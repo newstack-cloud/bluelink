@@ -23,12 +23,12 @@ Each key component will specify the release tag format in the README.
 
 You will find each key component listed in the commit scopes section of the [commit guidelines](./COMMIT_GUIDELINES.md#commit-scopes).
 
-The automated tooling bundled with Celerity will handle ensuring the correct release tags are produced and the corresponding artifacts are published, given you follow the release workflow outlined in the following section.
+The automated tooling bundled with Bluelink will handle ensuring the correct release tags are produced and the corresponding artifacts are published, given you follow the release workflow outlined in the following section.
 
 ## Release workflow
 
 This current iteration of the release workflow needs to be carried out for each key component individually.
-The reason releases should be carried out individually is to ensure the neccessary level of care is taken when making new releases. Automating the workflow to automatically publish all the changed packages and applications across Celerity would make it hard to track and review the changes made to each individually versioned key component, therefore leading to an increased likelihood of error-prone releases.
+The reason releases should be carried out individually is to ensure the neccessary level of care is taken when making new releases. Automating the workflow to automatically publish all the changed packages and applications across Bluelink would make it hard to track and review the changes made to each individually versioned key component, therefore leading to an increased likelihood of error-prone releases.
 
 1. Ensure all relevant changes have been merged (rebased) into the trunk (main).
 2. Create a new release branch for `release/{app_or_package}-MAJOR.MINOR.PATCH` (e.g. `release/blueprint-0.1.1`) with the approximate next version. (This branch is short-lived so it is not crucial to get the version 100% correct)

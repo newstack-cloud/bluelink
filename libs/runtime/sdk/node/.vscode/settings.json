@@ -1,4 +1,0 @@
-{
-  "editor.formatOnSave": true,
-  "rust-analyzer.procMacro.ignored": { "napi-derive": ["napi"] }
-}

@@ -1,9 +1,9 @@
 {
-  "name": "celerity",
+  "name": "bluelink",
   "version": "0.1.0",
-  "description": "Dependencies for scripts and git hooks across Celerity libraries and applications",
+  "description": "Dependencies for scripts and git hooks across Bluelink libraries and applications",
   "main": "index.js",
-  "repository": "git@github.com:software-works/newstack-cloud.git",
+  "repository": "git@github.com:newstack-cloud/bluelink.git",
   "devDependencies": {
     "@commitlint/cli": "^17.0.0",
     "@commitlint/config-conventional": "^17.0.0"

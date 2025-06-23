@@ -14,3 +14,7 @@ node_modules
 .DS_Store
 
 .vscode
+
+.yarn
+
+.yarnrc.yml

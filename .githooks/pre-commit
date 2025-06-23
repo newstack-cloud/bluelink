@@ -29,17 +29,9 @@ lint_project libs/blueprint-resolvers
 lint_project libs/common
 lint_project libs/plugin-framework
 lint_project libs/deploy-engine-client
-lint_project libs/runtime
 
 lint_project tools/blueprint-ls
 lint_project tools/plugin-docgen
 
 lint_project apps/deploy-engine
 lint_project apps/cli
-
-# lint_project apps/runtime/core
-# lint_project apps/runtime/csharp
-# lint_project apps/runtime/java
-# lint_project apps/runtime/nodejs
-# lint_project apps/runtime/python
-

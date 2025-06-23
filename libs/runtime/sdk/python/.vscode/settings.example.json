@@ -1,6 +1,0 @@
-{
-  "editor.formatOnSave": true,
-  "python.defaultInterpreterPath": "path/to/python",
-  "python.autoComplete.extraPaths": ["${workspaceFolder}"],
-  "python.analysis.extraPaths": ["${workspaceFolder}"]
-}

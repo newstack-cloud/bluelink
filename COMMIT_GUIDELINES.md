@@ -10,7 +10,7 @@ a base for more advanced tooling to allow for efficient searches for decisions a
 
 ### Commit types
 
-**The following commit types are supported in the Celerity project:**
+**The following commit types are supported in the Bluelink project:**
 
 - `fix:` - Should be used for any bug fixes.
 - `build:` - Should be used for functionality related to building an application.
@@ -30,20 +30,16 @@ a base for more advanced tooling to allow for efficient searches for decisions a
 
 **The following commit scopes are supported:**
 
-This list will evolve as more applications and libraries are added to Celerity.
+This list will evolve as more applications and libraries are added to Bluelink.
 
 - `blueprint` - This commit scope should be used for a commit that represents work that pertains to the blueprint library/framework.
 - `blueprint-resolvers` - This commit scope should be used for a commit that represents work that pertains to the blueprint resolvers library that provides a collection of child blueprint resolvers to load child blueprints from various locations.
 - `blueprint-state` - This commit scope should be used for a commit that represents work that pertains to the blueprint state library that provides core state container implementations to be used in the deploy engine or other applications built on top of the blueprint framework.
 - `blueprint-ls` - This commit scope should be used for a commit that represents work that pertains to the Blueprint Language Server.
-- `plugin-docgen` - This commit scope should be used for a commit that represents work that pertains to the plugin docgen tool that generates a JSON document for the plugin that can be used to generate documentation in the Celerity Registry.
+- `plugin-docgen` - This commit scope should be used for a commit that represents work that pertains to the plugin docgen tool that generates a JSON document for the plugin that can be used to generate documentation in the Bluelink Registry.
 - `deploy-engine` - This commit scope should be used for a commit that represents work that pertains to the deploy engine application.
 - `deploy-engine-client` - This commit scope should be used for a commit that represents work that pertains to the deploy engine client library that is used to communicate with the deploy engine.
 - `common` - This commit scope should be used for a commit that represents work that pertains to the common Go library.
-- `runtime-core` - This commit scope should be used for a commit that represents work that pertains to the core Rust runtime library.
-- `runtime-java` - This commit scope should be used for a commit that represents work that pertains to the Java wrapper application for the core runtime and the supporting Java SDK.
-- `runtime-nodejs` - This commit scope should be used for a commit that represents work that pertains to the NodeJS wrapper application for the core runtime and the supporting NodeJS SDK.
-- `runtime-python` - This commit scope should be used for a commit that represents work that pertains to the Python wrapper application for the core runtime and the supporting Python SDK.
 - `cli` - This commit scope should be used for a commit that represents work that pertains to the CLI for the test/build/package/deploy tooling.
 
 The commit scope can be omitted for changes that cut across these scopes.
@@ -63,7 +59,7 @@ However, it's best to check in commits that map to a specific scope where possib
 #### With commit scope
 
 ```bash
-git commit -m 'feat(blueprint): add celerity pub/sub resource types
+git commit -m 'feat(blueprint): add cloud pub/sub resource types
 
 Adds some pub/sub resource types including AWS SNS + SQS and Google Cloud Pub/Sub.
 
@@ -74,7 +70,7 @@ GitHubIssue: #2391
 #### Without commit scope
 
 ```bash
-git commit -m 'fix: correct default server configuration for all runtime applications'
+git commit -m 'fix: correct default server configuration for multiple environments'
 ```
 
 ## 2) You must use the imperative mood for commit headers.

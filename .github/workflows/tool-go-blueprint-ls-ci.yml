@@ -7,10 +7,10 @@ name: Go Blueprint Language Server
 on:
   push:
     branches: [ main ]
-    paths: 'tools/blueprint-ls/**'
+    paths: [ 'tools/blueprint-ls/**' ]
   pull_request:
     branches: [ main ]
-    paths: 'tools/blueprint-ls/**'
+    paths: [ 'tools/blueprint-ls/**' ]
   workflow_dispatch:
     inputs: {}
 
