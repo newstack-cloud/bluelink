@@ -3,9 +3,9 @@ package languageservices
 import (
 	"testing"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/corefunctions"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/tools/blueprint-ls/internal/testutils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/corefunctions"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/testutils"
 	"github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"github.com/stretchr/testify/suite"

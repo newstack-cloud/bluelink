@@ -4,9 +4,9 @@ import (
 	"sync"
 
 	"github.com/coreos/go-json"
-	"github.com/newstack-cloud/celerity/libs/blueprint/schema"
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
-	"github.com/newstack-cloud/celerity/tools/blueprint-ls/internal/blueprint"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/blueprint"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"gopkg.in/yaml.v3"
 )

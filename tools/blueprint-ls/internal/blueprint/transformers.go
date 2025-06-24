@@ -3,7 +3,7 @@ package blueprint
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/transform"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 )
 
 // LoadTransformers deals with loading the providers to be used for validating

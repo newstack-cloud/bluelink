@@ -3,8 +3,8 @@ package blueprint
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/providerhelpers"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/providerhelpers"
 )
 
 // LoadProviders deals with loading the providers to be used for validating
@@ -27,12 +27,12 @@ func LoadProviders(ctx context.Context) (map[string]provider.Provider, error) {
 
 	// Purely for testing purposes, should be removed once some actual
 	// providers have been implemented to test with.
-	celerityProvider := NewCelerityProvider()
+	bluelinkProvider := NewBluelinkProvider()
 
 	// TODO: load provider plugins through the deploy engine plugin system
 
 	return map[string]provider.Provider{
 		"core":     coreProvider,
-		"celerity": celerityProvider,
+		"bluelink": bluelinkProvider,
 	}, nil
 }

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/newstack-cloud/celerity/tools/blueprint-ls/internal/blueprint"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/blueprint"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"

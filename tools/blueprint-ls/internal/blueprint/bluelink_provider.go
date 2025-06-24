@@ -4,39 +4,39 @@ import (
 	"context"
 	"errors"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
 
-type celerityProvider struct {
+type bluelinkProvider struct {
 	resources       map[string]provider.Resource
 	dataSources     map[string]provider.DataSource
 	customVariables map[string]provider.CustomVariableType
 }
 
-func NewCelerityProvider() provider.Provider {
-	return &celerityProvider{
+func NewBluelinkProvider() provider.Provider {
+	return &bluelinkProvider{
 		resources: map[string]provider.Resource{
-			"celerity/handler": &celerityHandlerResource{},
+			"bluelink/handler": &bluelinkHandlerResource{},
 		},
 		dataSources: map[string]provider.DataSource{
-			"celerity/vpc": &celerityVPCDataSource{},
+			"bluelink/vpc": &bluelinkVPCDataSource{},
 		},
 		customVariables: map[string]provider.CustomVariableType{
-			"celerity/customVariable": &celerityCustomVariableType{},
+			"bluelink/customVariable": &bluelinkCustomVariableType{},
 		},
 	}
 }
 
-func (p *celerityProvider) Namespace(ctx context.Context) (string, error) {
-	return "celerity", nil
+func (p *bluelinkProvider) Namespace(ctx context.Context) (string, error) {
+	return "bluelink", nil
 }
 
-func (p *celerityProvider) ConfigDefinition(ctx context.Context) (*core.ConfigDefinition, error) {
+func (p *bluelinkProvider) ConfigDefinition(ctx context.Context) (*core.ConfigDefinition, error) {
 	return nil, nil
 }
 
-func (p *celerityProvider) Resource(ctx context.Context, resourceType string) (provider.Resource, error) {
+func (p *bluelinkProvider) Resource(ctx context.Context, resourceType string) (provider.Resource, error) {
 	resource, hasResource := p.resources[resourceType]
 	if !hasResource {
 		return nil, errors.New("resource not found")
@@ -45,7 +45,7 @@ func (p *celerityProvider) Resource(ctx context.Context, resourceType string) (p
 	return resource, nil
 }
 
-func (p *celerityProvider) DataSource(ctx context.Context, dataSourceType string) (provider.DataSource, error) {
+func (p *bluelinkProvider) DataSource(ctx context.Context, dataSourceType string) (provider.DataSource, error) {
 	dataSource, hasDataSource := p.dataSources[dataSourceType]
 	if !hasDataSource {
 		return nil, errors.New("data source not found")
@@ -54,11 +54,11 @@ func (p *celerityProvider) DataSource(ctx context.Context, dataSourceType string
 	return dataSource, nil
 }
 
-func (p *celerityProvider) Link(ctx context.Context, resourceTypeA string, resourceTypeB string) (provider.Link, error) {
+func (p *bluelinkProvider) Link(ctx context.Context, resourceTypeA string, resourceTypeB string) (provider.Link, error) {
 	return nil, errors.New("links not implemented")
 }
 
-func (p *celerityProvider) CustomVariableType(ctx context.Context, customVariableType string) (provider.CustomVariableType, error) {
+func (p *bluelinkProvider) CustomVariableType(ctx context.Context, customVariableType string) (provider.CustomVariableType, error) {
 	customVarType, hasCustomVarType := p.customVariables[customVariableType]
 	if !hasCustomVarType {
 		return nil, errors.New("custom variable type not found")
@@ -67,7 +67,7 @@ func (p *celerityProvider) CustomVariableType(ctx context.Context, customVariabl
 	return customVarType, nil
 }
 
-func (p *celerityProvider) ListResourceTypes(ctx context.Context) ([]string, error) {
+func (p *bluelinkProvider) ListResourceTypes(ctx context.Context) ([]string, error) {
 	resourceTypes := []string{}
 	for resourceType := range p.resources {
 		resourceTypes = append(resourceTypes, resourceType)
@@ -76,11 +76,11 @@ func (p *celerityProvider) ListResourceTypes(ctx context.Context) ([]string, err
 	return resourceTypes, nil
 }
 
-func (p *celerityProvider) ListLinkTypes(ctx context.Context) ([]string, error) {
+func (p *bluelinkProvider) ListLinkTypes(ctx context.Context) ([]string, error) {
 	return []string{}, nil
 }
 
-func (p *celerityProvider) ListDataSourceTypes(ctx context.Context) ([]string, error) {
+func (p *bluelinkProvider) ListDataSourceTypes(ctx context.Context) ([]string, error) {
 	dataSourceTypes := []string{}
 	for dataSourceType := range p.dataSources {
 		dataSourceTypes = append(dataSourceTypes, dataSourceType)
@@ -89,7 +89,7 @@ func (p *celerityProvider) ListDataSourceTypes(ctx context.Context) ([]string, e
 	return dataSourceTypes, nil
 }
 
-func (p *celerityProvider) ListCustomVariableTypes(ctx context.Context) ([]string, error) {
+func (p *bluelinkProvider) ListCustomVariableTypes(ctx context.Context) ([]string, error) {
 	customVariableTypes := []string{}
 	for customVariableType := range p.customVariables {
 		customVariableTypes = append(customVariableTypes, customVariableType)
@@ -98,21 +98,21 @@ func (p *celerityProvider) ListCustomVariableTypes(ctx context.Context) ([]strin
 	return customVariableTypes, nil
 }
 
-func (p *celerityProvider) ListFunctions(ctx context.Context) ([]string, error) {
+func (p *bluelinkProvider) ListFunctions(ctx context.Context) ([]string, error) {
 	return []string{}, nil
 }
 
-func (p *celerityProvider) Function(ctx context.Context, functionName string) (provider.Function, error) {
+func (p *bluelinkProvider) Function(ctx context.Context, functionName string) (provider.Function, error) {
 	return nil, errors.New("functions not implemented")
 }
 
-func (p *celerityProvider) RetryPolicy(ctx context.Context) (*provider.RetryPolicy, error) {
+func (p *bluelinkProvider) RetryPolicy(ctx context.Context) (*provider.RetryPolicy, error) {
 	return nil, nil
 }
 
-type celerityHandlerResource struct{}
+type bluelinkHandlerResource struct{}
 
-func (r *celerityHandlerResource) CanLinkTo(
+func (r *bluelinkHandlerResource) CanLinkTo(
 	ctx context.Context,
 	input *provider.ResourceCanLinkToInput,
 ) (*provider.ResourceCanLinkToOutput, error) {
@@ -121,7 +121,7 @@ func (r *celerityHandlerResource) CanLinkTo(
 	}, nil
 }
 
-func (r *celerityHandlerResource) IsCommonTerminal(
+func (r *bluelinkHandlerResource) IsCommonTerminal(
 	ctx context.Context,
 	input *provider.ResourceIsCommonTerminalInput,
 ) (*provider.ResourceIsCommonTerminalOutput, error) {
@@ -130,27 +130,27 @@ func (r *celerityHandlerResource) IsCommonTerminal(
 	}, nil
 }
 
-func (r *celerityHandlerResource) GetType(
+func (r *bluelinkHandlerResource) GetType(
 	ctx context.Context,
 	input *provider.ResourceGetTypeInput,
 ) (*provider.ResourceGetTypeOutput, error) {
 	return &provider.ResourceGetTypeOutput{
-		Type: "celerity/handler",
+		Type: "bluelink/handler",
 	}, nil
 }
 
-func (d *celerityHandlerResource) GetTypeDescription(
+func (d *bluelinkHandlerResource) GetTypeDescription(
 	ctx context.Context,
 	input *provider.ResourceGetTypeDescriptionInput,
 ) (*provider.ResourceGetTypeDescriptionOutput, error) {
 	return &provider.ResourceGetTypeDescriptionOutput{
-		MarkdownDescription: "A resource that represents a handler for a Celerity application.\n\n" +
-			"[`celerity/handler` resource docs](https://www.celerityframework.com/docs/resources/celerity-handler)",
-		PlainTextDescription: "A resource that represents a handler for a Celerity application.",
+		MarkdownDescription: "A resource that represents a handler for a Bluelink application.\n\n" +
+			"[`bluelink/handler` resource docs](https://www.bluelinkframework.com/docs/resources/bluelink-handler)",
+		PlainTextDescription: "A resource that represents a handler for a Bluelink application.",
 	}, nil
 }
 
-func (r *celerityHandlerResource) CustomValidate(
+func (r *bluelinkHandlerResource) CustomValidate(
 	ctx context.Context,
 	input *provider.ResourceValidateInput,
 ) (*provider.ResourceValidateOutput, error) {
@@ -159,14 +159,14 @@ func (r *celerityHandlerResource) CustomValidate(
 	}, nil
 }
 
-func (r *celerityHandlerResource) GetSpecDefinition(
+func (r *bluelinkHandlerResource) GetSpecDefinition(
 	ctx context.Context,
 	input *provider.ResourceGetSpecDefinitionInput,
 ) (*provider.ResourceGetSpecDefinitionOutput, error) {
 	return &provider.ResourceGetSpecDefinitionOutput{
 		SpecDefinition: &provider.ResourceSpecDefinition{
 			Schema: &provider.ResourceDefinitionsSchema{
-				Description: "A resource that represents a handler for a Celerity application.",
+				Description: "A resource that represents a handler for a Bluelink application.",
 				Type:        provider.ResourceDefinitionsSchemaTypeObject,
 				Attributes: map[string]*provider.ResourceDefinitionsSchema{
 					"id": {
@@ -198,7 +198,7 @@ func (r *celerityHandlerResource) GetSpecDefinition(
 	}, nil
 }
 
-func (r *celerityHandlerResource) GetStabilisedDependencies(
+func (r *bluelinkHandlerResource) GetStabilisedDependencies(
 	ctx context.Context,
 	input *provider.ResourceStabilisedDependenciesInput,
 ) (*provider.ResourceStabilisedDependenciesOutput, error) {
@@ -207,28 +207,28 @@ func (r *celerityHandlerResource) GetStabilisedDependencies(
 	}, nil
 }
 
-func (r *celerityHandlerResource) Deploy(
+func (r *bluelinkHandlerResource) Deploy(
 	ctx context.Context,
 	input *provider.ResourceDeployInput,
 ) (*provider.ResourceDeployOutput, error) {
 	return &provider.ResourceDeployOutput{}, nil
 }
 
-func (r *celerityHandlerResource) GetExternalState(
+func (r *bluelinkHandlerResource) GetExternalState(
 	ctx context.Context,
 	input *provider.ResourceGetExternalStateInput,
 ) (*provider.ResourceGetExternalStateOutput, error) {
 	return &provider.ResourceGetExternalStateOutput{}, nil
 }
 
-func (r *celerityHandlerResource) Destroy(
+func (r *bluelinkHandlerResource) Destroy(
 	ctx context.Context,
 	input *provider.ResourceDestroyInput,
 ) error {
 	return nil
 }
 
-func (r *celerityHandlerResource) HasStabilised(
+func (r *bluelinkHandlerResource) HasStabilised(
 	ctx context.Context,
 	input *provider.ResourceHasStabilisedInput,
 ) (*provider.ResourceHasStabilisedOutput, error) {
@@ -237,7 +237,7 @@ func (r *celerityHandlerResource) HasStabilised(
 	}, nil
 }
 
-func (r *celerityHandlerResource) GetExamples(
+func (r *bluelinkHandlerResource) GetExamples(
 	ctx context.Context,
 	input *provider.ResourceGetExamplesInput,
 ) (*provider.ResourceGetExamplesOutput, error) {
@@ -247,9 +247,9 @@ func (r *celerityHandlerResource) GetExamples(
 	}, nil
 }
 
-type celerityVPCDataSource struct{}
+type bluelinkVPCDataSource struct{}
 
-func (d *celerityVPCDataSource) GetSpecDefinition(
+func (d *bluelinkVPCDataSource) GetSpecDefinition(
 	ctx context.Context,
 	input *provider.DataSourceGetSpecDefinitionInput,
 ) (*provider.DataSourceGetSpecDefinitionOutput, error) {
@@ -273,7 +273,7 @@ func (d *celerityVPCDataSource) GetSpecDefinition(
 	}, nil
 }
 
-func (d *celerityVPCDataSource) Fetch(
+func (d *bluelinkVPCDataSource) Fetch(
 	ctx context.Context,
 	input *provider.DataSourceFetchInput,
 ) (*provider.DataSourceFetchOutput, error) {
@@ -282,7 +282,7 @@ func (d *celerityVPCDataSource) Fetch(
 	}, nil
 }
 
-func (d *celerityVPCDataSource) GetType(
+func (d *bluelinkVPCDataSource) GetType(
 	ctx context.Context,
 	input *provider.DataSourceGetTypeInput,
 ) (*provider.DataSourceGetTypeOutput, error) {
@@ -291,26 +291,33 @@ func (d *celerityVPCDataSource) GetType(
 	}, nil
 }
 
-func (d *celerityVPCDataSource) GetTypeDescription(
+func (d *bluelinkVPCDataSource) GetTypeDescription(
 	ctx context.Context,
 	input *provider.DataSourceGetTypeDescriptionInput,
 ) (*provider.DataSourceGetTypeDescriptionOutput, error) {
 	return &provider.DataSourceGetTypeDescriptionOutput{
-		MarkdownDescription:  "A data source that pulls in celerity network information.",
-		PlainTextDescription: "A data source that pulls in celerity network information.",
+		MarkdownDescription:  "A data source that pulls in bluelink network information.",
+		PlainTextDescription: "A data source that pulls in bluelink network information.",
 	}, nil
 }
 
-func (d *celerityVPCDataSource) GetFilterFields(
+func (d *bluelinkVPCDataSource) GetFilterFields(
 	ctx context.Context,
 	input *provider.DataSourceGetFilterFieldsInput,
 ) (*provider.DataSourceGetFilterFieldsOutput, error) {
 	return &provider.DataSourceGetFilterFieldsOutput{
-		Fields: []string{"tags", "vpcId"},
+		FilterFields: map[string]*provider.DataSourceFilterSchema{
+			"tags": {
+				Type: provider.DataSourceFilterSearchValueTypeString,
+			},
+			"vpcId": {
+				Type: provider.DataSourceFilterSearchValueTypeString,
+			},
+		},
 	}, nil
 }
 
-func (d *celerityVPCDataSource) CustomValidate(
+func (d *bluelinkVPCDataSource) CustomValidate(
 	ctx context.Context,
 	input *provider.DataSourceValidateInput,
 ) (*provider.DataSourceValidateOutput, error) {
@@ -319,7 +326,7 @@ func (d *celerityVPCDataSource) CustomValidate(
 	}, nil
 }
 
-func (r *celerityVPCDataSource) GetExamples(
+func (r *bluelinkVPCDataSource) GetExamples(
 	ctx context.Context,
 	input *provider.DataSourceGetExamplesInput,
 ) (*provider.DataSourceGetExamplesOutput, error) {
@@ -329,9 +336,9 @@ func (r *celerityVPCDataSource) GetExamples(
 	}, nil
 }
 
-type celerityCustomVariableType struct{}
+type bluelinkCustomVariableType struct{}
 
-func (t *celerityCustomVariableType) Options(
+func (t *bluelinkCustomVariableType) Options(
 	ctx context.Context,
 	input *provider.CustomVariableTypeOptionsInput,
 ) (*provider.CustomVariableTypeOptionsOutput, error) {
@@ -383,26 +390,26 @@ func (t *celerityCustomVariableType) Options(
 	}, nil
 }
 
-func (t *celerityCustomVariableType) GetType(
+func (t *bluelinkCustomVariableType) GetType(
 	ctx context.Context,
 	input *provider.CustomVariableTypeGetTypeInput,
 ) (*provider.CustomVariableTypeGetTypeOutput, error) {
 	return &provider.CustomVariableTypeGetTypeOutput{
-		Type: "celerity/customVariable",
+		Type: "bluelink/customVariable",
 	}, nil
 }
 
-func (t *celerityCustomVariableType) GetDescription(
+func (t *bluelinkCustomVariableType) GetDescription(
 	ctx context.Context,
 	input *provider.CustomVariableTypeGetDescriptionInput,
 ) (*provider.CustomVariableTypeGetDescriptionOutput, error) {
 	return &provider.CustomVariableTypeGetDescriptionOutput{
-		MarkdownDescription:  "### Celerity Custom Variable\n\nA custom variable type for Celerity.",
-		PlainTextDescription: "Celerity Custom Variable\n\nA custom variable type for Celerity.",
+		MarkdownDescription:  "### Bluelink Custom Variable\n\nA custom variable type for Bluelink.",
+		PlainTextDescription: "Bluelink Custom Variable\n\nA custom variable type for Bluelink.",
 	}, nil
 }
 
-func (t *celerityCustomVariableType) GetExamples(
+func (t *bluelinkCustomVariableType) GetExamples(
 	ctx context.Context,
 	input *provider.CustomVariableTypeGetExamplesInput,
 ) (*provider.CustomVariableTypeGetExamplesOutput, error) {

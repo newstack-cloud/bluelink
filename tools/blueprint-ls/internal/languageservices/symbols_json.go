@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/coreos/go-json"
-	bpcore "github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
-	"github.com/newstack-cloud/celerity/tools/blueprint-ls/internal/blueprint"
+	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/blueprint"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 )
 

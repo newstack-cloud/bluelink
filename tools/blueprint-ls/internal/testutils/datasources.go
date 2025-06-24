@@ -3,8 +3,8 @@ package testutils
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
 
 type VPCDataSource struct{}
@@ -57,7 +57,16 @@ func (d *VPCDataSource) GetFilterFields(
 	input *provider.DataSourceGetFilterFieldsInput,
 ) (*provider.DataSourceGetFilterFieldsOutput, error) {
 	return &provider.DataSourceGetFilterFieldsOutput{
-		Fields: []string{"instanceConfigId", "tags"},
+		FilterFields: map[string]*provider.DataSourceFilterSchema{
+			"instanceConfigId": {
+				Type:        provider.DataSourceFilterSearchValueTypeString,
+				Description: "The ID of the instance configuration.",
+			},
+			"tags": {
+				Type:        provider.DataSourceFilterSearchValueTypeString,
+				Description: "A map of tags to filter the VPCs.",
+			},
+		},
 	}, nil
 }
 

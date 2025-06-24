@@ -1,12 +1,12 @@
-module github.com/newstack-cloud/celerity/tools/blueprint-ls
+module github.com/newstack-cloud/bluelink/tools/blueprint-ls
 
 go 1.23.4
 
 require (
 	github.com/coreos/go-json v0.0.0-20231102161613-e49c8866685a
 	github.com/davecgh/go-spew v1.1.1
-	github.com/newstack-cloud/celerity/libs/blueprint v0.17.1
-	github.com/newstack-cloud/celerity/libs/common v0.3.1
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.24.1
+	github.com/newstack-cloud/bluelink/libs/common v0.3.2
 	github.com/newstack-cloud/ls-builder v0.2.4
 	github.com/sourcegraph/jsonrpc2 v0.2.0
 	github.com/stretchr/testify v1.10.0

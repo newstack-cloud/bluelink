@@ -5,10 +5,10 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/corefunctions"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/schema"
-	"github.com/newstack-cloud/celerity/tools/blueprint-ls/internal/testutils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/corefunctions"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/testutils"
 	"github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"github.com/stretchr/testify/suite"
@@ -86,7 +86,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_variable_
 				},
 				NewText: "instanceType",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "variable",
 			},
 		},
@@ -128,7 +128,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_ref
 				},
 				NewText: "tableName",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "value",
 			},
 		},
@@ -170,7 +170,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 				},
 				NewText: "network",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSource",
 			},
 		},
@@ -212,7 +212,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 				},
 				NewText: "vpc",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceProperty",
 			},
 		},
@@ -233,7 +233,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 				},
 				NewText: "subnetIds",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceProperty",
 			},
 		},
@@ -275,7 +275,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_child_ref
 				},
 				NewText: "networking",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "child",
 			},
 		},
@@ -350,7 +350,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				},
 				NewText: "ordersTable",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "resource",
 			},
 		},
@@ -371,7 +371,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				},
 				NewText: "saveOrderHandler",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "resource",
 			},
 		},
@@ -413,7 +413,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				},
 				NewText: "spec",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
@@ -434,7 +434,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				},
 				NewText: "state",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
@@ -455,7 +455,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				},
 				NewText: "metadata",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
@@ -497,7 +497,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				},
 				NewText: "tableName",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
@@ -518,7 +518,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				},
 				NewText: "id",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
@@ -560,7 +560,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				},
 				NewText: "annotations",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
@@ -581,7 +581,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				},
 				NewText: "custom",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
@@ -602,7 +602,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				},
 				NewText: "displayName",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
@@ -623,7 +623,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				},
 				NewText: "labels",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
@@ -654,7 +654,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 			Label:      "aws/dynamodb/table",
 			Detail:     &detail,
 			InsertText: &insertText,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "resourceType",
 			},
 		},
@@ -685,7 +685,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 			Label:      "aws/vpc",
 			Detail:     &detail,
 			InsertText: &insertText,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceType",
 			},
 		},
@@ -720,7 +720,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_variable_
 			Label:      "aws/ec2/instanceType",
 			Detail:     &detail,
 			InsertText: &insertTextInstanceType,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "variableType",
 			},
 		},
@@ -729,7 +729,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_variable_
 			Label:      "boolean",
 			Detail:     &detail,
 			InsertText: &insertTextBool,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "variableType",
 			},
 		},
@@ -738,7 +738,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_variable_
 			Label:      "float",
 			Detail:     &detail,
 			InsertText: &insertTextFloat,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "variableType",
 			},
 		},
@@ -747,7 +747,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_variable_
 			Label:      "integer",
 			Detail:     &detail,
 			InsertText: &insertTextInteger,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "variableType",
 			},
 		},
@@ -756,7 +756,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_variable_
 			Label:      "string",
 			Detail:     &detail,
 			InsertText: &insertTextString,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "variableType",
 			},
 		},
@@ -792,7 +792,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_typ
 			Label:      "boolean",
 			Detail:     &detail,
 			InsertText: &insertTextBool,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "valueType",
 			},
 		},
@@ -801,7 +801,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_typ
 			Label:      "float",
 			Detail:     &detail,
 			InsertText: &insertTextFloat,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "valueType",
 			},
 		},
@@ -810,7 +810,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_typ
 			Label:      "integer",
 			Detail:     &detail,
 			InsertText: &insertTextInteger,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "valueType",
 			},
 		},
@@ -819,7 +819,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_typ
 			Label:      "string",
 			Detail:     &detail,
 			InsertText: &insertTextString,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "valueType",
 			},
 		},
@@ -828,7 +828,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_typ
 			Label:      "array",
 			Detail:     &detail,
 			InsertText: &insertTextArray,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "valueType",
 			},
 		},
@@ -837,7 +837,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_typ
 			Label:      "object",
 			Detail:     &detail,
 			InsertText: &insertTextObject,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "valueType",
 			},
 		},
@@ -872,7 +872,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 			Label:      "boolean",
 			Detail:     &detail,
 			InsertText: &insertTextBool,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFieldType",
 			},
 		},
@@ -881,7 +881,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 			Label:      "float",
 			Detail:     &detail,
 			InsertText: &insertTextFloat,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFieldType",
 			},
 		},
@@ -890,7 +890,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 			Label:      "integer",
 			Detail:     &detail,
 			InsertText: &insertTextInteger,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFieldType",
 			},
 		},
@@ -899,7 +899,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 			Label:      "string",
 			Detail:     &detail,
 			InsertText: &insertTextString,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFieldType",
 			},
 		},
@@ -908,7 +908,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 			Label:      "array",
 			Detail:     &detail,
 			InsertText: &insertTextArray,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFieldType",
 			},
 		},
@@ -940,7 +940,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 			Label:      "instanceConfigId",
 			Detail:     &detail,
 			InsertText: &insertTextInstanceConfigId,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFilterField",
 			},
 		},
@@ -949,7 +949,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 			Label:      "tags",
 			Detail:     &detail,
 			InsertText: &insertTextTags,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFilterField",
 			},
 		},
@@ -1003,7 +1003,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_export_ty
 			Label:      "boolean",
 			Detail:     &detail,
 			InsertText: &insertTextBool,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "exportType",
 			},
 		},
@@ -1012,7 +1012,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_export_ty
 			Label:      "float",
 			Detail:     &detail,
 			InsertText: &insertTextFloat,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "exportType",
 			},
 		},
@@ -1021,7 +1021,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_export_ty
 			Label:      "integer",
 			Detail:     &detail,
 			InsertText: &insertTextInteger,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "exportType",
 			},
 		},
@@ -1030,7 +1030,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_export_ty
 			Label:      "string",
 			Detail:     &detail,
 			InsertText: &insertTextString,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "exportType",
 			},
 		},
@@ -1039,7 +1039,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_export_ty
 			Label:      "array",
 			Detail:     &detail,
 			InsertText: &insertTextArray,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "exportType",
 			},
 		},
@@ -1048,7 +1048,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_export_ty
 			Label:      "object",
 			Detail:     &detail,
 			InsertText: &insertTextObject,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "exportType",
 			},
 		},
@@ -1144,7 +1144,7 @@ func expectedDataSourceFilterOperatorItems() []*lsp.CompletionItem {
 				},
 				NewText: "\"!=\"",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFilterOperator",
 			},
 		},
@@ -1165,7 +1165,7 @@ func expectedDataSourceFilterOperatorItems() []*lsp.CompletionItem {
 				},
 				NewText: "\"=\"",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFilterOperator",
 			},
 		},
@@ -1186,7 +1186,7 @@ func expectedDataSourceFilterOperatorItems() []*lsp.CompletionItem {
 				},
 				NewText: "\"contains\"",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFilterOperator",
 			},
 		},
@@ -1207,7 +1207,7 @@ func expectedDataSourceFilterOperatorItems() []*lsp.CompletionItem {
 				},
 				NewText: "\"ends with\"",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFilterOperator",
 			},
 		},
@@ -1228,7 +1228,7 @@ func expectedDataSourceFilterOperatorItems() []*lsp.CompletionItem {
 				},
 				NewText: "\"has key\"",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFilterOperator",
 			},
 		},
@@ -1249,7 +1249,7 @@ func expectedDataSourceFilterOperatorItems() []*lsp.CompletionItem {
 				},
 				NewText: "\"in\"",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFilterOperator",
 			},
 		},
@@ -1270,7 +1270,7 @@ func expectedDataSourceFilterOperatorItems() []*lsp.CompletionItem {
 				},
 				NewText: "\"not contains\"",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFilterOperator",
 			},
 		},
@@ -1291,7 +1291,7 @@ func expectedDataSourceFilterOperatorItems() []*lsp.CompletionItem {
 				},
 				NewText: "\"not ends with\"",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFilterOperator",
 			},
 		},
@@ -1312,7 +1312,7 @@ func expectedDataSourceFilterOperatorItems() []*lsp.CompletionItem {
 				},
 				NewText: "\"not has key\"",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFilterOperator",
 			},
 		},
@@ -1333,7 +1333,7 @@ func expectedDataSourceFilterOperatorItems() []*lsp.CompletionItem {
 				},
 				NewText: "\"not in\"",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFilterOperator",
 			},
 		},
@@ -1354,7 +1354,7 @@ func expectedDataSourceFilterOperatorItems() []*lsp.CompletionItem {
 				},
 				NewText: "\"not starts with\"",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"completionType": "dataSourceFilterOperator",
 			},
 		},
@@ -1375,7 +1375,91 @@ func expectedDataSourceFilterOperatorItems() []*lsp.CompletionItem {
 				},
 				NewText: "\"starts with\"",
 			},
-			Data: map[string]interface{}{
+			Data: map[string]any{
+				"completionType": "dataSourceFilterOperator",
+			},
+		},
+		{
+			Kind:   &itemKind,
+			Label:  "\">\"",
+			Detail: &detail,
+			TextEdit: lsp.TextEdit{
+				Range: &lsp.Range{
+					Start: lsp.Position{
+						Line:      19,
+						Character: 16,
+					},
+					End: lsp.Position{
+						Line:      19,
+						Character: 19,
+					},
+				},
+				NewText: "\">\"",
+			},
+			Data: map[string]any{
+				"completionType": "dataSourceFilterOperator",
+			},
+		},
+		{
+			Kind:   &itemKind,
+			Label:  "\"<\"",
+			Detail: &detail,
+			TextEdit: lsp.TextEdit{
+				Range: &lsp.Range{
+					Start: lsp.Position{
+						Line:      19,
+						Character: 16,
+					},
+					End: lsp.Position{
+						Line:      19,
+						Character: 19,
+					},
+				},
+				NewText: "\"<\"",
+			},
+			Data: map[string]any{
+				"completionType": "dataSourceFilterOperator",
+			},
+		},
+		{
+			Kind:   &itemKind,
+			Label:  "\">=\"",
+			Detail: &detail,
+			TextEdit: lsp.TextEdit{
+				Range: &lsp.Range{
+					Start: lsp.Position{
+						Line:      19,
+						Character: 16,
+					},
+					End: lsp.Position{
+						Line:      19,
+						Character: 20,
+					},
+				},
+				NewText: "\">=\"",
+			},
+			Data: map[string]any{
+				"completionType": "dataSourceFilterOperator",
+			},
+		},
+		{
+			Kind:   &itemKind,
+			Label:  "\"<=\"",
+			Detail: &detail,
+			TextEdit: lsp.TextEdit{
+				Range: &lsp.Range{
+					Start: lsp.Position{
+						Line:      19,
+						Character: 16,
+					},
+					End: lsp.Position{
+						Line:      19,
+						Character: 20,
+					},
+				},
+				NewText: "\"<=\"",
+			},
+			Data: map[string]any{
 				"completionType": "dataSourceFilterOperator",
 			},
 		},

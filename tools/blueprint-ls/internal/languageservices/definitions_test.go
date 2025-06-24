@@ -3,7 +3,7 @@ package languageservices
 import (
 	"testing"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"

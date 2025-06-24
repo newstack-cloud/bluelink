@@ -7,11 +7,11 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/resourcehelpers"
-	"github.com/newstack-cloud/celerity/libs/blueprint/schema"
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
-	"github.com/newstack-cloud/celerity/libs/blueprint/substitutions"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	"github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"go.uber.org/zap"
@@ -424,19 +424,20 @@ func (s *CompletionService) isNewDataSourceFilterField(
 	sourceContent string,
 	position *lsp.Position,
 ) bool {
-	return len(pathParts) >= 4 &&
+	return len(pathParts) >= 5 &&
 		pathParts[1] == "datasources" &&
-		pathParts[3] == "filter" &&
+		pathParts[3] == "filters" &&
 		s.isPrecededBy(position, fieldPattern, sourceContent)
 }
 
 func (s *CompletionService) isDataSourceFilterField(
 	pathParts []string,
 ) bool {
-	return len(pathParts) == 5 &&
+	return len(pathParts) == 7 &&
 		pathParts[1] == "datasources" &&
-		pathParts[3] == "filter" &&
-		pathParts[4] == "field"
+		pathParts[3] == "filters" &&
+		pathParts[5] == "filter" &&
+		pathParts[6] == "field"
 }
 
 func (s *CompletionService) isNewDataSourceFilterOperator(
@@ -444,19 +445,21 @@ func (s *CompletionService) isNewDataSourceFilterOperator(
 	sourceContent string,
 	position *lsp.Position,
 ) bool {
-	return len(pathParts) >= 4 &&
+	return len(pathParts) >= 6 &&
 		pathParts[1] == "datasources" &&
-		pathParts[3] == "filter" &&
+		pathParts[3] == "filters" &&
+		pathParts[5] == "filter" &&
 		s.isPrecededBy(position, operatorPattern, sourceContent)
 }
 
 func (s *CompletionService) isDataSourceFilterOperator(
 	pathParts []string,
 ) bool {
-	return len(pathParts) == 5 &&
+	return len(pathParts) == 7 &&
 		pathParts[1] == "datasources" &&
-		pathParts[3] == "filter" &&
-		pathParts[4] == "operator"
+		pathParts[3] == "filters" &&
+		pathParts[5] == "filter" &&
+		pathParts[6] == "operator"
 }
 
 func (s *CompletionService) isExportType(
@@ -684,7 +687,7 @@ func (s *CompletionService) getDataSourceFilterFieldCompletionItems(
 
 	completionItems := []*lsp.CompletionItem{}
 	filterFieldDetail := "Data source filter field"
-	for _, filterField := range filterFieldsOutput.Fields {
+	for filterField := range filterFieldsOutput.FilterFields {
 		enumKind := lsp.CompletionItemKindEnum
 		completionItems = append(completionItems, &lsp.CompletionItem{
 			Label:      filterField,
@@ -829,7 +832,7 @@ func (s *CompletionService) getDataSourceFilterOperatorCompletionItems(
 				Detail:   &filterOperatorDetail,
 				Kind:     &enumKind,
 				TextEdit: edit,
-				Data:     map[string]interface{}{"completionType": "dataSourceFilterOperator"},
+				Data:     map[string]any{"completionType": "dataSourceFilterOperator"},
 			},
 		)
 	}

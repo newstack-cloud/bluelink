@@ -1,10 +1,10 @@
 package languageserver
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint/container"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/resourcehelpers"
-	"github.com/newstack-cloud/celerity/tools/blueprint-ls/internal/languageservices"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/languageservices"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"go.uber.org/zap"
 )
