@@ -5,8 +5,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
 
 func getProviderDataSourceDocs(
@@ -105,11 +105,13 @@ func getProviderDataSourceSpecDocs(
 		map[string]*PluginDocsDataSourceFieldSpec,
 		len(dataSourceSpecOutput.SpecDefinition.Fields),
 	)
+
+	filterableFields := extractKeys(filterableFieldsOutput.FilterFields)
 	for key, field := range dataSourceSpecOutput.SpecDefinition.Fields {
 		dataSourceSpecFieldDocs[key] = toDocsDataSourceFieldSpec(
 			key,
 			field,
-			filterableFieldsOutput.Fields,
+			filterableFields,
 		)
 	}
 
@@ -163,4 +165,12 @@ func getProviderDataSourceExamples(
 	}
 
 	return output.PlainTextExamples
+}
+
+func extractKeys[T any](m map[string]T) []string {
+	keys := make([]string, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+	return keys
 }

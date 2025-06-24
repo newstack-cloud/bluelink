@@ -1,8 +1,8 @@
 package providertest
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/sdk/providerv1"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sdk/providerv1"
 )
 
 func lambdaFunctionDataSource() provider.DataSource {
@@ -11,7 +11,7 @@ func lambdaFunctionDataSource() provider.DataSource {
 		Label:                "AWS Lambda Function",
 		PlainTextSummary:     "An external data source for an AWS Lambda function.",
 		FormattedDescription: "An external data source that can be used to retrieve information about an AWS Lambda function.",
-		FieldSchemas: map[string]*provider.DataSourceSpecSchema{
+		Fields: map[string]*provider.DataSourceSpecSchema{
 			"functionName": {
 				Type:        provider.DataSourceSpecTypeString,
 				Description: "The name of the Lambda function stored in the AWS system.",
@@ -32,7 +32,16 @@ func lambdaFunctionDataSource() provider.DataSource {
 				Nullable: true,
 			},
 		},
-		FilterFields: []string{"functionName", "arn"},
+		FilterFields: map[string]*provider.DataSourceFilterSchema{
+			"functionName": {
+				Type:        provider.DataSourceFilterSearchValueTypeString,
+				Description: "Filter by the name of the Lambda function.",
+			},
+			"arn": {
+				Type:        provider.DataSourceFilterSearchValueTypeString,
+				Description: "Filter by the Amazon Resource Name (ARN) of the Lambda function.",
+			},
+		},
 		MarkdownExamples: []string{
 			"```yaml\ndataSources:\n  - type: test/lambda/function\n    name: ProcessOrders\n    properties:\n      functionName: ProcessOrders\n```",
 			"```yaml\ndataSources:\n  - type: test/lambda/function\n    name: ProcessOrders\n    properties:\n      functionName: ProcessOrders\n      arn: arn:aws:lambda:us-west-2:123456789012:function:ProcessOrders\n```",

@@ -2,8 +2,8 @@ package env
 
 import (
 	"github.com/caarlos0/env/v11"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/providerserverv1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/transformerserverv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/providerserverv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/transformerserverv1"
 )
 
 // Config holds the configuration for the github
@@ -30,11 +30,11 @@ type Config struct {
 	// This will be set at runtime based on the version of the plugin protocol
 	// that the current version of the tool uses.
 	TransformerPluginProtocolVersion string
-	PluginPath                       string `env:"CELERITY_DEPLOY_ENGINE_PLUGIN_PATH"`
-	PluginLogFileRootDir             string `env:"CELERITY_PLUGIN_DOCGEN_PLUGIN_LOG_FILE_ROOT_DIR"`
-	LogLevel                         string `env:"CELERITY_PLUGIN_DOCGEN_LOG_LEVEL" envDefault:"info"`
-	LaunchWaitTimeoutMS              int    `env:"CELERITY_PLUGIN_DOCGEN_PLUGIN_LAUNCH_WAIT_TIMEOUT_MS" envDefault:"10000"`
-	GenerateTimeoutMS                int    `env:"CELERITY_PLUGIN_DOCGEN_GENERATE_TIMEOUT_MS" envDefault:"30000"`
+	PluginPath                       string `env:"BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH"`
+	PluginLogFileRootDir             string `env:"BLUELINK_PLUGIN_DOCGEN_PLUGIN_LOG_FILE_ROOT_DIR"`
+	LogLevel                         string `env:"BLUELINK_PLUGIN_DOCGEN_LOG_LEVEL" envDefault:"info"`
+	LaunchWaitTimeoutMS              int    `env:"BLUELINK_PLUGIN_DOCGEN_PLUGIN_LAUNCH_WAIT_TIMEOUT_MS" envDefault:"10000"`
+	GenerateTimeoutMS                int    `env:"BLUELINK_PLUGIN_DOCGEN_GENERATE_TIMEOUT_MS" envDefault:"30000"`
 }
 
 // LoadConfig loads environment configuration

@@ -1,6 +1,6 @@
 package docgen
 
-import "github.com/newstack-cloud/celerity/libs/blueprint/core"
+import "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 
 // PluginDocs is a struct that holds the JSON representation of the plugin
 // documentation.

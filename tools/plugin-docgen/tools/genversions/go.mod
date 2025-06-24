@@ -1,4 +1,4 @@
-module github.com/newstack-cloud/celerity/tools/plugin-docgen/tools/genversions
+module github.com/newstack-cloud/bluelink/tools/plugin-docgen/tools/genversions
 
 go 1.23.4
 

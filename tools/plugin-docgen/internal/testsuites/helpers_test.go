@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/plugin"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/pluginservicev1"
-	"github.com/newstack-cloud/celerity/tools/plugin-docgen/internal/docgen"
-	"github.com/newstack-cloud/celerity/tools/plugin-docgen/internal/providertest"
-	"github.com/newstack-cloud/celerity/tools/plugin-docgen/internal/transformertest"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/plugin"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginservicev1"
+	"github.com/newstack-cloud/bluelink/tools/plugin-docgen/internal/docgen"
+	"github.com/newstack-cloud/bluelink/tools/plugin-docgen/internal/providertest"
+	"github.com/newstack-cloud/bluelink/tools/plugin-docgen/internal/transformertest"
 	"github.com/spf13/afero"
 )
 
@@ -75,13 +75,13 @@ func loadPluginsIntoFS(plugins []*plugin.PluginPathInfo, fs afero.Fs) error {
 func loadExpectedPluginPaths() []*plugin.PluginPathInfo {
 	return []*plugin.PluginPathInfo{
 		{
-			AbsolutePath: "/root/.celerity/deploy-engine/plugins/bin/providers/newstack-cloud/test/1.0.0/plugin",
+			AbsolutePath: "/root/.bluelink/deploy-engine/plugins/bin/providers/newstack-cloud/test/1.0.0/plugin",
 			PluginType:   "provider",
 			ID:           "newstack-cloud/test",
 			Version:      "1.0.0",
 		},
 		{
-			AbsolutePath: "/root/.celerity/deploy-engine/plugins/bin/transformers/newstack-cloud/testTransform/1.0.0/plugin",
+			AbsolutePath: "/root/.bluelink/deploy-engine/plugins/bin/transformers/newstack-cloud/testTransform/1.0.0/plugin",
 			PluginType:   "transformer",
 			ID:           "newstack-cloud/testTransform",
 			Version:      "1.0.0",
@@ -102,7 +102,7 @@ var (
 			DisplayName:   "AWS",
 			FormattedDescription: "AWS provider for the Deploy Engine including `resources`, `data sources`," +
 				" `links` and `custom variable types` for interacting with AWs services.",
-			RepositoryUrl: "https://github.com/newstack-cloud/celerity-provider-aws",
+			RepositoryUrl: "https://github.com/newstack-cloud/bluelink-provider-aws",
 			Author:        "Two Hundred",
 		},
 	}

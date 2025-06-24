@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/transform"
-	"github.com/newstack-cloud/celerity/tools/plugin-docgen/internal/docgen"
-	"github.com/newstack-cloud/celerity/tools/plugin-docgen/internal/env"
-	"github.com/newstack-cloud/celerity/tools/plugin-docgen/internal/host"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
+	"github.com/newstack-cloud/bluelink/tools/plugin-docgen/internal/docgen"
+	"github.com/newstack-cloud/bluelink/tools/plugin-docgen/internal/env"
+	"github.com/newstack-cloud/bluelink/tools/plugin-docgen/internal/host"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/suite"
 	"google.golang.org/grpc/test/bufconn"
@@ -41,7 +41,7 @@ func (s *ProviderDocGenTestSuite) SetupTest() {
 	s.expectedTransformerDocs = expectedTransformerDocs
 
 	envConfig := &env.Config{
-		PluginPath:          "/root/.celerity/deploy-engine/plugins/bin",
+		PluginPath:          "/root/.bluelink/deploy-engine/plugins/bin",
 		LogLevel:            "debug",
 		LaunchWaitTimeoutMS: 10,
 		GenerateTimeoutMS:   10,

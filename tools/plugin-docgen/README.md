@@ -1,23 +1,23 @@
 # plugin json doc generator
 
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_celerity-plugin-docgen&metric=coverage)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_celerity-plugin-docgen)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_celerity-plugin-docgen&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_celerity-plugin-docgen)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_celerity-plugin-docgen&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_celerity-plugin-docgen)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_bluelink-plugin-docgen&metric=coverage)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_bluelink-plugin-docgen)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_bluelink-plugin-docgen&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_bluelink-plugin-docgen)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_bluelink-plugin-docgen&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_bluelink-plugin-docgen)
 
-The plugin JSON documentation generation tool that generates a JSON document from a plugin that can be used to generate documentation in the Celerity Registry.
+The plugin JSON documentation generation tool that generates a JSON document from a plugin that can be used to generate documentation in the Bluelink Registry.
 
 ## Installation
 
 ```bash
-go install github.com/newstack-cloud/celerity/tools/plugin-docgen/cmd/celerity-plugin-docgen@latest
+go install github.com/newstack-cloud/bluelink/tools/plugin-docgen/cmd/bluelink-plugin-docgen@latest
 ```
 
-This will install the `celerity-plugin-docgen` tool in either the `$GOBIN` directory, which by default will be `$GOPATH/bin`. You'll need to be sure to add this directory to your `PATH` if it is not already included.
+This will install the `bluelink-plugin-docgen` tool in either the `$GOBIN` directory, which by default will be `$GOPATH/bin`. You'll need to be sure to add this directory to your `PATH` if it is not already included.
 You can specify a version by replacing `latest` with the desired version tag.
 
 ## Usage
 
-1) You will need to build your plugin and store the plugin in a location that follows the Celerity plugin directory structure. The plugin directory structure is as follows:
+1) You will need to build your plugin and store the plugin in a location that follows the Bluelink plugin directory structure. The plugin directory structure is as follows:
 ```
 ├── {plural(pluginType)}
 │   ├── {host}? - (only required if the plugin is a part of a private or alternative registry)
@@ -27,7 +27,7 @@ You can specify a version by replacing `latest` with the desired version tag.
 │   │   │   │    │   ├── plugin
 ```
 
-For example (a plugin for the official Celerity registry):
+For example (a plugin for the official Bluelink registry):
 ```
 ├── providers
 │   ├── newstack-cloud
@@ -52,21 +52,21 @@ Or a plugin for a private registry:
 
 ```bash
 # This is a place for the tool to store logs that collect that stdout and stderr output from the plugin.
-export CELERITY_PLUGIN_DOCGEN_PLUGIN_LOG_FILE_ROOT_DIR="/path/for/plugin/logs"
+export BLUELINK_PLUGIN_DOCGEN_PLUGIN_LOG_FILE_ROOT_DIR="/path/for/plugin/logs"
 # The absolute path to the directory from step 2.
-export CELERITY_DEPLOY_ENGINE_PLUGIN_PATH="/path/to/my/plugin/root"
-celerity-plugin-docgen -plugin={plugin}
+export BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH="/path/to/my/plugin/root"
+bluelink-plugin-docgen -plugin={plugin}
 ```
 
 Replace `{plugin}` with the unique ID of your plugin. (e.g. `newstack-cloud/aws`)
 
-4) If the tool was successful, it will generate a `docs.json` file in the current working directory. This should then be published as a part of the release workflow so it can be used by a registry (e.g. the official Celerity Registry) to render HTML documentation.
+4) If the tool was successful, it will generate a `docs.json` file in the current working directory. This should then be published as a part of the release workflow so it can be used by a registry (e.g. the official Bluelink Registry) to render HTML documentation.
 
 ## Environment Configuration
 
 ### Plugin Path
 
-`CELERITY_DEPLOY_ENGINE_PLUGIN_PATH`
+`BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH`
 
 **_required_**
 
@@ -75,7 +75,7 @@ See [Usage](#usage) for more details on preparing the directory structure.
 
 ### Log File Root Directory
 
-`CELERITY_PLUGIN_DOCGEN_PLUGIN_LOG_FILE_ROOT_DIR`
+`BLUELINK_PLUGIN_DOCGEN_PLUGIN_LOG_FILE_ROOT_DIR`
 
 **_required_**
 
@@ -83,7 +83,7 @@ The absolute path to the directory where the tool will store logs that collect t
 
 ### Plugin Launch Timeout
 
-`CELERITY_PLUGIN_DOCGEN_PLUGIN_LAUNCH_WAIT_TIMEOUT_MS`
+`BLUELINK_PLUGIN_DOCGEN_PLUGIN_LAUNCH_WAIT_TIMEOUT_MS`
 
 **_optional_**
 
@@ -93,7 +93,7 @@ The amount of time in milliseconds that the tool will wait for plugins to launch
 
 ### Generate Docs Timeout
 
-`CELERITY_PLUGIN_DOCGEN_GENERATE_TIMEOUT_MS`
+`BLUELINK_PLUGIN_DOCGEN_GENERATE_TIMEOUT_MS`
 
 **_optional_**
 
@@ -103,7 +103,7 @@ The amount of time in milliseconds that the tool will wait for the plugin to gen
 
 ### Logging Level
 
-`CELERITY_PLUGIN_DOCGEN_LOG_LEVEL`
+`BLUELINK_PLUGIN_DOCGEN_LOG_LEVEL`
 
 **_optional_**
 

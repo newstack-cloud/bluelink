@@ -1,8 +1,8 @@
 package testsuites
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/tools/plugin-docgen/internal/docgen"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/tools/plugin-docgen/internal/docgen"
 	"github.com/stretchr/testify/suite"
 )
 

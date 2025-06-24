@@ -6,12 +6,12 @@ import (
 	"log"
 	"os"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/transform"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/plugin"
-	"github.com/newstack-cloud/celerity/tools/plugin-docgen/internal/docgen"
-	"github.com/newstack-cloud/celerity/tools/plugin-docgen/internal/env"
-	"github.com/newstack-cloud/celerity/tools/plugin-docgen/internal/host"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/plugin"
+	"github.com/newstack-cloud/bluelink/tools/plugin-docgen/internal/docgen"
+	"github.com/newstack-cloud/bluelink/tools/plugin-docgen/internal/env"
+	"github.com/newstack-cloud/bluelink/tools/plugin-docgen/internal/host"
 	"github.com/spf13/afero"
 )
 
