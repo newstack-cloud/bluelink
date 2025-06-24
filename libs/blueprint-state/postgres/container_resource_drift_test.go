@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/internal"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/state"
-	"github.com/newstack-cloud/celerity/libs/common/testhelpers"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/libs/common/testhelpers"
 	"github.com/stretchr/testify/suite"
 )
 

@@ -7,8 +7,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/idutils"
-	"github.com/newstack-cloud/celerity/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/idutils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
 type linksContainerImpl struct {

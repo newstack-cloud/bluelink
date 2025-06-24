@@ -4,7 +4,7 @@
     "instanceId": "46324ee7-b515-4988-98b0-d5445746a997",
     "destroy": true,
     "status": "STARTING",
-    "blueprintLocation": "s3://celerity-test/project1/project.blueprint.yml",
+    "blueprintLocation": "s3://bluelink-test/project1/project.blueprint.yml",
     "changes": {
       "removedResources": ["resource-a", "resource-b", "resource-c"],
       "removedLinks": ["resource-a::resource-c"],
@@ -17,7 +17,7 @@
     "instanceId": "46324ee7-b515-4988-98b0-d5445746a997",
     "destroy": true,
     "status": "CHANGES_STAGED",
-    "blueprintLocation": "s3://celerity-test/project1/project.blueprint.yml",
+    "blueprintLocation": "s3://bluelink-test/project1/project.blueprint.yml",
     "changes": {
       "removedResources": ["resource-1", "resource-2", "resource-3"],
       "removedLinks": ["resource-1::resource-3"],
@@ -30,7 +30,7 @@
     "instanceId": "46324ee7-b515-4988-98b0-d5445746a997",
     "destroy": true,
     "status": "CHANGES_STAGED",
-    "blueprintLocation": "s3://celerity-test/project1/cleanup-before-310320251000.blueprint.yml",
+    "blueprintLocation": "s3://bluelink-test/project1/cleanup-before-310320251000.blueprint.yml",
     "changes": {
       "removedResources": ["resource-1", "resource-2", "resource-3"],
       "removedLinks": ["resource-1::resource-3"],
@@ -43,7 +43,7 @@
     "instanceId": "46324ee7-b515-4988-98b0-d5445746a997",
     "destroy": true,
     "status": "CHANGES_STAGED",
-    "blueprintLocation": "s3://celerity-test/project1/cleanup-before-310320251000.blueprint.yml",
+    "blueprintLocation": "s3://bluelink-test/project1/cleanup-before-310320251000.blueprint.yml",
     "changes": {
       "removedResources": ["resource-1", "resource-2", "resource-3"],
       "removedLinks": ["resource-1::resource-3"],
@@ -56,7 +56,7 @@
     "instanceId": "46324ee7-b515-4988-98b0-d5445746a997",
     "destroy": true,
     "status": "CHANGES_STAGED",
-    "blueprintLocation": "s3://celerity-test/project1/cleanup-before-310320251000.blueprint.yml",
+    "blueprintLocation": "s3://bluelink-test/project1/cleanup-before-310320251000.blueprint.yml",
     "changes": {
       "removedResources": ["resource-1", "resource-2", "resource-3"],
       "removedLinks": ["resource-1::resource-3"],
@@ -69,7 +69,7 @@
     "instanceId": "46324ee7-b515-4988-98b0-d5445746a997",
     "destroy": true,
     "status": "CHANGES_STAGED",
-    "blueprintLocation": "s3://celerity-test/project1/cleanup-before-310320251000.blueprint.yml",
+    "blueprintLocation": "s3://bluelink-test/project1/cleanup-before-310320251000.blueprint.yml",
     "changes": {
       "removedResources": ["resource-1", "resource-2", "resource-3"],
       "removedLinks": ["resource-1::resource-3"],

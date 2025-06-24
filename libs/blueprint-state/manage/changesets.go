@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/changes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 )
 
 // Changesets is an interface that represents a service that manages

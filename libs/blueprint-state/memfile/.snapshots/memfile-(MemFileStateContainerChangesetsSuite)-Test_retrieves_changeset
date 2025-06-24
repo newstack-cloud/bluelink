@@ -3,7 +3,7 @@
   InstanceID: (string) (len=36) "46324ee7-b515-4988-98b0-d5445746a997",
   Destroy: (bool) true,
   Status: (manage.ChangesetStatus) (len=14) "CHANGES_STAGED",
-  BlueprintLocation: (string) (len=69) "s3://celerity-test/project1/cleanup-before-310320251000.blueprint.yml",
+  BlueprintLocation: (string) (len=69) "s3://bluelink-test/project1/cleanup-before-310320251000.blueprint.yml",
   Changes: (*changes.BlueprintChanges)({
     NewResources: (map[string]provider.Changes) <nil>,
     ResourceChanges: (map[string]provider.Changes) <nil>,

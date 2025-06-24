@@ -1,4 +1,4 @@
-module github.com/newstack-cloud/celerity/libs/blueprint-state
+module github.com/newstack-cloud/bluelink/libs/blueprint-state
 
 go 1.23
 
@@ -7,8 +7,8 @@ toolchain go1.24.4
 require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.2
-	github.com/newstack-cloud/celerity/libs/blueprint v0.17.1
-	github.com/newstack-cloud/celerity/libs/common v0.3.1
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.24.1
+	github.com/newstack-cloud/bluelink/libs/common v0.3.2
 	github.com/spf13/afero v1.11.0
 	github.com/stretchr/testify v1.10.0
 )

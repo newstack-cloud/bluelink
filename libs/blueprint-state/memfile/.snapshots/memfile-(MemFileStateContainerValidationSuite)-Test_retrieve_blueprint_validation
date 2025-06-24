@@ -1,6 +1,6 @@
 (*manage.BlueprintValidation)({
   ID: (string) (len=36) "96e38b14-2316-4614-9684-8384b4a0db11",
   Status: (manage.BlueprintValidationStatus) (len=9) "VALIDATED",
-  BlueprintLocation: (string) (len=49) "s3://celerity-test/project1/project.blueprint.yml",
+  BlueprintLocation: (string) (len=49) "s3://bluelink-test/project1/project.blueprint.yml",
   Created: (int64) 1745496983
 })

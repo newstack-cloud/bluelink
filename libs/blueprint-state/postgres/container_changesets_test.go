@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/internal"
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/manage"
-	"github.com/newstack-cloud/celerity/libs/blueprint/changes"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -148,7 +148,7 @@ var expectedExistingChangeSet = &manage.Changeset{
 	InstanceID:        "46324ee7-b515-4988-98b0-d5445746a997",
 	Destroy:           true,
 	Status:            manage.ChangesetStatusChangesStaged,
-	BlueprintLocation: "s3://celerity-test/project1/project.blueprint.yml",
+	BlueprintLocation: "s3://bluelink-test/project1/project.blueprint.yml",
 	Changes: &changes.BlueprintChanges{
 		RemovedResources: []string{
 			"resource-1",

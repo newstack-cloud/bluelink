@@ -1,8 +1,8 @@
 # blueprint state
 
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_celerity-blueprint-state&metric=coverage)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_celerity-blueprint-state)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_celerity-blueprint-state&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_celerity-blueprint-state)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_celerity-blueprint-state&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_celerity-blueprint-state)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_bluelink-blueprint-state&metric=coverage)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_bluelink-blueprint-state)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_bluelink-blueprint-state&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_bluelink-blueprint-state)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_bluelink-blueprint-state&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_bluelink-blueprint-state)
 
 A library that provides a collection of state container implementations to be used in the deploy engine or other applications built on top of the blueprint framework.
 These state containers implement the following interfaces:
@@ -39,10 +39,10 @@ import (
     "os"
 
     "github.com/jackc/pgx/v5/pgxpool"
-    "github.com/newstack-cloud/celerity/libs/blueprint/core"
-    "github.com/newstack-cloud/celerity/libs/blueprint/state"
-    "github.com/newstack-cloud/celerity/libs/blueprint-state/postgres"
-    "github.com/newstack-cloud/celerity/libs/blueprint/container"
+    "github.com/newstack-cloud/bluelink/libs/blueprint/core"
+    "github.com/newstack-cloud/bluelink/libs/blueprint/state"
+    "github.com/newstack-cloud/bluelink/libs/blueprint-state/postgres"
+    "github.com/newstack-cloud/bluelink/libs/blueprint/container"
     "github.com/example-org/example-project/changes"
     "github.com/example-org/example-project/validation"
     "github.com/example-org/example-project/events"
@@ -105,10 +105,10 @@ package main
 
 import (
     "github.com/spf13/afero"
-    "github.com/newstack-cloud/celerity/libs/blueprint/core"
-    "github.com/newstack-cloud/celerity/libs/blueprint/state"
-    "github.com/newstack-cloud/celerity/libs/blueprint-state/memfile"
-    "github.com/newstack-cloud/celerity/libs/blueprint/container"
+    "github.com/newstack-cloud/bluelink/libs/blueprint/core"
+    "github.com/newstack-cloud/bluelink/libs/blueprint/state"
+    "github.com/newstack-cloud/bluelink/libs/blueprint-state/memfile"
+    "github.com/newstack-cloud/bluelink/libs/blueprint/container"
     "github.com/example-org/example-project/changes"
     "github.com/example-org/example-project/validation"
     "github.com/example-org/example-project/events"

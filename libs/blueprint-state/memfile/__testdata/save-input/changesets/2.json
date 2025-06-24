@@ -3,7 +3,7 @@
   "instanceId": "46324ee7-b515-4988-98b0-d5445746a997",
   "destroy": true,
   "status": "CHANGES_STAGED",
-  "blueprintLocation": "s3://celerity-test/project1/project.blueprint.yml",
+  "blueprintLocation": "s3://bluelink-test/project1/project.blueprint.yml",
   "changes": {
     "removedResources": [
       "resource-1",

@@ -6,7 +6,7 @@ import (
 	"path"
 	"slices"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/spf13/afero"
 )
 

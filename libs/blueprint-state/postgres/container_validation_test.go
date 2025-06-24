@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/internal"
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/manage"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -149,7 +149,7 @@ func (s *PostgresBlueprintValidationTestSuite) Test_cleans_up_old_blueprint_vali
 var expectedExistingBlueprintValidation = &manage.BlueprintValidation{
 	ID:                existingBlueprintValidationID,
 	Status:            manage.BlueprintValidationStatusValidated,
-	BlueprintLocation: "s3://celerity-test/project1/project.blueprint.yml",
+	BlueprintLocation: "s3://bluelink-test/project1/project.blueprint.yml",
 	Created:           1745496983,
 }
 

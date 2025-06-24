@@ -1,6 +1,6 @@
 {
   "id": "c0ae5782-28b8-4476-8fcc-02b718e39728",
   "status": "VALIDATED",
-  "blueprintLocation": "s3://celerity-test/project1/project.blueprint.yml",
+  "blueprintLocation": "s3://bluelink-test/project1/project.blueprint.yml",
   "created": 1745496983
 }

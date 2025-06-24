@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/spf13/afero"
 )
 

@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/manage"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/spf13/afero"
 )
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/spf13/afero"
 )
 

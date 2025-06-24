@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/stretchr/testify/suite"
 )
 

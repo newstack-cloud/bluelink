@@ -2,31 +2,31 @@
   {
     "id": "138a9325-b30b-4953-ac4e-5e049c5f3e8a",
     "status": "VALIDATED",
-    "blueprintLocation": "s3://celerity-test/project1/cleanup-before-310320251000.blueprint.yml",
+    "blueprintLocation": "s3://bluelink-test/project1/cleanup-before-310320251000.blueprint.yml",
     "created": 1743411600
   },
   {
     "id": "b20604cd-48a2-4bb8-b8fd-a46ea4e2c25f",
     "status": "VALIDATED",
-    "blueprintLocation": "s3://celerity-test/project1/cleanup-before-310320251000.blueprint.yml",
+    "blueprintLocation": "s3://bluelink-test/project1/cleanup-before-310320251000.blueprint.yml",
     "created": 1743411630
   },
   {
     "id": "caa1b4d4-5b52-4703-a6b0-6d067e98dcea",
     "status": "VALIDATED",
-    "blueprintLocation": "s3://celerity-test/project1/cleanup-before-310320251000.blueprint.yml",
+    "blueprintLocation": "s3://bluelink-test/project1/cleanup-before-310320251000.blueprint.yml",
     "created": 1743411730
   },
   {
     "id": "1d574b3d-5674-4643-9ebf-19bcdfc90128",
     "status": "VALIDATED",
-    "blueprintLocation": "s3://celerity-test/project1/cleanup-before-310320251000.blueprint.yml",
+    "blueprintLocation": "s3://bluelink-test/project1/cleanup-before-310320251000.blueprint.yml",
     "created": 1743411820
   },
   {
     "id": "96e38b14-2316-4614-9684-8384b4a0db11",
     "status": "VALIDATED",
-    "blueprintLocation": "s3://celerity-test/project1/project.blueprint.yml",
+    "blueprintLocation": "s3://bluelink-test/project1/project.blueprint.yml",
     "created": 1745496983
   }
 ]

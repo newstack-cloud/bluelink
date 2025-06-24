@@ -1,6 +1,6 @@
 package postgres
 
-import "github.com/newstack-cloud/celerity/libs/blueprint/state"
+import "github.com/newstack-cloud/bluelink/libs/blueprint/state"
 
 func resourceQuery() string {
 	return `SELECT json FROM resources_json WHERE id = @resourceId`
