@@ -68,7 +68,7 @@ Title: `Common - v0.2.0`
 3. Prompt Go to update its index of modules with the new release:
 
 ```bash
-GOPROXY=proxy.golang.org go list -m github.com/newstack-cloud/celerity/libs/common@v0.2.0
+GOPROXY=proxy.golang.org go list -m github.com/newstack-cloud/bluelink/libs/common@v0.2.0
 ```
 
 ## Commit scope

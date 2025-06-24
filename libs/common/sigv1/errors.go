@@ -126,5 +126,5 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	return fmt.Sprintf("celerity sigv1 error: %s", e.Message)
+	return fmt.Sprintf("bluelink sigv1 error: %s", e.Message)
 }

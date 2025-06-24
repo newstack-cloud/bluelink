@@ -32,8 +32,8 @@ func (s *SignatureV1Suite) Test_creates_signature_header() {
 	)
 	s.Require().NoError(err)
 
-	expectedSignatureHeader := "keyId=\"test-key-id\", headers=\"celerity-date x-custom-header\", " +
-		"signature=\"ppBsB6jEDm48SoYcXmfpu-IWshzWI5S8b_MmLDXFy_4\""
+	expectedSignatureHeader := "keyId=\"test-key-id\", headers=\"bluelink-date x-custom-header\", " +
+		"signature=\"v0FTyFsVEXJwi6DC9NNNo8axZ7N-v1l1ngkZN2k72xQ\""
 	s.Assert().Equal(expectedSignatureHeader, signatureHeader)
 }
 

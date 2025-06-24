@@ -1,4 +1,4 @@
-module github.com/newstack-cloud/celerity/libs/common
+module github.com/newstack-cloud/bluelink/libs/common
 
 go 1.22
 

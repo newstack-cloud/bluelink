@@ -9,16 +9,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/newstack-cloud/celerity/libs/common/core"
+	"github.com/newstack-cloud/bluelink/libs/common/core"
 )
 
 const (
 	// SignatureHeaderName is the name of the HTTP header used for
-	// Celerity Signature v1.
-	SignatureHeaderName = "Celerity-Signature-V1"
+	// Bluelink Signature v1.
+	SignatureHeaderName = "Bluelink-Signature-V1"
 	// DateHeaderName is the name of the HTTP header used to
 	// store the date as a UNIX timestamp in seconds.
-	DateHeaderName = "Celerity-Date"
+	DateHeaderName = "Bluelink-Date"
 	// DefaultClockSkew is the default clock skew in seconds
 	// used to determine if the request is within the
 	// acceptable time window.
@@ -26,14 +26,14 @@ const (
 )
 
 // VerifyOptions contains options for verifying a
-// Celerity Signature v1 signature.
+// Bluelink Signature v1 signature.
 type VerifyOptions struct {
 	// The maximum clock skew in seconds.
 	ClockSkew int
 }
 
 // VerifiySignature verifies a signature header with
-// [Celerity Signature v1](https://celerityframework.io/docs/auth/signature-v1).
+// [Bluelink Signature v1](https://bluelink.dev/docs/auth/signature-v1).
 // Returns nil if the signature is valid, or an error if
 // the signature is invalid or cannot be verified.
 //
@@ -79,14 +79,14 @@ func VerifySignature(
 
 // CreateSignatureHeader creates a signature header
 // value to be attached to a request for
-// [Celerity Signature v1](https://celerityframework.io/docs/auth/signature-v1).
+// [Bluelink Signature v1](https://bluelink.dev/docs/auth/signature-v1).
 // This functions will return the value of the signature header that should be set
-// in the `Celerity-Signature-V1` header of the request.
+// in the `Bluelink-Signature-V1` header of the request.
 //
-// The `Celerity-Date` header does not need to be set in the provided headers,
+// The `Bluelink-Date` header does not need to be set in the provided headers,
 // as it will be automatically added to the signature message using the provided
 // clock and inserted into the provided headers map.
-// The provided `http.Header` map will be modified to include the `Celerity-Date` header
+// The provided `http.Header` map will be modified to include the `Bluelink-Date` header
 // with the current date in seconds since the epoch if it is not already present.
 func CreateSignatureHeader(
 	keyPair *KeyPair,
