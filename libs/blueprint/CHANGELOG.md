@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.24.1] - 2025-06-24
+
+### Fixed
+
+- Corrects the go module path in the `go.mod` file to `github.com/newstack-cloud/bluelink/libs/blueprint` for all future releases.
+
 ## [0.24.0] - 2025-06-22
 
 ### Added
@@ -53,7 +59,7 @@ _Breaking changes will occur in early 0.x releases of this framework._
 
 ### Fixed
 
-- Corrects the go module path in the `go.mod` file to `github.com/newstack-cloud/celerity/libs/blueprint` for all future releases.
+- Corrects the go module path in the `go.mod` file to `github.com/newstack-cloud/bluelink/libs/blueprint` for all future releases.
 
 ## [0.17.0] - 2025-06-10
 
