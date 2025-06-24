@@ -3,17 +3,17 @@ services:
     image: postgres:17.3
     container_name: deploy_engine_test_postgres
     networks:
-      - celerity_deploy_engine_test_network
+      - bluelink_deploy_engine_test_network
     restart: always
     shm_size: 128mb
     environment:
-      POSTGRES_DB: ${CELERITY_DEPLOY_ENGINE_STATE_POSTGRES_DATABASE}
-      POSTGRES_PASSWORD: ${CELERITY_DEPLOY_ENGINE_STATE_POSTGRES_PASSWORD}
-      POSTGRES_USER: ${CELERITY_DEPLOY_ENGINE_STATE_POSTGRES_USER}
+      POSTGRES_DB: ${BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_DATABASE}
+      POSTGRES_PASSWORD: ${BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_PASSWORD}
+      POSTGRES_USER: ${BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_USER}
     ports:
       - 45433:5432
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d ${CELERITY_DEPLOY_ENGINE_STATE_POSTGRES_DATABASE} -U ${CELERITY_DEPLOY_ENGINE_STATE_POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg_isready -d ${BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_DATABASE} -U ${BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_USER}"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -23,13 +23,13 @@ services:
     image: migrate/migrate:v4.18.2
     container_name: deploy_engine_test_postgres_migrate
     networks:
-      - celerity_deploy_engine_test_network
+      - bluelink_deploy_engine_test_network
     command:
       [
         "-source",
         "file:///migrations",
         "-database",
-        "pgx5://${CELERITY_DEPLOY_ENGINE_STATE_POSTGRES_USER}:${CELERITY_DEPLOY_ENGINE_STATE_POSTGRES_PASSWORD}@deploy_engine_test_postgres:5432/${CELERITY_DEPLOY_ENGINE_STATE_POSTGRES_DATABASE}?sslmode=disable",
+        "pgx5://${BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_USER}:${BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_PASSWORD}@deploy_engine_test_postgres:5432/${BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_DATABASE}?sslmode=disable",
         "up",
       ]
     links:
@@ -41,5 +41,5 @@ services:
       - ./postgres/migrations:/migrations
 
 networks:
-  celerity_deploy_engine_test_network:
-    name: celerity_deploy_engine_test_network
+  bluelink_deploy_engine_test_network:
+    name: bluelink_deploy_engine_test_network

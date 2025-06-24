@@ -1,4 +1,4 @@
-# Contributing to the celerity deploy engine
+# Contributing to the bluelink deploy engine
 
 ## Getting set up
 

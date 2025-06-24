@@ -21,7 +21,7 @@ func (s *MiddlewareSuite) Test_calls_next_handler_for_request_that_passes_auth_c
 	s.Require().NoError(err)
 
 	req := httptest.NewRequest("GET", "/test", nil)
-	req.Header.Set(CelerityAPIKeyHeaderName, "checker-1-key")
+	req.Header.Set(BluelinkAPIKeyHeaderName, "checker-1-key")
 	w := httptest.NewRecorder()
 	middleware.Middleware(
 		http.HandlerFunc(
@@ -45,7 +45,7 @@ func (s *MiddlewareSuite) Test_returns_401_unauthorised_response_for_failed_auth
 	s.Require().NoError(err)
 
 	req := httptest.NewRequest("GET", "/test2", nil)
-	req.Header.Set(CelerityAPIKeyHeaderName, "invalid-key")
+	req.Header.Set(BluelinkAPIKeyHeaderName, "invalid-key")
 	w := httptest.NewRecorder()
 	middleware.Middleware(
 		http.HandlerFunc(

@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"slices"
 
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/core"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
 )
 
 const (
-	// CelerityAPIKeyHeaderName is the name of the header
+	// BluelinkAPIKeyHeaderName is the name of the header
 	// used to pass the API key for authentication.
-	CelerityAPIKeyHeaderName = "Celerity-Api-Key"
+	BluelinkAPIKeyHeaderName = "Bluelink-Api-Key"
 )
 
 type apiKeyService struct {
@@ -32,7 +32,7 @@ func NewAPIKeyService(config *core.AuthConfig) Checker {
 // It returns an error if the key is invalid,
 // or nil if it is valid.
 func (s *apiKeyService) Check(ctx context.Context, headers http.Header) error {
-	apiKey := headers.Get(CelerityAPIKeyHeaderName)
+	apiKey := headers.Get(BluelinkAPIKeyHeaderName)
 	if apiKey == "" {
 		return &Error{
 			ChildErr: errors.New("missing API key"),

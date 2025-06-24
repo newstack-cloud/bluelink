@@ -1,9 +1,9 @@
 package validationv1
 
 import (
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/resolve"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/types"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/types"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 // CreateValidationRequestPayload represents the payload

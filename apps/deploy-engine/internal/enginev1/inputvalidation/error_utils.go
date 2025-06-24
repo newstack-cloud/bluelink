@@ -8,7 +8,7 @@ import (
 	"unicode"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/newstack-cloud/celerity/libs/common/core"
+	"github.com/newstack-cloud/bluelink/libs/common/core"
 )
 
 // ValidationError is a struct that represents a validation error

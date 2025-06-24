@@ -1,6 +1,6 @@
 package types
 
-import "github.com/newstack-cloud/celerity/libs/blueprint/core"
+import "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 
 // BlueprintOperationConfig is the data type for configuration that can be provided
 // in HTTP requests for actions that are carried out for blueprints.

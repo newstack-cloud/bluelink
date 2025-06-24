@@ -2,7 +2,7 @@ package helpersv1
 
 import (
 	"github.com/go-playground/validator/v10"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/enginev1/inputvalidation"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/inputvalidation"
 )
 
 // ValidateRequestBody is the request body validator shared between

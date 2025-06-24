@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/types"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/utils"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/types"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 )
 
 // DefinitionProvider is an interface that defines any plugin

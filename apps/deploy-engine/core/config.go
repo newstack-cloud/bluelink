@@ -4,8 +4,8 @@ import (
 	"os"
 
 	"github.com/caarlos0/env/v11"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/providerserverv1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/transformerserverv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/providerserverv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/transformerserverv1"
 )
 
 // Config provides configuration for the deploy engine application.
@@ -13,7 +13,7 @@ import (
 type Config struct {
 	// The version of the deploy engine API to use.
 	// Defaults to "v1".
-	APIVersion string `env:"CELERITY_DEPLOY_ENGINE_API_VERSION" envDefault:"v1"`
+	APIVersion string `env:"BLUELINK_DEPLOY_ENGINE_API_VERSION" envDefault:"v1"`
 	// The current version of the deploy engine software.
 	// This will be set based on a value of a constant determined at build time.
 	Version string
@@ -38,24 +38,24 @@ type Config struct {
 	// The TCP port to listen on for incoming connections.
 	// This will be ignored if UseUnixSocket is set to true.
 	// Defaults to "8325".
-	Port int `env:"CELERITY_DEPLOY_ENGINE_PORT" envDefault:"8325"`
+	Port int `env:"BLUELINK_DEPLOY_ENGINE_PORT" envDefault:"8325"`
 	// Determines whether or not to use unix sockets for handling
 	// incoming connections instead of TCP.
 	// If set to true, the Port will be ignored and the UnixSocketPath
 	// will be used instead.
 	// Defaults to "false".
-	UseUnixSocket bool `env:"CELERITY_DEPLOY_ENGINE_USE_UNIX_SOCKET" envDefault:"false"`
+	UseUnixSocket bool `env:"BLUELINK_DEPLOY_ENGINE_USE_UNIX_SOCKET" envDefault:"false"`
 	// The path to the unix socket to listen on for incoming connections.
 	// This will be ignored if UseUnixSocket is set to false.
-	// Defaults to "/tmp/celerity.sock".
-	UnixSocketPath string `env:"CELERITY_DEPLOY_ENGINE_UNIX_SOCKET_PATH" envDefault:"/tmp/celerity.sock"`
+	// Defaults to "/tmp/bluelink.sock".
+	UnixSocketPath string `env:"BLUELINK_DEPLOY_ENGINE_UNIX_SOCKET_PATH" envDefault:"/tmp/bluelink.sock"`
 	// LoopbackOnly determines whether or not to restrict the server
 	// to only accept connections from the loopback interface.
 	// Defaults to "true" for a more secure default.
 	// This should be intentionally set to false for deployments
 	// of the deploy engine that are intended to be accessible
 	// over a private network or the public internet.
-	LoopbackOnly bool `env:"CELERITY_DEPLOY_ENGINE_LOOPBACK_ONLY" envDefault:"true"`
+	LoopbackOnly bool `env:"BLUELINK_DEPLOY_ENGINE_LOOPBACK_ONLY" envDefault:"true"`
 	// Environment determines whether the deploy engine is running
 	// in a production or development environment.
 	// This is used to determine things like the formatting of logs,
@@ -63,33 +63,33 @@ type Config struct {
 	// while in production mode, logs are formatted purely in JSON for easier
 	// parsing and processing by log management systems.
 	// Defaults to "production".
-	Environment string `env:"CELERITY_DEPLOY_ENGINE_ENVIRONMENT" envDefault:"production"`
+	Environment string `env:"BLUELINK_DEPLOY_ENGINE_ENVIRONMENT" envDefault:"production"`
 	// LogLevel determines the level of logging to use for the deploy engine.
 	// Defaults to "info".
 	// Can be set to any of the logging levels supported by zap:
 	// debug, info, warn, error, dpanic, panic, fatal.
 	// See: https://pkg.go.dev/go.uber.org/zap#Level
-	LogLevel string `env:"CELERITY_DEPLOY_ENGINE_LOG_LEVEL" envDefault:"info"`
+	LogLevel string `env:"BLUELINK_DEPLOY_ENGINE_LOG_LEVEL" envDefault:"info"`
 	// Auth provides configuration for the way authentication
 	// should be handled by the deploy engine.
-	Auth AuthConfig `envPrefix:"CELERITY_DEPLOY_ENGINE_AUTH_"`
+	Auth AuthConfig `envPrefix:"BLUELINK_DEPLOY_ENGINE_AUTH_"`
 	// PluginsV1 provides configuration for the v1 plugin system
 	// implemented by the deploy engine.
 	PluginsV1 PluginsV1Config
 	// Blueprints provides configuration for the blueprint loader
 	// used by the deploy engine.
-	Blueprints BlueprintConfig `envPrefix:"CELERITY_DEPLOY_ENGINE_BLUEPRINTS_"`
+	Blueprints BlueprintConfig `envPrefix:"BLUELINK_DEPLOY_ENGINE_BLUEPRINTS_"`
 	// State provides configuration for the state management/persistence
 	// layer used by the deploy engine.
-	State StateConfig `envPrefix:"CELERITY_DEPLOY_ENGINE_STATE_"`
+	State StateConfig `envPrefix:"BLUELINK_DEPLOY_ENGINE_STATE_"`
 	// Resolvers provides configuration for the child blueprint resolvers
 	// used by the deploy engine.
-	Resolvers ResolversConfig `envPrefix:"CELERITY_DEPLOY_ENGINE_RESOLVERS_"`
+	Resolvers ResolversConfig `envPrefix:"BLUELINK_DEPLOY_ENGINE_RESOLVERS_"`
 	// Maintenance provides configuration for the maintenance
 	// of short-lived resources in the deploy engine.
 	// This is used for things like the retention periods for
 	// blueprint validations and change sets.
-	Maintenance MaintenanceConfig `envPrefix:"CELERITY_DEPLOY_ENGINE_MAINTENANCE_"`
+	Maintenance MaintenanceConfig `envPrefix:"BLUELINK_DEPLOY_ENGINE_MAINTENANCE_"`
 }
 
 func (p *Config) GetPluginPath() string {
@@ -121,34 +121,34 @@ func (p *Config) GetPluginToPluginCallTimeoutMS() int {
 type PluginsV1Config struct {
 	// PluginPath is the path to one or more plugin root directories
 	// separated by colons.
-	// Defaults to $HOME/.celerity/deploy-engine/plugins/bin,
+	// Defaults to $HOME/.bluelink/deploy-engine/plugins/bin,
 	// where $HOME will be expanded to the current user's home directory.
-	PluginPath string `env:"CELERITY_DEPLOY_ENGINE_PLUGIN_PATH" envDefault:"$HOME/.celerity/deploy-engine/plugins/bin"`
+	PluginPath string `env:"BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH" envDefault:"$HOME/.bluelink/deploy-engine/plugins/bin"`
 	// LogFileRootDir is the path to a single root directory used to store
 	// logs for all plugins. stdout and stderr for each plugin
 	// will be redirected to log files under this directory.
-	// Defaults to $HOME/.celerity/deploy-engine/plugins/logs,
+	// Defaults to $HOME/.bluelink/deploy-engine/plugins/logs,
 	// where $HOME will be expanded to the current user's home directory.
-	LogFileRootDir string `env:"CELERITY_DEPLOY_ENGINE_PLUGIN_LOG_FILE_ROOT_DIR" envDefault:"$HOME/.celerity/deploy-engine/plugins/logs"`
+	LogFileRootDir string `env:"BLUELINK_DEPLOY_ENGINE_PLUGIN_LOG_FILE_ROOT_DIR" envDefault:"$HOME/.bluelink/deploy-engine/plugins/logs"`
 	// LaunchWaitTimeoutMS is the timeout in milliseconds
 	// to wait for a plugin to register with the host.
 	// This is used when the plugin host is started and
 	// a plugin is expected to register with the host.
 	// Defaults to 15,000ms (15 seconds)
-	LaunchWaitTimeoutMS int `env:"CELERITY_DEPLOY_ENGINE_PLUGIN_LAUNCH_WAIT_TIMEOUT_MS" envDefault:"15000"`
+	LaunchWaitTimeoutMS int `env:"BLUELINK_DEPLOY_ENGINE_PLUGIN_LAUNCH_WAIT_TIMEOUT_MS" envDefault:"15000"`
 	// TotalLaunchWaitTimeoutMS is the timeout in milliseconds
 	// to wait for all plugins to register with the host.
 	// This is used when the plugin host is started and
 	// all plugins are expected to register with the host.
 	// Defaults to 60,000ms (1 minute)
-	TotalLaunchWaitTimeoutMS int `env:"CELERITY_DEPLOY_ENGINE_PLUGIN_TOTAL_LAUNCH_WAIT_TIMEOUT_MS" envDefault:"60000"`
+	TotalLaunchWaitTimeoutMS int `env:"BLUELINK_DEPLOY_ENGINE_PLUGIN_TOTAL_LAUNCH_WAIT_TIMEOUT_MS" envDefault:"60000"`
 	// ResourceStabilisationPollingTimeoutMS is the timeout in milliseconds
 	// to wait for a resource to stabilise when calls are made
 	// into the resource registry through the plugin service.
 	// This same timeout is used for configuring the blueprint loader and
 	// plugin host.
 	// Defaults to 3,600,000ms (1 hour)
-	ResourceStabilisationPollingTimeoutMS int `env:"CELERITY_DEPLOY_ENGINE_RESOURCE_STABILISATION_POLLING_TIMEOUT_MS" envDefault:"36000000"`
+	ResourceStabilisationPollingTimeoutMS int `env:"BLUELINK_DEPLOY_ENGINE_RESOURCE_STABILISATION_POLLING_TIMEOUT_MS" envDefault:"36000000"`
 	// PluginToPluginCallTimeoutMS is the timeout in milliseconds
 	// to wait for a plugin to respond to a call initiated by another
 	// or the same plugin through the plugin service.
@@ -156,7 +156,7 @@ type PluginsV1Config struct {
 	// a resource to stabilise when calls are made into the resource registry
 	// through the plugin service.
 	// Defaults to 120,000ms (2 minutes)
-	PluginToPluginCallTimeoutMS int `env:"CELERITY_DEPLOY_ENGINE_PLUGIN_TO_PLUGIN_CALL_TIMEOUT_MS" envDefault:"120000"`
+	PluginToPluginCallTimeoutMS int `env:"BLUELINK_DEPLOY_ENGINE_PLUGIN_TO_PLUGIN_CALL_TIMEOUT_MS" envDefault:"120000"`
 }
 
 // BlueprintConfig provides configuration for the blueprint loader
@@ -221,7 +221,7 @@ type StateConfig struct {
 	RecentlyQueuedEventsThreshold int64 `env:"RECENTLY_QUEUED_EVENTS_THRESHOLD" envDefault:"300"`
 	// The directory to use for persisting state files
 	// when using the in-memory storage with file system (memfile) persistence engine.
-	MemFileStateDir string `env:"MEMFILE_STATE_DIR" envDefault:"$HOME/.celerity/deploy-engine/state"`
+	MemFileStateDir string `env:"MEMFILE_STATE_DIR" envDefault:"$HOME/.bluelink/deploy-engine/state"`
 	// Sets the guide for the maximum size of a state chunk file in bytes
 	// when using the in-memory storage with file system (memfile) persistence engine.
 	// If a single record (instance or resource drift entry) exceeds this size,
@@ -329,14 +329,14 @@ type AuthConfig struct {
 	// Defaults to "HS256".
 	JWTSignatureAlgorithm string `env:"OAUTH2_OIDC_JWT_SIGNATURE_ALGORITHM" envDefault:"HS256"`
 	// A map of key pairs to be used to verify (public key id -> secret key)
-	// the contents of the Celerity-Signature-V1 header.
+	// the contents of the Bluelink-Signature-V1 header.
 	// This is checked after the JWT token but before the API key
 	// authentication method.
-	CeleritySigV1KeyPairs map[string]string `env:"CELERITY_SIGNATURE_V1_KEY_PAIRS"`
+	BluelinkSigV1KeyPairs map[string]string `env:"BLUELINK_SIGNATURE_V1_KEY_PAIRS"`
 	// A list of API keys to be used to authenticate with the deploy engine.
 	// This is checked last and will be used if the `Authorization` and
-	// `Celerity-Signature-V1` headers are not present.
-	APIKeys []string `env:"CELERITY_API_KEYS"`
+	// `Bluelink-Signature-V1` headers are not present.
+	APIKeys []string `env:"BLUELINK_API_KEYS"`
 }
 
 // MaintenanceConfig provides configuration for the maintenance

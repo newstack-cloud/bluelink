@@ -3,13 +3,13 @@ package deploymentsv1
 import (
 	"net/http"
 
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/enginev1/typesv1"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/httputils"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/utils"
-	"github.com/newstack-cloud/celerity/libs/blueprint/changes"
-	"github.com/newstack-cloud/celerity/libs/blueprint/container"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
 func createChangeStagingChannels() *container.ChangeStagingChannels {

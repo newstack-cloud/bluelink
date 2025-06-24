@@ -9,17 +9,17 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/enginev1/helpersv1"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/enginev1/inputvalidation"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/httputils"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/resolve"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/utils"
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/manage"
-	"github.com/newstack-cloud/celerity/libs/blueprint/container"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/includes"
-	"github.com/newstack-cloud/celerity/libs/blueprint/schema"
-	"github.com/newstack-cloud/celerity/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/inputvalidation"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/includes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
 // CreateBlueprintInstanceHandler is the handler for the POST /deployments/instances

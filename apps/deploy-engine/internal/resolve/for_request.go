@@ -4,10 +4,10 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/blueprint"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/httputils"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/includes"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/blueprint"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/includes"
 )
 
 // ResolveBlueprintForRequest resolves a blueprint for a HTTP request.

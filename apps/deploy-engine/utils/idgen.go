@@ -2,7 +2,7 @@ package utils
 
 import (
 	"github.com/google/uuid"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 type uuidv7Generator struct{}

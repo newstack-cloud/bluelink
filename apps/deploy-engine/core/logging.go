@@ -3,7 +3,7 @@ package core
 import (
 	"os"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

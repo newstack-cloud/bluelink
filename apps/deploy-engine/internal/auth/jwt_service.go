@@ -14,7 +14,7 @@ import (
 	"github.com/auth0/go-jwt-middleware/v2/jwks"
 	"github.com/auth0/go-jwt-middleware/v2/validator"
 
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/core"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
 )
 
 type jwtService struct {
@@ -84,7 +84,7 @@ func setupJWKSProvider(config *core.AuthConfig) (JWKSProvider, error) {
 	opts := []any{}
 	// Handle the case where the issuer is an OAuth2 authorization server
 	// but not an OIDC provider.
-	// As per the authentication spec for Celerity components,
+	// As per the authentication spec for Bluelink components,
 	// OAuth2 servers with a well-known endpoint need to be supported
 	// as well as OIDC providers.
 	oauthMetadata, err := getOAuthAuthzServerMetadata(config)

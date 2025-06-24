@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/gorilla/mux"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/core"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
 )
 
 // SetupFunc is a function that is used to set up

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # This script pulls whatever db migrations are in the blueprint state library
-# for the current branch or tag that is checked out for the celerity monorepo,
+# for the current branch or tag that is checked out for the bluelink monorepo,
 # this may not be the same as a released version of the library that is reported
 # to have issues.
 # For debugging purposes, it will often require manually copying the migration

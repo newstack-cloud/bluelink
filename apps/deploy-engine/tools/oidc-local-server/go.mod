@@ -1,4 +1,4 @@
-module github.com/newstack-cloud/celerity/apps/deploy-engine/tools/oidc-local-server
+module github.com/newstack-cloud/bluelink/apps/deploy-engine/tools/oidc-local-server
 
 go 1.23.4
 

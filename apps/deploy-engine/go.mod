@@ -1,4 +1,4 @@
-module github.com/newstack-cloud/celerity/apps/deploy-engine
+module github.com/newstack-cloud/bluelink/apps/deploy-engine
 
 go 1.23.4
 
@@ -10,11 +10,11 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/lestrrat-go/jwx v1.2.31
-	github.com/newstack-cloud/celerity/libs/blueprint v0.17.1
-	github.com/newstack-cloud/celerity/libs/blueprint-resolvers v0.0.0-20250610155814-a57a0f8e32c9
-	github.com/newstack-cloud/celerity/libs/blueprint-state v0.2.5
-	github.com/newstack-cloud/celerity/libs/common v0.3.1
-	github.com/newstack-cloud/celerity/libs/plugin-framework v0.0.0-20250610155814-a57a0f8e32c9
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.24.1
+	github.com/newstack-cloud/bluelink/libs/blueprint-resolvers v0.0.0-20250624125550-4f0bdd0374f6
+	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.2.6
+	github.com/newstack-cloud/bluelink/libs/common v0.3.2
+	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.0.0-20250624125550-4f0bdd0374f6
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/spf13/afero v1.11.0
 	github.com/stretchr/testify v1.10.0

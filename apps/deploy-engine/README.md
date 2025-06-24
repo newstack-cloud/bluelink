@@ -1,11 +1,10 @@
-# Celerity Deploy Engine
+# Bluelink Deploy Engine
 
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_celerity-deploy-engine&metric=coverage)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_celerity-deploy-engine)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_celerity-deploy-engine&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_celerity-deploy-engine)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_celerity-deploy-engine&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_celerity-deploy-engine)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_bluelink-deploy-engine&metric=coverage)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_bluelink-deploy-engine)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_bluelink-deploy-engine&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_bluelink-deploy-engine)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_bluelink-deploy-engine&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_bluelink-deploy-engine)
 
-The engine that validates and deploys blueprints for applications
-created with the Celerity framework in addition to more general infrastruture as code deployments.
+The engine that validates and deploys blueprints for infrastructure as code deployments.
 
 The deploy engine bundles the plugin framework's gRPC-based plugin system that allows for the creation of custom plugins for providers and transformers that can be pulled in at runtime.
 The deploy engine also bundles a limited set of state persistence implementations for blueprint instances, the persistence implementation can be chosen with configuration.
@@ -17,15 +16,15 @@ The deploy engine also bundles a limited set of state persistence implementation
 
 ## Installing
 
-The Deploy Engine is available for installation as a part of the standard Celerity installation.
-See the [installing Celerity documentation](https://celerityframework.io/docs/intro/installing-celerity) for more information.
+The Deploy Engine is available for installation as a part of the standard Bluelink installation.
+See the [installing Bluelink documentation](https://bluelink.dev/docs/intro/installing-bluelink) for more information.
 
 ### Docker
 
 You can also run the Deploy Engine as a Docker container using the public Docker image.
 
 ```bash
-docker pull ghcr.io/newstack-cloud/celerity-deploy-engine:latest
+docker pull ghcr.io/newstack-cloud/bluelink-deploy-engine:latest
 ```
 
 ## Configuration
@@ -46,7 +45,7 @@ Core configuration for the Deploy Engine server.
 
 #### Version
 
-`CELERITY_DEPLOY_ENGINE_API_VERSION`
+`BLUELINK_DEPLOY_ENGINE_API_VERSION`
 
 _**optional**_
 
@@ -58,7 +57,7 @@ For the current implementation of the deploy engine, only `v1` is supported.
 
 #### Port
 
-`CELERITY_DEPLOY_ENGINE_PORT`
+`BLUELINK_DEPLOY_ENGINE_PORT`
 
 _**optional**_
 
@@ -68,28 +67,28 @@ The port that the deploy engine will listen on for incoming requests. This is us
 
 #### Use Unix Socket?
 
-`CELERITY_DEPLOY_ENGINE_USE_UNIX_SOCKET`
+`BLUELINK_DEPLOY_ENGINE_USE_UNIX_SOCKET`
 
 _**optional**_
 
-If set to `true`, the deploy engine will use a Unix socket instead of a TCP socket. This is used to configure the HTTP server and should only be used when the deploy engine is running on a local machine where deployments and Celerity applications are managed with local state.
+If set to `true`, the deploy engine will use a Unix socket instead of a TCP socket. This is used to configure the HTTP server and should only be used when the deploy engine is running on a local machine where deployments and Bluelink applications are managed with local state.
 
 **default value:** `false`
 
 #### Unix Socket Path
 
-`CELERITY_DEPLOY_ENGINE_UNIX_SOCKET_PATH`
+`BLUELINK_DEPLOY_ENGINE_UNIX_SOCKET_PATH`
 
 _**optional**_
 
-The path to the Unix socket that the deploy engine will listen on for incoming requests. This is used to configure the HTTP server and should only be used when the deploy engine is running on a local machine where deployments and Celerity applications are managed with local state.
-This will only be used if `CELERITY_DEPLOY_ENGINE_USE_UNIX_SOCKET` is set to `true`.
+The path to the Unix socket that the deploy engine will listen on for incoming requests. This is used to configure the HTTP server and should only be used when the deploy engine is running on a local machine where deployments and Bluelink applications are managed with local state.
+This will only be used if `BLUELINK_DEPLOY_ENGINE_USE_UNIX_SOCKET` is set to `true`.
 
-**default value:** `/tmp/celerity.sock`
+**default value:** `/tmp/bluelink.sock`
 
 #### Loopback Interface Only
 
-`CELERITY_DEPLOY_ENGINE_LOOPBACK_ONLY`
+`BLUELINK_DEPLOY_ENGINE_LOOPBACK_ONLY`
 
 _**optional**_
 
@@ -102,7 +101,7 @@ This needs to be intentionally set to `false` to allow access over a wider priva
 
 #### Environment
 
-`CELERITY_DEPLOY_ENGINE_ENVIRONMENT`
+`BLUELINK_DEPLOY_ENGINE_ENVIRONMENT`
 
 _**optional**_
 
@@ -114,7 +113,7 @@ This can be set to `development` or `production`.
 
 #### Log Level
 
-`CELERITY_DEPLOY_ENGINE_LOG_LEVEL`
+`BLUELINK_DEPLOY_ENGINE_LOG_LEVEL`
 
 _**optional**_
 
@@ -131,24 +130,24 @@ Configuration for the authentication methods that the deploy engine will use to 
 
 #### OAuth2/OIDC JWT Issuer
 
-`CELERITY_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_ISSUER`
+`BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_ISSUER`
 
 _**required, if JWT authentication will be used**_
 
 The issuer URL of an OAuth2/OIDC JWT token that can be used to authenticate with the deploy engine. This is used to verify the JWT token provided with the bearer scheme in the `Authorization` header of all requests.
 There can only be one issuer configured for an instance of the deploy engine.
-This will be checked before the Celerity signature and API key authentication methods.
+This will be checked before the Bluelink signature and API key authentication methods.
 
-See the [JWTs](https://celerityframework.io/docs/auth/jwts) documentation for more information on the requirements for the issuer.
+See the [JWTs](https://bluelink.dev/docs/auth/jwts) documentation for more information on the requirements for the issuer.
 
 **Example:**
 ```
-CELERITY_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_ISSUER=oauth.example.com
+BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_ISSUER=oauth.example.com
 ```
 
 #### OAuth2/OIDC JWT Issuer Secure
 
-`CELERITY_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_ISSUER_SECURE`
+`BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_ISSUER_SECURE`
 
 _**optional**_
 
@@ -160,22 +159,22 @@ This should be set to `true` for production deployments and `false` for local de
 
 #### OAuth2/OIDC JWT Audience
 
-`CELERITY_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_AUDIENCE`
+`BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_AUDIENCE`
 
 _**required, if JWT authentication will be used**_
 
 The audience of the OAuth2/OIDC JWT token that can be used to authenticate with the deploy engine. This is used to verify the JWT token provided with the bearer scheme in the `Authorization` header of all requests.
 
-See the [JWTs](https://celerityframework.io/docs/auth/jwts) documentation for more information on the requirements for the audience.
+See the [JWTs](https://bluelink.dev/docs/auth/jwts) documentation for more information on the requirements for the audience.
 
 **Example:**
 ```
-CELERITY_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_AUDIENCE=deploy-engine-app-client-id
+BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_AUDIENCE=deploy-engine-app-client-id
 ```
 
 ### OAuth2/OIDC JWT Signing Algorithm
 
-`CELERITY_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_SIGNATURE_ALGORITHM`
+`BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_SIGNATURE_ALGORITHM`
 
 _**optional**_
 
@@ -199,37 +198,37 @@ This can be set to any of the following signing algorithms:
 
 **default value:** `HS256`
 
-#### Celerity Signature v1 Key Pairs
+#### Bluelink Signature v1 Key Pairs
 
-`CELERITY_DEPLOY_ENGINE_AUTH_CELERITY_SIGNATURE_V1_KEY_PAIRS`
+`BLUELINK_DEPLOY_ENGINE_AUTH_BLUELINK_SIGNATURE_V1_KEY_PAIRS`
 
-_**required, if Celerity Signature v1 authentication will be used**_
+_**required, if Bluelink Signature v1 authentication will be used**_
 
-A comma-separated list of Celerity signature key pairs that can be used to authenticate with the deploy engine. This is used to verify the Celerity signature provided in the `Celerity-Signature-V1` header of all requests.
+A comma-separated list of Bluelink signature key pairs that can be used to authenticate with the deploy engine. This is used to verify the Bluelink signature provided in the `Bluelink-Signature-V1` header of all requests.
 
 The key pairs are in the format `keyId:secretKey`, where the public key is used to verify the signature and the private key is used to sign the request.
 
-The deploy engine will check the `Celerity-Signature-V1` header of all requests.
+The deploy engine will check the `Bluelink-Signature-V1` header of all requests.
 This will be checked after the OAuth2/OIDC JWT bearer token authentication method and before the API key authentication method.
 
 **Example:**
 ```
-CELERITY_DEPLOY_ENGINE_AUTH_CELERITY_SIGNATURE_V1_KEY_PAIRS=keyId1:secretKey1,keyId2:secretKey2
+BLUELINK_DEPLOY_ENGINE_AUTH_BLUELINK_SIGNATURE_V1_KEY_PAIRS=keyId1:secretKey1,keyId2:secretKey2
 ```
 
 #### API Keys
 
-`CELERITY_DEPLOY_ENGINE_AUTH_API_KEYS`
+`BLUELINK_DEPLOY_ENGINE_AUTH_API_KEYS`
 
 _**required, if API key authentication will be used**_
 
 A comma-separated list of API keys that are allowed to access the deploy engine. This is used to authenticate all requests to the deploy engine.
-The deploy engine will check the `Celerity-Api-Key` header of all requests.
-This will be checked after the JWT bearer token and Celerity signature authentication methods.
+The deploy engine will check the `Bluelink-Api-Key` header of all requests.
+This will be checked after the JWT bearer token and Bluelink signature authentication methods.
 
 **Example:**
 ```
-CELERITY_DEPLOY_ENGINE_AUTH_API_KEYS=key1,key2,key3
+BLUELINK_DEPLOY_ENGINE_AUTH_API_KEYS=key1,key2,key3
 ```
 
 ### Plugins
@@ -238,29 +237,29 @@ Configuration for the plugin host used to manage and interact with plugins for p
 
 #### Plugin Path
 
-`CELERITY_DEPLOY_ENGINE_PLUGIN_PATH`
+`BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH`
 
 _**optional**_
 
 The path to one or more plugin root directories separated by colons.
-This environment variable, generally should be set globally when installed on developer machine as is used by multiple components of the Celerity framework.
+This environment variable, generally should be set globally when installed on developer machine as is used by multiple components of the Bluelink framework.
 
-**default value:** `$HOME/.celerity/deploy-engine/plugins/bin`
+**default value:** `$HOME/.bluelink/deploy-engine/plugins/bin`
 
 #### Plugin Log File Root Directory
 
-`CELERITY_DEPLOY_ENGINE_PLUGIN_LOG_FILE_ROOT_DIR`
+`BLUELINK_DEPLOY_ENGINE_PLUGIN_LOG_FILE_ROOT_DIR`
 
 _**optional**_
 
 The path to the root directory where plugin log files will be stored.
 stdout and stderr for each plugin will be redirected to log files under this directory.
 
-**default value:** `$HOME/.celerity/deploy-engine/plugins/logs`
+**default value:** `$HOME/.bluelink/deploy-engine/plugins/logs`
 
 #### Plugin Launch Timeout in Milliseconds
 
-`CELERITY_DEPLOY_ENGINE_PLUGIN_LAUNCH_WAIT_TIMEOUT_MS`
+`BLUELINK_DEPLOY_ENGINE_PLUGIN_LAUNCH_WAIT_TIMEOUT_MS`
 
 _**optional**_
 
@@ -271,7 +270,7 @@ This is used when the plugin host is started and a plugin is expected to registe
 
 #### Total Plugin Launch Timeout in Milliseconds
 
-`CELERITY_DEPLOY_ENGINE_PLUGIN_TOTAL_LAUNCH_WAIT_TIMEOUT_MS`
+`BLUELINK_DEPLOY_ENGINE_PLUGIN_TOTAL_LAUNCH_WAIT_TIMEOUT_MS`
 
 _**optional**_
 
@@ -282,7 +281,7 @@ This is used when the plugin host is started and all plugins are expected to reg
 
 #### Resource Stabilisation Polling Timeout in Milliseconds
 
-`CELERITY_DEPLOY_ENGINE_RESOURCE_STABILISATION_POLLING_TIMEOUT_MS`
+`BLUELINK_DEPLOY_ENGINE_RESOURCE_STABILISATION_POLLING_TIMEOUT_MS`
 
 _**optional**_
 
@@ -299,7 +298,7 @@ In the deploy engine, this will be used to wait for resources to stabilise befor
 
 #### Plugin to Plugin Call Timeout in Milliseconds
 
-`CELERITY_DEPLOY_ENGINE_PLUGIN_TO_PLUGIN_CALL_TIMEOUT_MS`
+`BLUELINK_DEPLOY_ENGINE_PLUGIN_TO_PLUGIN_CALL_TIMEOUT_MS`
 
 _**optional**_
 
@@ -316,7 +315,7 @@ Configuration for the blueprint loader/container used to load and manage bluepri
 
 #### Validate After Transform
 
-`CELERITY_DEPLOY_ENGINE_BLUEPRINTS_VALIDATE_AFTER_TRANSFORM`
+`BLUELINK_DEPLOY_ENGINE_BLUEPRINTS_VALIDATE_AFTER_TRANSFORM`
 
 _**optional**_
 
@@ -328,7 +327,7 @@ plugins producing invalid output.
 
 #### Enable Drift Checks
 
-`CELERITY_DEPLOY_ENGINE_BLUEPRINTS_ENABLE_DRIFT_CHECK`
+`BLUELINK_DEPLOY_ENGINE_BLUEPRINTS_ENABLE_DRIFT_CHECK`
 
 _**optional**_
 
@@ -340,7 +339,7 @@ Drift checks use the `GetExternalState` method of a resource implementation to c
 
 #### Resource Stabilisation Polling Interval in Milliseconds
 
-`CELERITY_DEPLOY_ENGINE_BLUEPRINTS_RESOURCE_STABILISATION_POLLING_INTERVAL_MS`
+`BLUELINK_DEPLOY_ENGINE_BLUEPRINTS_RESOURCE_STABILISATION_POLLING_INTERVAL_MS`
 
 _**optional**_
 
@@ -355,7 +354,7 @@ In the deploy engine, this will be used to wait for resources to stabilise befor
 
 #### Default Retry Policy
 
-`CELERITY_DEPLOY_ENGINE_BLUEPRINTS_DEFAULT_RETRY_POLICY`
+`BLUELINK_DEPLOY_ENGINE_BLUEPRINTS_DEFAULT_RETRY_POLICY`
 
 _**optional**_
 
@@ -381,7 +380,7 @@ The actual value in the environment variable will need to be in a single line an
 
 #### Deployment Timeout in Seconds
 
-`CELERITY_DEPLOY_ENGINE_BLUEPRINTS_DEPLOYMENT_TIMEOUT`
+`BLUELINK_DEPLOY_ENGINE_BLUEPRINTS_DEPLOYMENT_TIMEOUT`
 
 _**optional**_
 
@@ -396,7 +395,7 @@ Configuration for the state management/persistence layer used by the deploy engi
 
 #### Storage Engine
 
-`CELERITY_DEPLOY_ENGINE_STATE_STORAGE_ENGINE`
+`BLUELINK_DEPLOY_ENGINE_STATE_STORAGE_ENGINE`
 
 _**optional**_
 
@@ -416,7 +415,7 @@ to avoid losing all state in the event of a failure or destruction of the host m
 
 #### Recently Queued Events Threshold
 
-`CELERITY_DEPLOY_ENGINE_STATE_RECENTLY_QUEUED_EVENTS_THRESHOLD`
+`BLUELINK_DEPLOY_ENGINE_STATE_RECENTLY_QUEUED_EVENTS_THRESHOLD`
 
 _**optional**_
 
@@ -430,18 +429,18 @@ This applies to all storage engines.
 
 #### `memfile` Storage Engine State Directory
 
-`CELERITY_DEPLOY_ENGINE_STATE_MEMFILE_STATE_DIR`
+`BLUELINK_DEPLOY_ENGINE_STATE_MEMFILE_STATE_DIR`
 
 _**optional**_
 
 The directory to use for persisting state files when using the in-memory storage with file system
 (memfile) persistence engine.
 
-**default value:** `$HOME/.celerity/deploy-engine/state`
+**default value:** `$HOME/.bluelink/deploy-engine/state`
 
 #### `memfile` Storage Engine Max Guide File Size
 
-`CELERITY_DEPLOY_ENGINE_STATE_MEMFILE_MAX_GUIDE_FILE_SIZE`
+`BLUELINK_DEPLOY_ENGINE_STATE_MEMFILE_MAX_GUIDE_FILE_SIZE`
 
 _**optional**_
 
@@ -455,7 +454,7 @@ This is only a guide, the actual size of the files are often likely to be larger
 
 #### `memfile` Storage Engine Max Event Partition File Size
 
-`CELERITY_DEPLOY_ENGINE_STATE_MEMFILE_MAX_EVENT_PARTITION_SIZE`
+`BLUELINK_DEPLOY_ENGINE_STATE_MEMFILE_MAX_EVENT_PARTITION_SIZE`
 
 _**optional**_
 
@@ -471,7 +470,7 @@ will not be persisted.
 
 #### `postgres` Storage Engine User
 
-`CELERITY_DEPLOY_ENGINE_STATE_POSTGRES_USER`
+`BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_USER`
 
 _**required, if postgres storage engine is used**_
 
@@ -480,7 +479,7 @@ when using the postgres storage engine.
 
 #### `postgres` Storage Engine Password
 
-`CELERITY_DEPLOY_ENGINE_STATE_POSTGRES_PASSWORD`
+`BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_PASSWORD`
 
 _**required, if postgres storage engine is used**_
 
@@ -489,7 +488,7 @@ when using the postgres storage engine.
 
 #### `postgres` Storage Engine Host
 
-`CELERITY_DEPLOY_ENGINE_STATE_POSTGRES_HOST`
+`BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_HOST`
 
 _**optional**_
 
@@ -500,7 +499,7 @@ when using the postgres storage engine.
 
 #### `postgres` Storage Engine Port
 
-`CELERITY_DEPLOY_ENGINE_STATE_POSTGRES_PORT`
+`BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_PORT`
 
 _**optional**_
 
@@ -511,7 +510,7 @@ when using the postgres storage engine.
 
 #### `postgres` Storage Engine Database
 
-`CELERITY_DEPLOY_ENGINE_STATE_POSTGRES_DATABASE`
+`BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_DATABASE`
 
 _**required, if postgres storage engine is used**_
 
@@ -520,7 +519,7 @@ when using the postgres storage engine.
 
 #### `postgres` Storage Engine SSL Mode
 
-`CELERITY_DEPLOY_ENGINE_STATE_POSTGRES_SSL_MODE`
+`BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_SSL_MODE`
 
 _**optional**_
 
@@ -533,7 +532,7 @@ This can be set to `disable`, `require`, `verify-ca` or `verify-full`.
 
 #### `postgres` Storage Engine Pool Max Connections
 
-`CELERITY_DEPLOY_ENGINE_STATE_POSTGRES_POOL_MAX_CONNS`
+`BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_POOL_MAX_CONNS`
 
 _**optional**_
 
@@ -544,7 +543,7 @@ in the client pool when using the postgres storage engine.
 
 #### `postgres` Storage Engine Pool Max Connection Lifetime
 
-`CELERITY_DEPLOY_ENGINE_STATE_POSTGRES_POOL_MAX_CONN_LIFETIME`
+`BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_POOL_MAX_CONN_LIFETIME`
 
 _**optional**_
 
@@ -561,7 +560,7 @@ Configuration for child blueprint resolvers used by the deploy engine.
 
 #### Resolver S3 Endpoint
 
-`CELERITY_DEPLOY_ENGINE_RESOLVERS_S3_ENDPOINT`
+`BLUELINK_DEPLOY_ENGINE_RESOLVERS_S3_ENDPOINT`
 
 _**optional**_
 
@@ -571,7 +570,7 @@ When empty, the default AWS S3 endpoint will be used.
 
 #### Resolver Google Cloud Storage Endpoint
 
-`CELERITY_DEPLOY_ENGINE_RESOLVERS_GCS_ENDPOINT`
+`BLUELINK_DEPLOY_ENGINE_RESOLVERS_GCS_ENDPOINT`
 
 _**optional**_
 
@@ -581,7 +580,7 @@ When empty, the default Google Cloud Storage endpoint will be used.
 
 #### Resolver HTTPS Client Timeout
 
-`CELERITY_DEPLOY_ENGINE_RESOLVERS_HTTPS_CLIENT_TIMEOUT`
+`BLUELINK_DEPLOY_ENGINE_RESOLVERS_HTTPS_CLIENT_TIMEOUT`
 
 _**optional**_
 
@@ -598,7 +597,7 @@ This is used for things like the retention periods for blueprint validations and
 
 #### Blueprint Validation Retention Period
 
-`CELERITY_DEPLOY_ENGINE_MAINTENANCE_BLUEPRINT_VALIDATION_RETENTION_PERIOD`
+`BLUELINK_DEPLOY_ENGINE_MAINTENANCE_BLUEPRINT_VALIDATION_RETENTION_PERIOD`
 
 _**optional**_
 
@@ -612,7 +611,7 @@ it will delete all validation results that are older than this period.
 
 #### Change Set Retention Period
 
-`CELERITY_DEPLOY_ENGINE_MAINTENANCE_CHANGESET_RETENTION_PERIOD`
+`BLUELINK_DEPLOY_ENGINE_MAINTENANCE_CHANGESET_RETENTION_PERIOD`
 
 _**optional**_
 
@@ -626,7 +625,7 @@ it will delete all change sets that are older than this period.
 
 #### Events Retention Period
 
-`CELERITY_DEPLOY_ENGINE_MAINTENANCE_EVENTS_RETENTION_PERIOD`
+`BLUELINK_DEPLOY_ENGINE_MAINTENANCE_EVENTS_RETENTION_PERIOD`
 
 _**optional**_
 
@@ -642,7 +641,7 @@ it will delete all events that are older than this period.
 
 The API documentation for the v1 of the Deploy Engine HTTP API is available at the following URL:
 
-https://celerityframework.io/deploy-engine/docs/http-api-reference/v1/deploy-engine-api
+https://bluelink.dev/deploy-engine/docs/http-api-reference/v1/deploy-engine-api
 
 ## Additional documentation
 

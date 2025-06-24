@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/newstack-cloud/celerity/libs/common/core"
-	"github.com/newstack-cloud/celerity/libs/common/sigv1"
+	"github.com/newstack-cloud/bluelink/libs/common/core"
+	"github.com/newstack-cloud/bluelink/libs/common/sigv1"
 )
 
 type sigV1Service struct {
@@ -14,7 +14,7 @@ type sigV1Service struct {
 	options  *sigv1.VerifyOptions
 }
 
-// NewSigV1Service creates a new instance of the Celerity Signature V1 service.
+// NewSigV1Service creates a new instance of the Bluelink Signature V1 service.
 // It takes a map of key pairs (key ID -> secret key), a clock for time verification,
 // and options for customising configuration such as clock skew.
 // Options can be nil, in which case default options will be used.
@@ -30,7 +30,7 @@ func NewSigV1Service(
 	}
 }
 
-// Check verifies a Celerity Signature V1 header,
+// Check verifies a Bluelink Signature V1 header,
 // where the date and other custom headers
 // are expected to be in the provided request headers.
 // This method will return an error if verification fails,

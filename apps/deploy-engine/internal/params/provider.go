@@ -3,8 +3,8 @@ package params
 import (
 	"maps"
 
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/types"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/types"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 // Provider is an interface for a service that produces

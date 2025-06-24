@@ -1,7 +1,7 @@
 package helpersv1
 
 import (
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/resolve"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
 )
 
 func PopulateBlueprintDocInfoDefaults(payload *resolve.BlueprintDocumentInfo) {

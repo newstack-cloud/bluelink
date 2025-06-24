@@ -1,6 +1,6 @@
 package blueprint
 
-import "github.com/newstack-cloud/celerity/libs/blueprint/core"
+import "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 
 // CreateEmptyBlueprintParams creates an empty BlueprintParams object
 // with all fields initialized to empty maps or nil values.

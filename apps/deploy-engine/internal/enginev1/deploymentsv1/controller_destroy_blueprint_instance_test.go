@@ -10,10 +10,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/enginev1/typesv1"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/types"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/types"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
 func (s *ControllerTestSuite) Test_destroy_blueprint_instance() {

@@ -1,6 +1,6 @@
 package utils
 
-import "github.com/newstack-cloud/celerity/apps/deploy-engine/errors"
+import "github.com/newstack-cloud/bluelink/apps/deploy-engine/errors"
 
 func errUnsupportedBlueprintFormat(fileName string) error {
 	return &errors.DeployEngineError{

@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/enginev1/helpersv1"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/enginev1/typesv1"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/httputils"
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/manage"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	commoncore "github.com/newstack-cloud/celerity/libs/common/core"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
 )
 
 const (

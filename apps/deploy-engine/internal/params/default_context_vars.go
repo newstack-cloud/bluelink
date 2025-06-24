@@ -1,8 +1,8 @@
 package params
 
 import (
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/core"
-	bpcore "github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
+	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 const (

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/core"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -21,7 +21,7 @@ func (s *APIKeyServiceSuite) Test_check_verifies_a_valid_api_key() {
 	)
 
 	headers := make(http.Header)
-	headers.Set(CelerityAPIKeyHeaderName, "valid-key-2")
+	headers.Set(BluelinkAPIKeyHeaderName, "valid-key-2")
 
 	err := service.Check(context.Background(), headers)
 	s.NoError(err)
@@ -35,7 +35,7 @@ func (s *APIKeyServiceSuite) Test_check_fails_for_invalid_api_key() {
 	)
 
 	headers := make(http.Header)
-	headers.Set(CelerityAPIKeyHeaderName, "invalid-key")
+	headers.Set(BluelinkAPIKeyHeaderName, "invalid-key")
 	err := service.Check(context.Background(), headers)
 	s.Error(err)
 	authErr, ok := err.(*Error)

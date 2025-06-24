@@ -1,7 +1,7 @@
 package testutils
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/r3labs/sse/v2"
 )
 

@@ -2,9 +2,9 @@ package enginev1
 
 import (
 	"github.com/gorilla/mux"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/core"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/auth"
-	commoncore "github.com/newstack-cloud/celerity/libs/common/core"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/auth"
+	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
 )
 
 func setupAuth(
@@ -16,7 +16,7 @@ func setupAuth(
 	jwtAuthChecker, err := auth.LoadJWTService(config)
 	if err != nil {
 		if len(config.APIKeys) == 0 &&
-			len(config.CeleritySigV1KeyPairs) == 0 {
+			len(config.BluelinkSigV1KeyPairs) == 0 {
 			// There must be at least one auth method configured.
 			return nil, err
 		}
@@ -30,7 +30,7 @@ func setupAuth(
 	authCheckers = append(
 		authCheckers,
 		auth.NewSigV1Service(
-			config.CeleritySigV1KeyPairs,
+			config.BluelinkSigV1KeyPairs,
 			clock,
 			/* options */ nil,
 		),

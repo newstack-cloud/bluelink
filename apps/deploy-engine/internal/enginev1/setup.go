@@ -11,29 +11,29 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/core"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/enginev1/deploymentsv1"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/enginev1/eventsv1"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/enginev1/helpersv1"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/enginev1/typesv1"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/enginev1/validationv1"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/httputils"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/params"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/pluginconfig"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/pluginhostv1"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/resolve"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/utils"
-	"github.com/newstack-cloud/celerity/libs/blueprint-resolvers/azure"
-	resolverfs "github.com/newstack-cloud/celerity/libs/blueprint-resolvers/fs"
-	"github.com/newstack-cloud/celerity/libs/blueprint-resolvers/gcs"
-	resolverhttps "github.com/newstack-cloud/celerity/libs/blueprint-resolvers/https"
-	resolverrouter "github.com/newstack-cloud/celerity/libs/blueprint-resolvers/router"
-	"github.com/newstack-cloud/celerity/libs/blueprint-resolvers/s3"
-	"github.com/newstack-cloud/celerity/libs/blueprint/container"
-	bpcore "github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/providerhelpers"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/plugin"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/deploymentsv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/eventsv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/validationv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/params"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginconfig"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginhostv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/azure"
+	resolverfs "github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/fs"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/gcs"
+	resolverhttps "github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/https"
+	resolverrouter "github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/router"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/s3"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
+	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/providerhelpers"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/plugin"
 	"github.com/spf13/afero"
 )
 
@@ -412,7 +412,7 @@ func getPluginExecutorEnvVars(
 	if pluginServiceListener != nil {
 		tcpAddr, isTCPAddr := pluginServiceListener.Addr().(*net.TCPAddr)
 		if isTCPAddr {
-			envVars["CELERITY_BUILD_ENGINE_PLUGIN_SERVICE_PORT"] = fmt.Sprintf("%d", tcpAddr.Port)
+			envVars["BLUELINK_BUILD_ENGINE_PLUGIN_SERVICE_PORT"] = fmt.Sprintf("%d", tcpAddr.Port)
 		}
 	}
 

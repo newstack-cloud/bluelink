@@ -3,12 +3,12 @@ package helpersv1
 import (
 	"net/http"
 
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/enginev1/typesv1"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/httputils"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/pluginconfig"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/types"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/utils"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginconfig"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/types"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 // PrepareAndValidatePluginConfig prepares and validates the plugin configuration

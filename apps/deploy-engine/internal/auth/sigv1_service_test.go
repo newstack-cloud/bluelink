@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/newstack-cloud/celerity/libs/common/sigv1"
+	"github.com/newstack-cloud/bluelink/libs/common/sigv1"
 	"github.com/stretchr/testify/suite"
 )
 

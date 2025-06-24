@@ -20,7 +20,7 @@ func (s *MultiAuthCheckerSuite) Test_check_succeeds_on_first_check() {
 		checkerFunc(testChecker3),
 	)
 	headers := make(http.Header)
-	headers.Set(CelerityAPIKeyHeaderName, "checker-1-key")
+	headers.Set(BluelinkAPIKeyHeaderName, "checker-1-key")
 	err := checker.Check(context.Background(), headers)
 	s.Assert().NoError(err)
 }
@@ -32,7 +32,7 @@ func (s *MultiAuthCheckerSuite) Test_check_succeeds_on_last_check() {
 		checkerFunc(testChecker3),
 	)
 	headers := make(http.Header)
-	headers.Set(CelerityAPIKeyHeaderName, "checker-3-key")
+	headers.Set(BluelinkAPIKeyHeaderName, "checker-3-key")
 	err := checker.Check(context.Background(), headers)
 	s.Assert().NoError(err)
 }
@@ -44,7 +44,7 @@ func (s *MultiAuthCheckerSuite) Test_check_fails_all_checks_returning_error_for_
 		checkerFunc(testChecker3),
 	)
 	headers := make(http.Header)
-	headers.Set(CelerityAPIKeyHeaderName, "invalid-key")
+	headers.Set(BluelinkAPIKeyHeaderName, "invalid-key")
 	err := checker.Check(context.Background(), headers)
 	s.Assert().Error(err)
 	authErr, ok := err.(*Error)
@@ -59,7 +59,7 @@ func (f checkerFunc) Check(ctx context.Context, headers http.Header) error {
 }
 
 func testChecker1(ctx context.Context, headers http.Header) error {
-	if headers.Get(CelerityAPIKeyHeaderName) == "checker-1-key" {
+	if headers.Get(BluelinkAPIKeyHeaderName) == "checker-1-key" {
 		return nil
 	}
 
@@ -69,7 +69,7 @@ func testChecker1(ctx context.Context, headers http.Header) error {
 }
 
 func testChecker2(ctx context.Context, headers http.Header) error {
-	if headers.Get(CelerityAPIKeyHeaderName) == "checker-2-key" {
+	if headers.Get(BluelinkAPIKeyHeaderName) == "checker-2-key" {
 		return nil
 	}
 
@@ -79,7 +79,7 @@ func testChecker2(ctx context.Context, headers http.Header) error {
 }
 
 func testChecker3(ctx context.Context, headers http.Header) error {
-	if headers.Get(CelerityAPIKeyHeaderName) == "checker-3-key" {
+	if headers.Get(BluelinkAPIKeyHeaderName) == "checker-3-key" {
 		return nil
 	}
 

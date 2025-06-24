@@ -1,6 +1,6 @@
 package testutils
 
-import "github.com/newstack-cloud/celerity/apps/deploy-engine/internal/enginev1/typesv1"
+import "github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 
 func CopyDependencies(deps *typesv1.Dependencies) *typesv1.Dependencies {
 	return &typesv1.Dependencies{

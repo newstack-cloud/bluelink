@@ -6,7 +6,7 @@
 FROM golang:1.24.2-bookworm AS build
 
 # Add non-root user
-RUN useradd -u 1001 celerity
+RUN useradd -u 1001 bluelink
 
 RUN apt update && \
   apt upgrade -y && \
@@ -49,7 +49,7 @@ COPY ./public /public
 COPY ./private /private
 
 # Use non-root user
-USER celerity
+USER bluelink
 
 EXPOSE 80
 

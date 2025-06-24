@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/jwk"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/core"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
 	"github.com/stretchr/testify/suite"
 )
 

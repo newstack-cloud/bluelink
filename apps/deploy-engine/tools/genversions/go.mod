@@ -1,4 +1,4 @@
-module github.com/newstack-cloud/celerity/apps/deploy-engine/tools/genversions
+module github.com/newstack-cloud/bluelink/apps/deploy-engine/tools/genversions
 
 go 1.23.4
 

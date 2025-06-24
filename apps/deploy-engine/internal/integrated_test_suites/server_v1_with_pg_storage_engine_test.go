@@ -12,12 +12,12 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/core"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/auth"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/enginev1"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/enginev1/validationv1"
-	"github.com/newstack-cloud/celerity/apps/deploy-engine/internal/resolve"
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/auth"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/validationv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -75,7 +75,7 @@ func (s *ServerV1WithPGStorageEngineTestSuite) Test_server_endpoint_request() {
 		bodyReader,
 	)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set(auth.CelerityAPIKeyHeaderName, "test-api-key")
+	req.Header.Set(auth.BluelinkAPIKeyHeaderName, "test-api-key")
 	s.Require().NoError(err, "error creating request")
 
 	response, err := s.client.Do(req)

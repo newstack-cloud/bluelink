@@ -1,6 +1,6 @@
 package typesv1
 
-import "github.com/newstack-cloud/celerity/libs/blueprint/core"
+import "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 
 // ValidationDiagnosticErrors is the data type for validation errors
 // that are returned in the response of multiple endpoints.
