@@ -10,10 +10,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/newstack-cloud/celerity/libs/blueprint-resolvers/utils"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/includes"
-	"github.com/newstack-cloud/celerity/libs/blueprint/subengine"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/utils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/includes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/subengine"
 )
 
 type s3ChildResolver struct {

@@ -3,9 +3,9 @@ package utils
 import (
 	"fmt"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/includes"
-	"github.com/newstack-cloud/celerity/libs/blueprint/subengine"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/includes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/subengine"
 )
 
 // ValidateInclude checks if the path is valid and metadata contains all the required fields

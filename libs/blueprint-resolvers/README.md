@@ -1,8 +1,8 @@
 # blueprint resolvers
 
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_celerity-blueprint-resolvers&metric=coverage)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_celerity-blueprint-resolvers)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_celerity-blueprint-resolvers&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_celerity-blueprint-resolvers)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_celerity-blueprint-resolvers&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_celerity-blueprint-resolvers)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_bluelink-blueprint-resolvers&metric=coverage)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_bluelink-blueprint-resolvers)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_bluelink-blueprint-resolvers&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_bluelink-blueprint-resolvers)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=newstack-cloud_bluelink-blueprint-resolvers&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=newstack-cloud_bluelink-blueprint-resolvers)
 
 A library that provides a collection of blueprint framework `ChildResolver` implementations for sourcing child blueprints referenced through the use of the `include` property in a parent blueprint.
 
@@ -21,11 +21,11 @@ import (
     "context"
 
 	"github.com/spf13/afero"
-    "github.com/newstack-cloud/celerity/libs/blueprint-resolvers/router"
-    "github.com/newstack-cloud/celerity/libs/blueprint-resolvers/fs"
-    "github.com/newstack-cloud/celerity/libs/blueprint-resolvers/s3"
-    "github.com/newstack-cloud/celerity/libs/blueprint/subengine"
-    "github.com/newstack-cloud/celerity/libs/blueprint/core"
+    "github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/router"
+    "github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/fs"
+    "github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/s3"
+    "github.com/newstack-cloud/bluelink/libs/blueprint/subengine"
+    "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 func main() {

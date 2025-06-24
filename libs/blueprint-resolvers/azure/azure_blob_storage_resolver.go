@@ -10,10 +10,10 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
-	"github.com/newstack-cloud/celerity/libs/blueprint-resolvers/utils"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/includes"
-	"github.com/newstack-cloud/celerity/libs/blueprint/subengine"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/utils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/includes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/subengine"
 )
 
 // AzureBlobClientFactory is a function that creates an azblob.Client.

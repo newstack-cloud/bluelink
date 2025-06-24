@@ -1,6 +1,6 @@
 services:
   localstack:
-    container_name: "localstack_celerity_blueprint_resolver_tests"
+    container_name: "localstack_bluelink_blueprint_resolver_tests"
     image: localstack/localstack:3.2.0
     network_mode: bridge
     ports:
@@ -13,7 +13,7 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
 
   fake_gcs_server:
-    container_name: "fake_gcs_server_celerity_blueprint_resolver_tests"
+    container_name: "fake_gcs_server_bluelink_blueprint_resolver_tests"
     image: fsouza/fake-gcs-server:1.50.2
     ports:
       - "8184:8000"
@@ -24,7 +24,7 @@ services:
 
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite
-    container_name: "azurite_celerity_blueprint_resolver_tests"
+    container_name: "azurite_bluelink_blueprint_resolver_tests"
     hostname: azurite
     restart: always
     command: ["azurite-blob", "--blobHost", "0.0.0.0", "--blobPort", "10000"]

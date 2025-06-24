@@ -5,10 +5,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/errors"
-	"github.com/newstack-cloud/celerity/libs/blueprint/includes"
-	"github.com/newstack-cloud/celerity/libs/blueprint/subengine"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/includes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/subengine"
 	"github.com/stretchr/testify/suite"
 )
 
