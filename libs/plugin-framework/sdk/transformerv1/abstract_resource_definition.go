@@ -3,9 +3,9 @@ package transformerv1
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/transform"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 )
 
 // AbstractResourceDefinition is a template to be used for defining abstract resources

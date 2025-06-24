@@ -1,9 +1,9 @@
 package transformerserverv1
 
 import (
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/pluginbase"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/pluginservicev1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/sdk/pluginutils"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginbase"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginservicev1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sdk/pluginutils"
 )
 
 const (

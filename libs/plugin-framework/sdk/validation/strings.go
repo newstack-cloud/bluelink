@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 // StringLengthRange validates that a string value is within a specified length range.

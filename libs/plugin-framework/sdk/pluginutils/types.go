@@ -3,8 +3,8 @@ package pluginutils
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
 
 // ServiceFactory is a function type that creates an instance of a service

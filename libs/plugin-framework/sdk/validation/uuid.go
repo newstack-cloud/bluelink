@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 // IsUUID validates that a string is a valid UUID.

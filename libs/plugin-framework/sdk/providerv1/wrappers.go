@@ -3,8 +3,8 @@ package providerv1
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/sdk/pluginutils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sdk/pluginutils"
 )
 
 // Retryable wraps a function that only returns an error

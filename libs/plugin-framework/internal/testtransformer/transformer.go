@@ -3,10 +3,10 @@ package testtransformer
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/schema"
-	"github.com/newstack-cloud/celerity/libs/blueprint/transform"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/sdk/transformerv1"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sdk/transformerv1"
 )
 
 // NewTransformer creates a new instance of the test Celerity transformer

@@ -7,13 +7,14 @@
 package transformerserverv1
 
 import (
-	schemapb "github.com/newstack-cloud/celerity/libs/blueprint/schemapb"
-	sharedtypesv1 "github.com/newstack-cloud/celerity/libs/plugin-framework/sharedtypesv1"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	schemapb "github.com/newstack-cloud/bluelink/libs/blueprint/schemapb"
+	sharedtypesv1 "github.com/newstack-cloud/bluelink/libs/plugin-framework/sharedtypesv1"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (

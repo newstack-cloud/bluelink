@@ -5,8 +5,8 @@ import (
 	"log"
 	"net"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/pluginservicev1"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginservicev1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"

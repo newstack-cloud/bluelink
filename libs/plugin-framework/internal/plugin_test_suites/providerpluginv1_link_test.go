@@ -3,11 +3,11 @@ package plugintestsuites
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/errorsv1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/internal/testprovider"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/internal/testutils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/errorsv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/internal/testprovider"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/internal/testutils"
 )
 
 const (

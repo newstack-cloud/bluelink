@@ -3,15 +3,15 @@ package providerserverv1
 import (
 	"fmt"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/schema"
-	schemapb "github.com/newstack-cloud/celerity/libs/blueprint/schemapb"
-	"github.com/newstack-cloud/celerity/libs/blueprint/serialisation"
-	"github.com/newstack-cloud/celerity/libs/blueprint/state"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/convertv1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/pbutils"
-	sharedtypesv1 "github.com/newstack-cloud/celerity/libs/plugin-framework/sharedtypesv1"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	schemapb "github.com/newstack-cloud/bluelink/libs/blueprint/schemapb"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/serialisation"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/convertv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pbutils"
+	sharedtypesv1 "github.com/newstack-cloud/bluelink/libs/plugin-framework/sharedtypesv1"
 )
 
 func toPBLinkState(linkState *state.LinkState) (*LinkState, error) {

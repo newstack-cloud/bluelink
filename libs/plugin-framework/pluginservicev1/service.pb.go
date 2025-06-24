@@ -7,13 +7,14 @@
 package pluginservicev1
 
 import (
-	sharedtypesv1 "github.com/newstack-cloud/celerity/libs/plugin-framework/sharedtypesv1"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	sharedtypesv1 "github.com/newstack-cloud/bluelink/libs/plugin-framework/sharedtypesv1"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 const (
@@ -92,8 +93,8 @@ type PluginRegistrationRequest struct {
 	// {hostname/}?{namespace}/{provider}
 	//
 	// For example:
-	// registry.celerityframework.io/celerity/aws
-	// celerity/aws
+	// registry.bluelink.dev/bluelink/aws
+	// bluelink/aws
 	PluginId string `protobuf:"bytes,2,opt,name=plugin_id,json=pluginId" json:"plugin_id,omitempty"`
 	// The id of the plugin instance that should correspond to the
 	// id that was captured when the plugin was launched.

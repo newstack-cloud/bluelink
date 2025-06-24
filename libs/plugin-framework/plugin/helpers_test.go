@@ -3,16 +3,16 @@ package plugin
 import (
 	"path/filepath"
 
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/internal/testutils"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/pluginservicev1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/utils"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/internal/testutils"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginservicev1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/utils"
 	"github.com/spf13/afero"
 )
 
 var (
 	testPluginRootPaths = []string{
-		"/root/.celerity/deploy-engine/plugins/bin",
-		"/usr/local/celerity/deploy-engine/plugins/bin",
+		"/root/.bluelink/deploy-engine/plugins/bin",
+		"/usr/local/bluelink/deploy-engine/plugins/bin",
 	}
 )
 
@@ -31,22 +31,22 @@ func loadPluginsIntoFS(plugins []*PluginPathInfo, fs afero.Fs) error {
 func loadExpectedPluginPaths() []*PluginPathInfo {
 	return []*PluginPathInfo{
 		{
-			AbsolutePath: "/root/.celerity/deploy-engine/plugins/bin/providers/celerity/aws/1.0.0/plugin",
+			AbsolutePath: "/root/.bluelink/deploy-engine/plugins/bin/providers/bluelink/aws/1.0.0/plugin",
 			PluginType:   "provider",
-			ID:           "celerity/aws",
+			ID:           "bluelink/aws",
 			Version:      "1.0.0",
 		},
 		{
-			AbsolutePath: "/root/.celerity/deploy-engine/plugins/bin/transformers/celerity/celerity/2.0.1/plugin",
+			AbsolutePath: "/root/.bluelink/deploy-engine/plugins/bin/transformers/celerity/celerity/2.0.1/plugin",
 			PluginType:   "transformer",
 			ID:           "celerity/celerity",
 			Version:      "2.0.1",
 		},
 		{
-			AbsolutePath: "/usr/local/celerity/deploy-engine/plugins/bin/providers" +
-				"/registry.customhost.com/celerity/azure/3.2.0/plugin",
+			AbsolutePath: "/usr/local/bluelink/deploy-engine/plugins/bin/providers" +
+				"/registry.customhost.com/bluelink/azure/3.2.0/plugin",
 			PluginType: "provider",
-			ID:         "registry.customhost.com/celerity/azure",
+			ID:         "registry.customhost.com/bluelink/azure",
 			Version:    "3.2.0",
 		},
 	}

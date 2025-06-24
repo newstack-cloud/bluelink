@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
 
 // ContextFuncReturnValue is a function that takes a context,

@@ -7,7 +7,7 @@
 package sharedtypesv1
 
 import (
-	schemapb "github.com/newstack-cloud/celerity/libs/blueprint/schemapb"
+	schemapb "github.com/newstack-cloud/bluelink/libs/blueprint/schemapb"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	anypb "google.golang.org/protobuf/types/known/anypb"

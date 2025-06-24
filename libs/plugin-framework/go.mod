@@ -1,15 +1,15 @@
-module github.com/newstack-cloud/celerity/libs/plugin-framework
+module github.com/newstack-cloud/bluelink/libs/plugin-framework
 
 go 1.23
 
 toolchain go1.23.4
 
-replace github.com/newstack-cloud/celerity/libs/blueprint => ../blueprint
+replace github.com/newstack-cloud/bluelink/libs/blueprint => ../blueprint
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/newstack-cloud/celerity/libs/blueprint v0.24.0
-	github.com/newstack-cloud/celerity/libs/common v0.3.1
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.24.1
+	github.com/newstack-cloud/bluelink/libs/common v0.3.2
 	github.com/spf13/afero v1.11.0
 	github.com/stretchr/testify v1.10.0
 	google.golang.org/grpc v1.64.0

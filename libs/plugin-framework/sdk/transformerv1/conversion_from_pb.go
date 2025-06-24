@@ -1,11 +1,11 @@
 package transformerv1
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint/serialisation"
-	"github.com/newstack-cloud/celerity/libs/blueprint/transform"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/convertv1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/transformerserverv1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/utils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/serialisation"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/convertv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/transformerserverv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/utils"
 )
 
 func fromPBCustomValidateAbstractResourceRequest(

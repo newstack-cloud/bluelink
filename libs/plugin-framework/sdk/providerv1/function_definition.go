@@ -3,8 +3,8 @@ package providerv1
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/function"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
 
 // FunctionDefinition is a template to be used for defining functions

@@ -3,8 +3,8 @@ package testprovider
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/providerserverv1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/sharedtypesv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/providerserverv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sharedtypesv1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

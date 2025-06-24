@@ -4,7 +4,7 @@ import "google/protobuf/empty.proto";
 import "plugin-framework/sharedtypesv1/types.proto";
 
 option features.field_presence = IMPLICIT;
-option go_package = "github.com/newstack-cloud/celerity/libs/plugin-framework/pluginservicev1";
+option go_package = "github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginservicev1";
 
 package pluginservicev1;
 
@@ -78,8 +78,8 @@ message PluginRegistrationRequest {
 	// {hostname/}?{namespace}/{provider}
 	//
 	// For example:
-	// registry.celerityframework.io/celerity/aws
-	// celerity/aws
+	// registry.bluelink.dev/bluelink/aws
+	// bluelink/aws
     string plugin_id = 2;
     // The id of the plugin instance that should correspond to the
     // id that was captured when the plugin was launched.

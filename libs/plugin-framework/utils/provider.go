@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
 
 // ProviderContextFromVarMaps creates a provider.Context from the given provider config and context variables.

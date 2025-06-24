@@ -3,11 +3,11 @@ package testprovider
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
-	"github.com/newstack-cloud/celerity/libs/blueprint/substitutions"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/sdk/providerv1"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sdk/providerv1"
 )
 
 func resourceLambdaFunction() provider.Resource {

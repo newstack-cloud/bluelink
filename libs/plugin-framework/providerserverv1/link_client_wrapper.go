@@ -3,12 +3,12 @@ package providerserverv1
 import (
 	context "context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/serialisation"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/convertv1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/errorsv1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/sharedtypesv1"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/serialisation"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/convertv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/errorsv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sharedtypesv1"
 	"google.golang.org/grpc"
 )
 

@@ -1,8 +1,8 @@
 package pluginutils
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
 
 // GetCurrentResourceStateSpecData returns the spec data for the current

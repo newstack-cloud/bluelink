@@ -3,7 +3,7 @@ package validation
 import (
 	"fmt"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 // FloatRange validates that a float value is within a specified range.

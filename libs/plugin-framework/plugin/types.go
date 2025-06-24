@@ -3,7 +3,7 @@ package plugin
 import (
 	"net"
 
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/pluginservicev1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginservicev1"
 )
 
 // ServePluginConfiguration contains configuration for serving a plugin.
@@ -14,8 +14,8 @@ type ServePluginConfiguration struct {
 	// {hostname/}?{namespace}/{pluginName}
 	//
 	// For example:
-	// registry.celerityframework.io/celerity/aws
-	// celerity/aws
+	// registry.bluelink.dev/bluelink/aws
+	// bluelink/aws
 	//
 	// For providers, the last portion of the ID is the unique name of the provider
 	// that is expected to be used as the namespace for resources, data sources

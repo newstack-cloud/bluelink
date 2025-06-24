@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/transform"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 )
 
 // TransformerContextFromVarMaps creates a transform.Context from the given transformer config and context variables.

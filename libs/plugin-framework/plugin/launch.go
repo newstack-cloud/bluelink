@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/transform"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/pluginservicev1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/utils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginservicev1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/utils"
 	"github.com/spf13/afero"
 )
 

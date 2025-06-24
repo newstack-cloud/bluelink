@@ -5,7 +5,7 @@ import "blueprint/schema.proto";
 import "plugin-framework/sharedtypesv1/types.proto";
 
 option features.field_presence = IMPLICIT;
-option go_package = "github.com/newstack-cloud/celerity/libs/plugin-framework/providerserverv1";
+option go_package = "github.com/newstack-cloud/bluelink/libs/plugin-framework/providerserverv1";
 
 package providerserverv1;
 

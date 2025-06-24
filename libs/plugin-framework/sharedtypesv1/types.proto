@@ -5,7 +5,7 @@ import "google/protobuf/wrappers.proto";
 import "blueprint/schema.proto";
 
 option features.field_presence = IMPLICIT;
-option go_package = "github.com/newstack-cloud/celerity/libs/plugin-framework/sharedtypesv1";
+option go_package = "github.com/newstack-cloud/bluelink/libs/plugin-framework/sharedtypesv1";
 
 package sharedtypesv1;
 

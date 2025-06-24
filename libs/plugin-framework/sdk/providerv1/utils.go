@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/providerserverv1"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/providerserverv1"
 )
 
 type linkTypeInfo struct {

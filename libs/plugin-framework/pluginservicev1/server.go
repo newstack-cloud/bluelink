@@ -4,7 +4,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/utils"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/utils"
 	grpc "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

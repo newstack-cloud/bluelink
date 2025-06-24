@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 // IsDayOfTheWeek validates that a string is a valid day of the week.

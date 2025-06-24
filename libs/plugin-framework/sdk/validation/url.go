@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 // IsWebURL validates that a string is a valid HTTP or HTTPS URL.

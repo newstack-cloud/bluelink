@@ -1,15 +1,15 @@
 package providerv1
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/schema"
-	"github.com/newstack-cloud/celerity/libs/blueprint/serialisation"
-	"github.com/newstack-cloud/celerity/libs/blueprint/state"
-	commoncore "github.com/newstack-cloud/celerity/libs/common/core"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/convertv1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/errorsv1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/providerserverv1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/sharedtypesv1"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/serialisation"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/convertv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/errorsv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/providerserverv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sharedtypesv1"
 )
 
 func toProviderNamespaceResponse(namespace string) *providerserverv1.NamespaceResponse {

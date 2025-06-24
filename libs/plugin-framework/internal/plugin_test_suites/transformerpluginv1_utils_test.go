@@ -3,9 +3,9 @@ package plugintestsuites
 import (
 	"os"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/schema"
-	"github.com/newstack-cloud/celerity/libs/blueprint/transform"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/internal/testutils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/internal/testutils"
 	"gopkg.in/yaml.v3"
 )
 

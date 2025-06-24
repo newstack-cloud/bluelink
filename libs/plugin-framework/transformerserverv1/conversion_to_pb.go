@@ -1,8 +1,8 @@
 package transformerserverv1
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint/transform"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/convertv1"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/convertv1"
 )
 
 func toPBTransformerContext(transformerCtx transform.Context) (*TransformerContext, error) {

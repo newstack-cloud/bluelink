@@ -1,9 +1,9 @@
 package sharedtypesv1
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
-	"github.com/newstack-cloud/celerity/libs/blueprint/substitutions"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 )
 
 // NoResponsePBError returns an error response for when a plugin does not provide

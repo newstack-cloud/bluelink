@@ -1,8 +1,8 @@
 package plugintestsuites
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/internal/testutils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/internal/testutils"
 )
 
 func customVarTypeGetTypeInput() *provider.CustomVariableTypeGetTypeInput {

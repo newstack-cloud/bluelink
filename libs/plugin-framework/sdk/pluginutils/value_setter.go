@@ -4,9 +4,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	commoncore "github.com/newstack-cloud/celerity/libs/common/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
 )
 
 // ValueSetter is a helper struct that can be used to set a value in a

@@ -12,7 +12,7 @@ import (
 // NewEnvServiceClient creates a new plugin service client
 // from the current environment.
 func NewEnvServiceClient() (ServiceClient, func(), error) {
-	servicePort := os.Getenv("CELERITY_BUILD_ENGINE_PLUGIN_SERVICE_PORT")
+	servicePort := os.Getenv("BLUELINK_BUILD_ENGINE_PLUGIN_SERVICE_PORT")
 	if servicePort == "" {
 		servicePort = strconv.Itoa(DefaultPort)
 	}

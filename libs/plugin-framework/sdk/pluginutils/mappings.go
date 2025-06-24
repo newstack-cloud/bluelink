@@ -3,7 +3,7 @@ package pluginutils
 import (
 	"slices"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 // GetValueByPath is a helper function to extract a value from a mapping node

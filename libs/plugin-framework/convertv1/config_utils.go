@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 func expandNamespacedConfig(toExpand map[string]*core.ScalarValue) map[string]map[string]*core.ScalarValue {

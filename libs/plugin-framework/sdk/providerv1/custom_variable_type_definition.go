@@ -3,7 +3,7 @@ package providerv1
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
 
 // CustomVariableTypeDefinition is a template to be used for defining

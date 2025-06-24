@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/pbutils"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/sharedtypesv1"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pbutils"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sharedtypesv1"
 )
 
 // PluginResponseError represents a user-defined error that has ben returned

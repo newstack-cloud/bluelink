@@ -3,13 +3,13 @@ package providerv1
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/convertv1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/errorsv1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/pluginservicev1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/providerserverv1"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/sdk/pluginutils"
-	"github.com/newstack-cloud/celerity/libs/plugin-framework/sharedtypesv1"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/convertv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/errorsv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginservicev1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/providerserverv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sdk/pluginutils"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sharedtypesv1"
 )
 
 // NewProviderPlugin creates a new instance of a provider plugin

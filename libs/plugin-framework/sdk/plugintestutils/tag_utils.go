@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/stretchr/testify/assert"
 )
 

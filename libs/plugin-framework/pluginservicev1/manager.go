@@ -239,8 +239,8 @@ type PluginInstanceInfo struct {
 	// {hostname/}?{namespace}/{provider}
 	//
 	// For example:
-	// registry.celerityframework.io/celerity/aws
-	// celerity/aws
+	// registry.bluelink.dev/bluelink/aws
+	// bluelink/aws
 	//
 	// The last portion of the ID is the unique name of the provider
 	// that is expected to be used as the namespace for resources, data sources

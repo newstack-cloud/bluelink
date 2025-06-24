@@ -1,4 +1,4 @@
-# Contributing to the celerity plugin framework
+# Contributing to the bluelink plugin framework
 
 ## Getting set up
 
@@ -113,7 +113,7 @@ Title: `Plugin Framework - v0.2.0`
 3. Prompt Go to update its index of modules with the new release:
 
 ```bash
-GOPROXY=proxy.golang.org go list -m github.com/newstack-cloud/celerity/libs/plugin-framework@v0.2.0
+GOPROXY=proxy.golang.org go list -m github.com/newstack-cloud/bluelink/libs/plugin-framework@v0.2.0
 ```
 
 ## Commit scope

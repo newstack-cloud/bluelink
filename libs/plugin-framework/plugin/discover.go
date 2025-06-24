@@ -6,8 +6,8 @@ import (
 	"slices"
 	"strings"
 
-	bpcore "github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/common/core"
+	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/common/core"
 	"github.com/spf13/afero"
 )
 

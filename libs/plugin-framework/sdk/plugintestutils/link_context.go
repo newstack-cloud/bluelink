@@ -1,8 +1,8 @@
 package plugintestutils
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
 
 // NewTestLinkContext creates a provider.LinkContext

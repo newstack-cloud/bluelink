@@ -1,8 +1,8 @@
 package transformerserverv1
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint/transform"
-	sharedtypesv1 "github.com/newstack-cloud/celerity/libs/plugin-framework/sharedtypesv1"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
+	sharedtypesv1 "github.com/newstack-cloud/bluelink/libs/plugin-framework/sharedtypesv1"
 )
 
 func fromPBTypeDescription(

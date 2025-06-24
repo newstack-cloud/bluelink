@@ -3,8 +3,8 @@ package validation
 import (
 	"fmt"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	commoncore "github.com/newstack-cloud/celerity/libs/common/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
 )
 
 // AllOf validates that a value passes all provided validation functions,
