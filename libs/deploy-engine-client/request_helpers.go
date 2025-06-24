@@ -3,7 +3,7 @@ package deployengine
 import (
 	"net/http"
 
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/types"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
 )
 
 func attachHeaders(

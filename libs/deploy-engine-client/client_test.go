@@ -10,16 +10,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/manage"
-	"github.com/newstack-cloud/celerity/libs/blueprint/changes"
-	"github.com/newstack-cloud/celerity/libs/blueprint/container"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
-	"github.com/newstack-cloud/celerity/libs/common/sigv1"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/errors"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/internal/testutils"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/types"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/common/sigv1"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/internal/testutils"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -38,7 +38,7 @@ const (
 )
 
 var (
-	testCeleritySignatureKeyPair = &sigv1.KeyPair{
+	testBluelinkSignatureKeyPair = &sigv1.KeyPair{
 		KeyID:     "test-key-id",
 		SecretKey: "test-secret-key",
 	}
@@ -86,8 +86,8 @@ func (s *ClientSuite) SetupSuite() {
 			// See internal/testutils/token_server.go for the
 			// static token returned by the token server.
 			AllowedBearerTokens: []string{"test-token-1"},
-			AllowedCeleritySignatureKeyPairs: map[string]*sigv1.KeyPair{
-				testCeleritySignatureKeyPair.KeyID: testCeleritySignatureKeyPair,
+			AllowedBluelinkSignatureKeyPairs: map[string]*sigv1.KeyPair{
+				testBluelinkSignatureKeyPair.KeyID: testBluelinkSignatureKeyPair,
 			},
 			InternalServerErrorTrigger:   internalServerErrorTrigger,
 			NetworkErrorTrigger:          networkErrorTrigger,
@@ -109,8 +109,8 @@ func (s *ClientSuite) SetupSuite() {
 			// See internal/testutils/token_server.go for the
 			// static token returned by the token server.
 			AllowedBearerTokens: []string{"test-token-1"},
-			AllowedCeleritySignatureKeyPairs: map[string]*sigv1.KeyPair{
-				testCeleritySignatureKeyPair.KeyID: testCeleritySignatureKeyPair,
+			AllowedBluelinkSignatureKeyPairs: map[string]*sigv1.KeyPair{
+				testBluelinkSignatureKeyPair.KeyID: testBluelinkSignatureKeyPair,
 			},
 			InternalServerErrorTrigger:   internalServerErrorTrigger,
 			NetworkErrorTrigger:          networkErrorTrigger,
@@ -238,7 +238,7 @@ func (s *ClientSuite) prepareTestSocketDir() {
 
 	s.testSocketPath = path.Join(
 		socketDir,
-		"celerity.sock",
+		"bluelink.sock",
 	)
 }
 

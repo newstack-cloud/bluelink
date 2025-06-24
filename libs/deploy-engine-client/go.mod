@@ -1,4 +1,4 @@
-module github.com/newstack-cloud/celerity/libs/deploy-engine-client
+module github.com/newstack-cloud/bluelink/libs/deploy-engine-client
 
 go 1.23.0
 
@@ -6,9 +6,9 @@ toolchain go1.24.4
 
 require (
 	github.com/gorilla/mux v1.8.1
-	github.com/newstack-cloud/celerity/libs/blueprint v0.17.1
-	github.com/newstack-cloud/celerity/libs/blueprint-state v0.2.5
-	github.com/newstack-cloud/celerity/libs/common v0.3.1
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.24.1
+	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.2.6
+	github.com/newstack-cloud/bluelink/libs/common v0.3.2
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0

@@ -8,18 +8,18 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/manage"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/state"
-	"github.com/newstack-cloud/celerity/libs/common/sigv1"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/internal/oauth2"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/internal/sseconfig"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/types"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/libs/common/sigv1"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/internal/oauth2"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/internal/sseconfig"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
 	"github.com/r3labs/sse/v2"
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-// Client provides a client implementation of the Celerity Deploy Engine API.
+// Client provides a client implementation of the Bluelink Deploy Engine API.
 // This supports v1 of the API including the v1 streaming interface.
 type Client struct {
 	endpoint             string
@@ -42,7 +42,7 @@ type Client struct {
 type ClientOption func(*Client)
 
 // WithClientEndpoint configures the endpoint to use to connect
-// to the Celerity Deploy Engine.
+// to the Bluelink Deploy Engine.
 // When an endpoint is not provided, the client will use `http://localhost:8325`.
 // When the protocol is set to `ConnectProtocolUnixDomainSocket`,
 // the endpoint will be ignored and the client will use a placeholder
@@ -55,7 +55,7 @@ func WithClientEndpoint(endpoint string) ClientOption {
 }
 
 // WithClientConnectProtocol configures the protocol to use to connect
-// to the Celerity Deploy Engine.
+// to the Bluelink Deploy Engine.
 // This can be either `ConnectProtocolTCP` or `ConnectProtocolUnixDomainSocket`.
 // When a protocol is not provided, the client will default to `ConnectProtocolTCP`.
 func WithClientConnectProtocol(protocol ConnectProtocol) ClientOption {
@@ -65,9 +65,9 @@ func WithClientConnectProtocol(protocol ConnectProtocol) ClientOption {
 }
 
 // WithClientUnixDomainSocket configures the Unix domain socket to use
-// to connect to the Celerity Deploy Engine.
+// to connect to the Bluelink Deploy Engine.
 // This is only used when the protocol is set to `ConnectProtocolUnixDomainSocket`.
-// When a Unix domain socket is not provided, the client will default to `/tmp/celerity.sock`.
+// When a Unix domain socket is not provided, the client will default to `/tmp/bluelink.sock`.
 func WithClientUnixDomainSocket(socket string) ClientOption {
 	return func(c *Client) {
 		c.unixDomainSocket = socket
@@ -75,10 +75,10 @@ func WithClientUnixDomainSocket(socket string) ClientOption {
 }
 
 // WithClientAuthMethod configures the authentication method to use
-// to connect to the Celerity Deploy Engine.
+// to connect to the Bluelink Deploy Engine.
 // This can be either `AuthMethodAPIKey`, `AuthMethodOAuth2` or
-// `AuthMethodCeleritySignatureV1`.
-// When an authentication method is not provided, the client will default to `AuthMethodCeleritySignatureV1`.
+// `AuthMethodBluelinkSignatureV1`.
+// When an authentication method is not provided, the client will default to `AuthMethodBluelinkSignatureV1`.
 func WithClientAuthMethod(method AuthMethod) ClientOption {
 	return func(c *Client) {
 		c.authConfig.Method = method
@@ -86,10 +86,10 @@ func WithClientAuthMethod(method AuthMethod) ClientOption {
 }
 
 // WithClientAPIKey configures the API key to use to authenticate
-// to the Celerity Deploy Engine.
+// to the Bluelink Deploy Engine.
 // This is only used when the authentication method is set to `AuthMethodAPIKey`.
 // When an API key is not provided, the client will not be able to authenticate
-// to the Celerity Deploy Engine.
+// to the Bluelink Deploy Engine.
 func WithClientAPIKey(apiKey string) ClientOption {
 	return func(c *Client) {
 		c.authConfig.APIKey = apiKey
@@ -97,7 +97,7 @@ func WithClientAPIKey(apiKey string) ClientOption {
 }
 
 // WithClientOAuth2Config configures the OAuth2 configuration to use
-// to authenticate to the Celerity Deploy Engine.
+// to authenticate to the Bluelink Deploy Engine.
 // This is only used when the authentication method is set to `AuthMethodOAuth2`.
 // OAuth2 configuration must be provided when the authentication method
 // is set to `AuthMethodOAuth2`.
@@ -107,32 +107,32 @@ func WithClientOAuth2Config(config *OAuth2Config) ClientOption {
 	}
 }
 
-// WithClientCeleritySigv1KeyPair configures the Celerity Signature v1
-// configuration to use to authenticate to the Celerity Deploy Engine.
-// This is only used when the authentication method is set to `AuthMethodCeleritySignatureV1`.
-// Celerity Signature v1 configuration must be provided when the authentication method
-// is set to `AuthMethodCeleritySignatureV1`.
-func WithClientCeleritySigv1KeyPair(keyPair *sigv1.KeyPair) ClientOption {
+// WithClientBluelinkSigv1KeyPair configures the Bluelink Signature v1
+// configuration to use to authenticate to the Bluelink Deploy Engine.
+// This is only used when the authentication method is set to `AuthMethodBluelinkSignatureV1`.
+// Bluelink Signature v1 configuration must be provided when the authentication method
+// is set to `AuthMethodBluelinkSignatureV1`.
+func WithClientBluelinkSigv1KeyPair(keyPair *sigv1.KeyPair) ClientOption {
 	return func(c *Client) {
-		c.authConfig.CeleritySignatureKeyPair = keyPair
+		c.authConfig.BluelinkSignatureKeyPair = keyPair
 	}
 }
 
-// WithClientCeleritySigv1CustomHeaders configures the custom headers to use
-// to authenticate to the Celerity Deploy Engine using the Celerity Signature v1 method.
-// This is only used when the authentication method is set to `AuthMethodCeleritySignatureV1`.
-// Celerity Signature v1 configuration must be provided when the authentication method
-// is set to `AuthMethodCeleritySignatureV1`.
+// WithClientBluelinkSigv1CustomHeaders configures the custom headers to use
+// to authenticate to the Bluelink Deploy Engine using the Bluelink Signature v1 method.
+// This is only used when the authentication method is set to `AuthMethodBluelinkSignatureV1`.
+// Bluelink Signature v1 configuration must be provided when the authentication method
+// is set to `AuthMethodBluelinkSignatureV1`.
 // This is a list of headers that will be included in the signed message
 // when creating the signature header.
-func WithClientCeleritySigv1CustomHeaders(headers []string) ClientOption {
+func WithClientBluelinkSigv1CustomHeaders(headers []string) ClientOption {
 	return func(c *Client) {
-		c.authConfig.CeleritySignatureCustomHeaders = headers
+		c.authConfig.BluelinkSignatureCustomHeaders = headers
 	}
 }
 
 // WithClientHTTPRoundTripper configures the HTTP round tripper to use
-// to connect to the Celerity Deploy Engine.
+// to connect to the Bluelink Deploy Engine.
 // This is used to configure the HTTP client with a custom transport
 // that supports retries and other features.
 // This is a function that takes a transport and returns a round tripper
@@ -151,7 +151,7 @@ func WithClientHTTPRoundTripper(
 }
 
 // WithClientRequestTimeout configures the request timeout to use
-// to connect to the Celerity Deploy Engine.
+// to connect to the Bluelink Deploy Engine.
 // This is used to configure the HTTP client with a custom timeout
 // for requests.
 // When a timeout is not provided, the client will default to 60 seconds.
@@ -163,7 +163,7 @@ func WithClientRequestTimeout(timeout time.Duration) ClientOption {
 }
 
 // WithClientStreamTimeout configures the stream timeout to use
-// to connect to the Celerity Deploy Engine.
+// to connect to the Bluelink Deploy Engine.
 // This is used to configure the HTTP client with a custom timeout
 // for streaming requests.
 // When a timeout is not provided, the client will default to 3 hours.
@@ -184,7 +184,7 @@ func WithClientClock(clock core.Clock) ClientOption {
 }
 
 // WithClientLogger configures the logger to use
-// to log messages from the Celerity Deploy Engine client.
+// to log messages from the Bluelink Deploy Engine client.
 // When a logger is not provided, the client will default
 // to a no-op logger that does not log any messages.
 func WithClientLogger(logger core.Logger) ClientOption {
@@ -194,7 +194,7 @@ func WithClientLogger(logger core.Logger) ClientOption {
 }
 
 // NewClient creates a client for an instance of
-// the Celerity Deploy Engine v1 API.
+// the Bluelink Deploy Engine v1 API.
 // If an OAuth2/OIDC provider is configured, the client
 // will fetch the discovery document from the provider if
 // a token endpoint is not provided during client creation.
@@ -208,7 +208,7 @@ func NewClient(
 		unixDomainSocket: DefaultUnixDomainSocket,
 		authConfig: &AuthConfig{
 			Method:                         DefaultAuthMethod,
-			CeleritySignatureCustomHeaders: []string{},
+			BluelinkSignatureCustomHeaders: []string{},
 		},
 		defaultHTTPTransport: http.DefaultTransport.(*http.Transport),
 		requestTimeout:       DefaultRequestTimeout,
@@ -999,7 +999,7 @@ func (c *Client) setupOAuth2CredentialsHelper() error {
 func (c *Client) prepareAuthHeaders() (map[string]string, error) {
 	if c.authConfig.Method == AuthMethodAPIKey {
 		return map[string]string{
-			CelerityAPIKeyHeaderName: c.authConfig.APIKey,
+			BluelinkAPIKeyHeaderName: c.authConfig.APIKey,
 		}, nil
 	}
 
@@ -1007,8 +1007,8 @@ func (c *Client) prepareAuthHeaders() (map[string]string, error) {
 		return c.prepareOAuth2Headers()
 	}
 
-	if c.authConfig.Method == AuthMethodCeleritySignatureV1 {
-		return c.prepareCeleritySignatureV1Headers()
+	if c.authConfig.Method == AuthMethodBluelinkSignatureV1 {
+		return c.prepareBluelinkSignatureV1Headers()
 	}
 
 	return nil, createAuthPrepError(
@@ -1032,27 +1032,27 @@ func (c *Client) prepareOAuth2Headers() (map[string]string, error) {
 	}, nil
 }
 
-func (c *Client) prepareCeleritySignatureV1Headers() (map[string]string, error) {
-	if c.authConfig.CeleritySignatureKeyPair == nil {
+func (c *Client) prepareBluelinkSignatureV1Headers() (map[string]string, error) {
+	if c.authConfig.BluelinkSignatureKeyPair == nil {
 		return nil, createAuthPrepError(
-			"no Celerity Signature v1 key pair configured",
+			"no Bluelink Signature v1 key pair configured",
 		)
 	}
 
 	httpHeaders := make(http.Header)
 	signatureHeader, err := sigv1.CreateSignatureHeader(
 		&sigv1.KeyPair{
-			KeyID:     c.authConfig.CeleritySignatureKeyPair.KeyID,
-			SecretKey: c.authConfig.CeleritySignatureKeyPair.SecretKey,
+			KeyID:     c.authConfig.BluelinkSignatureKeyPair.KeyID,
+			SecretKey: c.authConfig.BluelinkSignatureKeyPair.SecretKey,
 		},
 		httpHeaders,
-		c.authConfig.CeleritySignatureCustomHeaders,
+		c.authConfig.BluelinkSignatureCustomHeaders,
 		c.clock,
 	)
 	if err != nil {
 		return nil, createAuthPrepError(
 			fmt.Sprintf(
-				"failed to create Celerity Signature v1 header: %s",
+				"failed to create Bluelink Signature v1 header: %s",
 				err.Error(),
 			),
 		)

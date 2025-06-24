@@ -1,22 +1,22 @@
 package deployengine
 
-import "github.com/newstack-cloud/celerity/libs/common/sigv1"
+import "github.com/newstack-cloud/bluelink/libs/common/sigv1"
 
 // ConnectProtocol represents the protocol used to connect
-// to an instance of the Celerity Deploy Engine.
+// to an instance of the Bluelink Deploy Engine.
 type ConnectProtocol int32
 
 const (
 	// ConnectProtocolTCP indicates that the client should connect
-	// to the Celerity Deploy Engine using HTTP over TCP.
+	// to the Bluelink Deploy Engine using HTTP over TCP.
 	ConnectProtocolTCP ConnectProtocol = iota
 	// ConnectProtocolUnixDomainSocket indicates that the client should connect
-	// to the Celerity Deploy Engine using a Unix domain socket.
+	// to the Bluelink Deploy Engine using a Unix domain socket.
 	ConnectProtocolUnixDomainSocket
 )
 
 // AuthMethod represents the method of authentication that should be
-// used to connect to an instance of the Celerity Deploy Engine.
+// used to connect to an instance of the Bluelink Deploy Engine.
 type AuthMethod int32
 
 const (
@@ -30,17 +30,17 @@ const (
 	// This version of the Deploy Engine supports OAuth2/OIDC
 	// providers that produce JWTs for access tokens that are compatible
 	// with the auth method documentation that can be found here:
-	// https://www.celerityframework.io/docs/auth/jwts
+	// https://www.bluelink.dev/docs/auth/jwts
 	AuthMethodOAuth2
-	// AuthMethodCeleritySignatureV1 indicates that the client should
-	// authenticate using the Celerity Signature v1 method.
-	// See: https://www.celerityframework.io/docs/auth/signature-v1
-	AuthMethodCeleritySignatureV1
+	// AuthMethodBluelinkSignatureV1 indicates that the client should
+	// authenticate using the Bluelink Signature v1 method.
+	// See: https://www.bluelink.dev/docs/auth/signature-v1
+	AuthMethodBluelinkSignatureV1
 )
 
 type AuthConfig struct {
 	// Method specifies the authentication method to use for requests
-	// to the Celerity Deploy Engine.
+	// to the Bluelink Deploy Engine.
 	Method AuthMethod
 	// APIKey is the API key to use to authenticate requests
 	// when Method is `AuthMethodAPIKey`.
@@ -48,13 +48,13 @@ type AuthConfig struct {
 	// OAuth2Config is the OAuth configuration to use to authenticate
 	// requests when Method is `AuthMethodOAuth2`.
 	OAuth2Config *OAuth2Config
-	// CeleritySignatureKeyPair is the Celerity Signature v1 key pair
-	// to use to authenticate requests when Method is `AuthMethodCeleritySignatureV1`.
-	CeleritySignatureKeyPair *sigv1.KeyPair
-	// CeleritySignatureCustomHeaders is a list of custom headers
-	// to include in the signed message for the Celerity Signature v1
+	// BluelinkSignatureKeyPair is the Bluelink Signature v1 key pair
+	// to use to authenticate requests when Method is `AuthMethodBluelinkSignatureV1`.
+	BluelinkSignatureKeyPair *sigv1.KeyPair
+	// BluelinkSignatureCustomHeaders is a list of custom headers
+	// to include in the signed message for the Bluelink Signature v1
 	// authentication method.
-	CeleritySignatureCustomHeaders []string
+	BluelinkSignatureCustomHeaders []string
 }
 
 // OAuth2Config contains the configuration for gaining access to the Deploy Engine

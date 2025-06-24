@@ -3,9 +3,9 @@ package deployengine
 import "time"
 
 const (
-	// CelerityAPIKeyHeaderName is the name of the header
+	// BluelinkAPIKeyHeaderName is the name of the header
 	// used to pass the API key for authentication.
-	CelerityAPIKeyHeaderName = "Celerity-Api-Key"
+	BluelinkAPIKeyHeaderName = "Bluelink-Api-Key"
 	// AuthorisationHeaderName is the name of the header
 	// used to send a bearer token issued by an OAuth2 or OIDC provider.
 	AuthorisationHeaderName = "Authorization"

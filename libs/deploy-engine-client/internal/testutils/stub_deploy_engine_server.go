@@ -13,14 +13,14 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/manage"
-	"github.com/newstack-cloud/celerity/libs/blueprint/changes"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/schema"
-	"github.com/newstack-cloud/celerity/libs/blueprint/state"
-	"github.com/newstack-cloud/celerity/libs/common/sigv1"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/libs/common/sigv1"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 )
 
 const (
@@ -30,7 +30,7 @@ const (
 type TestServerConfig struct {
 	AllowedAPIKeys                   []string
 	AllowedBearerTokens              []string
-	AllowedCeleritySignatureKeyPairs map[string]*sigv1.KeyPair
+	AllowedBluelinkSignatureKeyPairs map[string]*sigv1.KeyPair
 	// A string that will be present in some part of the request
 	// to the server that will trigger behaviour to simulate
 	// an internal server error.
@@ -567,7 +567,7 @@ func authMiddleware(
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Check for API key
-			apiKey := r.Header.Get("Celerity-Api-Key")
+			apiKey := r.Header.Get("Bluelink-Api-Key")
 			if apiKey != "" && slices.Contains(serverConfig.AllowedAPIKeys, apiKey) {
 				next.ServeHTTP(w, r)
 				return
@@ -581,11 +581,11 @@ func authMiddleware(
 				return
 			}
 
-			// Check for Celerity signature key pair
-			celeritySignature := r.Header.Get(sigv1.SignatureHeaderName)
-			if celeritySignature != "" {
+			// Check for Bluelink signature key pair
+			bluelinkSignature := r.Header.Get(sigv1.SignatureHeaderName)
+			if bluelinkSignature != "" {
 				err := sigv1.VerifySignature(
-					serverConfig.AllowedCeleritySignatureKeyPairs,
+					serverConfig.AllowedBluelinkSignatureKeyPairs,
 					r.Header,
 					clock,
 					&sigv1.VerifyOptions{},

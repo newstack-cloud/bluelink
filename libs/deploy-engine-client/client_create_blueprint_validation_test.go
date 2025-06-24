@@ -1,6 +1,6 @@
 // Tests for the CreateBlueprintValidation method in the DeployEngine client.
 // This will include tests that use different authentication methods,
-// including API key, OAuth2, and Celerity Signature v1.
+// including API key, OAuth2, and Bluelink Signature v1.
 // This is the only method that tests all supported auth methods,
 // tests for other DeployEngine client methods will be tested against
 // a single authentication method.
@@ -12,10 +12,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/manage"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/errors"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/internal/testutils"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/types"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/internal/testutils"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
 )
 
 const (
@@ -138,12 +138,12 @@ func (s *ClientSuite) Test_create_blueprint_validation_api_key() {
 	)
 }
 
-func (s *ClientSuite) Test_create_blueprint_validation_celerity_sigv1() {
-	// Create a new client with Celerity signature v1 auth.
+func (s *ClientSuite) Test_create_blueprint_validation_bluelink_sigv1() {
+	// Create a new client with Bluelink signature v1 auth.
 	client, err := NewClient(
 		WithClientEndpoint(s.deployEngineServer.URL),
-		WithClientAuthMethod(AuthMethodCeleritySignatureV1),
-		WithClientCeleritySigv1KeyPair(testCeleritySignatureKeyPair),
+		WithClientAuthMethod(AuthMethodBluelinkSignatureV1),
+		WithClientBluelinkSigv1KeyPair(testBluelinkSignatureKeyPair),
 		WithClientClock(s.clock),
 	)
 	s.Require().NoError(err)

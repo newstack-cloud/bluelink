@@ -3,8 +3,8 @@ package deployengine
 import (
 	"encoding/json"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/container"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/types"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
 	"github.com/r3labs/sse/v2"
 )
 

@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/errors"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 )
 
 func createAuthPrepError(message string) *errors.AuthPrepError {

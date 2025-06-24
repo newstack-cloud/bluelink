@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint-state/manage"
-	"github.com/newstack-cloud/celerity/libs/blueprint/changes"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/errors"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/internal/testutils"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/types"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/internal/testutils"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
 )
 
 const (

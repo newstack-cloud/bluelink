@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/errors"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/internal/testutils"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/types"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/internal/testutils"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
 )
 
 func (s *ClientSuite) Test_stream_blueprint_instance_events() {
