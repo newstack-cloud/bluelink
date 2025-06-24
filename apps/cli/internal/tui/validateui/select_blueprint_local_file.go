@@ -11,8 +11,8 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/newstack-cloud/celerity/apps/cli/internal/consts"
-	"github.com/newstack-cloud/celerity/apps/cli/internal/tui/styles"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/consts"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/styles"
 )
 
 type SelectBlueprintMsg struct {
@@ -23,7 +23,7 @@ type ClearSelectedBlueprintMsg struct{}
 
 type SelectBlueprintModel struct {
 	filepicker   filepicker.Model
-	styles       styles.CelerityStyles
+	styles       styles.BluelinkStyles
 	sourceList   list.Model
 	source       string
 	selectedFile string
@@ -162,10 +162,10 @@ func (m SelectBlueprintModel) View() string {
 func NewSelectBlueprint(
 	blueprintFile string,
 	autoValidate bool,
-	celerityStyles *styles.CelerityStyles,
+	bluelinkStyles *styles.BluelinkStyles,
 ) (*SelectBlueprintModel, error) {
 	fp := filepicker.New()
-	fp.Styles = customFilePickerStyles(celerityStyles)
+	fp.Styles = customFilePickerStyles(bluelinkStyles)
 	fp.AllowedTypes = []string{".yaml", ".yml", ".json"}
 
 	const defaultWidth = 20
@@ -188,12 +188,12 @@ func NewSelectBlueprint(
 	}, nil
 }
 
-func customFilePickerStyles(celerityStyles *styles.CelerityStyles) filepicker.Styles {
+func customFilePickerStyles(bluelinkStyles *styles.BluelinkStyles) filepicker.Styles {
 	styles := filepicker.DefaultStyles()
-	styles.Selected = celerityStyles.Selected
-	styles.File = celerityStyles.Selectable
-	styles.Directory = celerityStyles.Selectable
-	styles.Cursor = celerityStyles.Selected
+	styles.Selected = bluelinkStyles.Selected
+	styles.File = bluelinkStyles.Selectable
+	styles.Directory = bluelinkStyles.Selectable
+	styles.Cursor = bluelinkStyles.Selected
 	return styles
 }
 

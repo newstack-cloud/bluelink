@@ -5,8 +5,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/newstack-cloud/celerity/apps/cli/internal/engine"
-	"github.com/newstack-cloud/celerity/libs/deploy-engine-client/types"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/engine"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
 	"go.uber.org/zap"
 )
 

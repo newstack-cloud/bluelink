@@ -6,12 +6,12 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/newstack-cloud/celerity/apps/cli/cmd/utils"
-	"github.com/newstack-cloud/celerity/apps/cli/internal/config"
-	"github.com/newstack-cloud/celerity/apps/cli/internal/engine"
-	"github.com/newstack-cloud/celerity/apps/cli/internal/handlers"
-	"github.com/newstack-cloud/celerity/apps/cli/internal/tui/styles"
-	"github.com/newstack-cloud/celerity/apps/cli/internal/tui/validateui"
+	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/config"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/engine"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/handlers"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/styles"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/validateui"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -19,8 +19,8 @@ import (
 func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider) {
 	validateCmd := &cobra.Command{
 		Use:   "validate",
-		Short: "Validates a Celerity blueprint",
-		Long: `Carries out validation on a Celerity blueprint.
+		Short: "Validates a blueprint",
+		Long: `Carries out validation on a blueprint.
 	You can use this command to check for issues with a blueprint
 	before deployment.
 
@@ -54,11 +54,11 @@ func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider)
 				return handler.Handle(context.TODO())
 			}
 
-			if _, err := tea.LogToFile("celerity-output.log", "simple"); err != nil {
+			if _, err := tea.LogToFile("bluelink-output.log", "simple"); err != nil {
 				log.Fatal(err)
 			}
 
-			styles := styles.NewDefaultCelerityStyles()
+			styles := styles.NewDefaultBluelinkStyles()
 			app, err := validateui.NewValidateApp(deployEngine, logger, blueprintFile, isDefault, styles)
 			if err != nil {
 				return err
@@ -84,7 +84,7 @@ func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider)
 		"The blueprint file to use in the validation process.",
 	)
 	confProvider.BindPFlag("validateBlueprintFile", validateCmd.PersistentFlags().Lookup("blueprint-file"))
-	confProvider.BindEnvVar("validateBlueprintFile", "CELERITY_CLI_VALIDATE_BLUEPRINT_FILE")
+	confProvider.BindEnvVar("validateBlueprintFile", "BLUELINK_CLI_VALIDATE_BLUEPRINT_FILE")
 
 	rootCmd.AddCommand(validateCmd)
 }

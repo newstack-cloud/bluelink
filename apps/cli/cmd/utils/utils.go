@@ -59,7 +59,7 @@ var HelpTemplate = `
 // SetupLogger creates a zap logger instance that writes to a file.
 // Due to the CLI heavily using bubbletea to provide interactive experiences,
 func SetupLogger() (*zap.Logger, *os.File, error) {
-	logFileHandle, err := os.OpenFile("celerity.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	logFileHandle, err := os.OpenFile("bluelink.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, nil, err
 	}

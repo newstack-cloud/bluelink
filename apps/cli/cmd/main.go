@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/newstack-cloud/celerity/apps/cli/cmd/commands"
+	"github.com/newstack-cloud/bluelink/apps/cli/cmd/commands"
 	"github.com/spf13/cobra"
 )
 

@@ -6,8 +6,8 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/newstack-cloud/celerity/apps/cli/internal/engine"
-	"github.com/newstack-cloud/celerity/apps/cli/internal/tui/styles"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/engine"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/styles"
 	"go.uber.org/zap"
 )
 
@@ -125,7 +125,7 @@ func NewValidateApp(
 	logger *zap.Logger,
 	blueprintFile string,
 	isDefaultBlueprintFile bool,
-	celerityStyles *styles.CelerityStyles,
+	bluelinkStyles *styles.BluelinkStyles,
 ) (*MainModel, error) {
 	sessionState := validateBlueprintSelect
 	autoValidate := blueprintFile != "" && !isDefaultBlueprintFile
@@ -134,7 +134,7 @@ func NewValidateApp(
 		sessionState = validateView
 	}
 
-	selectBlueprint, err := NewSelectBlueprint(blueprintFile, autoValidate, celerityStyles)
+	selectBlueprint, err := NewSelectBlueprint(blueprintFile, autoValidate, bluelinkStyles)
 	if err != nil {
 		return nil, err
 	}

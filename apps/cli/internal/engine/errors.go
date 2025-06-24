@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	deerrors "github.com/newstack-cloud/celerity/libs/deploy-engine-client/errors"
+	deerrors "github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 	"go.uber.org/zap"
 )
 

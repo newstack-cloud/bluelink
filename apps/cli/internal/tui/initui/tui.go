@@ -8,7 +8,6 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/newstack-cloud/celerity/apps/cli/internal/consts"
 )
 
 const listHeight = 14
@@ -107,32 +106,7 @@ func (m InitModel) View() string {
 }
 
 func NewInitApp(initialLanguage string) *InitModel {
-	items := []list.Item{
-		item{
-			key:   consts.LanguageNodeJS,
-			label: "Node.js",
-		},
-		item{
-			key:   consts.LanguagePython,
-			label: "Python",
-		},
-		item{
-			key:   consts.LanguageJava,
-			label: "Java",
-		},
-		item{
-			key:   consts.LanguageDotNet,
-			label: ".NET",
-		},
-		item{
-			key:   consts.LanguageGo,
-			label: "Go",
-		},
-		item{
-			key:   consts.LanguageRust,
-			label: "Rust",
-		},
-	}
+	items := []list.Item{}
 
 	const defaultWidth = 20
 

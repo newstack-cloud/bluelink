@@ -5,8 +5,8 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/newstack-cloud/celerity/apps/cli/cmd/utils"
-	"github.com/newstack-cloud/celerity/apps/cli/internal/config"
+	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/config"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -18,11 +18,10 @@ func NewRootCmd() *cobra.Command {
 
 	cobra.AddTemplateFunc("wrappedFlagUsages", utils.WrappedFlagUsages)
 	rootCmd := &cobra.Command{
-		Use:   "celerity",
-		Short: "CLI for managing celerity applications and blueprint deployments",
-		Long: `The CLI for the backend toolkit that gets you moving fast.
-This CLI validates, builds, and deploys celerity applications
-along with blueprints used for Infrastructure as Code.`,
+		Use:   "bluelink",
+		Short: "CLI for managing blueprint deployments and plugins",
+		Long: `The CLI for managing and deploying your infrastructure blueprints.
+This CLI validates, stages changes for, and deploys blueprints.`,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if err := confProvider.LoadConfigFile(configFile); err != nil {
 				return err
@@ -45,13 +44,13 @@ along with blueprints used for Infrastructure as Code.`,
 		&configFile,
 		"config",
 		"c",
-		"celerity.config.toml",
+		"bluelink.config.toml",
 		"Specify a config file to source config from as an alternative to flags",
 	)
 
 	rootCmd.PersistentFlags().String(
 		"deploy-config-file",
-		"celerity.deploy.json",
+		"bluelink.deploy.json",
 		"The path to the deployment configuration JSON file that will be used as"+
 			" a source of blueprint variable overrides, provider configuration, "+
 			"transformer configuration and general configuration. "+
@@ -59,7 +58,7 @@ along with blueprints used for Infrastructure as Code.`,
 			"validation, change staging and deployment.",
 	)
 	confProvider.BindPFlag("deployConfigFile", rootCmd.PersistentFlags().Lookup("deploy-config-file"))
-	confProvider.BindEnvVar("deployConfigFile", "CELERITY_CLI_DEPLOY_CONFIG_FILE")
+	confProvider.BindEnvVar("deployConfigFile", "BLUELINK_CLI_DEPLOY_CONFIG_FILE")
 
 	rootCmd.PersistentFlags().String(
 		"connect-protocol",
@@ -71,7 +70,7 @@ along with blueprints used for Infrastructure as Code.`,
 			"To use a \"unix\" socket on windows, you will need to use WSL 2 or above.",
 	)
 	confProvider.BindPFlag("connectProtocol", rootCmd.PersistentFlags().Lookup("connect-protocol"))
-	confProvider.BindEnvVar("connectProtocol", "CELERITY_CLI_CONNECT_PROTOCOL")
+	confProvider.BindEnvVar("connectProtocol", "BLUELINK_CLI_CONNECT_PROTOCOL")
 
 	rootCmd.PersistentFlags().String(
 		"engine-endpoint",
@@ -79,7 +78,7 @@ along with blueprints used for Infrastructure as Code.`,
 		"The endpoint of the deploy engine api, this is used if --connect-protocol is set to \"tcp\"",
 	)
 	confProvider.BindPFlag("engineEndpoint", rootCmd.PersistentFlags().Lookup("engine-endpoint"))
-	confProvider.BindEnvVar("engineEndpoint", "CELERITY_CLI_ENGINE_ENDPOINT")
+	confProvider.BindEnvVar("engineEndpoint", "BLUELINK_CLI_ENGINE_ENDPOINT")
 
 	rootCmd.PersistentFlags().Bool(
 		"skip-plugin-config-validation",
@@ -87,7 +86,7 @@ along with blueprints used for Infrastructure as Code.`,
 		"Skip validation of the plugin-specific entries in the deploy configuration file for commands that interact with the deploy engine.",
 	)
 	confProvider.BindPFlag("skipPluginConfigValidation", rootCmd.PersistentFlags().Lookup("skip-plugin-config-validation"))
-	confProvider.BindEnvVar("skipPluginConfigValidation", "CELERITY_CLI_SKIP_PLUGIN_CONFIG_VALIDATION")
+	confProvider.BindEnvVar("skipPluginConfigValidation", "BLUELINK_CLI_SKIP_PLUGIN_CONFIG_VALIDATION")
 
 	setupVersionCommand(rootCmd)
 	setupInitCommand(rootCmd, confProvider)
@@ -121,12 +120,13 @@ func validateConnectProtocol(protocol string) error {
 
 func OnInitialise() {
 	asciiArt := `
-	   ___     _           _ _         
-	  / __\___| | ___ _ __(_) |_ _   _ 
-	 / /  / _ \ |/ _ \ '__| | __| | | |
-	/ /__|  __/ |  __/ |  | | |_| |_| |
-	\____/\___|_|\___|_|  |_|\__|\__, |
-				     |___/ 
+  _     _            _ _       _    
+ | |   | |          | (_)     | |   
+ | |__ | |_   _  ___| |_ _ __ | | __
+ | '_ \| | | | |/ _ \ | | '_ \| |/ /
+ | |_) | | |_| |  __/ | | | | |   < 
+ |_.__/|_|\__,_|\___|_|_|_| |_|_|\_\
+                                             
 	`
 
 	inTerminal := term.IsTerminal(int(os.Stdout.Fd()))
