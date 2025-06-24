@@ -1,6 +1,6 @@
 package serialisation
 
-import "github.com/newstack-cloud/celerity/libs/blueprint/schema"
+import "github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 
 // ExpandedBlueprintSerialiser is an interface that represents a service
 // that serialises and deserialises expanded blueprints.

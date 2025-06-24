@@ -3,8 +3,8 @@ package resourcehelpers
 import (
 	"fmt"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/errors"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
 
 const (

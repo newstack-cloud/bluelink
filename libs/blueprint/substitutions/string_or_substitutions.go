@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/coreos/go-json"
-	"github.com/newstack-cloud/celerity/libs/blueprint/jsonutils"
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/jsonutils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"gopkg.in/yaml.v3"
 )
 

@@ -3,8 +3,8 @@ package corefunctions
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/function"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
 
 // Contains_G_Function provides the implementation of the
@@ -23,7 +23,7 @@ func NewContains_G_Function() provider.Function {
 			FormattedDescription: "A composable version of the \"contains\" function that takes the search value as a " +
 				"static argument and returns a function that takes the string or array to search in.\n\n" +
 				"**Examples:**\n\n" +
-				"```\n${filter(\nvalues.cacheClusterConfig.hosts,\ncontains_g(\"celerityframework.com\")\n)}\n```",
+				"```\n${filter(\nvalues.cacheClusterConfig.hosts,\ncontains_g(\"bluelink.dev\")\n)}\n```",
 			Parameters: []function.Parameter{
 				&function.AnyParameter{
 					Label:       "substring",

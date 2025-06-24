@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"slices"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 )
 
 // ConfigDefinition contains a detailed definition (schema) of the configuration

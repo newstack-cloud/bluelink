@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 )
 
 // DataSourceRegistry provides a way to retrieve data source plugins

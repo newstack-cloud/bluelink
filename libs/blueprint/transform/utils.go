@@ -3,7 +3,7 @@ package transform
 import (
 	"strings"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 // ExtractTransformerFromItemType extracts the transformer namespace from an

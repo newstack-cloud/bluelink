@@ -3,8 +3,8 @@ package refgraph
 import (
 	"testing"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/stretchr/testify/suite"
 	. "gopkg.in/check.v1"
 )
@@ -105,7 +105,7 @@ func (s *RefChainCollectorTestSuite) Test_finds_no_circular_references() {
 
 func createTestResource(id string) *schema.Resource {
 	return &schema.Resource{
-		Type: &schema.ResourceTypeWrapper{Value: "celerity/example"},
+		Type: &schema.ResourceTypeWrapper{Value: "bluelink/example"},
 		Spec: &core.MappingNode{
 			Fields: map[string]*core.MappingNode{
 				"id": {

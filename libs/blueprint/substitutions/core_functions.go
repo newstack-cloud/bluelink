@@ -126,7 +126,7 @@ const (
 	// Example:
 	// ${filter(
 	// 	variables.cacheClusterConfig.hosts,
-	// 	contains_g("celerityframework.com")
+	// 	contains_g("blueprint.dev")
 	// )}
 	SubstitutionFunctionContains_G SubstitutionFunctionName = "contains_g"
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 // ExtractProviderFromItemType extracts the provider namespace from a resource type

@@ -3,8 +3,8 @@ package substitutions
 import (
 	"fmt"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/errors"
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 )
 
 const (

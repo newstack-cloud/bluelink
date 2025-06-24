@@ -3,7 +3,7 @@ package schema
 import (
 	"os"
 
-	"github.com/newstack-cloud/celerity/libs/common/testhelpers"
+	"github.com/newstack-cloud/bluelink/libs/common/testhelpers"
 	. "gopkg.in/check.v1"
 )
 

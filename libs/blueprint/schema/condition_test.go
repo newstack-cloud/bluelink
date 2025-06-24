@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/substitutions"
-	"github.com/newstack-cloud/celerity/libs/common/testhelpers"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
+	"github.com/newstack-cloud/bluelink/libs/common/testhelpers"
 	. "gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
 )

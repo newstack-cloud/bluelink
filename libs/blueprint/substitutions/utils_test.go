@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/coreos/go-json"
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/stretchr/testify/suite"
 )
 

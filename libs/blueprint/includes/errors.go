@@ -3,7 +3,7 @@ package includes
 import (
 	"fmt"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 )
 
 const (

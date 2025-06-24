@@ -3,8 +3,8 @@ package container
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
 // LinkDestroyer provides an interface for a service

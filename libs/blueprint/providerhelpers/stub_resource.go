@@ -3,7 +3,7 @@ package providerhelpers
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
 
 const (

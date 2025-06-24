@@ -4,11 +4,10 @@ import (
 	"context"
 	"strings"
 
-	bpcore "github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/schema"
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
-	"github.com/newstack-cloud/celerity/libs/blueprint/substitutions"
-	"github.com/newstack-cloud/celerity/libs/common/core"
+	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 )
 
 // ValidateTransforms checks for non-standard transforms and reports warnings
@@ -54,15 +53,6 @@ func validateTransform(
 			Range:   diagnosticRangeFromTransform(transformIndex, blueprint),
 		})
 		return
-	}
-
-	if !core.SliceContainsComparable(CoreTransforms, transform) {
-		*diagnostics = append(*diagnostics, &bpcore.Diagnostic{
-			Level: bpcore.DiagnosticLevelWarning,
-			Message: "The transform \"" + transform + "\" is not a core transform," +
-				" you will need to make sure it is configured when deploying this blueprint.",
-			Range: diagnosticRangeFromTransform(transformIndex, blueprint),
-		})
 	}
 }
 
@@ -126,19 +116,3 @@ func determineTransformEndSourceMeta(
 
 	return endSourceMeta
 }
-
-const (
-	// TransformCelerity2025_08_01 is the transform to be used for
-	// Celerity resources that provide an abstraction over a more complex
-	// combination of underlying resources.
-	TransformCelerity2025_08_01 = "celerity-2025-08-01"
-)
-
-var (
-	// CoreTransforms is the list of transforms that are considered to be core
-	// to Celerity, these will be transforms maintained by the Celerity team
-	// or by trusted maintainers.
-	CoreTransforms = []string{
-		TransformCelerity2025_08_01,
-	}
-)

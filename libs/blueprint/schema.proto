@@ -1,7 +1,7 @@
 syntax = "proto3";
 package schema;
 
-option go_package = "github.com/newstack-cloud/celerity/libs/blueprint/schemapb";
+option go_package = "github.com/newstack-cloud/bluelink/libs/blueprint/schemapb";
 
 message Blueprint {
     ScalarValue version = 1;

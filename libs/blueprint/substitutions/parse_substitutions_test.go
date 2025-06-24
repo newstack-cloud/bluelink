@@ -3,8 +3,8 @@ package substitutions
 import (
 	"testing"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/errors"
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	. "gopkg.in/check.v1"
 )
 

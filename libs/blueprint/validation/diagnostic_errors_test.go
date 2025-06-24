@@ -3,11 +3,11 @@ package validation
 import (
 	"testing"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/stretchr/testify/suite"
 
-	bperrors "github.com/newstack-cloud/celerity/libs/blueprint/errors"
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
+	bperrors "github.com/newstack-cloud/bluelink/libs/blueprint/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 )
 
 type DiagnosticErrorSuite struct {

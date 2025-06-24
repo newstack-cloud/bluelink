@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/internal"
-	"github.com/newstack-cloud/celerity/libs/common/testhelpers"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/common/testhelpers"
 	"github.com/stretchr/testify/suite"
 )
 

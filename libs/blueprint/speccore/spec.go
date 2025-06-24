@@ -1,7 +1,7 @@
 package speccore
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 )
 
 // BlueprintSpec provides an interface for a service that holds

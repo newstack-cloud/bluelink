@@ -1,8 +1,8 @@
 package core
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
-	"github.com/newstack-cloud/celerity/libs/blueprint/substitutions"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 )
 
 // Diagnostic provides error, warning or informational diagnostic for a blueprint.

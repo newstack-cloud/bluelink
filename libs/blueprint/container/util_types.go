@@ -1,8 +1,8 @@
 package container
 
 import (
-	"github.com/newstack-cloud/celerity/libs/blueprint/links"
-	"github.com/newstack-cloud/celerity/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/links"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
 // LinkPendingCompletion holds information about the completion status of a link

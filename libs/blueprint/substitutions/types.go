@@ -1,6 +1,6 @@
 package substitutions
 
-import "github.com/newstack-cloud/celerity/libs/blueprint/source"
+import "github.com/newstack-cloud/bluelink/libs/blueprint/source"
 
 // StringOrSubstitution represents a value that can be either
 // a string or a substitution represented as ${..}

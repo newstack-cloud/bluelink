@@ -3,9 +3,9 @@ package links
 import (
 	"fmt"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/schema"
-	"github.com/newstack-cloud/celerity/libs/blueprint/speccore"
-	"github.com/newstack-cloud/celerity/libs/common/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/speccore"
+	"github.com/newstack-cloud/bluelink/libs/common/core"
 )
 
 // SelectGroup provides a grouping of selector and selected resources

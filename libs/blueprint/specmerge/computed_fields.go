@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/substitutions"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 )
 
 // IsComputedField returns whether the given field path is a computed field

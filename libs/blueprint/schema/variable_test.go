@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	. "gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
 )

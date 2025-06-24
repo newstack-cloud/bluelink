@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
-	"github.com/newstack-cloud/celerity/libs/blueprint/transform"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	. "gopkg.in/check.v1"
 )
 
@@ -151,8 +151,8 @@ func newTestExampleResource() provider.Resource {
 				},
 			},
 		},
-		markdownDescription:  "## celerity/exampleResource\n\nThis is an example resource.",
-		plainTextDescription: "celerity/exampleResource\n\nThis is an example resource.",
+		markdownDescription:  "## bluelink/exampleResource\n\nThis is an example resource.",
+		plainTextDescription: "bluelink/exampleResource\n\nThis is an example resource.",
 		markdownExamples:     []string{},
 		plainTextExamples:    []string{},
 	}
@@ -189,7 +189,7 @@ func (r *testExampleResource) GetType(
 	input *provider.ResourceGetTypeInput,
 ) (*provider.ResourceGetTypeOutput, error) {
 	return &provider.ResourceGetTypeOutput{
-		Type: "celerity/exampleResource",
+		Type: "bluelink/exampleResource",
 	}, nil
 }
 

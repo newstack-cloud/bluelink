@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 // CustomVariableType provides the interface for a custom variable type

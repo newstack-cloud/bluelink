@@ -3,9 +3,9 @@ package container
 import (
 	"slices"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/refgraph"
-	"github.com/newstack-cloud/celerity/libs/blueprint/state"
-	"github.com/newstack-cloud/celerity/libs/common/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/libs/common/core"
 )
 
 // OrderElementsForRemoval orders resources, children and links for removal based on dependencies

@@ -1,6 +1,6 @@
 package refgraph
 
-import "github.com/newstack-cloud/celerity/libs/common/core"
+import "github.com/newstack-cloud/bluelink/libs/common/core"
 
 // DeepCopyReferenceChains deep copies a slice of reference chains.
 // This is useful when you want to modify the chains without affecting the original

@@ -3,8 +3,8 @@ package validation
 import (
 	"errors"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	bperrors "github.com/newstack-cloud/celerity/libs/blueprint/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	bperrors "github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 )
 
 // ExtractDiagnosticsAndErrors extracts diagnostics and errors from the provided diagnostics slice.

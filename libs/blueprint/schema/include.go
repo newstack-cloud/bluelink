@@ -2,9 +2,9 @@ package schema
 
 import (
 	json "github.com/coreos/go-json"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
-	"github.com/newstack-cloud/celerity/libs/blueprint/substitutions"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	"gopkg.in/yaml.v3"
 )
 
@@ -12,7 +12,7 @@ import (
 // include in the specification.
 // This provides a method of creating modular blueprints
 // that is native to the spec and doesn't require
-// a third party plugin to implement. (e.g. a celerity/blueprint resource type)
+// a third party plugin to implement. (e.g. a bluelink/blueprint resource type)
 type Include struct {
 	// The path to the child blueprint on a local or remote file system.
 	Path *substitutions.StringOrSubstitutions `yaml:"path" json:"path"`

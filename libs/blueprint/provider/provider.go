@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 // Provider is the interface for an implementation of a provider

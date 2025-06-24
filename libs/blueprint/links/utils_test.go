@@ -3,7 +3,7 @@ package links
 import (
 	"reflect"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	. "gopkg.in/check.v1"
 )
 

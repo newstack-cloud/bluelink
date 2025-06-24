@@ -3,8 +3,8 @@ package container
 import (
 	"context"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
 // ChildBlueprintDestroyer provides an interface for a service that destroys a child

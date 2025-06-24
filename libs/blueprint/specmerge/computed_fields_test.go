@@ -3,7 +3,7 @@ package specmerge
 import (
 	"testing"
 
-	"github.com/newstack-cloud/celerity/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/stretchr/testify/suite"
 )
 

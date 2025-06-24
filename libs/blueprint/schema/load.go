@@ -4,8 +4,8 @@ import (
 	"os"
 
 	json "github.com/coreos/go-json"
-	"github.com/newstack-cloud/celerity/libs/blueprint/core"
-	"github.com/newstack-cloud/celerity/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 
 	"github.com/tailscale/hujson"
 	"gopkg.in/yaml.v3"
