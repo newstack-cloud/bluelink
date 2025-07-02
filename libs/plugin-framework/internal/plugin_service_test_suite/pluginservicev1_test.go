@@ -14,6 +14,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/internal/testprovider"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/internal/testutils"
@@ -30,9 +31,10 @@ const (
 )
 
 type PluginServiceV1Suite struct {
-	pluginService pluginservicev1.ServiceClient
-	funcRegistry  provider.FunctionRegistry
-	provider      provider.Provider
+	pluginService  pluginservicev1.ServiceClient
+	funcRegistry   provider.FunctionRegistry
+	provider       provider.Provider
+	stateContainer state.Container
 
 	closePluginService func()
 	closeProvider      func()
@@ -52,21 +54,28 @@ func (s *PluginServiceV1Suite) SetupTest() {
 	s.funcRegistry = provider.NewFunctionRegistry(
 		providers,
 	)
+	s.stateContainer = testutils.NewMemoryStateContainer()
+	err := s.populateResourceStateToLookup()
+	s.Require().NoError(err)
+
+	resourceRegistry := resourcehelpers.NewRegistry(
+		providers,
+		map[string]transform.SpecTransformer{},
+		/* stabilisationPollingInterval */ 1*time.Millisecond,
+		s.stateContainer,
+		core.NewDefaultParams(
+			map[string]map[string]*core.ScalarValue{},
+			map[string]map[string]*core.ScalarValue{},
+			map[string]*core.ScalarValue{},
+			map[string]*core.ScalarValue{},
+		),
+	)
 	pluginService, closePluginService := testutils.StartPluginServiceServer(
 		testHostID,
 		pluginManager,
 		s.funcRegistry,
-		resourcehelpers.NewRegistry(
-			providers,
-			map[string]transform.SpecTransformer{},
-			/* stabilisationPollingInterval */ 1*time.Millisecond,
-			core.NewDefaultParams(
-				map[string]map[string]*core.ScalarValue{},
-				map[string]map[string]*core.ScalarValue{},
-				map[string]*core.ScalarValue{},
-				map[string]*core.ScalarValue{},
-			),
-		),
+		/* resourceDeployService */ resourceRegistry,
+		/* resourceLookupService */ resourceRegistry,
 	)
 	s.pluginService = pluginService
 	s.closePluginService = closePluginService
@@ -88,6 +97,25 @@ func (s *PluginServiceV1Suite) SetupTest() {
 	namespace, err := s.provider.Namespace(context.Background())
 	s.Require().NoError(err)
 	providers[namespace] = s.provider
+}
+
+func (s *PluginServiceV1Suite) populateResourceStateToLookup() error {
+	input := linkUpdateIntermediaryResourcesInput(
+		provider.LinkUpdateTypeCreate,
+	)
+	return s.stateContainer.Instances().Save(
+		context.Background(),
+		state.InstanceState{
+			InstanceID:   input.ResourceAInfo.InstanceID,
+			InstanceName: input.InstanceName,
+			ResourceIDs: map[string]string{
+				input.ResourceAInfo.ResourceName: input.ResourceAInfo.ResourceID,
+			},
+			Resources: map[string]*state.ResourceState{
+				input.ResourceAInfo.ResourceName: input.ResourceAInfo.CurrentResourceState,
+			},
+		},
+	)
 }
 
 func (s *PluginServiceV1Suite) TearDownTest() {
@@ -266,6 +294,34 @@ func (s *PluginServiceV1Suite) Test_link_destroy_intermediary_resource_call() {
 	s.Require().NoError(err)
 
 	s.Assert().Equal(&provider.LinkUpdateIntermediaryResourcesOutput{}, output)
+}
+
+func (s *PluginServiceV1Suite) Test_lookup_resource_in_state_output() {
+	lookupService := pluginservicev1.ResourceLookupServiceFromClient(
+		s.pluginService,
+	)
+	input := linkUpdateIntermediaryResourcesInput(
+		provider.LinkUpdateTypeCreate,
+	)
+	resourceState, err := lookupService.LookupResourceInState(
+		context.Background(),
+		&provider.ResourceLookupInput{
+			InstanceID:   input.ResourceAInfo.InstanceID,
+			ResourceType: "aws/lambda/function",
+			ExternalID: core.StringValue(
+				input.ResourceAInfo.CurrentResourceState.SpecData.Fields["arn"],
+			),
+			ProviderContext: provider.NewProviderContextFromParams(
+				"aws",
+				testutils.CreateEmptyTestParams(),
+			),
+		},
+	)
+	s.Require().NoError(err)
+	s.Assert().Equal(
+		input.ResourceAInfo.CurrentResourceState.ResourceID,
+		resourceState.ResourceID,
+	)
 }
 
 func (s *PluginServiceV1Suite) createPluginInstance(

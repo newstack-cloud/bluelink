@@ -761,9 +761,13 @@ func (p *blueprintProviderPluginImpl) UpdateLinkIntermediaryResources(
 	resourceDeployService := pluginservicev1.ResourceDeployServiceFromClient(
 		p.serviceClient,
 	)
+	resourceLookupService := pluginservicev1.ResourceLookupServiceFromClient(
+		p.serviceClient,
+	)
 	updateIntermediaryResourcesInput, err := fromPBLinkIntermediaryResourceRequest(
 		req,
 		resourceDeployService,
+		resourceLookupService,
 	)
 	if err != nil {
 		return toUpdateLinkIntermediaryResourcesErrorResponse(err), nil

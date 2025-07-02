@@ -122,6 +122,26 @@ func linkLambdaFunctionDDBTableUpdateIntermediaryResources(
 	// with the plugin service to deploy resources.
 	changes := createDeployIntermediaryResourceChanges()
 
+	// Check existing resource state, typically this would only be called
+	// when the intermediary resource already exists in the blueprint and is being updated.
+	_, err := input.ResourceLookupService.LookupResourceInState(
+		ctx,
+		&provider.ResourceLookupInput{
+			InstanceID: input.ResourceAInfo.InstanceID,
+			ExternalID: core.StringValue(
+				input.ResourceAInfo.CurrentResourceState.SpecData.Fields["arn"],
+			),
+			ResourceType: input.ResourceAInfo.CurrentResourceState.Type,
+			ProviderContext: provider.NewProviderContextFromLinkContext(
+				input.LinkContext,
+				"aws",
+			),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	if input.LinkUpdateType == provider.LinkUpdateTypeUpdate ||
 		input.LinkUpdateType == provider.LinkUpdateTypeCreate {
 		_, err := input.ResourceDeployService.Deploy(

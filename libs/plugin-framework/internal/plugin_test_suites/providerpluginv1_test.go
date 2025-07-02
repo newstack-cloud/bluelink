@@ -16,6 +16,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/errorsv1"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/internal/testprovider"
@@ -37,6 +38,7 @@ type ProviderPluginV1Suite struct {
 	providerWrongHost provider.Provider
 	failingProvider   provider.Provider
 	funcRegistry      provider.FunctionRegistry
+	stateContainer    state.Container
 
 	closePluginService   func()
 	closeProvider        func()
@@ -57,21 +59,28 @@ func (s *ProviderPluginV1Suite) SetupSuite() {
 	s.funcRegistry = provider.NewFunctionRegistry(
 		providers,
 	)
+	s.stateContainer = testutils.NewMemoryStateContainer()
+	err := s.populateResourceStateToLookup()
+	s.Require().NoError(err)
+
+	resourceRegistry := resourcehelpers.NewRegistry(
+		providers,
+		map[string]transform.SpecTransformer{},
+		/* stabilisationPollingInterval */ 1*time.Millisecond,
+		s.stateContainer,
+		core.NewDefaultParams(
+			map[string]map[string]*core.ScalarValue{},
+			map[string]map[string]*core.ScalarValue{},
+			map[string]*core.ScalarValue{},
+			map[string]*core.ScalarValue{},
+		),
+	)
 	pluginService, closePluginService := testutils.StartPluginServiceServer(
 		testHostID,
 		pluginManager,
 		s.funcRegistry,
-		resourcehelpers.NewRegistry(
-			providers,
-			map[string]transform.SpecTransformer{},
-			/* stabilisationPollingInterval */ 1*time.Millisecond,
-			core.NewDefaultParams(
-				map[string]map[string]*core.ScalarValue{},
-				map[string]map[string]*core.ScalarValue{},
-				map[string]*core.ScalarValue{},
-				map[string]*core.ScalarValue{},
-			),
-		),
+		/* resourceDeployService */ resourceRegistry,
+		/* resourceLookupService */ resourceRegistry,
 	)
 	s.pluginService = pluginService
 	s.closePluginService = closePluginService
@@ -94,6 +103,23 @@ func (s *ProviderPluginV1Suite) SetupSuite() {
 	s.failingProvider = providerserverv1.WrapProviderClient(failingProviderClient, testHostID)
 
 	s.providerWrongHost = providerserverv1.WrapProviderClient(providerClient, testWrongHostID)
+}
+
+func (s *ProviderPluginV1Suite) populateResourceStateToLookup() error {
+	input := linkUpdateIntermediaryResourcesInput()
+	return s.stateContainer.Instances().Save(
+		context.Background(),
+		state.InstanceState{
+			InstanceID:   input.ResourceAInfo.InstanceID,
+			InstanceName: input.InstanceName,
+			ResourceIDs: map[string]string{
+				input.ResourceAInfo.ResourceName: input.ResourceAInfo.ResourceID,
+			},
+			Resources: map[string]*state.ResourceState{
+				input.ResourceAInfo.ResourceName: input.ResourceAInfo.CurrentResourceState,
+			},
+		},
+	)
 }
 
 func (s *ProviderPluginV1Suite) Test_get_provider_namespace() {

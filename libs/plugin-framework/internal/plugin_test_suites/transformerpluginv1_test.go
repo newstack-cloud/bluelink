@@ -8,6 +8,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/errorsv1"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/internal/testtransformer"
@@ -23,6 +24,7 @@ type TransformerPluginV1Suite struct {
 	transformerWrongHost transform.SpecTransformer
 	failingTransformer   transform.SpecTransformer
 	funcRegistry         provider.FunctionRegistry
+	stateContainer       state.Container
 
 	closePluginService      func()
 	closeTransformer        func()
@@ -43,21 +45,25 @@ func (s *TransformerPluginV1Suite) SetupSuite() {
 	s.funcRegistry = provider.NewFunctionRegistry(
 		map[string]provider.Provider{},
 	)
+	s.stateContainer = testutils.NewMemoryStateContainer()
+	resourceRegistry := resourcehelpers.NewRegistry(
+		map[string]provider.Provider{},
+		transformers,
+		/* stabilisationPollingInterval */ 1*time.Millisecond,
+		s.stateContainer,
+		core.NewDefaultParams(
+			map[string]map[string]*core.ScalarValue{},
+			map[string]map[string]*core.ScalarValue{},
+			map[string]*core.ScalarValue{},
+			map[string]*core.ScalarValue{},
+		),
+	)
 	pluginService, closePluginService := testutils.StartPluginServiceServer(
 		testHostID,
 		pluginManager,
 		s.funcRegistry,
-		resourcehelpers.NewRegistry(
-			map[string]provider.Provider{},
-			transformers,
-			/* stabilisationPollingInterval */ 1*time.Millisecond,
-			core.NewDefaultParams(
-				map[string]map[string]*core.ScalarValue{},
-				map[string]map[string]*core.ScalarValue{},
-				map[string]*core.ScalarValue{},
-				map[string]*core.ScalarValue{},
-			),
-		),
+		/* resourceDeployService */ resourceRegistry,
+		/* resourceLookupService */ resourceRegistry,
 	)
 	s.pluginService = pluginService
 	s.closePluginService = closePluginService

@@ -1040,7 +1040,7 @@ func FromPBResourceInfo(
 		return provider.ResourceInfo{}, nil
 	}
 
-	resourceState, err := fromPBResourceState(resourceInfo.CurrentResourceState)
+	resourceState, err := FromPBResourceState(resourceInfo.CurrentResourceState)
 	if err != nil {
 		return provider.ResourceInfo{}, err
 	}
@@ -1210,7 +1210,7 @@ func fromPBResolvedResourceConditions(
 	return conditions, nil
 }
 
-func fromPBResourceState(
+func FromPBResourceState(
 	pbResourceState *sharedtypesv1.ResourceState,
 ) (*state.ResourceState, error) {
 	if pbResourceState == nil {
@@ -1457,7 +1457,7 @@ func FromPBDestroyResourceRequest(
 		return nil, err
 	}
 
-	resourceState, err := fromPBResourceState(req.ResourceState)
+	resourceState, err := FromPBResourceState(req.ResourceState)
 	if err != nil {
 		return nil, err
 	}

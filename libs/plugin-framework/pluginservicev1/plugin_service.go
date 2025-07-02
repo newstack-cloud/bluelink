@@ -28,6 +28,7 @@ type pluginServiceServer struct {
 	manager                      Manager
 	functionRegistry             provider.FunctionRegistry
 	resourceDeployService        provider.ResourceDeployService
+	resourceLookupService        provider.ResourceLookupService
 	hostID                       string
 	pluginToPluginCallTimeout    int
 	resourceStabilisationTimeout int
@@ -69,6 +70,7 @@ func NewServiceServer(
 	pluginManager Manager,
 	functionRegistry provider.FunctionRegistry,
 	resourceDeployService provider.ResourceDeployService,
+	resourceLookupService provider.ResourceLookupService,
 	hostID string,
 	opts ...ServiceServerOption,
 ) ServiceServer {
@@ -76,6 +78,7 @@ func NewServiceServer(
 		manager:                      pluginManager,
 		functionRegistry:             functionRegistry,
 		resourceDeployService:        resourceDeployService,
+		resourceLookupService:        resourceLookupService,
 		hostID:                       hostID,
 		pluginToPluginCallTimeout:    DefaultPluginToPluginCallTimeout,
 		resourceStabilisationTimeout: DefaultResourceStabilisationTimeout,
@@ -343,6 +346,63 @@ func (s *pluginServiceServer) DestroyResource(
 				Destroyed: true,
 			},
 		},
+	}, nil
+}
+
+func (s *pluginServiceServer) LookupResourceInState(
+	ctx context.Context,
+	req *LookupResourceInStateRequest,
+) (*LookupResourceInStateResponse, error) {
+	input, err := fromPBLookupResourceInStateRequest(req)
+	if err != nil {
+		return toPBLookupResourceInStateErrorResponse(err), nil
+	}
+
+	output, err := s.resourceLookupService.LookupResourceInState(
+		ctx,
+		input,
+	)
+	if err != nil {
+		return toPBLookupResourceInStateErrorResponse(err), nil
+	}
+
+	resourceState, err := convertv1.ToPBResourceState(output)
+	if err != nil {
+		return toPBLookupResourceInStateErrorResponse(err), nil
+	}
+
+	return &LookupResourceInStateResponse{
+		Response: &LookupResourceInStateResponse_Resource{
+			Resource: resourceState,
+		},
+	}, nil
+}
+
+func toPBLookupResourceInStateErrorResponse(err error) *LookupResourceInStateResponse {
+	return &LookupResourceInStateResponse{
+		Response: &LookupResourceInStateResponse_ErrorResponse{
+			ErrorResponse: errorsv1.CreateResponseFromError(err),
+		},
+	}
+}
+
+func fromPBLookupResourceInStateRequest(
+	req *LookupResourceInStateRequest,
+) (*provider.ResourceLookupInput, error) {
+	if req == nil {
+		return nil, nil
+	}
+
+	providerCtx, err := convertv1.FromPBProviderContext(req.Context)
+	if err != nil {
+		return nil, err
+	}
+
+	return &provider.ResourceLookupInput{
+		InstanceID:      req.InstanceId,
+		ResourceType:    req.ResourceType,
+		ExternalID:      req.ExternalId,
+		ProviderContext: providerCtx,
 	}, nil
 }
 

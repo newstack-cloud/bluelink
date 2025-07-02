@@ -29,6 +29,7 @@ const (
 	Service_ListFunctions_FullMethodName         = "/pluginservicev1.Service/ListFunctions"
 	Service_DeployResource_FullMethodName        = "/pluginservicev1.Service/DeployResource"
 	Service_DestroyResource_FullMethodName       = "/pluginservicev1.Service/DestroyResource"
+	Service_LookupResourceInState_FullMethodName = "/pluginservicev1.Service/LookupResourceInState"
 )
 
 // ServiceClient is the client API for Service service.
@@ -78,6 +79,14 @@ type ServiceClient interface {
 	// in a link implementation, this must not be used for managing resources that are explicitly
 	// defined in a blueprint.
 	DestroyResource(ctx context.Context, in *sharedtypesv1.DestroyResourceRequest, opts ...grpc.CallOption) (*sharedtypesv1.DestroyResourceResponse, error)
+	// LookupResourceInState retrieves a resource of a given type from the blueprint
+	// state.
+	// This is meant to be used to allow link implementations to check if intermediary resources
+	// are present in the blueprint state, when the intermediary resource should already exist
+	// in the blueprint instance so the link can update the resource without impacting drift
+	// detection as only links in the same blueprint instance that modify resources are taken into
+	// account for drift detection.
+	LookupResourceInState(ctx context.Context, in *LookupResourceInStateRequest, opts ...grpc.CallOption) (*LookupResourceInStateResponse, error)
 }
 
 type serviceClient struct {
@@ -168,6 +177,16 @@ func (c *serviceClient) DestroyResource(ctx context.Context, in *sharedtypesv1.D
 	return out, nil
 }
 
+func (c *serviceClient) LookupResourceInState(ctx context.Context, in *LookupResourceInStateRequest, opts ...grpc.CallOption) (*LookupResourceInStateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LookupResourceInStateResponse)
+	err := c.cc.Invoke(ctx, Service_LookupResourceInState_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ServiceServer is the server API for Service service.
 // All implementations must embed UnimplementedServiceServer
 // for forward compatibility.
@@ -215,6 +234,14 @@ type ServiceServer interface {
 	// in a link implementation, this must not be used for managing resources that are explicitly
 	// defined in a blueprint.
 	DestroyResource(context.Context, *sharedtypesv1.DestroyResourceRequest) (*sharedtypesv1.DestroyResourceResponse, error)
+	// LookupResourceInState retrieves a resource of a given type from the blueprint
+	// state.
+	// This is meant to be used to allow link implementations to check if intermediary resources
+	// are present in the blueprint state, when the intermediary resource should already exist
+	// in the blueprint instance so the link can update the resource without impacting drift
+	// detection as only links in the same blueprint instance that modify resources are taken into
+	// account for drift detection.
+	LookupResourceInState(context.Context, *LookupResourceInStateRequest) (*LookupResourceInStateResponse, error)
 	mustEmbedUnimplementedServiceServer()
 }
 
@@ -248,6 +275,9 @@ func (UnimplementedServiceServer) DeployResource(context.Context, *DeployResourc
 }
 func (UnimplementedServiceServer) DestroyResource(context.Context, *sharedtypesv1.DestroyResourceRequest) (*sharedtypesv1.DestroyResourceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DestroyResource not implemented")
+}
+func (UnimplementedServiceServer) LookupResourceInState(context.Context, *LookupResourceInStateRequest) (*LookupResourceInStateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LookupResourceInState not implemented")
 }
 func (UnimplementedServiceServer) mustEmbedUnimplementedServiceServer() {}
 func (UnimplementedServiceServer) testEmbeddedByValue()                 {}
@@ -414,6 +444,24 @@ func _Service_DestroyResource_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Service_LookupResourceInState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LookupResourceInStateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServiceServer).LookupResourceInState(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Service_LookupResourceInState_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServiceServer).LookupResourceInState(ctx, req.(*LookupResourceInStateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Service_ServiceDesc is the grpc.ServiceDesc for Service service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -452,6 +500,10 @@ var Service_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DestroyResource",
 			Handler:    _Service_DestroyResource_Handler,
+		},
+		{
+			MethodName: "LookupResourceInState",
+			Handler:    _Service_LookupResourceInState_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

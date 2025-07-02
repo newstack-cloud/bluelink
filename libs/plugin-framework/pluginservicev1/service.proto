@@ -65,6 +65,14 @@ service Service {
     // in a link implementation, this must not be used for managing resources that are explicitly
     // defined in a blueprint.
     rpc DestroyResource(sharedtypesv1.DestroyResourceRequest) returns (sharedtypesv1.DestroyResourceResponse) {}
+    // LookupResourceInState retrieves a resource of a given type from the blueprint
+    // state.
+    // This is meant to be used to allow link implementations to check if intermediary resources
+    // are present in the blueprint state, when the intermediary resource should already exist
+    // in the blueprint instance so the link can update the resource without impacting drift
+    // detection as only links in the same blueprint instance that modify resources are taken into
+    // account for drift detection.
+    rpc LookupResourceInState(LookupResourceInStateRequest) returns (LookupResourceInStateResponse) {}
 }
 
 // PluginRegistrationRequest is the request
@@ -219,4 +227,28 @@ message DeployResourceServiceRequest {
     // Whether the plugin should wait for the resource to stabilise
     // before returning a response.
     bool wait_until_stable = 2;
+}
+
+// LookupResourceInStateRequest is the request
+// to look up a resource in the blueprint state.
+message LookupResourceInStateRequest {
+    // The ID of the blueprint instance to look up the resource in.
+    string instance_id = 1;
+    // The type of the resource to look up.
+    // For eaxmple, "aws/iam/role" or "gcloud/compute/instance".
+    string resource_type = 2;
+    // The external identifier of the resource in the provider.
+    // This is defined in a resource type spec definition as the
+    // `IDField`.
+    string external_id = 3;
+    sharedtypesv1.ProviderContext context = 4;
+}
+
+// LookupResourceInStateResponse is the response
+// to the LookupResourceInStateRequest.
+message LookupResourceInStateResponse {
+    oneof response {
+        sharedtypesv1.ResourceState resource = 1;
+        sharedtypesv1.ErrorResponse error_response = 2;
+    }
 }

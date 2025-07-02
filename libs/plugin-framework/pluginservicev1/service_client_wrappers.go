@@ -5,6 +5,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/convertv1"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/errorsv1"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sdk/pluginutils"
@@ -359,4 +360,87 @@ func (f *functionRegistryClientWrapper) ListFunctions(
 		),
 		errorsv1.PluginActionServiceListFunctions,
 	)
+}
+
+// ResourceLookupServiceFromClient creates a new instance of a ResourceLookupService
+// that uses the provided ServiceClient to interact with the deploy engine (or other host)
+// to look up resources in the blueprint state.
+// This allows plugin implementations to interact with the deploy engine
+// using the blueprint framework interfaces abstracting away the communication
+// protocol from plugin developers.
+func ResourceLookupServiceFromClient(
+	client ServiceClient,
+) provider.ResourceLookupService {
+	return &resourceLookupServiceClientWrapper{
+		client: client,
+	}
+}
+
+type resourceLookupServiceClientWrapper struct {
+	client ServiceClient
+}
+
+func (r *resourceLookupServiceClientWrapper) LookupResourceInState(
+	ctx context.Context,
+	input *provider.ResourceLookupInput,
+) (*state.ResourceState, error) {
+	providerCtx, err := convertv1.ToPBProviderContext(input.ProviderContext)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionServiceLookupResourceInState,
+		)
+	}
+
+	response, err := r.client.LookupResourceInState(
+		ctx,
+		&LookupResourceInStateRequest{
+			InstanceId:   input.InstanceID,
+			ResourceType: input.ResourceType,
+			ExternalId:   input.ExternalID,
+			Context:      providerCtx,
+		},
+	)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionServiceDeployResource,
+		)
+	}
+
+	switch result := response.Response.(type) {
+	case *LookupResourceInStateResponse_Resource:
+		resourceState, err := convertv1.FromPBResourceState(result.Resource)
+		if err != nil {
+			return nil, errorsv1.CreateGeneralError(
+				err,
+				errorsv1.PluginActionServiceLookupResourceInState,
+			)
+		}
+		return resourceState, nil
+	case *LookupResourceInStateResponse_ErrorResponse:
+		return nil, errorsv1.CreateErrorFromResponse(
+			result.ErrorResponse,
+			errorsv1.PluginActionServiceLookupResourceInState,
+		)
+	}
+
+	return nil, errorsv1.CreateGeneralError(
+		errorsv1.ErrUnexpectedResponseType(
+			errorsv1.PluginActionServiceLookupResourceInState,
+		),
+		errorsv1.PluginActionServiceLookupResourceInState,
+	)
+}
+
+func (r *resourceLookupServiceClientWrapper) HasResourceInState(
+	ctx context.Context,
+	input *provider.ResourceLookupInput,
+) (bool, error) {
+	resourceState, err := r.LookupResourceInState(ctx, input)
+	if err != nil {
+		return false, err
+	}
+
+	return resourceState != nil, nil
 }

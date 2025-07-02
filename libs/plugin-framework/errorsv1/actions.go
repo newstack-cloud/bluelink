@@ -83,4 +83,5 @@ const (
 	PluginActionServiceGetFunctionDefinition = PluginAction("Service::GetFunctionDefinition")
 	PluginActionServiceCheckHasFunction      = PluginAction("Service::CheckHasFunction")
 	PluginActionServiceListFunctions         = PluginAction("Service::ListFunctions")
+	PluginActionServiceLookupResourceInState = PluginAction("Service::LookupResourceInState")
 )

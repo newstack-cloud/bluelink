@@ -17,6 +17,7 @@ func StartPluginServiceServer(
 	pluginManager pluginservicev1.Manager,
 	functionRegistry provider.FunctionRegistry,
 	resourceDeployService provider.ResourceDeployService,
+	resourceLookupService provider.ResourceLookupService,
 ) (pluginservicev1.ServiceClient, func()) {
 	bufferSize := 1024 * 1024
 	listener := bufconn.Listen(bufferSize)
@@ -24,6 +25,7 @@ func StartPluginServiceServer(
 		pluginManager,
 		functionRegistry,
 		resourceDeployService,
+		resourceLookupService,
 		hostID,
 		// Plugin to plugin call timeout is set to 10 milliseconds.
 		pluginservicev1.WithPluginToPluginCallTimeout(10),
