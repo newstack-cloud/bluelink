@@ -6,6 +6,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/memstate"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/providerhelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
@@ -66,7 +67,7 @@ func (s *SubResolverTestContainer) populateSpecFixtureSchemas(
 }
 
 func (s *SubResolverTestContainer) populateDependencies() {
-	s.stateContainer = internal.NewMemoryStateContainer()
+	s.stateContainer = memstate.NewMemoryStateContainer()
 	providers := map[string]provider.Provider{
 		"aws": newTestAWSProvider(),
 		"core": providerhelpers.NewCoreProvider(
@@ -81,6 +82,7 @@ func (s *SubResolverTestContainer) populateDependencies() {
 		providers,
 		map[string]transform.SpecTransformer{},
 		10*time.Millisecond,
+		s.stateContainer,
 		/* params */ nil,
 	)
 	s.dataSourceRegistry = provider.NewDataSourceRegistry(

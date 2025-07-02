@@ -13,6 +13,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/memstate"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/links"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
@@ -31,7 +32,7 @@ type ResourceDeployerTestSuite struct {
 
 func (s *ResourceDeployerTestSuite) SetupTest() {
 	resourceCache := core.NewCache[*provider.ResolvedResource]()
-	s.stateContainer = internal.NewMemoryStateContainer()
+	s.stateContainer = memstate.NewMemoryStateContainer()
 	s.deployer = NewDefaultResourceDeployer(
 		&core.SystemClock{},
 		&internal.StaticIDGenerator{

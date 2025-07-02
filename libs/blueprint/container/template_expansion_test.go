@@ -9,6 +9,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/memstate"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/providerhelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
@@ -50,7 +51,7 @@ func (s *ExpandResourceTemplatesTestSuite) SetupSuite() {
 	}
 	s.specFixtureContainers = make(map[string]BlueprintContainer)
 
-	s.stateContainer = internal.NewMemoryStateContainer()
+	s.stateContainer = memstate.NewMemoryStateContainer()
 	s.providers = map[string]provider.Provider{
 		"aws": newTestAWSProvider(
 			/* alwaysStabilise */ false,
@@ -93,12 +94,13 @@ func (s *ExpandResourceTemplatesTestSuite) SetupSuite() {
 }
 
 func (s *ExpandResourceTemplatesTestSuite) SetupTest() {
-	s.stateContainer = internal.NewMemoryStateContainer()
+	s.stateContainer = memstate.NewMemoryStateContainer()
 	s.funcRegistry = provider.NewFunctionRegistry(s.providers)
 	s.resourceRegistry = resourcehelpers.NewRegistry(
 		s.providers,
 		map[string]transform.SpecTransformer{},
 		10*time.Millisecond,
+		s.stateContainer,
 		/* params */ nil,
 	)
 	s.dataSourceRegistry = provider.NewDataSourceRegistry(

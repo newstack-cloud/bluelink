@@ -150,6 +150,7 @@ func newTestExampleResource() provider.Resource {
 					},
 				},
 			},
+			IDField: "id",
 		},
 		markdownDescription:  "## bluelink/exampleResource\n\nThis is an example resource.",
 		plainTextDescription: "bluelink/exampleResource\n\nThis is an example resource.",

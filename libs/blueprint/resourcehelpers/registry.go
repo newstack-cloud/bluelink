@@ -11,6 +11,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/specmerge"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 )
 
@@ -70,6 +71,20 @@ type Registry interface {
 		input *provider.ResourceStabilisedDependenciesInput,
 	) (*provider.ResourceStabilisedDependenciesOutput, error)
 
+	// LookupResourceInState retrieves a resource of a given type
+	// from the blueprint state.
+	LookupResourceInState(
+		ctx context.Context,
+		input *provider.ResourceLookupInput,
+	) (*state.ResourceState, error)
+
+	// HasResourceInState checks if a resource of a given type
+	// exists in the blueprint state.
+	HasResourceInState(
+		ctx context.Context,
+		input *provider.ResourceLookupInput,
+	) (bool, error)
+
 	// WithParams creates a new registry derived from the current registry
 	// with the given parameters.
 	WithParams(
@@ -85,6 +100,7 @@ type registryFromProviders struct {
 	resourceTypes                []string
 	params                       core.BlueprintParams
 	stabilisationPollingInterval time.Duration
+	stateContainer               state.Container
 	mu                           sync.Mutex
 }
 
@@ -94,12 +110,14 @@ func NewRegistry(
 	providers map[string]provider.Provider,
 	transformers map[string]transform.SpecTransformer,
 	stabilisationPollingInterval time.Duration,
+	stateContainer state.Container,
 	params core.BlueprintParams,
 ) Registry {
 	return &registryFromProviders{
 		providers:                    providers,
 		transformers:                 transformers,
 		stabilisationPollingInterval: stabilisationPollingInterval,
+		stateContainer:               stateContainer,
 		params:                       params,
 		resourceCache:                core.NewCache[provider.Resource](),
 		abstractResourceCache:        core.NewCache[transform.AbstractResource](),
@@ -385,6 +403,86 @@ func (r *registryFromProviders) GetStabilisedDependencies(
 	return resourceImpl.GetStabilisedDependencies(ctx, input)
 }
 
+func (r *registryFromProviders) LookupResourceInState(
+	ctx context.Context,
+	input *provider.ResourceLookupInput,
+) (*state.ResourceState, error) {
+	resourceImpl, err := r.getResourceType(ctx, input.ResourceType)
+	if err != nil {
+		return nil, err
+	}
+
+	definition, err := resourceImpl.GetSpecDefinition(
+		ctx,
+		&provider.ResourceGetSpecDefinitionInput{
+			ProviderContext: input.ProviderContext,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if definition == nil || definition.SpecDefinition == nil {
+		return nil, errEmptyResourceSpecDefinition(input.ResourceType)
+	}
+
+	idField := definition.SpecDefinition.IDField
+	instance, err := r.stateContainer.Instances().Get(ctx, input.InstanceID)
+	if err != nil {
+		return nil, err
+	}
+
+	return extractResourceByExternalID(
+		idField,
+		input.ExternalID,
+		input.ResourceType,
+		&instance,
+	), nil
+}
+
+func extractResourceByExternalID(
+	idField string,
+	externalID string,
+	resourceType string,
+	instance *state.InstanceState,
+) *state.ResourceState {
+	if instance == nil {
+		return nil
+	}
+
+	for _, resource := range instance.Resources {
+		fieldPath := substitutions.RenderFieldPath("$", idField)
+		idFieldValue, _ := core.GetPathValue(
+			fieldPath,
+			resource.SpecData,
+			core.MappingNodeMaxTraverseDepth,
+		)
+		if idFieldValue != nil &&
+			core.StringValue(idFieldValue) == externalID &&
+			resource.Type == resourceType {
+			return resource
+		}
+	}
+
+	return nil
+}
+
+func (r *registryFromProviders) HasResourceInState(
+	ctx context.Context,
+	input *provider.ResourceLookupInput,
+) (bool, error) {
+	resourceState, err := r.LookupResourceInState(ctx, input)
+	if err != nil {
+		return false, err
+	}
+
+	if resourceState == nil {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 func (r *registryFromProviders) WithParams(
 	params core.BlueprintParams,
 ) Registry {
@@ -395,6 +493,7 @@ func (r *registryFromProviders) WithParams(
 		abstractResourceCache:        r.abstractResourceCache,
 		resourceTypes:                r.resourceTypes,
 		stabilisationPollingInterval: r.stabilisationPollingInterval,
+		stateContainer:               r.stateContainer,
 		params:                       params,
 	}
 }

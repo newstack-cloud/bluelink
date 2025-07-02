@@ -10,7 +10,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	bperrors "github.com/newstack-cloud/bluelink/libs/blueprint/errors"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/memstate"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/providerhelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
@@ -34,7 +34,7 @@ type ContainerDeployTestSuite struct {
 }
 
 func (s *ContainerDeployTestSuite) SetupTest() {
-	stateContainer := internal.NewMemoryStateContainer()
+	stateContainer := memstate.NewMemoryStateContainer()
 	s.stateContainer = stateContainer
 	fixtureInstances := []int{1, 3, 4}
 	err := populateCurrentState(fixtureInstances, stateContainer, "deploy")

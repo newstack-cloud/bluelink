@@ -8,6 +8,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/memstate"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/common/testhelpers"
@@ -29,7 +30,7 @@ const (
 )
 
 func (s *DriftCheckerTestSuite) SetupTest() {
-	s.stateContainer = internal.NewMemoryStateContainer()
+	s.stateContainer = memstate.NewMemoryStateContainer()
 	err := s.populateCurrentState()
 	s.Require().NoError(err)
 	s.driftChecker = NewDefaultChecker(

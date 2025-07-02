@@ -12,6 +12,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/memstate"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
@@ -57,7 +58,7 @@ func (s *ChildBlueprintDeployerTestSuite) runDeployTest(
 ) {
 	ctx := context.Background()
 	channels := CreateDeployChannels()
-	stateContainer := internal.NewMemoryStateContainer()
+	stateContainer := memstate.NewMemoryStateContainer()
 	// Persist parent state so it can be accessed to get the instance name
 	// during child deployment.
 	err := stateContainer.Instances().Save(

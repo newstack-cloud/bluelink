@@ -13,6 +13,10 @@ const (
 	// the resource provider missing an implementation for a
 	// specific resource type.
 	ErrorReasonCodeProviderResourceTypeNotFound errors.ErrorReasonCode = "resource_type_not_found"
+	// ErrorReasonCodeItemTypeProviderNotFound is provided when the
+	// reason for a blueprint run error is due to the provider
+	// for a specific resource type not being found.
+	ErrorReasonCodeEmptyResourceSpecDefinition errors.ErrorReasonCode = "empty_resource_spec_definition"
 	// ErrorReasonCodeMultipleRunErrors is provided when the reason
 	// for a blueprint run error is due to multiple errors
 	// occurring during the run.
@@ -58,6 +62,18 @@ func errAbstactResourceTypeNotFound(
 		ReasonCode: ErrorReasonCodeAbstractResourceTypeNotFound,
 		Err: fmt.Errorf(
 			"run failed as the abstract resource with type %q was not found in any of the loaded transformers",
+			resourceType,
+		),
+	}
+}
+
+func errEmptyResourceSpecDefinition(
+	resourceType string,
+) error {
+	return &errors.RunError{
+		ReasonCode: ErrorReasonCodeEmptyResourceSpecDefinition,
+		Err: fmt.Errorf(
+			"run failed as the resource spec definition for resource type %q is empty",
 			resourceType,
 		),
 	}

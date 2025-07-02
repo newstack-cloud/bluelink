@@ -9,6 +9,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/memstate"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
@@ -25,7 +26,7 @@ type LinkDeployerTestSuite struct {
 }
 
 func (s *LinkDeployerTestSuite) SetupTest() {
-	s.stateContainer = internal.NewMemoryStateContainer()
+	s.stateContainer = memstate.NewMemoryStateContainer()
 	s.deployer = &defaultLinkDeployer{
 		clock:          &core.SystemClock{},
 		stateContainer: s.stateContainer,

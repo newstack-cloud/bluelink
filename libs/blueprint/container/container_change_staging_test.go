@@ -12,6 +12,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	bperrors "github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/memstate"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/providerhelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
@@ -47,7 +48,7 @@ type ContainerChangeStagingTestSuite struct {
 }
 
 func (s *ContainerChangeStagingTestSuite) SetupSuite() {
-	stateContainer := internal.NewMemoryStateContainer()
+	stateContainer := memstate.NewMemoryStateContainer()
 	err := s.populateCurrentState(stateContainer)
 	s.Require().NoError(err)
 

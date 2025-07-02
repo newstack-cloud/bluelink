@@ -9,7 +9,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/memstate"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/providerhelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
@@ -29,7 +29,7 @@ type ContainerDestroyTestSuite struct {
 }
 
 func (s *ContainerDestroyTestSuite) SetupTest() {
-	stateContainer := internal.NewMemoryStateContainer()
+	stateContainer := memstate.NewMemoryStateContainer()
 	s.stateContainer = stateContainer
 	fixtureInstances := []int{1, 2, 3, 4}
 	err := populateCurrentState(fixtureInstances, stateContainer, "destroy")

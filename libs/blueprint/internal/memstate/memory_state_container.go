@@ -1,7 +1,7 @@
 // An in-memory implementation of the StateContainer interface
 // to be used for testing purposes.
 
-package internal
+package memstate
 
 import (
 	"context"

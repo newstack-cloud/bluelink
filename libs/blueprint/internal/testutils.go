@@ -14,6 +14,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 )
 
 type FunctionRegistryMock struct {
@@ -82,7 +83,8 @@ func (f *FunctionRegistryMock) HasFunction(ctx context.Context, functionName str
 }
 
 type ResourceRegistryMock struct {
-	Resources map[string]provider.Resource
+	Resources      map[string]provider.Resource
+	StateContainer state.Container
 }
 
 func (r *ResourceRegistryMock) HasResourceType(ctx context.Context, resourceType string) (bool, error) {
@@ -185,6 +187,92 @@ func (r *ResourceRegistryMock) GetStabilisedDependencies(
 	}
 
 	return res.GetStabilisedDependencies(ctx, input)
+}
+
+func (r *ResourceRegistryMock) LookupResourceInState(
+	ctx context.Context,
+	input *provider.ResourceLookupInput,
+) (*state.ResourceState, error) {
+	resourceImpl, hasResourceImpl := r.Resources[input.ResourceType]
+	if !hasResourceImpl {
+		return nil, fmt.Errorf(
+			"resource type %s not found in the registry",
+			input.ResourceType,
+		)
+	}
+
+	definition, err := resourceImpl.GetSpecDefinition(
+		ctx,
+		&provider.ResourceGetSpecDefinitionInput{
+			ProviderContext: input.ProviderContext,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if definition == nil || definition.SpecDefinition == nil {
+		return nil, fmt.Errorf(
+			"resource spec definition for resource type %s is empty",
+			input.ResourceType,
+		)
+	}
+
+	idField := definition.SpecDefinition.IDField
+	instance, err := r.StateContainer.Instances().Get(ctx, input.InstanceID)
+	if err != nil {
+		return nil, err
+	}
+
+	return extractResourceByExternalID(
+		idField,
+		input.ExternalID,
+		input.ResourceType,
+		&instance,
+	), nil
+}
+
+func extractResourceByExternalID(
+	idField string,
+	externalID string,
+	resourceType string,
+	instance *state.InstanceState,
+) *state.ResourceState {
+	if instance == nil {
+		return nil
+	}
+
+	for _, resource := range instance.Resources {
+		fieldPath := substitutions.RenderFieldPath("$.%s", idField)
+		idFieldValue, _ := core.GetPathValue(
+			fieldPath,
+			resource.SpecData,
+			core.MappingNodeMaxTraverseDepth,
+		)
+		if idFieldValue != nil &&
+			core.StringValue(idFieldValue) == externalID &&
+			resource.Type == resourceType {
+			return resource
+		}
+	}
+
+	return nil
+}
+
+func (r *ResourceRegistryMock) HasResourceInState(
+	ctx context.Context,
+	input *provider.ResourceLookupInput,
+) (bool, error) {
+	resourceState, err := r.LookupResourceInState(ctx, input)
+	if err != nil {
+		return false, err
+	}
+
+	if resourceState == nil {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func (r *ResourceRegistryMock) WithParams(

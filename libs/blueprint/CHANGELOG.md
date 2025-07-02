@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.0] - 2025-07-02
+
+### Added
+
+- **Breaking change** - Adds the `LookupResourceInState` abd `HasResourceInState` methods to the `resourcehelpers.Registry` interface. This allows for looking up resources in the state container by their external ID. This is useful for link plugin implementations that use existing resources as intermediaries that get updated as a part of the link implementation.
+
+_Breaking changes will occur in early 0.x releases of this framework._
+
 ## [0.24.1] - 2025-06-24
 
 ### Fixed

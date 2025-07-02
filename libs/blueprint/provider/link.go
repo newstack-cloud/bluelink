@@ -37,6 +37,19 @@ type Link interface {
 	UpdateResourceB(ctx context.Context, input *LinkUpdateResourceInput) (*LinkUpdateResourceOutput, error)
 	// UpdateIntermediaryResources deals with creating, updating or deleting intermediary resources
 	// that are required for the link between two resources.
+	//
+	// An intermediary resource can be an existing resource in the blueprint that will be modified
+	// by the link, or a new resource that will be completely managed by the link implementation,
+	// where the link implementation will be responsible for creating, updating and deleting
+	// the intermediary resource as part of the link lifecycle.
+	// The ResourceDeployService provided in the input must only be used for intermediary resources
+	// fully managed by the link implementation.
+	// For existing resources in the blueprint, direct service calls to the upstream provider
+	// for the resource should be made and the link data will be overlayed or merged with the resource state
+	// of the top-level resource in the blueprint to account for changes made by the link
+	// when checking for drift, change staging (or planning) is applied only to resource and link state
+	// in the blueprint framework model and not to the current state of the upstream provider.
+	//
 	// This is called for both the creation and removal of a link between two resources.
 	// The value of the `LinkData` field returned in the output will be combined
 	// with the LinkData output from updating resource A and B
@@ -134,6 +147,16 @@ type LinkUpdateIntermediaryResourcesInput struct {
 	// this is useful as it allows link implementations to use the same
 	// resources used in blueprints.
 	ResourceDeployService ResourceDeployService
+	// ResourceLookupService allows a link implementation to look up resources
+	// in the blueprint state.
+	// This is useful for link implementations that need to check if an intermediary
+	// resource exists in the blueprint for intermediary resources that are not fully managed
+	// by the link implementation.
+	// For example, in AWS, an IAM role would be an intermediary resource
+	// been an AWS Lambda function and an AWS DynamoDB table,
+	// where the IAM role is not fully managed by the link implementation,
+	// but is an existing resource in the blueprint that will be modified by the link.
+	ResourceLookupService ResourceLookupService
 }
 
 type LinkUpdateIntermediaryResourcesOutput struct {

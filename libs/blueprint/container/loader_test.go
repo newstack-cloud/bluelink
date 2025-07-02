@@ -8,6 +8,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/memstate"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/links"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/providerhelpers"
@@ -72,7 +73,7 @@ func (s *LoaderTestSuite) SetupSuite() {
 		}
 	}
 
-	stateContainer := internal.NewMemoryStateContainer()
+	stateContainer := memstate.NewMemoryStateContainer()
 	providers := map[string]provider.Provider{
 		"aws": newTestAWSProvider(
 			/* alwaysStabilise */ false,

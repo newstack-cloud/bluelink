@@ -532,6 +532,7 @@ func NewDefaultLoader(
 			providers,
 			specTransformers,
 			loader.resourceStabilityPollingConfig.PollingInterval,
+			stateContainer,
 			/* params */ nil,
 		)
 	}
