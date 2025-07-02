@@ -197,8 +197,8 @@ github.com/lestrrat-go/option v1.0.1 h1:oAzP2fvZGQKWkvHa1/SAcFolBEca1oN+mQ7eooNB
 github.com/lestrrat-go/option v1.0.1/go.mod h1:5ZHFbivi4xwXxhxY9XHDe2FHo6/Z7WWmtT7T5nBBp3I=
 github.com/matoous/go-nanoid/v2 v2.1.0 h1:P64+dmq21hhWdtvZfEAofnvJULaRR1Yib0+PnU669bE=
 github.com/matoous/go-nanoid/v2 v2.1.0/go.mod h1:KlbGNQ+FhrUNIHUxZdL63t7tl4LaPkZNpUULS8H4uVM=
-github.com/newstack-cloud/bluelink/libs/blueprint v0.24.1 h1:p5PkSw+pbTpOJUooSn8ulMMJ7ZPY3CHdzHD4E8oeeqE=
-github.com/newstack-cloud/bluelink/libs/blueprint v0.24.1/go.mod h1:5Unn3mYYUB7WHiuoy+QvHmw8cCQFV0rZY4sK8+dqoBk=
+github.com/newstack-cloud/bluelink/libs/blueprint v0.25.0 h1:oS0+qtgb9wS4jAnJMjf/fJmnBwEmyakv5yS7KCAzm1g=
+github.com/newstack-cloud/bluelink/libs/blueprint v0.25.0/go.mod h1:5Unn3mYYUB7WHiuoy+QvHmw8cCQFV0rZY4sK8+dqoBk=
 github.com/newstack-cloud/bluelink/libs/blueprint-resolvers v0.0.0-20250624125550-4f0bdd0374f6 h1:3W/KEJObWPbs97wJhW8Wjiyk6Py3yNSmk6AIlXete5M=
 github.com/newstack-cloud/bluelink/libs/blueprint-resolvers v0.0.0-20250624125550-4f0bdd0374f6/go.mod h1:YPPh5XQkJfUydtUGY1MKr3Giy+u7Umd3RUWUV9kDi5c=
 github.com/newstack-cloud/bluelink/libs/blueprint-state v0.2.6 h1:s3pdue0ymM1lESHdLFt2HFQYky8DtSSyVVLoHhDxz58=
