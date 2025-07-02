@@ -54,7 +54,8 @@ func main() {
 		// to create a new resource registry.
 		/* stabilisationPollingTimeout */
 		time.Second,
-		nil,
+		/* stateContainer */ nil,
+		/* params */ nil,
 	)
 	frameworkLogger := core.NewLoggerFromZap(logger)
 	dataSourceRegistry := provider.NewDataSourceRegistry(providers, core.SystemClock{}, frameworkLogger)

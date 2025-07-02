@@ -12,6 +12,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
 type FunctionRegistryMock struct {
@@ -184,6 +185,20 @@ func (r *ResourceRegistryMock) GetStabilisedDependencies(
 		return nil, fmt.Errorf("resource %s not found", resourceType)
 	}
 	return res.GetStabilisedDependencies(ctx, input)
+}
+
+func (r *ResourceRegistryMock) LookupResourceInState(
+	ctx context.Context,
+	input *provider.ResourceLookupInput,
+) (*state.ResourceState, error) {
+	return nil, nil
+}
+
+func (r *ResourceRegistryMock) HasResourceInState(
+	ctx context.Context,
+	input *provider.ResourceLookupInput,
+) (bool, error) {
+	return false, nil
 }
 
 func (r *ResourceRegistryMock) WithParams(
