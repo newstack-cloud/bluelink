@@ -9,6 +9,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/plugin"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginservicev1"
@@ -35,6 +36,7 @@ type LoadDependencies struct {
 	Executor         plugin.PluginExecutor
 	InstanceFactory  pluginservicev1.PluginFactory
 	PluginHostConfig Config
+	StateContainer   state.Container
 }
 
 type serviceImpl struct {
@@ -48,6 +50,7 @@ type serviceImpl struct {
 	pluginServiceListener net.Listener
 	idGenerator           core.IDGenerator
 	config                Config
+	stateContainer        state.Container
 	closePluginService    func()
 }
 
@@ -117,6 +120,7 @@ func LoadDefaultService(
 		logger:          core.NewNopLogger(),
 		idGenerator:     core.NewUUIDGenerator(),
 		config:          dependencies.PluginHostConfig,
+		stateContainer:  dependencies.StateContainer,
 	}
 
 	for _, opt := range opts {
@@ -163,6 +167,7 @@ func (s *serviceImpl) Initialise() error {
 		s.providers,
 		s.transformers,
 		time.Duration(stabilisationPollingIntervalMS)*time.Millisecond,
+		s.stateContainer,
 		// At this point, there aren't any params to pass to the registry.
 		// However, on every request to the deploy engine, the request-specific
 		// params need to be attached to a copy of the registry using

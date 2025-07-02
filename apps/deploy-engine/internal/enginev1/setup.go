@@ -81,6 +81,7 @@ func Setup(
 			Executor:         pluginExecutor,
 			InstanceFactory:  plugin.CreatePluginInstance,
 			PluginHostConfig: config,
+			StateContainer:   stateServices.container,
 		},
 		pluginhostv1.WithServiceLogger(logger),
 		pluginhostv1.WithServiceFS(fileSystem),
