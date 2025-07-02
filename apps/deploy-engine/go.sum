@@ -207,6 +207,8 @@ github.com/newstack-cloud/bluelink/libs/common v0.3.2 h1:YqD47176o62SwJyEqpTH/87
 github.com/newstack-cloud/bluelink/libs/common v0.3.2/go.mod h1:b18HJMiIRGIFyom6jiweqcxA8vRO6D5Gkfssrq9C+Wc=
 github.com/newstack-cloud/bluelink/libs/plugin-framework v0.0.0-20250624125550-4f0bdd0374f6 h1:Dqm4qz2JhXaxGE+jde0oNUF68SYInjJRf454x5T4DCI=
 github.com/newstack-cloud/bluelink/libs/plugin-framework v0.0.0-20250624125550-4f0bdd0374f6/go.mod h1:zTgj/U0i6idOSl6hHDqsu+78QtJ9rsdoEntX/4II3oI=
+github.com/newstack-cloud/bluelink/libs/plugin-framework v0.0.0-20250702230105-5e492d635acd h1:GQGSdoOZGzI6MEP8nbmjc9k6Oq2ODbeBFO5CunLshr8=
+github.com/newstack-cloud/bluelink/libs/plugin-framework v0.0.0-20250702230105-5e492d635acd/go.mod h1:63KeI28A2tdQfQGTPaOP65jXaudYyFWpSSxgSdSNxpc=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c h1:+mdjkGKdHQG3305AYmdv1U2eRNDiU2ErMBj1gwrq8eQ=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c/go.mod h1:7rwL4CYBLnjLxUqIJNnCWiEdr3bn6IUYi15bNlnbCCU=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=

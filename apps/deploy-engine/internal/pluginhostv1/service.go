@@ -163,7 +163,7 @@ func (s *serviceImpl) Initialise() error {
 
 	functionRegistry := provider.NewFunctionRegistry(s.providers)
 	stabilisationPollingIntervalMS := s.config.GetResourceStabilisationPollingIntervalMS()
-	resourceDeployService := resourcehelpers.NewRegistry(
+	resourceRegistry := resourcehelpers.NewRegistry(
 		s.providers,
 		s.transformers,
 		time.Duration(stabilisationPollingIntervalMS)*time.Millisecond,
@@ -179,7 +179,8 @@ func (s *serviceImpl) Initialise() error {
 	pluginService := pluginservicev1.NewServiceServer(
 		manager,
 		functionRegistry,
-		resourceDeployService,
+		/* resourceDeployService */ resourceRegistry,
+		/* resourceLookupService */ resourceRegistry,
 		hostID,
 		pluginservicev1.WithPluginToPluginCallTimeout(
 			s.config.GetPluginToPluginCallTimeoutMS(),
