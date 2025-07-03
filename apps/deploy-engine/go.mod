@@ -10,10 +10,11 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/lestrrat-go/jwx v1.2.31
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.25.0
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.26.0
 	github.com/newstack-cloud/bluelink/libs/blueprint-resolvers v0.0.0-20250624125550-4f0bdd0374f6
-	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.2.6
+	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.3.0
 	github.com/newstack-cloud/bluelink/libs/common v0.3.2
+	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.0.0-20250703220551-db625c5d84a6
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/spf13/afero v1.11.0
 	github.com/stretchr/testify v1.10.0
@@ -88,7 +89,6 @@ require (
 	github.com/lestrrat-go/iter v1.0.2 // indirect
 	github.com/lestrrat-go/option v1.0.1 // indirect
 	github.com/matoous/go-nanoid/v2 v2.1.0 // indirect
-	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.0.0-20250702230105-5e492d635acd // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
