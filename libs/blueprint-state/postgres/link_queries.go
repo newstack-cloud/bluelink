@@ -12,6 +12,12 @@ func linkByNameQuery() string {
 	WHERE instance_id = @instanceId AND "name" = @linkName`
 }
 
+func linksInInstanceQuery() string {
+	return `
+	SELECT json FROM links_json
+	WHERE instance_id = @instanceId`
+}
+
 func upsertLinksQuery() string {
 	return `
 	INSERT INTO links (
@@ -23,6 +29,7 @@ func upsertLinksQuery() string {
 		last_deploy_attempt_timestamp,
 		intermediary_resources_state,
 		data,
+		resource_data_mappings,
 		failure_reasons,
 		durations
 	) VALUES (
@@ -34,6 +41,7 @@ func upsertLinksQuery() string {
 		@lastDeployAttemptTimestamp,
 		@intermediaryResourcesState,
 		@data,
+		@resourceDataMappings,
 		@failureReasons,
 		@durations
 	) ON CONFLICT (id) DO UPDATE SET
@@ -44,6 +52,7 @@ func upsertLinksQuery() string {
 		last_deploy_attempt_timestamp = excluded.last_deploy_attempt_timestamp,
 		intermediary_resources_state = excluded.intermediary_resources_state,
 		data = excluded.data,
+		resource_data_mappings = excluded.resource_data_mappings,
 		failure_reasons = excluded.failure_reasons,
 		durations = excluded.durations
 	`

@@ -15,10 +15,11 @@ import (
 
 const (
 	// See files in __testdata/seed/
-	existingLinkID     = "c0d6d914-21a6-4a99-afb3-f6f45eefbdd3"
-	existingLinkName   = "saveOrderFunction::ordersTable_0"
-	updateStatusLinkID = "d97e379c-7e85-4c70-bd31-d7a6f9a5dbd6"
-	nonExistentLinkID  = "423d094a-4fac-4869-b0af-1f373c0e6820"
+	existingLinkID         = "c0d6d914-21a6-4a99-afb3-f6f45eefbdd3"
+	existingLinkName       = "saveOrderFunction::ordersTable_0"
+	updateStatusLinkID     = "d97e379c-7e85-4c70-bd31-d7a6f9a5dbd6"
+	nonExistentLinkID      = "423d094a-4fac-4869-b0af-1f373c0e6820"
+	existingLinkInstanceID = "46324ee7-b515-4988-98b0-d5445746a997"
 )
 
 type PostgresStateContainerLinksTestSuite struct {
@@ -67,6 +68,19 @@ func (s *PostgresStateContainerLinksTestSuite) Test_retrieves_link() {
 	s.Require().NoError(err)
 	s.Require().NotNil(linkState)
 	err = testhelpers.Snapshot(linkState)
+	s.Require().NoError(err)
+}
+
+func (s *PostgresStateContainerLinksTestSuite) Test_retrieves_links_with_resource_data_mappings() {
+	links := s.container.Links()
+	linkStates, err := links.ListWithResourceDataMappings(
+		context.Background(),
+		existingLinkInstanceID,
+		"saveOrderFunction",
+	)
+	s.Require().NoError(err)
+	s.Require().Len(linkStates, 1)
+	err = testhelpers.Snapshot(linkStates)
 	s.Require().NoError(err)
 }
 
@@ -124,6 +138,7 @@ func (s *PostgresStateContainerLinksTestSuite) Test_saves_new_link() {
 		fixture.LinkState.LinkID,
 	)
 	s.Require().NoError(err)
+
 	internal.AssertLinkStatesEqual(fixture.LinkState, &savedState, &s.Suite)
 }
 

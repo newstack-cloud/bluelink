@@ -125,6 +125,11 @@
       FieldsSourceMeta: (map[string]*source.Meta) <nil>
     })
   },
+  ResourceDataMappings: (map[string]string) (len=3) {
+    (string) (len=46) "ordersRole::spec.policies[0].statements[99999]": (string) (len=44) "saveOrderFunction[\"iam.policyStatements\"][0]",
+    (string) (len=70) "saveOrderFunction::spec.environment.variables.TABLE_NAME_ordersTable_0": (string) (len=63) "saveOrderFunction.environmentVariables.TABLE_NAME_ordersTable_0",
+    (string) (len=72) "saveOrderFunction::spec.environment.variables.TABLE_REGION_ordersTable_0": (string) (len=65) "saveOrderFunction.environmentVariables.TABLE_REGION_ordersTable_0"
+  },
   FailureReasons: ([]string) {
   },
   Durations: (*state.LinkCompletionDurations)(<nil>)

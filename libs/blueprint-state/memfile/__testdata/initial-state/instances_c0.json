@@ -144,6 +144,11 @@
             }
           }
         },
+        "resourceDataMappings": {
+          "saveOrderFunction::spec.environment.variables.TABLE_NAME_ordersTable_0": "saveOrderFunction.environmentVariables.TABLE_NAME_ordersTable_0",
+          "saveOrderFunction::spec.environment.variables.TABLE_REGION_ordersTable_0": "saveOrderFunction.environmentVariables.TABLE_REGION_ordersTable_0",
+          "ordersRole::spec.policies[0].statements[99999]": "saveOrderFunction[\"iam.policyStatements\"][0]"
+        },
         "failureReasons": []
       },
       "saveOrderFunction::ordersTable_1": {

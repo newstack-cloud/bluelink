@@ -144,6 +144,7 @@ func AssertLinkStatesEqual(
 	s.Assert().Equal(expected.Name, actual.Name)
 	s.Assert().Equal(expected.InstanceID, actual.InstanceID)
 	assertMapsEqual(expected.Data, actual.Data, s)
+	assertMapsEqual(expected.ResourceDataMappings, actual.ResourceDataMappings, s)
 	assertSlicesEqual(expected.FailureReasons, actual.FailureReasons, s)
 	s.Assert().Equal(expected.LastStatusUpdateTimestamp, actual.LastStatusUpdateTimestamp)
 	s.Assert().Equal(expected.LastDeployAttemptTimestamp, actual.LastDeployAttemptTimestamp)

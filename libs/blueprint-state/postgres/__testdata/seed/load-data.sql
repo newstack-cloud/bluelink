@@ -147,6 +147,7 @@ INSERT INTO links (
     last_deploy_attempt_timestamp,
     intermediary_resources_state,
     "data",
+    resource_data_mappings,
     failure_reasons,
     durations
 )
@@ -159,6 +160,7 @@ SELECT
     TO_TIMESTAMP((data->>'lastDeployAttemptTimestamp')::bigint),
     (data->>'intermediaryResourcesState')::jsonb,
     (data->>'data')::jsonb,
+    (data->>'resourceDataMappings')::jsonb,
     (data->>'failureReasons')::jsonb,
     (data->>'durations')::jsonb
 FROM temp_links;

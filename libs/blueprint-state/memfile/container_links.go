@@ -3,6 +3,7 @@ package memfile
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/idutils"
@@ -14,10 +15,12 @@ import (
 type linksContainerImpl struct {
 	links     map[string]*state.LinkState
 	instances map[string]*state.InstanceState
-	fs        afero.Fs
-	persister *statePersister
-	logger    core.Logger
-	mu        *sync.RWMutex
+	// instance ID -> resourceName -> linkIDs
+	resourceDataMappingIDs map[string]map[string][]string
+	fs                     afero.Fs
+	persister              *statePersister
+	logger                 core.Logger
+	mu                     *sync.RWMutex
 }
 
 func (c *linksContainerImpl) Get(
@@ -52,6 +55,73 @@ func (c *linksContainerImpl) GetByName(
 	return state.LinkState{}, state.LinkNotFoundError(elementID)
 }
 
+func (c *linksContainerImpl) ListWithResourceDataMappings(
+	ctx context.Context,
+	instanceID string,
+	resourceName string,
+) ([]state.LinkState, error) {
+	// Lock for reading and writing as this method builds the resource data mappings
+	// on the fly if needed.
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if instance, ok := c.instances[instanceID]; ok {
+		if instance != nil {
+			mappings := c.deriveInstanceResourceDataMappings(instanceID)
+			if linkIDs, ok := mappings[resourceName]; ok {
+				links := []state.LinkState{}
+				for _, linkID := range linkIDs {
+					if linkState, ok := c.links[linkID]; ok {
+						links = append(links, copyLink(linkState))
+					}
+				}
+				return links, nil
+			} else {
+				return []state.LinkState{}, nil
+			}
+		}
+	}
+
+	return nil, state.InstanceNotFoundError(instanceID)
+}
+
+func (c *linksContainerImpl) deriveInstanceResourceDataMappings(
+	instanceID string,
+) map[string][]string {
+	if mappings, ok := c.resourceDataMappingIDs[instanceID]; ok {
+		return mappings
+	}
+
+	return c.buildResourceDataMappings(instanceID)
+}
+
+// A write lock must be held when calling this method.
+func (c *linksContainerImpl) buildResourceDataMappings(instanceID string) map[string][]string {
+	instanceResourceDataMappings := map[string][]string{}
+	for linkID, link := range c.links {
+		if link.InstanceID == instanceID {
+			for resourceNameFieldPath := range link.ResourceDataMappings {
+				// The resourceNameFieldPath is of the form "resourceName::fieldPath"
+				// where resourceName is the logical name of the resource in the blueprint instance.
+				parts := strings.SplitN(resourceNameFieldPath, "::", 2)
+				if len(parts) == 2 {
+					resourceName := parts[0]
+					if _, ok := instanceResourceDataMappings[resourceName]; !ok {
+						instanceResourceDataMappings[resourceName] = []string{}
+					}
+					instanceResourceDataMappings[resourceName] = append(
+						instanceResourceDataMappings[resourceName],
+						linkID,
+					)
+					break
+				}
+			}
+		}
+	}
+	c.resourceDataMappingIDs[instanceID] = instanceResourceDataMappings
+	return instanceResourceDataMappings
+}
+
 func (c *linksContainerImpl) Save(
 	ctx context.Context,
 	linkState state.LinkState,
@@ -67,6 +137,11 @@ func (c *linksContainerImpl) Save(
 	if instance, ok := getInstance(c.instances, linkState.InstanceID); ok {
 		instance.Links[linkState.Name] = &linkState
 		c.links[linkState.LinkID] = &linkState
+
+		// Build the resource data mappings, it's fine to do this only when saving
+		// and removing links directly as the blueprint container will use the link-specific
+		// methods to update links in a blueprint instance.
+		c.buildResourceDataMappings(linkState.InstanceID)
 
 		linkLogger.Debug("persisting updated or newly created link")
 		return c.persister.updateInstance(instance)
@@ -149,6 +224,11 @@ func (c *linksContainerImpl) Remove(
 	delete(instance.Links, link.Name)
 	delete(c.links, linkID)
 
+	// Build the resource data mappings, it's fine to do this only when saving
+	// and removing links directly as the blueprint container will use the link-specific
+	// methods to update links in a blueprint instance.
+	c.buildResourceDataMappings(link.InstanceID)
+
 	linkLogger.Debug("persisting link removal")
 	return *link, c.persister.updateInstance(instance)
 }
@@ -170,9 +250,10 @@ func copyLink(linkState *state.LinkState) state.LinkState {
 		IntermediaryResourceStates: copyIntermediaryResources(
 			linkState.IntermediaryResourceStates,
 		),
-		Data:           linkState.Data,
-		FailureReasons: linkState.FailureReasons,
-		Durations:      linkState.Durations,
+		Data:                 linkState.Data,
+		ResourceDataMappings: linkState.ResourceDataMappings,
+		FailureReasons:       linkState.FailureReasons,
+		Durations:            linkState.Durations,
 	}
 }
 

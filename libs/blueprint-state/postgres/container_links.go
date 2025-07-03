@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -74,6 +76,64 @@ func (c *linksContainerImpl) GetByName(
 	}
 
 	return link, nil
+}
+
+func (c *linksContainerImpl) ListWithResourceDataMappings(
+	ctx context.Context,
+	instanceID string,
+	resourceName string,
+) ([]state.LinkState, error) {
+	rows, err := c.connPool.Query(
+		ctx,
+		linksInInstanceQuery(),
+		&pgx.NamedArgs{
+			"instanceId": instanceID,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var links []*state.LinkState
+	for rows.Next() {
+		var linkState state.LinkState
+		// This query is against the a json column, so we can scan
+		// the entire value into the struct directly.
+		err = rows.Scan(
+			&linkState,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		links = append(links, &linkState)
+	}
+
+	return filterLinksForResourceDataMappings(resourceName, links), nil
+}
+
+func filterLinksForResourceDataMappings(
+	resourceName string,
+	links []*state.LinkState,
+) []state.LinkState {
+	var filteredLinks []state.LinkState
+
+	for _, link := range links {
+		if _, ok := link.ResourceDataMappings[resourceName]; ok {
+			filteredLinks = append(filteredLinks, *link)
+		}
+
+		for resourceFieldPath := range link.ResourceDataMappings {
+			resourceNamePrefix := fmt.Sprintf("%s::", resourceName)
+			if strings.HasPrefix(resourceFieldPath, resourceNamePrefix) {
+				filteredLinks = append(filteredLinks, *link)
+				break
+			}
+		}
+	}
+
+	return filteredLinks
 }
 
 func (c *linksContainerImpl) Save(

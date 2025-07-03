@@ -1,0 +1,138 @@
+([]state.LinkState) (len=1) {
+  (state.LinkState) {
+    LinkID: (string) (len=36) "c0d6d914-21a6-4a99-afb3-f6f45eefbdd3",
+    Name: (string) (len=32) "saveOrderFunction::ordersTable_0",
+    InstanceID: (string) (len=36) "46324ee7-b515-4988-98b0-d5445746a997",
+    Status: (core.LinkStatus) 2,
+    PreciseStatus: (core.PreciseLinkStatus) 8,
+    LastStatusUpdateTimestamp: (int) 0,
+    LastDeployedTimestamp: (int) 1733145428,
+    LastDeployAttemptTimestamp: (int) 1733145428,
+    IntermediaryResourceStates: ([]*state.LinkIntermediaryResourceState) <nil>,
+    Data: (map[string]*core.MappingNode) (len=1) {
+      (string) (len=17) "saveOrderFunction": (*core.MappingNode)({
+        Scalar: (*core.ScalarValue)(<nil>),
+        Fields: (map[string]*core.MappingNode) (len=2) {
+          (string) (len=20) "environmentVariables": (*core.MappingNode)({
+            Scalar: (*core.ScalarValue)(<nil>),
+            Fields: (map[string]*core.MappingNode) (len=2) {
+              (string) (len=24) "TABLE_NAME_ordersTable_0": (*core.MappingNode)({
+                Scalar: (*core.ScalarValue)({
+                  IntValue: (*int)(<nil>),
+                  BoolValue: (*bool)(<nil>),
+                  FloatValue: (*float64)(<nil>),
+                  StringValue: (*string)((len=26) "legacy-production-orders-1"),
+                  SourceMeta: (*source.Meta)(<nil>)
+                }),
+                Fields: (map[string]*core.MappingNode) <nil>,
+                Items: ([]*core.MappingNode) <nil>,
+                StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+                SourceMeta: (*source.Meta)(<nil>),
+                FieldsSourceMeta: (map[string]*source.Meta) <nil>
+              }),
+              (string) (len=26) "TABLE_REGION_ordersTable_0": (*core.MappingNode)({
+                Scalar: (*core.ScalarValue)({
+                  IntValue: (*int)(<nil>),
+                  BoolValue: (*bool)(<nil>),
+                  FloatValue: (*float64)(<nil>),
+                  StringValue: (*string)((len=9) "eu-west-1"),
+                  SourceMeta: (*source.Meta)(<nil>)
+                }),
+                Fields: (map[string]*core.MappingNode) <nil>,
+                Items: ([]*core.MappingNode) <nil>,
+                StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+                SourceMeta: (*source.Meta)(<nil>),
+                FieldsSourceMeta: (map[string]*source.Meta) <nil>
+              })
+            },
+            Items: ([]*core.MappingNode) <nil>,
+            StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+            SourceMeta: (*source.Meta)(<nil>),
+            FieldsSourceMeta: (map[string]*source.Meta) <nil>
+          }),
+          (string) (len=20) "iam.policyStatements": (*core.MappingNode)({
+            Scalar: (*core.ScalarValue)(<nil>),
+            Fields: (map[string]*core.MappingNode) (len=1) {
+              (string) (len=1) "0": (*core.MappingNode)({
+                Scalar: (*core.ScalarValue)(<nil>),
+                Fields: (map[string]*core.MappingNode) (len=3) {
+                  (string) (len=6) "action": (*core.MappingNode)({
+                    Scalar: (*core.ScalarValue)(<nil>),
+                    Fields: (map[string]*core.MappingNode) <nil>,
+                    Items: ([]*core.MappingNode) (len=1) {
+                      (*core.MappingNode)({
+                        Scalar: (*core.ScalarValue)({
+                          IntValue: (*int)(<nil>),
+                          BoolValue: (*bool)(<nil>),
+                          FloatValue: (*float64)(<nil>),
+                          StringValue: (*string)((len=16) "dynamodb:PutItem"),
+                          SourceMeta: (*source.Meta)(<nil>)
+                        }),
+                        Fields: (map[string]*core.MappingNode) <nil>,
+                        Items: ([]*core.MappingNode) <nil>,
+                        StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+                        SourceMeta: (*source.Meta)(<nil>),
+                        FieldsSourceMeta: (map[string]*source.Meta) <nil>
+                      })
+                    },
+                    StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+                    SourceMeta: (*source.Meta)(<nil>),
+                    FieldsSourceMeta: (map[string]*source.Meta) <nil>
+                  }),
+                  (string) (len=6) "effect": (*core.MappingNode)({
+                    Scalar: (*core.ScalarValue)({
+                      IntValue: (*int)(<nil>),
+                      BoolValue: (*bool)(<nil>),
+                      FloatValue: (*float64)(<nil>),
+                      StringValue: (*string)((len=5) "Allow"),
+                      SourceMeta: (*source.Meta)(<nil>)
+                    }),
+                    Fields: (map[string]*core.MappingNode) <nil>,
+                    Items: ([]*core.MappingNode) <nil>,
+                    StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+                    SourceMeta: (*source.Meta)(<nil>),
+                    FieldsSourceMeta: (map[string]*source.Meta) <nil>
+                  }),
+                  (string) (len=8) "resource": (*core.MappingNode)({
+                    Scalar: (*core.ScalarValue)({
+                      IntValue: (*int)(<nil>),
+                      BoolValue: (*bool)(<nil>),
+                      FloatValue: (*float64)(<nil>),
+                      StringValue: (*string)((len=72) "arn:aws:dynamodb:eu-west-1:123456789012:table/legacy-production-orders-1"),
+                      SourceMeta: (*source.Meta)(<nil>)
+                    }),
+                    Fields: (map[string]*core.MappingNode) <nil>,
+                    Items: ([]*core.MappingNode) <nil>,
+                    StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+                    SourceMeta: (*source.Meta)(<nil>),
+                    FieldsSourceMeta: (map[string]*source.Meta) <nil>
+                  })
+                },
+                Items: ([]*core.MappingNode) <nil>,
+                StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+                SourceMeta: (*source.Meta)(<nil>),
+                FieldsSourceMeta: (map[string]*source.Meta) <nil>
+              })
+            },
+            Items: ([]*core.MappingNode) <nil>,
+            StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+            SourceMeta: (*source.Meta)(<nil>),
+            FieldsSourceMeta: (map[string]*source.Meta) <nil>
+          })
+        },
+        Items: ([]*core.MappingNode) <nil>,
+        StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+        SourceMeta: (*source.Meta)(<nil>),
+        FieldsSourceMeta: (map[string]*source.Meta) <nil>
+      })
+    },
+    ResourceDataMappings: (map[string]string) (len=3) {
+      (string) (len=46) "ordersRole::spec.policies[0].statements[99999]": (string) (len=44) "saveOrderFunction[\"iam.policyStatements\"][0]",
+      (string) (len=70) "saveOrderFunction::spec.environment.variables.TABLE_NAME_ordersTable_0": (string) (len=63) "saveOrderFunction.environmentVariables.TABLE_NAME_ordersTable_0",
+      (string) (len=72) "saveOrderFunction::spec.environment.variables.TABLE_REGION_ordersTable_0": (string) (len=65) "saveOrderFunction.environmentVariables.TABLE_REGION_ordersTable_0"
+    },
+    FailureReasons: ([]string) {
+    },
+    Durations: (*state.LinkCompletionDurations)(<nil>)
+  }
+}

@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	existingLinkID    = "test-link-1"
-	existingLinkName  = "saveOrderFunction::ordersTable_0"
-	nonExistentLinkID = "non-existent-link"
+	existingLinkID         = "test-link-1"
+	existingLinkName       = "saveOrderFunction::ordersTable_0"
+	nonExistentLinkID      = "non-existent-link"
+	existingLinkInstanceID = "blueprint-instance-1"
 )
 
 type MemFileStateContainerLinksTestSuite struct {
@@ -57,6 +58,19 @@ func (s *MemFileStateContainerLinksTestSuite) Test_retrieves_link() {
 	s.Require().NoError(err)
 	s.Require().NotNil(linkState)
 	err = testhelpers.Snapshot(linkState)
+	s.Require().NoError(err)
+}
+
+func (s *MemFileStateContainerLinksTestSuite) Test_retrieves_links_with_resource_data_mappings() {
+	links := s.container.Links()
+	linkStates, err := links.ListWithResourceDataMappings(
+		context.Background(),
+		existingLinkInstanceID,
+		"saveOrderFunction",
+	)
+	s.Require().NoError(err)
+	s.Require().Len(linkStates, 1)
+	err = testhelpers.Snapshot(linkStates)
 	s.Require().NoError(err)
 }
 
