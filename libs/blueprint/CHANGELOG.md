@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.0] - 2025-07-03
+
+### Added
+
+- Adds a new field to link state that holds a mapping of fields in any resource in the same blueprint to the field path in the link data. This is primarily useful in that it allows the drift checker to overlay link data in the same blueprint on resource state so that updates made by links to any resource in the same blueprint are not picked up as drift. This is essential for the concept of links as side effects that can update resources linked together along with existing resources in the same blueprint that act as intermediaries, without this behaviour, any changes that links make will be consistently picked up as drift and if you relax the drift checker then it will be very difficult to track the current state and the abstraction of links would become an unwieldy addition that would make things less predictable. With the combination of the link data projection and link changes included when staging changes, there is a clear picture of what the current state should be looking at the resource spec data as defined by the user and the updates made by linking resources together. Drift detection now takes link changes into account, based on a similar picture to what the user would see when staging changes.
+
 ## [0.25.0] - 2025-07-02
 
 ### Added
