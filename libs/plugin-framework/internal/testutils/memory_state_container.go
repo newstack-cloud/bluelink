@@ -463,6 +463,7 @@ func (c *memoryLinksContainer) buildResourceDataMappings(instanceID string) map[
 						instanceResourceDataMappings[resourceName] = []string{}
 					}
 					instanceResourceDataMappings[resourceName] = append(instanceResourceDataMappings[resourceName], linkID)
+					break
 				}
 			}
 		}
