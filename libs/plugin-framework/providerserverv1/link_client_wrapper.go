@@ -169,7 +169,8 @@ func (l *linkProviderClientWrapper) updateResource(
 		}
 
 		return &provider.LinkUpdateResourceOutput{
-			LinkData: linkData,
+			LinkData:             linkData,
+			ResourceDataMappings: result.CompleteResponse.ResourceDataMappings,
 		}, nil
 	case *UpdateLinkResourceResponse_ErrorResponse:
 		return nil, errorsv1.CreateErrorFromResponse(

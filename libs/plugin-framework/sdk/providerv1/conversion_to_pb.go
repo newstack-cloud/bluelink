@@ -484,7 +484,8 @@ func toPBUpdateLinkResourceResponse(
 	return &providerserverv1.UpdateLinkResourceResponse{
 		Response: &providerserverv1.UpdateLinkResourceResponse_CompleteResponse{
 			CompleteResponse: &providerserverv1.UpdateLinkResourceCompleteResponse{
-				LinkData: linkData,
+				LinkData:             linkData,
+				ResourceDataMappings: output.ResourceDataMappings,
 			},
 		},
 	}, nil
@@ -531,6 +532,7 @@ func toPBUpdateLinkIntermediaryResourcesResponse(
 			CompleteResponse: &providerserverv1.UpdateLinkIntermediaryResourcesCompleteResponse{
 				IntermediaryResourceStates: intermediaryResourceStates,
 				LinkData:                   linkData,
+				ResourceDataMappings:       output.ResourceDataMappings,
 			},
 		},
 	}, nil

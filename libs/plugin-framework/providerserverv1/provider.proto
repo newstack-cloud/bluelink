@@ -604,6 +604,7 @@ message UpdateLinkResourceResponse {
 // in the blueprint instance state.
 message UpdateLinkResourceCompleteResponse {
     schema.MappingNode link_data = 1;
+    map<string, string> resource_data_mappings = 2;
 }
 
 // UpdateLinkIntermediaryResourcesRequest provides the input data needed
@@ -635,6 +636,7 @@ message UpdateLinkIntermediaryResourcesResponse {
 message UpdateLinkIntermediaryResourcesCompleteResponse {
     repeated LinkIntermediaryResourceState intermediary_resource_states = 1;
     schema.MappingNode link_data = 2;
+    map<string, string> resource_data_mappings = 3;
 }
 
 // LinkPriorityResourceResponse is the response

@@ -96,6 +96,9 @@ func LinkLambdaDynamoDBUpdateResourceAOutput() *provider.LinkUpdateResourceOutpu
 				"environmentVariables.TABLE_NAME_ordersTable": core.MappingNodeFromString("orders-updated"),
 			},
 		},
+		ResourceDataMappings: map[string]string{
+			"saveOrderFunction::spec.environment.variables.TABLE_NAME_ordersTable": "saveOrderFunction.environmentVariables.TABLE_NAME_ordersTable",
+		},
 	}
 }
 

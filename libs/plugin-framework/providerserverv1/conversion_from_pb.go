@@ -31,6 +31,7 @@ func fromPBLinkIntermediaryResourcesCompleteResponse(
 	return &provider.LinkUpdateIntermediaryResourcesOutput{
 		IntermediaryResourceStates: intermediaryResourceStates,
 		LinkData:                   linkData,
+		ResourceDataMappings:       response.ResourceDataMappings,
 	}, nil
 }
 
