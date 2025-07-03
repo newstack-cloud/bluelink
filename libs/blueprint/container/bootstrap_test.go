@@ -448,6 +448,28 @@ func (l *testLambdaDynamoDBTableLink) UpdateResourceA(
 
 	tableNameEnvVar := fmt.Sprintf("TABLE_NAME_%s", input.OtherResourceInfo.ResourceName)
 	tableRegionEnvVar := fmt.Sprintf("TABLE_REGION_%s", input.OtherResourceInfo.ResourceName)
+
+	resourceEnvVarTableNameFieldPath := fmt.Sprintf(
+		"%s::spec.environment.variables.%s",
+		input.ResourceInfo.ResourceName,
+		tableNameEnvVar,
+	)
+	linkEnvVarTableNameFieldPath := fmt.Sprintf(
+		"%s.environmentVariables.%s",
+		input.ResourceInfo.ResourceName,
+		tableNameEnvVar,
+	)
+	resourceEnvVarTableRegionFieldPath := fmt.Sprintf(
+		"%s::spec.environment.variables.%s",
+		input.ResourceInfo.ResourceName,
+		tableRegionEnvVar,
+	)
+	linkEnvVarTableRegionFieldPath := fmt.Sprintf(
+		"%s.environmentVariables.%s",
+		input.ResourceInfo.ResourceName,
+		tableRegionEnvVar,
+	)
+
 	return &provider.LinkUpdateResourceOutput{
 		LinkData: &core.MappingNode{
 			Fields: map[string]*core.MappingNode{
@@ -462,6 +484,10 @@ func (l *testLambdaDynamoDBTableLink) UpdateResourceA(
 					},
 				},
 			},
+		},
+		ResourceDataMappings: map[string]string{
+			resourceEnvVarTableNameFieldPath:   linkEnvVarTableNameFieldPath,
+			resourceEnvVarTableRegionFieldPath: linkEnvVarTableRegionFieldPath,
 		},
 	}, nil
 }

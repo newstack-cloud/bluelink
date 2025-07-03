@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"strings"
 	"sync"
 
@@ -29,6 +30,7 @@ func NewMemoryStateContainer() state.Container {
 	resources := map[string]*state.ResourceState{}
 	resourceDrift := map[string]*state.ResourceDriftState{}
 	links := map[string]*state.LinkState{}
+	resourceDataMappingIDs := map[string]map[string][]string{}
 
 	mu := &sync.RWMutex{}
 	return &MemoryStateContainer{
@@ -46,9 +48,10 @@ func NewMemoryStateContainer() state.Container {
 			mu:            mu,
 		},
 		linksContainer: &memoryLinksContainer{
-			instances: instances,
-			links:     links,
-			mu:        mu,
+			instances:              instances,
+			links:                  links,
+			resourceDataMappingIDs: resourceDataMappingIDs,
+			mu:                     mu,
 		},
 		childrenContainer: &memoryChildrenContainer{
 			instances: instances,
@@ -375,7 +378,11 @@ func (c *memoryResourcesContainer) RemoveDrift(
 type memoryLinksContainer struct {
 	instances map[string]*state.InstanceState
 	links     map[string]*state.LinkState
-	mu        *sync.RWMutex
+	// A Mapping of the form {instanceID} -> {resourceName} -> []string (link IDs)
+	// used to quickly find links that have resource data mappings for a specific
+	// resource in a blueprint instance.
+	resourceDataMappingIDs map[string]map[string][]string
+	mu                     *sync.RWMutex
 }
 
 func (c *memoryLinksContainer) Get(ctx context.Context, linkID string) (state.LinkState, error) {
@@ -405,6 +412,69 @@ func (c *memoryLinksContainer) GetByName(ctx context.Context, instanceID string,
 	return state.LinkState{}, state.LinkNotFoundError(elementID)
 }
 
+func (c *memoryLinksContainer) ListWithResourceDataMappings(
+	ctx context.Context,
+	instanceID string,
+	resourceName string,
+) ([]state.LinkState, error) {
+	// Lock for reading and writing as this method builds the resource data mappings
+	// on the fly if needed.
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if instance, ok := c.instances[instanceID]; ok {
+		if instance != nil {
+			mappings := c.deriveInstanceResourceDataMappings(instanceID)
+			if linkIDs, ok := mappings[resourceName]; ok {
+				links := []state.LinkState{}
+				for _, linkID := range linkIDs {
+					if linkState, ok := c.links[linkID]; ok {
+						links = append(links, copyLink(linkState))
+					}
+				}
+				return links, nil
+			} else {
+				return []state.LinkState{}, nil
+			}
+		}
+	}
+
+	return nil, state.InstanceNotFoundError(instanceID)
+}
+
+func (c *memoryLinksContainer) deriveInstanceResourceDataMappings(
+	instanceID string,
+) map[string][]string {
+	if mappings, ok := c.resourceDataMappingIDs[instanceID]; ok {
+		return mappings
+	}
+
+	return c.buildResourceDataMappings(instanceID)
+}
+
+// A write lock must be held when calling this method.
+func (c *memoryLinksContainer) buildResourceDataMappings(instanceID string) map[string][]string {
+	instanceResourceDataMappings := map[string][]string{}
+	for linkID, link := range c.links {
+		if link.InstanceID == instanceID {
+			for resourceNameFieldPath := range link.ResourceDataMappings {
+				// The resourceNameFieldPath is of the form "resourceName::fieldPath"
+				// where resourceName is the logical name of the resource in the blueprint instance.
+				parts := strings.SplitN(resourceNameFieldPath, "::", 2)
+				if len(parts) == 2 {
+					resourceName := parts[0]
+					if _, ok := instanceResourceDataMappings[resourceName]; !ok {
+						instanceResourceDataMappings[resourceName] = []string{}
+					}
+					instanceResourceDataMappings[resourceName] = append(instanceResourceDataMappings[resourceName], linkID)
+				}
+			}
+		}
+	}
+	c.resourceDataMappingIDs[instanceID] = instanceResourceDataMappings
+	return instanceResourceDataMappings
+}
+
 func (c *memoryLinksContainer) Save(ctx context.Context, linkState state.LinkState) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -416,6 +486,11 @@ func (c *memoryLinksContainer) Save(ctx context.Context, linkState state.LinkSta
 			}
 			instance.Links[linkState.Name] = &linkState
 			c.links[linkState.LinkID] = &linkState
+
+			// Build the resource data mappings, it's fine to do this only when saving
+			// and removing links directly as the blueprint container will use the link-specific
+			// methods to update links in a blueprint instance.
+			c.buildResourceDataMappings(linkState.InstanceID)
 		} else {
 			return state.InstanceNotFoundError(linkState.InstanceID)
 		}
@@ -458,6 +533,11 @@ func (c *memoryLinksContainer) Remove(ctx context.Context, linkID string) (state
 		if instance != nil {
 			delete(instance.Links, link.Name)
 		}
+
+		// Build the resource data mappings, it's fine to do this only when saving
+		// and removing links directly as the blueprint container will use the link-specific
+		// methods to update links in a blueprint instance.
+		c.buildResourceDataMappings(link.InstanceID)
 		return *link, nil
 	}
 
@@ -829,6 +909,9 @@ func copyLink(linkState *state.LinkState) state.LinkState {
 		return state.LinkState{}
 	}
 
+	resourceDataMappings := make(map[string]string)
+	maps.Copy(resourceDataMappings, linkState.ResourceDataMappings)
+
 	return state.LinkState{
 		LinkID:                     linkState.LinkID,
 		Name:                       linkState.Name,
@@ -840,9 +923,10 @@ func copyLink(linkState *state.LinkState) state.LinkState {
 		IntermediaryResourceStates: copyIntermediaryResources(
 			linkState.IntermediaryResourceStates,
 		),
-		Data:           linkState.Data,
-		FailureReasons: linkState.FailureReasons,
-		Durations:      linkState.Durations,
+		Data:                 linkState.Data,
+		ResourceDataMappings: resourceDataMappings,
+		FailureReasons:       linkState.FailureReasons,
+		Durations:            linkState.Durations,
 	}
 }
 

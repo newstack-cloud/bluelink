@@ -642,6 +642,7 @@ func assertLinkStateEquals(
 	testSuite.Assert().Equal(expected.Name, actual.Name)
 	assertAllowForDynamicValue(expected.InstanceID, actual.InstanceID, actual, testSuite)
 	assertMapsEqual(expected.Data, actual.Data, testSuite)
+	assertMapsEqual(expected.ResourceDataMappings, actual.ResourceDataMappings, testSuite)
 	assertSlicesEqual(expected.FailureReasons, actual.FailureReasons, testSuite)
 	assertTimestampPresent(
 		int64(expected.LastStatusUpdateTimestamp),

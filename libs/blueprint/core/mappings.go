@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 
@@ -416,9 +417,7 @@ func MergeMaps(nodes ...*MappingNode) *MappingNode {
 	merged := make(map[string]*MappingNode)
 	for _, node := range nodes {
 		if node != nil && node.Fields != nil {
-			for k, v := range node.Fields {
-				merged[k] = v
-			}
+			maps.Copy(merged, node.Fields)
 		}
 	}
 	return &MappingNode{

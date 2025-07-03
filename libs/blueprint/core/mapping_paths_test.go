@@ -117,6 +117,22 @@ func (s *MappingPathsTestSuite) Test_inject_value_for_complex_path() {
 	s.Assert().Equal(injected, MappingNodeFromString(endpoint))
 }
 
+func (s *MappingPathsTestSuite) Test_inject_value_replace_for_complex_path() {
+	path := "$[\"cluster\\\".v1\"].config.environments[0].hosts[0].endpoint"
+	node := fixtureInjectMappingNode2()
+	endpoint := "https://sfg94831-api.example.com"
+	value := &MappingNode{
+		Scalar: &ScalarValue{
+			StringValue: &endpoint,
+		},
+	}
+	err := InjectPathValueReplace(path, value, node, 10)
+	s.Require().NoError(err)
+	injected, err := GetPathValue(path, node, 10)
+	s.Require().NoError(err)
+	s.Assert().Equal(injected, MappingNodeFromString(endpoint))
+}
+
 func (s *MappingPathsTestSuite) Test_reports_error_for_trying_to_inject_value_for_non_existent_path() {
 	// Config is a map, not an array in the target node so we can't inject into it.
 	path := "$[\"cluster\\\".v1\"].config[0]"
@@ -203,6 +219,40 @@ func fixtureInjectMappingNode1() *MappingNode {
 						Fields: map[string]*MappingNode{
 							"environments": {
 								Items: []*MappingNode{},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func fixtureInjectMappingNode2() *MappingNode {
+	return &MappingNode{
+		Fields: map[string]*MappingNode{
+			"cluster\".v1": {
+				Fields: map[string]*MappingNode{
+					"config": {
+						Fields: map[string]*MappingNode{
+							"environments": {
+								Items: []*MappingNode{
+									{
+										Fields: map[string]*MappingNode{
+											"hosts": {
+												Items: []*MappingNode{
+													{
+														Fields: map[string]*MappingNode{
+															"endpoint": {
+																Scalar: ScalarFromString("https://old-endpoint.example.com"),
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
 							},
 						},
 					},

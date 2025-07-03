@@ -3,6 +3,7 @@ package drift
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
@@ -150,6 +151,7 @@ func (c *defaultChecker) CheckResourceDrift(
 		core.StringLogField("resourceId", resourceID),
 	)
 	resources := c.stateContainer.Resources()
+	links := c.stateContainer.Links()
 
 	resourceLogger.Info(
 		fmt.Sprintf("Fetching state for resource %s", resourceID),
@@ -162,7 +164,32 @@ func (c *defaultChecker) CheckResourceDrift(
 		return nil, err
 	}
 
-	return c.checkResourceDrift(ctx, &resourceState, instanceName, params, resourceLogger)
+	linksWithResourceDataMappings, err := links.ListWithResourceDataMappings(
+		ctx,
+		instanceID,
+		resourceState.Name,
+	)
+	if err != nil {
+		resourceLogger.Debug(
+			fmt.Sprintf("Failed to fetch resource data mappings for resource %s", resourceID),
+			core.ErrorLogField("error", err),
+		)
+		return nil, err
+	}
+
+	finalResourceState, err := applyLinksToResourceState(
+		&resourceState,
+		linksWithResourceDataMappings,
+	)
+	if err != nil {
+		resourceLogger.Debug(
+			fmt.Sprintf("Failed to apply links to resource state for resource %s", resourceID),
+			core.ErrorLogField("error", err),
+		)
+		return nil, err
+	}
+
+	return c.checkResourceDrift(ctx, &finalResourceState, instanceName, params, resourceLogger)
 }
 
 func (c *defaultChecker) checkResourceDrift(
@@ -459,4 +486,66 @@ func toResourceDriftFieldChanges(
 			}
 		},
 	)
+}
+
+func applyLinksToResourceState(
+	resourceState *state.ResourceState,
+	linksWithResourceDataMappings []state.LinkState,
+) (state.ResourceState, error) {
+	appliedResourceState := state.ResourceState{
+		ResourceID:                 resourceState.ResourceID,
+		Name:                       resourceState.Name,
+		Type:                       resourceState.Type,
+		TemplateName:               resourceState.TemplateName,
+		InstanceID:                 resourceState.InstanceID,
+		Status:                     resourceState.Status,
+		PreciseStatus:              resourceState.PreciseStatus,
+		LastStatusUpdateTimestamp:  resourceState.LastStatusUpdateTimestamp,
+		LastDeployedTimestamp:      resourceState.LastDeployedTimestamp,
+		LastDeployAttemptTimestamp: resourceState.LastDeployAttemptTimestamp,
+		SpecData:                   core.CopyMappingNode(resourceState.SpecData),
+		Description:                resourceState.Description,
+		Metadata:                   resourceState.Metadata,
+		DependsOnResources:         resourceState.DependsOnResources,
+		DependsOnChildren:          resourceState.DependsOnChildren,
+		FailureReasons:             resourceState.FailureReasons,
+		Drifted:                    resourceState.Drifted,
+		LastDriftDetectedTimestamp: resourceState.LastDriftDetectedTimestamp,
+		Durations:                  resourceState.Durations,
+	}
+
+	for _, link := range linksWithResourceDataMappings {
+		for resourceFieldPath, linkFieldPath := range link.ResourceDataMappings {
+			// resourceFieldPath is in the form "resourceName::fieldPath".
+			parts := strings.SplitN(resourceFieldPath, "::", 2)
+			if len(parts) == 2 {
+				linkDataPathWithRoot := core.AddRootToPath(linkFieldPath)
+				linkDataValue, _ := core.GetPathValue(
+					linkDataPathWithRoot,
+					&core.MappingNode{
+						Fields: link.Data,
+					},
+					core.MappingNodeMaxTraverseDepth,
+				)
+
+				if linkDataValue != nil {
+					fieldPath := core.ReplaceSpecWithRoot(parts[1])
+					err := core.InjectPathValueReplace(
+						fieldPath,
+						linkDataValue,
+						appliedResourceState.SpecData,
+						core.MappingNodeMaxTraverseDepth,
+					)
+					if err != nil {
+						return state.ResourceState{}, fmt.Errorf(
+							"failed to apply link data to resource state: %w",
+							err,
+						)
+					}
+				}
+			}
+		}
+	}
+
+	return appliedResourceState, nil
 }

@@ -107,6 +107,14 @@ type LinksContainer interface {
 	// GetByName deals with retrieving the state for a given link
 	// in the provided blueprint instance by its logical name ({resourceA}::{resourceB}).
 	GetByName(ctx context.Context, instanceID string, linkName string) (LinkState, error)
+	// ListWithResourceDataMappings deals with retrieving all links in a given blueprint instance
+	// that have resource data mappings that map to a spec field in the resource with the given
+	// name in the blueprint instance.
+	ListWithResourceDataMappings(
+		ctx context.Context,
+		instanceID string,
+		resourceName string,
+	) ([]LinkState, error)
 	// Save deals with persisting a link in the system and attaching it to the blueprint instance
 	// for the instance ID in the provided link state structure.
 	Save(ctx context.Context, linkState LinkState) error
@@ -459,13 +467,25 @@ type LinkState struct {
 	// IntermediaryResourceStates holds the state of intermediary resources
 	// that are created by the provider's implementation of a link.
 	IntermediaryResourceStates []*LinkIntermediaryResourceState `json:"intermediaryResourceStates"`
-	// Data is the mapping that holds the structure of
+	// Data is the map that holds the structure of
 	// the "raw" link data to hold information about a link that is not
 	// stored directly in the resources that are linked and is not
 	// stored in intermediary resources.
 	// This should hold information that may include values that are populated
-	// in one or both of the resources in the link relationship.
+	// in one or both of the resources in the link relationship along with
+	// intermediary resources.
 	Data map[string]*core.MappingNode `json:"data"`
+	// ResourceDataMappings provides mappings of resource spec fields
+	// to the link data fields created when updating intermediary resources
+	// in a link relationship.
+	// The format is:
+	// {resourceName}::{fieldPath} -> {linkDataFieldPath}
+	// e.g. "orderServiceRole::spec.policy.name" -> "orderServiceRole.policy"
+	// This is useful for applying link data projections to resources to take
+	// link changes into account when checking for drift.
+	//
+	// {resourceName} represents the logical name of the resource in single blueprint instance.
+	ResourceDataMappings map[string]string `json:"resourceDataMappings,omitempty"`
 	// Holds the latest reasons for failures in deploying a link,
 	// this only ever holds the results of the latest deployment attempt.
 	FailureReasons []string `json:"failureReasons"`

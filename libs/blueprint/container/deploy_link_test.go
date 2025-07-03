@@ -360,6 +360,10 @@ func (s *LinkDeployerTestSuite) createFixtureDeployExpectedOutput(
 				"testIntermediaryResource": core.MappingNodeFromString("testIntermediaryResourceValue"),
 			},
 		},
+		ResourceDataMappings: map[string]string{
+			"saveOrderFunction::spec.environment.variables.TABLE_NAME_ordersTable":   "saveOrderFunction.environmentVariables.TABLE_NAME_ordersTable",
+			"saveOrderFunction::spec.environment.variables.TABLE_REGION_ordersTable": "saveOrderFunction.environmentVariables.TABLE_REGION_ordersTable",
+		},
 	}
 }
 

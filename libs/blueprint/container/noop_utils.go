@@ -20,6 +20,14 @@ func (l *noopLinksContainer) GetByName(
 	return state.LinkState{}, nil
 }
 
+func (l *noopLinksContainer) ListWithResourceDataMappings(
+	ctx context.Context,
+	instanceID string,
+	resourceName string,
+) ([]state.LinkState, error) {
+	return []state.LinkState{}, nil
+}
+
 func (l *noopLinksContainer) Save(ctx context.Context, linkState state.LinkState) error {
 	return nil
 }

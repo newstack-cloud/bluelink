@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 )
 
@@ -398,4 +399,44 @@ func LogicalLinkName(resourceAName string, resourceBName string) string {
 // (e.g. "aws/lambda/function::aws/dynamodb/table").
 func LinkType(resourceTypeA string, resourceTypeB string) string {
 	return LogicalLinkName(resourceTypeA, resourceTypeB)
+}
+
+// ReplaceSpecWithRoot replaces the "spec." prefix in a path with "$.".
+// This is primarily useful for resource specs during merge/overlay operations
+// for merging computed fields into a resource spec and overlaying link data mappings
+// for drift checking.
+func ReplaceSpecWithRoot(path string) string {
+	if strings.HasPrefix(path, "spec.") {
+		withoutSpec := path[5:]
+		return fmt.Sprintf("$.%s", withoutSpec)
+	}
+
+	// If the path does not start with "spec.", it could be "spec[".
+	// An example of this would be in a path such as "spec[\"ids.v1\"].arns[0]".
+	withoutSpec := strings.TrimPrefix(path, "spec")
+	return fmt.Sprintf("$%s", withoutSpec)
+}
+
+// AddRootToPath adds a root prefix to a path.
+// If the path starts with a bracket (e.g. "[\"myField.v1\"]"), it adds a
+// "$" prefix to it (e.g. "$[\"myField.v1\"]"). Otherwise, it adds a "$." prefix
+// to it (e.g. "$.myField").
+func AddRootToPath(path string) string {
+	if strings.HasPrefix(path, "[") {
+		return fmt.Sprintf("$%s", path)
+	}
+
+	return fmt.Sprintf("$.%s", path)
+}
+
+// MergeNativeMaps merges multiple maps of string keys to values into a single map.
+// Each subsequent map will overwrite the keys of the previous maps.
+func MergeNativeMaps[Value any](nativeMaps ...map[string]Value) map[string]Value {
+	merged := make(map[string]Value)
+	for _, current := range nativeMaps {
+		if len(current) > 0 {
+			maps.Copy(merged, current)
+		}
+	}
+	return merged
 }

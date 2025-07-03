@@ -2,6 +2,7 @@ package drift
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"testing"
 
@@ -31,7 +32,7 @@ const (
 
 func (s *DriftCheckerTestSuite) SetupTest() {
 	s.stateContainer = memstate.NewMemoryStateContainer()
-	err := s.populateCurrentState()
+	err := s.populateCurrentState( /* includeLinkData */ false)
 	s.Require().NoError(err)
 	s.driftChecker = NewDefaultChecker(
 		s.stateContainer,
@@ -113,51 +114,118 @@ func (s *DriftCheckerTestSuite) Test_checks_drift_for_a_single_resource() {
 	s.Assert().Equal(driftState, &persistedDriftState)
 }
 
-func (s *DriftCheckerTestSuite) populateCurrentState() error {
-	return s.stateContainer.Instances().Save(
+func (s *DriftCheckerTestSuite) Test_checks_drift_for_a_single_resource_where_link_changes_are_taken_into_account() {
+	// Link changes should not be treated as drift, the implementation should overlay
+	// them on top of the existing resource state to create a derived state to compare
+	// with what is in the external system.
+
+	// Re-populate the current state with link data included.
+	err := s.populateCurrentState( /* includeLinkData */ true)
+	s.Require().NoError(err)
+
+	driftState, err := s.driftChecker.CheckResourceDrift(
 		context.Background(),
-		state.InstanceState{
-			InstanceID: instance1ID,
-			Status:     core.InstanceStatusDeployed,
-			ResourceIDs: map[string]string{
-				saveOrderFunctionName: saveOrderFunctionID,
-				ordersTableName:       ordersTableID,
+		instance1ID,
+		instance1ID,
+		saveOrderFunctionID,
+		createParams(),
+	)
+	s.Require().NoError(err)
+	s.Assert().Nil(driftState)
+
+	resources := s.stateContainer.Resources()
+
+	stateAfterCheck, err := resources.Get(
+		context.Background(),
+		saveOrderFunctionID,
+	)
+	s.Require().NoError(err)
+
+	s.Assert().False(stateAfterCheck.Drifted)
+
+	persistedDriftState, err := resources.GetDrift(
+		context.Background(),
+		saveOrderFunctionID,
+	)
+	s.Require().NoError(err)
+	// Empty fields indicate that there was no drift detected.
+	s.Assert().Equal(persistedDriftState.ResourceID, "")
+	s.Assert().Equal(persistedDriftState.ResourceName, "")
+	s.Assert().Nil(persistedDriftState.SpecData)
+	s.Assert().Nil(persistedDriftState.Difference)
+	s.Assert().Nil(persistedDriftState.Timestamp)
+}
+
+func (s *DriftCheckerTestSuite) populateCurrentState(includeLinkData bool) error {
+	instanceState := state.InstanceState{
+		InstanceID: instance1ID,
+		Status:     core.InstanceStatusDeployed,
+		ResourceIDs: map[string]string{
+			saveOrderFunctionName: saveOrderFunctionID,
+			ordersTableName:       ordersTableID,
+		},
+		Resources: map[string]*state.ResourceState{
+			saveOrderFunctionID: {
+				ResourceID:    saveOrderFunctionID,
+				Name:          saveOrderFunctionName,
+				Type:          "aws/lambda/function",
+				InstanceID:    instance1ID,
+				Status:        core.ResourceStatusCreated,
+				PreciseStatus: core.PreciseResourceStatusCreated,
+				SpecData: &core.MappingNode{
+					Fields: map[string]*core.MappingNode{
+						"id": core.MappingNodeFromString(
+							"arn:aws:lambda:us-east-1:123456789012:function:save-order-function",
+						),
+						"handler": core.MappingNodeFromString("saveOrderFunction.handler"),
+					},
+				},
+				Drifted: false,
 			},
-			Resources: map[string]*state.ResourceState{
-				saveOrderFunctionID: {
-					ResourceID:    saveOrderFunctionID,
-					Name:          saveOrderFunctionName,
-					Type:          "aws/lambda/function",
-					InstanceID:    instance1ID,
-					Status:        core.ResourceStatusCreated,
-					PreciseStatus: core.PreciseResourceStatusCreated,
-					SpecData: &core.MappingNode{
-						Fields: map[string]*core.MappingNode{
-							"id": core.MappingNodeFromString(
-								"arn:aws:lambda:us-east-1:123456789012:function:save-order-function",
-							),
-							"handler": core.MappingNodeFromString("saveOrderFunction.handler"),
-						},
+			ordersTableID: {
+				ResourceID:    ordersTableID,
+				Name:          ordersTableName,
+				Type:          "aws/dynamodb/table",
+				InstanceID:    instance1ID,
+				Status:        core.ResourceStatusCreated,
+				PreciseStatus: core.PreciseResourceStatusCreated,
+				SpecData: &core.MappingNode{
+					Fields: map[string]*core.MappingNode{
+						"tableName": core.MappingNodeFromString("ORDERS_TABLE"),
+						"region":    core.MappingNodeFromString("us-east-1"),
 					},
-					Drifted: false,
 				},
-				ordersTableID: {
-					ResourceID:    ordersTableID,
-					Name:          ordersTableName,
-					Type:          "aws/dynamodb/table",
-					InstanceID:    instance1ID,
-					Status:        core.ResourceStatusCreated,
-					PreciseStatus: core.PreciseResourceStatusCreated,
-					SpecData: &core.MappingNode{
-						Fields: map[string]*core.MappingNode{
-							"tableName": core.MappingNodeFromString("ORDERS_TABLE"),
-							"region":    core.MappingNodeFromString("us-east-1"),
-						},
-					},
-					Drifted: false,
-				},
+				Drifted: false,
 			},
 		},
+	}
+
+	if includeLinkData {
+		saveOrderDataMappingFieldPath := fmt.Sprintf("%s::spec.handler", saveOrderFunctionName)
+		instanceState.Links = map[string]*state.LinkState{
+			"saveOrderFunction::ordersTable": {
+				LinkID:     "test-link-1",
+				Name:       "saveOrderFunction::ordersTable",
+				InstanceID: instance1ID,
+				Data: map[string]*core.MappingNode{
+					"saveOrderFunction": {
+						Fields: map[string]*core.MappingNode{
+							// The same value as the external system, so when the link is applied
+							// in the check, it should not cause any drift.
+							"handler": core.MappingNodeFromString("orders.saveOrder"),
+						},
+					},
+				},
+				ResourceDataMappings: map[string]string{
+					saveOrderDataMappingFieldPath: "saveOrderFunction.handler",
+				},
+			},
+		}
+	}
+
+	return s.stateContainer.Instances().Save(
+		context.Background(),
+		instanceState,
 	)
 }
 

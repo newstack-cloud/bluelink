@@ -35,6 +35,7 @@ type LinkDeployer interface {
 type LinkDeployResult struct {
 	IntermediaryResourceStates []*state.LinkIntermediaryResourceState
 	LinkData                   *core.MappingNode
+	ResourceDataMappings       map[string]string
 }
 
 // NewDefaultLinkDeployer creates a new instance of the default implementation
@@ -928,6 +929,11 @@ func createLinkDeployResult(
 	intermediaryResourcesOutputLinkData := getIntermediaryResourcesOutputLinkData(
 		intermediaryResourcesOutput,
 	)
+	resADataMappings := getOutputResourceDataMappings(resourceAOutput)
+	resBDataMappings := getOutputResourceDataMappings(resourceBOutput)
+	intermediaryResourcesDataMappings := getIntermediaryResourcesOutputDataMappings(
+		intermediaryResourcesOutput,
+	)
 	intermediaryResourceStates := getIntermediaryResourcesOutputStates(
 		intermediaryResourcesOutput,
 	)
@@ -938,6 +944,11 @@ func createLinkDeployResult(
 			resourceAOutputLinkData,
 			resourceBOutputLinkData,
 			intermediaryResourcesOutputLinkData,
+		),
+		ResourceDataMappings: core.MergeNativeMaps(
+			resADataMappings,
+			resBDataMappings,
+			intermediaryResourcesDataMappings,
 		),
 	}
 }
@@ -950,6 +961,16 @@ func getResourceOutputLinkData(output *provider.LinkUpdateResourceOutput) *core.
 	return output.LinkData
 }
 
+func getOutputResourceDataMappings(
+	output *provider.LinkUpdateResourceOutput,
+) map[string]string {
+	if output == nil {
+		return nil
+	}
+
+	return output.ResourceDataMappings
+}
+
 func getIntermediaryResourcesOutputLinkData(
 	output *provider.LinkUpdateIntermediaryResourcesOutput,
 ) *core.MappingNode {
@@ -958,6 +979,16 @@ func getIntermediaryResourcesOutputLinkData(
 	}
 
 	return output.LinkData
+}
+
+func getIntermediaryResourcesOutputDataMappings(
+	output *provider.LinkUpdateIntermediaryResourcesOutput,
+) map[string]string {
+	if output == nil {
+		return nil
+	}
+
+	return output.ResourceDataMappings
 }
 
 func getIntermediaryResourcesOutputStates(

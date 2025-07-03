@@ -1,6 +1,7 @@
 package container
 
 import (
+	"maps"
 	"sync"
 	"time"
 
@@ -434,8 +435,11 @@ func (d *defaultDeploymentState) GetElementDependencies(element state.Element) *
 }
 
 func copyLinkDeployResult(result *LinkDeployResult) *LinkDeployResult {
+	resourceDataMappings := make(map[string]string)
+	maps.Copy(resourceDataMappings, result.ResourceDataMappings)
 	return &LinkDeployResult{
 		LinkData:                   core.CopyMappingNode(result.LinkData),
+		ResourceDataMappings:       resourceDataMappings,
 		IntermediaryResourceStates: copyLinkIntermediaryResourceStates(result.IntermediaryResourceStates),
 	}
 }

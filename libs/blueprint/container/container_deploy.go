@@ -1855,6 +1855,9 @@ func (c *defaultBlueprintContainer) buildLinkState(
 			if linkDeployResult.LinkData != nil {
 				linkState.Data = linkDeployResult.LinkData.Fields
 			}
+			if linkDeployResult.ResourceDataMappings != nil {
+				linkState.ResourceDataMappings = linkDeployResult.ResourceDataMappings
+			}
 			linkState.IntermediaryResourceStates = linkDeployResult.IntermediaryResourceStates
 		}
 

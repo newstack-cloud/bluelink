@@ -256,6 +256,10 @@
         },
         "testIntermediaryResource": "testIntermediaryResourceValue"
       },
+      "resourceDataMappings": {
+        "saveOrderFunction::spec.environment.variables.TABLE_NAME_ordersTable_0": "saveOrderFunction.environmentVariables.TABLE_NAME_ordersTable_0",
+        "saveOrderFunction::spec.environment.variables.TABLE_REGION_ordersTable_0": "saveOrderFunction.environmentVariables.TABLE_REGION_ordersTable_0"
+      },
       "failureReasons": null,
       "durations": {
         "resourceAUpdate": {
@@ -292,6 +296,10 @@
         },
         "testIntermediaryResource": "testIntermediaryResourceValue"
       },
+      "resourceDataMappings": {
+        "saveOrderFunction::spec.environment.variables.TABLE_NAME_ordersTable_1": "saveOrderFunction.environmentVariables.TABLE_NAME_ordersTable_1",
+        "saveOrderFunction::spec.environment.variables.TABLE_REGION_ordersTable_1": "saveOrderFunction.environmentVariables.TABLE_REGION_ordersTable_1"
+      },
       "failureReasons": null,
       "durations": {
         "resourceAUpdate": {
@@ -327,6 +335,10 @@
           }
         },
         "testIntermediaryResource": "testIntermediaryResourceValue"
+      },
+      "resourceDataMappings": {
+        "saveOrderFunction::spec.environment.variables.TABLE_NAME_ordersTable_2": "saveOrderFunction.environmentVariables.TABLE_NAME_ordersTable_2",
+        "saveOrderFunction::spec.environment.variables.TABLE_REGION_ordersTable_2": "saveOrderFunction.environmentVariables.TABLE_REGION_ordersTable_2"
       },
       "failureReasons": null,
       "durations": {

@@ -129,6 +129,17 @@ const (
 // a resource in a link relationship.
 type LinkUpdateResourceOutput struct {
 	LinkData *core.MappingNode
+	// ResourceDataMappings provides mappings of resource spec fields
+	// to the link data fields created when updating one of the two
+	// resources in a link relationship.
+	// The format is:
+	// {resourceName}::{fieldPath} -> {linkDataFieldPath}
+	// e.g. "orderServiceRole::spec.policy.name" -> "orderServiceRole.policy"
+	// This is useful for applying link data projections to resources to take
+	// link changes into account when checking for drift.
+	//
+	// {resourceName} represents the logical name of the resource in single blueprint instance.
+	ResourceDataMappings map[string]string
 }
 
 // LinkUpdateIntermediaryResourcesInput provides the input required to
@@ -162,6 +173,17 @@ type LinkUpdateIntermediaryResourcesInput struct {
 type LinkUpdateIntermediaryResourcesOutput struct {
 	IntermediaryResourceStates []*state.LinkIntermediaryResourceState
 	LinkData                   *core.MappingNode
+	// ResourceDataMappings provides mappings of resource spec fields
+	// to the link data fields created when updating intermediary resources
+	// in a link relationship.
+	// The format is:
+	// {resourceName}::{fieldPath} -> {linkDataFieldPath}
+	// e.g. "orderServiceRole::spec.policy.name" -> "orderServiceRole.policy"
+	// This is useful for applying link data projections to resources to take
+	// link changes into account when checking for drift.
+	//
+	// {resourceName} represents the logical name of the resource in single blueprint instance.
+	ResourceDataMappings map[string]string
 }
 
 // LinkGetPriorityResourceInput provides the input for retrieving

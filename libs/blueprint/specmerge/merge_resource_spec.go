@@ -1,9 +1,6 @@
 package specmerge
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
@@ -31,7 +28,7 @@ func MergeResourceSpec(
 	for computedFieldPath, computedFieldValue := range computedFieldValues {
 		if IsComputedFieldInList(expectedComputedFields, computedFieldPath) {
 			err := core.InjectPathValue(
-				replaceSpecWithRoot(computedFieldPath),
+				core.ReplaceSpecWithRoot(computedFieldPath),
 				computedFieldValue,
 				mergedResource,
 				core.MappingNodeMaxTraverseDepth,
@@ -50,16 +47,4 @@ func MergeResourceSpec(
 	}
 
 	return mergedResource, nil
-}
-
-func replaceSpecWithRoot(path string) string {
-	if strings.HasPrefix(path, "spec.") {
-		withoutSpec := path[5:]
-		return fmt.Sprintf("$.%s", withoutSpec)
-	}
-
-	// If the path does not start with "spec.", it could be "spec[".
-	// An example of this would be in a path such as "spec[\"ids.v1\"].arns[0]".
-	withoutSpec := strings.TrimPrefix(path, "spec")
-	return fmt.Sprintf("$%s", withoutSpec)
 }

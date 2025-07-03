@@ -79,6 +79,59 @@ func InjectPathValue(
 	injectInto *MappingNode,
 	maxTraverseDepth int,
 ) error {
+	return injectPathValue(
+		path,
+		value,
+		injectInto,
+		false, // replace
+		maxTraverseDepth,
+	)
+}
+
+// InjectPathValueReplace injects a value into a MappingNode using a path.
+// This will return an error if the provided path is invalid
+// or if the path is not reachable in the given node.
+// Structures such as an arrays and field mappings will be created
+// if they do not exist in the injectInto node and the path is valid.
+//
+// InjectPathValueReplace is similar to InjectPathValue,
+// where the difference is that it replaces the existing value
+// at the path if it exists, instead of skipping the injection.
+//
+// A path supports the following acessors:
+//
+// - "." for fields
+// - "[\"<field>\"]" for fields with special characters
+// - "[<index>]" for array items
+//
+// "$" represents the root of the path and must always be the first character
+// in the path.
+//
+// Example:
+//
+//	core.InjectPathValueReplace("$[\"cluster.v1\"].config.endpoints[0]", value, injectInto, 3)
+func InjectPathValueReplace(
+	path string,
+	value *MappingNode,
+	injectInto *MappingNode,
+	maxTraverseDepth int,
+) error {
+	return injectPathValue(
+		path,
+		value,
+		injectInto,
+		true, // replace
+		maxTraverseDepth,
+	)
+}
+
+func injectPathValue(
+	path string,
+	value *MappingNode,
+	injectInto *MappingNode,
+	replace bool,
+	maxTraverseDepth int,
+) error {
 	parsedPath, err := parsePath(path)
 	if err != nil {
 		return err
@@ -91,7 +144,7 @@ func InjectPathValue(
 	for pathExists && current != nil && i < maxDepth {
 		pathItem := parsedPath[i]
 		if pathItem.FieldName != "" && current.Fields != nil {
-			injectIntoFields(current, pathItem, parsedPath, i, value)
+			injectIntoFields(current, pathItem, parsedPath, i, value, replace)
 			current = current.Fields[pathItem.FieldName]
 		} else if pathItem.ArrayIndex != nil && current.Items != nil {
 			injectIntoItems(current, pathItem, parsedPath, i, value)
@@ -132,9 +185,10 @@ func injectIntoFields(
 	parsedPath []*pathItem,
 	i int,
 	valueToInject *MappingNode,
+	replace bool,
 ) {
 	_, hasValue := target.Fields[pathItem.FieldName]
-	if !hasValue {
+	if replace || !hasValue {
 		if i == len(parsedPath)-1 {
 			target.Fields[pathItem.FieldName] = valueToInject
 		} else {
