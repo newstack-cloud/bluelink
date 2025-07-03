@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-07-03
+
+### Changed
+
+- Adds support for link resource data mappings as per the latest updates to the blueprint framework to store information about the specific fields in link data that map to fields in resources in the same blueprint, this is used for overlaying link data for drift checks so that the alterations made by links to "activate" the connection between resources is not detected as drift.
+    - Updates the postgres schema to include a new `resource_data_mappings` column in the `links` table and a migration to rebuild the `links_json` view to include the new column.
+    - Updates the `memfile` state container implementation to support the new `ResourceDataMappings` field for links and implements an internal map to efficiently retrieve mappings given an instance ID and resource name.
+
 ## [0.2.6] - 2025-06-24
 
 ### Fixed
