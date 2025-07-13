@@ -268,6 +268,9 @@ type DataSourceSpecSchema struct {
 	// This essentially means that the data source implementation can provide
 	// a null value for the field.
 	Nullable bool
+	// Sensitive specifies whether the data source field is sensitive and should be kept
+	// out of logs and other outputs.
+	Sensitive bool
 }
 
 // DataSourceSpecSchemaType holds the type of a data source schema.

@@ -573,6 +573,9 @@ type ResourceDefinitionsSchema struct {
 	// This is only used for user-provided values, it will be ignored
 	// for computed values.
 	MustRecreate bool
+	// Sensitive specifies whether the value is sensitive and should be kept
+	// out of logs and other outputs.
+	Sensitive bool
 }
 
 // ResourceDefinitionsSchemaType holds the type of a resource schema.
