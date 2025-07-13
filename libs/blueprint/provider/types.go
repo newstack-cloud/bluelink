@@ -15,6 +15,9 @@ type FieldChange struct {
 	// MustRecreate is a flag that indicates whether the resource or link
 	// containing the field must be recreated in order to apply the change.
 	MustRecreate bool `json:"mustRecreate"`
+	// Sensitive indicates whether the field is sensitive and the values
+	// should be redacted in logs and outputs.
+	Sensitive bool `json:"sensitive"`
 }
 
 // RetryContext contains information to be used for retrying operations

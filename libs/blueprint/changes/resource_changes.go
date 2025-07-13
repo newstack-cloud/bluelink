@@ -278,6 +278,7 @@ func collectScalarFieldChanges(
 			PrevValue:    scalarInCurrentState,
 			NewValue:     scalarInNewSpec,
 			MustRecreate: fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
+			Sensitive:    schema.Sensitive,
 		})
 		return
 	}
@@ -289,6 +290,7 @@ func collectScalarFieldChanges(
 			PrevValue:    nil,
 			NewValue:     scalarInNewSpec,
 			MustRecreate: fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
+			Sensitive:    schema.Sensitive,
 		})
 		return
 	}
@@ -425,6 +427,7 @@ func collectUnionFieldChanges(
 			PrevValue:    unionValueInCurrentState,
 			NewValue:     unionValueInNewSpec,
 			MustRecreate: fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
+			Sensitive:    unionHasSensitiveVariant(schema),
 		})
 		return
 	}
@@ -444,6 +447,22 @@ func collectUnionFieldChanges(
 			depth:              fieldChangeCtx.depth,
 		},
 	)
+}
+
+func unionHasSensitiveVariant(
+	unionSchema *provider.ResourceDefinitionsSchema,
+) bool {
+	if unionSchema.Sensitive {
+		return true
+	}
+
+	for _, typeInUnion := range unionSchema.OneOf {
+		if typeInUnion.Sensitive {
+			return true
+		}
+	}
+
+	return false
 }
 
 func collectMetadataFieldChanges(

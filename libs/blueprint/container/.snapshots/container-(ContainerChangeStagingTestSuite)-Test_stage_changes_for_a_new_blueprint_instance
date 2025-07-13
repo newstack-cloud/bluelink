@@ -150,7 +150,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=22) "metadata.labels[\"app\"]",
@@ -169,7 +170,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=10) "spec.label",
@@ -188,7 +190,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=11) "spec.region",
@@ -207,7 +210,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         }
       },
       RemovedFields: ([]string) {
@@ -414,7 +418,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=22) "metadata.labels[\"app\"]",
@@ -433,7 +438,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=11) "spec.global",
@@ -452,7 +458,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=11) "spec.region",
@@ -471,7 +478,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=14) "spec.tableName",
@@ -490,7 +498,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         }
       },
       RemovedFields: ([]string) {
@@ -839,19 +848,22 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=40) "metadata.annotations[\"aws.dynamodb.vpc\"]",
           PrevValue: (*core.MappingNode)(<nil>),
           NewValue: (*core.MappingNode)(<nil>),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=46) "metadata.annotations[\"custom.coreInfraRegion\"]",
           PrevValue: (*core.MappingNode)(<nil>),
           NewValue: (*core.MappingNode)(<nil>),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=28) "metadata.custom.visual.label",
@@ -870,7 +882,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=27) "metadata.custom.visual[\"x\"]",
@@ -904,7 +917,8 @@
             }),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=27) "metadata.custom.visual[\"y\"]",
@@ -938,7 +952,8 @@
             }),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=20) "metadata.displayName",
@@ -957,7 +972,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=22) "metadata.labels[\"app\"]",
@@ -976,7 +992,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=11) "spec.global",
@@ -995,7 +1012,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=11) "spec.region",
@@ -1014,7 +1032,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=14) "spec.tableName",
@@ -1033,7 +1052,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         }
       },
       RemovedFields: ([]string) {
@@ -1367,19 +1387,22 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=40) "metadata.annotations[\"aws.dynamodb.vpc\"]",
           PrevValue: (*core.MappingNode)(<nil>),
           NewValue: (*core.MappingNode)(<nil>),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=46) "metadata.annotations[\"custom.coreInfraRegion\"]",
           PrevValue: (*core.MappingNode)(<nil>),
           NewValue: (*core.MappingNode)(<nil>),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=28) "metadata.custom.visual.label",
@@ -1398,7 +1421,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=27) "metadata.custom.visual[\"x\"]",
@@ -1432,7 +1456,8 @@
             }),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=27) "metadata.custom.visual[\"y\"]",
@@ -1466,7 +1491,8 @@
             }),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=20) "metadata.displayName",
@@ -1485,7 +1511,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=22) "metadata.labels[\"app\"]",
@@ -1504,7 +1531,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=11) "spec.global",
@@ -1523,7 +1551,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=11) "spec.region",
@@ -1542,7 +1571,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=14) "spec.tableName",
@@ -1561,7 +1591,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         }
       },
       RemovedFields: ([]string) {
@@ -1694,7 +1725,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (provider.FieldChange) {
           FieldPath: (string) (len=12) "spec.handler",
@@ -1728,7 +1760,8 @@
             }),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         }
       },
       RemovedFields: ([]string) {
@@ -1880,7 +1913,8 @@
             }),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         }
       },
       RemovedFields: ([]string) {
@@ -1914,7 +1948,8 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) false
+              MustRecreate: (bool) false,
+              Sensitive: (bool) false
             }),
             (*provider.FieldChange)({
               FieldPath: (string) (len=65) "saveOrderFunction.environmentVariables.TABLE_REGION_ordersTable_0",
@@ -1933,7 +1968,8 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) false
+              MustRecreate: (bool) false,
+              Sensitive: (bool) false
             }),
             (*provider.FieldChange)({
               FieldPath: (string) (len=50) "saveOrderFunction[\"iam.policyStatements\"].0.action",
@@ -1961,7 +1997,8 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) false
+              MustRecreate: (bool) false,
+              Sensitive: (bool) false
             }),
             (*provider.FieldChange)({
               FieldPath: (string) (len=50) "saveOrderFunction[\"iam.policyStatements\"].0.effect",
@@ -1980,7 +2017,8 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) false
+              MustRecreate: (bool) false,
+              Sensitive: (bool) false
             })
           },
           RemovedFields: ([]string) <nil>,
@@ -2009,7 +2047,8 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) false
+              MustRecreate: (bool) false,
+              Sensitive: (bool) false
             }),
             (*provider.FieldChange)({
               FieldPath: (string) (len=65) "saveOrderFunction.environmentVariables.TABLE_REGION_ordersTable_1",
@@ -2028,7 +2067,8 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) false
+              MustRecreate: (bool) false,
+              Sensitive: (bool) false
             }),
             (*provider.FieldChange)({
               FieldPath: (string) (len=50) "saveOrderFunction[\"iam.policyStatements\"].0.action",
@@ -2056,7 +2096,8 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) false
+              MustRecreate: (bool) false,
+              Sensitive: (bool) false
             }),
             (*provider.FieldChange)({
               FieldPath: (string) (len=50) "saveOrderFunction[\"iam.policyStatements\"].0.effect",
@@ -2075,7 +2116,8 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) false
+              MustRecreate: (bool) false,
+              Sensitive: (bool) false
             })
           },
           RemovedFields: ([]string) <nil>,
@@ -2460,7 +2502,8 @@
                 }),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) true
+              MustRecreate: (bool) true,
+              Sensitive: (bool) false
             },
             (provider.FieldChange) {
               FieldPath: (string) (len=28) "spec.itemConfig.endpoints[1]",
@@ -2494,7 +2537,8 @@
                 }),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) true
+              MustRecreate: (bool) true,
+              Sensitive: (bool) false
             },
             (provider.FieldChange) {
               FieldPath: (string) (len=20) "spec.itemConfig.ipv4",
@@ -2528,7 +2572,8 @@
                 }),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) true
+              MustRecreate: (bool) true,
+              Sensitive: (bool) false
             },
             (provider.FieldChange) {
               FieldPath: (string) (len=36) "spec.itemConfig.metadata.environment",
@@ -2547,7 +2592,8 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) true
+              MustRecreate: (bool) true,
+              Sensitive: (bool) false
             },
             (provider.FieldChange) {
               FieldPath: (string) (len=31) "spec.itemConfig.metadata.region",
@@ -2566,7 +2612,8 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) true
+              MustRecreate: (bool) true,
+              Sensitive: (bool) false
             },
             (provider.FieldChange) {
               FieldPath: (string) (len=27) "spec.itemConfig.primaryPort",
@@ -2585,7 +2632,8 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) true
+              MustRecreate: (bool) true,
+              Sensitive: (bool) true
             },
             (provider.FieldChange) {
               FieldPath: (string) (len=35) "spec.otherItemConfig.default.value1",
@@ -2604,7 +2652,8 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) false
+              MustRecreate: (bool) false,
+              Sensitive: (bool) false
             },
             (provider.FieldChange) {
               FieldPath: (string) (len=35) "spec.otherItemConfig.default.value2",
@@ -2623,7 +2672,8 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) false
+              MustRecreate: (bool) false,
+              Sensitive: (bool) false
             },
             (provider.FieldChange) {
               FieldPath: (string) (len=29) "spec.vendorConfig[0].vendorId",
@@ -2657,7 +2707,8 @@
                 }),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) false
+              MustRecreate: (bool) false,
+              Sensitive: (bool) false
             },
             (provider.FieldChange) {
               FieldPath: (string) (len=36) "spec.vendorConfig[0].vendorNamespace",
@@ -2691,7 +2742,8 @@
                 }),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              MustRecreate: (bool) false
+              MustRecreate: (bool) false,
+              Sensitive: (bool) false
             }
           },
           RemovedFields: ([]string) {
@@ -2731,7 +2783,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         },
         (string) (len=6) "region": (provider.FieldChange) {
           FieldPath: (string) (len=14) "exports.region",
@@ -2750,7 +2803,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          MustRecreate: (bool) false
+          MustRecreate: (bool) false,
+          Sensitive: (bool) false
         }
       }
     }
@@ -2779,7 +2833,8 @@
         SourceMeta: (*source.Meta)(<nil>),
         FieldsSourceMeta: (map[string]*source.Meta) <nil>
       }),
-      MustRecreate: (bool) false
+      MustRecreate: (bool) false,
+      Sensitive: (bool) false
     }
   },
   ExportChanges: (map[string]provider.FieldChange) {
@@ -2822,7 +2877,8 @@
           }),
           FieldsSourceMeta: (map[string]*source.Meta) <nil>
         }),
-        MustRecreate: (bool) false
+        MustRecreate: (bool) false,
+        Sensitive: (bool) false
       }
     },
     ModifiedFields: ([]provider.FieldChange) {

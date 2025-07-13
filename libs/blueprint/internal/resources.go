@@ -867,6 +867,11 @@ func (r *ExampleComplexResource) GetSpecDefinition(
 												IntValue: &defaultPrimaryPort,
 											},
 										},
+										// In reality a port number would not be sensitive,
+										// this is just to test the sensitive field logic for field
+										// change values without significantly changing the resource
+										// schema.
+										Sensitive: true,
 									},
 									"score": {
 										Type:     provider.ResourceDefinitionsSchemaTypeFloat,
