@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.27.0] - 2025-07-13
+
+### Added
+
+- Adds support for marking fields as sensitive in resource and data source schema definitions. This also includes updates to the generate changes functionality to ensure that field changes are marked as sensitive when the field in the source schema is marked as sensitive.
+
 ## [0.26.0] - 2025-07-03
 
 ### Added
