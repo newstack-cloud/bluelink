@@ -886,6 +886,9 @@ message FieldChange {
     // A flag that indicates whether the resource or link
     // containing the field must be recreated in order to apply the change.
     bool must_recreate = 4;
+    // A flag that indicates whether the field is sensitive.
+    // Sensitive fields are not included in logs or any other output.
+    bool sensitive = 5;
 }
 
 // LinkChanges provides a set of modified fields for a link between two resources.
@@ -1240,6 +1243,9 @@ message ResourceDefinitionsSchema {
     // This is only used for user-provided values, it will be ignored
     // for computed values.
     bool must_recreate = 14;
+    // Specifies whether the field for the schema is sensitive
+    // and should not be logged or displayed in output.
+    bool sensitive = 15;
 }
 
 // CanLinkTo holds a list of resource types that a given resource type

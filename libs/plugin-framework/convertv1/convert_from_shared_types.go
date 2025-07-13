@@ -942,6 +942,7 @@ func fromPBResourceDefinitionsSchema(
 		Examples:             examples,
 		Computed:             pbSchema.Computed,
 		MustRecreate:         pbSchema.MustRecreate,
+		Sensitive:            pbSchema.Sensitive,
 	}, nil
 }
 
@@ -1321,6 +1322,7 @@ func fromPBFieldChanges(
 			PrevValue:    prevValue,
 			NewValue:     newValue,
 			MustRecreate: pbFieldChange.MustRecreate,
+			Sensitive:    pbFieldChange.Sensitive,
 		}
 	}
 

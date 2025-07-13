@@ -218,6 +218,7 @@ func fromPBDataSourceSpecSchema(
 		FormattedDescription: pbFieldSchema.FormattedDescription,
 		Items:                items,
 		Nullable:             pbFieldSchema.Nullable,
+		Sensitive:            pbFieldSchema.Sensitive,
 	}, nil
 }
 

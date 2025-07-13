@@ -853,6 +853,9 @@ message DataSourceSpecSchema {
     // This essentially means that the data source implementation can provide
     // a null value for the field.
     bool nullable = 6;
+    // Specifies whether the field for the schema is sensitive
+    // and should not be logged or displayed in output.
+    bool sensitive = 7;
 }
 
 // DataSourceSpecSchemaType represents the type of a data source spec schema.

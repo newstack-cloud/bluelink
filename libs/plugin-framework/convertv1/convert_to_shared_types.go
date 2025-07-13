@@ -853,6 +853,7 @@ func toPBFieldChange(
 		PrevValue:    prevValue,
 		NewValue:     newValue,
 		MustRecreate: fieldChange.MustRecreate,
+		Sensitive:    fieldChange.Sensitive,
 	}, nil
 }
 

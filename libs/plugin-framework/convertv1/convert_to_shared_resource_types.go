@@ -67,6 +67,7 @@ func ToPBResourceDefinitionsSchema(
 		Examples:             examples,
 		Computed:             schema.Computed,
 		MustRecreate:         schema.MustRecreate,
+		Sensitive:            schema.Sensitive,
 	}, nil
 }
 

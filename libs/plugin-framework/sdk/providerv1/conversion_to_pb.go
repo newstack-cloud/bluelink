@@ -901,6 +901,7 @@ func toPBDataSourceSpecSchema(
 		FormattedDescription: providerSchema.FormattedDescription,
 		Items:                items,
 		Nullable:             providerSchema.Nullable,
+		Sensitive:            providerSchema.Sensitive,
 	}, nil
 }
 
