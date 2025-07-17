@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.0] - 2025-07-17
+
+### Added
+
+- Adds support for the `IgnoreDrift` field in resource schema definitions. This allows plugin developers to mark fields in resource schemas that should not be checked for drift.
+- Adds `DestroyBeforeCreate` field to resource spec definitions. This is to indicate in documentation and tools built on top of the blueprint framework that a resource should be destroyed before it is created when a resource must be recreated as a part of a deployment.
+
 ## [0.27.0] - 2025-07-13
 
 ### Added
