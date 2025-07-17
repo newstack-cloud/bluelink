@@ -882,8 +882,9 @@ func FromPBResourceSpecDefinition(
 	}
 
 	return &provider.ResourceSpecDefinition{
-		Schema:  resourceDefinitionSchema,
-		IDField: pbSpecDef.IdField,
+		Schema:              resourceDefinitionSchema,
+		IDField:             pbSpecDef.IdField,
+		DestroyBeforeCreate: pbSpecDef.DestroyBeforeCreate,
 	}, nil
 }
 
@@ -943,6 +944,7 @@ func fromPBResourceDefinitionsSchema(
 		Computed:             pbSchema.Computed,
 		MustRecreate:         pbSchema.MustRecreate,
 		Sensitive:            pbSchema.Sensitive,
+		IgnoreDrift:          pbSchema.IgnoreDrift,
 	}, nil
 }
 

@@ -220,8 +220,9 @@ func toPBResourceSpecDefinitionResponse(
 	return &providerserverv1.ResourceSpecDefinitionResponse{
 		Response: &providerserverv1.ResourceSpecDefinitionResponse_SpecDefinition{
 			SpecDefinition: &sharedtypesv1.ResourceSpecDefinition{
-				Schema:  schema,
-				IdField: output.SpecDefinition.IDField,
+				Schema:              schema,
+				IdField:             output.SpecDefinition.IDField,
+				DestroyBeforeCreate: output.SpecDefinition.DestroyBeforeCreate,
 			},
 		},
 	}, nil

@@ -68,6 +68,7 @@ func ToPBResourceDefinitionsSchema(
 		Computed:             schema.Computed,
 		MustRecreate:         schema.MustRecreate,
 		Sensitive:            schema.Sensitive,
+		IgnoreDrift:          schema.IgnoreDrift,
 	}, nil
 }
 

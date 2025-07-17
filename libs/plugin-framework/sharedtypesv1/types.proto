@@ -1192,6 +1192,10 @@ message ResourceSpecDefinition {
     // the blueprint.
     // The ID field must be a top-level property of the resource spec schema.
     string id_field = 2;
+    // Specifies whether the resource should be destroyed before it is created
+    // as a part of the deployment process when a resource must be recreated
+    // to apply a set of changes.
+    bool destroy_before_create = 3;
 }
 
 // ResourceDefinitionsSchema provides a schema that can be used to validate
@@ -1246,6 +1250,10 @@ message ResourceDefinitionsSchema {
     // Specifies whether the field for the schema is sensitive
     // and should not be logged or displayed in output.
     bool sensitive = 15;
+    // Specifies whether a field defined by this schema should be ignored
+    // when checking for drift in the resource state between the resource in
+    // the upstream provider and the resource in the blueprint instance state.
+    bool ignore_drift = 16;
 }
 
 // CanLinkTo holds a list of resource types that a given resource type

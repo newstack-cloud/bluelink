@@ -63,6 +63,22 @@ type ResourceDefinition struct {
 	// The ID field must be a top-level property of the resource spec schema.
 	IDField string
 
+	// DestroyBeforeCreate specifies whether the resource must be destroyed
+	// before it can be created again.
+	// In most cases, this should be false or not set, as where possible,
+	// resources should be replaced with minimal disruption, as per a create-before-destroy
+	// strategy.
+	// This is useful for resources that will often need to be recreated with the same
+	// user-defined unique name that are safe to destroy before creating a replacement.
+	// This doesn't necessarily mean the resource will always be recreated successfully,
+	// as some providers may not allow the use of the same name for a resource until a certain
+	// period of time has passed since the resource was destroyed.
+	//
+	// To keep things simple for the practitioner, this is not something that can be set
+	// in a blueprint spec, it is up to the developers of providers to set this
+	// based on the nature of the resource and how critical it will be deemed for most use cases.
+	DestroyBeforeCreate bool
+
 	// Specifies whether this resource is expected to have a common use-case
 	// as a terminal resource that does not link out to other resources.
 	// This is useful for providing useful warnings to users about their blueprints
@@ -167,8 +183,9 @@ func (r *ResourceDefinition) GetSpecDefinition(
 ) (*provider.ResourceGetSpecDefinitionOutput, error) {
 	return &provider.ResourceGetSpecDefinitionOutput{
 		SpecDefinition: &provider.ResourceSpecDefinition{
-			Schema:  r.Schema,
-			IDField: r.IDField,
+			Schema:              r.Schema,
+			IDField:             r.IDField,
+			DestroyBeforeCreate: r.DestroyBeforeCreate,
 		},
 	}, nil
 }
@@ -261,15 +278,14 @@ func (r *ResourceDefinition) Deploy(
 	// meaning the resource is being updated.
 	hasCurrentResourceState := isCurrentResourceStatePopulated(input)
 
-	// If the changes provided require the resource to be re-created,
-	// then we create the replacement resource and destroy the old one.
-	// This does mean that for resources that have user-defined unique identifiers,
-	// the user will need to ensure a new unique identifier is provided
-	// in the resource spec.
 	if hasCurrentResourceState && input.Changes.MustRecreate {
-		resourceDeployOutput, err := r.CreateFunc(ctx, input)
-		if err != nil {
-			return nil, err
+		var resourceDeployOutput *provider.ResourceDeployOutput
+		var err error
+		if !r.DestroyBeforeCreate {
+			resourceDeployOutput, err = r.CreateFunc(ctx, input)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		err = r.Destroy(ctx, &provider.ResourceDestroyInput{
@@ -282,7 +298,11 @@ func (r *ResourceDefinition) Deploy(
 			return nil, err
 		}
 
-		return resourceDeployOutput, nil
+		if r.DestroyBeforeCreate {
+			resourceDeployOutput, err = r.CreateFunc(ctx, input)
+		}
+
+		return resourceDeployOutput, err
 	}
 
 	if hasCurrentResourceState {
