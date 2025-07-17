@@ -43,6 +43,14 @@ type anyType struct{}
 // for a value that can be ignored.
 var Any = anyType{}
 
+// EqualityCheckValues is a struct used to hold expected and actual values
+// for equality checks in assertions used with an `equality` matcher that takes an arg
+// and transforms ito to be a value that can be compared with an expected value.
+type EqualityCheckValues struct {
+	Expected any
+	Actual   any
+}
+
 // RegisterCall registers a call for the current method with the given arguments.
 func (m *MockCalls) RegisterCall(args ...any) {
 	pc, _, _, ok := runtime.Caller(1)
@@ -114,14 +122,54 @@ func (m *MockCalls) AssertCalledWith(s *suite.Suite, methodName string, callInde
 	for i, arg := range callArgs {
 		expected := args[i]
 		if expected != Any {
-			s.Assert().Equal(
-				expected,
-				arg,
-				"Method arg at index %d does not match expected value",
-				i,
-			)
+			assertArg(expected, arg, s, methodName, i)
 		}
 	}
+}
+
+func assertArg(
+	expected any, arg any, s *suite.Suite, methodName string, i int,
+) {
+	matcher, isMatcher := expected.(func(arg any) bool)
+	if isMatcher {
+		s.Assert().True(
+			matcher(arg),
+			"Method arg at index %d does not match expected matcher for method %s",
+			i,
+			methodName,
+		)
+		return
+	}
+
+	eqMatcher, isEqMatcher := expected.(func(arg any) (EqualityCheckValues, error))
+	if isEqMatcher {
+		checkValues, err := eqMatcher(arg)
+		if err != nil {
+			s.Assert().Fail(
+				"Method arg at index %d failed in matcher for method %s: %v",
+				i,
+				methodName,
+				err,
+			)
+			return
+		}
+
+		s.Assert().Equal(
+			checkValues.Expected,
+			checkValues.Actual,
+			"Method arg at index %d does not match expected value for method %s for equality matcher",
+			i,
+			methodName,
+		)
+		return
+	}
+
+	s.Assert().Equal(
+		expected,
+		arg,
+		"Method arg at index %d does not match expected value",
+		i,
+	)
 }
 
 // AssertNotCalled asserts that a method with the given name was not called.

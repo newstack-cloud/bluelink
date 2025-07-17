@@ -2,6 +2,7 @@ package plugintestutils
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -357,9 +358,17 @@ func (s *ResourceTestRunnerSuite) createMockResourceUpdateTestCase() ResourceDep
 		SaveActionsCalled: map[string]any{
 			"UpdateConfig": []any{
 				&updateMockResourceConfigInput{},
-				&updateMockResourceConfigInput{
-					Name:      "Second Update Name",
-					DebugMode: true,
+				func(input any) bool {
+					updateInput, ok := input.(*updateMockResourceConfigInput)
+					if !ok {
+						return false
+					}
+					return reflect.DeepEqual(
+						updateInput,
+						&updateMockResourceConfigInput{
+							Name:      "Second Update Name",
+							DebugMode: true,
+						})
 				},
 			},
 			"UpdateCode": &updateMockResourceCodeInput{},
@@ -413,10 +422,15 @@ func (s *ResourceTestRunnerSuite) createMockResourceSaveNewTestCase() ResourceDe
 				ModifiedFields: []provider.FieldChange{},
 			},
 		},
-		ExpectedOutput: &provider.ResourceDeployOutput{
-			ComputedFieldValues: map[string]*core.MappingNode{
-				"spec.id": core.MappingNodeFromString("new-resource-id"),
-			},
+		ExpectedOutputMatcher: func(actual *provider.ResourceDeployOutput) (EqualityCheckValues, error) {
+			return EqualityCheckValues{
+				Expected: &provider.ResourceDeployOutput{
+					ComputedFieldValues: map[string]*core.MappingNode{
+						"spec.id": core.MappingNodeFromString("new-resource-id"),
+					},
+				},
+				Actual: actual,
+			}, nil
 		},
 		SaveActionsCalled: map[string]any{
 			"SaveResource": &saveMockResourceInput{},

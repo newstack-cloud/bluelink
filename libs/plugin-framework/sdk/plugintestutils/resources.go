@@ -34,6 +34,12 @@ type ResourceGetExternalStateTestCase[ServiceConfig any, Service any] struct {
 	Input *provider.ResourceGetExternalStateInput
 	// ExpectedOutput is the expected output from the `GetExternalState` method.
 	ExpectedOutput *provider.ResourceGetExternalStateOutput
+	// ExpectedOutputMatcher is a function that takes the actual output
+	// from the `GetExternalState` method and returns a prepared actual
+	// value along with the expected value to be used in an equality check.
+	ExpectedOutputMatcher func(
+		actual *provider.ResourceGetExternalStateOutput,
+	) (EqualityCheckValues, error)
 	// CheckTags should be set to true if the subject resource holds tags
 	// as an array of key-value pair objects.
 	// The default behaviour is to not check tags.
@@ -100,10 +106,42 @@ func RunResourceGetExternalStateTestCases[ServiceConfig any, Service any](
 					),
 				)
 			} else {
-				testSuite.Equal(tc.ExpectedOutput, output)
+				assertExpectedOutput(
+					tc.ExpectedOutput,
+					tc.ExpectedOutputMatcher,
+					output,
+					testSuite,
+				)
 			}
 		})
 	}
+}
+
+func assertExpectedOutput[Output any](
+	expectedOutput Output,
+	expectedOutputMatcher func(actual Output) (EqualityCheckValues, error),
+	actualOutput Output,
+	testSuite *suite.Suite,
+) {
+	if expectedOutputMatcher == nil {
+		testSuite.Equal(expectedOutput, actualOutput)
+		return
+	}
+
+	checkValues, err := expectedOutputMatcher(actualOutput)
+	if err != nil {
+		testSuite.Fail(
+			"Expected output matcher failed",
+			"Error: %v",
+			err,
+		)
+		return
+	}
+	testSuite.Equal(
+		checkValues.Expected,
+		checkValues.Actual,
+		"Expected output does not match actual output",
+	)
 }
 
 // ResourceHasStabilisedTestCase defines a test case for `HasStabilised` method
@@ -132,6 +170,12 @@ type ResourceHasStabilisedTestCase[ServiceConfig any, Service any] struct {
 	Input *provider.ResourceHasStabilisedInput
 	// ExpectedOutput is the expected output from the `HasStabilised` method.
 	ExpectedOutput *provider.ResourceHasStabilisedOutput
+	// ExpectedOutputMatcher is a function that takes the actual output
+	// from the `HasStabilised` method and returns a prepared actual
+	// value along with the expected value to be used in an equality check.
+	ExpectedOutputMatcher func(
+		actual *provider.ResourceHasStabilisedOutput,
+	) (EqualityCheckValues, error)
 	// ExpectError indicates whether the test case expects an error
 	// to be returned from the `GetExternalState` method.
 	ExpectError bool
@@ -161,7 +205,12 @@ func RunResourceHasStabilisedTestCases[ServiceConfig any, Service any](
 			}
 
 			testSuite.NoError(err)
-			testSuite.Equal(tc.ExpectedOutput, output)
+			assertExpectedOutput(
+				tc.ExpectedOutput,
+				tc.ExpectedOutputMatcher,
+				output,
+				testSuite,
+			)
 		})
 	}
 }
@@ -214,6 +263,12 @@ type ResourceDeployTestCase[ServiceConfig any, Service any] struct {
 	SaveActionsNotCalled []string
 	// ExpectedOutput is the expected output from the `Deploy` method.
 	ExpectedOutput *provider.ResourceDeployOutput
+	// ExpectedOutputMatcher is a function that takes the actual output
+	// from the `Deploy` method and returns a prepared actual
+	// value along with the expected value to be used in an equality check.
+	ExpectedOutputMatcher func(
+		actual *provider.ResourceDeployOutput,
+	) (EqualityCheckValues, error)
 	// ExpectError indicates whether the test case expects an error
 	// to be returned from the `Deploy` method.
 	ExpectError bool
@@ -243,7 +298,12 @@ func RunResourceDeployTestCases[ServiceConfig any, Service any](
 			}
 
 			testSuite.NoError(err)
-			testSuite.Equal(tc.ExpectedOutput, output)
+			assertExpectedOutput(
+				tc.ExpectedOutput,
+				tc.ExpectedOutputMatcher,
+				output,
+				testSuite,
+			)
 
 			assertActionsCalled(testSuite, tc.ServiceMockCalls, tc.SaveActionsCalled)
 			assertActionsNotCalled(testSuite, tc.ServiceMockCalls, tc.SaveActionsNotCalled)
