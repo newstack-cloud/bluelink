@@ -11,6 +11,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
 )
 
@@ -234,6 +235,10 @@ func (c *defaultChecker) checkResourceDrift(
 		"Retrieving external state for the resource from the provider",
 	)
 	retryCtx := provider.CreateRetryContext(policy)
+	providerCtx := provider.NewProviderContextFromParams(
+		providerNamespace,
+		params,
+	)
 	externalStateOutput, err := c.getResourceExternalState(
 		ctx,
 		resourceImpl,
@@ -243,7 +248,7 @@ func (c *defaultChecker) checkResourceDrift(
 			ResourceID:              resource.ResourceID,
 			CurrentResourceSpec:     resource.SpecData,
 			CurrentResourceMetadata: resource.Metadata,
-			ProviderContext:         provider.NewProviderContextFromParams(providerNamespace, params),
+			ProviderContext:         providerCtx,
 		},
 		retryCtx,
 		resourceLogger,
@@ -274,7 +279,28 @@ func (c *defaultChecker) checkResourceDrift(
 		return nil, err
 	}
 
-	if !hasChanges(resourceChanges) {
+	specDefinitionOutput, err := resourceImpl.GetSpecDefinition(ctx, &provider.ResourceGetSpecDefinitionInput{
+		ProviderContext: providerCtx,
+	})
+	if err != nil {
+		resourceLogger.Debug(
+			"Failed to get spec definition for resource required for "+
+				"determining changes that should be considered for drift",
+			core.StringLogField("resourceType", resource.Type),
+			core.ErrorLogField("error", err),
+		)
+		return nil, err
+	}
+
+	// Filter the resource changes to only include changes to fields that
+	// are not marked to be ignored for drift checking in the spec definition.
+	finalResourceChanges := filterChanges(
+		resourceChanges,
+		specDefinitionOutput.SpecDefinition,
+		resourceLogger,
+	)
+
+	if !hasChanges(finalResourceChanges) {
 		resourceLogger.Debug(
 			"No changes detected indicating that the resource has not drifted" +
 				", updating resource state as not drifted",
@@ -300,7 +326,7 @@ func (c *defaultChecker) checkResourceDrift(
 		ResourceID:   resource.ResourceID,
 		ResourceName: resource.Name,
 		SpecData:     resource.SpecData,
-		Difference:   toResourceDriftChanges(resourceChanges),
+		Difference:   toResourceDriftChanges(finalResourceChanges),
 		Timestamp:    &currentTime,
 	}
 
@@ -458,7 +484,237 @@ func createResolvedResourceMetadata(
 	}
 }
 
-func hasChanges(changes *provider.Changes) bool {
+func filterChanges(
+	changes *provider.Changes,
+	specDefinition *provider.ResourceSpecDefinition,
+	resourceLogger core.Logger,
+) *provider.Changes {
+	if specDefinition == nil || specDefinition.Schema == nil {
+		resourceLogger.Debug(
+			"Spec definition is nil, all changes will be considered as drift",
+		)
+		return changes
+	}
+
+	filteredChanges := &provider.Changes{
+		AppliedResourceInfo:       changes.AppliedResourceInfo,
+		ModifiedFields:            withoutSpecFieldChanges(changes.ModifiedFields),
+		NewFields:                 withoutSpecFieldChanges(changes.NewFields),
+		RemovedFields:             withoutSpecFields(changes.RemovedFields),
+		MustRecreate:              changes.MustRecreate,
+		ComputedFields:            changes.ComputedFields,
+		UnchangedFields:           changes.UnchangedFields,
+		FieldChangesKnownOnDeploy: changes.FieldChangesKnownOnDeploy,
+		ConditionKnownOnDeploy:    changes.ConditionKnownOnDeploy,
+		NewOutboundLinks:          changes.NewOutboundLinks,
+		OutboundLinkChanges:       changes.OutboundLinkChanges,
+		RemovedOutboundLinks:      changes.RemovedOutboundLinks,
+	}
+
+	// Walk the schema, for each non-computed field, check if there are any changes
+	// in the modified, new or removed fields, if so, and IgnoreDrift is true, then
+	// omit the change from the final change set
+	filterSchemaChanges(specDefinition.Schema, changes, filteredChanges, "$", 0, resourceLogger)
+
+	return filteredChanges
+}
+
+func withoutSpecFieldChanges(
+	sourceFieldChanges []provider.FieldChange,
+) []provider.FieldChange {
+	filteredChanges := []provider.FieldChange{}
+	for _, fieldChange := range sourceFieldChanges {
+		if !isFieldInSpec(fieldChange.FieldPath) {
+			filteredChanges = append(filteredChanges, fieldChange)
+		}
+	}
+	return filteredChanges
+}
+
+func withoutSpecFields(
+	sourceRemovedFields []string,
+) []string {
+	filteredRemovedFields := []string{}
+	for _, removedField := range sourceRemovedFields {
+		if !isFieldInSpec(removedField) {
+			filteredRemovedFields = append(filteredRemovedFields, removedField)
+		}
+	}
+	return filteredRemovedFields
+}
+
+func filterSchemaChanges(
+	schema *provider.ResourceDefinitionsSchema,
+	source *provider.Changes,
+	destination *provider.Changes,
+	schemaPath string,
+	depth int,
+	resourceLogger core.Logger,
+) {
+	if schema == nil || depth >= core.MappingNodeMaxTraverseDepth || schema.Computed {
+		return
+	}
+
+	filteredModifiedFields := filterFieldChanges(
+		schema,
+		source.ModifiedFields,
+		schemaPath,
+		resourceLogger,
+	)
+	destination.ModifiedFields = append(destination.ModifiedFields, filteredModifiedFields...)
+
+	filteredNewFields := filterFieldChanges(
+		schema,
+		source.NewFields,
+		schemaPath,
+		resourceLogger,
+	)
+	destination.NewFields = append(destination.NewFields, filteredNewFields...)
+
+	filteredRemovedFields := filterRemovedFields(
+		schema,
+		source.RemovedFields,
+		schemaPath,
+		resourceLogger,
+	)
+	destination.RemovedFields = append(destination.RemovedFields, filteredRemovedFields...)
+
+	if schema.Type == provider.ResourceDefinitionsSchemaTypeObject {
+		for attrName, attrSchema := range schema.Attributes {
+			attrPath := substitutions.RenderFieldPath(schemaPath, attrName)
+			filterSchemaChanges(
+				attrSchema,
+				source,
+				destination,
+				attrPath,
+				depth+1,
+				resourceLogger,
+			)
+		}
+	}
+
+	if schema.Type == provider.ResourceDefinitionsSchemaTypeArray {
+		// "[*]" in the path matches any index in the array.
+		arrayPath := fmt.Sprintf("%s[*]", schemaPath)
+		filterSchemaChanges(
+			schema.Items,
+			source,
+			destination,
+			arrayPath,
+			depth+1,
+			resourceLogger,
+		)
+	}
+
+	if schema.Type == provider.ResourceDefinitionsSchemaTypeMap {
+		// ".*" in the path matches any key in the map.
+		mapPath := fmt.Sprintf("%s.*", schemaPath)
+		filterSchemaChanges(
+			schema.Items,
+			source,
+			destination,
+			mapPath,
+			depth+1,
+			resourceLogger,
+		)
+	}
+
+	if schema.Type == provider.ResourceDefinitionsSchemaTypeUnion && !schema.IgnoreDrift {
+		for _, unionSchema := range schema.OneOf {
+			filterSchemaChanges(
+				unionSchema,
+				source,
+				destination,
+				// Use the same schema path for union schemas, as they are not nested
+				// within the parent schema, but rather represent an alternative
+				// schema for the same field.
+				schemaPath,
+				depth+1,
+				resourceLogger,
+			)
+		}
+	}
+}
+
+func filterFieldChanges(
+	schema *provider.ResourceDefinitionsSchema,
+	sourceFieldChanges []provider.FieldChange,
+	schemaPath string,
+	logger core.Logger,
+) []provider.FieldChange {
+	filteredChanges := []provider.FieldChange{}
+
+	for _, fieldChange := range sourceFieldChanges {
+		if isFieldInSpec(fieldChange.FieldPath) {
+			fieldSearchPath := core.ReplaceSpecWithRoot(fieldChange.FieldPath)
+			pathsEqual, _ := core.PathMatchesPattern(
+				fieldSearchPath,
+				schemaPath,
+			)
+			if pathsEqual && !schema.IgnoreDrift {
+				filteredChanges = append(
+					filteredChanges,
+					provider.FieldChange{
+						FieldPath:    fieldChange.FieldPath,
+						PrevValue:    fieldChange.PrevValue,
+						NewValue:     fieldChange.NewValue,
+						MustRecreate: fieldChange.MustRecreate,
+						Sensitive:    schema.Sensitive,
+					},
+				)
+			} else if pathsEqual && schema.IgnoreDrift {
+				logger.Debug(
+					fmt.Sprintf(
+						"Ignoring drift for new or modified field %s as it is marked to be ignored",
+						fieldChange.FieldPath,
+					),
+				)
+			}
+		}
+	}
+
+	return filteredChanges
+}
+
+func filterRemovedFields(
+	schema *provider.ResourceDefinitionsSchema,
+	sourceRemovedFields []string,
+	schemaPath string,
+	logger core.Logger,
+) []string {
+	filteredRemovedFields := []string{}
+
+	for _, removedField := range sourceRemovedFields {
+		if isFieldInSpec(removedField) {
+			fieldSearchPath := core.ReplaceSpecWithRoot(removedField)
+			pathsEqual, _ := core.PathMatchesPattern(
+				fieldSearchPath,
+				schemaPath,
+			)
+			if pathsEqual && !schema.IgnoreDrift {
+				filteredRemovedFields = append(filteredRemovedFields, removedField)
+			} else if pathsEqual && schema.IgnoreDrift {
+				logger.Debug(
+					fmt.Sprintf(
+						"Ignoring drift for removed field %s as it is marked to be ignored",
+						removedField,
+					),
+				)
+			}
+		}
+	}
+
+	return filteredRemovedFields
+}
+
+func isFieldInSpec(fieldPath string) bool {
+	return strings.HasPrefix(fieldPath, "spec.") ||
+		strings.HasPrefix(fieldPath, "spec[")
+}
+
+func hasChanges(
+	changes *provider.Changes,
+) bool {
 	return len(changes.ModifiedFields) > 0 ||
 		len(changes.NewFields) > 0 ||
 		len(changes.RemovedFields) > 0

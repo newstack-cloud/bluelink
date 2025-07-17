@@ -42,3 +42,29 @@ func newTestAWSProvider(
 		},
 	}
 }
+
+func newTestExampleProvider(
+	exampleComplexResourceExternalState *core.MappingNode,
+) provider.Provider {
+	return &internal.ProviderMock{
+		NamespaceValue: "example",
+		Resources: map[string]provider.Resource{
+			"example/complexResource": &internal.ExampleComplexResource{
+				ExternalState: exampleComplexResourceExternalState,
+			},
+		},
+		Links:               map[string]provider.Link{},
+		CustomVariableTypes: map[string]provider.CustomVariableType{},
+		DataSources:         map[string]provider.DataSource{},
+		ProviderRetryPolicy: &provider.RetryPolicy{
+			MaxRetries: 3,
+			// The first retry delay is 1 millisecond
+			FirstRetryDelay: 0.001,
+			// The maximum delay between retries is 10 milliseconds.
+			MaxDelay:      0.01,
+			BackoffFactor: 0.5,
+			// Make the retry behaviour more deterministic for tests by disabling jitter.
+			Jitter: false,
+		},
+	}
+}

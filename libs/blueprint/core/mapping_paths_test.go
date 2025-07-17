@@ -173,6 +173,38 @@ func (s *MappingPathsTestSuite) Test_reports_error_for_trying_to_inject_value_fo
 	)
 }
 
+func (s *MappingPathsTestSuite) Test_path_matches_pattern_for_exact_match() {
+	path := "$[\"cluster\\\".v1\"].config.environments[0].hosts[0].endpoint"
+	pattern := "$[\"cluster\\\".v1\"].config.environments[0].hosts[0].endpoint"
+	matches, err := PathMatchesPattern(path, pattern)
+	s.Require().NoError(err)
+	s.Assert().True(matches)
+}
+
+func (s *MappingPathsTestSuite) Test_path_matches_pattern_for_different_property_notation() {
+	path := "$[\"cluster\\\".v1\"].config.environments[0].hosts[0].endpoint"
+	pattern := "$[\"cluster\\\".v1\"].config.[\"environments\"][0].hosts[0][\"endpoint\"]"
+	matches, err := PathMatchesPattern(path, pattern)
+	s.Require().NoError(err)
+	s.Assert().True(matches)
+}
+
+func (s *MappingPathsTestSuite) Test_path_matches_pattern_with_wildcards_1() {
+	path := "$[\"cluster\\\".v1\"].config.environments[0].hosts[0].endpoint"
+	pattern := "$[\"cluster\\\".v1\"].config.*[0].hosts[*].endpoint"
+	matches, err := PathMatchesPattern(path, pattern)
+	s.Require().NoError(err)
+	s.Assert().True(matches)
+}
+
+func (s *MappingPathsTestSuite) Test_path_matches_pattern_with_wildcards_2() {
+	path := "$.cluster.config[5].environments[2].hosts[0].endpoint"
+	pattern := "$.cluster.*[*].*[2].hosts[*].endpoint"
+	matches, err := PathMatchesPattern(path, pattern)
+	s.Require().NoError(err)
+	s.Assert().True(matches)
+}
+
 func fixtureMappingNode1() (*MappingNode, string) {
 	endpoint := "https://sfg94832-api.example.com"
 	return &MappingNode{

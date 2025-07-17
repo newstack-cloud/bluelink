@@ -26,7 +26,10 @@ import (
 //
 //	core.GetPathValue("$[\"cluster.v1\"].config.endpoints[0]", node, 3)
 func GetPathValue(path string, node *MappingNode, maxTraverseDepth int) (*MappingNode, error) {
-	parsedPath, err := parsePath(path)
+	parsedPath, err := parsePath(
+		path,
+		/* allowPatterns */ false,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -37,10 +40,10 @@ func GetPathValue(path string, node *MappingNode, maxTraverseDepth int) (*Mappin
 	maxDepth := int(math.Min(float64(maxTraverseDepth), float64(len(parsedPath))))
 	for pathExists && current != nil && i < maxDepth {
 		pathItem := parsedPath[i]
-		if pathItem.FieldName != "" && current.Fields != nil {
-			current = current.Fields[pathItem.FieldName]
-		} else if pathItem.ArrayIndex != nil && current.Items != nil {
-			current = current.Items[*pathItem.ArrayIndex]
+		if pathItem.fieldName != "" && current.Fields != nil {
+			current = current.Fields[pathItem.fieldName]
+		} else if pathItem.arrayIndex != nil && current.Items != nil {
+			current = current.Items[*pathItem.arrayIndex]
 		} else if IsNilMappingNode(current) {
 			pathExists = false
 		}
@@ -132,7 +135,10 @@ func injectPathValue(
 	replace bool,
 	maxTraverseDepth int,
 ) error {
-	parsedPath, err := parsePath(path)
+	parsedPath, err := parsePath(
+		path,
+		/* allowPatterns */ false,
+	)
 	if err != nil {
 		return err
 	}
@@ -143,13 +149,13 @@ func injectPathValue(
 	maxDepth := int(math.Min(float64(maxTraverseDepth), float64(len(parsedPath))))
 	for pathExists && current != nil && i < maxDepth {
 		pathItem := parsedPath[i]
-		if pathItem.FieldName != "" && current.Fields != nil {
+		if pathItem.fieldName != "" && current.Fields != nil {
 			injectIntoFields(current, pathItem, parsedPath, i, value, replace)
-			current = current.Fields[pathItem.FieldName]
-		} else if pathItem.ArrayIndex != nil && current.Items != nil {
+			current = current.Fields[pathItem.fieldName]
+		} else if pathItem.arrayIndex != nil && current.Items != nil {
 			injectIntoItems(current, pathItem, parsedPath, i, value)
 			arrayIndex := math.Min(
-				float64(*pathItem.ArrayIndex),
+				float64(*pathItem.arrayIndex),
 				float64(len(current.Items)-1),
 			)
 			current = current.Items[int(arrayIndex)]
@@ -187,12 +193,12 @@ func injectIntoFields(
 	valueToInject *MappingNode,
 	replace bool,
 ) {
-	_, hasValue := target.Fields[pathItem.FieldName]
+	_, hasValue := target.Fields[pathItem.fieldName]
 	if replace || !hasValue {
 		if i == len(parsedPath)-1 {
-			target.Fields[pathItem.FieldName] = valueToInject
+			target.Fields[pathItem.fieldName] = valueToInject
 		} else {
-			target.Fields[pathItem.FieldName] = createFieldsOrItems(parsedPath, i+1)
+			target.Fields[pathItem.fieldName] = createFieldsOrItems(parsedPath, i+1)
 		}
 	}
 }
@@ -204,7 +210,7 @@ func injectIntoItems(
 	i int,
 	valueToInject *MappingNode,
 ) {
-	if *pathItem.ArrayIndex >= len(target.Items) {
+	if *pathItem.arrayIndex >= len(target.Items) {
 		// When the array index exceeds the last index of the array,
 		// the value will be injected at the end of the array.
 		// This is to ensure that the array is contiguous instead of having
@@ -223,13 +229,13 @@ func createFieldsOrItems(parsedPath []*pathItem, nextIndex int) *MappingNode {
 	}
 
 	nextPathItem := parsedPath[nextIndex]
-	if nextPathItem.FieldName != "" {
+	if nextPathItem.fieldName != "" {
 		return &MappingNode{
 			Fields: map[string]*MappingNode{},
 		}
 	}
 
-	if nextPathItem.ArrayIndex != nil {
+	if nextPathItem.arrayIndex != nil {
 		return &MappingNode{
 			Items: []*MappingNode{},
 		}
@@ -238,14 +244,104 @@ func createFieldsOrItems(parsedPath []*pathItem, nextIndex int) *MappingNode {
 	return &MappingNode{}
 }
 
+// PathMatchesPattern determines if a given path matches the provided pattern.
+// This can be an exact path match or a partial match where a pattern is used
+// to indicate wildcard matches for array indices or map keys.
+//
+// Equality of a path is not the same as equality of a string,
+// for example, the path "$[\"cluster\"].config.endpoints[0]"
+// is equal to the path "$.cluster.config.endpoints[0]".
+//
+// A pattern does NOT refer to a regular expression, instead, it refers to a
+// specific pattern where placeholders can be used to indicate any array index
+// or map key.
+// Placeholders in patterns are represented by "[*]" for any array index
+// and ".*" for any map key.
+// For example, the pattern "$.cluster.config.endpoints[*]" matches
+// "$.cluster.config.endpoints[0]", "$.cluster.config.endpoints[1]",
+// "$.cluster.config.endpoints[2]", etc.
+// The pattern "$.cluster.config.endpoints.*" matches
+// "$.cluster.config.endpoints[\"key1\"]", "$.cluster.config.endpoints[\"key2\"]",
+// "$.cluster.config.endpoints[\"key3\"]", etc.
+func PathMatchesPattern(path, pattern string) (bool, error) {
+	if path == pattern {
+		// There is no need to parse the path and pattern
+		// if there is an exact string match.
+		return true, nil
+	}
+
+	parsedPatternPath, err := parsePath(
+		pattern,
+		/* allowPatterns */ true,
+	)
+	if err != nil {
+		return false, err
+	}
+
+	parsedPath, err := parsePath(
+		path,
+		/* allowPatterns */ false,
+	)
+	if err != nil {
+		return false, err
+	}
+
+	if len(parsedPatternPath) != len(parsedPath) {
+		return false, nil
+	}
+
+	for i := range parsedPath {
+		patternItem := parsedPatternPath[i]
+		pathItem := parsedPath[i]
+
+		matchesFieldName := patternItem.fieldName == pathItem.fieldName ||
+			(patternItem.anyFieldName && pathItem.fieldName != "")
+
+		matchesArrayIndex := checkArrayIndexMatch(
+			patternItem,
+			pathItem,
+		)
+
+		if !matchesFieldName || !matchesArrayIndex {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+func checkArrayIndexMatch(patternItem, pathItem *pathItem) bool {
+	if patternItem.arrayIndex == nil && pathItem.arrayIndex == nil {
+		return true
+	}
+
+	if patternItem.arrayIndex != nil && pathItem.arrayIndex != nil {
+		return *patternItem.arrayIndex == *pathItem.arrayIndex
+	}
+
+	if patternItem.anyIndex {
+		return true
+	}
+
+	return false
+}
+
 // Represents a single item in a path used to access
 // values in a MappingNode.
 type pathItem struct {
-	FieldName  string
-	ArrayIndex *int
+	fieldName  string
+	arrayIndex *int
+	// Indicates that the path item can match any index in an array,
+	// this should only be used for patterns, regular parsing of paths
+	// should not set this field.
+	anyIndex bool
+	// Indicates that the path item can match any key in a map,
+	// this should only be used for patterns, regular parsing of paths
+	// should not set this field.
+	anyFieldName bool
 }
 
-func parsePath(path string) ([]*pathItem, error) {
+func parsePath(path string, allowPatterns bool) ([]*pathItem, error) {
 
 	if len(path) == 0 || path[0] != '$' {
 		return nil, errInvalidMappingPath(path, nil)
@@ -257,10 +353,10 @@ func parsePath(path string) ([]*pathItem, error) {
 		return []*pathItem{}, nil
 	}
 
-	return parsePathItems(pathWithoutRoot)
+	return parsePathItems(pathWithoutRoot, allowPatterns)
 }
 
-func parsePathItems(pathWithoutRoot string) ([]*pathItem, error) {
+func parsePathItems(pathWithoutRoot string, allowPatterns bool) ([]*pathItem, error) {
 	pathItems := []*pathItem{}
 
 	i := 0
@@ -274,13 +370,16 @@ func parsePathItems(pathWithoutRoot string) ([]*pathItem, error) {
 	for i < len(pathWithoutRoot) && err == nil {
 		char, width := utf8.DecodeRuneInString(pathWithoutRoot[i:])
 		if isDotAccessor(char, inOpenBracket) {
-			inFieldNameAccessor = true
 			currentItemStr, err = takeCurrentItem(
 				&pathItems,
 				currentItemStr,
 				inFieldNameAccessor,
 				inArrayIndexAccessor,
+				allowPatterns,
 			)
+			// After we've taken the current item before the ".",
+			// we should move to a state of being in a field name accessor.
+			inFieldNameAccessor = true
 		} else if isAccessorOpenBracket(char, inStringLiteral) {
 			inOpenBracket = true
 			currentItemStr, err = takeCurrentItem(
@@ -288,6 +387,7 @@ func parsePathItems(pathWithoutRoot string) ([]*pathItem, error) {
 				currentItemStr,
 				inFieldNameAccessor,
 				inArrayIndexAccessor,
+				allowPatterns,
 			)
 			// "[" marks the end of the previous path item where the
 			// previous path item was accessed via dot notation.
@@ -300,6 +400,7 @@ func parsePathItems(pathWithoutRoot string) ([]*pathItem, error) {
 				currentItemStr,
 				inFieldNameAccessor,
 				inArrayIndexAccessor,
+				allowPatterns,
 			)
 		} else if isStringLiteralDelimiter(char, prevChar, inOpenBracket) {
 			inStringLiteral = !inStringLiteral
@@ -309,8 +410,10 @@ func parsePathItems(pathWithoutRoot string) ([]*pathItem, error) {
 				inFieldNameAccessor,
 				inArrayIndexAccessor,
 				inStringLiteral,
+				allowPatterns,
 			)
-		} else if isFirstDigitOfArrayIndex(char, prevChar, inOpenBracket, inStringLiteral) {
+		} else if isFirstDigitOfArrayIndex(char, prevChar, inOpenBracket, inStringLiteral) ||
+			isWildcardArrayIndex(char, prevChar, inOpenBracket, inStringLiteral, allowPatterns) {
 			inArrayIndexAccessor = true
 			currentItemStr += string(char)
 		} else if inFieldNameAccessor || inArrayIndexAccessor {
@@ -326,6 +429,7 @@ func parsePathItems(pathWithoutRoot string) ([]*pathItem, error) {
 			currentItemStr,
 			inFieldNameAccessor,
 			inArrayIndexAccessor,
+			allowPatterns,
 		)
 	}
 
@@ -363,6 +467,21 @@ func isFirstDigitOfArrayIndex(
 		!inStringLiteral
 }
 
+func isWildcardArrayIndex(
+	char rune,
+	prevChar rune,
+	inOpenBracket bool,
+	inStringLiteral bool,
+	allowPatterns bool,
+) bool {
+	if !allowPatterns {
+		return false
+	}
+
+	return char == '*' && prevChar == '[' &&
+		inOpenBracket && !inStringLiteral
+}
+
 func isAccessorCloseBracket(
 	char rune,
 	inOpenBracket bool,
@@ -377,6 +496,7 @@ func tryTakeCurrentItemEndOfStringLiteral(
 	inFieldNameAccessor bool,
 	inArrayIndexAccessor bool,
 	inStringLiteral bool,
+	allowPatterns bool,
 ) (bool, string, error) {
 	if inStringLiteral {
 		// A string literal is a field name accessor,
@@ -391,6 +511,7 @@ func tryTakeCurrentItemEndOfStringLiteral(
 		currentItemStr,
 		inFieldNameAccessor,
 		inArrayIndexAccessor,
+		allowPatterns,
 	)
 
 	return false, currentItemStr, err
@@ -401,25 +522,48 @@ func takeCurrentItem(
 	currentItemStr string,
 	inFieldNameAccessor bool,
 	inArrayIndexAccessor bool,
+	allowPatterns bool,
 ) (string, error) {
 	if len(currentItemStr) == 0 {
 		return currentItemStr, nil
 	}
 
-	if inFieldNameAccessor {
+	if inFieldNameAccessor && allowPatterns && currentItemStr == "*" {
+		// If the current item is a wildcard for field names,
+		// we treat it as a special case where it matches any field name.
 		*pathItems = append(*pathItems, &pathItem{
-			// Unescape quotes in the field name.
-			FieldName: strings.Replace(currentItemStr, "\\\"", "\"", -1),
+			anyFieldName: true,
 		})
 		// Reset the current item string.
 		return "", nil
-	} else if inArrayIndexAccessor {
+	}
+
+	if inFieldNameAccessor {
+		*pathItems = append(*pathItems, &pathItem{
+			// Unescape quotes in the field name.
+			fieldName: strings.ReplaceAll(currentItemStr, "\\\"", "\""),
+		})
+		// Reset the current item string.
+		return "", nil
+	}
+
+	if inArrayIndexAccessor && allowPatterns && currentItemStr == "*" {
+		// If the current item is a wildcard for array indices,
+		// we treat it as a special case where it matches any index.
+		*pathItems = append(*pathItems, &pathItem{
+			anyIndex: true,
+		})
+		// Reset the current item string.
+		return "", nil
+	}
+
+	if inArrayIndexAccessor {
 		index, err := strconv.Atoi(currentItemStr)
 		if err != nil {
 			return currentItemStr, err
 		}
 		*pathItems = append(*pathItems, &pathItem{
-			ArrayIndex: &index,
+			arrayIndex: &index,
 		})
 		// Reset the current item string.
 		return "", nil

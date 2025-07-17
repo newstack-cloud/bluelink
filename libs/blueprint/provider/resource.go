@@ -438,6 +438,25 @@ type ResourceSpecDefinition struct {
 	// should resolve to the ID of the resource in the blueprint.
 	// The ID field must be a top-level property of the resource spec schema.
 	IDField string
+	// DestroyBeforeCreate specifies whether the resource must be destroyed
+	// before it can be created again.
+	// In most cases, this should be false or not set, as where possible,
+	// resources should be replaced with minimal disruption, as per a create-before-destroy
+	// strategy.
+	// This is useful for resources that will often need to be recreated with the same
+	// user-defined unique name that are safe to destroy before creating a replacement.
+	// This doesn't necessarily mean the resource will always be recreated successfully,
+	// as some providers may not allow the use of the same name for a resource until a certain
+	// period of time has passed since the resource was destroyed.
+	//
+	// To keep things simple for the practitioner, this is not something that can be set
+	// in a blueprint spec, it is up to the developers of resource providers to set this
+	// based on the nature of the resource and how critical it will be deemed for most use cases.
+	//
+	// As far as the core blueprint framework is concerned, this is for documentation purposes
+	// and is a hint for tools and SDKs built on top of the framework (such as the plugin framework SDK)
+	// on how they should handle resource deployments.
+	DestroyBeforeCreate bool
 }
 
 // ResourceDefinitionsSchema provides a schema that can be used to validate
@@ -576,6 +595,19 @@ type ResourceDefinitionsSchema struct {
 	// Sensitive specifies whether the value is sensitive and should be kept
 	// out of logs and other outputs.
 	Sensitive bool
+	// IgnoreDrift specifies whether drift checking behaviour in the core blueprint
+	// framework drift checker should ignore changes to this field when checking
+	// for drift in the resource state.
+	// This is mostly useful for fields that are only used during the creation of a resource,
+	// such as a private key for a certificate.
+	// This only applies to user-defined values defined in a blueprint resource spec,
+	// computed values are not used in the change set generation process used for checking drift.
+	//
+	// For fields that have a union type, this must be set at the union level
+	// and not at the individual schema level in order to ignore the field's changes
+	// to be considered as drift.
+	// Nested types in a union can be ignored for drift checking.
+	IgnoreDrift bool
 }
 
 // ResourceDefinitionsSchemaType holds the type of a resource schema.

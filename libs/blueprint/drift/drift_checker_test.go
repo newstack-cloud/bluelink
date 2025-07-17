@@ -28,6 +28,8 @@ const (
 	saveOrderFunctionID   = "save-order-function"
 	ordersTableName       = "ordersTable"
 	saveOrderFunctionName = "saveOrderFunction"
+	complexResourceID     = "complex-resource"
+	complexResourceName   = "complexResource"
 )
 
 func (s *DriftCheckerTestSuite) SetupTest() {
@@ -40,6 +42,9 @@ func (s *DriftCheckerTestSuite) SetupTest() {
 			"aws": newTestAWSProvider(
 				s.dynamoDBTableExternalState(),
 				s.lambdaFunctionExternalState(),
+			),
+			"example": newTestExampleProvider(
+				s.exampleComplexResourceExternalState(),
 			),
 		},
 		changes.NewDefaultResourceChangeGenerator(),
@@ -163,6 +168,7 @@ func (s *DriftCheckerTestSuite) populateCurrentState(includeLinkData bool) error
 		ResourceIDs: map[string]string{
 			saveOrderFunctionName: saveOrderFunctionID,
 			ordersTableName:       ordersTableID,
+			complexResourceName:   complexResourceID,
 		},
 		Resources: map[string]*state.ResourceState{
 			saveOrderFunctionID: {
@@ -193,6 +199,64 @@ func (s *DriftCheckerTestSuite) populateCurrentState(includeLinkData bool) error
 					Fields: map[string]*core.MappingNode{
 						"tableName": core.MappingNodeFromString("ORDERS_TABLE"),
 						"region":    core.MappingNodeFromString("us-east-1"),
+					},
+				},
+				Drifted: false,
+			},
+			complexResourceID: {
+				ResourceID:    complexResourceID,
+				Name:          complexResourceName,
+				Type:          "example/complexResource",
+				InstanceID:    instance1ID,
+				Status:        core.ResourceStatusCreated,
+				PreciseStatus: core.PreciseResourceStatusCreated,
+				SpecData: &core.MappingNode{
+					Fields: map[string]*core.MappingNode{
+						"itemConfig": {
+							Fields: map[string]*core.MappingNode{
+								"endpoints": {
+									Items: []*core.MappingNode{
+										core.MappingNodeFromString("https://api.example.com/node/1"),
+										core.MappingNodeFromString("https://api.example.com/node/2"),
+									},
+								},
+								"primaryPort": core.MappingNodeFromInt(8080),
+								"score":       core.MappingNodeFromFloat(13.5),
+								"ipv4":        core.MappingNodeFromBool(true),
+								"metadata": {
+									Fields: map[string]*core.MappingNode{
+										"sampleKey": core.MappingNodeFromString("sampleValue"),
+									},
+								},
+							},
+						},
+						"otherItemConfig": {
+							Fields: map[string]*core.MappingNode{
+								"item1": {
+									Fields: map[string]*core.MappingNode{
+										"value1": core.MappingNodeFromString("Value 1"),
+										"value2": core.MappingNodeFromString("Value 2"),
+									},
+								},
+							},
+						},
+						"vendorTags": {
+							Items: []*core.MappingNode{
+								core.MappingNodeFromString("tag1"),
+								core.MappingNodeFromString("tag2"),
+								core.MappingNodeFromString("tag3"),
+							},
+						},
+						"vendorConfig": {
+							Items: []*core.MappingNode{
+								{
+									Fields: map[string]*core.MappingNode{
+										"vendorNamespace": core.MappingNodeFromString("vendor1"),
+										"vendorId":        core.MappingNodeFromString("vendor1-id"),
+									},
+								},
+							},
+						},
 					},
 				},
 				Drifted: false,
@@ -245,6 +309,57 @@ func (s *DriftCheckerTestSuite) lambdaFunctionExternalState() *core.MappingNode 
 				"arn:aws:lambda:us-west-1:124856789012:function:save-order-function-2",
 			),
 			"handler": core.MappingNodeFromString("orders.saveOrder"),
+		},
+	}
+}
+
+func (s *DriftCheckerTestSuite) exampleComplexResourceExternalState() *core.MappingNode {
+	return &core.MappingNode{
+		Fields: map[string]*core.MappingNode{
+			"itemConfig": {
+				Fields: map[string]*core.MappingNode{
+					"endpoints": {
+						Items: []*core.MappingNode{
+							core.MappingNodeFromString("https://api2.example.com/node/1"),
+						},
+					},
+					"primaryPort": core.MappingNodeFromInt(8181),
+					"score":       core.MappingNodeFromFloat(15.5),
+					"ipv4":        core.MappingNodeFromBool(true),
+					"metadata": {
+						Fields: map[string]*core.MappingNode{
+							"sampleKey": core.MappingNodeFromString("sampleValue2"),
+						},
+					},
+				},
+			},
+			"otherItemConfig": {
+				Fields: map[string]*core.MappingNode{
+					"item1": {
+						Fields: map[string]*core.MappingNode{
+							"value1": core.MappingNodeFromString("Value 1 Updated"),
+							"value2": core.MappingNodeFromString("Value 2"),
+						},
+					},
+				},
+			},
+			"vendorTags": {
+				Items: []*core.MappingNode{
+					core.MappingNodeFromString("tag1--a"),
+					core.MappingNodeFromString("tag2--b"),
+					core.MappingNodeFromString("tag3--c"),
+				},
+			},
+			"vendorConfig": {
+				Items: []*core.MappingNode{
+					{
+						Fields: map[string]*core.MappingNode{
+							"vendorNamespace": core.MappingNodeFromString("vendor1"),
+							"vendorId":        core.MappingNodeFromString("vendor1-id-new"),
+						},
+					},
+				},
+			},
 		},
 	}
 }

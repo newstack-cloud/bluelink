@@ -891,7 +891,8 @@ func (r *ExampleComplexResource) GetSpecDefinition(
 									"metadata": {
 										Type: provider.ResourceDefinitionsSchemaTypeMap,
 										MapValues: &provider.ResourceDefinitionsSchema{
-											Type: provider.ResourceDefinitionsSchemaTypeString,
+											Type:        provider.ResourceDefinitionsSchemaTypeString,
+											IgnoreDrift: true,
 										},
 									},
 								},
@@ -911,7 +912,8 @@ func (r *ExampleComplexResource) GetSpecDefinition(
 									Type: provider.ResourceDefinitionsSchemaTypeObject,
 									Attributes: map[string]*provider.ResourceDefinitionsSchema{
 										"value1": {
-											Type: provider.ResourceDefinitionsSchemaTypeString,
+											Type:        provider.ResourceDefinitionsSchemaTypeString,
+											IgnoreDrift: true,
 										},
 										"value2": {
 											Type: provider.ResourceDefinitionsSchemaTypeString,
@@ -977,6 +979,7 @@ func (r *ExampleComplexResource) GetSpecDefinition(
 													Type: provider.ResourceDefinitionsSchemaTypeInteger,
 												},
 											},
+											IgnoreDrift: true,
 											Default: &core.MappingNode{
 												Scalar: &core.ScalarValue{
 													StringValue: &defaultVendorId,
