@@ -786,7 +786,7 @@ func applyLinksToResourceState(
 
 				if linkDataValue != nil {
 					fieldPath := core.ReplaceSpecWithRoot(parts[1])
-					err := core.InjectPathValueReplace(
+					err := core.InjectPathValueReplaceFields(
 						fieldPath,
 						linkDataValue,
 						appliedResourceState.SpecData,

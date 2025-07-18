@@ -1972,7 +1972,7 @@
               Sensitive: (bool) false
             }),
             (*provider.FieldChange)({
-              FieldPath: (string) (len=50) "saveOrderFunction[\"iam.policyStatements\"].0.action",
+              FieldPath: (string) (len=51) "saveOrderFunction[\"iam.policyStatements\"][0].action",
               PrevValue: (*core.MappingNode)(<nil>),
               NewValue: (*core.MappingNode)({
                 Scalar: (*core.ScalarValue)(<nil>),
@@ -2001,7 +2001,7 @@
               Sensitive: (bool) false
             }),
             (*provider.FieldChange)({
-              FieldPath: (string) (len=50) "saveOrderFunction[\"iam.policyStatements\"].0.effect",
+              FieldPath: (string) (len=51) "saveOrderFunction[\"iam.policyStatements\"][0].effect",
               PrevValue: (*core.MappingNode)(<nil>),
               NewValue: (*core.MappingNode)({
                 Scalar: (*core.ScalarValue)({
@@ -2024,7 +2024,7 @@
           RemovedFields: ([]string) <nil>,
           UnchangedFields: ([]string) <nil>,
           FieldChangesKnownOnDeploy: ([]string) (len=1) {
-            (string) (len=52) "saveOrderFunction[\"iam.policyStatements\"].0.resource"
+            (string) (len=53) "saveOrderFunction[\"iam.policyStatements\"][0].resource"
           }
         },
         (string) (len=13) "ordersTable_1": (provider.LinkChanges) {
@@ -2071,7 +2071,7 @@
               Sensitive: (bool) false
             }),
             (*provider.FieldChange)({
-              FieldPath: (string) (len=50) "saveOrderFunction[\"iam.policyStatements\"].0.action",
+              FieldPath: (string) (len=51) "saveOrderFunction[\"iam.policyStatements\"][0].action",
               PrevValue: (*core.MappingNode)(<nil>),
               NewValue: (*core.MappingNode)({
                 Scalar: (*core.ScalarValue)(<nil>),
@@ -2100,7 +2100,7 @@
               Sensitive: (bool) false
             }),
             (*provider.FieldChange)({
-              FieldPath: (string) (len=50) "saveOrderFunction[\"iam.policyStatements\"].0.effect",
+              FieldPath: (string) (len=51) "saveOrderFunction[\"iam.policyStatements\"][0].effect",
               PrevValue: (*core.MappingNode)(<nil>),
               NewValue: (*core.MappingNode)({
                 Scalar: (*core.ScalarValue)({
@@ -2123,7 +2123,7 @@
           RemovedFields: ([]string) <nil>,
           UnchangedFields: ([]string) <nil>,
           FieldChangesKnownOnDeploy: ([]string) (len=1) {
-            (string) (len=52) "saveOrderFunction[\"iam.policyStatements\"].0.resource"
+            (string) (len=53) "saveOrderFunction[\"iam.policyStatements\"][0].resource"
           }
         }
       },
@@ -2889,7 +2889,7 @@
     }
   },
   ResolveOnDeploy: ([]string) (len=2) {
-    (string) (len=91) "link(saveOrderFunction::ordersTable_0).saveOrderFunction[\"iam.policyStatements\"].0.resource",
-    (string) (len=91) "link(saveOrderFunction::ordersTable_1).saveOrderFunction[\"iam.policyStatements\"].0.resource"
+    (string) (len=92) "link(saveOrderFunction::ordersTable_0).saveOrderFunction[\"iam.policyStatements\"][0].resource",
+    (string) (len=92) "link(saveOrderFunction::ordersTable_1).saveOrderFunction[\"iam.policyStatements\"][0].resource"
   }
 })

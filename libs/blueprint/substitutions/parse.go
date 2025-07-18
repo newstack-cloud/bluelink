@@ -414,7 +414,7 @@ func (p *Parser) childReference() (*SubstitutionChild, error) {
 	}, nil
 }
 
-// resourceRef = resourceName , [ { namAccessor | indexAccessor } ] ;
+// resourceRef = resourceName , [ { nameAccessor | indexAccessor } ] ;
 func (p *Parser) resourceReference() (*SubstitutionResourceProperty, error) {
 	firstPartToken := p.currentToken()
 	resourceName, err := p.resourceName()

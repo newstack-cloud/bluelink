@@ -147,13 +147,13 @@
             "TABLE_NAME_ordersTable_0": "legacy-production-orders-1",
             "TABLE_REGION_ordersTable_0": "eu-west-1"
           },
-          "iam.policyStatements": {
-            "0": {
+          "iam.policyStatements": [
+            {
               "effect": "Allow",
               "action": ["dynamodb:PutItem"],
               "resource": "arn:aws:dynamodb:eu-west-1:123456789012:table/legacy-production-orders-1"
             }
-          }
+          ]
         }
       },
       "failureReasons": []
@@ -173,13 +173,13 @@
             "TABLE_NAME_ordersTable_1": "legacy-production-orders-2",
             "TABLE_REGION_ordersTable_1": "eu-west-2"
           },
-          "iam.policyStatements": {
-            "0": {
+          "iam.policyStatements": [
+            {
               "effect": "Allow",
               "action": ["dynamodb:PutItem"],
               "resource": "arn:aws:dynamodb:eu-west-2:123456789012:table/legacy-production-orders-2"
             }
-          }
+          ]
         }
       },
       "failureReasons": []

@@ -12,7 +12,7 @@ type MappingPathsTestSuite struct {
 }
 
 func (s *MappingPathsTestSuite) Test_get_value_by_path_for_complex_path() {
-	path := "$[\"cluster\\\".v1\"].config.environments[0].hosts[0].endpoint"
+	path := "$[\"cluster.v1\"].config.environments[0].hosts[0].endpoint"
 	node, expectedEndpoint := fixtureMappingNode1()
 	value, err := GetPathValue(path, node, 10)
 	s.Require().NoError(err)
@@ -32,7 +32,7 @@ func (s *MappingPathsTestSuite) Test_returns_passed_in_node_for_root_identity_pa
 }
 
 func (s *MappingPathsTestSuite) Test_returns_nil_for_non_existent_path() {
-	path := "$[\"cluster\\\".v1\"].config.environments[0].hosts[0].missingField"
+	path := "$[\"cluster.v1\"].config.environments[0].hosts[0].missingField"
 	node, _ := fixtureMappingNode1()
 	value, err := GetPathValue(path, node, 10)
 	s.Require().NoError(err)
@@ -47,7 +47,7 @@ func (s *MappingPathsTestSuite) Test_returns_nil_for_path_that_goes_beyond_max_d
 }
 
 func (s *MappingPathsTestSuite) Test_fails_to_get_value_by_path_for_invalid_path() {
-	path := "$[\"cluster\\\".v1\"].config.environments[0unexpected].hosts[0].missingField"
+	path := "$[\"cluster.v1\"].config.environments[0unexpected].hosts[0].missingField"
 	node, _ := fixtureMappingNode1()
 	_, err := GetPathValue(path, node, 10)
 	s.Require().Error(err)
@@ -70,7 +70,7 @@ func (s *MappingPathsTestSuite) Test_fails_to_get_value_by_path_for_invalid_path
 }
 
 func (s *MappingPathsTestSuite) Test_inject_value_for_map_field() {
-	path := "$[\"cluster\\\".v1\"].config.endpoint"
+	path := "$[\"cluster.v1\"].config.endpoint"
 	node := fixtureInjectMappingNode1()
 	endpoint := "https://sfg94831-api.example.com"
 	value := &MappingNode{
@@ -86,7 +86,7 @@ func (s *MappingPathsTestSuite) Test_inject_value_for_map_field() {
 }
 
 func (s *MappingPathsTestSuite) Test_inject_value_for_array_item() {
-	path := "$[\"cluster\\\".v1\"].config.environments[0]"
+	path := "$[\"cluster.v1\"].config.environments[0]"
 	node := fixtureInjectMappingNode1()
 	endpoint := "https://sfg94831-api.example.com"
 	value := &MappingNode{
@@ -102,7 +102,7 @@ func (s *MappingPathsTestSuite) Test_inject_value_for_array_item() {
 }
 
 func (s *MappingPathsTestSuite) Test_inject_value_for_complex_path() {
-	path := "$[\"cluster\\\".v1\"].config.environments[0].hosts[0].endpoint"
+	path := "$[\"cluster.v1\"].config.environments[0].hosts[0].endpoint"
 	node := fixtureInjectMappingNode1()
 	endpoint := "https://sfg94831-api.example.com"
 	value := &MappingNode{
@@ -117,8 +117,24 @@ func (s *MappingPathsTestSuite) Test_inject_value_for_complex_path() {
 	s.Assert().Equal(injected, MappingNodeFromString(endpoint))
 }
 
+func (s *MappingPathsTestSuite) Test_inject_value_for_array_item_selector_path() {
+	path := "$[\"cluster.v1\"].config.environments[0].hosts[@.endpoint = \"https://old.example.com\"].protocol"
+	node := fixtureInjectMappingNode3()
+	protocol := "http/1.1"
+	value := &MappingNode{
+		Scalar: &ScalarValue{
+			StringValue: &protocol,
+		},
+	}
+	err := InjectPathValue(path, value, node, 10)
+	s.Require().NoError(err)
+	injected, err := GetPathValue(path, node, 10)
+	s.Require().NoError(err)
+	s.Assert().Equal(injected, MappingNodeFromString(protocol))
+}
+
 func (s *MappingPathsTestSuite) Test_inject_value_replace_for_complex_path() {
-	path := "$[\"cluster\\\".v1\"].config.environments[0].hosts[0].endpoint"
+	path := "$[\"cluster.v1\"].config.environments[0].hosts[0].endpoint"
 	node := fixtureInjectMappingNode2()
 	endpoint := "https://sfg94831-api.example.com"
 	value := &MappingNode{
@@ -126,7 +142,7 @@ func (s *MappingPathsTestSuite) Test_inject_value_replace_for_complex_path() {
 			StringValue: &endpoint,
 		},
 	}
-	err := InjectPathValueReplace(path, value, node, 10)
+	err := InjectPathValueReplaceFields(path, value, node, 10)
 	s.Require().NoError(err)
 	injected, err := GetPathValue(path, node, 10)
 	s.Require().NoError(err)
@@ -135,7 +151,7 @@ func (s *MappingPathsTestSuite) Test_inject_value_replace_for_complex_path() {
 
 func (s *MappingPathsTestSuite) Test_reports_error_for_trying_to_inject_value_for_non_existent_path() {
 	// Config is a map, not an array in the target node so we can't inject into it.
-	path := "$[\"cluster\\\".v1\"].config[0]"
+	path := "$[\"cluster.v1\"].config[0]"
 	node := fixtureInjectMappingNode1()
 	endpoint := "https://sfg94831-api.example.com"
 	value := &MappingNode{
@@ -146,7 +162,7 @@ func (s *MappingPathsTestSuite) Test_reports_error_for_trying_to_inject_value_fo
 	err := InjectPathValue(path, value, node, 10)
 	s.Assert().Error(err)
 	s.Assert().Equal(
-		"path \"$[\\\"cluster\\\\\\\".v1\\\"].config[0]\" could not be injected into the mapping node, "+
+		"path \"$[\\\"cluster.v1\\\"].config[0]\" could not be injected into the mapping node, "+
 			"the structure of the mapping node does not match the path",
 		err.Error(),
 	)
@@ -174,24 +190,24 @@ func (s *MappingPathsTestSuite) Test_reports_error_for_trying_to_inject_value_fo
 }
 
 func (s *MappingPathsTestSuite) Test_path_matches_pattern_for_exact_match() {
-	path := "$[\"cluster\\\".v1\"].config.environments[0].hosts[0].endpoint"
-	pattern := "$[\"cluster\\\".v1\"].config.environments[0].hosts[0].endpoint"
+	path := "$[\"cluster.v1\"].config.environments[0].hosts[0].endpoint"
+	pattern := "$[\"cluster.v1\"].config.environments[0].hosts[0].endpoint"
 	matches, err := PathMatchesPattern(path, pattern)
 	s.Require().NoError(err)
 	s.Assert().True(matches)
 }
 
 func (s *MappingPathsTestSuite) Test_path_matches_pattern_for_different_property_notation() {
-	path := "$[\"cluster\\\".v1\"].config.environments[0].hosts[0].endpoint"
-	pattern := "$[\"cluster\\\".v1\"].config.[\"environments\"][0].hosts[0][\"endpoint\"]"
+	path := "$[\"cluster.v1\"].config.environments[0].hosts[0].endpoint"
+	pattern := "$[\"cluster.v1\"].config[\"environments\"][0].hosts[0][\"endpoint\"]"
 	matches, err := PathMatchesPattern(path, pattern)
 	s.Require().NoError(err)
 	s.Assert().True(matches)
 }
 
 func (s *MappingPathsTestSuite) Test_path_matches_pattern_with_wildcards_1() {
-	path := "$[\"cluster\\\".v1\"].config.environments[0].hosts[0].endpoint"
-	pattern := "$[\"cluster\\\".v1\"].config.*[0].hosts[*].endpoint"
+	path := "$[\"cluster.v1\"].config.environments[0].hosts[0].endpoint"
+	pattern := "$[\"cluster.v1\"].config.*[0].hosts[*].endpoint"
 	matches, err := PathMatchesPattern(path, pattern)
 	s.Require().NoError(err)
 	s.Assert().True(matches)
@@ -209,7 +225,7 @@ func fixtureMappingNode1() (*MappingNode, string) {
 	endpoint := "https://sfg94832-api.example.com"
 	return &MappingNode{
 		Fields: map[string]*MappingNode{
-			"cluster\".v1": {
+			"cluster.v1": {
 				Fields: map[string]*MappingNode{
 					"config": {
 						Fields: map[string]*MappingNode{
@@ -245,7 +261,7 @@ func fixtureMappingNode1() (*MappingNode, string) {
 func fixtureInjectMappingNode1() *MappingNode {
 	return &MappingNode{
 		Fields: map[string]*MappingNode{
-			"cluster\".v1": {
+			"cluster.v1": {
 				Fields: map[string]*MappingNode{
 					"config": {
 						Fields: map[string]*MappingNode{
@@ -263,7 +279,7 @@ func fixtureInjectMappingNode1() *MappingNode {
 func fixtureInjectMappingNode2() *MappingNode {
 	return &MappingNode{
 		Fields: map[string]*MappingNode{
-			"cluster\".v1": {
+			"cluster.v1": {
 				Fields: map[string]*MappingNode{
 					"config": {
 						Fields: map[string]*MappingNode{
@@ -278,6 +294,45 @@ func fixtureInjectMappingNode2() *MappingNode {
 															"endpoint": {
 																Scalar: ScalarFromString("https://old-endpoint.example.com"),
 															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func fixtureInjectMappingNode3() *MappingNode {
+	return &MappingNode{
+		Fields: map[string]*MappingNode{
+			"cluster.v1": {
+				Fields: map[string]*MappingNode{
+					"config": {
+						Fields: map[string]*MappingNode{
+							"environments": {
+								Items: []*MappingNode{
+									{
+										Fields: map[string]*MappingNode{
+											"hosts": {
+												Items: []*MappingNode{
+													{
+														Fields: map[string]*MappingNode{
+															"endpoint": MappingNodeFromString("https://other.example.com"),
+															"protocol": MappingNodeFromString("http/2.0"),
+														},
+													},
+													{
+														Fields: map[string]*MappingNode{
+															"endpoint": MappingNodeFromString("https://old.example.com"),
+															// Protocol will be injected here.
 														},
 													},
 												},

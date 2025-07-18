@@ -164,7 +164,7 @@ type LinkUpdateIntermediaryResourcesInput struct {
 	// resource exists in the blueprint for intermediary resources that are not fully managed
 	// by the link implementation.
 	// For example, in AWS, an IAM role would be an intermediary resource
-	// been an AWS Lambda function and an AWS DynamoDB table,
+	// between an AWS Lambda function and an AWS DynamoDB table,
 	// where the IAM role is not fully managed by the link implementation,
 	// but is an existing resource in the blueprint that will be modified by the link.
 	ResourceLookupService ResourceLookupService

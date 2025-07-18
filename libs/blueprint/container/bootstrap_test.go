@@ -296,7 +296,7 @@ func (l *testLambdaDynamoDBTableLink) StageChanges(
 	)
 	actionArray := l.policyStatementActionFromAccessType(accessType)
 	actionFieldPath := fmt.Sprintf(
-		"$.%s[\"iam.policyStatements\"].0.action",
+		"$.%s[\"iam.policyStatements\"][0].action",
 		functionResourceName,
 	)
 	err = linkhelpers.CollectLinkDataChanges(
@@ -311,7 +311,7 @@ func (l *testLambdaDynamoDBTableLink) StageChanges(
 
 	effect := core.MappingNodeFromString("Allow")
 	effectFieldPath := fmt.Sprintf(
-		"$.%s[\"iam.policyStatements\"].0.effect",
+		"$.%s[\"iam.policyStatements\"][0].effect",
 		functionResourceName,
 	)
 	err = linkhelpers.CollectLinkDataChanges(
@@ -325,7 +325,7 @@ func (l *testLambdaDynamoDBTableLink) StageChanges(
 	}
 
 	resourceARNFieldPath := fmt.Sprintf(
-		"$.%s[\"iam.policyStatements\"].0.resource",
+		"$.%s[\"iam.policyStatements\"][0].resource",
 		functionResourceName,
 	)
 	err = linkhelpers.CollectChanges(

@@ -1,8 +1,10 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -18,9 +20,13 @@ import (
 // - "." for fields
 // - "[\"<field>\"]" for fields with special characters
 // - "[<index>]" for array items
+// - "[@.<key> = \"<value>\"]" To target a specific item in an array of objects by a unique attribute
 //
 // "$" represents the root of the path and must always be the first character
 // in the path.
+// This path syntax is similar to JSONPath, but is not an implementation of the JSONPath
+// specification. A very limited set of selection features are provided intended to meet the needs
+// of the Blueprint framework and provider implementations.
 //
 // Example:
 //
@@ -44,6 +50,18 @@ func GetPathValue(path string, node *MappingNode, maxTraverseDepth int) (*Mappin
 			current = current.Fields[pathItem.fieldName]
 		} else if pathItem.arrayIndex != nil && current.Items != nil {
 			current = current.Items[*pathItem.arrayIndex]
+		} else if pathItem.arrayItemSelector != nil && current.Items != nil {
+			targetItemIndex := slices.IndexFunc(
+				current.Items,
+				objectHasPropertyWithValue(
+					pathItem.arrayItemSelector,
+				),
+			)
+			if targetItemIndex < 0 {
+				pathExists = false
+			} else {
+				current = current.Items[targetItemIndex]
+			}
 		} else if IsNilMappingNode(current) {
 			pathExists = false
 		}
@@ -61,17 +79,26 @@ func GetPathValue(path string, node *MappingNode, maxTraverseDepth int) (*Mappin
 // InjectPathValue injects a value into a MappingNode using a path.
 // This will return an error if the provided path is invalid
 // or if the path is not reachable in the given node.
-// Structures such as an arrays and field mappings will be created
+// Structures such as arrays and field mappings will be created
 // if they do not exist in the injectInto node and the path is valid.
+// Existing fields in objects will not be replaced, use InjectPathValueReplaceFields
+// to ensure existing object fields are replaced.
+// For arrays, values will be injected to replace existing items
+// at the specified index or appended to the end of the array
+// if the index exceeds the last index of the array.
 //
 // A path supports the following acessors:
 //
 // - "." for fields
 // - "[\"<field>\"]" for fields with special characters
 // - "[<index>]" for array items
+// - "[@.<key> = \"<value>\"]" To target a specific item in an array of objects by a unique attribute
 //
 // "$" represents the root of the path and must always be the first character
 // in the path.
+// This path syntax is similar to JSONPath, but is not an implementation of the JSONPath
+// specification. A very limited set of selection features are provided intended to meet the needs
+// of the Blueprint framework and provider implementations.
 //
 // Example:
 //
@@ -91,29 +118,35 @@ func InjectPathValue(
 	)
 }
 
-// InjectPathValueReplace injects a value into a MappingNode using a path.
+// InjectPathValueReplaceFields injects a value into a MappingNode using a path.
 // This will return an error if the provided path is invalid
 // or if the path is not reachable in the given node.
 // Structures such as an arrays and field mappings will be created
 // if they do not exist in the injectInto node and the path is valid.
 //
-// InjectPathValueReplace is similar to InjectPathValue,
+// InjectPathValueReplaceFields is similar to InjectPathValue,
 // where the difference is that it replaces the existing value
-// at the path if it exists, instead of skipping the injection.
+// at the path if it exists for an object field, instead of skipping the injection.
+// Values are always injected into arrays, even if the index already exists in both
+// InjectPathValue and InjectPathValueReplaceFields.
 //
 // A path supports the following acessors:
 //
 // - "." for fields
 // - "[\"<field>\"]" for fields with special characters
 // - "[<index>]" for array items
+// - "[@.<key> = \"<value>\"]" To target a specific item in an array of objects by a unique attribute
 //
 // "$" represents the root of the path and must always be the first character
 // in the path.
+// This path syntax is similar to JSONPath, but is not an implementation of the JSONPath
+// specification. A very limited set of selection features are provided intended to meet the needs
+// of the Blueprint framework and provider implementations.
 //
 // Example:
 //
-//	core.InjectPathValueReplace("$[\"cluster.v1\"].config.endpoints[0]", value, injectInto, 3)
-func InjectPathValueReplace(
+//	core.InjectPathValueReplaceFields("$[\"cluster.v1\"].config.endpoints[0]", value, injectInto, 3)
+func InjectPathValueReplaceFields(
 	path string,
 	value *MappingNode,
 	injectInto *MappingNode,
@@ -159,6 +192,19 @@ func injectPathValue(
 				float64(len(current.Items)-1),
 			)
 			current = current.Items[int(arrayIndex)]
+		} else if pathItem.arrayItemSelector != nil && current.Items != nil {
+			injectedIndex := injectIntoItemsWithSelector(
+				current,
+				pathItem,
+				parsedPath,
+				value,
+				i,
+			)
+			if injectedIndex < 0 {
+				pathExists = false
+			} else {
+				current = current.Items[injectedIndex]
+			}
 		} else {
 			pathExists = false
 		}
@@ -183,6 +229,52 @@ func injectPathValue(
 	}
 
 	return nil
+}
+
+func injectIntoItemsWithSelector(
+	target *MappingNode,
+	pathItem *pathItem,
+	parsedPath []*pathItem,
+	valueToInject *MappingNode,
+	i int,
+) int {
+	targetItemIndex := slices.IndexFunc(
+		target.Items,
+		objectHasPropertyWithValue(
+			pathItem.arrayItemSelector,
+		),
+	)
+	if targetItemIndex < 0 {
+		// If there is no item in the array that matches the selector,
+		// the value can not be injected.
+		return -1
+	}
+
+	if i == len(parsedPath)-1 {
+		target.Items[targetItemIndex] = valueToInject
+	}
+	return targetItemIndex
+}
+
+func objectHasPropertyWithValue(selector *arrayItemSelector) func(*MappingNode) bool {
+	return func(item *MappingNode) bool {
+		if item.Fields == nil {
+			return false
+		}
+
+		value, exists := item.Fields[selector.key]
+		if !exists {
+			return false
+		}
+		// Only string matching is supported for now,
+		// the path parser will need to be updated
+		// to support other types of values if needed in the future.
+		if StringValue(value) == selector.value {
+			return true
+		}
+
+		return false
+	}
 }
 
 func injectIntoFields(
@@ -263,6 +355,10 @@ func createFieldsOrItems(parsedPath []*pathItem, nextIndex int) *MappingNode {
 // The pattern "$.cluster.config.endpoints.*" matches
 // "$.cluster.config.endpoints[\"key1\"]", "$.cluster.config.endpoints[\"key2\"]",
 // "$.cluster.config.endpoints[\"key3\"]", etc.
+//
+// This path syntax is similar to JSONPath, but is not an implementation of the JSONPath
+// specification. Paths and patterns are restricted to a limited set of features
+// intended to meet the needs of the Blueprint framework and provider implementations.
 func PathMatchesPattern(path, pattern string) (bool, error) {
 	if path == pattern {
 		// There is no need to parse the path and pattern
@@ -339,235 +435,474 @@ type pathItem struct {
 	// this should only be used for patterns, regular parsing of paths
 	// should not set this field.
 	anyFieldName bool
+	// Indicates that the path item is a selector for an array item
+	// based on a key-value pair, e.g. "[?(@.<key> = \"<value>\")]".
+	// This is used to target a specific item in an array of objects
+	// by a unique attribute.
+	arrayItemSelector *arrayItemSelector
+}
+
+type arrayItemSelector struct {
+	key   string
+	value string
 }
 
 func parsePath(path string, allowPatterns bool) ([]*pathItem, error) {
+	// if len(path) == 0 || path[0] != '$' {
+	// 	return nil, errInvalidMappingPath(path, nil)
+	// }
 
-	if len(path) == 0 || path[0] != '$' {
-		return nil, errInvalidMappingPath(path, nil)
+	// pathWithoutRoot := path[1:]
+	// if len(pathWithoutRoot) == 0 {
+	// 	// "$" is a valid path to the root of the node.
+	// 	return []*pathItem{}, nil
+	// }
+
+	// return parsePathItems(pathWithoutRoot, allowPatterns)
+	parser := newPathParser(path, allowPatterns)
+	return parser.parse()
+}
+
+type pathParser struct {
+	input         string
+	allowPatterns bool
+	pos           int
+	// A stack of positions in the sequence where a path item
+	// evaluation started, this allows for state.pos updates
+	// to be reverted when a path item evaluation fails.
+	startPosStack []int
+}
+
+// endChar is a marker rune used to indicate the end of the input,
+// it is the null unicode character (U+0000).
+const endChar = rune(0)
+
+func newPathParser(input string, allowPatterns bool) *pathParser {
+	return &pathParser{
+		input:         strings.TrimSpace(input),
+		allowPatterns: allowPatterns,
+		pos:           0,
+		startPosStack: []int{},
 	}
+}
 
-	pathWithoutRoot := path[1:]
-	if len(pathWithoutRoot) == 0 {
+func (p *pathParser) parse() ([]*pathItem, error) {
+	return p.path()
+}
+
+// path = '$' | pathWithAccessors ;
+func (p *pathParser) path() ([]*pathItem, error) {
+	if p.input == "$" {
 		// "$" is a valid path to the root of the node.
+		// An empty path array indicates that the path is for the root node.
 		return []*pathItem{}, nil
 	}
 
-	return parsePathItems(pathWithoutRoot, allowPatterns)
+	return p.pathWithAccessors()
 }
 
-func parsePathItems(pathWithoutRoot string, allowPatterns bool) ([]*pathItem, error) {
-	pathItems := []*pathItem{}
-
-	i := 0
-	prevChar := ' '
-	inFieldNameAccessor := false
-	inStringLiteral := false
-	inOpenBracket := false
-	inArrayIndexAccessor := false
-	currentItemStr := ""
-	var err error
-	for i < len(pathWithoutRoot) && err == nil {
-		char, width := utf8.DecodeRuneInString(pathWithoutRoot[i:])
-		if isDotAccessor(char, inOpenBracket) {
-			currentItemStr, err = takeCurrentItem(
-				&pathItems,
-				currentItemStr,
-				inFieldNameAccessor,
-				inArrayIndexAccessor,
-				allowPatterns,
-			)
-			// After we've taken the current item before the ".",
-			// we should move to a state of being in a field name accessor.
-			inFieldNameAccessor = true
-		} else if isAccessorOpenBracket(char, inStringLiteral) {
-			inOpenBracket = true
-			currentItemStr, err = takeCurrentItem(
-				&pathItems,
-				currentItemStr,
-				inFieldNameAccessor,
-				inArrayIndexAccessor,
-				allowPatterns,
-			)
-			// "[" marks the end of the previous path item where the
-			// previous path item was accessed via dot notation.
-			// (e.g. the end of endpoints in config.endpoints[0])
-			inFieldNameAccessor = false
-		} else if isAccessorCloseBracket(char, inOpenBracket, inStringLiteral) {
-			inOpenBracket = false
-			currentItemStr, err = takeCurrentItem(
-				&pathItems,
-				currentItemStr,
-				inFieldNameAccessor,
-				inArrayIndexAccessor,
-				allowPatterns,
-			)
-		} else if isStringLiteralDelimiter(char, prevChar, inOpenBracket) {
-			inStringLiteral = !inStringLiteral
-			inFieldNameAccessor, currentItemStr, err = tryTakeCurrentItemEndOfStringLiteral(
-				&pathItems,
-				currentItemStr,
-				inFieldNameAccessor,
-				inArrayIndexAccessor,
-				inStringLiteral,
-				allowPatterns,
-			)
-		} else if isFirstDigitOfArrayIndex(char, prevChar, inOpenBracket, inStringLiteral) ||
-			isWildcardArrayIndex(char, prevChar, inOpenBracket, inStringLiteral, allowPatterns) {
-			inArrayIndexAccessor = true
-			currentItemStr += string(char)
-		} else if inFieldNameAccessor || inArrayIndexAccessor {
-			currentItemStr += string(char)
-		}
-		i += width
-		prevChar = char
-	}
-
-	if len(currentItemStr) > 0 {
-		_, err = takeCurrentItem(
-			&pathItems,
-			currentItemStr,
-			inFieldNameAccessor,
-			inArrayIndexAccessor,
-			allowPatterns,
-		)
-	}
-
-	if err != nil || inOpenBracket {
+// pathWithAccessors = '$' , { nameAccessor | indexAccessor | selector } ;
+func (p *pathParser) pathWithAccessors() ([]*pathItem, error) {
+	if p.peek() != '$' {
 		return nil, errInvalidMappingPath(
-			fmt.Sprintf("$%s", pathWithoutRoot),
-			err,
+			p.input,
+			errors.New("path must start with '$'"),
 		)
 	}
 
-	return pathItems, nil
+	p.advance()
+	return p.propertyPath()
 }
 
-func isDotAccessor(char rune, inOpenBracket bool) bool {
-	return char == '.' && !inOpenBracket
+// propertyPath = { nameAccessor | indexAccessor | selector } ;
+func (p *pathParser) propertyPath() ([]*pathItem, error) {
+	isValidPathItem := true
+	path := []*pathItem{}
+	for isValidPathItem && !p.isAtEnd() {
+		namePathItem := p.nameAccessor()
+		if namePathItem != nil {
+			path = append(path, namePathItem)
+			continue
+		}
+
+		indexPathItem := p.indexAccessor()
+		if indexPathItem != nil {
+			path = append(path, indexPathItem)
+			continue
+		}
+
+		selectorPathItem := p.selector()
+		if selectorPathItem != nil {
+			path = append(path, selectorPathItem)
+		} else {
+			isValidPathItem = false
+		}
+	}
+
+	if !isValidPathItem {
+		return nil, errInvalidMappingPath(
+			p.input,
+			fmt.Errorf(
+				"invalid path item at position %d near %q",
+				p.pos,
+				getNextChars(p.input, p.pos),
+			),
+		)
+	}
+
+	return path, nil
 }
 
-func isAccessorOpenBracket(char rune, inStringLiteral bool) bool {
-	return char == '[' && !inStringLiteral
+func getNextChars(input string, pos int) string {
+	if pos >= utf8.RuneCountInString(input) {
+		return ""
+	}
+
+	nextChars := ""
+	for i := pos; i < utf8.RuneCountInString(input) && i <
+		pos+10; i++ {
+		char, _ := utf8.DecodeRuneInString(input[i:])
+		nextChars += string(char)
+	}
+	if len(nextChars) > 10 {
+		nextChars = nextChars[:10]
+	}
+	return nextChars
 }
 
-func isStringLiteralDelimiter(char rune, prevChar rune, inOpenBracket bool) bool {
-	return char == '"' && prevChar != '\\' && inOpenBracket
+// nameAccessorWithPatterns = ( "." , ( name | "*" ) ) | ( "[" , nameStringLiteral , "]" ) ;
+// nameAccessor = ( "." , name ) | ( "[" , nameStringLiteral , "]" ) ;
+func (p *pathParser) nameAccessor() *pathItem {
+	// As a name accessor is not the only rule that can start with a "[",
+	// we need to save the current position in the sequence so that we can revert
+	// back in the case that a "[" character is not followed by a name string literal.
+	p.savePos()
+	if p.match('.') {
+		return p.namePathItem()
+	}
+
+	if !p.match('[') {
+		return nil
+	}
+
+	namePathItem := p.nameStringLiteralPathItem()
+	if namePathItem == nil {
+		p.backtrack()
+		return nil
+	}
+
+	p.popPos()
+
+	if p.match(']') {
+		return namePathItem
+	}
+
+	return nil
 }
 
-func isFirstDigitOfArrayIndex(
-	char rune,
-	prevChar rune,
-	inOpenBracket bool,
-	inStringLiteral bool,
-) bool {
-	return unicode.IsDigit(char) &&
-		prevChar == '[' &&
-		inOpenBracket &&
-		!inStringLiteral
+// nameWithPatterns = "*" | ( ? [A-Za-z_] ? , { ? [A-Za-z0-9_\-] ? } ) ;
+// name =  ? [A-Za-z_] ? , { ? [A-Za-z0-9_\-] ? } ;
+func (p *pathParser) namePathItem() *pathItem {
+	if p.allowPatterns && p.match('*') {
+		return &pathItem{
+			anyFieldName: true,
+		}
+	}
+
+	name := p.name()
+	if name != nil {
+		return &pathItem{
+			fieldName: *name,
+		}
+	}
+
+	p.backtrack()
+	return nil
 }
 
-func isWildcardArrayIndex(
-	char rune,
-	prevChar rune,
-	inOpenBracket bool,
-	inStringLiteral bool,
-	allowPatterns bool,
-) bool {
-	if !allowPatterns {
+// name = [A-Za-z_] , { [A-Za-z0-9_\-] } ;
+func (p *pathParser) name() *string {
+	name := ""
+	next := p.peek()
+	if !(unicode.IsLetter(next) || next == '_') {
+		return nil
+	}
+
+	p.advance()
+	name += string(next)
+
+	isValidNameChar := true
+	for isValidNameChar && !p.isAtEnd() {
+		char := p.peek()
+		if unicode.IsLetter(char) ||
+			char == '_' ||
+			unicode.IsDigit(char) ||
+			char == '-' {
+			p.advance()
+			name += string(char)
+		} else {
+			isValidNameChar = false
+		}
+	}
+
+	return &name
+}
+
+// nameStringLiteral = '"' , { ? [A-Za-z0-9_\-\.] ? } , '"' ;
+func (p *pathParser) nameStringLiteralPathItem() *pathItem {
+	name := p.nameStringLiteral()
+	if name != nil {
+		return &pathItem{
+			fieldName: *name,
+		}
+	}
+
+	return nil
+}
+
+// nameStringLiteral = '"' , { ? [A-Za-z0-9_\-\.] ? } , '"' ;
+func (p *pathParser) nameStringLiteral() *string {
+	if !p.match('"') {
+		return nil
+	}
+
+	name := ""
+	inStringLiteral := true
+	for inStringLiteral && !p.isAtEnd() {
+		if p.check('"') {
+			inStringLiteral = false
+			p.advance()
+		} else {
+			name += string(p.advance())
+		}
+	}
+
+	if inStringLiteral {
+		// The name string literal was not closed properly.
+		return nil
+	}
+
+	return &name
+}
+
+// indexAccessWithPatterns = "[" , ( intLiteral | "*" ) , "]" ;
+// indexAccessor = "[" , intLiteral , "]" ;
+func (p *pathParser) indexAccessor() *pathItem {
+	// As an index accessor is not the only rule that can start with a "[",
+	// we need to save the current position in the sequence so that we can revert
+	// back in the case that a "[" token is not followed by an int literal.
+	p.savePos()
+	if p.match('[') {
+		anyIndex := false
+		if p.allowPatterns && p.match('*') {
+			anyIndex = true
+		}
+
+		index := (*int)(nil)
+		if !anyIndex {
+			index = p.intLiteral()
+		}
+
+		if !p.match(']') {
+			// The next token could be a name string literal or selector, so we can't return
+			// an error here and we need to backtrack to allow another rule (e.g. name accessor)
+			// to match on the opening bracket.
+			p.backtrack()
+			return nil
+		}
+
+		p.popPos()
+		return &pathItem{
+			arrayIndex: index,
+			anyIndex:   anyIndex,
+		}
+	}
+
+	p.popPos()
+	return nil
+}
+
+// selector = "[" , "@" , "." , name , "=" , stringLiteral , "]" ;
+func (p *pathParser) selector() *pathItem {
+	// As a selector is not the only rule that can start with a "[",
+	// we need to save the current position in the sequence so that we can revert
+	// back in the case that a "[" token is not followed by a valid selector.
+	p.savePos()
+	if !p.check('[') {
+		p.popPos()
+		return nil
+	}
+
+	// Consume the opening bracket.
+	p.advance()
+
+	// There can be white space before the "@" character in a selector.
+	p.consumeWhiteSpace()
+
+	if !p.match('@') {
+		p.backtrack()
+		return nil
+	}
+
+	if !p.match('.') {
+		p.backtrack()
+		return nil
+	}
+
+	name := p.name()
+	if name == nil {
+		p.backtrack()
+		return nil
+	}
+
+	// There can be white space before the "=" character in a selector.
+	p.consumeWhiteSpace()
+
+	if !p.match('=') {
+		p.backtrack()
+		return nil
+	}
+
+	// There can be white space before the string literal in a selector.
+	p.consumeWhiteSpace()
+
+	stringLiteral := p.stringLiteral()
+	if stringLiteral == nil {
+		p.backtrack()
+		return nil
+	}
+
+	// There can be white space before the closing bracket in a selector.
+	p.consumeWhiteSpace()
+
+	if !p.match(']') {
+		p.backtrack()
+		return nil
+	}
+
+	p.popPos()
+	return &pathItem{
+		arrayItemSelector: &arrayItemSelector{
+			key:   *name,
+			value: *stringLiteral,
+		},
+	}
+}
+
+func (p *pathParser) consumeWhiteSpace() {
+	for !p.isAtEnd() && unicode.IsSpace(p.peek()) {
+		p.advance()
+	}
+}
+
+func (p *pathParser) intLiteral() *int {
+	if p.isAtEnd() || !unicode.IsDigit(p.peek()) {
+		return nil
+	}
+
+	intStr := ""
+	for !p.isAtEnd() && unicode.IsDigit(p.peek()) {
+		intStr += string(p.advance())
+	}
+
+	index, err := strconv.ParseInt(intStr, 10, 64)
+	if err != nil {
+		return nil
+	}
+
+	if index < 0 {
+		return nil
+	}
+
+	indexAsInt := int(index)
+	return &indexAsInt
+}
+
+// stringLiteral = '"' , ( ? utf-8 char excluding quote ? | escaped quote ) , '"' ;
+func (p *pathParser) stringLiteral() *string {
+	if !p.match('"') {
+		return nil
+	}
+
+	stringLiteral := ""
+	inStringLiteral := true
+	for inStringLiteral && !p.isAtEnd() {
+		if p.check('"') {
+			inStringLiteral = false
+			p.advance()
+		} else if p.check('\\') {
+			// Skip the escape character.
+			p.advance()
+			if !p.isAtEnd() {
+				// Add the escaped character.
+				stringLiteral += string(p.advance())
+			}
+		} else {
+			stringLiteral += string(p.advance())
+		}
+	}
+
+	if inStringLiteral {
+		// The string literal was not closed properly.
+		return nil
+	}
+
+	return &stringLiteral
+}
+
+func (p *pathParser) match(chars ...rune) bool {
+	if slices.ContainsFunc(chars, p.check) {
+		p.advance()
+		return true
+	}
+
+	return false
+}
+
+func (p *pathParser) check(char rune) bool {
+	if p.isAtEnd() {
 		return false
 	}
-
-	return char == '*' && prevChar == '[' &&
-		inOpenBracket && !inStringLiteral
+	return p.peek() == char
 }
 
-func isAccessorCloseBracket(
-	char rune,
-	inOpenBracket bool,
-	inStringLiteral bool,
-) bool {
-	return char == ']' && inOpenBracket && !inStringLiteral
+func (p *pathParser) advance() rune {
+	if !p.isAtEnd() {
+		p.pos += 1
+	}
+	return p.previous()
 }
 
-func tryTakeCurrentItemEndOfStringLiteral(
-	pathItems *[]*pathItem,
-	currentItemStr string,
-	inFieldNameAccessor bool,
-	inArrayIndexAccessor bool,
-	inStringLiteral bool,
-	allowPatterns bool,
-) (bool, string, error) {
-	if inStringLiteral {
-		// A string literal is a field name accessor,
-		// if we are in a string literal, we should
-		// treat the current character as a part of
-		// a field name.
-		return true, currentItemStr, nil
-	}
-
-	currentItemStr, err := takeCurrentItem(
-		pathItems,
-		currentItemStr,
-		inFieldNameAccessor,
-		inArrayIndexAccessor,
-		allowPatterns,
-	)
-
-	return false, currentItemStr, err
+func (p *pathParser) previous() rune {
+	prevChar, _ := utf8.DecodeRuneInString(p.input[p.pos-1:])
+	return prevChar
 }
 
-func takeCurrentItem(
-	pathItems *[]*pathItem,
-	currentItemStr string,
-	inFieldNameAccessor bool,
-	inArrayIndexAccessor bool,
-	allowPatterns bool,
-) (string, error) {
-	if len(currentItemStr) == 0 {
-		return currentItemStr, nil
+func (p *pathParser) peek() rune {
+	if p.isAtEnd() {
+		return endChar
 	}
+	char, _ := utf8.DecodeRuneInString(p.input[p.pos:])
+	return char
+}
 
-	if inFieldNameAccessor && allowPatterns && currentItemStr == "*" {
-		// If the current item is a wildcard for field names,
-		// we treat it as a special case where it matches any field name.
-		*pathItems = append(*pathItems, &pathItem{
-			anyFieldName: true,
-		})
-		// Reset the current item string.
-		return "", nil
+func (p *pathParser) isAtEnd() bool {
+	return p.pos >= utf8.RuneCountInString(p.input)
+}
+
+func (p *pathParser) savePos() {
+	p.startPosStack = append(p.startPosStack, p.pos)
+}
+
+func (p *pathParser) backtrack() {
+	if len(p.startPosStack) > 0 {
+		p.pos = p.startPosStack[len(p.startPosStack)-1]
+		p.startPosStack = p.startPosStack[:len(p.startPosStack)-1]
 	}
+}
 
-	if inFieldNameAccessor {
-		*pathItems = append(*pathItems, &pathItem{
-			// Unescape quotes in the field name.
-			fieldName: strings.ReplaceAll(currentItemStr, "\\\"", "\""),
-		})
-		// Reset the current item string.
-		return "", nil
+func (p *pathParser) popPos() {
+	if len(p.startPosStack) > 0 {
+		p.startPosStack = p.startPosStack[:len(p.startPosStack)-1]
 	}
-
-	if inArrayIndexAccessor && allowPatterns && currentItemStr == "*" {
-		// If the current item is a wildcard for array indices,
-		// we treat it as a special case where it matches any index.
-		*pathItems = append(*pathItems, &pathItem{
-			anyIndex: true,
-		})
-		// Reset the current item string.
-		return "", nil
-	}
-
-	if inArrayIndexAccessor {
-		index, err := strconv.Atoi(currentItemStr)
-		if err != nil {
-			return currentItemStr, err
-		}
-		*pathItems = append(*pathItems, &pathItem{
-			arrayIndex: &index,
-		})
-		// Reset the current item string.
-		return "", nil
-	}
-
-	return currentItemStr, nil
 }
