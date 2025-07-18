@@ -23,6 +23,18 @@ func (s *MappingPathsTestSuite) Test_get_value_by_path_for_complex_path() {
 	}, value)
 }
 
+func (s *MappingPathsTestSuite) Test_get_value_by_path_for_path_with_array_selector() {
+	path := "$[\"cluster.v1\"].config.environments[0].hosts[@.endpoint = \"https://other.example.com\"].protocol"
+	node, expectedProtocol := fixtureMappingNode2()
+	value, err := GetPathValue(path, node, 10)
+	s.Require().NoError(err)
+	s.Assert().Equal(&MappingNode{
+		Scalar: &ScalarValue{
+			StringValue: &expectedProtocol,
+		},
+	}, value)
+}
+
 func (s *MappingPathsTestSuite) Test_returns_passed_in_node_for_root_identity_path() {
 	path := "$"
 	node, _ := fixtureMappingNode1()
@@ -127,6 +139,22 @@ func (s *MappingPathsTestSuite) Test_inject_value_for_array_item_selector_path()
 		},
 	}
 	err := InjectPathValue(path, value, node, 10)
+	s.Require().NoError(err)
+	injected, err := GetPathValue(path, node, 10)
+	s.Require().NoError(err)
+	s.Assert().Equal(injected, MappingNodeFromString(protocol))
+}
+
+func (s *MappingPathsTestSuite) Test_inject_value_replace_for_array_item_selector_path() {
+	path := "$[\"cluster.v1\"].config.environments[0].hosts[@.endpoint = \"https://other.example.com\"].protocol"
+	node := fixtureInjectMappingNode3()
+	protocol := "http/1.1"
+	value := &MappingNode{
+		Scalar: &ScalarValue{
+			StringValue: &protocol,
+		},
+	}
+	err := InjectPathValueReplaceFields(path, value, node, 10)
 	s.Require().NoError(err)
 	injected, err := GetPathValue(path, node, 10)
 	s.Require().NoError(err)
@@ -256,6 +284,10 @@ func fixtureMappingNode1() (*MappingNode, string) {
 			},
 		},
 	}, endpoint
+}
+
+func fixtureMappingNode2() (*MappingNode, string) {
+	return fixtureInjectMappingNode3(), "http/2.0"
 }
 
 func fixtureInjectMappingNode1() *MappingNode {

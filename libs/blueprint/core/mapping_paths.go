@@ -289,7 +289,7 @@ func injectIntoFields(
 	if replace || !hasValue {
 		if i == len(parsedPath)-1 {
 			target.Fields[pathItem.fieldName] = valueToInject
-		} else {
+		} else if !hasValue {
 			target.Fields[pathItem.fieldName] = createFieldsOrItems(parsedPath, i+1)
 		}
 	}
