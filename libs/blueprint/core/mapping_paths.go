@@ -448,17 +448,6 @@ type arrayItemSelector struct {
 }
 
 func parsePath(path string, allowPatterns bool) ([]*pathItem, error) {
-	// if len(path) == 0 || path[0] != '$' {
-	// 	return nil, errInvalidMappingPath(path, nil)
-	// }
-
-	// pathWithoutRoot := path[1:]
-	// if len(pathWithoutRoot) == 0 {
-	// 	// "$" is a valid path to the root of the node.
-	// 	return []*pathItem{}, nil
-	// }
-
-	// return parsePathItems(pathWithoutRoot, allowPatterns)
 	parser := newPathParser(path, allowPatterns)
 	return parser.parse()
 }
