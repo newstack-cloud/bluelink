@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.29.0] - 2025-07-19
+
+### Added
+
+- **Breaking change** - Changes the name of the `core.InjectPathValueReplace` function to `core.InjectPathValueReplaceFields` to better reflect its purpose of replacing fields in a mapping node as the `core.InjectPathValue` function replaces elements in an array but not fields in a map/object mapping node.
+- Adds support for path array selectors for mapping paths used for searching for values in mapping nodes along with injecting values into mapping nodes. The `[@.<key> = "<value>"]` syntax can be used to select an item in an array that has a specific key matching a provided value. This is useful for working with arrays of objects in mapping nodes when patching updates to specific objects in an array by a unique identifier. This is the case for things like cloud provider IAM policies where the representation for policy documents is an array of objects with a unique identifier instead of a mapping of IDs to policy documents. This behaviour is supported for the `core.GetPathValue`, `core.InjectPathValue`, `core.InjectPathValueReplaceFields` and `core.PathMatchesPattern` functions.
+
+_Breaking changes will occur in early 0.x releases of this framework._
+
+### Fixed
+
+- Corrects the mapping node injection behaviour to make sure entire structures are not replaced with an empty array or mapping when injecting in "replace fields" mode. Arrays and mappings should only be created if the value in the injection path does not already exist in the structure that the value is being injected into.
+
 ## [0.28.0] - 2025-07-17
 
 ### Added
