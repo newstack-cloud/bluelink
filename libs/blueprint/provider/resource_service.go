@@ -96,5 +96,6 @@ type AcquireResourceLockInput struct {
 	// in a provider link implementation.
 	// This is helpful in releasing locks proactively instead of waiting for the
 	// lock timeout to occur.
-	AcquiredBy string
+	AcquiredBy      string
+	ProviderContext Context
 }
