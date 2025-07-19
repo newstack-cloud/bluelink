@@ -986,20 +986,21 @@ message LinkState {
 message LinkIntermediaryResourceState {
     // A globally unique identifier for the resource.
     string resource_id = 1;
-    string instance_id = 2;
-    sharedtypesv1.ResourceStatus status = 3;
-    sharedtypesv1.PreciseResourceStatus precise_status = 4;
+    string resource_type = 2;
+    string instance_id = 3;
+    sharedtypesv1.ResourceStatus status = 4;
+    sharedtypesv1.PreciseResourceStatus precise_status = 5;
     // The unix timestamp when the resource was last deployed.
-    int64 last_deployed_timestamp = 5;
+    int64 last_deployed_timestamp = 6;
     // The unix timestamp when an attempt was last made to deploy the resource.
-    int64 last_deploy_attempt_timestamp = 6;
+    int64 last_deploy_attempt_timestamp = 7;
     // The resolved resource spec for the currently deployed version
     // of the resource along with computed fields derived from the deployed resource
     // in the provider.
-    schema.MappingNode resource_spec_data = 7;
+    schema.MappingNode resource_spec_data = 8;
     // A list of the latest reasons for failures in deploying the resource,
     // this only ever holds the results of the latest deployment attempt.
-    repeated string failure_reasons = 8;
+    repeated string failure_reasons = 9;
 }
 
 // LinkCompletionDurations holds duration information

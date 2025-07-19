@@ -927,6 +927,7 @@ func copyIntermediaryResources(
 			intermediaryResourcesCopy,
 			&state.LinkIntermediaryResourceState{
 				ResourceID:                 value.ResourceID,
+				ResourceType:               value.ResourceType,
 				InstanceID:                 value.InstanceID,
 				LastDeployedTimestamp:      value.LastDeployedTimestamp,
 				LastDeployAttemptTimestamp: value.LastDeployAttemptTimestamp,

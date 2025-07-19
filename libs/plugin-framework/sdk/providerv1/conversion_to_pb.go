@@ -576,8 +576,9 @@ func toPBLinkIntermediaryResourceState(
 	}
 
 	return &providerserverv1.LinkIntermediaryResourceState{
-		ResourceId: intermediaryResourceState.ResourceID,
-		InstanceId: intermediaryResourceState.InstanceID,
+		ResourceId:   intermediaryResourceState.ResourceID,
+		ResourceType: intermediaryResourceState.ResourceType,
+		InstanceId:   intermediaryResourceState.InstanceID,
 		Status: sharedtypesv1.ResourceStatus(
 			intermediaryResourceState.Status,
 		),

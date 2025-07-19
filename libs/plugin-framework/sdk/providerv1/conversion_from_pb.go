@@ -160,9 +160,10 @@ func fromPBLinkIntermediaryResourceState(
 		return nil, err
 	}
 	return &state.LinkIntermediaryResourceState{
-		ResourceID: pbIntermediaryResourceState.ResourceId,
-		InstanceID: pbIntermediaryResourceState.InstanceId,
-		Status:     core.ResourceStatus(pbIntermediaryResourceState.Status),
+		ResourceID:   pbIntermediaryResourceState.ResourceId,
+		ResourceType: pbIntermediaryResourceState.ResourceType,
+		InstanceID:   pbIntermediaryResourceState.InstanceId,
+		Status:       core.ResourceStatus(pbIntermediaryResourceState.Status),
 		PreciseStatus: core.PreciseResourceStatus(
 			pbIntermediaryResourceState.PreciseStatus,
 		),
