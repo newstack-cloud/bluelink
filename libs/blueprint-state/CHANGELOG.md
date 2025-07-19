@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-07-20
+
+### Added
+
+- Adds support for storing resource type in link intermediary resource state. The change made to the `memfile` state container implementation ensures that the `ResourceType` field is copied when copying intermediary resource states. The new field will be persisted automatically for both the `memfile` and `postgres` state container implementations as long as it is set, the postgres state container stores the intermediary resource state for a link in a `jsonb` column that is populated by marshalling the `LinkIntermediaryResourceState` struct.
+
 ## [0.3.0] - 2025-07-03
 
 ### Changed
