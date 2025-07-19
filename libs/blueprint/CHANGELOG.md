@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.30.0] - 2025-07-19
+
+### Added
+
+- **Breaking change** -  Adds support for resource locking to prevent links applying updates to the same resource at the same time that would lead to conflicts and data races. Links are not orchestrated like resources are with a dependency graph, links are deployed asynchronously as soon as the two primary resources linked together have been deployed, this means there are no guarantees that multiple links operating on the same resources will not try to update the same resources at the same time.
+
+  This is primarily an issue for links that update existing resources in the same blueprint that are considered intermediary resources for a link. This includes breaking changes to the resource registry and the interfaces of services passed in as a part of the input for the `UpdateIntermediaryResources` method. Link implementations are now able to acquire locks scoped to the blueprint instance for a specific resource when applying updates to ensure that two links are not updating the same resource at the same time.
+
+_Breaking changes will occur in early 0.x releases of this framework._
+
 ## [0.29.0] - 2025-07-19
 
 ### Added
