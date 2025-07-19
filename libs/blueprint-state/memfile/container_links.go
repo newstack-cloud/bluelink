@@ -268,6 +268,7 @@ func copyIntermediaryResources(
 	for i, value := range intermediaryResourceStates {
 		intermediaryResourcesCopy[i] = &state.LinkIntermediaryResourceState{
 			ResourceID:                 value.ResourceID,
+			ResourceType:               value.ResourceType,
 			InstanceID:                 value.InstanceID,
 			LastDeployedTimestamp:      value.LastDeployedTimestamp,
 			LastDeployAttemptTimestamp: value.LastDeployAttemptTimestamp,
