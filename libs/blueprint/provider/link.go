@@ -147,27 +147,36 @@ type LinkUpdateResourceOutput struct {
 type LinkUpdateIntermediaryResourcesInput struct {
 	ResourceAInfo *ResourceInfo
 	ResourceBInfo *ResourceInfo
-	Changes       *LinkChanges
+	// A handle for the link being deployed that can be used for tasks
+	// like acquiring locks on resources that are being updated
+	// in the same blueprint instance.
+	LinkID  string
+	Changes *LinkChanges
 	// Additional user-defined blueprint instance name
 	// that can be used in ID/unique name generation and for debugging.
 	InstanceName   string
 	LinkUpdateType LinkUpdateType
 	LinkContext    LinkContext
-	// ResourceDeployService allows a link implementation to hook into
+	// ResourceService allows a link implementation to hook into
 	// the framework's existing mechanism to manage resource deployments,
-	// this is useful as it allows link implementations to use the same
-	// resources used in blueprints.
-	ResourceDeployService ResourceDeployService
-	// ResourceLookupService allows a link implementation to look up resources
-	// in the blueprint state.
-	// This is useful for link implementations that need to check if an intermediary
+	// look up resources and acquire locks when updating existing resources
+	// in the same blueprint.
+	//
+	// The deployment functionality is useful as it allows
+	// link implementations to use the same resources used in blueprints.
+	//
+	// The lookup behaviour is useful for link implementations that need to check if an intermediary
 	// resource exists in the blueprint for intermediary resources that are not fully managed
 	// by the link implementation.
 	// For example, in AWS, an IAM role would be an intermediary resource
 	// between an AWS Lambda function and an AWS DynamoDB table,
 	// where the IAM role is not fully managed by the link implementation,
 	// but is an existing resource in the blueprint that will be modified by the link.
-	ResourceLookupService ResourceLookupService
+	//
+	// The lock acquisition is useful for link implementations that need to ensure
+	// that no other link is modifying the same intermediary resources at the same time,
+	// to avoid conflicts and race conditions.
+	ResourceService ResourceService
 }
 
 type LinkUpdateIntermediaryResourcesOutput struct {
@@ -184,6 +193,9 @@ type LinkUpdateIntermediaryResourcesOutput struct {
 	//
 	// {resourceName} represents the logical name of the resource in single blueprint instance.
 	ResourceDataMappings map[string]string
+}
+
+type LinkExistingResourceUpdatesOutput struct {
 }
 
 // LinkGetPriorityResourceInput provides the input for retrieving

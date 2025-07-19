@@ -148,12 +148,13 @@ func (d *defaultLinkDeployer) Deploy(
 		ctx,
 		linkImplementation,
 		&provider.LinkUpdateIntermediaryResourcesInput{
-			ResourceAInfo:         resourceAInfo,
-			ResourceBInfo:         resourceBInfo,
-			InstanceName:          instanceName,
-			LinkUpdateType:        linkUpdateType,
-			LinkContext:           linkCtx,
-			ResourceDeployService: deployCtx.ResourceRegistry,
+			ResourceAInfo:   resourceAInfo,
+			ResourceBInfo:   resourceBInfo,
+			LinkID:          linkElement.ID(),
+			InstanceName:    instanceName,
+			LinkUpdateType:  linkUpdateType,
+			LinkContext:     linkCtx,
+			ResourceService: deployCtx.ResourceRegistry,
 		},
 		linkInfo,
 		provider.CreateRetryContext(retryPolicy),
@@ -186,12 +187,43 @@ func (d *defaultLinkDeployer) updateLinkResourceA(
 		input.LinkUpdateType,
 	)
 
+	deployCtx.Logger.Debug(
+		"acquiring resource lock for link resource A update",
+		core.StringLogField("linkId", linkInfo.element.ID()),
+		core.StringLogField("resourceName", input.ResourceInfo.ResourceName),
+	)
+	err := deployCtx.ResourceRegistry.AcquireResourceLock(
+		ctx,
+		&provider.AcquireResourceLockInput{
+			InstanceID:   linkInfo.instanceID,
+			ResourceName: input.ResourceInfo.ResourceName,
+			AcquiredBy:   linkInfo.element.ID(),
+		},
+	)
+	if err != nil {
+		deployCtx.Logger.Error(
+			"failed to acquire resource lock for link resource A update",
+			core.StringLogField("linkId", linkInfo.element.ID()),
+			core.StringLogField("resourceName", input.ResourceInfo.ResourceName),
+			core.ErrorLogField("error", err),
+		)
+		return nil, true, err
+	}
+
 	deployCtx.Logger.Info(
 		"calling link plugin implementation to update resource A",
 		core.IntegerLogField("attempt", int64(updateResourceARetryInfo.Attempt)),
 	)
 
 	resourceAOutput, err := linkImplementation.UpdateResourceA(ctx, input)
+	// Regardless of whether or not the resource A update was successful,
+	// we need to ensure that all locks acquired by the link implementation's UpdateResourceA
+	// method are released before retrying or moving on.
+	deployCtx.ResourceRegistry.ReleaseResourceLocksAcquiredBy(
+		ctx,
+		linkInfo.instanceID,
+		linkInfo.element.ID(),
+	)
 	if err != nil {
 		var retryErr *provider.RetryableError
 		if provider.AsRetryableError(err, &retryErr) {
@@ -419,12 +451,43 @@ func (d *defaultLinkDeployer) updateLinkResourceB(
 		input.LinkUpdateType,
 	)
 
+	deployCtx.Logger.Debug(
+		"acquiring resource lock for link resource B update",
+		core.StringLogField("linkId", linkInfo.element.ID()),
+		core.StringLogField("resourceName", input.ResourceInfo.ResourceName),
+	)
+	err := deployCtx.ResourceRegistry.AcquireResourceLock(
+		ctx,
+		&provider.AcquireResourceLockInput{
+			InstanceID:   linkInfo.instanceID,
+			ResourceName: input.ResourceInfo.ResourceName,
+			AcquiredBy:   linkInfo.element.ID(),
+		},
+	)
+	if err != nil {
+		deployCtx.Logger.Error(
+			"failed to acquire resource lock for link resource B update",
+			core.StringLogField("linkId", linkInfo.element.ID()),
+			core.StringLogField("resourceName", input.ResourceInfo.ResourceName),
+			core.ErrorLogField("error", err),
+		)
+		return nil, true, err
+	}
+
 	deployCtx.Logger.Info(
 		"calling link plugin implementation to update resource B",
 		core.IntegerLogField("attempt", int64(updateResourceBRetryInfo.Attempt)),
 	)
 
 	resourceBOutput, err := linkImplementation.UpdateResourceB(ctx, input)
+	// Regardless of whether or not the resource B update was successful,
+	// we need to ensure that all locks acquired by the link implementation's UpdateResourceB
+	// method are released before retrying or moving on.
+	deployCtx.ResourceRegistry.ReleaseResourceLocksAcquiredBy(
+		ctx,
+		linkInfo.instanceID,
+		linkInfo.element.ID(),
+	)
 	if err != nil {
 		var retryErr *provider.RetryableError
 		if provider.AsRetryableError(err, &retryErr) {
@@ -665,6 +728,14 @@ func (d *defaultLinkDeployer) updateLinkIntermediaryResources(
 	)
 
 	intermediaryResourcesOutput, err := linkImplementation.UpdateIntermediaryResources(ctx, input)
+	// Regardless of whether or not the intermediary resources update was successful,
+	// we need to ensure that all locks acquired by the link implementation's UpdateIntermediaryResources
+	// method are released before retrying or moving on.
+	deployCtx.ResourceRegistry.ReleaseResourceLocksAcquiredBy(
+		ctx,
+		linkInfo.instanceID,
+		linkInfo.element.ID(),
+	)
 	if err != nil {
 		var retryErr *provider.RetryableError
 		if provider.AsRetryableError(err, &retryErr) {

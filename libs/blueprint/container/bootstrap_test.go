@@ -544,7 +544,7 @@ func (l *testLambdaDynamoDBTableLink) UpdateIntermediaryResources(
 			"aws",
 		),
 	}
-	roleDeployOutput, err := input.ResourceDeployService.Deploy(
+	roleDeployOutput, err := input.ResourceService.Deploy(
 		ctx,
 		iamRoleResourceType,
 		&provider.ResourceDeployServiceInput{

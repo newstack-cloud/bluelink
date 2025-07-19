@@ -20,11 +20,11 @@ type PopulateResourceSpecDefaultsTestSuite struct {
 }
 
 func (s *PopulateResourceSpecDefaultsTestSuite) SetupSuite() {
-	s.resourceRegistry = &internal.ResourceRegistryMock{
-		Resources: map[string]provider.Resource{
+	s.resourceRegistry = internal.NewResourceRegistryMock(
+		map[string]provider.Resource{
 			"example/complex": &internal.ExampleComplexResource{},
 		},
-	}
+	)
 
 	specBytes, err := os.ReadFile("__testdata/populate-resource-spec-defaults/blueprint.yml")
 	if err != nil {

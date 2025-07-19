@@ -31,11 +31,11 @@ func (s *LinkDeployerTestSuite) SetupTest() {
 		clock:          &core.SystemClock{},
 		stateContainer: s.stateContainer,
 	}
-	s.resourceRegistry = &internal.ResourceRegistryMock{
-		Resources: map[string]provider.Resource{
+	s.resourceRegistry = internal.NewResourceRegistryMock(
+		map[string]provider.Resource{
 			"aws/iam/role": &internal.IAMRoleResource{},
 		},
-	}
+	)
 	fixtureInputs := s.fixtureInputs()
 	s.fixtures = map[int]*linkDeployerFixture{}
 

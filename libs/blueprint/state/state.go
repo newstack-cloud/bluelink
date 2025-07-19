@@ -510,6 +510,7 @@ func (l *LinkState) Kind() ElementKind {
 type LinkIntermediaryResourceState struct {
 	// A globally unique identifier for the resource.
 	ResourceID    string                     `json:"id"`
+	ResourceType  string                     `json:"type"`
 	InstanceID    string                     `json:"instanceId"`
 	Status        core.ResourceStatus        `json:"status"`
 	PreciseStatus core.PreciseResourceStatus `json:"preciseStatus"`

@@ -19,6 +19,12 @@ const (
 	prepareFailureMessage = "failed to load instance state while preparing to deploy"
 )
 
+type deployDeps struct {
+	resourceRegistry resourcehelpers.Registry
+	logger           core.Logger
+	paramOverrides   core.BlueprintParams
+}
+
 func (c *defaultBlueprintContainer) Deploy(
 	ctx context.Context,
 	input *DeployInput,
@@ -73,6 +79,7 @@ func (c *defaultBlueprintContainer) Deploy(
 		FinishChan:           interceptDeploymentFinishChan,
 	}
 
+	resourceRegistry := c.resourceRegistry.WithParams(paramOverrides)
 	go c.deploy(
 		ctxWithInstanceID,
 		&DeployInput{
@@ -84,8 +91,11 @@ func (c *defaultBlueprintContainer) Deploy(
 		rewiredChannels,
 		state,
 		isNewInstance,
-		paramOverrides,
-		deployLogger,
+		&deployDeps{
+			resourceRegistry,
+			deployLogger,
+			paramOverrides,
+		},
 	)
 
 	// Intercept the top-level instance deployment events
@@ -101,13 +111,18 @@ func (c *defaultBlueprintContainer) Deploy(
 	// the caller-provided channels, so even though this is called asynchronously,
 	// it will ensure that no top-level status updates received by the caller go out of sync
 	// with the status information in the persisted state.
-	go c.saveInstanceDeploymentState(
+	//
+	// As this is a single point where we can intercept when the instance deployment
+	// has finished either successfully or with a failure,
+	// it is also used to ensure that some clean up tasks are performed.
+	go c.saveInstanceDeploymentStateAndCleanup(
 		ctxWithInstanceID,
 		instanceID,
 		isNewInstance,
 		input.Rollback,
 		rewiredChannels,
 		channels,
+		resourceRegistry,
 	)
 
 	return nil
@@ -119,10 +134,10 @@ func (c *defaultBlueprintContainer) deploy(
 	channels *DeployChannels,
 	deployState DeploymentState,
 	isNewInstance bool,
-	paramOverrides core.BlueprintParams,
-	deployLogger core.Logger,
+	deployDeps *deployDeps,
 ) {
-	instanceTreePath := getInstanceTreePath(paramOverrides, input.InstanceID)
+	deployLogger := deployDeps.logger
+	instanceTreePath := getInstanceTreePath(deployDeps.paramOverrides, input.InstanceID)
 	if exceedsMaxDepth(instanceTreePath, MaxBlueprintDepth) {
 		deployLogger.Debug("max nested blueprint depth exceeded")
 		channels.ErrChan <- errMaxBlueprintDepthExceeded(
@@ -199,7 +214,7 @@ func (c *defaultBlueprintContainer) deploy(
 		subengine.ResolveForDeployment,
 		input.Changes,
 		c.linkInfo,
-		paramOverrides,
+		deployDeps.paramOverrides,
 	)
 	if err != nil {
 		channels.FinishChan <- c.createDeploymentFinishedMessage(
@@ -218,7 +233,7 @@ func (c *defaultBlueprintContainer) deploy(
 		Rollback:              input.Rollback,
 		Destroying:            false,
 		Channels:              channels,
-		ParamOverrides:        paramOverrides,
+		ParamOverrides:        deployDeps.paramOverrides,
 		InstanceStateSnapshot: &currentInstanceState,
 		ResourceProviders: addRemovedResourcesToProvidersMap(
 			prepareResult.ResourceProviderMap,
@@ -229,7 +244,7 @@ func (c *defaultBlueprintContainer) deploy(
 		PreparedContainer: prepareResult.BlueprintContainer,
 		InputChanges:      input.Changes,
 		ResourceTemplates: prepareResult.BlueprintContainer.ResourceTemplates(),
-		ResourceRegistry:  c.resourceRegistry.WithParams(paramOverrides),
+		ResourceRegistry:  deployDeps.resourceRegistry,
 		Logger:            deployLogger,
 	}
 
@@ -242,10 +257,10 @@ func (c *defaultBlueprintContainer) deploy(
 		ctx,
 		flattenedNodes,
 		c.refChainCollector,
-		paramOverrides,
+		deployDeps.paramOverrides,
 	)
 	if err != nil {
-		channels.ErrChan <- wrapErrorForChildContext(err, paramOverrides)
+		channels.ErrChan <- wrapErrorForChildContext(err, deployDeps.paramOverrides)
 		return
 	}
 
@@ -257,7 +272,7 @@ func (c *defaultBlueprintContainer) deploy(
 		isNewInstance,
 	)
 	if err != nil {
-		channels.ErrChan <- wrapErrorForChildContext(err, paramOverrides)
+		channels.ErrChan <- wrapErrorForChildContext(err, deployDeps.paramOverrides)
 		return
 	}
 	if sentFinishedMessage {
@@ -271,7 +286,7 @@ func (c *defaultBlueprintContainer) deploy(
 		isNewInstance,
 	)
 	if err != nil {
-		channels.ErrChan <- wrapErrorForChildContext(err, paramOverrides)
+		channels.ErrChan <- wrapErrorForChildContext(err, deployDeps.paramOverrides)
 		return
 	}
 	if sentFinishedMessage {
@@ -286,7 +301,7 @@ func (c *defaultBlueprintContainer) deploy(
 		deployCtx,
 	)
 	if err != nil {
-		channels.ErrChan <- wrapErrorForChildContext(err, paramOverrides)
+		channels.ErrChan <- wrapErrorForChildContext(err, deployDeps.paramOverrides)
 		return
 	}
 
@@ -417,13 +432,14 @@ func (c *defaultBlueprintContainer) saveMetadata(
 	return nil
 }
 
-func (c *defaultBlueprintContainer) saveInstanceDeploymentState(
+func (c *defaultBlueprintContainer) saveInstanceDeploymentStateAndCleanup(
 	ctx context.Context,
 	instanceID string,
 	isNewInstance bool,
 	rollingBack bool,
 	listenToChannels *DeployChannels,
 	forwardToChannels *DeployChannels,
+	resourceRegistry resourcehelpers.Registry,
 ) {
 	finished := false
 	for !finished {
@@ -449,6 +465,13 @@ func (c *defaultBlueprintContainer) saveInstanceDeploymentState(
 				ctx,
 				instanceID,
 				statusInfo,
+			)
+			// Regardless of whether or not deployment persistence
+			// was successful, we need to clean up all resource locks
+			// acquired by the deployment process for the current instance ID.
+			resourceRegistry.ReleaseResourceLocks(
+				ctx,
+				instanceID,
 			)
 			if err != nil {
 				forwardToChannels.ErrChan <- err
@@ -1081,7 +1104,7 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterResource(
 		)
 		isDependant := dependencyNode != nil
 
-		stabilisedDependencies, err := c.getGetStabilisedDependencies(
+		stabilisedDependencies, err := c.getStabilisedDependencies(
 			ctx,
 			node,
 			deployCtx.ResourceRegistry,
@@ -1137,7 +1160,7 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterResource(
 	}
 }
 
-func (c *defaultBlueprintContainer) getGetStabilisedDependencies(
+func (c *defaultBlueprintContainer) getStabilisedDependencies(
 	ctx context.Context,
 	node *DeploymentNode,
 	resourceRegistry resourcehelpers.Registry,
@@ -1587,7 +1610,7 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterChild(
 		// that is expected to be stable before the resource in question can be deployed.
 		// For this reason, even when we are choosing elements to deploy after a child blueprint,
 		// other dependencies must be considered and stabilised dependencies must be checked.
-		stabilisedDependencies, err := c.getGetStabilisedDependencies(
+		stabilisedDependencies, err := c.getStabilisedDependencies(
 			ctx,
 			node,
 			deployCtx.ResourceRegistry,

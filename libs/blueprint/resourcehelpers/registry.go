@@ -2,6 +2,8 @@ package resourcehelpers
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -85,12 +87,66 @@ type Registry interface {
 		input *provider.ResourceLookupInput,
 	) (bool, error)
 
+	// AcquireResourceLock acquires a lock on a resource
+	// in the blueprint state to ensure that no other operations
+	// are modifying the resource at the same time.
+	// This is useful for links that need to update existing resources
+	// in the same blueprint as a part of the intermediary resources update phase.
+	// The blueprint container will ensure that the lock is released after the
+	// update intermediary resources phase is complete for the current link.
+	// The lock will be released if the link update fails or by the resource registry
+	// if a lock timeout occurs.
+	AcquireResourceLock(
+		ctx context.Context,
+		input *provider.AcquireResourceLockInput,
+	) error
+
+	// ReleaseResourceLock releases a lock on a resource of a given type
+	// in the blueprint state.
+	// This is to be used by the deployment orchestrator to release the lock
+	// after the link update phase is complete or the link update fails.
+	ReleaseResourceLock(
+		ctx context.Context,
+		instanceID string,
+		resourceName string,
+	)
+
+	// ReleaseResourceLocks releases all resource locks
+	// that have been acquired for the given instance ID.
+	ReleaseResourceLocks(ctx context.Context, instanceID string)
+
+	// ReleaseResourceLocksAcquiredBy releases all resource locks
+	// that have been acquired by a specific caller (e.g. a link).
+	// This is useful for releasing locks proactively instead of waiting
+	// for the lock timeout to occur.
+	ReleaseResourceLocksAcquiredBy(ctx context.Context, instanceID string, acquiredBy string)
+
 	// WithParams creates a new registry derived from the current registry
 	// with the given parameters.
 	WithParams(
 		params core.BlueprintParams,
 	) Registry
 }
+
+type resourceLock struct {
+	// The ID of the blueprint instance that the lock is acquired in.
+	instanceID string
+	// The name of the resource that the lock is acquired on.
+	resourceName string
+	// The time when the lock was acquired.
+	// This is used to determine if the lock has timed out.
+	lockTime time.Time
+	// Optional field to track who acquired the lock.
+	acquiredBy string
+}
+
+const (
+	// DefaultResourceLockTimeout is the default timeout for acquiring a resource lock.
+	DefaultResourceLockTimeout = 3 * time.Minute
+	// DefaultResourceLockCheckInterval is the default interval at which the resource lock
+	// will be checked for availability when acquiring a lock.
+	DefaultResourceLockCheckInterval = 100 * time.Millisecond
+)
 
 type registryFromProviders struct {
 	providers                    map[string]provider.Provider
@@ -101,7 +157,42 @@ type registryFromProviders struct {
 	params                       core.BlueprintParams
 	stabilisationPollingInterval time.Duration
 	stateContainer               state.Container
-	mu                           sync.Mutex
+	resourceLocks                map[string]*resourceLock
+	resourceLockTimeout          time.Duration
+	resourceLockCheckInterval    time.Duration
+	clock                        core.Clock
+	mu                           *sync.Mutex
+	// Use a separate mutex for resource locks to avoid contention
+	// by blocking unrelated operations.
+	resourceLocksMu *sync.Mutex
+}
+
+// RegistryOption is a function that modifies the registryFromProviders
+// to allow for additional configuration options when creating a new registry.
+type RegistryOption func(*registryFromProviders)
+
+// WithResourceLockTimeout sets the timeout for acquiring a resource lock.
+// If not provided, the default timeout is 180 seconds (3 minutes).
+func WithResourceLockTimeout(timeout time.Duration) RegistryOption {
+	return func(r *registryFromProviders) {
+		r.resourceLockTimeout = timeout
+	}
+}
+
+// WithResourceLockCheckInterval sets the interval at which the resource lock
+// will be checked for availability when acquiring a lock.
+// If not provided, the default interval is 100 milliseconds.
+func WithResourceLockCheckInterval(interval time.Duration) RegistryOption {
+	return func(r *registryFromProviders) {
+		r.resourceLockCheckInterval = interval
+	}
+}
+
+// WithClock sets the clock to be used by the registry.
+func WithClock(clock core.Clock) RegistryOption {
+	return func(r *registryFromProviders) {
+		r.clock = clock
+	}
 }
 
 // NewRegistry creates a new resource registry from a map of providers,
@@ -112,8 +203,9 @@ func NewRegistry(
 	stabilisationPollingInterval time.Duration,
 	stateContainer state.Container,
 	params core.BlueprintParams,
+	opts ...RegistryOption,
 ) Registry {
-	return &registryFromProviders{
+	registry := &registryFromProviders{
 		providers:                    providers,
 		transformers:                 transformers,
 		stabilisationPollingInterval: stabilisationPollingInterval,
@@ -122,7 +214,19 @@ func NewRegistry(
 		resourceCache:                core.NewCache[provider.Resource](),
 		abstractResourceCache:        core.NewCache[transform.AbstractResource](),
 		resourceTypes:                []string{},
+		resourceLocks:                map[string]*resourceLock{},
+		resourceLockTimeout:          DefaultResourceLockTimeout,
+		resourceLockCheckInterval:    DefaultResourceLockCheckInterval,
+		clock:                        core.SystemClock{},
+		mu:                           &sync.Mutex{},
+		resourceLocksMu:              &sync.Mutex{},
 	}
+
+	for _, opt := range opts {
+		opt(registry)
+	}
+
+	return registry
 }
 
 func (r *registryFromProviders) GetSpecDefinition(
@@ -483,6 +587,95 @@ func (r *registryFromProviders) HasResourceInState(
 	return true, nil
 }
 
+func (r *registryFromProviders) AcquireResourceLock(
+	ctx context.Context,
+	input *provider.AcquireResourceLockInput,
+) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			r.resourceLocksMu.Lock()
+			lockKey := createResourceLockKey(input.InstanceID, input.ResourceName)
+			if r.checkLock(lockKey) {
+				r.resourceLocks[lockKey] = &resourceLock{
+					instanceID:   input.InstanceID,
+					resourceName: input.ResourceName,
+					lockTime:     r.clock.Now(),
+					acquiredBy:   input.AcquiredBy,
+				}
+				r.resourceLocksMu.Unlock()
+				return nil
+			}
+			r.resourceLocksMu.Unlock()
+			time.Sleep(r.resourceLockCheckInterval)
+		}
+	}
+}
+
+// The resource locks mutex must be held when calling this method.
+func (r *registryFromProviders) checkLock(lockKey string) bool {
+	if lock, exists := r.resourceLocks[lockKey]; exists {
+		// If the lock exists, check if it has timed out.
+		if r.clock.Now().Sub(lock.lockTime) < r.resourceLockTimeout {
+			// Lock is still held, cannot acquire.
+			return false
+		}
+		// Lock has timed out, remove it.
+		delete(r.resourceLocks, lockKey)
+	}
+
+	return true
+}
+
+func (r *registryFromProviders) ReleaseResourceLock(
+	ctx context.Context,
+	instanceID string,
+	resourceName string,
+) {
+	r.resourceLocksMu.Lock()
+	defer r.resourceLocksMu.Unlock()
+
+	lockKey := createResourceLockKey(instanceID, resourceName)
+	delete(r.resourceLocks, lockKey)
+}
+
+func (r *registryFromProviders) ReleaseResourceLocks(ctx context.Context, instanceID string) {
+	r.resourceLocksMu.Lock()
+	defer r.resourceLocksMu.Unlock()
+
+	for lockKey := range r.resourceLocks {
+		if lockKeyHasInstanceID(lockKey, instanceID) {
+			delete(r.resourceLocks, lockKey)
+		}
+	}
+}
+
+func (r *registryFromProviders) ReleaseResourceLocksAcquiredBy(
+	ctx context.Context,
+	instanceID string,
+	acquiredBy string,
+) {
+	r.resourceLocksMu.Lock()
+	defer r.resourceLocksMu.Unlock()
+
+	for lockKey, lock := range r.resourceLocks {
+		if lockKeyHasInstanceID(lockKey, instanceID) && lock.acquiredBy == acquiredBy {
+			delete(r.resourceLocks, lockKey)
+		}
+	}
+}
+
+func createResourceLockKey(instanceID, resourceName string) string {
+	return fmt.Sprintf("%s:%s", instanceID, resourceName)
+}
+
+func lockKeyHasInstanceID(lockKey, instanceID string) bool {
+	instanceIDPrefix := fmt.Sprintf("%s:", instanceID)
+	return strings.HasPrefix(lockKey, instanceIDPrefix)
+}
+
 func (r *registryFromProviders) WithParams(
 	params core.BlueprintParams,
 ) Registry {
@@ -494,7 +687,16 @@ func (r *registryFromProviders) WithParams(
 		resourceTypes:                r.resourceTypes,
 		stabilisationPollingInterval: r.stabilisationPollingInterval,
 		stateContainer:               r.stateContainer,
+		resourceLocks:                r.resourceLocks,
+		resourceLockTimeout:          r.resourceLockTimeout,
+		resourceLockCheckInterval:    r.resourceLockCheckInterval,
+		clock:                        r.clock,
 		params:                       params,
+		// The same locks must be used across all registry instances derived
+		// from the same base registry, derived registries exist to allow
+		// the attachment of parameters to the registry.
+		mu:              r.mu,
+		resourceLocksMu: r.resourceLocksMu,
 	}
 }
 

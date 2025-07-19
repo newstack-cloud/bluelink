@@ -46,11 +46,11 @@ func (s *ResourceValidationTestSuite) SetUpTest(c *C) {
 		},
 	}
 	s.refChainCollector = refgraph.NewRefChainCollector()
-	s.resourceRegistry = &internal.ResourceRegistryMock{
-		Resources: map[string]provider.Resource{
+	s.resourceRegistry = internal.NewResourceRegistryMock(
+		map[string]provider.Resource{
 			"aws/ecs/service": newTestECSServiceResource(),
 		},
-	}
+	)
 	s.dataSourceRegistry = &internal.DataSourceRegistryMock{
 		DataSources: map[string]provider.DataSource{
 			"aws/ec2/instance": newTestEC2InstanceDataSource(),

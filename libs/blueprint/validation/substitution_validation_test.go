@@ -7,6 +7,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/corefunctions"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/mockclock"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
@@ -32,18 +33,18 @@ func (s *SubstitutionValidationTestSuite) SetUpTest(c *C) {
 			"trimprefix": corefunctions.NewTrimPrefixFunction(),
 			"list":       corefunctions.NewListFunction(),
 			"object":     corefunctions.NewObjectFunction(),
-			"datetime":   corefunctions.NewDateTimeFunction(&internal.ClockMock{}),
+			"datetime":   corefunctions.NewDateTimeFunction(&mockclock.StaticClock{}),
 			"link":       corefunctions.NewLinkFunction(nil, nil),
 		},
 	}
 	s.refChainCollector = refgraph.NewRefChainCollector()
-	s.resourceRegistry = &internal.ResourceRegistryMock{
-		Resources: map[string]provider.Resource{
+	s.resourceRegistry = internal.NewResourceRegistryMock(
+		map[string]provider.Resource{
 			"exampleResource":                      &testExampleResource{},
 			"exampleResourceMissingSpecDefinition": &testExampleResourceMissingSpecDefinition{},
 			"exampleResourceMissingSpecSchema":     &testExampleResourceMissingSpecSchema{},
 		},
-	}
+	)
 	s.dataSourceRegistry = &internal.DataSourceRegistryMock{
 		DataSources: map[string]provider.DataSource{
 			"aws/ec2/instance":           newTestEC2InstanceDataSource(),

@@ -9,6 +9,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/mockclock"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/stretchr/testify/suite"
 )
@@ -30,7 +31,7 @@ func (s *DateTimeFunctionTestSuite) SetupTest() {
 		},
 		callStack: s.callStack,
 	}
-	s.clock = &internal.ClockMock{}
+	s.clock = &mockclock.StaticClock{}
 }
 
 func (s *DateTimeFunctionTestSuite) Test_gets_current_time_unix_format() {
@@ -51,7 +52,7 @@ func (s *DateTimeFunctionTestSuite) Test_gets_current_time_unix_format() {
 	s.Require().NoError(err)
 	outputStr, isStr := output.ResponseData.(string)
 	s.Assert().True(isStr)
-	s.Assert().Equal(fmt.Sprintf("%d", internal.CurrentTimeUnixMock), outputStr)
+	s.Assert().Equal(fmt.Sprintf("%d", mockclock.CurrentTimeUnixMock), outputStr)
 }
 
 func (s *DateTimeFunctionTestSuite) Test_gets_current_time_rfc3339_format() {

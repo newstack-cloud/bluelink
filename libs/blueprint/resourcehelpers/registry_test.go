@@ -2,12 +2,14 @@ package resourcehelpers
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/memstate"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/mockclock"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
@@ -19,6 +21,7 @@ type RegistryTestSuite struct {
 	resourceRegistry Registry
 	testResource     *testExampleResource
 	stateContainer   state.Container
+	advanceableClock *mockclock.AdvanceableClock
 }
 
 var _ = Suite(&RegistryTestSuite{})
@@ -47,12 +50,27 @@ func (s *RegistryTestSuite) SetUpTest(c *C) {
 
 	s.stateContainer = memstate.NewMemoryStateContainer()
 	s.testResource = testRes.(*testExampleResource)
+	s.advanceableClock = mockclock.NewAdvanceableClock(
+		time.Unix(mockclock.CurrentTimeUnixMock, 0),
+	)
 	s.resourceRegistry = NewRegistry(
 		providers,
 		transformers,
 		time.Millisecond,
 		s.stateContainer,
 		/* params */ nil,
+		WithClock(
+			s.advanceableClock,
+		),
+		WithResourceLockTimeout(
+			200*time.Millisecond,
+		),
+		// Real time is used for the check interval, to avoid having to implement a custom
+		// sleep scheduler purely for the tests.
+		// Keep the check interval low to ensure that the tests run quickly.
+		WithResourceLockCheckInterval(
+			1*time.Millisecond,
+		),
 	)
 }
 
@@ -360,4 +378,116 @@ func (s *RegistryTestSuite) Test_produces_error_for_missing_provider(c *C) {
 	c.Assert(runErr.ReasonCode, Equals, provider.ErrorReasonCodeItemTypeProviderNotFound)
 	c.Assert(runErr.Error(), Equals, "run error: run failed as the provider with namespace \"otherProvider\" "+
 		"was not found for resource type \"otherProvider/otherResource\"")
+}
+
+func (s *RegistryTestSuite) Test_resource_locking_behaviour(c *C) {
+	lockInput := &provider.AcquireResourceLockInput{
+		InstanceID:   "test-blueprint-id",
+		ResourceName: "test-resource-id-1",
+	}
+
+	err := s.resourceRegistry.AcquireResourceLock(context.TODO(), lockInput)
+	c.Assert(err, IsNil)
+
+	// Subsequent lock acquisition should fail with a timeout error.
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+
+	err = s.resourceRegistry.AcquireResourceLock(ctx, lockInput)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "context deadline exceeded")
+
+	// Advance the clock to allow the lock to be released.
+	s.advanceableClock.Advance(200 * time.Millisecond)
+
+	// Now we should be able to acquire a new lock on the same resource.
+	err = s.resourceRegistry.AcquireResourceLock(context.TODO(), lockInput)
+	c.Assert(err, IsNil)
+
+	// Manually release the lock early.
+	s.resourceRegistry.ReleaseResourceLock(
+		context.TODO(),
+		lockInput.InstanceID,
+		lockInput.ResourceName,
+	)
+
+	// We should be able to acquire the lock again immediately.
+	err = s.resourceRegistry.AcquireResourceLock(context.TODO(), lockInput)
+	c.Assert(err, IsNil)
+}
+
+func (s *RegistryTestSuite) Test_resource_locking_behaviour_release_all_for_instance(c *C) {
+	for i := range 10 {
+		lockInput := &provider.AcquireResourceLockInput{
+			InstanceID:   "test-blueprint-id",
+			ResourceName: fmt.Sprintf("test-resource-id-%d", i+1),
+		}
+
+		err := s.resourceRegistry.AcquireResourceLock(context.TODO(), lockInput)
+		c.Assert(err, IsNil)
+	}
+
+	s.resourceRegistry.ReleaseResourceLocks(
+		context.TODO(),
+		"test-blueprint-id",
+	)
+
+	// Now we should be able to acquire a new lock on the same resources immediately.
+	for i := range 10 {
+		lockInput := &provider.AcquireResourceLockInput{
+			InstanceID:   "test-blueprint-id",
+			ResourceName: fmt.Sprintf("test-resource-id-%d", i+1),
+		}
+
+		err := s.resourceRegistry.AcquireResourceLock(context.TODO(), lockInput)
+		c.Assert(err, IsNil)
+	}
+}
+
+func (s *RegistryTestSuite) Test_resource_locking_behaviour_release_all_for_instance_acquired_by(c *C) {
+	for i := range 10 {
+		lockInput := &provider.AcquireResourceLockInput{
+			InstanceID:   "test-blueprint-id",
+			ResourceName: fmt.Sprintf("test-resource-id-%d", i+1),
+			// Alternate between two callers.
+			AcquiredBy: fmt.Sprintf("caller-%d", i%2),
+		}
+
+		err := s.resourceRegistry.AcquireResourceLock(context.TODO(), lockInput)
+		c.Assert(err, IsNil)
+	}
+
+	s.resourceRegistry.ReleaseResourceLocksAcquiredBy(
+		context.TODO(),
+		"test-blueprint-id",
+		"caller-0",
+	)
+
+	// Now we should be able to acquire a new lock on the same resources immediately for caller-0.
+	for i := range 10 {
+		// Only for caller-0
+		if i%2 == 0 {
+			lockInput := &provider.AcquireResourceLockInput{
+				InstanceID:   "test-blueprint-id",
+				ResourceName: fmt.Sprintf("test-resource-id-%d", i+1),
+				AcquiredBy:   "caller-0",
+			}
+
+			err := s.resourceRegistry.AcquireResourceLock(context.TODO(), lockInput)
+			c.Assert(err, IsNil)
+		} else {
+			// For caller-1, it should still fail to acquire the lock.
+			lockInput := &provider.AcquireResourceLockInput{
+				InstanceID:   "test-blueprint-id",
+				ResourceName: fmt.Sprintf("test-resource-id-%d", i+1),
+				AcquiredBy:   "caller-1",
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+			defer cancel()
+			err := s.resourceRegistry.AcquireResourceLock(ctx, lockInput)
+			c.Assert(err, NotNil)
+			c.Assert(err.Error(), Equals, "context deadline exceeded")
+		}
+	}
 }

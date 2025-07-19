@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/mockclock"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
@@ -83,8 +86,60 @@ func (f *FunctionRegistryMock) HasFunction(ctx context.Context, functionName str
 }
 
 type ResourceRegistryMock struct {
-	Resources      map[string]provider.Resource
-	StateContainer state.Container
+	Resources                 map[string]provider.Resource
+	StateContainer            state.Container
+	resourceLocks             map[string]*resourceLock
+	resourceLockCheckInterval time.Duration
+	resourceLockTimeout       time.Duration
+	clock                     core.Clock
+	resourceLocksMu           *sync.Mutex
+}
+
+type ResourceRegistryMockOption func(*ResourceRegistryMock)
+
+func WithResourceRegistryLockCheckInterval(interval time.Duration) ResourceRegistryMockOption {
+	return func(r *ResourceRegistryMock) {
+		r.resourceLockCheckInterval = interval
+	}
+}
+
+func WithResourceRegistryLockTimeout(timeout time.Duration) ResourceRegistryMockOption {
+	return func(r *ResourceRegistryMock) {
+		r.resourceLockTimeout = timeout
+	}
+}
+
+func WithResourceRegistryClock(clock core.Clock) ResourceRegistryMockOption {
+	return func(r *ResourceRegistryMock) {
+		r.clock = clock
+	}
+}
+
+func WithResourceRegistryStateContainer(stateContainer state.Container) ResourceRegistryMockOption {
+	return func(r *ResourceRegistryMock) {
+		r.StateContainer = stateContainer
+	}
+}
+
+func NewResourceRegistryMock(
+	resources map[string]provider.Resource,
+	opts ...ResourceRegistryMockOption,
+) *ResourceRegistryMock {
+	registry := &ResourceRegistryMock{
+		Resources:                 resources,
+		StateContainer:            nil,
+		resourceLocks:             make(map[string]*resourceLock),
+		resourceLockCheckInterval: 10 * time.Millisecond,
+		resourceLockTimeout:       200 * time.Millisecond,
+		clock:                     &mockclock.StaticClock{},
+		resourceLocksMu:           &sync.Mutex{},
+	}
+
+	for _, opt := range opts {
+		opt(registry)
+	}
+
+	return registry
 }
 
 func (r *ResourceRegistryMock) HasResourceType(ctx context.Context, resourceType string) (bool, error) {
@@ -275,11 +330,118 @@ func (r *ResourceRegistryMock) HasResourceInState(
 	return true, nil
 }
 
+type resourceLock struct {
+	// The ID of the blueprint instance that the lock is acquired in.
+	instanceID string
+	// The name of the resource that the lock is acquired on.
+	resourceName string
+	// The time when the lock was acquired.
+	// This is used to determine if the lock has timed out.
+	lockTime time.Time
+	// The identifier of the caller that acquired the lock.
+	acquiredBy string
+}
+
+func (r *ResourceRegistryMock) AcquireResourceLock(
+	ctx context.Context,
+	input *provider.AcquireResourceLockInput,
+) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			r.resourceLocksMu.Lock()
+			lockKey := createResourceLockKey(input.InstanceID, input.ResourceName)
+			if r.checkLock(lockKey) {
+				r.resourceLocks[lockKey] = &resourceLock{
+					instanceID:   input.InstanceID,
+					resourceName: input.ResourceName,
+					lockTime:     r.clock.Now(),
+					acquiredBy:   input.AcquiredBy,
+				}
+				r.resourceLocksMu.Unlock()
+				return nil
+			}
+			r.resourceLocksMu.Unlock()
+			time.Sleep(r.resourceLockCheckInterval)
+		}
+	}
+}
+
+// The resource locks mutex must be held when calling this method.
+func (r *ResourceRegistryMock) checkLock(lockKey string) bool {
+	if lock, exists := r.resourceLocks[lockKey]; exists {
+		// If the lock exists, check if it has timed out.
+		if r.clock.Now().Sub(lock.lockTime) < r.resourceLockTimeout {
+			// Lock is still held, cannot acquire.
+			return false
+		}
+		// Lock has timed out, remove it.
+		delete(r.resourceLocks, lockKey)
+	}
+
+	return true
+}
+
+func (r *ResourceRegistryMock) ReleaseResourceLock(
+	ctx context.Context,
+	instanceID string,
+	resourceName string,
+) {
+	r.resourceLocksMu.Lock()
+	defer r.resourceLocksMu.Unlock()
+
+	lockKey := createResourceLockKey(instanceID, resourceName)
+	delete(r.resourceLocks, lockKey)
+}
+
+func (r *ResourceRegistryMock) ReleaseResourceLocks(ctx context.Context, instanceID string) {
+	r.resourceLocksMu.Lock()
+	defer r.resourceLocksMu.Unlock()
+
+	for lockKey := range r.resourceLocks {
+		if lockKeyHasInstanceID(lockKey, instanceID) {
+			delete(r.resourceLocks, lockKey)
+		}
+	}
+}
+
+func (r *ResourceRegistryMock) ReleaseResourceLocksAcquiredBy(
+	ctx context.Context,
+	instanceID string,
+	acquiredBy string,
+) {
+	r.resourceLocksMu.Lock()
+	defer r.resourceLocksMu.Unlock()
+
+	for lockKey, lock := range r.resourceLocks {
+		if lockKeyHasInstanceID(lockKey, instanceID) && lock.acquiredBy == acquiredBy {
+			delete(r.resourceLocks, lockKey)
+		}
+	}
+}
+
+func createResourceLockKey(instanceID, resourceName string) string {
+	return fmt.Sprintf("%s:%s", instanceID, resourceName)
+}
+
+func lockKeyHasInstanceID(lockKey, instanceID string) bool {
+	instanceIDPrefix := fmt.Sprintf("%s:", instanceID)
+	return strings.HasPrefix(lockKey, instanceIDPrefix)
+}
+
 func (r *ResourceRegistryMock) WithParams(
 	params core.BlueprintParams,
 ) resourcehelpers.Registry {
 	return &ResourceRegistryMock{
-		Resources: r.Resources,
+		Resources:                 r.Resources,
+		StateContainer:            r.StateContainer,
+		resourceLocks:             r.resourceLocks,
+		resourceLockCheckInterval: r.resourceLockCheckInterval,
+		resourceLockTimeout:       r.resourceLockTimeout,
+		clock:                     r.clock,
+		resourceLocksMu:           r.resourceLocksMu,
 	}
 }
 
@@ -400,19 +562,6 @@ func UnpackError(err error) (error, bool) {
 		return UnpackError(loadErr.ChildErrors[0])
 	}
 	return err, ok
-}
-
-// Thursday, 7th September 2023 14:43:44
-const CurrentTimeUnixMock int64 = 1694097824
-
-type ClockMock struct{}
-
-func (c *ClockMock) Now() time.Time {
-	return time.Unix(CurrentTimeUnixMock, 0)
-}
-
-func (c *ClockMock) Since(t time.Time) time.Duration {
-	return c.Now().Sub(t)
 }
 
 func OrderStringSlice(fields []string) []string {
