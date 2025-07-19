@@ -27,8 +27,7 @@ type pluginServiceServer struct {
 	UnimplementedServiceServer
 	manager                      Manager
 	functionRegistry             provider.FunctionRegistry
-	resourceDeployService        provider.ResourceDeployService
-	resourceLookupService        provider.ResourceLookupService
+	resourceService              provider.ResourceService
 	hostID                       string
 	pluginToPluginCallTimeout    int
 	resourceStabilisationTimeout int
@@ -69,16 +68,14 @@ func WithResourceStabilisationTimeout(timeout int) ServiceServerOption {
 func NewServiceServer(
 	pluginManager Manager,
 	functionRegistry provider.FunctionRegistry,
-	resourceDeployService provider.ResourceDeployService,
-	resourceLookupService provider.ResourceLookupService,
+	resourceService provider.ResourceService,
 	hostID string,
 	opts ...ServiceServerOption,
 ) ServiceServer {
 	server := &pluginServiceServer{
 		manager:                      pluginManager,
 		functionRegistry:             functionRegistry,
-		resourceDeployService:        resourceDeployService,
-		resourceLookupService:        resourceLookupService,
+		resourceService:              resourceService,
 		hostID:                       hostID,
 		pluginToPluginCallTimeout:    DefaultPluginToPluginCallTimeout,
 		resourceStabilisationTimeout: DefaultResourceStabilisationTimeout,
@@ -296,7 +293,7 @@ func (s *pluginServiceServer) DeployResource(
 	)
 	defer cancel()
 
-	output, err := s.resourceDeployService.Deploy(
+	output, err := s.resourceService.Deploy(
 		ctxWithTimeout,
 		convertv1.ResourceTypeToString(req.DeployRequest.ResourceType),
 		&provider.ResourceDeployServiceInput{
@@ -331,7 +328,7 @@ func (s *pluginServiceServer) DestroyResource(
 	)
 	defer cancel()
 
-	err = s.resourceDeployService.Destroy(
+	err = s.resourceService.Destroy(
 		ctxWithTimeout,
 		convertv1.ResourceTypeToString(req.ResourceType),
 		input,
@@ -358,7 +355,7 @@ func (s *pluginServiceServer) LookupResourceInState(
 		return toPBLookupResourceInStateErrorResponse(err), nil
 	}
 
-	output, err := s.resourceLookupService.LookupResourceInState(
+	output, err := s.resourceService.LookupResourceInState(
 		ctx,
 		input,
 	)
@@ -374,6 +371,32 @@ func (s *pluginServiceServer) LookupResourceInState(
 	return &LookupResourceInStateResponse{
 		Response: &LookupResourceInStateResponse_Resource{
 			Resource: resourceState,
+		},
+	}, nil
+}
+
+func (s *pluginServiceServer) AcquireResourceLock(
+	ctx context.Context,
+	req *AcquireResourceLockRequest,
+) (*AcquireResourceLockResponse, error) {
+	input, err := fromPBAcquireResourceLockRequest(req)
+	if err != nil {
+		return toPBAcquireResourceLockErrorResponse(err), nil
+	}
+
+	err = s.resourceService.AcquireResourceLock(
+		ctx,
+		input,
+	)
+	if err != nil {
+		return toPBAcquireResourceLockErrorResponse(err), nil
+	}
+
+	return &AcquireResourceLockResponse{
+		Response: &AcquireResourceLockResponse_Result{
+			Result: &AcquireResourceLockResult{
+				Acquired: true,
+			},
 		},
 	}, nil
 }
@@ -402,6 +425,34 @@ func fromPBLookupResourceInStateRequest(
 		InstanceID:      req.InstanceId,
 		ResourceType:    req.ResourceType,
 		ExternalID:      req.ExternalId,
+		ProviderContext: providerCtx,
+	}, nil
+}
+
+func toPBAcquireResourceLockErrorResponse(err error) *AcquireResourceLockResponse {
+	return &AcquireResourceLockResponse{
+		Response: &AcquireResourceLockResponse_ErrorResponse{
+			ErrorResponse: errorsv1.CreateResponseFromError(err),
+		},
+	}
+}
+
+func fromPBAcquireResourceLockRequest(
+	req *AcquireResourceLockRequest,
+) (*provider.AcquireResourceLockInput, error) {
+	if req == nil {
+		return nil, nil
+	}
+
+	providerCtx, err := convertv1.FromPBProviderContext(req.Context)
+	if err != nil {
+		return nil, err
+	}
+
+	return &provider.AcquireResourceLockInput{
+		InstanceID:      req.InstanceId,
+		ResourceName:    req.ResourceName,
+		AcquiredBy:      req.AcquiredBy,
 		ProviderContext: providerCtx,
 	}, nil
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/utils"
 )
 
 // LinkDefinition is a template to be used for defining links
@@ -202,7 +203,12 @@ func (l *LinkDefinition) UpdateIntermediaryResources(
 	ctx context.Context,
 	input *provider.LinkUpdateIntermediaryResourcesInput,
 ) (*provider.LinkUpdateIntermediaryResourcesOutput, error) {
-	return l.UpdateIntermediaryResourcesFunc(ctx, input)
+	// Attach link ID to the context so that it can be automatically
+	// attached to calls from the plugin to the plugin service,
+	// this is especially useful for ensuring the link ID is always attached
+	// as the "acquiredBy" field when acquiring a resource lock.
+	ctxWithLinkID := context.WithValue(ctx, utils.ContextKeyLinkID, input.LinkID)
+	return l.UpdateIntermediaryResourcesFunc(ctxWithLinkID, input)
 }
 
 func (l *LinkDefinition) getPriorityResourceType() string {

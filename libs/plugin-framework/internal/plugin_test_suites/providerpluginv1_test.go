@@ -79,8 +79,7 @@ func (s *ProviderPluginV1Suite) SetupSuite() {
 		testHostID,
 		pluginManager,
 		s.funcRegistry,
-		/* resourceDeployService */ resourceRegistry,
-		/* resourceLookupService */ resourceRegistry,
+		/* resourceService */ resourceRegistry,
 	)
 	s.pluginService = pluginService
 	s.closePluginService = closePluginService

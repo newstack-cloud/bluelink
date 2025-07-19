@@ -74,8 +74,7 @@ func (s *PluginServiceV1Suite) SetupTest() {
 		testHostID,
 		pluginManager,
 		s.funcRegistry,
-		/* resourceDeployService */ resourceRegistry,
-		/* resourceLookupService */ resourceRegistry,
+		/* resourceService */ resourceRegistry,
 	)
 	s.pluginService = pluginService
 	s.closePluginService = closePluginService
@@ -258,7 +257,7 @@ func (s *PluginServiceV1Suite) Test_check_has_function_in_registry() {
 	s.Assert().True(hasFunction)
 }
 
-func (s *PluginServiceV1Suite) Test_link_deploy_intermediary_resource_call() {
+func (s *PluginServiceV1Suite) Test_link_deploy_intermediary_resource_call_and_acquire_resource_lock_call() {
 	link, err := s.provider.Link(
 		context.Background(),
 		"aws/lambda/function",
@@ -297,13 +296,13 @@ func (s *PluginServiceV1Suite) Test_link_destroy_intermediary_resource_call() {
 }
 
 func (s *PluginServiceV1Suite) Test_lookup_resource_in_state_output() {
-	lookupService := pluginservicev1.ResourceLookupServiceFromClient(
+	resourceService := pluginservicev1.ResourceServiceFromClient(
 		s.pluginService,
 	)
 	input := linkUpdateIntermediaryResourcesInput(
 		provider.LinkUpdateTypeCreate,
 	)
-	resourceState, err := lookupService.LookupResourceInState(
+	resourceState, err := resourceService.LookupResourceInState(
 		context.Background(),
 		&provider.ResourceLookupInput{
 			InstanceID:   input.ResourceAInfo.InstanceID,

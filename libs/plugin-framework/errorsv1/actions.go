@@ -60,6 +60,7 @@ const (
 	///////////////////////////////////////////////////////////////////////////////////////
 	// Transformer actions
 	///////////////////////////////////////////////////////////////////////////////////////
+
 	PluginActionTransformerGetTransformName          = PluginAction("Transformer::GetTransformName")
 	PluginActionTransformerGetConfigDefinition       = PluginAction("Transformer::GetConfigDefinition")
 	PluginActionTransformerTransform                 = PluginAction("Transformer::Transform")
@@ -84,4 +85,5 @@ const (
 	PluginActionServiceCheckHasFunction      = PluginAction("Service::CheckHasFunction")
 	PluginActionServiceListFunctions         = PluginAction("Service::ListFunctions")
 	PluginActionServiceLookupResourceInState = PluginAction("Service::LookupResourceInState")
+	PluginActionServiceAcquireResourceLock   = PluginAction("Service::AcquireResourceLock")
 )

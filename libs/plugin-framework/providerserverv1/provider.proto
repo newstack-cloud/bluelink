@@ -616,10 +616,11 @@ message UpdateLinkIntermediaryResourcesRequest {
     string host_id = 2;
     sharedtypesv1.ResourceInfo resource_a_info = 3;
     sharedtypesv1.ResourceInfo resource_b_info = 4;
-    sharedtypesv1.LinkChanges changes = 5;
-    string instance_name = 6;
-    LinkUpdateType update_type = 7;
-    LinkContext context = 8;
+    string link_id = 5;
+    sharedtypesv1.LinkChanges changes = 6;
+    string instance_name = 7;
+    LinkUpdateType update_type = 8;
+    LinkContext context = 9;
 }
 
 // UpdateLinkIntermediaryResourcesResponse is the response

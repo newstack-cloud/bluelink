@@ -10,27 +10,28 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/errorsv1"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sdk/pluginutils"
 	sharedtypesv1 "github.com/newstack-cloud/bluelink/libs/plugin-framework/sharedtypesv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/utils"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// ResourceDeployServiceFromClient creates a new instance of a ResourceDeployService
+// ResourceServiceFromClient creates a new instance of a ResourceService
 // that uses the provided ServiceClient to interact with the deploy engine.
 // This allows plugin implementations to interact with the deploy engine
 // using the blueprint framework interfaces abstracting away the communication
 // protocol from plugin developers.
-func ResourceDeployServiceFromClient(
+func ResourceServiceFromClient(
 	client ServiceClient,
-) provider.ResourceDeployService {
-	return &resourceDeployServiceClientWrapper{
+) provider.ResourceService {
+	return &resourceServiceClientWrapper{
 		client: client,
 	}
 }
 
-type resourceDeployServiceClientWrapper struct {
+type resourceServiceClientWrapper struct {
 	client ServiceClient
 }
 
-func (r *resourceDeployServiceClientWrapper) Deploy(
+func (r *resourceServiceClientWrapper) Deploy(
 	ctx context.Context,
 	resourceType string,
 	input *provider.ResourceDeployServiceInput,
@@ -75,7 +76,7 @@ func (r *resourceDeployServiceClientWrapper) Deploy(
 	)
 }
 
-func (r *resourceDeployServiceClientWrapper) toResourceDeployOutput(
+func (r *resourceServiceClientWrapper) toResourceDeployOutput(
 	response *sharedtypesv1.DeployResourceCompleteResponse,
 ) (*provider.ResourceDeployOutput, error) {
 	computedFieldValues, err := convertv1.FromPBMappingNodeMap(
@@ -93,7 +94,7 @@ func (r *resourceDeployServiceClientWrapper) toResourceDeployOutput(
 	}, nil
 }
 
-func (r *resourceDeployServiceClientWrapper) Destroy(
+func (r *resourceServiceClientWrapper) Destroy(
 	ctx context.Context,
 	resourceType string,
 	input *provider.ResourceDestroyInput,
@@ -141,6 +142,132 @@ func (r *resourceDeployServiceClientWrapper) Destroy(
 			errorsv1.PluginActionServiceDestroyResource,
 		),
 		errorsv1.PluginActionServiceDestroyResource,
+	)
+}
+
+func (r *resourceServiceClientWrapper) LookupResourceInState(
+	ctx context.Context,
+	input *provider.ResourceLookupInput,
+) (*state.ResourceState, error) {
+	providerCtx, err := convertv1.ToPBProviderContext(input.ProviderContext)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionServiceLookupResourceInState,
+		)
+	}
+
+	response, err := r.client.LookupResourceInState(
+		ctx,
+		&LookupResourceInStateRequest{
+			InstanceId:   input.InstanceID,
+			ResourceType: input.ResourceType,
+			ExternalId:   input.ExternalID,
+			Context:      providerCtx,
+		},
+	)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionServiceDeployResource,
+		)
+	}
+
+	switch result := response.Response.(type) {
+	case *LookupResourceInStateResponse_Resource:
+		resourceState, err := convertv1.FromPBResourceState(result.Resource)
+		if err != nil {
+			return nil, errorsv1.CreateGeneralError(
+				err,
+				errorsv1.PluginActionServiceLookupResourceInState,
+			)
+		}
+		return resourceState, nil
+	case *LookupResourceInStateResponse_ErrorResponse:
+		return nil, errorsv1.CreateErrorFromResponse(
+			result.ErrorResponse,
+			errorsv1.PluginActionServiceLookupResourceInState,
+		)
+	}
+
+	return nil, errorsv1.CreateGeneralError(
+		errorsv1.ErrUnexpectedResponseType(
+			errorsv1.PluginActionServiceLookupResourceInState,
+		),
+		errorsv1.PluginActionServiceLookupResourceInState,
+	)
+}
+
+func (r *resourceServiceClientWrapper) HasResourceInState(
+	ctx context.Context,
+	input *provider.ResourceLookupInput,
+) (bool, error) {
+	resourceState, err := r.LookupResourceInState(ctx, input)
+	if err != nil {
+		return false, err
+	}
+
+	return resourceState != nil, nil
+}
+
+func (r *resourceServiceClientWrapper) AcquireResourceLock(
+	ctx context.Context,
+	input *provider.AcquireResourceLockInput,
+) error {
+	linkID, linkIDInContext := ctx.Value(utils.ContextKeyLinkID).(string)
+	providerCtx, err := convertv1.ToPBProviderContext(input.ProviderContext)
+	if err != nil {
+		return errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionServiceAcquireResourceLock,
+		)
+	}
+
+	acquireReq := &AcquireResourceLockRequest{
+		InstanceId:   input.InstanceID,
+		ResourceName: input.ResourceName,
+		AcquiredBy:   input.AcquiredBy,
+		Context:      providerCtx,
+	}
+	if acquireReq.AcquiredBy == "" && linkIDInContext {
+		acquireReq.AcquiredBy = linkID
+	}
+
+	response, err := r.client.AcquireResourceLock(
+		ctx,
+		acquireReq,
+	)
+	if err != nil {
+		return errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionServiceAcquireResourceLock,
+		)
+	}
+
+	switch result := response.Response.(type) {
+	case *AcquireResourceLockResponse_Result:
+		if result.Result != nil && result.Result.Acquired {
+			return nil
+		}
+		if err != nil {
+			return errorsv1.CreateGeneralError(
+				err,
+				errorsv1.PluginActionServiceAcquireResourceLock,
+			)
+		}
+		return nil
+	case *AcquireResourceLockResponse_ErrorResponse:
+		return errorsv1.CreateErrorFromResponse(
+			result.ErrorResponse,
+			errorsv1.PluginActionServiceAcquireResourceLock,
+		)
+	}
+
+	return errorsv1.CreateGeneralError(
+		errorsv1.ErrUnexpectedResponseType(
+			errorsv1.PluginActionServiceAcquireResourceLock,
+		),
+		errorsv1.PluginActionServiceAcquireResourceLock,
 	)
 }
 
@@ -360,87 +487,4 @@ func (f *functionRegistryClientWrapper) ListFunctions(
 		),
 		errorsv1.PluginActionServiceListFunctions,
 	)
-}
-
-// ResourceLookupServiceFromClient creates a new instance of a ResourceLookupService
-// that uses the provided ServiceClient to interact with the deploy engine (or other host)
-// to look up resources in the blueprint state.
-// This allows plugin implementations to interact with the deploy engine
-// using the blueprint framework interfaces abstracting away the communication
-// protocol from plugin developers.
-func ResourceLookupServiceFromClient(
-	client ServiceClient,
-) provider.ResourceLookupService {
-	return &resourceLookupServiceClientWrapper{
-		client: client,
-	}
-}
-
-type resourceLookupServiceClientWrapper struct {
-	client ServiceClient
-}
-
-func (r *resourceLookupServiceClientWrapper) LookupResourceInState(
-	ctx context.Context,
-	input *provider.ResourceLookupInput,
-) (*state.ResourceState, error) {
-	providerCtx, err := convertv1.ToPBProviderContext(input.ProviderContext)
-	if err != nil {
-		return nil, errorsv1.CreateGeneralError(
-			err,
-			errorsv1.PluginActionServiceLookupResourceInState,
-		)
-	}
-
-	response, err := r.client.LookupResourceInState(
-		ctx,
-		&LookupResourceInStateRequest{
-			InstanceId:   input.InstanceID,
-			ResourceType: input.ResourceType,
-			ExternalId:   input.ExternalID,
-			Context:      providerCtx,
-		},
-	)
-	if err != nil {
-		return nil, errorsv1.CreateGeneralError(
-			err,
-			errorsv1.PluginActionServiceDeployResource,
-		)
-	}
-
-	switch result := response.Response.(type) {
-	case *LookupResourceInStateResponse_Resource:
-		resourceState, err := convertv1.FromPBResourceState(result.Resource)
-		if err != nil {
-			return nil, errorsv1.CreateGeneralError(
-				err,
-				errorsv1.PluginActionServiceLookupResourceInState,
-			)
-		}
-		return resourceState, nil
-	case *LookupResourceInStateResponse_ErrorResponse:
-		return nil, errorsv1.CreateErrorFromResponse(
-			result.ErrorResponse,
-			errorsv1.PluginActionServiceLookupResourceInState,
-		)
-	}
-
-	return nil, errorsv1.CreateGeneralError(
-		errorsv1.ErrUnexpectedResponseType(
-			errorsv1.PluginActionServiceLookupResourceInState,
-		),
-		errorsv1.PluginActionServiceLookupResourceInState,
-	)
-}
-
-func (r *resourceLookupServiceClientWrapper) HasResourceInState(
-	ctx context.Context,
-	input *provider.ResourceLookupInput,
-) (bool, error) {
-	resourceState, err := r.LookupResourceInState(ctx, input)
-	if err != nil {
-		return false, err
-	}
-
-	return resourceState != nil, nil
 }

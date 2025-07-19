@@ -240,8 +240,7 @@ func fromPBUpdateLinkResourceRequest(
 
 func fromPBLinkIntermediaryResourceRequest(
 	req *providerserverv1.UpdateLinkIntermediaryResourcesRequest,
-	resourceDeployService provider.ResourceDeployService,
-	resourceLookupService provider.ResourceLookupService,
+	resourceService provider.ResourceService,
 ) (*provider.LinkUpdateIntermediaryResourcesInput, error) {
 	resourceAInfo, err := convertv1.FromPBResourceInfo(req.ResourceAInfo)
 	if err != nil {
@@ -264,14 +263,14 @@ func fromPBLinkIntermediaryResourceRequest(
 	}
 
 	return &provider.LinkUpdateIntermediaryResourcesInput{
-		ResourceAInfo:         &resourceAInfo,
-		ResourceBInfo:         &resourceBInfo,
-		Changes:               &changes,
-		InstanceName:          req.InstanceName,
-		LinkUpdateType:        provider.LinkUpdateType(req.UpdateType),
-		LinkContext:           linkContext,
-		ResourceDeployService: resourceDeployService,
-		ResourceLookupService: resourceLookupService,
+		ResourceAInfo:   &resourceAInfo,
+		ResourceBInfo:   &resourceBInfo,
+		Changes:         &changes,
+		LinkID:          req.LinkId,
+		InstanceName:    req.InstanceName,
+		LinkUpdateType:  provider.LinkUpdateType(req.UpdateType),
+		LinkContext:     linkContext,
+		ResourceService: resourceService,
 	}, nil
 }
 

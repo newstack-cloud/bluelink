@@ -73,6 +73,15 @@ service Service {
     // detection as only links in the same blueprint instance that modify resources are taken into
     // account for drift detection.
     rpc LookupResourceInState(LookupResourceInStateRequest) returns (LookupResourceInStateResponse) {}
+    // AcquireResourceLock acquires a lock on a resource of a given type
+	// in the blueprint state to ensure that no other operations
+	// are modifying the resource at the same time.
+	// This is useful for links that need to update existing resources
+	// in the same blueprint as a part of the intermediary resources update phase.
+	// The blueprint container will ensure that the lock is released after the
+	// update intermediary resources phase is complete for the current link.
+	// The lock will be released if the link update fails or a lock timeout occurs.
+    rpc AcquireResourceLock(AcquireResourceLockRequest) returns (AcquireResourceLockResponse) {}
 }
 
 // PluginRegistrationRequest is the request
@@ -251,4 +260,31 @@ message LookupResourceInStateResponse {
         sharedtypesv1.ResourceState resource = 1;
         sharedtypesv1.ErrorResponse error_response = 2;
     }
+}
+
+// AcquireResourceLockRequest is the request
+// to acquire a lock on a resource.
+message AcquireResourceLockRequest {
+    // The ID of the blueprint instance to scope the resource lock to.
+    string instance_id = 1;
+    // The name of the resource in the blueprint to lock.
+    string resource_name = 2;
+    // The identifier of the caller that is seeking to acquire the lock.
+    string acquired_by = 3;
+    sharedtypesv1.ProviderContext context = 4;
+}
+
+// AcquireResourceLockResponse is the response
+// containing the result of acquiring a resource lock.
+message AcquireResourceLockResponse {
+    oneof response {
+        AcquireResourceLockResult result = 1;
+        sharedtypesv1.ErrorResponse error_response = 2;
+    }
+}
+
+// AcquireResourceLockResult contains the result
+// of acquiring a lock to a resource.
+message AcquireResourceLockResult {
+    bool acquired = 1;
 }

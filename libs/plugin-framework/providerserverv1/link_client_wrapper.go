@@ -306,6 +306,7 @@ func (l *linkProviderClientWrapper) buildUpdateIntermediaryResourcesRequest(
 		HostId:        l.hostID,
 		ResourceAInfo: resourceAInfoPB,
 		ResourceBInfo: resourceBInfoPB,
+		LinkId:        input.LinkID,
 		Changes:       linkChangesPB,
 		InstanceName:  input.InstanceName,
 		UpdateType:    LinkUpdateType(input.LinkUpdateType),

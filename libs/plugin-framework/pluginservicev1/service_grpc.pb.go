@@ -30,6 +30,7 @@ const (
 	Service_DeployResource_FullMethodName        = "/pluginservicev1.Service/DeployResource"
 	Service_DestroyResource_FullMethodName       = "/pluginservicev1.Service/DestroyResource"
 	Service_LookupResourceInState_FullMethodName = "/pluginservicev1.Service/LookupResourceInState"
+	Service_AcquireResourceLock_FullMethodName   = "/pluginservicev1.Service/AcquireResourceLock"
 )
 
 // ServiceClient is the client API for Service service.
@@ -87,6 +88,15 @@ type ServiceClient interface {
 	// detection as only links in the same blueprint instance that modify resources are taken into
 	// account for drift detection.
 	LookupResourceInState(ctx context.Context, in *LookupResourceInStateRequest, opts ...grpc.CallOption) (*LookupResourceInStateResponse, error)
+	// AcquireResourceLock acquires a lock on a resource of a given type
+	// in the blueprint state to ensure that no other operations
+	// are modifying the resource at the same time.
+	// This is useful for links that need to update existing resources
+	// in the same blueprint as a part of the intermediary resources update phase.
+	// The blueprint container will ensure that the lock is released after the
+	// update intermediary resources phase is complete for the current link.
+	// The lock will be released if the link update fails or a lock timeout occurs.
+	AcquireResourceLock(ctx context.Context, in *AcquireResourceLockRequest, opts ...grpc.CallOption) (*AcquireResourceLockResponse, error)
 }
 
 type serviceClient struct {
@@ -187,6 +197,16 @@ func (c *serviceClient) LookupResourceInState(ctx context.Context, in *LookupRes
 	return out, nil
 }
 
+func (c *serviceClient) AcquireResourceLock(ctx context.Context, in *AcquireResourceLockRequest, opts ...grpc.CallOption) (*AcquireResourceLockResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AcquireResourceLockResponse)
+	err := c.cc.Invoke(ctx, Service_AcquireResourceLock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ServiceServer is the server API for Service service.
 // All implementations must embed UnimplementedServiceServer
 // for forward compatibility.
@@ -242,6 +262,15 @@ type ServiceServer interface {
 	// detection as only links in the same blueprint instance that modify resources are taken into
 	// account for drift detection.
 	LookupResourceInState(context.Context, *LookupResourceInStateRequest) (*LookupResourceInStateResponse, error)
+	// AcquireResourceLock acquires a lock on a resource of a given type
+	// in the blueprint state to ensure that no other operations
+	// are modifying the resource at the same time.
+	// This is useful for links that need to update existing resources
+	// in the same blueprint as a part of the intermediary resources update phase.
+	// The blueprint container will ensure that the lock is released after the
+	// update intermediary resources phase is complete for the current link.
+	// The lock will be released if the link update fails or a lock timeout occurs.
+	AcquireResourceLock(context.Context, *AcquireResourceLockRequest) (*AcquireResourceLockResponse, error)
 	mustEmbedUnimplementedServiceServer()
 }
 
@@ -278,6 +307,9 @@ func (UnimplementedServiceServer) DestroyResource(context.Context, *sharedtypesv
 }
 func (UnimplementedServiceServer) LookupResourceInState(context.Context, *LookupResourceInStateRequest) (*LookupResourceInStateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupResourceInState not implemented")
+}
+func (UnimplementedServiceServer) AcquireResourceLock(context.Context, *AcquireResourceLockRequest) (*AcquireResourceLockResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AcquireResourceLock not implemented")
 }
 func (UnimplementedServiceServer) mustEmbedUnimplementedServiceServer() {}
 func (UnimplementedServiceServer) testEmbeddedByValue()                 {}
@@ -462,6 +494,24 @@ func _Service_LookupResourceInState_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Service_AcquireResourceLock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AcquireResourceLockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServiceServer).AcquireResourceLock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Service_AcquireResourceLock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServiceServer).AcquireResourceLock(ctx, req.(*AcquireResourceLockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Service_ServiceDesc is the grpc.ServiceDesc for Service service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -504,6 +554,10 @@ var Service_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LookupResourceInState",
 			Handler:    _Service_LookupResourceInState_Handler,
+		},
+		{
+			MethodName: "AcquireResourceLock",
+			Handler:    _Service_AcquireResourceLock_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

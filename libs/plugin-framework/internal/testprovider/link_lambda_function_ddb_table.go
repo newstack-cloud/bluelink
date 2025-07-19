@@ -127,7 +127,7 @@ func linkLambdaFunctionDDBTableUpdateIntermediaryResources(
 
 	// Check existing resource state, typically this would only be called
 	// when the intermediary resource already exists in the blueprint and is being updated.
-	_, err := input.ResourceLookupService.LookupResourceInState(
+	_, err := input.ResourceService.LookupResourceInState(
 		ctx,
 		&provider.ResourceLookupInput{
 			InstanceID: input.ResourceAInfo.InstanceID,
@@ -147,7 +147,7 @@ func linkLambdaFunctionDDBTableUpdateIntermediaryResources(
 
 	if input.LinkUpdateType == provider.LinkUpdateTypeUpdate ||
 		input.LinkUpdateType == provider.LinkUpdateTypeCreate {
-		_, err := input.ResourceDeployService.Deploy(
+		_, err := input.ResourceService.Deploy(
 			ctx,
 			"aws/lambda/function",
 			&provider.ResourceDeployServiceInput{
@@ -166,10 +166,26 @@ func linkLambdaFunctionDDBTableUpdateIntermediaryResources(
 		if err != nil {
 			return nil, err
 		}
+
+		err = input.ResourceService.AcquireResourceLock(
+			ctx,
+			&provider.AcquireResourceLockInput{
+				InstanceID:   changes.AppliedResourceInfo.InstanceID,
+				ResourceName: "exampleResourceToLock",
+				ProviderContext: provider.NewProviderContextFromLinkContext(
+					input.LinkContext,
+					"aws",
+				),
+				AcquiredBy: input.LinkID,
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		// Destroy the mock resource to test the link interacting
 		// with the plugin service to destroy resources.
-		err := input.ResourceDeployService.Destroy(
+		err := input.ResourceService.Destroy(
 			ctx,
 			"aws/lambda/function",
 			&provider.ResourceDestroyInput{
