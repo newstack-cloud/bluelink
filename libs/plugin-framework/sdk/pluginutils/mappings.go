@@ -1,6 +1,7 @@
 package pluginutils
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -40,4 +41,48 @@ func ShallowCopy(
 		}
 	}
 	return copy
+}
+
+// AnyToMappingNode converts any JSON-like data to a MappingNode.
+func AnyToMappingNode(data any) (*core.MappingNode, error) {
+	switch v := data.(type) {
+	case map[string]any:
+		fields := make(map[string]*core.MappingNode)
+		for key, value := range v {
+			convertedValue, err := AnyToMappingNode(value)
+			if err != nil {
+				return nil, err
+			}
+			fields[key] = convertedValue
+		}
+		return &core.MappingNode{Fields: fields}, nil
+	case []any:
+		items := make([]*core.MappingNode, len(v))
+		for i, item := range v {
+			convertedItem, err := AnyToMappingNode(item)
+			if err != nil {
+				return nil, err
+			}
+			items[i] = convertedItem
+		}
+		return &core.MappingNode{Items: items}, nil
+	case string:
+		return core.MappingNodeFromString(v), nil
+	case int:
+		return core.MappingNodeFromInt(v), nil
+	case int32:
+		return core.MappingNodeFromInt(int(v)), nil
+	case int64:
+		return core.MappingNodeFromInt(int(v)), nil
+	case float32:
+		return core.MappingNodeFromFloat(float64(v)), nil
+	case float64:
+		return core.MappingNodeFromFloat(v), nil
+	case bool:
+		return core.MappingNodeFromBool(v), nil
+	case nil:
+		return &core.MappingNode{}, nil
+	default:
+		return nil, fmt.Errorf("unsupported type: %T", data)
+	}
 }
