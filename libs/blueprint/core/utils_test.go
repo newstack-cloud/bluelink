@@ -342,6 +342,73 @@ func (s *UtilsTestSuite) Test_converts_empty_mapping_node_to_empty_bool_map() {
 	s.Assert().Equal(map[string]bool{}, boolMap)
 }
 
+func (s *UtilsTestSuite) Test_mapping_node_fields() {
+	mappingNode := MappingNodeFields(
+		"key1", MappingNodeFromString("value1"),
+		"key2", MappingNodeFromInt(200),
+		"key3", MappingNodeFromFloat(3.3),
+		"key4", MappingNodeFromBool(true),
+	)
+
+	s.Assert().Equal(
+		map[string]*MappingNode{
+			"key1": MappingNodeFromString("value1"),
+			"key2": MappingNodeFromInt(200),
+			"key3": MappingNodeFromFloat(3.3),
+			"key4": MappingNodeFromBool(true),
+		},
+		mappingNode.Fields,
+	)
+}
+
+func (s *UtilsTestSuite) Test_mapping_node_fields_empty_for_odd_amount_of_args() {
+	mappingNode := MappingNodeFields(
+		"key1",
+		MappingNodeFromString("value1"),
+		"key2",
+	)
+
+	s.Assert().Equal(
+		map[string]*MappingNode{},
+		mappingNode.Fields,
+	)
+}
+
+func (s *UtilsTestSuite) Test_mapping_node_fields_skips_fields_with_invalid_types() {
+	mappingNode := MappingNodeFields(
+		"key1", MappingNodeFromString("value1"),
+		"key2", "not a mapping node",
+		"key3", MappingNodeFromFloat(3.3),
+	)
+
+	s.Assert().Equal(
+		map[string]*MappingNode{
+			"key1": MappingNodeFromString("value1"),
+			"key3": MappingNodeFromFloat(3.3),
+		},
+		mappingNode.Fields,
+	)
+}
+
+func (s *UtilsTestSuite) Test_mapping_node_items() {
+	mappingNode := MappingNodeItems(
+		MappingNodeFromString("value1"),
+		MappingNodeFromInt(200),
+		MappingNodeFromFloat(3.3),
+		MappingNodeFromBool(true),
+	)
+
+	s.Assert().Equal(
+		[]*MappingNode{
+			MappingNodeFromString("value1"),
+			MappingNodeFromInt(200),
+			MappingNodeFromFloat(3.3),
+			MappingNodeFromBool(true),
+		},
+		mappingNode.Items,
+	)
+}
+
 func TestUtilsTestSuite(t *testing.T) {
 	suite.Run(t, new(UtilsTestSuite))
 }

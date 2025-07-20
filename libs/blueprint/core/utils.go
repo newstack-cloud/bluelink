@@ -325,6 +325,43 @@ func MappingNodeFromBoolMap(values map[string]bool) *MappingNode {
 	}
 }
 
+// MappingNodeFields creates a map of string keys to MappingNode values.
+// This is useful for creating a map/object as a MappingNode in a more
+// concise way that defining the structure manually.
+// Keys must be strings and values must be MappingNode pointers.
+// This will return an empty map if an odd number of arguments is provided.
+// If a key is not a string or a value is not a MappingNode, the key/pair
+// will be skipped.
+func MappingNodeFields(pairs ...any) *MappingNode {
+	if len(pairs)%2 != 0 {
+		return &MappingNode{
+			Fields: map[string]*MappingNode{},
+		}
+	}
+
+	fields := map[string]*MappingNode{}
+	for i := 0; i < len(pairs); i += 2 {
+		key, keyOK := pairs[i].(string)
+		value, valueOK := pairs[i+1].(*MappingNode)
+		if keyOK && valueOK {
+			fields[key] = value
+		}
+	}
+
+	return &MappingNode{
+		Fields: fields,
+	}
+}
+
+// MappingNodeItems creates a MappingNode with a slice of MappingNode items.
+// This is useful for creating a list of items as a MappingNode in a more
+// concise way that defining the structure manually.
+func MappingNodeItems(items ...*MappingNode) *MappingNode {
+	return &MappingNode{
+		Items: items,
+	}
+}
+
 // ResourceElementID generates an element ID for a resource that is used
 // primarily for resolving substitutions.
 func ResourceElementID(resourceName string) string {
