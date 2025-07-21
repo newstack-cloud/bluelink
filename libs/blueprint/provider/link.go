@@ -107,9 +107,10 @@ type LinkUpdateResourceInput struct {
 	OtherResourceInfo *ResourceInfo
 	// Additional user-defined blueprint instance name
 	// that can be used in ID/unique name generation and for debugging.
-	InstanceName   string
-	LinkUpdateType LinkUpdateType
-	LinkContext    LinkContext
+	InstanceName     string
+	LinkUpdateType   LinkUpdateType
+	CurrentLinkState *state.LinkState
+	LinkContext      LinkContext
 }
 
 // LinkUpdateType represents the type of update that is being carried out
@@ -154,9 +155,10 @@ type LinkUpdateIntermediaryResourcesInput struct {
 	Changes *LinkChanges
 	// Additional user-defined blueprint instance name
 	// that can be used in ID/unique name generation and for debugging.
-	InstanceName   string
-	LinkUpdateType LinkUpdateType
-	LinkContext    LinkContext
+	InstanceName     string
+	LinkUpdateType   LinkUpdateType
+	CurrentLinkState *state.LinkState
+	LinkContext      LinkContext
 	// ResourceService allows a link implementation to hook into
 	// the framework's existing mechanism to manage resource deployments,
 	// look up resources and acquire locks when updating existing resources

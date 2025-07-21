@@ -76,25 +76,33 @@ func (d *defaultLinkDeployer) Deploy(
 		linkDependencyInfo.resourceBName,
 	)
 
+	var currentLinkState *state.LinkState
 	if linkUpdateType == provider.LinkUpdateTypeCreate {
 		deployCtx.Logger.Info(
 			"persisting skeleton state for new link",
 			core.StringLogField("linkId", linkElement.ID()),
 		)
 		links := d.stateContainer.Links()
+		linkState := state.LinkState{
+			LinkID:        linkElement.ID(),
+			Name:          linkElement.LogicalName(),
+			InstanceID:    instanceID,
+			Status:        core.LinkStatusUnknown,
+			PreciseStatus: core.PreciseLinkStatusUnknown,
+		}
 		err := links.Save(
 			ctx,
-			state.LinkState{
-				LinkID:        linkElement.ID(),
-				Name:          linkElement.LogicalName(),
-				InstanceID:    instanceID,
-				Status:        core.LinkStatusUnknown,
-				PreciseStatus: core.PreciseLinkStatusUnknown,
-			},
+			linkState,
 		)
 		if err != nil {
 			return err
 		}
+		currentLinkState = &linkState
+	} else {
+		currentLinkState = getLinkStateByName(
+			deployCtx.InstanceStateSnapshot,
+			linkElement.LogicalName(),
+		)
 	}
 
 	linkInfo := &deploymentElementInfo{
@@ -110,6 +118,7 @@ func (d *defaultLinkDeployer) Deploy(
 			OtherResourceInfo: resourceBInfo,
 			InstanceName:      instanceName,
 			LinkUpdateType:    linkUpdateType,
+			CurrentLinkState:  currentLinkState,
 			LinkContext:       linkCtx,
 		},
 		linkInfo,
@@ -131,6 +140,7 @@ func (d *defaultLinkDeployer) Deploy(
 			OtherResourceInfo: resourceAInfo,
 			InstanceName:      instanceName,
 			LinkUpdateType:    linkUpdateType,
+			CurrentLinkState:  currentLinkState,
 			LinkContext:       linkCtx,
 		},
 		linkInfo,
@@ -148,13 +158,14 @@ func (d *defaultLinkDeployer) Deploy(
 		ctx,
 		linkImplementation,
 		&provider.LinkUpdateIntermediaryResourcesInput{
-			ResourceAInfo:   resourceAInfo,
-			ResourceBInfo:   resourceBInfo,
-			LinkID:          linkElement.ID(),
-			InstanceName:    instanceName,
-			LinkUpdateType:  linkUpdateType,
-			LinkContext:     linkCtx,
-			ResourceService: deployCtx.ResourceRegistry,
+			ResourceAInfo:    resourceAInfo,
+			ResourceBInfo:    resourceBInfo,
+			LinkID:           linkElement.ID(),
+			InstanceName:     instanceName,
+			LinkUpdateType:   linkUpdateType,
+			CurrentLinkState: currentLinkState,
+			LinkContext:      linkCtx,
+			ResourceService:  deployCtx.ResourceRegistry,
 		},
 		linkInfo,
 		provider.CreateRetryContext(retryPolicy),

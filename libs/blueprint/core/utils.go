@@ -327,7 +327,7 @@ func MappingNodeFromBoolMap(values map[string]bool) *MappingNode {
 
 // MappingNodeFields creates a map of string keys to MappingNode values.
 // This is useful for creating a map/object as a MappingNode in a more
-// concise way that defining the structure manually.
+// concise way than defining the structure manually.
 // Keys must be strings and values must be MappingNode pointers.
 // This will return an empty map if an odd number of arguments is provided.
 // If a key is not a string or a value is not a MappingNode, the key/pair
@@ -355,7 +355,7 @@ func MappingNodeFields(pairs ...any) *MappingNode {
 
 // MappingNodeItems creates a MappingNode with a slice of MappingNode items.
 // This is useful for creating a list of items as a MappingNode in a more
-// concise way that defining the structure manually.
+// concise way than defining the structure manually.
 func MappingNodeItems(items ...*MappingNode) *MappingNode {
 	return &MappingNode{
 		Items: items,
