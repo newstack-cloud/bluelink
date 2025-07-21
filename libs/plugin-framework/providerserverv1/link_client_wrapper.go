@@ -208,6 +208,11 @@ func (l *linkProviderClientWrapper) buildUpdateResourceRequest(
 		return nil, err
 	}
 
+	currentLinkStatePB, err := toPBLinkState(input.CurrentLinkState)
+	if err != nil {
+		return nil, err
+	}
+
 	return &UpdateLinkResourceRequest{
 		LinkType: &LinkType{
 			Type: core.LinkType(
@@ -221,6 +226,7 @@ func (l *linkProviderClientWrapper) buildUpdateResourceRequest(
 		OtherResourceInfo: otherResourceInfoPB,
 		InstanceName:      input.InstanceName,
 		UpdateType:        LinkUpdateType(input.LinkUpdateType),
+		CurrentLinkState:  currentLinkStatePB,
 		Context:           linkCtx,
 	}, nil
 }
@@ -296,6 +302,11 @@ func (l *linkProviderClientWrapper) buildUpdateIntermediaryResourcesRequest(
 		return nil, err
 	}
 
+	currentLinkStatePB, err := toPBLinkState(input.CurrentLinkState)
+	if err != nil {
+		return nil, err
+	}
+
 	return &UpdateLinkIntermediaryResourcesRequest{
 		LinkType: &LinkType{
 			Type: core.LinkType(
@@ -303,14 +314,15 @@ func (l *linkProviderClientWrapper) buildUpdateIntermediaryResourcesRequest(
 				l.resourceTypeB,
 			),
 		},
-		HostId:        l.hostID,
-		ResourceAInfo: resourceAInfoPB,
-		ResourceBInfo: resourceBInfoPB,
-		LinkId:        input.LinkID,
-		Changes:       linkChangesPB,
-		InstanceName:  input.InstanceName,
-		UpdateType:    LinkUpdateType(input.LinkUpdateType),
-		Context:       linkCtx,
+		HostId:           l.hostID,
+		ResourceAInfo:    resourceAInfoPB,
+		ResourceBInfo:    resourceBInfoPB,
+		LinkId:           input.LinkID,
+		Changes:          linkChangesPB,
+		InstanceName:     input.InstanceName,
+		UpdateType:       LinkUpdateType(input.LinkUpdateType),
+		CurrentLinkState: currentLinkStatePB,
+		Context:          linkCtx,
 	}, nil
 }
 

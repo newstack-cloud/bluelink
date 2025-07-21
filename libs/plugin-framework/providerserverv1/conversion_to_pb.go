@@ -15,6 +15,10 @@ import (
 )
 
 func toPBLinkState(linkState *state.LinkState) (*LinkState, error) {
+	if linkState == nil {
+		return nil, nil
+	}
+
 	intermediaryResourceStates, err := toPBLinkIntermediaryResourceStates(
 		linkState.IntermediaryResourceStates,
 	)

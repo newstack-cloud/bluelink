@@ -24,6 +24,7 @@ func linkUpdateResourceAInput() *provider.LinkUpdateResourceInput {
 		ResourceInfo:      createLinkResourceAInfo(),
 		OtherResourceInfo: createLinkResourceBInfo(),
 		LinkUpdateType:    provider.LinkUpdateTypeCreate,
+		CurrentLinkState:  createCurrentLinkState(),
 		LinkContext:       testutils.CreateTestLinkContext(),
 	}
 }
@@ -34,6 +35,7 @@ func linkUpdateResourceBInput() *provider.LinkUpdateResourceInput {
 		ResourceInfo:      createLinkResourceBInfo(),
 		OtherResourceInfo: createLinkResourceAInfo(),
 		LinkUpdateType:    provider.LinkUpdateTypeCreate,
+		CurrentLinkState:  createCurrentLinkState(),
 		LinkContext:       testutils.CreateTestLinkContext(),
 	}
 }
@@ -136,11 +138,12 @@ func createLinkResourceBInfo() *provider.ResourceInfo {
 
 func linkUpdateIntermediaryResourcesInput() *provider.LinkUpdateIntermediaryResourcesInput {
 	return &provider.LinkUpdateIntermediaryResourcesInput{
-		ResourceAInfo:  createLinkResourceAInfo(),
-		ResourceBInfo:  createLinkResourceBInfo(),
-		LinkUpdateType: provider.LinkUpdateTypeCreate,
-		Changes:        testprovider.LinkLambdaDynamoDBChangesOutput().Changes,
-		LinkContext:    testutils.CreateTestLinkContext(),
+		ResourceAInfo:    createLinkResourceAInfo(),
+		ResourceBInfo:    createLinkResourceBInfo(),
+		LinkUpdateType:   provider.LinkUpdateTypeCreate,
+		CurrentLinkState: createCurrentLinkState(),
+		Changes:          testprovider.LinkLambdaDynamoDBChangesOutput().Changes,
+		LinkContext:      testutils.CreateTestLinkContext(),
 	}
 }
 

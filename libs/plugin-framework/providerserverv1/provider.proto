@@ -584,7 +584,8 @@ message UpdateLinkResourceRequest {
     sharedtypesv1.ResourceInfo other_resource_info = 5;
     string instance_name = 6;
     LinkUpdateType update_type = 7;
-    LinkContext context = 8;
+    LinkState current_link_state = 8;
+    LinkContext context = 9;
 }
 
 // UpdateLinkResourceResponse is the response
@@ -620,7 +621,8 @@ message UpdateLinkIntermediaryResourcesRequest {
     sharedtypesv1.LinkChanges changes = 6;
     string instance_name = 7;
     LinkUpdateType update_type = 8;
-    LinkContext context = 9;
+    LinkState current_link_state = 9;
+    LinkContext context = 10;
 }
 
 // UpdateLinkIntermediaryResourcesResponse is the response

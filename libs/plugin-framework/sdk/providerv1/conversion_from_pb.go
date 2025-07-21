@@ -96,6 +96,10 @@ func fromPBStageLinkChangesRequest(
 func fromPBLinkState(
 	pbLinkState *providerserverv1.LinkState,
 ) (*state.LinkState, error) {
+	if pbLinkState == nil {
+		return nil, nil
+	}
+
 	intermediaryResourceStates, err := fromPBLinkIntermediaryResourceStates(
 		pbLinkState.IntermediaryResourceStates,
 	)
@@ -229,11 +233,17 @@ func fromPBUpdateLinkResourceRequest(
 		return nil, err
 	}
 
+	currentLinkState, err := fromPBLinkState(req.CurrentLinkState)
+	if err != nil {
+		return nil, err
+	}
+
 	return &provider.LinkUpdateResourceInput{
 		Changes:           &changes,
 		ResourceInfo:      &resourceInfo,
 		OtherResourceInfo: &otherResourceInfo,
 		LinkUpdateType:    provider.LinkUpdateType(req.UpdateType),
+		CurrentLinkState:  currentLinkState,
 		InstanceName:      req.InstanceName,
 		LinkContext:       linkContext,
 	}, nil
@@ -263,15 +273,21 @@ func fromPBLinkIntermediaryResourceRequest(
 		return nil, err
 	}
 
+	currentLinkState, err := fromPBLinkState(req.CurrentLinkState)
+	if err != nil {
+		return nil, err
+	}
+
 	return &provider.LinkUpdateIntermediaryResourcesInput{
-		ResourceAInfo:   &resourceAInfo,
-		ResourceBInfo:   &resourceBInfo,
-		Changes:         &changes,
-		LinkID:          req.LinkId,
-		InstanceName:    req.InstanceName,
-		LinkUpdateType:  provider.LinkUpdateType(req.UpdateType),
-		LinkContext:     linkContext,
-		ResourceService: resourceService,
+		ResourceAInfo:    &resourceAInfo,
+		ResourceBInfo:    &resourceBInfo,
+		Changes:          &changes,
+		LinkID:           req.LinkId,
+		InstanceName:     req.InstanceName,
+		LinkUpdateType:   provider.LinkUpdateType(req.UpdateType),
+		CurrentLinkState: currentLinkState,
+		LinkContext:      linkContext,
+		ResourceService:  resourceService,
 	}, nil
 }
 
