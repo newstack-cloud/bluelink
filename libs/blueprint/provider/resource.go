@@ -608,6 +608,12 @@ type ResourceDefinitionsSchema struct {
 	// to be considered as drift.
 	// Nested types in a union can be ignored for drift checking.
 	IgnoreDrift bool
+	// TrackDrift specifies whether a computed value should be included in the drift
+	// checking process.
+	// This is only applicable for schemas with the `Computed` field set to true,
+	// this value has no effect on user-defined values.
+	// Compted values are excluded from the drift checking process by default.
+	TrackDrift bool
 }
 
 // ResourceDefinitionsSchemaType holds the type of a resource schema.

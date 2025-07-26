@@ -154,7 +154,21 @@
       LinkSelector: (*schema.LinkSelector)(<nil>),
       Spec: (*core.MappingNode)({
         Scalar: (*core.ScalarValue)(<nil>),
-        Fields: (map[string]*core.MappingNode) (len=3) {
+        Fields: (map[string]*core.MappingNode) (len=4) {
+          (string) (len=23) "computedFieldTrackDrift": (*core.MappingNode)({
+            Scalar: (*core.ScalarValue)({
+              IntValue: (*int)(<nil>),
+              BoolValue: (*bool)(<nil>),
+              FloatValue: (*float64)(<nil>),
+              StringValue: (*string)((len=24) "computed-field-new-value"),
+              SourceMeta: (*source.Meta)(<nil>)
+            }),
+            Fields: (map[string]*core.MappingNode) <nil>,
+            Items: ([]*core.MappingNode) <nil>,
+            StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+            SourceMeta: (*source.Meta)(<nil>),
+            FieldsSourceMeta: (map[string]*source.Meta) <nil>
+          }),
           (string) (len=10) "itemConfig": (*core.MappingNode)({
             Scalar: (*core.ScalarValue)(<nil>),
             Fields: (map[string]*core.MappingNode) (len=5) {

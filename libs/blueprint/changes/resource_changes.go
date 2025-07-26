@@ -167,8 +167,9 @@ func collectSpecFieldChanges(
 		return
 	}
 
-	if schema.Computed {
-		// Change staging is not supported for computed fields.
+	if schema.Computed && !schema.TrackDrift {
+		// Change staging is not supported for computed fields that are not explicitly
+		// marked with `TrackDrift: true` in the schema.
 		// Change staging is the process of comparing user-defined values in a new resource
 		// spec with the current state of a deployed resource.
 		// The user should be presented with information that computed field values will be known

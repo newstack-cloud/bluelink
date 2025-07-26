@@ -16,7 +16,21 @@
       LastDeployAttemptTimestamp: (int) 1732969676,
       SpecData: (*core.MappingNode)({
         Scalar: (*core.ScalarValue)(<nil>),
-        Fields: (map[string]*core.MappingNode) (len=4) {
+        Fields: (map[string]*core.MappingNode) (len=5) {
+          (string) (len=23) "computedFieldTrackDrift": (*core.MappingNode)({
+            Scalar: (*core.ScalarValue)({
+              IntValue: (*int)(<nil>),
+              BoolValue: (*bool)(<nil>),
+              FloatValue: (*float64)(<nil>),
+              StringValue: (*string)((len=24) "computed-field-old-value"),
+              SourceMeta: (*source.Meta)(<nil>)
+            }),
+            Fields: (map[string]*core.MappingNode) <nil>,
+            Items: ([]*core.MappingNode) <nil>,
+            StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+            SourceMeta: (*source.Meta)(<nil>),
+            FieldsSourceMeta: (map[string]*source.Meta) <nil>
+          }),
           (string) (len=2) "id": (*core.MappingNode)({
             Scalar: (*core.ScalarValue)({
               IntValue: (*int)(<nil>),
@@ -529,7 +543,21 @@
       LinkSelector: (*schema.LinkSelector)(<nil>),
       Spec: (*core.MappingNode)({
         Scalar: (*core.ScalarValue)(<nil>),
-        Fields: (map[string]*core.MappingNode) (len=3) {
+        Fields: (map[string]*core.MappingNode) (len=4) {
+          (string) (len=23) "computedFieldTrackDrift": (*core.MappingNode)({
+            Scalar: (*core.ScalarValue)({
+              IntValue: (*int)(<nil>),
+              BoolValue: (*bool)(<nil>),
+              FloatValue: (*float64)(<nil>),
+              StringValue: (*string)((len=24) "computed-field-new-value"),
+              SourceMeta: (*source.Meta)(<nil>)
+            }),
+            Fields: (map[string]*core.MappingNode) <nil>,
+            Items: ([]*core.MappingNode) <nil>,
+            StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+            SourceMeta: (*source.Meta)(<nil>),
+            FieldsSourceMeta: (map[string]*source.Meta) <nil>
+          }),
           (string) (len=10) "itemConfig": (*core.MappingNode)({
             Scalar: (*core.ScalarValue)(<nil>),
             Fields: (map[string]*core.MappingNode) (len=5) {
@@ -726,7 +754,7 @@
     })
   },
   MustRecreate: (bool) true,
-  ModifiedFields: ([]provider.FieldChange) (len=14) {
+  ModifiedFields: ([]provider.FieldChange) (len=15) {
     (provider.FieldChange) {
       FieldPath: (string) (len=42) "metadata.annotations[\"test.annotation.v1\"]",
       PrevValue: (*core.MappingNode)({
@@ -898,6 +926,39 @@
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
           StringValue: (*string)((len=11) "test-app-v2"),
+          SourceMeta: (*source.Meta)(<nil>)
+        }),
+        Fields: (map[string]*core.MappingNode) <nil>,
+        Items: ([]*core.MappingNode) <nil>,
+        StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+        SourceMeta: (*source.Meta)(<nil>),
+        FieldsSourceMeta: (map[string]*source.Meta) <nil>
+      }),
+      MustRecreate: (bool) false,
+      Sensitive: (bool) false
+    },
+    (provider.FieldChange) {
+      FieldPath: (string) (len=28) "spec.computedFieldTrackDrift",
+      PrevValue: (*core.MappingNode)({
+        Scalar: (*core.ScalarValue)({
+          IntValue: (*int)(<nil>),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          StringValue: (*string)((len=24) "computed-field-old-value"),
+          SourceMeta: (*source.Meta)(<nil>)
+        }),
+        Fields: (map[string]*core.MappingNode) <nil>,
+        Items: ([]*core.MappingNode) <nil>,
+        StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+        SourceMeta: (*source.Meta)(<nil>),
+        FieldsSourceMeta: (map[string]*source.Meta) <nil>
+      }),
+      NewValue: (*core.MappingNode)({
+        Scalar: (*core.ScalarValue)({
+          IntValue: (*int)(<nil>),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          StringValue: (*string)((len=24) "computed-field-new-value"),
           SourceMeta: (*source.Meta)(<nil>)
         }),
         Fields: (map[string]*core.MappingNode) <nil>,
@@ -1246,7 +1307,8 @@
     (string) (len=17) "spec.vendorConfig",
     (string) (len=18) "spec.vendorTags[0]"
   },
-  ComputedFields: ([]string) (len=1) {
+  ComputedFields: ([]string) (len=2) {
+    (string) (len=28) "spec.computedFieldTrackDrift",
     (string) (len=7) "spec.id"
   },
   FieldChangesKnownOnDeploy: ([]string) (len=4) {

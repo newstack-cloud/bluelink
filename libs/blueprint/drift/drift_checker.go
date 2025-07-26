@@ -551,7 +551,11 @@ func filterSchemaChanges(
 	depth int,
 	resourceLogger core.Logger,
 ) {
-	if schema == nil || depth >= core.MappingNodeMaxTraverseDepth || schema.Computed {
+
+	if schema == nil ||
+		depth >= core.MappingNodeMaxTraverseDepth ||
+		// Computed value that should not be tracked for drift.
+		schema.Computed && !schema.TrackDrift {
 		return
 	}
 

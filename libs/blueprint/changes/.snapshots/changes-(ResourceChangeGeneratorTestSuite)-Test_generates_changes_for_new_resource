@@ -628,10 +628,12 @@
   },
   RemovedFields: ([]string) {
   },
-  UnchangedFields: ([]string) (len=1) {
+  UnchangedFields: ([]string) (len=2) {
+    (string) (len=28) "spec.computedFieldTrackDrift",
     (string) (len=17) "spec.vendorConfig"
   },
-  ComputedFields: ([]string) (len=1) {
+  ComputedFields: ([]string) (len=2) {
+    (string) (len=28) "spec.computedFieldTrackDrift",
     (string) (len=7) "spec.id"
   },
   FieldChangesKnownOnDeploy: ([]string) (len=3) {

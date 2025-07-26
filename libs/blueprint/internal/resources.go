@@ -992,6 +992,11 @@ func (r *ExampleComplexResource) GetSpecDefinition(
 						},
 						Nullable: true,
 					},
+					"computedFieldTrackDrift": {
+						Type:       provider.ResourceDefinitionsSchemaTypeString,
+						Computed:   true,
+						TrackDrift: true,
+					},
 				},
 			},
 		},

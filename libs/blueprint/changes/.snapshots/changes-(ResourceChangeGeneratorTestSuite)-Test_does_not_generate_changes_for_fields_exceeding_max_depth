@@ -414,13 +414,15 @@
     (string) (len=18) "spec.vendorTags[1]",
     (string) (len=18) "spec.vendorTags[2]"
   },
-  UnchangedFields: ([]string) (len=4) {
+  UnchangedFields: ([]string) (len=5) {
+    (string) (len=28) "spec.computedFieldTrackDrift",
     (string) (len=28) "spec.itemConfig.endpoints[3]",
     (string) (len=20) "spec.otherItemConfig",
     (string) (len=17) "spec.vendorConfig",
     (string) (len=18) "spec.vendorTags[0]"
   },
-  ComputedFields: ([]string) (len=1) {
+  ComputedFields: ([]string) (len=2) {
+    (string) (len=28) "spec.computedFieldTrackDrift",
     (string) (len=7) "spec.id"
   },
   FieldChangesKnownOnDeploy: ([]string) {

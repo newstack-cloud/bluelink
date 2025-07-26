@@ -138,6 +138,7 @@ func (s *ResourceChangeGeneratorTestSuite) resourceInfoFixture1CurrentState() *s
 						},
 					},
 				},
+				"computedFieldTrackDrift": core.MappingNodeFromString("computed-field-old-value"),
 			},
 		},
 		Metadata: &state.ResourceMetadataState{
@@ -351,6 +352,7 @@ func (s *ResourceChangeGeneratorTestSuite) resourceInfoFixture1NewResolvedResour
 						},
 					},
 				},
+				"computedFieldTrackDrift": core.MappingNodeFromString("computed-field-new-value"),
 			},
 		},
 	}

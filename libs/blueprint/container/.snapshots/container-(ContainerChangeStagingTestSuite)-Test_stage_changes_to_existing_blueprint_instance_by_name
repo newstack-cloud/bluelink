@@ -3239,10 +3239,12 @@
           RemovedFields: ([]string) (len=1) {
             (string) (len=28) "spec.itemConfig.endpoints[2]"
           },
-          UnchangedFields: ([]string) (len=1) {
+          UnchangedFields: ([]string) (len=2) {
+            (string) (len=28) "spec.computedFieldTrackDrift",
             (string) (len=21) "spec.itemConfig.score"
           },
-          ComputedFields: ([]string) (len=1) {
+          ComputedFields: ([]string) (len=2) {
+            (string) (len=28) "spec.computedFieldTrackDrift",
             (string) (len=7) "spec.id"
           },
           FieldChangesKnownOnDeploy: ([]string) {
