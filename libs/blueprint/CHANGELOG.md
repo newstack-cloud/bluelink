@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.0] - 2025-07-26
+
+### Added
+
+- Adds a new `TrackDrift` field to the `provider.ResourceDefinitionsSchema` struct to allow provider developers to mark computed resource fields that should be tracked for drift. This is useful for detecting changes to derived values from a resource deployment that should be considered drift. This change also includes updates to the resource change generator and drift checker to ensure that computed fields that are marked as `TrackDrift` are included in resource change sets and drift checks.
+
 ## [0.31.1] - 2025-07-21
 
 ### Fixed
