@@ -1254,6 +1254,12 @@ message ResourceDefinitionsSchema {
     // when checking for drift in the resource state between the resource in
     // the upstream provider and the resource in the blueprint instance state.
     bool ignore_drift = 16;
+    // Specifies whether a computed value should be included in the drift
+	// checking process.
+	// This is only applicable for schemas with the `Computed` field set to true,
+	// this value has no effect on user-defined values.
+	// Computed values are excluded from the drift checking process by default.
+    bool track_drift = 17;
 }
 
 // CanLinkTo holds a list of resource types that a given resource type

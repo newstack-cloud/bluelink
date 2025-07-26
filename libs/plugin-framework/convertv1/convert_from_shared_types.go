@@ -945,6 +945,7 @@ func fromPBResourceDefinitionsSchema(
 		MustRecreate:         pbSchema.MustRecreate,
 		Sensitive:            pbSchema.Sensitive,
 		IgnoreDrift:          pbSchema.IgnoreDrift,
+		TrackDrift:           pbSchema.TrackDrift,
 	}, nil
 }
 
