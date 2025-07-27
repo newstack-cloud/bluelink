@@ -195,6 +195,208 @@ func (s *ChangesTestSuite) Test_get_resolved_resource_spec_data() {
 	}
 }
 
+func (s *ChangesTestSuite) Test_has_modified_fields() {
+	testCases := []struct {
+		name      string
+		changes   *provider.Changes
+		fieldPath string
+		expected  bool
+	}{
+		{
+			name:      "nil changes",
+			changes:   nil,
+			fieldPath: "some.field",
+			expected:  false,
+		},
+		{
+			name: "no modified fields",
+			changes: &provider.Changes{
+				ModifiedFields: nil,
+			},
+			fieldPath: "some.field",
+			expected:  false,
+		},
+		{
+			name: "field not modified",
+			changes: &provider.Changes{
+				ModifiedFields: []provider.FieldChange{},
+			},
+			fieldPath: "some.field",
+			expected:  false,
+		},
+		{
+			name: "field modified",
+			changes: &provider.Changes{
+				ModifiedFields: []provider.FieldChange{
+					{FieldPath: "some.field"},
+				},
+			},
+			fieldPath: "some.field",
+			expected:  true,
+		},
+	}
+
+	for _, tc := range testCases {
+		s.Run(tc.name, func() {
+			result := HasModifiedField(tc.changes, tc.fieldPath)
+			s.Assert().Equal(tc.expected, result)
+		})
+	}
+}
+
+func (s *ChangesTestSuite) Test_get_modified_field() {
+	testCases := []struct {
+		name      string
+		changes   *provider.Changes
+		fieldPath string
+		expected  *provider.FieldChange
+	}{
+		{
+			name:      "nil changes",
+			changes:   nil,
+			fieldPath: "some.field",
+			expected:  nil,
+		},
+		{
+			name: "no modified fields",
+			changes: &provider.Changes{
+				ModifiedFields: nil,
+			},
+			fieldPath: "some.field",
+			expected:  nil,
+		},
+		{
+			name: "field not modified",
+			changes: &provider.Changes{
+				ModifiedFields: []provider.FieldChange{},
+			},
+			fieldPath: "some.field",
+			expected:  nil,
+		},
+		{
+			name: "field modified",
+			changes: &provider.Changes{
+				ModifiedFields: []provider.FieldChange{
+					{FieldPath: "some.field", NewValue: core.MappingNodeFromString("newValue")},
+				},
+			},
+			fieldPath: "some.field",
+			expected: &provider.FieldChange{
+				FieldPath: "some.field",
+				NewValue:  core.MappingNodeFromString("newValue"),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		s.Run(tc.name, func() {
+			result := GetModifiedField(tc.changes, tc.fieldPath)
+			s.Assert().Equal(tc.expected, result)
+		})
+	}
+}
+
+func (s *ChangesTestSuite) Test_has_new_fields() {
+	testCases := []struct {
+		name      string
+		changes   *provider.Changes
+		fieldPath string
+		expected  bool
+	}{
+		{
+			name:      "nil changes",
+			changes:   nil,
+			fieldPath: "some.field",
+			expected:  false,
+		},
+		{
+			name: "no new fields",
+			changes: &provider.Changes{
+				NewFields: nil,
+			},
+			fieldPath: "some.field",
+			expected:  false,
+		},
+		{
+			name: "field not new",
+			changes: &provider.Changes{
+				NewFields: []provider.FieldChange{},
+			},
+			fieldPath: "some.field",
+			expected:  false,
+		},
+		{
+			name: "field new",
+			changes: &provider.Changes{
+				NewFields: []provider.FieldChange{
+					{FieldPath: "some.field"},
+				},
+			},
+			fieldPath: "some.field",
+			expected:  true,
+		},
+	}
+
+	for _, tc := range testCases {
+		s.Run(tc.name, func() {
+			result := HasNewField(tc.changes, tc.fieldPath)
+			s.Assert().Equal(tc.expected, result)
+		})
+	}
+}
+
+func (s *ChangesTestSuite) Test_get_new_field() {
+	testCases := []struct {
+		name      string
+		changes   *provider.Changes
+		fieldPath string
+		expected  *provider.FieldChange
+	}{
+		{
+			name:      "nil changes",
+			changes:   nil,
+			fieldPath: "some.field",
+			expected:  nil,
+		},
+		{
+			name: "no new fields",
+			changes: &provider.Changes{
+				NewFields: nil,
+			},
+			fieldPath: "some.field",
+			expected:  nil,
+		},
+		{
+			name: "field not new",
+			changes: &provider.Changes{
+				NewFields: []provider.FieldChange{},
+			},
+			fieldPath: "some.field",
+			expected:  nil,
+		},
+		{
+			name: "field new",
+			changes: &provider.Changes{
+				NewFields: []provider.FieldChange{
+					{FieldPath: "some.field", NewValue: core.MappingNodeFromString("newValue")},
+				},
+			},
+			fieldPath: "some.field",
+			expected: &provider.FieldChange{
+				FieldPath: "some.field",
+				NewValue:  core.MappingNodeFromString("newValue"),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		s.Run(tc.name, func() {
+			result := GetNewField(tc.changes, tc.fieldPath)
+			s.Assert().Equal(tc.expected, result)
+		})
+	}
+}
+
 func TestChangesTestSuite(t *testing.T) {
 	suite.Run(t, new(ChangesTestSuite))
 }

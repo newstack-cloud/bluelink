@@ -50,3 +50,59 @@ func GetCurrentStateSpecDataFromResourceInfo(
 
 	return resourceInfo.CurrentResourceState.SpecData
 }
+
+// HasModifiedField checks if the specified field path has been modified in the
+// changes object.
+func HasModifiedField(
+	changes *provider.Changes,
+	fieldPath string,
+) bool {
+	return GetModifiedField(changes, fieldPath) != nil
+}
+
+// GetModifiedField retrieves the modified field from the changes object
+// based on the specified field path. If no such field exists, it returns nil.
+func GetModifiedField(
+	changes *provider.Changes,
+	fieldPath string,
+) *provider.FieldChange {
+	if changes == nil || changes.ModifiedFields == nil {
+		return nil
+	}
+
+	for _, modifiedField := range changes.ModifiedFields {
+		if modifiedField.FieldPath == fieldPath {
+			return &modifiedField
+		}
+	}
+
+	return nil
+}
+
+// HasNewField checks if the specified field path has been added as a new field
+// in the changes object.
+func HasNewField(
+	changes *provider.Changes,
+	fieldPath string,
+) bool {
+	return GetNewField(changes, fieldPath) != nil
+}
+
+// GetNewField retrieves the new field from the changes object based on the
+// specified field path. If no such field exists, it returns nil.
+func GetNewField(
+	changes *provider.Changes,
+	fieldPath string,
+) *provider.FieldChange {
+	if changes == nil || changes.NewFields == nil {
+		return nil
+	}
+
+	for _, newField := range changes.NewFields {
+		if newField.FieldPath == fieldPath {
+			return &newField
+		}
+	}
+
+	return nil
+}
