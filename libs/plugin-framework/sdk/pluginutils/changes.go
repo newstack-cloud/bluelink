@@ -1,6 +1,8 @@
 package pluginutils
 
 import (
+	"strings"
+
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
@@ -66,17 +68,11 @@ func GetModifiedField(
 	changes *provider.Changes,
 	fieldPath string,
 ) *provider.FieldChange {
-	if changes == nil || changes.ModifiedFields == nil {
+	if changes == nil {
 		return nil
 	}
 
-	for _, modifiedField := range changes.ModifiedFields {
-		if modifiedField.FieldPath == fieldPath {
-			return &modifiedField
-		}
-	}
-
-	return nil
+	return getFieldChange(changes.ModifiedFields, fieldPath)
 }
 
 // HasNewField checks if the specified field path has been added as a new field
@@ -94,15 +90,52 @@ func GetNewField(
 	changes *provider.Changes,
 	fieldPath string,
 ) *provider.FieldChange {
-	if changes == nil || changes.NewFields == nil {
+	if changes == nil {
 		return nil
 	}
 
-	for _, newField := range changes.NewFields {
-		if newField.FieldPath == fieldPath {
-			return &newField
+	return getFieldChange(changes.NewFields, fieldPath)
+}
+
+func getFieldChange(
+	fields []provider.FieldChange,
+	fieldPath string,
+) *provider.FieldChange {
+	for _, field := range fields {
+		if field.FieldPath == fieldPath {
+			return &field
+		}
+	}
+	return nil
+}
+
+// HasChildModifiedField checks if there is a modified field
+// that is a child of the specified field path.
+func HasChildModifiedField(
+	changes *provider.Changes,
+	fieldPathPrefix string,
+) bool {
+	if changes == nil {
+		return false
+	}
+
+	return hasFieldWithPrefix(changes.ModifiedFields, fieldPathPrefix)
+}
+
+func hasFieldWithPrefix(
+	fields []provider.FieldChange,
+	prefix string,
+) bool {
+	dotNotationPrefix := prefix + "."
+	bracketNotationPrefix := prefix + "["
+
+	for _, modifiedField := range fields {
+
+		if strings.HasPrefix(modifiedField.FieldPath, dotNotationPrefix) ||
+			strings.HasPrefix(modifiedField.FieldPath, bracketNotationPrefix) {
+			return true
 		}
 	}
 
-	return nil
+	return false
 }

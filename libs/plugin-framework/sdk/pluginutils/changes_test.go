@@ -397,6 +397,55 @@ func (s *ChangesTestSuite) Test_get_new_field() {
 	}
 }
 
+func (s *ChangesTestSuite) Test_has_child_modified_field() {
+	testCases := []struct {
+		name      string
+		changes   *provider.Changes
+		fieldPath string
+		expected  bool
+	}{
+		{
+			name:      "nil changes",
+			changes:   nil,
+			fieldPath: "parent.field",
+			expected:  false,
+		},
+		{
+			name: "no modified fields",
+			changes: &provider.Changes{
+				ModifiedFields: nil,
+			},
+			fieldPath: "parent.field",
+			expected:  false,
+		},
+		{
+			name: "no child modified fields",
+			changes: &provider.Changes{
+				ModifiedFields: []provider.FieldChange{},
+			},
+			fieldPath: "parent.field",
+			expected:  false,
+		},
+		{
+			name: "child modified field exists",
+			changes: &provider.Changes{
+				ModifiedFields: []provider.FieldChange{
+					{FieldPath: "parent.field.child"},
+				},
+			},
+			fieldPath: "parent.field",
+			expected:  true,
+		},
+	}
+
+	for _, tc := range testCases {
+		s.Run(tc.name, func() {
+			result := HasChildModifiedField(tc.changes, tc.fieldPath)
+			s.Assert().Equal(tc.expected, result)
+		})
+	}
+}
+
 func TestChangesTestSuite(t *testing.T) {
 	suite.Run(t, new(ChangesTestSuite))
 }
