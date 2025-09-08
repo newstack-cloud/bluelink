@@ -2,7 +2,7 @@ module github.com/newstack-cloud/bluelink/libs/plugin-framework
 
 go 1.23
 
-toolchain go1.23.4
+toolchain go1.24.0
 
 replace github.com/newstack-cloud/bluelink/libs/blueprint => ../blueprint
 
