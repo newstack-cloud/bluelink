@@ -198,6 +198,7 @@ func (s *ResourceTestRunnerSuite) Test_deploy_suite_runner() {
 	testCases := []ResourceDeployTestCase[*mockConfig, *mockService]{
 		s.createMockResourceUpdateTestCase(),
 		s.createMockResourceSaveNewTestCase(),
+		s.createMockResourceSaveRealTestCase(),
 		s.createMockResourceDeployErrorTestCase(),
 	}
 
@@ -211,6 +212,7 @@ func (s *ResourceTestRunnerSuite) Test_deploy_suite_runner() {
 func (s *ResourceTestRunnerSuite) Test_destroy_suite_runner() {
 	testCases := []ResourceDestroyTestCase[*mockConfig, *mockService]{
 		s.createMockResourceDestroyTestCase(),
+		s.createMockResourceDestroyRealTestCase(),
 		s.createMockResourceDestroyErrorTestCase(),
 	}
 
@@ -258,6 +260,50 @@ func (s *ResourceTestRunnerSuite) createMockResourceDestroyTestCase() ResourceDe
 			"DeleteResourceConfig": &deleteMockResourceConfigInput{},
 			"DeleteResourceCode":   &deleteMockResourceCodeInput{},
 		},
+	}
+}
+
+func (s *ResourceTestRunnerSuite) createMockResourceDestroyRealTestCase() ResourceDestroyTestCase[*mockConfig, *mockService] {
+	// This test case provides an example of using the `ResourceDestroyTestCase` helper
+	// for integration testing with a real service.
+	// The assertion will be that no errors occur.
+	// A separate call to the third party service will usually be made
+	// to verify that the resource has been destroyed, this is not
+	// covered by the `ResourceDestroyTestCase` helper.
+
+	service := newMockService(
+		withDeleteMockResourceCodeOutput(
+			&deleteMockResourceCodeOutput{
+				ID: "test-id",
+			},
+		),
+		withDeleteMockResourceConfigOutput(
+			&deleteMockResourceConfigOutput{
+				ID: "test-id",
+			},
+		),
+	)
+
+	return ResourceDestroyTestCase[*mockConfig, *mockService]{
+		Name: "destroys resource successfully",
+		ServiceFactory: func(serviceConfig *mockConfig, providerContext provider.Context) *mockService {
+			return service
+		},
+		ServiceMockCalls: &service.MockCalls,
+		ConfigStore:      s.configStore,
+		Input: &provider.ResourceDestroyInput{
+			ProviderContext: s.providerCtx,
+			InstanceID:      "test-instance-id",
+			ResourceID:      "test-resource-id",
+			ResourceState: &state.ResourceState{
+				ResourceID: "test-resource-id",
+				Name:       "TestResource",
+				InstanceID: "test-instance-id",
+				// SpecData is not used by the mock resource implementation
+				// a pre-determined stub is returned by the underlying mock service.
+			},
+		},
+		ExpectError: false,
 	}
 }
 
@@ -436,6 +482,68 @@ func (s *ResourceTestRunnerSuite) createMockResourceSaveNewTestCase() ResourceDe
 			"SaveResource": &saveMockResourceInput{},
 		},
 		SaveActionsNotCalled: []string{"UpdateConfig", "UpdateCode"},
+	}
+}
+
+func (s *ResourceTestRunnerSuite) createMockResourceSaveRealTestCase() ResourceDeployTestCase[*mockConfig, *mockService] {
+	// This test case provides an example of using the `ResourceDeployTestCase` helper
+	// for integration testing with a real service.
+	// The assertion will be purely on outputs and no mock calls are expected.
+
+	service := newMockService(
+		withSaveMockResourceOutput(
+			&saveMockResourceOutput{
+				ID:           "new-resource-id",
+				Name:         "new-resource",
+				DebugMode:    true,
+				Param1:       4032,
+				Param2:       "new-param2",
+				Param3:       403.23029,
+				InlineCode:   "new-inline-code",
+				CodeLocation: "s3://new-bucket/new-key",
+			},
+		),
+	)
+
+	return ResourceDeployTestCase[*mockConfig, *mockService]{
+		Name: "deploys resource successfully for creation of new resource",
+		ServiceFactory: func(serviceConfig *mockConfig, providerContext provider.Context) *mockService {
+			return service
+		},
+		// No service mock calls for a real service.
+		ConfigStore: s.configStore,
+		Input: &provider.ResourceDeployInput{
+			ProviderContext: s.providerCtx,
+			InstanceID:      "test-instance-id",
+			ResourceID:      "test-resource-id",
+			Changes: &provider.Changes{
+				AppliedResourceInfo: provider.ResourceInfo{
+					ResourceID:   "test-function-id",
+					ResourceName: "TestResource",
+					InstanceID:   "test-instance-id",
+					// No current resource state for a new resource.
+					CurrentResourceState: nil,
+					ResourceWithResolvedSubs: &provider.ResolvedResource{
+						Type: &schema.ResourceTypeWrapper{
+							Value: "aws/lambda/function",
+						},
+						// Spec is not used by the mock resource implementation
+						// a pre-determined stub is returned by the underlying mock service.
+					},
+				},
+				ModifiedFields: []provider.FieldChange{},
+			},
+		},
+		ExpectedOutputMatcher: func(actual *provider.ResourceDeployOutput) (EqualityCheckValues, error) {
+			return EqualityCheckValues{
+				Expected: &provider.ResourceDeployOutput{
+					ComputedFieldValues: map[string]*core.MappingNode{
+						"spec.id": core.MappingNodeFromString("new-resource-id"),
+					},
+				},
+				Actual: actual,
+			}, nil
+		},
 	}
 }
 

@@ -169,11 +169,20 @@ type LinkUpdateResourceTestCase[
 	// into a mock implementation of the service interface for carrying out
 	// the update operation via the provider service APIs for the resource
 	// under test.
+	//
+	// This is optional and only needs to be set if the test case
+	// uses mocks instead of a real service.
 	CurrentServiceMockCalls *MockCalls
 	// Input for the link resource update operation.
 	Input *provider.LinkUpdateResourceInput
 	// Expected output from the link resource update operation.
 	ExpectedOutput *provider.LinkUpdateResourceOutput
+	// ExpectedOutputMatcher is a function that takes the actual output
+	// from the `UpdateResource(A|B)` method and returns a prepared actual
+	// value along with the expected value to be used in an equality check.
+	ExpectedOutputMatcher func(
+		actual *provider.LinkUpdateResourceOutput,
+	) (EqualityCheckValues, error)
 	// Resource defines the resource in the link relationship that should be updated.
 	Resource LinkUpdateResource
 	// UpdateActionsCalled is a mapping of method name to the
@@ -182,10 +191,16 @@ type LinkUpdateResourceTestCase[
 	// is called multiple times with different arguments in the provided order.
 	// This will usually be something like a `*Input` or `*Request` struct
 	// that service library functions take after a context argument.
+	//
+	// This should only be set if the case uses mocks instead of a real service
+	// (i.e. when `CurrentServiceMockCalls` is set).
 	UpdateActionsCalled map[string]any
 	// UpdateActionsNotCalled is a list of method names
 	// that are not expected to be called as a part
 	// of the update operation.
+	//
+	// This should only be set if the case uses mocks instead of a real service
+	// (i.e. when `CurrentServiceMockCalls` is set).
 	UpdateActionsNotCalled []string
 	// If true, the test case expects an error to be returned.
 	ExpectError bool
@@ -283,7 +298,12 @@ func RunLinkUpdateResourceTestCases[
 			}
 
 			testSuite.NoError(err)
-			testSuite.Equal(tc.ExpectedOutput, output)
+			assertExpectedOutput(
+				tc.ExpectedOutput,
+				tc.ExpectedOutputMatcher,
+				output,
+				testSuite,
+			)
 
 			assertActionsCalled(testSuite, tc.CurrentServiceMockCalls, tc.UpdateActionsCalled)
 			assertActionsNotCalled(testSuite, tc.CurrentServiceMockCalls, tc.UpdateActionsNotCalled)
@@ -339,21 +359,36 @@ type LinkUpdateIntermediaryResourcesTestCase[
 	// IntermediariesServiceMockCalls is a mock calls tracker that is expected to be embedded
 	// into a mock implementation of the service interface for carrying out
 	// the update operation via the provider service APIs for intermediary resources.
+	//
+	// This is optional and only needs to be set if the test case
+	// uses mocks instead of a real service.
 	IntermediariesServiceMockCalls *MockCalls
 	// Input for the link intermediary resources update operation.
 	Input *provider.LinkUpdateIntermediaryResourcesInput
 	// Expected output from the link intermediary resources update operation.
 	ExpectedOutput *provider.LinkUpdateIntermediaryResourcesOutput
+	// ExpectedOutputMatcher is a function that takes the actual output
+	// from the `UpdateIntermediaryResources` method and returns a prepared actual
+	// value along with the expected value to be used in an equality check.
+	ExpectedOutputMatcher func(
+		actual *provider.LinkUpdateIntermediaryResourcesOutput,
+	) (EqualityCheckValues, error)
 	// UpdateActionsCalled is a mapping of method name to the
 	// expected second argument for the method.
 	// When the value is a slice of any, it is expected that the method
 	// is called multiple times with different arguments in the provided order.
 	// This will usually be something like a `*Input` or `*Request` struct
 	// that service library functions take after a context argument.
+	//
+	// This should only be set if the case uses mocks instead of a real service
+	// (i.e. when `IntermediariesServiceMockCalls` is set).
 	UpdateActionsCalled map[string]any
 	// UpdateActionsNotCalled is a list of method names
 	// that are not expected to be called as a part
 	// of the update operation.
+	//
+	// This should only be set if the case uses mocks instead of a real service
+	// (i.e. when `IntermediariesServiceMockCalls` is set).
 	UpdateActionsNotCalled []string
 	// If true, the test case expects an error to be returned.
 	ExpectError bool
@@ -425,7 +460,12 @@ func RunLinkUpdateIntermediaryResourcesTestCases[
 			}
 
 			testSuite.NoError(err)
-			testSuite.Equal(tc.ExpectedOutput, output)
+			assertExpectedOutput(
+				tc.ExpectedOutput,
+				tc.ExpectedOutputMatcher,
+				output,
+				testSuite,
+			)
 
 			assertActionsCalled(testSuite, tc.IntermediariesServiceMockCalls, tc.UpdateActionsCalled)
 			assertActionsNotCalled(testSuite, tc.IntermediariesServiceMockCalls, tc.UpdateActionsNotCalled)

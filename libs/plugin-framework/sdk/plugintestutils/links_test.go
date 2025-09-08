@@ -78,6 +78,7 @@ func (s *LinkTestRunnerSuite) Test_update_link_resource_suite_runner() {
 		*mockService,
 	]{
 		s.createMockLinkUpdateResourceATestCase(),
+		s.createMockLinkUpdateResourceRealTestCase(),
 		s.createMockLinkUpdateResourceBTestCase(),
 		s.createMockLinkUpdateErrorTestCase(),
 	}
@@ -121,15 +122,71 @@ func (s *LinkTestRunnerSuite) createMockLinkUpdateResourceATestCase() LinkUpdate
 		ServiceFactoryB:         serviceFactory,
 		ConfigStoreB:            s.configStore,
 		CurrentServiceMockCalls: &service.MockCalls,
-		ExpectedOutput: &provider.LinkUpdateResourceOutput{
-			LinkData: &core.MappingNode{
-				Fields: map[string]*core.MappingNode{
-					"resourceAId": core.MappingNodeFromString("new-resource-id"),
+		ExpectedOutputMatcher: func(actual *provider.LinkUpdateResourceOutput) (EqualityCheckValues, error) {
+			return EqualityCheckValues{
+				Expected: &provider.LinkUpdateResourceOutput{
+					LinkData: &core.MappingNode{
+						Fields: map[string]*core.MappingNode{
+							"resourceAId": core.MappingNodeFromString("new-resource-id"),
+						},
+					},
 				},
-			},
+				Actual: actual,
+			}, nil
 		},
 		UpdateActionsCalled: map[string]any{
 			"SaveResource": &saveMockResourceInput{},
+		},
+	}
+}
+
+func (s *LinkTestRunnerSuite) createMockLinkUpdateResourceRealTestCase() LinkUpdateResourceTestCase[
+	*mockConfig,
+	*mockService,
+	*mockConfig,
+	*mockService,
+] {
+	// This test case provides an example of using the `LinkUpdateResourceTestCase` helper
+	// for integration testing with a real service.
+	// The assertion will be purely on outputs and no mock calls are expected.
+
+	service := newMockService(
+		withSaveMockResourceOutput(
+			&saveMockResourceOutput{
+				ID: "new-resource-id",
+			},
+		),
+	)
+
+	serviceFactory := func(_ *mockConfig, _ provider.Context) *mockService {
+		return service
+	}
+
+	return LinkUpdateResourceTestCase[
+		*mockConfig,
+		*mockService,
+		*mockConfig,
+		*mockService,
+	]{
+		Name:            "Update Resource A",
+		Input:           &provider.LinkUpdateResourceInput{},
+		Resource:        LinkUpdateResourceA,
+		ServiceFactoryA: serviceFactory,
+		ConfigStoreA:    s.configStore,
+		ServiceFactoryB: serviceFactory,
+		ConfigStoreB:    s.configStore,
+		// No service mock calls for a real service.
+		ExpectedOutputMatcher: func(actual *provider.LinkUpdateResourceOutput) (EqualityCheckValues, error) {
+			return EqualityCheckValues{
+				Expected: &provider.LinkUpdateResourceOutput{
+					LinkData: &core.MappingNode{
+						Fields: map[string]*core.MappingNode{
+							"resourceAId": core.MappingNodeFromString("new-resource-id"),
+						},
+					},
+				},
+				Actual: actual,
+			}, nil
 		},
 	}
 }
@@ -222,6 +279,7 @@ func (s *LinkTestRunnerSuite) Test_update_link_intermediary_resources_suite_runn
 		*mockService,
 	]{
 		s.createMockLinkUpdateIntermediaryResourcesTestCase(),
+		s.createMockLinkUpdateIntermediaryResourcesRealTestCase(),
 		s.createMockLinkUpdateIntermediaryResourcesErrorTestCase(),
 	}
 
@@ -277,6 +335,56 @@ func (s *LinkTestRunnerSuite) createMockLinkUpdateIntermediaryResourcesTestCase(
 		},
 		UpdateActionsCalled: map[string]any{
 			"SaveResource": &saveMockResourceInput{},
+		},
+	}
+}
+
+func (s *LinkTestRunnerSuite) createMockLinkUpdateIntermediaryResourcesRealTestCase() LinkUpdateIntermediaryResourcesTestCase[
+	*mockConfig,
+	*mockService,
+	*mockConfig,
+	*mockService,
+] {
+	// This test case provides an example of using the `LinkUpdateIntermediaryResourcesTestCase` helper
+	// for integration testing with a real service.
+	// The assertion will be purely on outputs and no mock calls are expected.
+
+	service := newMockService(
+		withSaveMockResourceOutput(
+			&saveMockResourceOutput{
+				ID: "intermediary-resource-id",
+			},
+		),
+	)
+
+	serviceFactory := func(_ *mockConfig, _ provider.Context) *mockService {
+		return service
+	}
+
+	return LinkUpdateIntermediaryResourcesTestCase[
+		*mockConfig,
+		*mockService,
+		*mockConfig,
+		*mockService,
+	]{
+		Name:            "Update Intermediary Resources",
+		Input:           &provider.LinkUpdateIntermediaryResourcesInput{},
+		ServiceFactoryA: serviceFactory,
+		ConfigStoreA:    s.configStore,
+		ServiceFactoryB: serviceFactory,
+		ConfigStoreB:    s.configStore,
+		// No service mock calls for a real service.
+		ExpectedOutput: &provider.LinkUpdateIntermediaryResourcesOutput{
+			IntermediaryResourceStates: []*state.LinkIntermediaryResourceState{
+				{
+					ResourceID: "intermediary-resource-id",
+				},
+			},
+			LinkData: &core.MappingNode{
+				Fields: map[string]*core.MappingNode{
+					"intermediaryResourceId": core.MappingNodeFromString("intermediary-resource-id"),
+				},
+			},
 		},
 	}
 }

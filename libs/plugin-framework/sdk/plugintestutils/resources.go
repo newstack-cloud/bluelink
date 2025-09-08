@@ -240,6 +240,9 @@ type ResourceDeployTestCase[ServiceConfig any, Service any] struct {
 	// ServiceMockCalls is a mock calls tracker that is expected to be embedded
 	// into a mock implementation of the service interface for carrying out
 	// the save operation via the provider service APIs.
+	//
+	// This is optional and only needs to be set if the test case
+	// uses mocks instead of a real service.
 	ServiceMockCalls *MockCalls
 	// ConfigStore is a store that generates service-specific configuration
 	// for the service factory to create an instance of the service.
@@ -256,10 +259,16 @@ type ResourceDeployTestCase[ServiceConfig any, Service any] struct {
 	// is called multiple times with different arguments in the provided order.
 	// This will usually be something like a `*Input` or `*Request` struct
 	// that service library functions take after a context argument.
+	//
+	// This should only be set if the case uses mocks instead of a real service
+	// (i.e. when `ServiceMockCalls` is set).
 	SaveActionsCalled map[string]any
 	// SaveActionsNotCalled is a list of method names
 	// that are not expected to be called as a part
 	// of the save operation.
+	//
+	// This should only be set if the case uses mocks instead of a real service
+	// (i.e. when `ServiceMockCalls` is set).
 	SaveActionsNotCalled []string
 	// ExpectedOutput is the expected output from the `Deploy` method.
 	ExpectedOutput *provider.ResourceDeployOutput
@@ -331,6 +340,9 @@ type ResourceDestroyTestCase[ServiceConfig any, Service any] struct {
 	// ServiceMockCalls is a mock calls tracker that is expected to be embedded
 	// into a mock implementation of the service interface for carrying out
 	// the destroy operation via the provider service APIs.
+	//
+	// This is optional and only needs to be set if the test case
+	// uses mocks instead of a real service.
 	ServiceMockCalls *MockCalls
 	// ConfigStore is a store that generates service-specific configuration
 	// for the service factory to create an instance of the service.
@@ -347,10 +359,16 @@ type ResourceDestroyTestCase[ServiceConfig any, Service any] struct {
 	// is called multiple times with different arguments in the provided order.
 	// This will usually be something like a `*Input` or `*Request` struct
 	// that service library functions take after a context argument.
+	//
+	// This should only be set if the case uses mocks instead of a real service
+	// (i.e. when `ServiceMockCalls` is set).
 	DestroyActionsCalled map[string]any
 	// SaveActionsNotCalled is a list of method names
 	// that are not expected to be called as a part
 	// of the save operation.
+	//
+	// This should only be set if the case uses mocks instead of a real service
+	// (i.e. when `ServiceMockCalls` is set).
 	DestroyActionsNotCalled []string
 	// ExpectError indicates whether the test case expects an error
 	// to be returned from the `Destroy` method.
@@ -393,6 +411,10 @@ func assertActionsCalled(
 	serviceMockCalls *MockCalls,
 	expected map[string]any,
 ) {
+	if serviceMockCalls == nil {
+		return
+	}
+
 	for methodName, expectedInput := range expected {
 		if expectedSlice, ok := expectedInput.([]any); ok {
 			// []any indicates that the method is expected to be called multiple times
@@ -412,6 +434,10 @@ func assertActionsNotCalled(
 	serviceMockCalls *MockCalls,
 	notCalled []string,
 ) {
+	if serviceMockCalls == nil {
+		return
+	}
+
 	for _, methodName := range notCalled {
 		serviceMockCalls.AssertNotCalled(s, methodName)
 	}
