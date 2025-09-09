@@ -73,13 +73,14 @@ func (s *LinkTestRunnerSuite) Test_stage_changes_suite_runner() {
 
 func (s *LinkTestRunnerSuite) Test_update_link_resource_suite_runner() {
 	cleanedUp := []string{}
+	collectedCalls := &MockCalls{}
 	testCases := []LinkUpdateResourceTestCase[
 		*mockConfig,
 		*mockService,
 		*mockConfig,
 		*mockService,
 	]{
-		s.createMockLinkUpdateResourceATestCase(),
+		s.createMockLinkUpdateResourceATestCase(collectedCalls),
 		s.createMockLinkUpdateResourceRealTestCase(&cleanedUp),
 		s.createMockLinkUpdateResourceBTestCase(),
 		s.createMockLinkUpdateErrorTestCase(),
@@ -92,9 +93,12 @@ func (s *LinkTestRunnerSuite) Test_update_link_resource_suite_runner() {
 	)
 
 	s.Equal(cleanedUp, []string{"new-resource-id"})
+	collectedCalls.AssertCalled(&s.Suite, "ExtraAssertions")
 }
 
-func (s *LinkTestRunnerSuite) createMockLinkUpdateResourceATestCase() LinkUpdateResourceTestCase[
+func (s *LinkTestRunnerSuite) createMockLinkUpdateResourceATestCase(
+	callCollector *MockCalls,
+) LinkUpdateResourceTestCase[
 	*mockConfig,
 	*mockService,
 	*mockConfig,
@@ -137,6 +141,13 @@ func (s *LinkTestRunnerSuite) createMockLinkUpdateResourceATestCase() LinkUpdate
 				},
 				Actual: actual,
 			}, nil
+		},
+		ExtraAssertions: func(
+			ctx context.Context,
+			suite *suite.Suite,
+			output *provider.LinkUpdateResourceOutput,
+		) {
+			callCollector.RegisterNamedCall("ExtraAssertions")
 		},
 		UpdateActionsCalled: map[string]any{
 			"SaveResource": &saveMockResourceInput{},
@@ -287,13 +298,14 @@ func (s *LinkTestRunnerSuite) createMockLinkUpdateErrorTestCase() LinkUpdateReso
 
 func (s *LinkTestRunnerSuite) Test_update_link_intermediary_resources_suite_runner() {
 	cleanedUp := []string{}
+	collectedCalls := &MockCalls{}
 	testCases := []LinkUpdateIntermediaryResourcesTestCase[
 		*mockConfig,
 		*mockService,
 		*mockConfig,
 		*mockService,
 	]{
-		s.createMockLinkUpdateIntermediaryResourcesTestCase(),
+		s.createMockLinkUpdateIntermediaryResourcesTestCase(collectedCalls),
 		s.createMockLinkUpdateIntermediaryResourcesRealTestCase(&cleanedUp),
 		s.createMockLinkUpdateIntermediaryResourcesErrorTestCase(),
 	}
@@ -305,9 +317,12 @@ func (s *LinkTestRunnerSuite) Test_update_link_intermediary_resources_suite_runn
 	)
 
 	s.Equal(cleanedUp, []string{"intermediary-resource-id"})
+	collectedCalls.AssertCalled(&s.Suite, "ExtraAssertions")
 }
 
-func (s *LinkTestRunnerSuite) createMockLinkUpdateIntermediaryResourcesTestCase() LinkUpdateIntermediaryResourcesTestCase[
+func (s *LinkTestRunnerSuite) createMockLinkUpdateIntermediaryResourcesTestCase(
+	callCollector *MockCalls,
+) LinkUpdateIntermediaryResourcesTestCase[
 	*mockConfig,
 	*mockService,
 	*mockConfig,
@@ -349,6 +364,13 @@ func (s *LinkTestRunnerSuite) createMockLinkUpdateIntermediaryResourcesTestCase(
 					"intermediaryResourceId": core.MappingNodeFromString("intermediary-resource-id"),
 				},
 			},
+		},
+		ExtraAssertions: func(
+			ctx context.Context,
+			suite *suite.Suite,
+			output *provider.LinkUpdateIntermediaryResourcesOutput,
+		) {
+			callCollector.RegisterNamedCall("ExtraAssertions")
 		},
 		UpdateActionsCalled: map[string]any{
 			"SaveResource": &saveMockResourceInput{},

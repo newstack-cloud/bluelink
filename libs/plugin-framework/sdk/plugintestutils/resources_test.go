@@ -196,9 +196,10 @@ func (s *ResourceTestRunnerSuite) Test_has_stabilised_suite_runner() {
 
 func (s *ResourceTestRunnerSuite) Test_deploy_suite_runner() {
 	cleanedUp := []string{}
+	collectedCalls := &MockCalls{}
 
 	testCases := []ResourceDeployTestCase[*mockConfig, *mockService]{
-		s.createMockResourceUpdateTestCase(),
+		s.createMockResourceUpdateTestCase(collectedCalls),
 		s.createMockResourceSaveNewTestCase(),
 		s.createMockResourceSaveRealTestCase(&cleanedUp),
 		s.createMockResourceDeployErrorTestCase(),
@@ -209,6 +210,9 @@ func (s *ResourceTestRunnerSuite) Test_deploy_suite_runner() {
 		newMockResource,
 		&s.Suite,
 	)
+
+	s.Equal(cleanedUp, []string{"new-resource-id"})
+	collectedCalls.AssertCalled(&s.Suite, "ExtraAssertions")
 }
 
 func (s *ResourceTestRunnerSuite) Test_destroy_suite_runner() {
@@ -339,7 +343,9 @@ func (s *ResourceTestRunnerSuite) createMockResourceDestroyErrorTestCase() Resou
 	}
 }
 
-func (s *ResourceTestRunnerSuite) createMockResourceUpdateTestCase() ResourceDeployTestCase[*mockConfig, *mockService] {
+func (s *ResourceTestRunnerSuite) createMockResourceUpdateTestCase(
+	callCollector *MockCalls,
+) ResourceDeployTestCase[*mockConfig, *mockService] {
 	service := newMockService(
 		withUpdateMockResourceConfigOutput(
 			&updateMockResourceConfigOutput{
@@ -402,6 +408,13 @@ func (s *ResourceTestRunnerSuite) createMockResourceUpdateTestCase() ResourceDep
 			ComputedFieldValues: map[string]*core.MappingNode{
 				"spec.id": core.MappingNodeFromString("test-id"),
 			},
+		},
+		ExtraAssertions: func(
+			ctx context.Context,
+			suite *suite.Suite,
+			output *provider.ResourceDeployOutput,
+		) {
+			callCollector.RegisterNamedCall("ExtraAssertions")
 		},
 		SaveActionsCalled: map[string]any{
 			"UpdateConfig": []any{

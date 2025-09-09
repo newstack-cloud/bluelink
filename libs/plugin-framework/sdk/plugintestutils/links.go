@@ -183,6 +183,15 @@ type LinkUpdateResourceTestCase[
 	ExpectedOutputMatcher func(
 		actual *provider.LinkUpdateResourceOutput,
 	) (EqualityCheckValues, error)
+	// ExtraAssertions is an optional function that is called after the output of
+	// the operation successfully matches the expected output or matcher.
+	// This is useful for adding additional assertions, such as checking
+	// the persisted state of the resource in the upstream service for integration tests.
+	ExtraAssertions func(
+		ctx context.Context,
+		suite *suite.Suite,
+		output *provider.LinkUpdateResourceOutput,
+	)
 	// Resource defines the resource in the link relationship that should be updated.
 	Resource LinkUpdateResource
 	// UpdateActionsCalled is a mapping of method name to the
@@ -326,6 +335,10 @@ func RunLinkUpdateResourceTestCases[
 
 			assertActionsCalled(testSuite, tc.CurrentServiceMockCalls, tc.UpdateActionsCalled)
 			assertActionsNotCalled(testSuite, tc.CurrentServiceMockCalls, tc.UpdateActionsNotCalled)
+
+			if tc.ExtraAssertions != nil {
+				tc.ExtraAssertions(context.Background(), testSuite, output)
+			}
 		})
 	}
 }
@@ -392,6 +405,16 @@ type LinkUpdateIntermediaryResourcesTestCase[
 	ExpectedOutputMatcher func(
 		actual *provider.LinkUpdateIntermediaryResourcesOutput,
 	) (EqualityCheckValues, error)
+	// ExtraAssertions is an optional function that is called after the output of
+	// the operation successfully matches the expected output or matcher.
+	// This is useful for adding additional assertions, such as checking
+	// the persisted state of intermediary resources in the upstream service
+	// for integration tests.
+	ExtraAssertions func(
+		ctx context.Context,
+		suite *suite.Suite,
+		output *provider.LinkUpdateIntermediaryResourcesOutput,
+	)
 	// UpdateActionsCalled is a mapping of method name to the
 	// expected second argument for the method.
 	// When the value is a slice of any, it is expected that the method
@@ -512,6 +535,10 @@ func RunLinkUpdateIntermediaryResourcesTestCases[
 
 			assertActionsCalled(testSuite, tc.IntermediariesServiceMockCalls, tc.UpdateActionsCalled)
 			assertActionsNotCalled(testSuite, tc.IntermediariesServiceMockCalls, tc.UpdateActionsNotCalled)
+
+			if tc.ExtraAssertions != nil {
+				tc.ExtraAssertions(context.Background(), testSuite, output)
+			}
 		})
 	}
 }

@@ -278,6 +278,15 @@ type ResourceDeployTestCase[ServiceConfig any, Service any] struct {
 	ExpectedOutputMatcher func(
 		actual *provider.ResourceDeployOutput,
 	) (EqualityCheckValues, error)
+	// ExtraAssertions is an optional function that is called after the output of
+	// the operation successfully matches the expected output or matcher.
+	// This is useful for adding additional assertions, such as checking
+	// the persisted state of the resource in the upstream service for integration tests.
+	ExtraAssertions func(
+		ctx context.Context,
+		suite *suite.Suite,
+		output *provider.ResourceDeployOutput,
+	)
 	// ExpectError indicates whether the test case expects an error
 	// to be returned from the `Deploy` method.
 	ExpectError bool
@@ -306,7 +315,8 @@ func RunResourceDeployTestCases[ServiceConfig any, Service any](
 				tc.ConfigStore,
 			)
 
-			output, err := resource.Deploy(context.Background(), tc.Input)
+			ctx := context.Background()
+			output, err := resource.Deploy(ctx, tc.Input)
 			if tc.ExpectError {
 				testSuite.Error(err)
 				return
@@ -314,7 +324,7 @@ func RunResourceDeployTestCases[ServiceConfig any, Service any](
 
 			if tc.Cleanup != nil {
 				defer func() {
-					err := tc.Cleanup(context.Background(), output)
+					err := tc.Cleanup(ctx, output)
 					if err != nil {
 						testSuite.Fail(
 							"Cleanup function failed",
@@ -335,6 +345,10 @@ func RunResourceDeployTestCases[ServiceConfig any, Service any](
 
 			assertActionsCalled(testSuite, tc.ServiceMockCalls, tc.SaveActionsCalled)
 			assertActionsNotCalled(testSuite, tc.ServiceMockCalls, tc.SaveActionsNotCalled)
+
+			if tc.ExtraAssertions != nil {
+				tc.ExtraAssertions(ctx, testSuite, output)
+			}
 		})
 	}
 }
