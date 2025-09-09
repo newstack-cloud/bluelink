@@ -281,6 +281,12 @@ type ResourceDeployTestCase[ServiceConfig any, Service any] struct {
 	// ExpectError indicates whether the test case expects an error
 	// to be returned from the `Deploy` method.
 	ExpectError bool
+	// Cleanup is a function that is called after the test case has run.
+	// This is used to clean up any resources that were created during the test case.
+	// This is useful for integration tests with real services where the resource
+	// needs to be cleaned up after the test case has run regardless of whether
+	// the test case passes or fails.
+	Cleanup func(ctx context.Context, output *provider.ResourceDeployOutput) error
 }
 
 // RunResourceDeployTestCases runs a set of test cases for the `Deploy` method
@@ -304,6 +310,19 @@ func RunResourceDeployTestCases[ServiceConfig any, Service any](
 			if tc.ExpectError {
 				testSuite.Error(err)
 				return
+			}
+
+			if tc.Cleanup != nil {
+				defer func() {
+					err := tc.Cleanup(context.Background(), output)
+					if err != nil {
+						testSuite.Fail(
+							"Cleanup function failed",
+							"Error: %v",
+							err,
+						)
+					}
+				}()
 			}
 
 			testSuite.NoError(err)

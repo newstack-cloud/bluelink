@@ -1,6 +1,7 @@
 package plugintestutils
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -71,6 +72,7 @@ func (s *LinkTestRunnerSuite) Test_stage_changes_suite_runner() {
 }
 
 func (s *LinkTestRunnerSuite) Test_update_link_resource_suite_runner() {
+	cleanedUp := []string{}
 	testCases := []LinkUpdateResourceTestCase[
 		*mockConfig,
 		*mockService,
@@ -78,7 +80,7 @@ func (s *LinkTestRunnerSuite) Test_update_link_resource_suite_runner() {
 		*mockService,
 	]{
 		s.createMockLinkUpdateResourceATestCase(),
-		s.createMockLinkUpdateResourceRealTestCase(),
+		s.createMockLinkUpdateResourceRealTestCase(&cleanedUp),
 		s.createMockLinkUpdateResourceBTestCase(),
 		s.createMockLinkUpdateErrorTestCase(),
 	}
@@ -88,6 +90,8 @@ func (s *LinkTestRunnerSuite) Test_update_link_resource_suite_runner() {
 		newMockLink,
 		&s.Suite,
 	)
+
+	s.Equal(cleanedUp, []string{"new-resource-id"})
 }
 
 func (s *LinkTestRunnerSuite) createMockLinkUpdateResourceATestCase() LinkUpdateResourceTestCase[
@@ -140,7 +144,9 @@ func (s *LinkTestRunnerSuite) createMockLinkUpdateResourceATestCase() LinkUpdate
 	}
 }
 
-func (s *LinkTestRunnerSuite) createMockLinkUpdateResourceRealTestCase() LinkUpdateResourceTestCase[
+func (s *LinkTestRunnerSuite) createMockLinkUpdateResourceRealTestCase(
+	cleanedUp *[]string,
+) LinkUpdateResourceTestCase[
 	*mockConfig,
 	*mockService,
 	*mockConfig,
@@ -187,6 +193,14 @@ func (s *LinkTestRunnerSuite) createMockLinkUpdateResourceRealTestCase() LinkUpd
 				},
 				Actual: actual,
 			}, nil
+		},
+		Cleanup: func(
+			ctx context.Context,
+			failed bool,
+			output *provider.LinkUpdateResourceOutput,
+		) error {
+			*cleanedUp = append(*cleanedUp, core.StringValue(output.LinkData.Fields["resourceAId"]))
+			return nil
 		},
 	}
 }
@@ -272,6 +286,7 @@ func (s *LinkTestRunnerSuite) createMockLinkUpdateErrorTestCase() LinkUpdateReso
 }
 
 func (s *LinkTestRunnerSuite) Test_update_link_intermediary_resources_suite_runner() {
+	cleanedUp := []string{}
 	testCases := []LinkUpdateIntermediaryResourcesTestCase[
 		*mockConfig,
 		*mockService,
@@ -279,7 +294,7 @@ func (s *LinkTestRunnerSuite) Test_update_link_intermediary_resources_suite_runn
 		*mockService,
 	]{
 		s.createMockLinkUpdateIntermediaryResourcesTestCase(),
-		s.createMockLinkUpdateIntermediaryResourcesRealTestCase(),
+		s.createMockLinkUpdateIntermediaryResourcesRealTestCase(&cleanedUp),
 		s.createMockLinkUpdateIntermediaryResourcesErrorTestCase(),
 	}
 
@@ -288,6 +303,8 @@ func (s *LinkTestRunnerSuite) Test_update_link_intermediary_resources_suite_runn
 		newMockLink,
 		&s.Suite,
 	)
+
+	s.Equal(cleanedUp, []string{"intermediary-resource-id"})
 }
 
 func (s *LinkTestRunnerSuite) createMockLinkUpdateIntermediaryResourcesTestCase() LinkUpdateIntermediaryResourcesTestCase[
@@ -339,7 +356,9 @@ func (s *LinkTestRunnerSuite) createMockLinkUpdateIntermediaryResourcesTestCase(
 	}
 }
 
-func (s *LinkTestRunnerSuite) createMockLinkUpdateIntermediaryResourcesRealTestCase() LinkUpdateIntermediaryResourcesTestCase[
+func (s *LinkTestRunnerSuite) createMockLinkUpdateIntermediaryResourcesRealTestCase(
+	cleanedUp *[]string,
+) LinkUpdateIntermediaryResourcesTestCase[
 	*mockConfig,
 	*mockService,
 	*mockConfig,
@@ -385,6 +404,14 @@ func (s *LinkTestRunnerSuite) createMockLinkUpdateIntermediaryResourcesRealTestC
 					"intermediaryResourceId": core.MappingNodeFromString("intermediary-resource-id"),
 				},
 			},
+		},
+		Cleanup: func(
+			ctx context.Context,
+			failed bool,
+			output *provider.LinkUpdateIntermediaryResourcesOutput,
+		) error {
+			*cleanedUp = append(*cleanedUp, core.StringValue(output.LinkData.Fields["intermediaryResourceId"]))
+			return nil
 		},
 	}
 }

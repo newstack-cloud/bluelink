@@ -208,6 +208,12 @@ type LinkUpdateResourceTestCase[
 	// This doesn't have to be an exact match, the error message
 	// just needs to contain the provided string.
 	ExpectedErrorMessage string
+	// Cleanup is a function that is called after the test case has run.
+	// This is used to clean up resources that were created for the link test case.
+	// This is useful for integration tests with real services where the resource
+	// needs to be cleaned up after the test case has run regardless of whether
+	// the test case passes or fails.
+	Cleanup func(ctx context.Context, failed bool, output *provider.LinkUpdateResourceOutput) error
 }
 
 // LinkUpdateResource is a type that represents a resource
@@ -289,6 +295,19 @@ func RunLinkUpdateResourceTestCases[
 			default:
 				testSuite.Failf("Invalid link resource", "Resource %s is not supported", tc.Resource)
 				return
+			}
+
+			if tc.Cleanup != nil {
+				defer func() {
+					err := tc.Cleanup(context.Background(), err != nil, output)
+					if err != nil {
+						testSuite.Fail(
+							"Cleanup function failed",
+							"Error: %v",
+							err,
+						)
+					}
+				}()
 			}
 
 			if tc.ExpectError {
@@ -396,6 +415,16 @@ type LinkUpdateIntermediaryResourcesTestCase[
 	// This doesn't have to be an exact match, the error message
 	// just needs to contain the provided string.
 	ExpectedErrorMessage string
+	// Cleanup is a function that is called after the test case has run.
+	// This is used to clean up intermediary resources that were created for the link test case.
+	// This is useful for integration tests with real services where the resource
+	// needs to be cleaned up after the test case has run regardless of whether
+	// the test case passes or fails.
+	Cleanup func(
+		ctx context.Context,
+		failed bool,
+		output *provider.LinkUpdateIntermediaryResourcesOutput,
+	) error
 }
 
 // RunLinkUpdateIntermediaryResourcesTestCases runs a set of test cases
@@ -453,6 +482,20 @@ func RunLinkUpdateIntermediaryResourcesTestCases[
 				context.Background(),
 				tc.Input,
 			)
+
+			if tc.Cleanup != nil {
+				defer func() {
+					err := tc.Cleanup(context.Background(), err != nil, output)
+					if err != nil {
+						testSuite.Fail(
+							"Cleanup function failed",
+							"Error: %v",
+							err,
+						)
+					}
+				}()
+			}
+
 			if tc.ExpectError {
 				testSuite.Error(err)
 				testSuite.ErrorContains(err, tc.ExpectedErrorMessage)

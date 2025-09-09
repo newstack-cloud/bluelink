@@ -1,6 +1,7 @@
 package plugintestutils
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"testing"
@@ -194,11 +195,12 @@ func (s *ResourceTestRunnerSuite) Test_has_stabilised_suite_runner() {
 }
 
 func (s *ResourceTestRunnerSuite) Test_deploy_suite_runner() {
+	cleanedUp := []string{}
 
 	testCases := []ResourceDeployTestCase[*mockConfig, *mockService]{
 		s.createMockResourceUpdateTestCase(),
 		s.createMockResourceSaveNewTestCase(),
-		s.createMockResourceSaveRealTestCase(),
+		s.createMockResourceSaveRealTestCase(&cleanedUp),
 		s.createMockResourceDeployErrorTestCase(),
 	}
 
@@ -485,7 +487,9 @@ func (s *ResourceTestRunnerSuite) createMockResourceSaveNewTestCase() ResourceDe
 	}
 }
 
-func (s *ResourceTestRunnerSuite) createMockResourceSaveRealTestCase() ResourceDeployTestCase[*mockConfig, *mockService] {
+func (s *ResourceTestRunnerSuite) createMockResourceSaveRealTestCase(
+	cleanedUp *[]string,
+) ResourceDeployTestCase[*mockConfig, *mockService] {
 	// This test case provides an example of using the `ResourceDeployTestCase` helper
 	// for integration testing with a real service.
 	// The assertion will be purely on outputs and no mock calls are expected.
@@ -543,6 +547,10 @@ func (s *ResourceTestRunnerSuite) createMockResourceSaveRealTestCase() ResourceD
 				},
 				Actual: actual,
 			}, nil
+		},
+		Cleanup: func(ctx context.Context, output *provider.ResourceDeployOutput) error {
+			*cleanedUp = append(*cleanedUp, core.StringValue(output.ComputedFieldValues["spec.id"]))
+			return nil
 		},
 	}
 }
