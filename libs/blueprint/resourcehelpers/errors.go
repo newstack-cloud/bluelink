@@ -33,11 +33,29 @@ func errResourceTypeProviderNotFound(
 ) error {
 	return &errors.RunError{
 		ReasonCode: provider.ErrorReasonCodeItemTypeProviderNotFound,
-		Err: fmt.Errorf(
-			"run failed as the provider with namespace %q was not found for resource type %q",
-			providerNamespace,
-			resourceType,
-		),
+		Err:        fmt.Errorf("provider %q not found for resource type %q", providerNamespace, resourceType),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryProviderMissing,
+			ReasonCode: provider.ErrorReasonCodeItemTypeProviderNotFound,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeInstallProvider),
+					Title:       "Install Provider",
+					Description: fmt.Sprintf("Install the %s provider to support %s resources", providerNamespace, resourceType),
+					Priority:    1,
+				},
+				{
+					Type:        string(errors.ActionTypeCheckResourceType),
+					Title:       "Verify Resource Type",
+					Description: "Check if the resource type name is correct",
+					Priority:    2,
+				},
+			},
+			Metadata: map[string]any{
+				"providerNamespace": providerNamespace,
+				"resourceType":      resourceType,
+			},
+		},
 	}
 }
 

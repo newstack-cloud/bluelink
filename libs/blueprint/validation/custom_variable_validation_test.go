@@ -458,8 +458,7 @@ func (s *CustomVariableValidationTestSuite) Test_reports_error_when_no_value_is_
 	c.Assert(
 		loadErr.Error(),
 		Equals,
-		"blueprint load error: validation failed due to a value not being provided for the "+
-			"required variable \"region\", as it does not have a default",
+		"blueprint load error: required variable \"region\" has no value",
 	)
 }
 

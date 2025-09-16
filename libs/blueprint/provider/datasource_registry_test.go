@@ -151,6 +151,5 @@ func (s *DataSourceRegistryTestSuite) Test_produces_error_for_missing_provider(c
 	runErr, isRunErr := err.(*errors.RunError)
 	c.Assert(isRunErr, Equals, true)
 	c.Assert(runErr.ReasonCode, Equals, ErrorReasonCodeItemTypeProviderNotFound)
-	c.Assert(runErr.Error(), Equals, "run error: run failed as the provider with namespace \"otherProvider\" "+
-		"was not found for data source type \"otherProvider/otherDataSource\"")
+	c.Assert(runErr.Error(), Equals, "run error: provider \"otherProvider\" not found for data source type \"otherProvider/otherDataSource\"")
 }

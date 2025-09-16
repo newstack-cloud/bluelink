@@ -7,12 +7,60 @@ import (
 
 type ErrorReasonCode string
 
+// ErrorContext provides structured information for error resolution
+type ErrorContext struct {
+	// Category helps clients group and handle errors
+	Category ErrorCategory `json:"category,omitempty"`
+	// Reason code from the parent error for programmatic identification
+	ReasonCode ErrorReasonCode `json:"reasonCode,omitempty"`
+	// Suggested actions the user can take
+	SuggestedActions []SuggestedAction `json:"suggestedActions,omitempty"`
+	// Additional metadata for context
+	Metadata map[string]any `json:"metadata,omitempty"`
+}
+
+type ErrorCategory string
+
+const (
+	ErrorCategoryProviderMissing      ErrorCategory = "providerMissing"
+	ErrorCategoryProviderIncompatible ErrorCategory = "providerIncompatible"
+	ErrorCategoryValidation           ErrorCategory = "validation"
+	ErrorCategoryFunctionNotFound     ErrorCategory = "functionNotFound"
+	ErrorCategoryResourceType         ErrorCategory = "resourceType"
+	ErrorCategoryVariableType         ErrorCategory = "variableType"
+)
+
+type SuggestedAction struct {
+	Type        string `json:"type"`                  // Programmatically stable identifier
+	Title       string `json:"title"`                 // Human-readable title
+	Description string `json:"description,omitempty"` // Human-readable description
+	Priority    int    `json:"priority,omitempty"`    // 1=highest, 5=lowest
+}
+
+// ActionType constants for programmatic identification
+type ActionType string
+
+const (
+	ActionTypeInstallProvider     ActionType = "installProvider"
+	ActionTypeUpdateProvider      ActionType = "updateProvider"
+	ActionTypeCheckConfiguration  ActionType = "checkConfiguration"
+	ActionTypeCheckFunctionName   ActionType = "checkFunctionName"
+	ActionTypeCheckResourceType   ActionType = "checkResourceType"
+	ActionTypeCheckDataSourceType ActionType = "checkDataSourceType"
+	ActionTypeProvideValue        ActionType = "provideValue"
+	ActionTypeAddDefaultValue     ActionType = "addDefaultValue"
+	ActionTypeFixVariableType     ActionType = "fixVariableType"
+	ActionTypeAddResourceType     ActionType = "addResourceType"
+	ActionTypeListAvailableTypes  ActionType = "listAvailableTypes"
+)
+
 type LoadError struct {
 	ReasonCode  ErrorReasonCode
 	Err         error
 	ChildErrors []error
 	Line        *int
 	Column      *int
+	Context     *ErrorContext `json:"context,omitempty"`
 }
 
 func (e *LoadError) Error() string {
@@ -44,6 +92,7 @@ type RunError struct {
 	// This is useful for distinguishing between errors that occur in the parent blueprint
 	// and errors that occur in a child blueprint.
 	ChildBlueprintPath string
+	Context            *ErrorContext `json:"context,omitempty"`
 }
 
 func (e *RunError) Error() string {
@@ -78,6 +127,7 @@ type SerialiseError struct {
 	ReasonCode  ErrorReasonCode
 	Err         error
 	ChildErrors []error
+	Context     *ErrorContext `json:"context,omitempty"`
 }
 
 func (e *SerialiseError) Error() string {

@@ -39,12 +39,19 @@ func validationErrorFromDiagnostic(
 	errorReasonCode bperrors.ErrorReasonCode,
 ) error {
 	line, column := getDiagnosticLineAndColumn(diagnostic)
-	return &bperrors.LoadError{
+	loadErr := &bperrors.LoadError{
 		ReasonCode: errorReasonCode,
 		Err:        errors.New(diagnostic.Message),
 		Line:       &line,
 		Column:     &column,
 	}
+
+	// Preserve context if available
+	if diagnostic.Context != nil {
+		loadErr.Context = diagnostic.Context
+	}
+
+	return loadErr
 }
 
 func getDiagnosticLineAndColumn(diagnostic *core.Diagnostic) (int, int) {

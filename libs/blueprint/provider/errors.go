@@ -50,11 +50,29 @@ func errDataSourceTypeProviderNotFound(
 ) error {
 	return &errors.RunError{
 		ReasonCode: ErrorReasonCodeItemTypeProviderNotFound,
-		Err: fmt.Errorf(
-			"run failed as the provider with namespace %q was not found for data source type %q",
-			providerNamespace,
-			dataSourceType,
-		),
+		Err:        fmt.Errorf("provider %q not found for data source type %q", providerNamespace, dataSourceType),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryProviderMissing,
+			ReasonCode: ErrorReasonCodeItemTypeProviderNotFound,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeInstallProvider),
+					Title:       "Install Provider",
+					Description: fmt.Sprintf("Install the %s provider to support %s data sources", providerNamespace, dataSourceType),
+					Priority:    1,
+				},
+				{
+					Type:        string(errors.ActionTypeCheckConfiguration),
+					Title:       "Check Configuration",
+					Description: "Verify your provider configuration",
+					Priority:    2,
+				},
+			},
+			Metadata: map[string]any{
+				"providerNamespace": providerNamespace,
+				"dataSourceType":    dataSourceType,
+			},
+		},
 	}
 }
 
@@ -64,11 +82,29 @@ func errProviderDataSourceTypeNotFound(
 ) error {
 	return &errors.RunError{
 		ReasonCode: ErrorReasonCodeProviderDataSourceTypeNotFound,
-		Err: fmt.Errorf(
-			"run failed as the provider with namespace %q does not have an implementation for data source type %q",
-			providerNamespace,
-			dataSourceType,
-		),
+		Err:        fmt.Errorf("provider %q does not support data source type %q", providerNamespace, dataSourceType),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryProviderIncompatible,
+			ReasonCode: ErrorReasonCodeProviderDataSourceTypeNotFound,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeCheckDataSourceType),
+					Title:       "Check Data Source Type",
+					Description: "Verify the data source type name is correct",
+					Priority:    1,
+				},
+				{
+					Type:        string(errors.ActionTypeUpdateProvider),
+					Title:       "Update Provider",
+					Description: "Update to a newer version that may support this data source type",
+					Priority:    2,
+				},
+			},
+			Metadata: map[string]any{
+				"providerNamespace": providerNamespace,
+				"dataSourceType":    dataSourceType,
+			},
+		},
 	}
 }
 
@@ -78,11 +114,7 @@ func errCustomVariableTypeProviderNotFound(
 ) error {
 	return &errors.RunError{
 		ReasonCode: ErrorReasonCodeItemTypeProviderNotFound,
-		Err: fmt.Errorf(
-			"run failed as the provider with namespace %q was not found for custom variable type %q",
-			providerNamespace,
-			customVariableType,
-		),
+		Err:        fmt.Errorf("provider %q not found for custom variable type %q", providerNamespace, customVariableType),
 	}
 }
 
@@ -105,10 +137,28 @@ func errFunctionNotFound(
 ) error {
 	return &errors.RunError{
 		ReasonCode: ErrorReasonCodeFunctionNotFound,
-		Err: fmt.Errorf(
-			"run failed as the function %q was not found in any of the configured providers",
-			functionName,
-		),
+		Err:        fmt.Errorf("function %q not found", functionName),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryFunctionNotFound,
+			ReasonCode: ErrorReasonCodeFunctionNotFound,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeCheckFunctionName),
+					Title:       "Check Function Name",
+					Description: "Verify the function name is correct (case-sensitive)",
+					Priority:    1,
+				},
+				{
+					Type:        string(errors.ActionTypeInstallProvider),
+					Title:       "Install Provider",
+					Description: "Check if a provider needs to be installed for this function",
+					Priority:    2,
+				},
+			},
+			Metadata: map[string]any{
+				"functionName": functionName,
+			},
+		},
 	}
 }
 

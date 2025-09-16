@@ -499,8 +499,7 @@ func (s *CoreVariableValidationTestSuite) Test_reports_errors_when_an_invalid_de
 	c.Assert(
 		loadErr.Error(),
 		Equals,
-		"blueprint load error: validation failed due to an invalid default value "+
-			"for variable \"region\", boolean was provided when string was expected",
+		"blueprint load error: variable \"region\": expected string, got boolean",
 	)
 }
 
@@ -542,8 +541,7 @@ func (s *CoreVariableValidationTestSuite) Test_reports_errors_when_an_invalid_de
 	c.Assert(
 		loadErr.Error(),
 		Equals,
-		"blueprint load error: validation failed due to an invalid default value "+
-			"for variable \"maxRetries\", string was provided when integer was expected",
+		"blueprint load error: variable \"maxRetries\": expected integer, got string",
 	)
 }
 
@@ -585,8 +583,7 @@ func (s *CoreVariableValidationTestSuite) Test_reports_errors_when_an_invalid_de
 	c.Assert(
 		loadErr.Error(),
 		Equals,
-		"blueprint load error: validation failed due to an invalid default value "+
-			"for variable \"timeoutInSeconds\", boolean was provided when float was expected",
+		"blueprint load error: variable \"timeoutInSeconds\": expected float, got boolean",
 	)
 }
 
@@ -628,8 +625,7 @@ func (s *CoreVariableValidationTestSuite) Test_reports_errors_when_an_invalid_de
 	c.Assert(
 		loadErr.Error(),
 		Equals,
-		"blueprint load error: validation failed due to an invalid default value "+
-			"for variable \"experimentalFeatures\", float was provided when boolean was expected",
+		"blueprint load error: variable \"experimentalFeatures\": expected boolean, got float",
 	)
 }
 
@@ -1247,8 +1243,7 @@ func (s *CoreVariableValidationTestSuite) Test_reports_error_when_string_variabl
 	c.Assert(
 		loadErr.Error(),
 		Equals,
-		"blueprint load error: validation failed due to a value not being provided for the "+
-			"required variable \"region\", as it does not have a default",
+		"blueprint load error: required variable \"region\" has no value",
 	)
 }
 
@@ -1282,8 +1277,7 @@ func (s *CoreVariableValidationTestSuite) Test_reports_error_when_integer_variab
 	c.Assert(
 		loadErr.Error(),
 		Equals,
-		"blueprint load error: validation failed due to a value not being provided for the "+
-			"required variable \"maxRetries\", as it does not have a default",
+		"blueprint load error: required variable \"maxRetries\" has no value",
 	)
 }
 
@@ -1317,8 +1311,7 @@ func (s *CoreVariableValidationTestSuite) Test_reports_error_when_float_variable
 	c.Assert(
 		loadErr.Error(),
 		Equals,
-		"blueprint load error: validation failed due to a value not being provided for the "+
-			"required variable \"timeoutInSeconds\", as it does not have a default",
+		"blueprint load error: required variable \"timeoutInSeconds\" has no value",
 	)
 }
 
@@ -1352,8 +1345,7 @@ func (s *CoreVariableValidationTestSuite) Test_reports_error_when_boolean_variab
 	c.Assert(
 		loadErr.Error(),
 		Equals,
-		"blueprint load error: validation failed due to a value not being provided for the "+
-			"required variable \"experimentalFeatures\", as it does not have a default",
+		"blueprint load error: required variable \"experimentalFeatures\" has no value",
 	)
 }
 

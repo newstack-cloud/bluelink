@@ -93,6 +93,5 @@ func (s *CustomVariableTypeRegistryTestSuite) Test_produces_error_for_missing_pr
 	runErr, isRunErr := err.(*errors.RunError)
 	c.Assert(isRunErr, Equals, true)
 	c.Assert(runErr.ReasonCode, Equals, ErrorReasonCodeItemTypeProviderNotFound)
-	c.Assert(runErr.Error(), Equals, "run error: run failed as the provider with namespace \"otherProvider\" "+
-		"was not found for custom variable type \"otherProvider/otherVarType\"")
+	c.Assert(runErr.Error(), Equals, "run error: provider \"otherProvider\" not found for custom variable type \"otherProvider/otherVarType\"")
 }

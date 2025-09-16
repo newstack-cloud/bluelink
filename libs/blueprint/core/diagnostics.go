@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 )
@@ -17,6 +18,8 @@ type Diagnostic struct {
 	// An optional text range in the source blueprint
 	// that the diagnostic applies to.
 	Range *DiagnosticRange `json:"range,omitempty"`
+	// Structured context for enhanced error handling
+	Context *errors.ErrorContext `json:"context,omitempty"`
 }
 
 // DiagnosticLevel provides the level of a diagnostic.

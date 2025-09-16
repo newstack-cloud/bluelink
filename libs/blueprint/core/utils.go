@@ -357,6 +357,13 @@ func MappingNodeFields(pairs ...any) *MappingNode {
 // This is useful for creating a list of items as a MappingNode in a more
 // concise way than defining the structure manually.
 func MappingNodeItems(items ...*MappingNode) *MappingNode {
+	if len(items) == 0 {
+		// Ensure an empty slice is returned instead of nil.
+		return &MappingNode{
+			Items: []*MappingNode{},
+		}
+	}
+
 	return &MappingNode{
 		Items: items,
 	}

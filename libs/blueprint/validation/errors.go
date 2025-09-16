@@ -181,14 +181,27 @@ func errVariableInvalidDefaultValue(
 	line, col := positionFromScalarValue(defaultValue, varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidVariable,
-		Err: fmt.Errorf(
-			"validation failed due to an invalid default value for variable \"%s\", %s was provided when %s was expected",
-			varName,
-			defaultVarType,
-			varType,
-		),
-		Line:   line,
-		Column: col,
+		Err:        fmt.Errorf("variable %q: expected %s, got %s", varName, varType, defaultVarType),
+		Line:       line,
+		Column:     col,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeInvalidVariable,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeFixVariableType),
+					Title:       "Fix Variable Type",
+					Description: fmt.Sprintf("Update the variable type or default value for %s", varName),
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"variableName": varName,
+				"expectedType": string(varType),
+				"actualType":   string(defaultVarType),
+				"variableType": "defaultValue",
+			},
+		},
 	}
 }
 
@@ -387,13 +400,31 @@ func errRequiredVariableMissing(varName string, varSourceMeta *source.Meta) erro
 	line, col := source.PositionFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidVariable,
-		Err: fmt.Errorf(
-			"validation failed due to a value not being provided for the "+
-				"required variable \"%s\", as it does not have a default",
-			varName,
-		),
-		Line:   line,
-		Column: col,
+		Err:        fmt.Errorf("required variable %q has no value", varName),
+		Line:       line,
+		Column:     col,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryValidation,
+			ReasonCode: ErrorReasonCodeInvalidVariable,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeProvideValue),
+					Title:       "Provide Value",
+					Description: fmt.Sprintf("Provide a value for the required variable %s", varName),
+					Priority:    1,
+				},
+				{
+					Type:        string(errors.ActionTypeAddDefaultValue),
+					Title:       "Add Default Value",
+					Description: fmt.Sprintf("Add a default value to the variable definition for %s", varName),
+					Priority:    2,
+				},
+			},
+			Metadata: map[string]any{
+				"variableName": varName,
+				"variableType": "required",
+			},
+		},
 	}
 }
 
@@ -1234,12 +1265,30 @@ func errResourceMissingType(resourceName string, location *source.Meta) error {
 	line, col := source.PositionFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidResource,
-		Err: fmt.Errorf(
-			"validation failed due to a missing type for resource \"%s\"",
-			resourceName,
-		),
-		Line:   line,
-		Column: col,
+		Err:        fmt.Errorf("resource %q missing type", resourceName),
+		Line:       line,
+		Column:     col,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryResourceType,
+			ReasonCode: ErrorReasonCodeInvalidResource,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeAddResourceType),
+					Title:       "Add Resource Type",
+					Description: fmt.Sprintf("Add a type field to the resource %s", resourceName),
+					Priority:    1,
+				},
+				{
+					Type:        string(errors.ActionTypeListAvailableTypes),
+					Title:       "List Available Types",
+					Description: "See available resource types from installed providers",
+					Priority:    2,
+				},
+			},
+			Metadata: map[string]any{
+				"resourceName": resourceName,
+			},
+		},
 	}
 }
 
