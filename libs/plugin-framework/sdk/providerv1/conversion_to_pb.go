@@ -173,22 +173,27 @@ func toRetryPolicyErrorResponse(err error) *providerserverv1.RetryPolicyResponse
 
 func toCustomValidateResourceResponse(
 	output *provider.ResourceValidateOutput,
-) *providerserverv1.CustomValidateResourceResponse {
+) (*providerserverv1.CustomValidateResourceResponse, error) {
 	if output == nil {
 		return &providerserverv1.CustomValidateResourceResponse{
 			Response: &providerserverv1.CustomValidateResourceResponse_ErrorResponse{
 				ErrorResponse: sharedtypesv1.NoResponsePBError(),
 			},
-		}
+		}, nil
+	}
+
+	diagnostics, err := sharedtypesv1.ToPBDiagnostics(output.Diagnostics)
+	if err != nil {
+		return nil, err
 	}
 
 	return &providerserverv1.CustomValidateResourceResponse{
 		Response: &providerserverv1.CustomValidateResourceResponse_CompleteResponse{
 			CompleteResponse: &providerserverv1.CustomValidateResourceCompleteResponse{
-				Diagnostics: sharedtypesv1.ToPBDiagnostics(output.Diagnostics),
+				Diagnostics: diagnostics,
 			},
 		},
-	}
+	}, nil
 }
 
 func toCustomValidateErrorResponse(
@@ -770,22 +775,27 @@ func toCustomValidateDataSourceErrorResponse(
 
 func toPBCustomValidateDataSourceResponse(
 	output *provider.DataSourceValidateOutput,
-) *providerserverv1.CustomValidateDataSourceResponse {
+) (*providerserverv1.CustomValidateDataSourceResponse, error) {
 	if output == nil {
 		return &providerserverv1.CustomValidateDataSourceResponse{
 			Response: &providerserverv1.CustomValidateDataSourceResponse_ErrorResponse{
 				ErrorResponse: sharedtypesv1.NoResponsePBError(),
 			},
-		}
+		}, nil
+	}
+
+	diagnostics, err := sharedtypesv1.ToPBDiagnostics(output.Diagnostics)
+	if err != nil {
+		return nil, err
 	}
 
 	return &providerserverv1.CustomValidateDataSourceResponse{
 		Response: &providerserverv1.CustomValidateDataSourceResponse_CompleteResponse{
 			CompleteResponse: &providerserverv1.CustomValidateDataSourceCompleteResponse{
-				Diagnostics: sharedtypesv1.ToPBDiagnostics(output.Diagnostics),
+				Diagnostics: diagnostics,
 			},
 		},
-	}
+	}, nil
 }
 
 func toGetDataSourceTypeErrorResponse(

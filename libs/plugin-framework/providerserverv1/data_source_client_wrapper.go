@@ -200,10 +200,18 @@ func (d *dataSourceProviderClientWrapper) CustomValidate(
 
 	switch result := response.Response.(type) {
 	case *CustomValidateDataSourceResponse_CompleteResponse:
+		diagnostics, err := sharedtypesv1.ToCoreDiagnostics(
+			result.CompleteResponse.GetDiagnostics(),
+		)
+		if err != nil {
+			return nil, errorsv1.CreateGeneralError(
+				err,
+				errorsv1.PluginActionProviderCustomValidateDataSource,
+			)
+		}
+
 		return &provider.DataSourceValidateOutput{
-			Diagnostics: sharedtypesv1.ToCoreDiagnostics(
-				result.CompleteResponse.GetDiagnostics(),
-			),
+			Diagnostics: diagnostics,
 		}, nil
 	case *CustomValidateDataSourceResponse_ErrorResponse:
 		return nil, errorsv1.CreateErrorFromResponse(

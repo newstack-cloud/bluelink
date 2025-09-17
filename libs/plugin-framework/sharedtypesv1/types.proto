@@ -1288,6 +1288,36 @@ message Diagnostic {
     // is YAML and the plugin can extract this information
     // from the resource schema.
     DiagnosticRange range = 3;
+    // Additional context for the diagnostic, usually present for errors
+    // to create more user-friendly action-oriented messages.
+    DiagnosticContext context = 4;
+}
+
+// DiagnosticContext holds additional context for a diagnostic.
+message DiagnosticContext {
+    // The category of the diagnostic.
+    // This is used to group diagnostics into categories
+    // to create more user-friendly action-oriented messages.
+    string category = 1;
+    // Reason code from the parent error for programmatic identification.
+    string reason_code = 2;
+    // Suggested actions that the user can take.
+    repeated DiagnosticSuggestedAction suggested_actions = 3;
+    // Additional metadata for the diagnostic.
+    google.protobuf.Any metadata = 4;
+}
+
+// DiagnosticSuggestedAction holds a suggested action that the user can take
+// in response to an error diagnostic.
+message DiagnosticSuggestedAction {
+    // The type of the suggested action.
+    string type = 1;
+    // The title of the suggested action.
+    string title = 2;
+    // The description of the suggested action.
+    string description = 3;
+    // The priority of the suggested action.
+    int32 priority = 4;
 }
 
 // DiagnosticLevel is an enum for the level of a diagnostic.

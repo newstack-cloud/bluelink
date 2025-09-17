@@ -173,7 +173,7 @@ func (p *blueprintTransformerPluginImpl) CustomValidateAbstractResource(
 		return toCustomValidateAbstractResourceErrorResponse(err), nil
 	}
 
-	return toPBCustomValidateAbstractResourceResponse(output), nil
+	return toPBCustomValidateAbstractResourceResponse(output)
 }
 
 func (p *blueprintTransformerPluginImpl) GetAbstractResourceSpecDefinition(

@@ -222,7 +222,7 @@ func (p *blueprintProviderPluginImpl) CustomValidateResource(
 		return toCustomValidateErrorResponse(err), nil
 	}
 
-	return toCustomValidateResourceResponse(output), nil
+	return toCustomValidateResourceResponse(output)
 }
 
 func (p *blueprintProviderPluginImpl) GetResourceSpecDefinition(
@@ -976,7 +976,7 @@ func (p *blueprintProviderPluginImpl) CustomValidateDataSource(
 		return toCustomValidateDataSourceErrorResponse(err), nil
 	}
 
-	return toPBCustomValidateDataSourceResponse(output), nil
+	return toPBCustomValidateDataSourceResponse(output)
 }
 
 func (p *blueprintProviderPluginImpl) GetDataSourceType(

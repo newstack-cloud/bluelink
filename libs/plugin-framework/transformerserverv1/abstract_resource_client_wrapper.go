@@ -56,8 +56,16 @@ func (t *abstractResourceTransformerClientWrapper) CustomValidate(
 
 	switch result := response.Response.(type) {
 	case *CustomValidateAbstractResourceResponse_CompleteResponse:
+		diagnostics, err := sharedtypesv1.ToCoreDiagnostics(result.CompleteResponse.GetDiagnostics())
+		if err != nil {
+			return nil, errorsv1.CreateGeneralError(
+				err,
+				errorsv1.PluginActionTransformerCustomValidateAbstractResource,
+			)
+		}
+
 		return &transform.AbstractResourceValidateOutput{
-			Diagnostics: sharedtypesv1.ToCoreDiagnostics(result.CompleteResponse.GetDiagnostics()),
+			Diagnostics: diagnostics,
 		}, nil
 	case *CustomValidateAbstractResourceResponse_ErrorResponse:
 		return nil, errorsv1.CreateErrorFromResponse(

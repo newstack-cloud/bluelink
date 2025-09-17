@@ -66,7 +66,7 @@ func toCustomValidateAbstractResourceErrorResponse(
 
 func toPBCustomValidateAbstractResourceResponse(
 	output *transform.AbstractResourceValidateOutput,
-) *transformerserverv1.CustomValidateAbstractResourceResponse {
+) (*transformerserverv1.CustomValidateAbstractResourceResponse, error) {
 	if output == nil {
 		return &transformerserverv1.CustomValidateAbstractResourceResponse{
 			Response: &transformerserverv1.CustomValidateAbstractResourceResponse_ErrorResponse{
@@ -76,16 +76,21 @@ func toPBCustomValidateAbstractResourceResponse(
 					),
 				),
 			},
-		}
+		}, nil
+	}
+
+	diagnostics, err := sharedtypesv1.ToPBDiagnostics(output.Diagnostics)
+	if err != nil {
+		return nil, err
 	}
 
 	return &transformerserverv1.CustomValidateAbstractResourceResponse{
 		Response: &transformerserverv1.CustomValidateAbstractResourceResponse_CompleteResponse{
 			CompleteResponse: &transformerserverv1.CustomValidateAbstractResourceCompleteResponse{
-				Diagnostics: sharedtypesv1.ToPBDiagnostics(output.Diagnostics),
+				Diagnostics: diagnostics,
 			},
 		},
-	}
+	}, nil
 }
 
 func toAbstractResourceSpecDefinitionErrorResponse(

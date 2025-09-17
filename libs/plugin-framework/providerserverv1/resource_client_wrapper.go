@@ -56,8 +56,18 @@ func (r *resourceProviderClientWrapper) CustomValidate(
 
 	switch result := response.Response.(type) {
 	case *CustomValidateResourceResponse_CompleteResponse:
+		diagnostics, err := sharedtypesv1.ToCoreDiagnostics(
+			result.CompleteResponse.GetDiagnostics(),
+		)
+		if err != nil {
+			return nil, errorsv1.CreateGeneralError(
+				err,
+				errorsv1.PluginActionProviderCustomValidateResource,
+			)
+		}
+
 		return &provider.ResourceValidateOutput{
-			Diagnostics: sharedtypesv1.ToCoreDiagnostics(result.CompleteResponse.GetDiagnostics()),
+			Diagnostics: diagnostics,
 		}, nil
 	case *CustomValidateResourceResponse_ErrorResponse:
 		return nil, errorsv1.CreateErrorFromResponse(
