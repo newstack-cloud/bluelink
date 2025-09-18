@@ -217,7 +217,8 @@ func validateResourceDefinitionObject(
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
-	if isMappingNodeEmpty(node) && !validateAgainstSchema.Nullable {
+	isEmpty := isMappingNodeEmpty(node)
+	if isEmpty && !validateAgainstSchema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
 			provider.ResourceDefinitionsSchemaTypeObject,
@@ -225,12 +226,12 @@ func validateResourceDefinitionObject(
 		)
 	}
 
-	hasNilValue := node.Fields == nil
-	if hasNilValue && validateAgainstSchema.Nullable {
+	if isEmpty && validateAgainstSchema.Nullable {
 		return diagnostics, nil
 	}
 
-	if hasNilValue {
+	invalidType := node.Fields == nil
+	if invalidType {
 		specType := deriveMappingNodeResourceDefinitionsType(node)
 
 		return diagnostics, errResourceDefInvalidType(
@@ -317,7 +318,8 @@ func validateResourceDefinitionMap(
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
-	if isMappingNodeEmpty(node) && !validateAgainstSchema.Nullable {
+	isEmpty := isMappingNodeEmpty(node)
+	if isEmpty && !validateAgainstSchema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
 			provider.ResourceDefinitionsSchemaTypeMap,
@@ -325,12 +327,12 @@ func validateResourceDefinitionMap(
 		)
 	}
 
-	hasNilValue := node.Fields == nil
-	if hasNilValue && validateAgainstSchema.Nullable {
+	if isEmpty && validateAgainstSchema.Nullable {
 		return diagnostics, nil
 	}
 
-	if hasNilValue {
+	invalidType := node.Fields == nil
+	if invalidType {
 		specType := deriveMappingNodeResourceDefinitionsType(node)
 
 		return diagnostics, errResourceDefInvalidType(
@@ -421,7 +423,8 @@ func validateResourceDefinitionArray(
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
-	if isMappingNodeEmpty(node) && !validateAgainstSchema.Nullable {
+	isEmpty := isMappingNodeEmpty(node)
+	if isEmpty && !validateAgainstSchema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
 			provider.ResourceDefinitionsSchemaTypeArray,
@@ -429,12 +432,12 @@ func validateResourceDefinitionArray(
 		)
 	}
 
-	hasNilValue := node.Items == nil
-	if hasNilValue && validateAgainstSchema.Nullable {
+	if isEmpty && validateAgainstSchema.Nullable {
 		return diagnostics, nil
 	}
 
-	if hasNilValue {
+	invalidType := node.Items == nil
+	if invalidType {
 		specType := deriveMappingNodeResourceDefinitionsType(node)
 
 		return diagnostics, errResourceDefInvalidType(
@@ -522,7 +525,8 @@ func validateResourceDefinitionString(
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
-	if isMappingNodeEmpty(node) && !schema.Nullable {
+	isEmpty := isMappingNodeEmpty(node)
+	if isEmpty && !schema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
 			provider.ResourceDefinitionsSchemaTypeString,
@@ -530,15 +534,15 @@ func validateResourceDefinitionString(
 		)
 	}
 
-	hasNilValue := (node.Scalar == nil ||
-		(node.Scalar != nil && node.Scalar.StringValue == nil)) &&
-		node.StringWithSubstitutions == nil
-
-	if hasNilValue && schema.Nullable {
+	if isEmpty && schema.Nullable {
 		return diagnostics, nil
 	}
 
-	if hasNilValue {
+	invalidType := (node.Scalar == nil ||
+		(node.Scalar != nil && node.Scalar.StringValue == nil)) &&
+		node.StringWithSubstitutions == nil
+
+	if invalidType {
 		specType := deriveMappingNodeResourceDefinitionsType(node)
 		if specType == "" {
 			return diagnostics, errResourceDefItemEmpty(
@@ -662,7 +666,8 @@ func validateResourceDefinitionInteger(
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
-	if isMappingNodeEmpty(node) && !schema.Nullable {
+	isEmpty := isMappingNodeEmpty(node)
+	if isEmpty && !schema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
 			provider.ResourceDefinitionsSchemaTypeInteger,
@@ -670,15 +675,15 @@ func validateResourceDefinitionInteger(
 		)
 	}
 
-	hasNilValue := (node.Scalar == nil ||
-		(node.Scalar != nil && node.Scalar.IntValue == nil)) &&
-		node.StringWithSubstitutions == nil
-
-	if hasNilValue && schema.Nullable {
+	if isEmpty && schema.Nullable {
 		return diagnostics, nil
 	}
 
-	if hasNilValue {
+	invalidType := (node.Scalar == nil ||
+		(node.Scalar != nil && node.Scalar.IntValue == nil)) &&
+		node.StringWithSubstitutions == nil
+
+	if invalidType {
 		specType := deriveMappingNodeResourceDefinitionsType(node)
 		if specType == "" {
 			return diagnostics, errResourceDefItemEmpty(
@@ -790,7 +795,8 @@ func validateResourceDefinitionFloat(
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
-	if isMappingNodeEmpty(node) && !schema.Nullable {
+	isEmpty := isMappingNodeEmpty(node)
+	if isEmpty && !schema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
 			provider.ResourceDefinitionsSchemaTypeFloat,
@@ -798,15 +804,15 @@ func validateResourceDefinitionFloat(
 		)
 	}
 
-	hasNilValue := (node.Scalar == nil ||
-		(node.Scalar != nil && node.Scalar.FloatValue == nil)) &&
-		node.StringWithSubstitutions == nil
-
-	if hasNilValue && schema.Nullable {
+	if isEmpty && schema.Nullable {
 		return diagnostics, nil
 	}
 
-	if hasNilValue {
+	invalidType := (node.Scalar == nil ||
+		(node.Scalar != nil && node.Scalar.FloatValue == nil)) &&
+		node.StringWithSubstitutions == nil
+
+	if invalidType {
 		specType := deriveMappingNodeResourceDefinitionsType(node)
 		if specType == "" {
 			return diagnostics, errResourceDefItemEmpty(
@@ -918,7 +924,8 @@ func validateResourceDefinitionBoolean(
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
-	if isMappingNodeEmpty(node) && !schema.Nullable {
+	isEmpty := isMappingNodeEmpty(node)
+	if isEmpty && !schema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
 			provider.ResourceDefinitionsSchemaTypeBoolean,
@@ -926,15 +933,15 @@ func validateResourceDefinitionBoolean(
 		)
 	}
 
-	hasNilValue := (node.Scalar == nil ||
-		(node.Scalar != nil && node.Scalar.BoolValue == nil)) &&
-		node.StringWithSubstitutions == nil
-
-	if hasNilValue && schema.Nullable {
+	if isEmpty && schema.Nullable {
 		return diagnostics, nil
 	}
 
-	if hasNilValue {
+	invalidType := (node.Scalar == nil ||
+		(node.Scalar != nil && node.Scalar.BoolValue == nil)) &&
+		node.StringWithSubstitutions == nil
+
+	if invalidType {
 		specType := deriveMappingNodeResourceDefinitionsType(node)
 		if specType == "" {
 			return diagnostics, errResourceDefItemEmpty(
