@@ -217,7 +217,7 @@ func validateResourceDefinitionObject(
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
-	if isMappingNodeEmpty(node) {
+	if isMappingNodeEmpty(node) && !validateAgainstSchema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
 			provider.ResourceDefinitionsSchemaTypeObject,
@@ -317,7 +317,7 @@ func validateResourceDefinitionMap(
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
-	if isMappingNodeEmpty(node) {
+	if isMappingNodeEmpty(node) && !validateAgainstSchema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
 			provider.ResourceDefinitionsSchemaTypeMap,
@@ -421,7 +421,7 @@ func validateResourceDefinitionArray(
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
-	if isMappingNodeEmpty(node) {
+	if isMappingNodeEmpty(node) && !validateAgainstSchema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
 			provider.ResourceDefinitionsSchemaTypeArray,
@@ -522,7 +522,7 @@ func validateResourceDefinitionString(
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
-	if isMappingNodeEmpty(node) {
+	if isMappingNodeEmpty(node) && !schema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
 			provider.ResourceDefinitionsSchemaTypeString,
@@ -662,7 +662,7 @@ func validateResourceDefinitionInteger(
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
-	if isMappingNodeEmpty(node) {
+	if isMappingNodeEmpty(node) && !schema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
 			provider.ResourceDefinitionsSchemaTypeInteger,
@@ -790,7 +790,7 @@ func validateResourceDefinitionFloat(
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
-	if isMappingNodeEmpty(node) {
+	if isMappingNodeEmpty(node) && !schema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
 			provider.ResourceDefinitionsSchemaTypeFloat,
@@ -918,7 +918,7 @@ func validateResourceDefinitionBoolean(
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
-	if isMappingNodeEmpty(node) {
+	if isMappingNodeEmpty(node) && !schema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
 			provider.ResourceDefinitionsSchemaTypeBoolean,
@@ -1009,7 +1009,7 @@ func validateResourceDefinitionUnion(
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
-	if isMappingNodeEmpty(spec) {
+	if isMappingNodeEmpty(spec) && !validateAgainstSchema.Nullable {
 		return diagnostics, errResourceDefUnionItemEmpty(
 			path,
 			validateAgainstSchema.OneOf,
