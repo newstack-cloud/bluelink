@@ -35,7 +35,7 @@ func errResourceTypeProviderNotFound(
 		ReasonCode: provider.ErrorReasonCodeItemTypeProviderNotFound,
 		Err:        fmt.Errorf("provider %q not found for resource type %q", providerNamespace, resourceType),
 		Context: &errors.ErrorContext{
-			Category:   errors.ErrorCategoryProviderMissing,
+			Category:   errors.ErrorCategoryProvider,
 			ReasonCode: provider.ErrorReasonCodeItemTypeProviderNotFound,
 			SuggestedActions: []errors.SuggestedAction{
 				{
@@ -53,7 +53,8 @@ func errResourceTypeProviderNotFound(
 			},
 			Metadata: map[string]any{
 				"providerNamespace": providerNamespace,
-				"resourceType":      resourceType,
+				"category":          "resource",
+				"itemType":          resourceType,
 			},
 		},
 	}
@@ -70,6 +71,28 @@ func errProviderResourceTypeNotFound(
 			providerNamespace,
 			resourceType,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryResourceType,
+			ReasonCode: ErrorReasonCodeProviderResourceTypeNotFound,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeCheckResourceType),
+					Title:       "Check Resource Type",
+					Description: "Verify the resource type name is correct",
+					Priority:    1,
+				},
+				{
+					Type:        string(errors.ActionTypeUpdateProvider),
+					Title:       "Update Provider",
+					Description: "Update to a newer version that may support this resource type",
+					Priority:    2,
+				},
+			},
+			Metadata: map[string]any{
+				"providerNamespace": providerNamespace,
+				"resourceType":      resourceType,
+			},
+		},
 	}
 }
 
@@ -82,6 +105,21 @@ func errAbstactResourceTypeNotFound(
 			"run failed as the abstract resource with type %q was not found in any of the loaded transformers",
 			resourceType,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryResourceType,
+			ReasonCode: ErrorReasonCodeAbstractResourceTypeNotFound,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeCheckAbstractResourceType),
+					Title:       "Check Abstract Resource Type",
+					Description: "Verify the abstract resource type name is correct",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"abstractResourceType": resourceType,
+			},
+		},
 	}
 }
 

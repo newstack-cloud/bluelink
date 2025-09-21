@@ -243,7 +243,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_string_interpol
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefInvalidType)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -306,7 +306,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_string_interpol
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefInvalidType)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -353,7 +353,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_string_value_no
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefNotAllowedValue)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -400,7 +400,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_integer_value_n
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefNotAllowedValue)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -447,7 +447,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_float_value_not
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefNotAllowedValue)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -644,7 +644,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_string_interpol
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefInvalidType)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -707,7 +707,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_string_interpol
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefInvalidType)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -754,7 +754,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_integer_value_l
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefMinConstraintFailure)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -794,7 +794,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_integer_value_g
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefMaxConstraintFailure)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -834,7 +834,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_float_value_les
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefMinConstraintFailure)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -874,7 +874,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_float_value_gre
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefMaxConstraintFailure)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -986,7 +986,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_string_value_th
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefPatternConstraintFailure)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -1106,7 +1106,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_string_value_th
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefStringMinLengthConstraintFailure)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -1155,7 +1155,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_string_value_th
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefStringMaxLengthConstraintFailure)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -1206,7 +1206,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_array_value_tha
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefComplexMinLengthConstraintFailure)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -1263,7 +1263,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_array_value_tha
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefComplexMaxLengthConstraintFailure)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -1314,7 +1314,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_map_value_that_
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefComplexMinLengthConstraintFailure)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -1370,7 +1370,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_map_value_that_
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefComplexMaxLengthConstraintFailure)
 	c.Assert(
 		loadErr.Error(),
 		Equals,

@@ -166,19 +166,22 @@ func ValidateResource(
 
 	if resource.Type != nil {
 		logger.Debug("Validating resource spec")
+		validationParams := ResourceValidationParams{
+			ResourceName:                name,
+			ResourceType:                resource.Type.Value,
+			ResourceDerivedFromTemplate: resourceDerivedFromTemplate,
+			BpSchema:                    bpSchema,
+			Params:                      params,
+			FuncRegistry:                funcRegistry,
+			RefChainCollector:           refChainCollector,
+			ResourceRegistry:            resourceRegistry,
+			DataSourceRegistry:          dataSourceRegistry,
+		}
 		validateSpecDiagnostics, validateSpecErr := ValidateResourceSpec(
 			ctx,
-			name,
-			resource.Type.Value,
-			resourceDerivedFromTemplate,
+			validationParams,
 			resource,
 			resourceMap.SourceMeta[name],
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 		)
 		diagnostics = append(diagnostics, validateSpecDiagnostics...)
 		if validateSpecErr != nil {

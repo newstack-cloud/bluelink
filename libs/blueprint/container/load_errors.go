@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/common/core"
@@ -20,11 +21,6 @@ const (
 	// is due to an invalid resource type provided in one
 	// of the resources in the spec.
 	ErrorReasonCodeInvalidResourceType errors.ErrorReasonCode = "invalid_resource_type"
-	// ErrorReasonCodeMissingProvider is provided when the
-	// reason for a blueprint spec load error is due to
-	// a missing provider for one of the resources in
-	// the spec.
-	ErrorReasonCodeMissingProvider errors.ErrorReasonCode = "missing_provider"
 	// ErrorReasonCodeMissingResource is provided when the
 	// reason for a blueprint spec load error is due to
 	// the resource provider missing an implementation for the
@@ -139,6 +135,27 @@ func errTransformersMissing(missingTransformers []string, childErrors []error, l
 		ChildErrors: childErrors,
 		Line:        line,
 		Column:      column,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryTransformer,
+			ReasonCode: ErrorReasonMissingTransformers,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeInstallTransformers),
+					Title:       "Install Transformers",
+					Description: "Install the missing transformers",
+					Priority:    1,
+				},
+				{
+					Type:        string(errors.ActionTypeCheckTransformers),
+					Title:       "Check Transformers",
+					Description: "Explore the available transformers",
+					Priority:    2,
+				},
+			},
+			Metadata: map[string]any{
+				"missingTransformers": missingTransformers,
+			},
+		},
 	}
 }
 
@@ -150,6 +167,27 @@ func errTransformerMissing(transformer string, line *int, column *int) error {
 		),
 		Line:   line,
 		Column: column,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryTransformer,
+			ReasonCode: ErrorReasonMissingTransformers,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeInstallTransformer),
+					Title:       "Install Transformer",
+					Description: "Install the missing transformer",
+					Priority:    1,
+				},
+				{
+					Type:        string(errors.ActionTypeCheckTransformers),
+					Title:       "Check Transformers",
+					Description: "Explore the available transformers",
+					Priority:    2,
+				},
+			},
+			Metadata: map[string]any{
+				"missingTransformer": transformer,
+			},
+		},
 	}
 }
 
@@ -162,6 +200,27 @@ func errMissingVariableType(variableName string, location *source.Meta) error {
 		),
 		Line:   line,
 		Column: column,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeVariableValidationErrors,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeAddVariableType),
+					Title:       "Add Variable Type",
+					Description: "Add the missing variable type",
+					Priority:    1,
+				},
+				{
+					Type:        string(errors.ActionTypeCheckVariableType),
+					Title:       "Check Variable Type",
+					Description: "Explore the available variable types",
+					Priority:    2,
+				},
+			},
+			Metadata: map[string]any{
+				"variableName": variableName,
+			},
+		},
 	}
 }
 
@@ -173,6 +232,29 @@ func errInvalidCustomVariableType(variableName string, variableType schema.Varia
 		),
 		Line:   line,
 		Column: column,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeVariableValidationErrors,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeInstallProvider),
+					Title:       "Install Provider for Variable Type",
+					Description: "Install the provider for the variable type",
+					Priority:    1,
+				},
+				{
+					Type:        string(errors.ActionTypeCheckVariableType),
+					Title:       "Check Variable Type",
+					Description: "Explore the available variable types",
+					Priority:    2,
+				},
+			},
+			Metadata: map[string]any{
+				"variableName":      variableName,
+				"variableType":      variableType,
+				"providerNamespace": provider.ExtractProviderFromItemType(string(variableType)),
+			},
+		},
 	}
 }
 
@@ -190,6 +272,23 @@ func errMissingProviderForCustomVarType(
 		),
 		Line:   line,
 		Column: column,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeVariableValidationErrors,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeInstallProvider),
+					Title:       "Install Provider for Variable Type",
+					Description: "Install the provider for the variable type",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"variableName":      variableName,
+				"variableType":      variableType,
+				"providerNamespace": providerKey,
+			},
+		},
 	}
 }
 

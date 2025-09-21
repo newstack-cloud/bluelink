@@ -137,7 +137,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_resource_type_w
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceTypeSpecDefMissing)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -199,7 +199,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_resource_type_w
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceTypeSpecDefMissingSchema)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -239,7 +239,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_empty_required_
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefItemEmpty)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -349,7 +349,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_missing_require
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefMissingRequiredField)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -403,7 +403,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_empty_required_
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefItemEmpty)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -443,7 +443,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_empty_required_
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefItemEmpty)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -489,7 +489,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_empty_string_fi
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefItemEmpty)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -537,7 +537,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_empty_string_fi
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefItemEmpty)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -586,7 +586,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_invalid_type_fo
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefInvalidType)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -653,7 +653,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_union_invalid_s
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefUnionInvalidType)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -699,7 +699,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_invalid_mapping
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefInvalidType)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -744,7 +744,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_invalid_mapping
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefInvalidType)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -789,7 +789,7 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_invalid_mapping
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeResourceDefInvalidType)
 	c.Assert(
 		loadErr.Error(),
 		Equals,

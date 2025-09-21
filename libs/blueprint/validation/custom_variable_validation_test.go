@@ -108,7 +108,7 @@ func (s *CustomVariableValidationTestSuite) Test_reports_errors_when_multiple_va
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidVariable)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeMixedVariableTypes)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -208,7 +208,7 @@ func (s *CustomVariableValidationTestSuite) Test_reports_error_when_provided_all
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidVariable)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeVariableInvalidAllowedValues)
 	// Multiple errors are expected here.
 	// Instead of simply checking the error message string,
 	// we want to make sure the underlying errors are provided in the error struct
@@ -273,7 +273,7 @@ func (s *CustomVariableValidationTestSuite) Test_reports_error_when_provided_all
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidVariable)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeCustomVarAllowedValuesNotInOptions)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -320,7 +320,7 @@ func (s *CustomVariableValidationTestSuite) Test_reports_error_when_provided_def
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidVariable)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeVariableInvalidDefaultValue)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -365,7 +365,7 @@ func (s *CustomVariableValidationTestSuite) Test_reports_error_when_provided_def
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidVariable)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeCustomVarDefaultValueNotInOptions)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -418,7 +418,7 @@ func (s *CustomVariableValidationTestSuite) Test_reports_error_when_provided_def
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidVariable)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeVariableValueNotAllowed)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -454,7 +454,7 @@ func (s *CustomVariableValidationTestSuite) Test_reports_error_when_no_value_is_
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidVariable)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeRequiredVariableMissing)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -495,7 +495,7 @@ func (s *CustomVariableValidationTestSuite) Test_reports_error_when_empty_string
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidVariable)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeVariableEmptyValue)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -536,7 +536,7 @@ func (s *CustomVariableValidationTestSuite) Test_reports_error_when_empty_string
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidVariable)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeVariableEmptyDefaultValue)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -577,7 +577,7 @@ func (s *CustomVariableValidationTestSuite) Test_reports_error_when_provided_val
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidVariable)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeVariableInvalidOrMissing)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -618,7 +618,7 @@ func (s *CustomVariableValidationTestSuite) Test_reports_error_when_provided_val
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidVariable)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeCustomVarValueNotInOptions)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -673,7 +673,7 @@ func (s *CustomVariableValidationTestSuite) Test_reports_error_when_provided_val
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidVariable)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeVariableValueNotAllowed)
 	c.Assert(
 		loadErr.Error(),
 		Equals,

@@ -6,7 +6,6 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
@@ -22,27 +21,19 @@ import (
 // if the depth is exceeded, validation will not be performed on further elements.
 func ValidateResourceSpec(
 	ctx context.Context,
-	name string,
-	resourceType string,
-	resourceDerivedFromTemplate bool,
+	params ResourceValidationParams,
 	resource *schema.Resource,
 	resourceLocation *source.Meta,
-	bpSchema *schema.Blueprint,
-	params core.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
 	specDefinition, err := loadResourceSpecDefinition(
 		ctx,
 		resource.Type.Value,
-		name,
+		params.ResourceName,
 		resource.SourceMeta,
-		params,
-		resourceRegistry,
+		params.Params,
+		params.ResourceRegistry,
 	)
 	if err != nil {
 		// If there is no spec definition for the resource type,
@@ -51,21 +42,13 @@ func ValidateResourceSpec(
 	}
 
 	var errs []error
-	path := fmt.Sprintf("resources.%s.spec", name)
+	path := fmt.Sprintf("resources.%s.spec", params.ResourceName)
 	specDiagnostics, err := validateResourceDefinition(
 		ctx,
-		name,
-		resourceType,
-		resourceDerivedFromTemplate,
+		params,
 		resource.Spec,
 		resourceLocation,
 		specDefinition.Schema,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
 		path,
 		/* depth */ 0,
 	)
@@ -74,15 +57,15 @@ func ValidateResourceSpec(
 		errs = append(errs, err)
 	}
 
-	providerNamespace := provider.ExtractProviderFromItemType(resourceType)
-	customOutput, err := resourceRegistry.CustomValidate(
+	providerNamespace := provider.ExtractProviderFromItemType(params.ResourceType)
+	customOutput, err := params.ResourceRegistry.CustomValidate(
 		ctx,
-		resourceType,
+		params.ResourceType,
 		&provider.ResourceValidateInput{
 			SchemaResource: resource,
 			ProviderContext: provider.NewProviderContextFromParams(
 				providerNamespace,
-				params,
+				params.Params,
 			),
 		},
 	)

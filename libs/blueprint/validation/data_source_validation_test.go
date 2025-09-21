@@ -81,7 +81,7 @@ func (s *DataSourceValidationTestSuite) Test_reports_error_when_substitution_pro
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidDataSource)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -163,7 +163,7 @@ func (s *DataSourceValidationTestSuite) Test_reports_errors_when_filter_is_missi
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidDataSource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeDataSourceMissingFilter)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -244,7 +244,7 @@ func (s *DataSourceValidationTestSuite) Test_reports_errors_when_field_is_empty(
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidDataSource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeDataSourceMissingFilterField)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -390,7 +390,7 @@ func (s *DataSourceValidationTestSuite) Test_reports_errors_when_filter_search_i
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidDataSource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeDataSourceMissingFilterSearch)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -853,7 +853,7 @@ func (s *DataSourceValidationTestSuite) Test_reports_errors_when_no_exported_fie
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidDataSource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeDataSourceMissingExports)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -970,7 +970,7 @@ func (s *DataSourceValidationTestSuite) Test_reports_error_when_spec_definition_
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidDataSource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeDataSourceSpecDefMissing)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -1009,7 +1009,7 @@ func (s *DataSourceValidationTestSuite) Test_reports_error_when_no_filter_fields
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidDataSource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeDataSourceSpecDefMissing)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -1071,7 +1071,7 @@ func (s *DataSourceValidationTestSuite) Test_reports_error_when_filter_field_is_
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidDataSource)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeDataSourceFilterFieldNotSupported)
 	c.Assert(
 		loadErr.Error(),
 		Equals,

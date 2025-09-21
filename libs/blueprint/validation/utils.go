@@ -182,8 +182,15 @@ func getEndLocation(location *source.Meta) *source.Meta {
 }
 
 func isMappingNodeEmpty(node *core.MappingNode) bool {
-	return node == nil || (node.Scalar == nil && node.Fields == nil &&
+	return node == nil || (isEmptyScalar(node.Scalar) && node.Fields == nil &&
 		node.Items == nil && node.StringWithSubstitutions == nil)
+}
+
+func isEmptyScalar(scalar *core.ScalarValue) bool {
+	return scalar == nil || (scalar.StringValue == nil &&
+		scalar.IntValue == nil &&
+		scalar.BoolValue == nil &&
+		scalar.FloatValue == nil)
 }
 
 func deriveMappingNodeResourceDefinitionsType(node *core.MappingNode) provider.ResourceDefinitionsSchemaType {

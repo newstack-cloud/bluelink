@@ -4,10 +4,10 @@ package container
 // referenced by the use of the `include` feature in a blueprint.
 // This means that if you have a dependency tree:
 //
-// blueprint1
-// ├── blueprint2
-// │	 ├── blueprint3
-// │	 │   └── blueprint4
+//	blueprint1
+//	├── blueprint2
+//	│	 ├── blueprint3
+//	│	 │   └── blueprint4
 //
 // The depth of the the tree would be 4, therefore causing an error
 // if MaxBlueprintDepth is set to 3.
@@ -15,10 +15,10 @@ package container
 // This will also help with breaking out of cyclic blueprint inclusions.
 // For example, if we have the following cycle and max depth is 3:
 //
-// ├── blueprint1
-// │   ├── blueprint2
-// │   │   ├── blueprint3
-// │   │   │   └── blueprint1
+//	├── blueprint1
+//	│   ├── blueprint2
+//	│   │   ├── blueprint3
+//	│   │   │   └── blueprint1
 //
 // The iterations will be:
 // 1. process blueprint1

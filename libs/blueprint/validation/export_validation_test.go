@@ -154,7 +154,7 @@ func (s *ExportValidationTestSuite) Test_reports_error_when_an_unsupported_expor
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidExport)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidExportType)
 	c.Assert(
 		loadErr.Error(),
 		Equals,
@@ -214,7 +214,7 @@ func (s *ExportValidationTestSuite) Test_reports_error_when_an_empty_export_fiel
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	c.Assert(isLoadErr, Equals, true)
-	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidExport)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeEmptyExportField)
 	c.Assert(
 		loadErr.Error(),
 		Equals,

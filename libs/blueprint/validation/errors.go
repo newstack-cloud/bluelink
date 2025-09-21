@@ -26,6 +26,57 @@ const (
 	// for a blueprint spec load error is due to one or more resources
 	// being invalid.
 	ErrorReasonCodeInvalidResource errors.ErrorReasonCode = "invalid_resource"
+	// ErrorReasonCodeResourceDefItemEmpty is provided when the reason
+	// for a blueprint spec load error is due to an empty resource definition item.
+	ErrorReasonCodeResourceDefItemEmpty errors.ErrorReasonCode = "resource_def_item_empty"
+	// ErrorReasonCodeResourceDefInvalidType is provided when the reason
+	// for a blueprint spec load error is due to an invalid type in a resource definition.
+	ErrorReasonCodeResourceDefInvalidType errors.ErrorReasonCode = "resource_def_invalid_type"
+	// ErrorReasonCodeResourceDefMissingRequiredField is provided when the reason
+	// for a blueprint spec load error is due to a missing required field in a resource definition.
+	ErrorReasonCodeResourceDefMissingRequiredField errors.ErrorReasonCode = "resource_def_missing_required_field"
+	// ErrorReasonCodeResourceDefUnknownField is provided when the reason
+	// for a blueprint spec load error is due to an unknown field in a resource definition.
+	ErrorReasonCodeResourceDefUnknownField errors.ErrorReasonCode = "resource_def_unknown_field"
+	// ErrorReasonCodeResourceDefUnionItemEmpty is provided when the reason
+	// for a blueprint spec load error is due to an empty union item in a resource definition.
+	ErrorReasonCodeResourceDefUnionItemEmpty errors.ErrorReasonCode = "resource_def_union_item_empty"
+	// ErrorReasonCodeResourceDefUnionInvalidType is provided when the reason
+	// for a blueprint spec load error is due to an invalid type in a union item.
+	ErrorReasonCodeResourceDefUnionInvalidType errors.ErrorReasonCode = "resource_def_union_invalid_type"
+	// ErrorReasonCodeResourceDefNotAllowedValue is provided when the reason
+	// for a blueprint spec load error is due to a value not being in the allowed values list.
+	ErrorReasonCodeResourceDefNotAllowedValue errors.ErrorReasonCode = "resource_def_not_allowed_value"
+	// ErrorReasonCodeResourceDefPatternConstraintFailure is provided when the reason
+	// for a blueprint spec load error is due to a pattern constraint failure.
+	ErrorReasonCodeResourceDefPatternConstraintFailure errors.ErrorReasonCode = "resource_def_pattern_constraint_failure"
+	// ErrorReasonCodeResourceDefMinConstraintFailure is provided when the reason
+	// for a blueprint spec load error is due to a minimum value constraint failure.
+	ErrorReasonCodeResourceDefMinConstraintFailure errors.ErrorReasonCode = "resource_def_min_constraint_failure"
+	// ErrorReasonCodeResourceDefMaxConstraintFailure is provided when the reason
+	// for a blueprint spec load error is due to a maximum value constraint failure.
+	ErrorReasonCodeResourceDefMaxConstraintFailure errors.ErrorReasonCode = "resource_def_max_constraint_failure"
+	// ErrorReasonCodeResourceDefComplexMinLengthConstraintFailure is provided when the reason
+	// for a blueprint spec load error is due to a minimum length constraint failure for complex types.
+	ErrorReasonCodeResourceDefComplexMinLengthConstraintFailure errors.ErrorReasonCode = "resource_def_complex_min_length_constraint_failure"
+	// ErrorReasonCodeResourceDefComplexMaxLengthConstraintFailure is provided when the reason
+	// for a blueprint spec load error is due to a maximum length constraint failure for complex types.
+	ErrorReasonCodeResourceDefComplexMaxLengthConstraintFailure errors.ErrorReasonCode = "resource_def_complex_max_length_constraint_failure"
+	// ErrorReasonCodeResourceDefStringMinLengthConstraintFailure is provided when the reason
+	// for a blueprint spec load error is due to a minimum length constraint failure for strings.
+	ErrorReasonCodeResourceDefStringMinLengthConstraintFailure errors.ErrorReasonCode = "resource_def_string_min_length_constraint_failure"
+	// ErrorReasonCodeResourceDefStringMaxLengthConstraintFailure is provided when the reason
+	// for a blueprint spec load error is due to a maximum length constraint failure for strings.
+	ErrorReasonCodeResourceDefStringMaxLengthConstraintFailure errors.ErrorReasonCode = "resource_def_string_max_length_constraint_failure"
+	// ErrorReasonCodeResourceTypeSpecDefMissing is provided when the reason
+	// for a blueprint spec load error is due to a missing spec definition for a resource.
+	ErrorReasonCodeResourceTypeSpecDefMissing errors.ErrorReasonCode = "resource_type_spec_def_missing"
+	// ErrorReasonCodeResourceTypeSpecDefMissingSchema is provided when the reason
+	// for a blueprint spec load error is due to a missing spec definition schema for a resource.
+	ErrorReasonCodeResourceTypeSpecDefMissingSchema errors.ErrorReasonCode = "resource_type_spec_def_missing_schema"
+	// ErrorReasonCodeDataSourceSpecDefMissing is provided when the reason
+	// for a blueprint spec load error is due to a missing spec definition for a data source.
+	ErrorReasonCodeDataSourceSpecDefMissing errors.ErrorReasonCode = "data_source_spec_def_missing"
 	// ErrorReasonCodeMissingResourcesOrIncludes is provided when the reason
 	// for a blueprint spec load error is due no resources or includes
 	// being defined in the blueprint.
@@ -83,6 +134,14 @@ const (
 	// to a conflict between two filter fields in a data source,
 	// where both fields can not be used to filter the same data source.
 	ErrorReasonCodeDataSourceFilterConflict errors.ErrorReasonCode = "data_source_filter_conflict"
+	// ErrorReasonCodeDataSourceFilterFieldNotSupported is provided
+	// when the reason for a blueprint spec load error is due
+	// to a data source having a field set as a filter that can't be used for filtering.
+	ErrorReasonCodeDataSourceFilterFieldNotSupported errors.ErrorReasonCode = "data_source_filter_field_not_supported"
+	// ErrorReasonCodeDataSourceMissingType is provided
+	// when the reason for a blueprint spec load error is due
+	// to a missing type for a data source.
+	ErrorReasonCodeDataSourceMissingType errors.ErrorReasonCode = "data_source_missing_type"
 	// ErrorReasonCodeInvalidMapKey is provided when the reason
 	// for a blueprint spec load error is due to an invalid map key.
 	ErrorReasonCodeInvalidMapKey errors.ErrorReasonCode = "invalid_map_key"
@@ -118,6 +177,99 @@ const (
 	// for a blueprint spec load error is due to a resource not being found
 	// in an argument to the "link" substitution function.
 	ErrorReasonCodeSubFuncLinkArgResourceNotFound errors.ErrorReasonCode = "sub_func_link_arg_resource_not_found"
+	// ErrorReasonCodeVariableEmptyDefaultValue is provided when the reason
+	// for a blueprint spec load error is due to an empty default value for a variable.
+	ErrorReasonCodeVariableEmptyDefaultValue errors.ErrorReasonCode = "variable_empty_default_value"
+	// ErrorReasonCodeVariableInvalidOrMissing is provided when the reason
+	// for a blueprint spec load error is due to an invalid or missing variable value.
+	ErrorReasonCodeVariableInvalidOrMissing errors.ErrorReasonCode = "variable_invalid_or_missing"
+	// ErrorReasonCodeVariableEmptyValue is provided when the reason
+	// for a blueprint spec load error is due to an empty variable value.
+	ErrorReasonCodeVariableEmptyValue errors.ErrorReasonCode = "variable_empty_value"
+	// ErrorReasonCodeVariableInvalidAllowedValue is provided when the reason
+	// for a blueprint spec load error is due to an invalid allowed value for a variable.
+	ErrorReasonCodeVariableInvalidAllowedValue errors.ErrorReasonCode = "variable_invalid_allowed_value"
+	// ErrorReasonCodeVariableNullAllowedValue is provided when the reason
+	// for a blueprint spec load error is due to a null allowed value for a variable.
+	ErrorReasonCodeVariableNullAllowedValue errors.ErrorReasonCode = "variable_null_allowed_value"
+	// ErrorReasonCodeVariableInvalidAllowedValues is provided when the reason
+	// for a blueprint spec load error is due to invalid allowed values for a variable.
+	ErrorReasonCodeVariableInvalidAllowedValues errors.ErrorReasonCode = "variable_invalid_allowed_values"
+	// ErrorReasonCodeVariableInvalidAllowedValuesNotSupported is provided when the reason
+	// for a blueprint spec load error is due to allowed values not being supported for a variable type.
+	ErrorReasonCodeVariableInvalidAllowedValuesNotSupported errors.ErrorReasonCode = "variable_invalid_allowed_values_not_supported"
+	// ErrorReasonCodeVariableValueNotAllowed is provided when the reason
+	// for a blueprint spec load error is due to a variable value not being in the allowed values.
+	ErrorReasonCodeVariableValueNotAllowed errors.ErrorReasonCode = "variable_value_not_allowed"
+	// ErrorReasonCodeRequiredVariableMissing is provided when the reason
+	// for a blueprint spec load error is due to a required variable being missing.
+	ErrorReasonCodeRequiredVariableMissing errors.ErrorReasonCode = "required_variable_missing"
+	// ErrorReasonCodeCustomVarValueNotInOptions is provided when the reason
+	// for a blueprint spec load error is due to a custom variable value not being in the available options.
+	ErrorReasonCodeCustomVarValueNotInOptions errors.ErrorReasonCode = "custom_variable_value_not_in_options"
+	// ErrorReasonCodeMixedVariableTypes is provided when the reason
+	// for a blueprint spec load error is due to mixed variable types
+	// used in the options for a custom variable type.
+	ErrorReasonCodeMixedVariableTypes errors.ErrorReasonCode = "mixed_variable_types"
+	// ErrorReasonCodeCustomVarAllowedValuesNotInOptions is provided when the reason
+	// for a blueprint spec load error is due to allowed values not being in the available options
+	// for a custom variable type.
+	ErrorReasonCodeCustomVarAllowedValuesNotInOptions errors.ErrorReasonCode = "custom_variable_allowed_values_not_in_options"
+	// ErrorReasonCodeCustomVarDefaultValueNotInOptions is provided when the reason
+	// for a blueprint spec load error is due to a default value not being in the available options
+	// for a custom variable type.
+	ErrorReasonCodeCustomVarDefaultValueNotInOptions errors.ErrorReasonCode = "custom_variable_default_value_not_in_options"
+	// ErrorReasonCodeInvalidExportType is provided when the reason
+	// for a blueprint spec load error is due to an invalid export type.
+	ErrorReasonCodeInvalidExportType errors.ErrorReasonCode = "invalid_export_type"
+	// ErrorReasonCodeMissingExportType is provided when the reason
+	// for a blueprint spec load error is due to a missing export type.
+	ErrorReasonCodeMissingExportType errors.ErrorReasonCode = "missing_export_type"
+	// ErrorReasonCodeEmptyExportField is provided when the reason
+	// for a blueprint spec load error is due to an empty export field.
+	ErrorReasonCodeEmptyExportField errors.ErrorReasonCode = "empty_export_field"
+	// ErrorReasonCodeInvalidReferencePattern is provided when the reason
+	// for a blueprint spec load error is due to an invalid reference pattern.
+	ErrorReasonCodeInvalidReferencePattern errors.ErrorReasonCode = "invalid_reference_pattern"
+	// ErrorReasonCodeReferenceContextAccess is provided when the reason
+	// for a blueprint spec load error is due to invalid reference context access.
+	ErrorReasonCodeReferenceContextAccess errors.ErrorReasonCode = "reference_context_access"
+	// ErrorReasonCodeIncludeEmptyPath is provided when the reason
+	// for a blueprint spec load error is due to an empty include path.
+	ErrorReasonCodeIncludeEmptyPath errors.ErrorReasonCode = "include_empty_path"
+	// ErrorReasonCodeDataSourceMissingFilter is provided when the reason
+	// for a blueprint spec load error is due to a missing data source filter.
+	ErrorReasonCodeDataSourceMissingFilter errors.ErrorReasonCode = "data_source_missing_filter"
+	// ErrorReasonCodeDataSourceEmptyFilter is provided when the reason
+	// for a blueprint spec load error is due to an empty data source filter.
+	ErrorReasonCodeDataSourceEmptyFilter errors.ErrorReasonCode = "data_source_empty_filter"
+	// ErrorReasonCodeDataSourceMissingFilterField is provided when the reason
+	// for a blueprint spec load error is due to a missing data source filter field.
+	ErrorReasonCodeDataSourceMissingFilterField errors.ErrorReasonCode = "data_source_missing_filter_field"
+	// ErrorReasonCodeDataSourceMissingFilterSearch is provided when the reason
+	// for a blueprint spec load error is due to a missing data source filter search.
+	ErrorReasonCodeDataSourceMissingFilterSearch errors.ErrorReasonCode = "data_source_missing_filter_search"
+	// ErrorReasonCodeDataSourceMissingExports is provided when the reason
+	// for a blueprint spec load error is due to missing data source exports.
+	ErrorReasonCodeDataSourceMissingExports errors.ErrorReasonCode = "data_source_missing_exports"
+	// ErrorReasonCodeDataSourceFilterFieldConflict is provided when the reason
+	// for a blueprint spec load error is due to a data source filter field conflict.
+	ErrorReasonCodeDataSourceFilterFieldConflict errors.ErrorReasonCode = "data_source_filter_field_conflict"
+	// ErrorReasonCodeDataSourceFilterOperatorNotSupported is provided when the reason
+	// for a blueprint spec load error is due to an unsupported data source filter operator.
+	ErrorReasonCodeDataSourceFilterOperatorNotSupported errors.ErrorReasonCode = "data_source_filter_operator_not_supported"
+	// ErrorReasonCodeDataSourceMissingFilterOperator is provided when the reason
+	// for a blueprint spec load error is due to a missing data source filter operator.
+	ErrorReasonCodeDataSourceMissingFilterOperator errors.ErrorReasonCode = "data_source_missing_filter_operator"
+	// ErrorReasonCodeResourceSpecPreValidationFailed is provided when the reason
+	// for a blueprint spec load error is due to resource spec pre-validation failure.
+	ErrorReasonCodeResourceSpecPreValidationFailed errors.ErrorReasonCode = "resource_spec_pre_validation_failed"
+	// ErrorReasonCodeMappingNodeKeyContainsSubstitution is provided when the reason
+	// for a blueprint spec load error is due to a mapping node key containing substitution.
+	ErrorReasonCodeMappingNodeKeyContainsSubstitution errors.ErrorReasonCode = "mapping_node_key_contains_substitution"
+	// ErrorReasonCodeVariableInvalidDefaultValue is provided when the reason
+	// for a blueprint spec load error is due to an invalid default value for a variable.
+	ErrorReasonCodeVariableInvalidDefaultValue errors.ErrorReasonCode = "variable_invalid_default_value"
 )
 
 func errBlueprintMissingVersion() error {
@@ -180,13 +332,13 @@ func errVariableInvalidDefaultValue(
 
 	line, col := positionFromScalarValue(defaultValue, varSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidVariable,
+		ReasonCode: ErrorReasonCodeVariableInvalidDefaultValue,
 		Err:        fmt.Errorf("variable %q: expected %s, got %s", varName, varType, defaultVarType),
 		Line:       line,
 		Column:     col,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
-			ReasonCode: ErrorReasonCodeInvalidVariable,
+			ReasonCode: ErrorReasonCodeVariableInvalidDefaultValue,
 			SuggestedActions: []errors.SuggestedAction{
 				{
 					Type:        string(errors.ActionTypeFixVariableType),
@@ -199,7 +351,6 @@ func errVariableInvalidDefaultValue(
 				"variableName": varName,
 				"expectedType": string(varType),
 				"actualType":   string(defaultVarType),
-				"variableType": "defaultValue",
 			},
 		},
 	}
@@ -208,7 +359,7 @@ func errVariableInvalidDefaultValue(
 func errVariableEmptyDefaultValue(varType schema.VariableType, varName string, varSourceMeta *source.Meta) error {
 	line, col := source.PositionFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidVariable,
+		ReasonCode: ErrorReasonCodeVariableEmptyDefaultValue,
 		Err: fmt.Errorf(
 			"validation failed due to an empty default %s value for variable \"%s\", you must provide a value when declaring a default in a blueprint",
 			varType,
@@ -216,6 +367,22 @@ func errVariableEmptyDefaultValue(varType schema.VariableType, varName string, v
 		),
 		Line:   line,
 		Column: col,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeVariableEmptyDefaultValue,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeFixVariableType),
+					Title:       "Fix Variable Default Value",
+					Description: "Provide a valid default value for the variable or remove the default declaration.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"variableName": varName,
+				"variableType": varType,
+			},
+		},
 	}
 }
 
@@ -229,7 +396,7 @@ func errVariableInvalidOrMissing(
 	if actualVarType == nil {
 		line, col := source.PositionFromSourceMeta(varSourceMeta)
 		return &errors.LoadError{
-			ReasonCode: ErrorReasonCodeInvalidVariable,
+			ReasonCode: ErrorReasonCodeVariableInvalidOrMissing,
 			Err: fmt.Errorf(
 				"validation failed to a missing value for variable \"%s\", a value of type %s must be provided",
 				varName,
@@ -237,12 +404,28 @@ func errVariableInvalidOrMissing(
 			),
 			Line:   line,
 			Column: col,
+			Context: &errors.ErrorContext{
+				Category:   errors.ErrorCategoryVariableType,
+				ReasonCode: ErrorReasonCodeVariableInvalidOrMissing,
+				SuggestedActions: []errors.SuggestedAction{
+					{
+						Type:        string(errors.ActionTypeFixVariableType),
+						Title:       "Provide Variable Value",
+						Description: "Provide a valid value for the variable with the correct type.",
+						Priority:    1,
+					},
+				},
+				Metadata: map[string]any{
+					"variableName": varName,
+					"variableType": varType,
+				},
+			},
 		}
 	}
 
 	line, col := source.PositionFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidVariable,
+		ReasonCode: ErrorReasonCodeVariableInvalidOrMissing,
 		Err: fmt.Errorf(
 			"validation failed due to an incorrect type used for variable \"%s\", "+
 				"expected a value of type %s but one of type %s was provided",
@@ -252,6 +435,23 @@ func errVariableInvalidOrMissing(
 		),
 		Line:   line,
 		Column: col,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeVariableInvalidOrMissing,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeFixVariableType),
+					Title:       "Fix Variable Type",
+					Description: "Provide a value with the correct type for the variable.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"variableName": varName,
+				"variableType": varType,
+				"actualType":   *actualVarType,
+			},
+		},
 	}
 }
 
@@ -262,7 +462,7 @@ func errVariableEmptyValue(
 ) error {
 	line, col := source.PositionFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidVariable,
+		ReasonCode: ErrorReasonCodeVariableEmptyValue,
 		Err: fmt.Errorf(
 			"validation failed due to an empty value being provided for variable \"%s\", "+
 				"please provide a valid %s value that is not empty",
@@ -271,6 +471,22 @@ func errVariableEmptyValue(
 		),
 		Line:   line,
 		Column: col,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeVariableEmptyValue,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeFixVariableType),
+					Title:       "Provide Non-Empty Variable Value",
+					Description: "Provide a valid non-empty value for the variable.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"variableName": varName,
+				"variableType": varType,
+			},
+		},
 	}
 }
 
@@ -284,7 +500,7 @@ func errVariableInvalidAllowedValue(
 
 	line, col := positionFromScalarValue(allowedValue, varSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidVariable,
+		ReasonCode: ErrorReasonCodeVariableInvalidAllowedValue,
 		Err: fmt.Errorf(
 			"an invalid allowed value was provided, %s with the value \"%s\" was provided when only %ss are allowed",
 			varTypeToUnit(allowedValueVarType),
@@ -293,6 +509,23 @@ func errVariableInvalidAllowedValue(
 		),
 		Line:   line,
 		Column: col,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeVariableInvalidAllowedValue,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeFixVariableType),
+					Title:       "Fix Allowed Value Type",
+					Description: "Provide an allowed value with the correct type for the variable.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"variableType":     varType,
+				"allowedValueType": allowedValueVarType,
+				"allowedValue":     scalarValueStr,
+			},
+		},
 	}
 }
 
@@ -303,13 +536,28 @@ func errVariableNullAllowedValue(
 ) error {
 	line, col := positionFromScalarValue(allowedValue, varSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidVariable,
+		ReasonCode: ErrorReasonCodeVariableNullAllowedValue,
 		Err: fmt.Errorf(
 			"null was provided for an allowed value, a valid %s must be provided",
 			varType,
 		),
 		Line:   line,
 		Column: col,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeVariableNullAllowedValue,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeFixVariableType),
+					Title:       "Fix Allowed Value",
+					Description: "Provide a valid non-null allowed value for the variable.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"variableType": varType,
+			},
+		},
 	}
 }
 
@@ -318,7 +566,7 @@ func errVariableInvalidAllowedValues(
 	allowedValueErrors []error,
 ) error {
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidVariable,
+		ReasonCode: ErrorReasonCodeVariableInvalidAllowedValues,
 		Err: fmt.Errorf(
 			"validation failed due to one or more invalid allowed values being provided for variable \"%s\"",
 			varName,
@@ -334,7 +582,7 @@ func errVariableInvalidAllowedValuesNotSupported(
 ) error {
 	line, col := source.PositionFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidVariable,
+		ReasonCode: ErrorReasonCodeVariableInvalidAllowedValuesNotSupported,
 		Err: fmt.Errorf(
 			"validation failed due to an allowed values list being provided for %s variable \"%s\","+
 				" %s variables do not support allowed values enumeration",
@@ -344,6 +592,22 @@ func errVariableInvalidAllowedValuesNotSupported(
 		),
 		Line:   line,
 		Column: col,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeVariableInvalidAllowedValuesNotSupported,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeFixVariableType),
+					Title:       "Remove Allowed Values",
+					Description: "Remove the allowed values list as this variable type does not support enumeration.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"variableName": varName,
+				"variableType": varType,
+			},
+		},
 	}
 }
 
@@ -358,7 +622,7 @@ func errVariableValueNotAllowed(
 	valueLabel := deriveValueLabel(usingDefault)
 	line, col := positionFromScalarValue(value, varSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidVariable,
+		ReasonCode: ErrorReasonCodeVariableValueNotAllowed,
 		Err: fmt.Errorf(
 			"validation failed due to an invalid %s being provided for %s variable \"%s\","+
 				" only the following values are supported: %s",
@@ -369,6 +633,24 @@ func errVariableValueNotAllowed(
 		),
 		Line:   line,
 		Column: col,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeVariableValueNotAllowed,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeFixVariableType),
+					Title:       "Use Allowed Value",
+					Description: "Provide a value from the allowed values list for the variable.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"variableName":      varName,
+				"variableType":      varType,
+				"valueLabel":        valueLabel,
+				"allowedValuesText": scalarListToString(allowedValues),
+			},
+		},
 	}
 }
 
@@ -382,7 +664,7 @@ func errCustomVariableValueNotInOptions(
 	valueLabel := deriveValueLabel(usingDefault)
 	line, col := positionFromScalarValue(value, varSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidVariable,
+		ReasonCode: ErrorReasonCodeCustomVarValueNotInOptions,
 		Err: fmt.Errorf(
 			"validation failed due to an invalid %s \"%s\" being provided for variable \"%s\","+
 				" which is not a valid %s option, see the custom type documentation for more details",
@@ -391,6 +673,22 @@ func errCustomVariableValueNotInOptions(
 			varName,
 			varType,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeCustomVarValueNotInOptions,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeCheckCustomVariableOptions),
+					Title:       "Check Custom Variable Options",
+					Description: "Check the options for the custom variable type.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"variableName": varName,
+				"variableType": varType,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -399,13 +697,13 @@ func errCustomVariableValueNotInOptions(
 func errRequiredVariableMissing(varName string, varSourceMeta *source.Meta) error {
 	line, col := source.PositionFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidVariable,
+		ReasonCode: ErrorReasonCodeRequiredVariableMissing,
 		Err:        fmt.Errorf("required variable %q has no value", varName),
 		Line:       line,
 		Column:     col,
 		Context: &errors.ErrorContext{
-			Category:   errors.ErrorCategoryValidation,
-			ReasonCode: ErrorReasonCodeInvalidVariable,
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeRequiredVariableMissing,
 			SuggestedActions: []errors.SuggestedAction{
 				{
 					Type:        string(errors.ActionTypeProvideValue),
@@ -422,7 +720,6 @@ func errRequiredVariableMissing(varName string, varSourceMeta *source.Meta) erro
 			},
 			Metadata: map[string]any{
 				"variableName": varName,
-				"variableType": "required",
 			},
 		},
 	}
@@ -455,13 +752,29 @@ func errCustomVariableMixedTypes(
 ) error {
 	line, col := source.PositionFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidVariable,
+		ReasonCode: ErrorReasonCodeMixedVariableTypes,
 		Err: fmt.Errorf(
 			"validation failed due to mixed types provided as options for variable type \"%s\" used in variable \"%s\", "+
 				"all options must be of the same scalar type",
 			varSchema.Type.Value,
 			varName,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeMixedVariableTypes,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeContactVariableTypeDeveloper),
+					Title:       "Contact Variable Type Developer",
+					Description: "Contact the developer of the variable type to fix the issue.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"variableName": varName,
+				"variableType": varSchema.Type.Value,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -476,7 +789,7 @@ func errCustomVariableInvalidDefaultValueType(
 	defaultVarType := deriveVarType(defaultValue)
 	line, col := positionFromScalarValue(defaultValue, varSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidVariable,
+		ReasonCode: ErrorReasonCodeVariableInvalidDefaultValue,
 		Err: fmt.Errorf(
 			"validation failed due to an invalid type for a default value for variable \"%s\", %s was provided "+
 				"when a custom variable type option of %s was expected",
@@ -484,6 +797,23 @@ func errCustomVariableInvalidDefaultValueType(
 			defaultVarType,
 			varType,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeVariableInvalidDefaultValue,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeFixVariableType),
+					Title:       "Fix Variable Default Value",
+					Description: "Provide a valid default value for the variable.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"variableName": varName,
+				"expectedType": varType,
+				"actualType":   defaultVarType,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -497,7 +827,7 @@ func errCustomVariableAllowedValuesNotInOptions(
 ) error {
 	line, col := source.PositionFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidVariable,
+		ReasonCode: ErrorReasonCodeCustomVarAllowedValuesNotInOptions,
 		Err: fmt.Errorf(
 			"validation failed due to invalid allowed values being provided for variable \"%s\" "+
 				"of custom type \"%s\". See custom type documentation for possible values. Invalid values provided: %s",
@@ -505,6 +835,22 @@ func errCustomVariableAllowedValuesNotInOptions(
 			varType,
 			strings.Join(invalidOptions, ", "),
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeCustomVarAllowedValuesNotInOptions,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeCheckCustomVariableOptions),
+					Title:       "Check Custom Variable Options",
+					Description: "Check the options for the custom variable type.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"variableName": varName,
+				"variableType": varType,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -518,7 +864,7 @@ func errCustomVariableDefaultValueNotInOptions(
 ) error {
 	line, col := source.PositionFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidVariable,
+		ReasonCode: ErrorReasonCodeCustomVarDefaultValueNotInOptions,
 		Err: fmt.Errorf(
 			"validation failed due to an invalid default value for variable \"%s\" "+
 				"of custom type \"%s\". See custom type documentation for possible values. Invalid default value provided: %s",
@@ -526,6 +872,22 @@ func errCustomVariableDefaultValueNotInOptions(
 			varType,
 			defaultValue,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeCustomVarDefaultValueNotInOptions,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeCheckCustomVariableOptions),
+					Title:       "Check Custom Variable Options",
+					Description: "Check the options for the custom variable type.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"variableName": varName,
+				"variableType": varType,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -534,13 +896,28 @@ func errCustomVariableDefaultValueNotInOptions(
 func errMissingExportType(exportName string, exportSourceMeta *source.Meta) error {
 	line, col := source.PositionFromSourceMeta(exportSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidExport,
+		ReasonCode: ErrorReasonCodeMissingExportType,
 		Err: fmt.Errorf(
 			"validation failed due to a missing export type for export \"%s\"",
 			exportName,
 		),
 		Line:   line,
 		Column: col,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryExport,
+			ReasonCode: ErrorReasonCodeMissingExportType,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeFixVariableType),
+					Title:       "Add Export Type",
+					Description: "Add a valid export type to the export definition.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"exportName": exportName,
+			},
+		},
 	}
 }
 
@@ -556,7 +933,7 @@ func errInvalidExportType(exportType schema.ExportType, exportName string, expor
 	)
 	line, col := source.PositionFromSourceMeta(exportSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidExport,
+		ReasonCode: ErrorReasonCodeInvalidExportType,
 		Err: fmt.Errorf(
 			"validation failed due to an invalid export type of \"%s\" being provided for export \"%s\". "+
 				"The following export types are supported: %s",
@@ -566,19 +943,51 @@ func errInvalidExportType(exportType schema.ExportType, exportName string, expor
 		),
 		Line:   line,
 		Column: col,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryExport,
+			ReasonCode: ErrorReasonCodeInvalidExportType,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeFixVariableType),
+					Title:       "Check Supported Export Types",
+					Description: "Use a valid export type from the supported list.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"exportName":       exportName,
+				"exportType":       exportType,
+				"validExportTypes": validExportTypes,
+			},
+		},
 	}
 }
 
 func errEmptyExportField(exportName string, exportSourceMeta *source.Meta) error {
 	line, col := source.PositionFromSourceMeta(exportSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidExport,
+		ReasonCode: ErrorReasonCodeEmptyExportField,
 		Err: fmt.Errorf(
 			"validation failed due to an empty field string being provided for export \"%s\"",
 			exportName,
 		),
 		Line:   line,
 		Column: col,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryExport,
+			ReasonCode: ErrorReasonCodeEmptyExportField,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeFixVariableType),
+					Title:       "Provide Export Field",
+					Description: "Provide a non-empty field value for the export.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"exportName": exportName,
+			},
+		},
 	}
 }
 
@@ -637,12 +1046,27 @@ func errIncludeEmptyPath(includeName string, varSourceMeta *source.Meta) error {
 func errDataSourceMissingFilter(dataSourceName string, dataSourceMeta *source.Meta) error {
 	line, col := source.PositionFromSourceMeta(dataSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidDataSource,
+		ReasonCode: ErrorReasonCodeDataSourceMissingFilter,
 		Err: fmt.Errorf(
 			"validation failed due to a missing filter in "+
 				"data source \"%s\", every data source must have a filter",
 			dataSourceName,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryDataSourceType,
+			ReasonCode: ErrorReasonCodeDataSourceMissingFilter,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeAddDataSourceFilter),
+					Title:       "Add Filter",
+					Description: "Add a filter to the data source.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"dataSourceName": dataSourceName,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -651,12 +1075,27 @@ func errDataSourceMissingFilter(dataSourceName string, dataSourceMeta *source.Me
 func errDataSourceEmptyFilter(dataSourceName string, dataSourceMeta *source.Meta) error {
 	line, col := source.PositionFromSourceMeta(dataSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidDataSource,
+		ReasonCode: ErrorReasonCodeDataSourceEmptyFilter,
 		Err: fmt.Errorf(
 			"validation failed due to an empty filter in "+
 				"data source \"%s\", filters cannot be null or empty objects",
 			dataSourceName,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryDataSourceType,
+			ReasonCode: ErrorReasonCodeDataSourceEmptyFilter,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeAddDataSourceFilter),
+					Title:       "Provide Valid Filter",
+					Description: "Provide a valid filter for the data source.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"dataSourceName": dataSourceName,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -665,12 +1104,27 @@ func errDataSourceEmptyFilter(dataSourceName string, dataSourceMeta *source.Meta
 func errDataSourceMissingFilterField(dataSourceName string, dataSourceMeta *source.Meta) error {
 	line, col := source.PositionFromSourceMeta(dataSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidDataSource,
+		ReasonCode: ErrorReasonCodeDataSourceMissingFilterField,
 		Err: fmt.Errorf(
 			"validation failed due to a missing field in filter for "+
 				"data source \"%s\", field must be set for a data source filter",
 			dataSourceName,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryDataSourceType,
+			ReasonCode: ErrorReasonCodeDataSourceMissingFilterField,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeAddDataSourceFilter),
+					Title:       "Add Filter Field",
+					Description: "Add a filter field to the data source.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"dataSourceName": dataSourceName,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -679,12 +1133,27 @@ func errDataSourceMissingFilterField(dataSourceName string, dataSourceMeta *sour
 func errDataSourceMissingFilterSearch(dataSourceName string, dataSourceMeta *source.Meta) error {
 	line, col := source.PositionFromSourceMeta(dataSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidDataSource,
+		ReasonCode: ErrorReasonCodeDataSourceMissingFilterSearch,
 		Err: fmt.Errorf(
 			"validation failed due to a missing search in filter for "+
 				"data source \"%s\", at least one search value must be provided for a filter",
 			dataSourceName,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryDataSourceType,
+			ReasonCode: ErrorReasonCodeDataSourceMissingFilterSearch,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeAddDataSourceFilter),
+					Title:       "Add Filter Search Value",
+					Description: "Add at least one search value to the data source.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"dataSourceName": dataSourceName,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -693,12 +1162,27 @@ func errDataSourceMissingFilterSearch(dataSourceName string, dataSourceMeta *sou
 func errDataSourceMissingExports(dataSourceName string, dataSourceMeta *source.Meta) error {
 	line, col := source.PositionFromSourceMeta(dataSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidDataSource,
+		ReasonCode: ErrorReasonCodeDataSourceMissingExports,
 		Err: fmt.Errorf(
 			"validation failed due to missing exports for "+
 				"data source \"%s\", at least one field must be exported for a data source",
 			dataSourceName,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryDataSourceType,
+			ReasonCode: ErrorReasonCodeDataSourceMissingExports,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeAddDataSourceExport),
+					Title:       "Add Export",
+					Description: "Add an exported field for the data source.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"dataSourceName": dataSourceName,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -720,6 +1204,23 @@ func errDataSourceFilterFieldConflict(
 			otherField,
 			dataSourceName,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryDataSourceType,
+			ReasonCode: ErrorReasonCodeDataSourceFilterConflict,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeAddDataSourceFilter),
+					Title:       "Fix Filter Field Conflict",
+					Description: "Fix the conflict between the filter fields.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"dataSourceName": dataSourceName,
+				"fieldName":      fieldName,
+				"otherFieldName": otherField,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -743,6 +1244,22 @@ func errInvalidDataSourceFilterOperator(
 				", ",
 			),
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryDataSourceType,
+			ReasonCode: ErrorReasonCodeInvalidDataSourceFilterOperator,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeAddDataSourceFilter),
+					Title:       "Choose Valid Filter Operator",
+					Description: "Choose a valid filter operator for the data source.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"dataSourceName": dataSourceName,
+				"filterOperator": dataSourceFilterOperator.Value,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -771,6 +1288,23 @@ func errDataSourceFilterOperatorNotSupported(
 				", ",
 			),
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryDataSourceType,
+			ReasonCode: ErrorReasonCodeUnsupportedDataSourceFilterOperator,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeAddDataSourceFilter),
+					Title:       "Choose Valid Filter Operator",
+					Description: "Choose a valid filter operator for the data source.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"dataSourceName":  dataSourceName,
+				"filterOperator":  operator,
+				"filterFieldName": filterFieldName,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -790,6 +1324,21 @@ func errDataSourceMissingFilterOperator(dataSourceName string, location *source.
 				", ",
 			),
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryDataSourceType,
+			ReasonCode: ErrorReasonCodeInvalidDataSourceFilterOperator,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeAddDataSourceFilter),
+					Title:       "Choose Valid Filter Operator",
+					Description: "Choose a valid filter operator for the data source.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"dataSourceName": dataSourceName,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -810,6 +1359,22 @@ func errInvalidDataSourceFieldType(
 			exportName,
 			dataSourceName,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryDataSourceType,
+			ReasonCode: ErrorReasonCodeInvalidDataSourceFieldType,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeAddDataSourceExport),
+					Title:       "Choose Valid Field Export Type",
+					Description: "Choose a valid field export type for the data source.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"dataSourceName": dataSourceName,
+				"exportName":     exportName,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -1279,8 +1844,8 @@ func errResourceMissingType(resourceName string, location *source.Meta) error {
 					Priority:    1,
 				},
 				{
-					Type:        string(errors.ActionTypeListAvailableTypes),
-					Title:       "List Available Types",
+					Type:        string(errors.ActionTypeListAvailableResourceTypes),
+					Title:       "Check Available Resource Types",
 					Description: "See available resource types from installed providers",
 					Priority:    2,
 				},
@@ -1305,7 +1870,7 @@ func errResourceTypeMissingSpecDefinition(
 		contextInfo = " referenced in substitution"
 	}
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
+		ReasonCode: ErrorReasonCodeResourceTypeSpecDefMissing,
 		Err: fmt.Errorf(
 			"validation failed due to a missing spec definition for resource \"%s\" "+
 				"of type \"%s\"%s: %s",
@@ -1314,6 +1879,22 @@ func errResourceTypeMissingSpecDefinition(
 			contextInfo,
 			extraDetails,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryResourceType,
+			ReasonCode: ErrorReasonCodeResourceTypeSpecDefMissing,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeContactResourceTypeDeveloper),
+					Title:       "Contact Resource Type Developer",
+					Description: fmt.Sprintf("Contact the developer of the resource type %s to fix the issue.", resourceType),
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"resourceName": resourceName,
+				"resourceType": resourceType,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -1331,7 +1912,7 @@ func errResourceTypeSpecDefMissingSchema(
 		contextInfo = " referenced in substitution"
 	}
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
+		ReasonCode: ErrorReasonCodeResourceTypeSpecDefMissingSchema,
 		Err: fmt.Errorf(
 			"validation failed due to a missing spec definition schema for resource \"%s\" "+
 				"of type \"%s\"%s",
@@ -1339,6 +1920,22 @@ func errResourceTypeSpecDefMissingSchema(
 			resourceType,
 			contextInfo,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryResourceType,
+			ReasonCode: ErrorReasonCodeResourceTypeSpecDefMissingSchema,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeContactResourceTypeDeveloper),
+					Title:       "Contact Resource Type Developer",
+					Description: fmt.Sprintf("Contact the developer of the resource type %s to fix the issue.", resourceType),
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"resourceName": resourceName,
+				"resourceType": resourceType,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -1358,7 +1955,7 @@ func errDataSourceTypeMissingSpecDefinition(
 	}
 
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidDataSource,
+		ReasonCode: ErrorReasonCodeDataSourceSpecDefMissing,
 		Err: fmt.Errorf(
 			"validation failed due to a missing spec definition for data source \"%s\" "+
 				"of type \"%s\"%s: %s",
@@ -1367,6 +1964,22 @@ func errDataSourceTypeMissingSpecDefinition(
 			contextInfo,
 			extraDetails,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryDataSourceType,
+			ReasonCode: ErrorReasonCodeDataSourceSpecDefMissing,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeContactDataSourceTypeDeveloper),
+					Title:       "Contact Data Source Type Developer",
+					Description: fmt.Sprintf("Contact the developer of the data source type %s to fix the issue.", dataSourceType),
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"dataSourceName": dataSourceName,
+				"dataSourceType": dataSourceType,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -1379,13 +1992,25 @@ func errDataSourceTypeMissingFields(
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidDataSource,
+		ReasonCode: ErrorReasonCodeDataSourceSpecDefMissing,
 		Err: fmt.Errorf(
 			"validation failed due to a missing fields definition for data source \"%s\" "+
 				"of type \"%s\"",
 			dataSourceName,
 			dataSourceType,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryDataSourceType,
+			ReasonCode: ErrorReasonCodeDataSourceSpecDefMissing,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeContactDataSourceTypeDeveloper),
+					Title:       "Contact Data Source Type Developer",
+					Description: fmt.Sprintf("Contact the developer of the data source type %s to fix the issue.", dataSourceType),
+					Priority:    1,
+				},
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -1398,13 +2023,29 @@ func errDataSourceFilterFieldNotSupported(
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidDataSource,
+		ReasonCode: ErrorReasonCodeDataSourceFilterFieldNotSupported,
 		Err: fmt.Errorf(
 			"validation failed due to the field \"%s\" in the filter for data source \"%s\" "+
 				"not being supported",
 			field,
 			dataSourceName,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryDataSourceType,
+			ReasonCode: ErrorReasonCodeDataSourceFilterFieldNotSupported,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeCheckDataSourceFilterFields),
+					Title:       "Choose a different field for filtering",
+					Description: "Choose a different field for filtering from the list of supported fields.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"dataSourceName": dataSourceName,
+				"fieldName":      field,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}
@@ -1413,11 +2054,26 @@ func errDataSourceFilterFieldNotSupported(
 func errDataSourceMissingType(dataSourceName string, location *source.Meta) error {
 	line, col := source.PositionFromSourceMeta(location)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidDataSource,
+		ReasonCode: ErrorReasonCodeDataSourceMissingType,
 		Err: fmt.Errorf(
 			"validation failed due to a missing type for data source \"%s\"",
 			dataSourceName,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryDataSourceType,
+			ReasonCode: ErrorReasonCodeDataSourceMissingType,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeAddDataSourceType),
+					Title:       "Add Data Source Type",
+					Description: "Add a type for the data source.",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"dataSourceName": dataSourceName,
+			},
+		},
 		Line:   line,
 		Column: col,
 	}

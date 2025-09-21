@@ -23,7 +23,7 @@ func ValidateDataSourceName(mappingName string, dataSourceMap *schema.DataSource
 		return errMappingNameContainsSubstitution(
 			mappingName,
 			"data source",
-			ErrorReasonCodeInvalidResource,
+			ErrorReasonCodeInvalidDataSource,
 			getDataSourceMeta(dataSourceMap, mappingName),
 		)
 	}

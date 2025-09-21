@@ -17,20 +17,25 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 )
 
+// ResourceValidationParams groups the non-context parameters used across validation functions
+type ResourceValidationParams struct {
+	ResourceName                string
+	ResourceType                string
+	ResourceDerivedFromTemplate bool
+	BpSchema                    *schema.Blueprint
+	Params                      core.BlueprintParams
+	FuncRegistry                provider.FunctionRegistry
+	RefChainCollector           refgraph.RefChainCollector
+	ResourceRegistry            resourcehelpers.Registry
+	DataSourceRegistry          provider.DataSourceRegistry
+}
+
 func validateResourceDefinition(
 	ctx context.Context,
-	resourceName string,
-	resourceType string,
-	resourceDerivedFromTemplate bool,
+	params ResourceValidationParams,
 	spec *core.MappingNode,
 	parentLocation *source.Meta,
 	validateAgainstSchema *provider.ResourceDefinitionsSchema,
-	bpSchema *schema.Blueprint,
-	params core.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
 	path string,
 	depth int,
 ) ([]*core.Diagnostic, error) {
@@ -48,7 +53,7 @@ func validateResourceDefinition(
 	if validateAgainstSchema.Computed {
 		return diagnostics, errComputedFieldDefinedInBlueprint(
 			path,
-			resourceName,
+			params.ResourceName,
 			selectMappingNodeLocation(spec, parentLocation),
 		)
 	}
@@ -57,161 +62,93 @@ func validateResourceDefinition(
 	case provider.ResourceDefinitionsSchemaTypeObject:
 		return validateResourceDefinitionObject(
 			ctx,
-			resourceName,
-			resourceType,
-			resourceDerivedFromTemplate,
+			params,
 			spec,
 			parentLocation,
 			validateAgainstSchema,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 			path,
 			depth,
 		)
 	case provider.ResourceDefinitionsSchemaTypeMap:
 		return validateResourceDefinitionMap(
 			ctx,
-			resourceName,
-			resourceType,
-			resourceDerivedFromTemplate,
+			params,
 			spec,
 			parentLocation,
 			validateAgainstSchema,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 			path,
 			depth,
 		)
 	case provider.ResourceDefinitionsSchemaTypeArray:
 		return validateResourceDefinitionArray(
 			ctx,
-			resourceName,
-			resourceType,
-			resourceDerivedFromTemplate,
+			params,
 			spec,
 			parentLocation,
 			validateAgainstSchema,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 			path,
 			depth,
 		)
 	case provider.ResourceDefinitionsSchemaTypeString:
 		return validateResourceDefinitionString(
 			ctx,
-			resourceName,
-			resourceDerivedFromTemplate,
+			params,
 			spec,
 			parentLocation,
 			validateAgainstSchema,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 			path,
 		)
 	case provider.ResourceDefinitionsSchemaTypeInteger:
 		return validateResourceDefinitionInteger(
 			ctx,
-			resourceName,
-			resourceDerivedFromTemplate,
+			params,
 			spec,
 			parentLocation,
 			validateAgainstSchema,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 			path,
 		)
 	case provider.ResourceDefinitionsSchemaTypeFloat:
 		return validateResourceDefinitionFloat(
 			ctx,
-			resourceName,
-			resourceDerivedFromTemplate,
+			params,
 			spec,
 			parentLocation,
 			validateAgainstSchema,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 			path,
 		)
 	case provider.ResourceDefinitionsSchemaTypeBoolean:
 		return validateResourceDefinitionBoolean(
 			ctx,
-			resourceName,
-			resourceDerivedFromTemplate,
+			params,
 			spec,
 			parentLocation,
 			validateAgainstSchema,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 			path,
 		)
 	case provider.ResourceDefinitionsSchemaTypeUnion:
 		return validateResourceDefinitionUnion(
 			ctx,
-			resourceName,
-			resourceType,
-			resourceDerivedFromTemplate,
+			params,
 			spec,
 			parentLocation,
 			validateAgainstSchema,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 			path,
 			depth,
 		)
 	default:
 		return diagnostics, provider.ErrUnknownResourceDefSchemaType(
 			validateAgainstSchema.Type,
-			resourceType,
+			params.ResourceType,
 		)
 	}
 }
 
 func validateResourceDefinitionObject(
 	ctx context.Context,
-	resourceName string,
-	resourceType string,
-	resourceDerivedFromTemplate bool,
+	params ResourceValidationParams,
 	node *core.MappingNode,
 	parentLocation *source.Meta,
 	validateAgainstSchema *provider.ResourceDefinitionsSchema,
-	bpSchema *schema.Blueprint,
-	params core.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
 	path string,
 	depth int,
 ) ([]*core.Diagnostic, error) {
@@ -221,6 +158,7 @@ func validateResourceDefinitionObject(
 	if isEmpty && !validateAgainstSchema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
+			params.ResourceType,
 			provider.ResourceDefinitionsSchemaTypeObject,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -236,6 +174,7 @@ func validateResourceDefinitionObject(
 
 		return diagnostics, errResourceDefInvalidType(
 			path,
+			params.ResourceType,
 			specType,
 			provider.ResourceDefinitionsSchemaTypeObject,
 			selectMappingNodeLocation(node, parentLocation),
@@ -251,6 +190,7 @@ func validateResourceDefinitionObject(
 			if slices.Contains(validateAgainstSchema.Required, attrName) {
 				errs = append(errs, errResourceDefMissingRequiredField(
 					attrPath,
+					params.ResourceType,
 					attrName,
 					attrSchema.Type,
 					selectMappingNodeLocation(node, parentLocation),
@@ -259,18 +199,10 @@ func validateResourceDefinitionObject(
 		} else {
 			attrDiagnostics, err := validateResourceDefinition(
 				ctx,
-				resourceName,
-				resourceType,
-				resourceDerivedFromTemplate,
+				params,
 				attrNode,
 				parentLocation,
 				attrSchema,
-				bpSchema,
-				params,
-				funcRegistry,
-				refChainCollector,
-				resourceRegistry,
-				dataSourceRegistry,
 				attrPath,
 				depth+1,
 			)
@@ -286,6 +218,7 @@ func validateResourceDefinitionObject(
 		if _, hasAttr := validateAgainstSchema.Attributes[fieldName]; !hasAttr {
 			errs = append(errs, errResourceDefUnknownField(
 				fieldPath,
+				params.ResourceType,
 				fieldName,
 				selectMappingNodeLocation(fieldNode, parentLocation),
 			))
@@ -301,18 +234,10 @@ func validateResourceDefinitionObject(
 
 func validateResourceDefinitionMap(
 	ctx context.Context,
-	resourceName string,
-	resourceType string,
-	resourceDerivedFromTemplate bool,
+	params ResourceValidationParams,
 	node *core.MappingNode,
 	parentLocation *source.Meta,
 	validateAgainstSchema *provider.ResourceDefinitionsSchema,
-	bpSchema *schema.Blueprint,
-	params core.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
 	path string,
 	depth int,
 ) ([]*core.Diagnostic, error) {
@@ -322,6 +247,7 @@ func validateResourceDefinitionMap(
 	if isEmpty && !validateAgainstSchema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
+			params.ResourceType,
 			provider.ResourceDefinitionsSchemaTypeMap,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -337,6 +263,7 @@ func validateResourceDefinitionMap(
 
 		return diagnostics, errResourceDefInvalidType(
 			path,
+			params.ResourceType,
 			specType,
 			provider.ResourceDefinitionsSchemaTypeMap,
 			selectMappingNodeLocation(node, parentLocation),
@@ -347,6 +274,7 @@ func validateResourceDefinitionMap(
 		minLengthDiagnostics, err := validateResourceDefinitionMapMinLength(
 			node,
 			validateAgainstSchema,
+			params.ResourceType,
 			path,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -360,6 +288,7 @@ func validateResourceDefinitionMap(
 		maxLengthDiagnostics, err := validateResourceDefinitionMapMaxLength(
 			node,
 			validateAgainstSchema,
+			params.ResourceType,
 			path,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -375,18 +304,10 @@ func validateResourceDefinitionMap(
 		fieldPath := fmt.Sprintf("%s.%s", path, fieldName)
 		fieldDiagnostics, err := validateResourceDefinition(
 			ctx,
-			resourceName,
-			resourceType,
-			resourceDerivedFromTemplate,
+			params,
 			fieldNode,
 			parentLocation,
 			validateAgainstSchema.MapValues,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 			fieldPath,
 			depth+1,
 		)
@@ -406,18 +327,10 @@ func validateResourceDefinitionMap(
 
 func validateResourceDefinitionArray(
 	ctx context.Context,
-	resourceName string,
-	resourceType string,
-	resourceDerivedFromTemplate bool,
+	params ResourceValidationParams,
 	node *core.MappingNode,
 	parentLocation *source.Meta,
 	validateAgainstSchema *provider.ResourceDefinitionsSchema,
-	bpSchema *schema.Blueprint,
-	params core.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
 	path string,
 	depth int,
 ) ([]*core.Diagnostic, error) {
@@ -427,6 +340,7 @@ func validateResourceDefinitionArray(
 	if isEmpty && !validateAgainstSchema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
+			params.ResourceType,
 			provider.ResourceDefinitionsSchemaTypeArray,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -442,6 +356,7 @@ func validateResourceDefinitionArray(
 
 		return diagnostics, errResourceDefInvalidType(
 			path,
+			params.ResourceType,
 			specType,
 			provider.ResourceDefinitionsSchemaTypeArray,
 			selectMappingNodeLocation(node, parentLocation),
@@ -452,6 +367,7 @@ func validateResourceDefinitionArray(
 		minLengthDiagnostics, err := validateResourceDefinitionArrayMinLength(
 			node,
 			validateAgainstSchema,
+			params.ResourceType,
 			path,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -465,6 +381,7 @@ func validateResourceDefinitionArray(
 		maxLengthDiagnostics, err := validateResourceDefinitionArrayMaxLength(
 			node,
 			validateAgainstSchema,
+			params.ResourceType,
 			path,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -480,18 +397,10 @@ func validateResourceDefinitionArray(
 		itemPath := fmt.Sprintf("%s[%d]", path, itemIndex)
 		fieldDiagnostics, err := validateResourceDefinition(
 			ctx,
-			resourceName,
-			resourceType,
-			resourceDerivedFromTemplate,
+			params,
 			itemNode,
 			parentLocation,
 			validateAgainstSchema.Items,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 			itemPath,
 			depth+1,
 		)
@@ -510,17 +419,10 @@ func validateResourceDefinitionArray(
 
 func validateResourceDefinitionString(
 	ctx context.Context,
-	resourceName string,
-	resourceDerivedFromTemplate bool,
+	params ResourceValidationParams,
 	node *core.MappingNode,
 	parentLocation *source.Meta,
 	schema *provider.ResourceDefinitionsSchema,
-	bpSchema *schema.Blueprint,
-	params core.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
 	path string,
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
@@ -529,6 +431,7 @@ func validateResourceDefinitionString(
 	if isEmpty && !schema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
+			params.ResourceType,
 			provider.ResourceDefinitionsSchemaTypeString,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -547,12 +450,14 @@ func validateResourceDefinitionString(
 		if specType == "" {
 			return diagnostics, errResourceDefItemEmpty(
 				path,
+				params.ResourceType,
 				provider.ResourceDefinitionsSchemaTypeString,
 				selectMappingNodeLocation(node, parentLocation),
 			)
 		}
 		return diagnostics, errResourceDefInvalidType(
 			path,
+			params.ResourceType,
 			specType,
 			provider.ResourceDefinitionsSchemaTypeString,
 			selectMappingNodeLocation(node, parentLocation),
@@ -563,6 +468,7 @@ func validateResourceDefinitionString(
 		allowedValueDiagnostics, err := validateResourceDefinitionAllowedValues(
 			node,
 			schema,
+			params.ResourceType,
 			path,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -576,6 +482,7 @@ func validateResourceDefinitionString(
 		minLengthDiagnostics, err := validateResourceDefinitionStringMinLength(
 			node,
 			schema,
+			params.ResourceType,
 			path,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -589,6 +496,7 @@ func validateResourceDefinitionString(
 		maxLengthDiagnostics, err := validateResourceDefinitionStringMaxLength(
 			node,
 			schema,
+			params.ResourceType,
 			path,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -602,6 +510,7 @@ func validateResourceDefinitionString(
 		patternDiagnostics, err := validateResourceDefinitionPattern(
 			node,
 			schema,
+			params,
 			path,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -616,8 +525,8 @@ func validateResourceDefinitionString(
 			node,
 			path,
 			schema,
-			resourceName,
-			bpSchema,
+			params.ResourceName,
+			params.BpSchema,
 		)
 		diagnostics = append(diagnostics, customValidateDiagnostics...)
 		if err != nil {
@@ -628,16 +537,9 @@ func validateResourceDefinitionString(
 	if node.StringWithSubstitutions != nil {
 		subDiagnostics, err := validateResourceDefinitionSubstitution(
 			ctx,
-			resourceName,
-			resourceDerivedFromTemplate,
+			params,
 			node.StringWithSubstitutions,
 			substitutions.ResolvedSubExprTypeString,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 			path,
 		)
 		diagnostics = append(diagnostics, subDiagnostics...)
@@ -651,17 +553,10 @@ func validateResourceDefinitionString(
 
 func validateResourceDefinitionInteger(
 	ctx context.Context,
-	resourceName string,
-	resourceDerivedFromTemplate bool,
+	params ResourceValidationParams,
 	node *core.MappingNode,
 	parentLocation *source.Meta,
 	schema *provider.ResourceDefinitionsSchema,
-	bpSchema *schema.Blueprint,
-	params core.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
 	path string,
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
@@ -670,6 +565,7 @@ func validateResourceDefinitionInteger(
 	if isEmpty && !schema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
+			params.ResourceType,
 			provider.ResourceDefinitionsSchemaTypeInteger,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -688,6 +584,7 @@ func validateResourceDefinitionInteger(
 		if specType == "" {
 			return diagnostics, errResourceDefItemEmpty(
 				path,
+				params.ResourceType,
 				provider.ResourceDefinitionsSchemaTypeInteger,
 				selectMappingNodeLocation(node, parentLocation),
 			)
@@ -695,6 +592,7 @@ func validateResourceDefinitionInteger(
 
 		return diagnostics, errResourceDefInvalidType(
 			path,
+			params.ResourceType,
 			specType,
 			provider.ResourceDefinitionsSchemaTypeInteger,
 			selectMappingNodeLocation(node, parentLocation),
@@ -705,6 +603,7 @@ func validateResourceDefinitionInteger(
 		allowedValueDiagnostics, err := validateResourceDefinitionAllowedValues(
 			node,
 			schema,
+			params.ResourceType,
 			path,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -718,6 +617,7 @@ func validateResourceDefinitionInteger(
 		minimumValueDiagnostics, err := validateResourceDefinitionMinIntValue(
 			node,
 			schema,
+			params,
 			path,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -731,6 +631,7 @@ func validateResourceDefinitionInteger(
 		maximumValueDiagnostics, err := validateResourceDefinitionMaxIntValue(
 			node,
 			schema,
+			params,
 			path,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -745,8 +646,8 @@ func validateResourceDefinitionInteger(
 			node,
 			path,
 			schema,
-			resourceName,
-			bpSchema,
+			params.ResourceName,
+			params.BpSchema,
 		)
 		diagnostics = append(diagnostics, customValidateDiagnostics...)
 		if err != nil {
@@ -757,16 +658,9 @@ func validateResourceDefinitionInteger(
 	if node.StringWithSubstitutions != nil {
 		subDiagnostics, err := validateResourceDefinitionSubstitution(
 			ctx,
-			resourceName,
-			resourceDerivedFromTemplate,
+			params,
 			node.StringWithSubstitutions,
 			substitutions.ResolvedSubExprTypeInteger,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 			path,
 		)
 		diagnostics = append(diagnostics, subDiagnostics...)
@@ -780,17 +674,10 @@ func validateResourceDefinitionInteger(
 
 func validateResourceDefinitionFloat(
 	ctx context.Context,
-	resourceName string,
-	resourceDerivedFromTemplate bool,
+	params ResourceValidationParams,
 	node *core.MappingNode,
 	parentLocation *source.Meta,
 	schema *provider.ResourceDefinitionsSchema,
-	bpSchema *schema.Blueprint,
-	params core.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
 	path string,
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
@@ -799,6 +686,7 @@ func validateResourceDefinitionFloat(
 	if isEmpty && !schema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
+			params.ResourceType,
 			provider.ResourceDefinitionsSchemaTypeFloat,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -817,6 +705,7 @@ func validateResourceDefinitionFloat(
 		if specType == "" {
 			return diagnostics, errResourceDefItemEmpty(
 				path,
+				params.ResourceType,
 				provider.ResourceDefinitionsSchemaTypeFloat,
 				selectMappingNodeLocation(node, parentLocation),
 			)
@@ -824,6 +713,7 @@ func validateResourceDefinitionFloat(
 
 		return diagnostics, errResourceDefInvalidType(
 			path,
+			params.ResourceType,
 			specType,
 			provider.ResourceDefinitionsSchemaTypeFloat,
 			selectMappingNodeLocation(node, parentLocation),
@@ -834,6 +724,7 @@ func validateResourceDefinitionFloat(
 		allowedValueDiagnostics, err := validateResourceDefinitionAllowedValues(
 			node,
 			schema,
+			params.ResourceType,
 			path,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -847,6 +738,7 @@ func validateResourceDefinitionFloat(
 		minimumValueDiagnostics, err := validateResourceDefinitionMinFloatValue(
 			node,
 			schema,
+			params,
 			path,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -860,6 +752,7 @@ func validateResourceDefinitionFloat(
 		maximumValueDiagnostics, err := validateResourceDefinitionMaxFloatValue(
 			node,
 			schema,
+			params.ResourceType,
 			path,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -874,8 +767,8 @@ func validateResourceDefinitionFloat(
 			node,
 			path,
 			schema,
-			resourceName,
-			bpSchema,
+			params.ResourceName,
+			params.BpSchema,
 		)
 		diagnostics = append(diagnostics, customValidateDiagnostics...)
 		if err != nil {
@@ -886,16 +779,9 @@ func validateResourceDefinitionFloat(
 	if node.StringWithSubstitutions != nil {
 		subDiagnostics, err := validateResourceDefinitionSubstitution(
 			ctx,
-			resourceName,
-			resourceDerivedFromTemplate,
+			params,
 			node.StringWithSubstitutions,
 			substitutions.ResolvedSubExprTypeFloat,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 			path,
 		)
 		diagnostics = append(diagnostics, subDiagnostics...)
@@ -909,17 +795,10 @@ func validateResourceDefinitionFloat(
 
 func validateResourceDefinitionBoolean(
 	ctx context.Context,
-	resourceName string,
-	resourceDerivedFromTemplate bool,
+	params ResourceValidationParams,
 	node *core.MappingNode,
 	parentLocation *source.Meta,
 	schema *provider.ResourceDefinitionsSchema,
-	bpSchema *schema.Blueprint,
-	params core.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
 	path string,
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
@@ -928,6 +807,7 @@ func validateResourceDefinitionBoolean(
 	if isEmpty && !schema.Nullable {
 		return diagnostics, errResourceDefItemEmpty(
 			path,
+			params.ResourceType,
 			provider.ResourceDefinitionsSchemaTypeBoolean,
 			selectMappingNodeLocation(node, parentLocation),
 		)
@@ -946,6 +826,7 @@ func validateResourceDefinitionBoolean(
 		if specType == "" {
 			return diagnostics, errResourceDefItemEmpty(
 				path,
+				params.ResourceType,
 				provider.ResourceDefinitionsSchemaTypeBoolean,
 				selectMappingNodeLocation(node, parentLocation),
 			)
@@ -953,6 +834,7 @@ func validateResourceDefinitionBoolean(
 
 		return diagnostics, errResourceDefInvalidType(
 			path,
+			params.ResourceType,
 			specType,
 			provider.ResourceDefinitionsSchemaTypeBoolean,
 			selectMappingNodeLocation(node, parentLocation),
@@ -964,8 +846,8 @@ func validateResourceDefinitionBoolean(
 			node,
 			path,
 			schema,
-			resourceName,
-			bpSchema,
+			params.ResourceName,
+			params.BpSchema,
 		)
 		diagnostics = append(diagnostics, customValidateDiagnostics...)
 		if err != nil {
@@ -976,16 +858,9 @@ func validateResourceDefinitionBoolean(
 	if node.StringWithSubstitutions != nil {
 		subDiagnostics, err := validateResourceDefinitionSubstitution(
 			ctx,
-			resourceName,
-			resourceDerivedFromTemplate,
+			params,
 			node.StringWithSubstitutions,
 			substitutions.ResolvedSubExprTypeBoolean,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 			path,
 		)
 		diagnostics = append(diagnostics, subDiagnostics...)
@@ -999,18 +874,10 @@ func validateResourceDefinitionBoolean(
 
 func validateResourceDefinitionUnion(
 	ctx context.Context,
-	resourceName string,
-	resourceType string,
-	resourceDerivedFromTemplate bool,
+	params ResourceValidationParams,
 	spec *core.MappingNode,
 	parentLocation *source.Meta,
 	validateAgainstSchema *provider.ResourceDefinitionsSchema,
-	bpSchema *schema.Blueprint,
-	params core.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
 	path string,
 	depth int,
 ) ([]*core.Diagnostic, error) {
@@ -1019,6 +886,7 @@ func validateResourceDefinitionUnion(
 	if isMappingNodeEmpty(spec) && !validateAgainstSchema.Nullable {
 		return diagnostics, errResourceDefUnionItemEmpty(
 			path,
+			params.ResourceType,
 			validateAgainstSchema.OneOf,
 			selectMappingNodeLocation(spec, parentLocation),
 		)
@@ -1030,18 +898,10 @@ func validateResourceDefinitionUnion(
 		unionSchema := validateAgainstSchema.OneOf[i]
 		unionDiagnostics, err := validateResourceDefinition(
 			ctx,
-			resourceName,
-			resourceType,
-			resourceDerivedFromTemplate,
+			params,
 			spec,
 			parentLocation,
 			unionSchema,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 			path,
 			depth,
 		)
@@ -1055,6 +915,7 @@ func validateResourceDefinitionUnion(
 	if !foundMatch {
 		return diagnostics, errResourceDefUnionInvalidType(
 			path,
+			params.ResourceType,
 			validateAgainstSchema.OneOf,
 			selectMappingNodeLocation(spec, parentLocation),
 		)
@@ -1065,23 +926,16 @@ func validateResourceDefinitionUnion(
 
 func validateResourceDefinitionSubstitution(
 	ctx context.Context,
-	resourceName string,
-	resourceDerivedFromTemplate bool,
+	params ResourceValidationParams,
 	value *substitutions.StringOrSubstitutions,
 	expectedResolvedType substitutions.ResolvedSubExprType,
-	bpSchema *schema.Blueprint,
-	params core.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
 	path string,
 ) ([]*core.Diagnostic, error) {
 	if value == nil {
 		return []*core.Diagnostic{}, nil
 	}
 
-	resourceIdentifier := core.ResourceElementID(resourceName)
+	resourceIdentifier := core.ResourceElementID(params.ResourceName)
 	errs := []error{}
 	diagnostics := []*core.Diagnostic{}
 
@@ -1090,6 +944,7 @@ func validateResourceDefinitionSubstitution(
 			// StringOrSubstitutions with multiple values is an
 			// interpolated string.
 			string(substitutions.ResolvedSubExprTypeString),
+			params.ResourceType,
 			path,
 			string(expectedResolvedType),
 			value.SourceMeta,
@@ -1102,15 +957,15 @@ func validateResourceDefinitionSubstitution(
 				ctx,
 				stringOrSub.SubstitutionValue,
 				nil,
-				bpSchema,
-				resourceDerivedFromTemplate,
+				params.BpSchema,
+				params.ResourceDerivedFromTemplate,
 				resourceIdentifier,
 				path,
-				params,
-				funcRegistry,
-				refChainCollector,
-				resourceRegistry,
-				dataSourceRegistry,
+				params.Params,
+				params.FuncRegistry,
+				params.RefChainCollector,
+				params.ResourceRegistry,
+				params.DataSourceRegistry,
 			)
 			if err != nil {
 				errs = append(errs, err)
@@ -1120,6 +975,7 @@ func validateResourceDefinitionSubstitution(
 					resolvedType != string(substitutions.ResolvedSubExprTypeAny) {
 					errs = append(errs, errInvalidResourceDefSubType(
 						resolvedType,
+						params.ResourceType,
 						path,
 						string(expectedResolvedType),
 						stringOrSub.SourceMeta,
@@ -1139,6 +995,7 @@ func validateResourceDefinitionSubstitution(
 func validateResourceDefinitionPattern(
 	node *core.MappingNode,
 	schema *provider.ResourceDefinitionsSchema,
+	params ResourceValidationParams,
 	path string,
 	location *source.Meta,
 ) ([]*core.Diagnostic, error) {
@@ -1174,6 +1031,7 @@ func validateResourceDefinitionPattern(
 	if !patternRegexp.MatchString(core.StringValue(node)) {
 		return diagnostics, errResourceDefPatternConstraintFailure(
 			path,
+			params.ResourceType,
 			schema.Pattern,
 			selectMappingNodeLocation(node, location),
 		)
@@ -1185,6 +1043,7 @@ func validateResourceDefinitionPattern(
 func validateResourceDefinitionMinIntValue(
 	node *core.MappingNode,
 	schema *provider.ResourceDefinitionsSchema,
+	params ResourceValidationParams,
 	path string,
 	location *source.Meta,
 ) ([]*core.Diagnostic, error) {
@@ -1192,6 +1051,7 @@ func validateResourceDefinitionMinIntValue(
 		node,
 		schema.Minimum,
 		schema,
+		params.ResourceType,
 		path,
 		selectMappingNodeLocation(node, location),
 		func(value *core.MappingNode, constraint *core.ScalarValue) bool {
@@ -1206,6 +1066,7 @@ func validateResourceDefinitionMinIntValue(
 func validateResourceDefinitionMaxIntValue(
 	node *core.MappingNode,
 	schema *provider.ResourceDefinitionsSchema,
+	params ResourceValidationParams,
 	path string,
 	location *source.Meta,
 ) ([]*core.Diagnostic, error) {
@@ -1213,6 +1074,7 @@ func validateResourceDefinitionMaxIntValue(
 		node,
 		schema.Maximum,
 		schema,
+		params.ResourceType,
 		path,
 		selectMappingNodeLocation(node, location),
 		func(value *core.MappingNode, constraint *core.ScalarValue) bool {
@@ -1227,6 +1089,7 @@ func validateResourceDefinitionMaxIntValue(
 func validateResourceDefinitionMinFloatValue(
 	node *core.MappingNode,
 	schema *provider.ResourceDefinitionsSchema,
+	params ResourceValidationParams,
 	path string,
 	location *source.Meta,
 ) ([]*core.Diagnostic, error) {
@@ -1234,6 +1097,7 @@ func validateResourceDefinitionMinFloatValue(
 		node,
 		schema.Minimum,
 		schema,
+		params.ResourceType,
 		path,
 		selectMappingNodeLocation(node, location),
 		func(value *core.MappingNode, constraint *core.ScalarValue) bool {
@@ -1248,6 +1112,7 @@ func validateResourceDefinitionMinFloatValue(
 func validateResourceDefinitionMaxFloatValue(
 	node *core.MappingNode,
 	schema *provider.ResourceDefinitionsSchema,
+	resourceType string,
 	path string,
 	location *source.Meta,
 ) ([]*core.Diagnostic, error) {
@@ -1255,6 +1120,7 @@ func validateResourceDefinitionMaxFloatValue(
 		node,
 		schema.Maximum,
 		schema,
+		resourceType,
 		path,
 		selectMappingNodeLocation(node, location),
 		func(value *core.MappingNode, constraint *core.ScalarValue) bool {
@@ -1270,6 +1136,7 @@ func validateResourceDefinitionNumericConstraint(
 	node *core.MappingNode,
 	constraint *core.ScalarValue,
 	schema *provider.ResourceDefinitionsSchema,
+	resourceType string,
 	path string,
 	location *source.Meta,
 	failsConstraint func(value *core.MappingNode, constraint *core.ScalarValue) bool,
@@ -1277,6 +1144,7 @@ func validateResourceDefinitionNumericConstraint(
 	constraintText string,
 	errFunc func(
 		path string,
+		resourceType string,
 		value *core.ScalarValue,
 		constraint *core.ScalarValue,
 		location *source.Meta,
@@ -1291,6 +1159,7 @@ func validateResourceDefinitionNumericConstraint(
 		if isInterpolatedString(node.StringWithSubstitutions) {
 			return diagnostics, errResourceDefInvalidType(
 				path,
+				resourceType,
 				deriveMappingNodeResourceDefinitionsType(node),
 				schema.Type,
 				selectMappingNodeLocation(node, location),
@@ -1323,6 +1192,7 @@ func validateResourceDefinitionNumericConstraint(
 	if failsConstraint(node, constraint) {
 		return diagnostics, errFunc(
 			path,
+			resourceType,
 			node.Scalar,
 			constraint,
 			selectMappingNodeLocation(node, location),
@@ -1338,6 +1208,7 @@ const maxShowAllowedValues = 5
 func validateResourceDefinitionAllowedValues(
 	node *core.MappingNode,
 	schema *provider.ResourceDefinitionsSchema,
+	resourceType string,
 	path string,
 	location *source.Meta,
 ) ([]*core.Diagnostic, error) {
@@ -1356,6 +1227,7 @@ func validateResourceDefinitionAllowedValues(
 			isInterpolatedString(node.StringWithSubstitutions) {
 			return diagnostics, errResourceDefInvalidType(
 				path,
+				resourceType,
 				deriveMappingNodeResourceDefinitionsType(node),
 				schema.Type,
 				selectMappingNodeLocation(node, location),
@@ -1395,6 +1267,7 @@ func validateResourceDefinitionAllowedValues(
 	if !inAllowedList {
 		return diagnostics, errResourceDefNotAllowedValue(
 			path,
+			resourceType,
 			allowedValuesText,
 			selectMappingNodeLocation(node, location),
 		)
@@ -1437,6 +1310,7 @@ func isInterpolatedString(value *substitutions.StringOrSubstitutions) bool {
 func validateResourceDefinitionMapMinLength(
 	node *core.MappingNode,
 	schema *provider.ResourceDefinitionsSchema,
+	resourceType string,
 	path string,
 	location *source.Meta,
 ) ([]*core.Diagnostic, error) {
@@ -1445,6 +1319,7 @@ func validateResourceDefinitionMapMinLength(
 	if len(node.Fields) < schema.MinLength {
 		return diagnostics, errResourceDefComplexMinLengthConstraintFailure(
 			path,
+			resourceType,
 			provider.ResourceDefinitionsSchemaTypeMap,
 			len(node.Fields),
 			schema.MinLength,
@@ -1458,6 +1333,7 @@ func validateResourceDefinitionMapMinLength(
 func validateResourceDefinitionMapMaxLength(
 	node *core.MappingNode,
 	schema *provider.ResourceDefinitionsSchema,
+	resourceType string,
 	path string,
 	location *source.Meta,
 ) ([]*core.Diagnostic, error) {
@@ -1466,6 +1342,7 @@ func validateResourceDefinitionMapMaxLength(
 	if len(node.Fields) > schema.MaxLength {
 		return diagnostics, errResourceDefComplexMaxLengthConstraintFailure(
 			path,
+			resourceType,
 			provider.ResourceDefinitionsSchemaTypeMap,
 			len(node.Fields),
 			schema.MaxLength,
@@ -1479,6 +1356,7 @@ func validateResourceDefinitionMapMaxLength(
 func validateResourceDefinitionArrayMinLength(
 	node *core.MappingNode,
 	schema *provider.ResourceDefinitionsSchema,
+	resourceType string,
 	path string,
 	location *source.Meta,
 ) ([]*core.Diagnostic, error) {
@@ -1487,6 +1365,7 @@ func validateResourceDefinitionArrayMinLength(
 	if len(node.Items) < schema.MinLength {
 		return diagnostics, errResourceDefComplexMinLengthConstraintFailure(
 			path,
+			resourceType,
 			provider.ResourceDefinitionsSchemaTypeArray,
 			len(node.Items),
 			schema.MinLength,
@@ -1500,6 +1379,7 @@ func validateResourceDefinitionArrayMinLength(
 func validateResourceDefinitionArrayMaxLength(
 	node *core.MappingNode,
 	schema *provider.ResourceDefinitionsSchema,
+	resourceType string,
 	path string,
 	location *source.Meta,
 ) ([]*core.Diagnostic, error) {
@@ -1508,6 +1388,7 @@ func validateResourceDefinitionArrayMaxLength(
 	if len(node.Items) > schema.MaxLength {
 		return diagnostics, errResourceDefComplexMaxLengthConstraintFailure(
 			path,
+			resourceType,
 			provider.ResourceDefinitionsSchemaTypeArray,
 			len(node.Items),
 			schema.MaxLength,
@@ -1521,6 +1402,7 @@ func validateResourceDefinitionArrayMaxLength(
 func validateResourceDefinitionStringMinLength(
 	node *core.MappingNode,
 	schema *provider.ResourceDefinitionsSchema,
+	resourceType string,
 	path string,
 	location *source.Meta,
 ) ([]*core.Diagnostic, error) {
@@ -1552,6 +1434,7 @@ func validateResourceDefinitionStringMinLength(
 	if numberOfChars < schema.MinLength {
 		return diagnostics, errResourceDefStringMinLengthConstraintFailure(
 			path,
+			resourceType,
 			numberOfChars,
 			schema.MinLength,
 			selectMappingNodeLocation(node, location),
@@ -1564,6 +1447,7 @@ func validateResourceDefinitionStringMinLength(
 func validateResourceDefinitionStringMaxLength(
 	node *core.MappingNode,
 	schema *provider.ResourceDefinitionsSchema,
+	resourceType string,
 	path string,
 	location *source.Meta,
 ) ([]*core.Diagnostic, error) {
@@ -1595,6 +1479,7 @@ func validateResourceDefinitionStringMaxLength(
 	if numberOfChars > schema.MaxLength {
 		return diagnostics, errResourceDefStringMaxLengthConstraintFailure(
 			path,
+			resourceType,
 			numberOfChars,
 			schema.MaxLength,
 			selectMappingNodeLocation(node, location),

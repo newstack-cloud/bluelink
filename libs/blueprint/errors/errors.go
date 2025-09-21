@@ -22,36 +22,54 @@ type ErrorContext struct {
 type ErrorCategory string
 
 const (
-	ErrorCategoryProviderMissing      ErrorCategory = "providerMissing"
-	ErrorCategoryProviderIncompatible ErrorCategory = "providerIncompatible"
-	ErrorCategoryValidation           ErrorCategory = "validation"
-	ErrorCategoryFunctionNotFound     ErrorCategory = "functionNotFound"
-	ErrorCategoryResourceType         ErrorCategory = "resourceType"
-	ErrorCategoryVariableType         ErrorCategory = "variableType"
+	ErrorCategoryProvider       ErrorCategory = "provider"
+	ErrorCategoryTransformer    ErrorCategory = "transformer"
+	ErrorCategoryFunction       ErrorCategory = "function"
+	ErrorCategoryResourceType   ErrorCategory = "resource_type"
+	ErrorCategoryVariableType   ErrorCategory = "variable_type"
+	ErrorCategoryDataSourceType ErrorCategory = "data_source_type"
+	ErrorCategoryExport         ErrorCategory = "export"
 )
 
 type SuggestedAction struct {
-	Type        string `json:"type"`                  // Programmatically stable identifier
-	Title       string `json:"title"`                 // Human-readable title
-	Description string `json:"description,omitempty"` // Human-readable description
-	Priority    int    `json:"priority,omitempty"`    // 1=highest, 5=lowest
+	Type        string `json:"type"`
+	Title       string `json:"title"`
+	Description string `json:"description,omitempty"`
+	Priority    int    `json:"priority,omitempty"` // 1=highest, 5=lowest
 }
 
 // ActionType constants for programmatic identification
 type ActionType string
 
 const (
-	ActionTypeInstallProvider     ActionType = "installProvider"
-	ActionTypeUpdateProvider      ActionType = "updateProvider"
-	ActionTypeCheckConfiguration  ActionType = "checkConfiguration"
-	ActionTypeCheckFunctionName   ActionType = "checkFunctionName"
-	ActionTypeCheckResourceType   ActionType = "checkResourceType"
-	ActionTypeCheckDataSourceType ActionType = "checkDataSourceType"
-	ActionTypeProvideValue        ActionType = "provideValue"
-	ActionTypeAddDefaultValue     ActionType = "addDefaultValue"
-	ActionTypeFixVariableType     ActionType = "fixVariableType"
-	ActionTypeAddResourceType     ActionType = "addResourceType"
-	ActionTypeListAvailableTypes  ActionType = "listAvailableTypes"
+	ActionTypeInstallProvider                ActionType = "install_provider"
+	ActionTypeUpdateProvider                 ActionType = "update_provider"
+	ActionTypeCheckConfiguration             ActionType = "check_configuration"
+	ActionTypeCheckFunctionName              ActionType = "check_function_name"
+	ActionTypeCheckResourceType              ActionType = "check_resource_type"
+	ActionTypeCheckDataSourceType            ActionType = "check_data_source_type"
+	ActionTypeProvideValue                   ActionType = "provide_value"
+	ActionTypeAddDefaultValue                ActionType = "add_default_value"
+	ActionTypeFixVariableType                ActionType = "fix_variable_type"
+	ActionTypeCheckVariableType              ActionType = "check_variable_type"
+	ActionTypeContactVariableTypeDeveloper   ActionType = "contact_variable_type_developer"
+	ActionTypeAddVariableType                ActionType = "add_variable_type"
+	ActionTypeCheckCustomVariableOptions     ActionType = "check_custom_variable_options"
+	ActionTypeAddResourceType                ActionType = "add_resource_type"
+	ActionTypeContactResourceTypeDeveloper   ActionType = "contact_resource_type_developer"
+	ActionTypeListAvailableResourceTypes     ActionType = "list_available_resource_types"
+	ActionTypeCheckAbstractResourceType      ActionType = "check_abstract_resource_type"
+	ActionTypeListAvailableDataSourceTypes   ActionType = "list_available_data_source_types"
+	ActionTypeListAvailableVariableTypes     ActionType = "list_available_variable_types"
+	ActionTypeInstallTransformers            ActionType = "install_transformers"
+	ActionTypeInstallTransformer             ActionType = "install_transformer"
+	ActionTypeCheckTransformers              ActionType = "check_transformers"
+	ActionTypeCheckResourceTypeSchema        ActionType = "check_resource_type_schema"
+	ActionTypeAddDataSourceFilter            ActionType = "add_data_source_filter"
+	ActionTypeAddDataSourceExport            ActionType = "add_data_source_export"
+	ActionTypeContactDataSourceTypeDeveloper ActionType = "contact_data_source_type_developer"
+	ActionTypeCheckDataSourceFilterFields    ActionType = "check_data_source_filter_fields"
+	ActionTypeAddDataSourceType              ActionType = "add_data_source_type"
 )
 
 type LoadError struct {
@@ -127,7 +145,6 @@ type SerialiseError struct {
 	ReasonCode  ErrorReasonCode
 	Err         error
 	ChildErrors []error
-	Context     *ErrorContext `json:"context,omitempty"`
 }
 
 func (e *SerialiseError) Error() string {

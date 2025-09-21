@@ -9,14 +9,35 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 )
 
+// createResourceDefErrorContext creates a standardized error context for resource definition validation errors
+func createResourceDefErrorContext(reasonCode errors.ErrorReasonCode, resourceType string, metadata map[string]any) *errors.ErrorContext {
+	// Add resourceType to metadata
+	metadata["resourceType"] = resourceType
+
+	return &errors.ErrorContext{
+		Category:   errors.ErrorCategoryResourceType,
+		ReasonCode: reasonCode,
+		SuggestedActions: []errors.SuggestedAction{
+			{
+				Type:        string(errors.ActionTypeCheckResourceTypeSchema),
+				Title:       "Check Resource Type Schema",
+				Description: "Check the schema for the resource type for the expected fields and their types.",
+				Priority:    1,
+			},
+		},
+		Metadata: metadata,
+	}
+}
+
 func errResourceDefItemEmpty(
 	path string,
+	resourceType string,
 	resourceSpecType provider.ResourceDefinitionsSchemaType,
 	location *source.Meta,
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
+		ReasonCode: ErrorReasonCodeResourceDefItemEmpty,
 		Err: fmt.Errorf(
 			"validation failed due to an empty resource item "+
 				"at path %q where the %s type was expected",
@@ -25,24 +46,42 @@ func errResourceDefItemEmpty(
 		),
 		Line:   line,
 		Column: col,
+		Context: createResourceDefErrorContext(
+			ErrorReasonCodeResourceDefItemEmpty,
+			resourceType,
+			map[string]any{
+				"path":             path,
+				"resourceSpecType": resourceSpecType,
+			},
+		),
 	}
 }
 
 func errResourceDefInvalidType(
 	path string,
+	resourceType string,
 	foundType provider.ResourceDefinitionsSchemaType,
 	expectedType provider.ResourceDefinitionsSchemaType,
 	location *source.Meta,
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
+		ReasonCode: ErrorReasonCodeResourceDefInvalidType,
 		Err: fmt.Errorf(
 			"validation failed due to an invalid resource item "+
 				"at path %q where the %s type was expected, but %s was found",
 			path,
 			expectedType,
 			foundType,
+		),
+		Context: createResourceDefErrorContext(
+			ErrorReasonCodeResourceDefInvalidType,
+			resourceType,
+			map[string]any{
+				"path":         path,
+				"expectedType": expectedType,
+				"actualType":   foundType,
+			},
 		),
 		Line:   line,
 		Column: col,
@@ -51,19 +90,28 @@ func errResourceDefInvalidType(
 
 func errResourceDefMissingRequiredField(
 	path string,
+	resourceType string,
 	field string,
 	fieldType provider.ResourceDefinitionsSchemaType,
 	location *source.Meta,
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
+		ReasonCode: ErrorReasonCodeResourceDefMissingRequiredField,
 		Err: fmt.Errorf(
 			"validation failed due to a missing required field %q of type %s "+
 				"at path %q",
 			field,
 			fieldType,
 			path,
+		),
+		Context: createResourceDefErrorContext(
+			ErrorReasonCodeResourceDefMissingRequiredField,
+			resourceType,
+			map[string]any{
+				"path":         path,
+				"missingField": field,
+			},
 		),
 		Line:   line,
 		Column: col,
@@ -72,17 +120,26 @@ func errResourceDefMissingRequiredField(
 
 func errResourceDefUnknownField(
 	path string,
+	resourceType string,
 	field string,
 	location *source.Meta,
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
+		ReasonCode: ErrorReasonCodeResourceDefUnknownField,
 		Err: fmt.Errorf(
 			"validation failed due to an unknown field %q "+
 				"at path %q, only fields that match the resource definition schema are allowed",
 			field,
 			path,
+		),
+		Context: createResourceDefErrorContext(
+			ErrorReasonCodeResourceDefUnknownField,
+			resourceType,
+			map[string]any{
+				"path":         path,
+				"unknownField": field,
+			},
 		),
 		Line:   line,
 		Column: col,
@@ -92,6 +149,7 @@ func errResourceDefUnknownField(
 func errInvalidResourceDefSubType(
 	resolvedType string,
 	path string,
+	resourceType string,
 	expectedResolvedType string,
 	location *source.Meta,
 ) error {
@@ -107,18 +165,28 @@ func errInvalidResourceDefSubType(
 		),
 		Line:   line,
 		Column: col,
+		Context: createResourceDefErrorContext(
+			ErrorReasonCodeInvalidResource,
+			resourceType,
+			map[string]any{
+				"path":                 path,
+				"expectedResolvedType": expectedResolvedType,
+				"actualResolvedType":   resolvedType,
+			},
+		),
 	}
 }
 
 func errResourceDefUnionItemEmpty(
 	path string,
+	resourceType string,
 	unionSchema []*provider.ResourceDefinitionsSchema,
 	location *source.Meta,
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
 	unionType := resourceDefinitionsUnionTypeToString(unionSchema)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
+		ReasonCode: ErrorReasonCodeResourceDefUnionItemEmpty,
 		Err: fmt.Errorf(
 			"validation failed due to an empty resource item "+
 				"at path %s where one of the types %s was expected",
@@ -127,18 +195,27 @@ func errResourceDefUnionItemEmpty(
 		),
 		Line:   line,
 		Column: col,
+		Context: createResourceDefErrorContext(
+			ErrorReasonCodeResourceDefUnionItemEmpty,
+			resourceType,
+			map[string]any{
+				"path":      path,
+				"unionType": unionType,
+			},
+		),
 	}
 }
 
 func errResourceDefUnionInvalidType(
 	path string,
+	resourceType string,
 	unionSchema []*provider.ResourceDefinitionsSchema,
 	location *source.Meta,
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
 	unionType := resourceDefinitionsUnionTypeToString(unionSchema)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
+		ReasonCode: ErrorReasonCodeResourceDefUnionInvalidType,
 		Err: fmt.Errorf(
 			"validation failed due to an invalid resource item found "+
 				"at path %q where one of the types %s was expected",
@@ -147,17 +224,26 @@ func errResourceDefUnionInvalidType(
 		),
 		Line:   line,
 		Column: col,
+		Context: createResourceDefErrorContext(
+			ErrorReasonCodeResourceDefUnionInvalidType,
+			resourceType,
+			map[string]any{
+				"path":      path,
+				"unionType": unionType,
+			},
+		),
 	}
 }
 
 func errResourceDefNotAllowedValue(
 	path string,
+	resourceType string,
 	allowedValuesText string,
 	location *source.Meta,
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
+		ReasonCode: ErrorReasonCodeResourceDefNotAllowedValue,
 		Err: fmt.Errorf(
 			"validation failed due to a value that is not allowed "+
 				"being provided at path %q, the value must be one of: %s",
@@ -166,17 +252,26 @@ func errResourceDefNotAllowedValue(
 		),
 		Line:   line,
 		Column: col,
+		Context: createResourceDefErrorContext(
+			ErrorReasonCodeResourceDefNotAllowedValue,
+			resourceType,
+			map[string]any{
+				"path":              path,
+				"allowedValuesText": allowedValuesText,
+			},
+		),
 	}
 }
 
 func errResourceDefPatternConstraintFailure(
 	path string,
+	resourceType string,
 	pattern string,
 	location *source.Meta,
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
+		ReasonCode: ErrorReasonCodeResourceDefPatternConstraintFailure,
 		Err: fmt.Errorf(
 			"validation failed due to a value that does not match the pattern "+
 
@@ -186,18 +281,27 @@ func errResourceDefPatternConstraintFailure(
 		),
 		Line:   line,
 		Column: col,
+		Context: createResourceDefErrorContext(
+			ErrorReasonCodeResourceDefPatternConstraintFailure,
+			resourceType,
+			map[string]any{
+				"path":    path,
+				"pattern": pattern,
+			},
+		),
 	}
 }
 
 func errResourceDefMinConstraintFailure(
 	path string,
+	resourceType string,
 	value *core.ScalarValue,
 	minimum *core.ScalarValue,
 	location *source.Meta,
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
+		ReasonCode: ErrorReasonCodeResourceDefMinConstraintFailure,
 		Err: fmt.Errorf(
 			"validation failed due to a value that is less than the minimum "+
 				"constraint at path %q, %s provided but the value must be greater than or equal to %s",
@@ -207,18 +311,28 @@ func errResourceDefMinConstraintFailure(
 		),
 		Line:   line,
 		Column: col,
+		Context: createResourceDefErrorContext(
+			ErrorReasonCodeResourceDefMinConstraintFailure,
+			resourceType,
+			map[string]any{
+				"path":    path,
+				"value":   value.ToString(),
+				"minimum": minimum.ToString(),
+			},
+		),
 	}
 }
 
 func errResourceDefMaxConstraintFailure(
 	path string,
+	resourceType string,
 	value *core.ScalarValue,
 	minimum *core.ScalarValue,
 	location *source.Meta,
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
+		ReasonCode: ErrorReasonCodeResourceDefMaxConstraintFailure,
 		Err: fmt.Errorf(
 			"validation failed due to a value that is greater than the maximum "+
 				"constraint at path %q, %s provided but the value must be less than or equal to %s",
@@ -228,11 +342,21 @@ func errResourceDefMaxConstraintFailure(
 		),
 		Line:   line,
 		Column: col,
+		Context: createResourceDefErrorContext(
+			ErrorReasonCodeResourceDefMaxConstraintFailure,
+			resourceType,
+			map[string]any{
+				"path":    path,
+				"value":   value.ToString(),
+				"maximum": minimum.ToString(),
+			},
+		),
 	}
 }
 
 func errResourceDefComplexMinLengthConstraintFailure(
 	path string,
+	resourceType string,
 	schemaType provider.ResourceDefinitionsSchemaType,
 	valueLength int,
 	minimumLength int,
@@ -240,7 +364,7 @@ func errResourceDefComplexMinLengthConstraintFailure(
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
+		ReasonCode: ErrorReasonCodeResourceDefComplexMinLengthConstraintFailure,
 		Err: fmt.Errorf(
 			"validation failed due to %s that has less items than the minimum "+
 				"length constraint at path %q, %s provided when there must be at least %s",
@@ -251,11 +375,22 @@ func errResourceDefComplexMinLengthConstraintFailure(
 		),
 		Line:   line,
 		Column: col,
+		Context: createResourceDefErrorContext(
+			ErrorReasonCodeResourceDefComplexMinLengthConstraintFailure,
+			resourceType,
+			map[string]any{
+				"path":          path,
+				"schemaType":    schemaType,
+				"valueLength":   valueLength,
+				"minimumLength": minimumLength,
+			},
+		),
 	}
 }
 
 func errResourceDefComplexMaxLengthConstraintFailure(
 	path string,
+	resourceType string,
 	schemaType provider.ResourceDefinitionsSchemaType,
 	valueLength int,
 	maximumLength int,
@@ -263,7 +398,7 @@ func errResourceDefComplexMaxLengthConstraintFailure(
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
+		ReasonCode: ErrorReasonCodeResourceDefComplexMaxLengthConstraintFailure,
 		Err: fmt.Errorf(
 			"validation failed due to %s that has more items than the maximum "+
 				"length constraint at path %q, %s provided when there must be at most %s",
@@ -274,18 +409,29 @@ func errResourceDefComplexMaxLengthConstraintFailure(
 		),
 		Line:   line,
 		Column: col,
+		Context: createResourceDefErrorContext(
+			ErrorReasonCodeResourceDefComplexMaxLengthConstraintFailure,
+			resourceType,
+			map[string]any{
+				"path":          path,
+				"schemaType":    schemaType,
+				"valueLength":   valueLength,
+				"maximumLength": maximumLength,
+			},
+		),
 	}
 }
 
 func errResourceDefStringMinLengthConstraintFailure(
 	path string,
+	resourceType string,
 	numberOfChars int,
 	minimumLength int,
 	location *source.Meta,
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
+		ReasonCode: ErrorReasonCodeResourceDefStringMinLengthConstraintFailure,
 		Err: fmt.Errorf(
 			"validation failed due to a string value that is shorter than the minimum "+
 				"length constraint at path %q, %s provided when there must be at least %s",
@@ -295,18 +441,28 @@ func errResourceDefStringMinLengthConstraintFailure(
 		),
 		Line:   line,
 		Column: col,
+		Context: createResourceDefErrorContext(
+			ErrorReasonCodeResourceDefStringMinLengthConstraintFailure,
+			resourceType,
+			map[string]any{
+				"path":          path,
+				"numberOfChars": numberOfChars,
+				"minimumLength": minimumLength,
+			},
+		),
 	}
 }
 
 func errResourceDefStringMaxLengthConstraintFailure(
 	path string,
+	resourceType string,
 	numberOfChars int,
 	maximumLength int,
 	location *source.Meta,
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
+		ReasonCode: ErrorReasonCodeResourceDefStringMaxLengthConstraintFailure,
 		Err: fmt.Errorf(
 			"validation failed due to a string value that is longer than the maximum "+
 				"length constraint at path %q, %s provided when there must be at most %s",
@@ -316,6 +472,15 @@ func errResourceDefStringMaxLengthConstraintFailure(
 		),
 		Line:   line,
 		Column: col,
+		Context: createResourceDefErrorContext(
+			ErrorReasonCodeResourceDefStringMaxLengthConstraintFailure,
+			resourceType,
+			map[string]any{
+				"path":          path,
+				"numberOfChars": numberOfChars,
+				"maximumLength": maximumLength,
+			},
+		),
 	}
 }
 

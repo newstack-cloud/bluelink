@@ -52,7 +52,7 @@ func errDataSourceTypeProviderNotFound(
 		ReasonCode: ErrorReasonCodeItemTypeProviderNotFound,
 		Err:        fmt.Errorf("provider %q not found for data source type %q", providerNamespace, dataSourceType),
 		Context: &errors.ErrorContext{
-			Category:   errors.ErrorCategoryProviderMissing,
+			Category:   errors.ErrorCategoryProvider,
 			ReasonCode: ErrorReasonCodeItemTypeProviderNotFound,
 			SuggestedActions: []errors.SuggestedAction{
 				{
@@ -70,7 +70,8 @@ func errDataSourceTypeProviderNotFound(
 			},
 			Metadata: map[string]any{
 				"providerNamespace": providerNamespace,
-				"dataSourceType":    dataSourceType,
+				"category":          "dataSource",
+				"itemType":          dataSourceType,
 			},
 		},
 	}
@@ -84,7 +85,7 @@ func errProviderDataSourceTypeNotFound(
 		ReasonCode: ErrorReasonCodeProviderDataSourceTypeNotFound,
 		Err:        fmt.Errorf("provider %q does not support data source type %q", providerNamespace, dataSourceType),
 		Context: &errors.ErrorContext{
-			Category:   errors.ErrorCategoryProviderIncompatible,
+			Category:   errors.ErrorCategoryDataSourceType,
 			ReasonCode: ErrorReasonCodeProviderDataSourceTypeNotFound,
 			SuggestedActions: []errors.SuggestedAction{
 				{
@@ -115,6 +116,29 @@ func errCustomVariableTypeProviderNotFound(
 	return &errors.RunError{
 		ReasonCode: ErrorReasonCodeItemTypeProviderNotFound,
 		Err:        fmt.Errorf("provider %q not found for custom variable type %q", providerNamespace, customVariableType),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryProvider,
+			ReasonCode: ErrorReasonCodeItemTypeProviderNotFound,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeInstallProvider),
+					Title:       "Install Provider",
+					Description: fmt.Sprintf("Install the %s provider to support %s custom variable types", providerNamespace, customVariableType),
+					Priority:    1,
+				},
+				{
+					Type:        string(errors.ActionTypeCheckConfiguration),
+					Title:       "Check Configuration",
+					Description: "Verify your provider configuration",
+					Priority:    2,
+				},
+			},
+			Metadata: map[string]any{
+				"providerNamespace": providerNamespace,
+				"category":          "variable",
+				"itemType":          customVariableType,
+			},
+		},
 	}
 }
 
@@ -129,6 +153,28 @@ func errProviderCustomVariableTypeNotFound(
 			providerNamespace,
 			customVariableType,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeProviderCustomVariableTypeNotFound,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeCheckVariableType),
+					Title:       "Check Variable Type",
+					Description: "Verify the variable type name is correct",
+					Priority:    1,
+				},
+				{
+					Type:        string(errors.ActionTypeUpdateProvider),
+					Title:       "Update Provider",
+					Description: "Update to a newer version that may support this variable type",
+					Priority:    2,
+				},
+			},
+			Metadata: map[string]any{
+				"providerNamespace": providerNamespace,
+				"variableType":      customVariableType,
+			},
+		},
 	}
 }
 
@@ -139,7 +185,7 @@ func errFunctionNotFound(
 		ReasonCode: ErrorReasonCodeFunctionNotFound,
 		Err:        fmt.Errorf("function %q not found", functionName),
 		Context: &errors.ErrorContext{
-			Category:   errors.ErrorCategoryFunctionNotFound,
+			Category:   errors.ErrorCategoryFunction,
 			ReasonCode: ErrorReasonCodeFunctionNotFound,
 			SuggestedActions: []errors.SuggestedAction{
 				{
@@ -236,6 +282,24 @@ func ErrUnknownResourceDefSchemaType(
 			specType,
 			resourceType,
 		),
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryResourceType,
+			ReasonCode: ErrorReasonCodeInvalidResourceSpecDefinition,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeAddResourceType),
+					Title:       "Contact Resource Type Developer",
+					Description: "Report the issue with the developer of the provider or transformer plugin",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"specType":          specType,
+				"invalidSchemaType": resourceType,
+				// Can be the namespace of a transformer or a provider.
+				"pluginNamespace": ExtractProviderFromItemType(resourceType),
+			},
+		},
 	}
 }
 
