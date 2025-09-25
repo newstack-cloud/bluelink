@@ -27,6 +27,7 @@ report.json
 
 .env
 !.env.test
+.env.host
 
 # Directory for postgres migration files copied from the
 # blueprint-state library when running the deploy engine locally.
@@ -41,3 +42,5 @@ postgres
 core/versions.go
 
 tmp
+
+.bluelink

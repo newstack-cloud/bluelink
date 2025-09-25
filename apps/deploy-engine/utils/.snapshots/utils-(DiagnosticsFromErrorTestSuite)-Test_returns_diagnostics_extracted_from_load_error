@@ -1,24 +1,25 @@
-([]*core.Diagnostic) (len=10) {
+([]*core.Diagnostic) (len=11) {
   (*core.Diagnostic)({
     Level: (core.DiagnosticLevel) 1,
-    Message: (string) (len=38) "blueprint load error: test child error",
+    Message: (string) (len=46) "blueprint load error: test child error level 6",
     Range: (*core.DiagnosticRange)({
       Start: (*source.Meta)({
         Position: (source.Position) {
-          Line: (int) 1,
+          Line: (int) 10,
           Column: (int) 1
         },
         EndPosition: (*source.Position)(<nil>)
       }),
       End: (*source.Meta)({
         Position: (source.Position) {
-          Line: (int) 2,
+          Line: (int) 11,
           Column: (int) 0
         },
         EndPosition: (*source.Position)(<nil>)
       }),
       ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
-    })
+    }),
+    Context: (*errors.ErrorContext)(<nil>)
   }),
   (*core.Diagnostic)({
     Level: (core.DiagnosticLevel) 1,
@@ -39,7 +40,8 @@
         EndPosition: (*source.Position)(<nil>)
       }),
       ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
-    })
+    }),
+    Context: (*errors.ErrorContext)(<nil>)
   }),
   (*core.Diagnostic)({
     Level: (core.DiagnosticLevel) 1,
@@ -60,7 +62,8 @@
         EndPosition: (*source.Position)(<nil>)
       }),
       ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
-    })
+    }),
+    Context: (*errors.ErrorContext)(<nil>)
   }),
   (*core.Diagnostic)({
     Level: (core.DiagnosticLevel) 1,
@@ -81,7 +84,8 @@
         EndPosition: (*source.Position)(<nil>)
       }),
       ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
-    })
+    }),
+    Context: (*errors.ErrorContext)(<nil>)
   }),
   (*core.Diagnostic)({
     Level: (core.DiagnosticLevel) 1,
@@ -102,7 +106,8 @@
         EndPosition: (*source.Position)(<nil>)
       }),
       ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
-    })
+    }),
+    Context: (*errors.ErrorContext)(<nil>)
   }),
   (*core.Diagnostic)({
     Level: (core.DiagnosticLevel) 1,
@@ -123,7 +128,8 @@
         EndPosition: (*source.Position)(<nil>)
       }),
       ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
-    })
+    }),
+    Context: (*errors.ErrorContext)(<nil>)
   }),
   (*core.Diagnostic)({
     Level: (core.DiagnosticLevel) 1,
@@ -144,7 +150,8 @@
         EndPosition: (*source.Position)(<nil>)
       }),
       ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
-    })
+    }),
+    Context: (*errors.ErrorContext)(<nil>)
   }),
   (*core.Diagnostic)({
     Level: (core.DiagnosticLevel) 1,
@@ -165,7 +172,8 @@
         EndPosition: (*source.Position)(<nil>)
       }),
       ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
-    })
+    }),
+    Context: (*errors.ErrorContext)(<nil>)
   }),
   (*core.Diagnostic)({
     Level: (core.DiagnosticLevel) 1,
@@ -186,7 +194,8 @@
         EndPosition: (*source.Position)(<nil>)
       }),
       ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
-    })
+    }),
+    Context: (*errors.ErrorContext)(<nil>)
   }),
   (*core.Diagnostic)({
     Level: (core.DiagnosticLevel) 1,
@@ -207,6 +216,29 @@
         EndPosition: (*source.Position)(<nil>)
       }),
       ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
-    })
+    }),
+    Context: (*errors.ErrorContext)(<nil>)
+  }),
+  (*core.Diagnostic)({
+    Level: (core.DiagnosticLevel) 1,
+    Message: (string) (len=67) "run error (child blueprint path: include.coreInfra): test run error",
+    Range: (*core.DiagnosticRange)({
+      Start: (*source.Meta)({
+        Position: (source.Position) {
+          Line: (int) 0,
+          Column: (int) 0
+        },
+        EndPosition: (*source.Position)(<nil>)
+      }),
+      End: (*source.Meta)({
+        Position: (source.Position) {
+          Line: (int) 1,
+          Column: (int) 0
+        },
+        EndPosition: (*source.Position)(<nil>)
+      }),
+      ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
+    }),
+    Context: (*errors.ErrorContext)(<nil>)
   })
 }

@@ -18,6 +18,7 @@
         EndPosition: (*source.Position)(<nil>)
       }),
       ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
-    })
+    }),
+    Context: (*errors.ErrorContext)(<nil>)
   })
 }

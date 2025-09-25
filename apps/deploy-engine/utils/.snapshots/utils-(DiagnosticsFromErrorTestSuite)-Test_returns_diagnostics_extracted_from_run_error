@@ -1,18 +1,18 @@
 ([]*core.Diagnostic) (len=1) {
   (*core.Diagnostic)({
     Level: (core.DiagnosticLevel) 1,
-    Message: (string) (len=17) "test schema error",
+    Message: (string) (len=67) "run error (child blueprint path: include.coreInfra): test run error",
     Range: (*core.DiagnosticRange)({
       Start: (*source.Meta)({
         Position: (source.Position) {
-          Line: (int) 20,
-          Column: (int) 2
+          Line: (int) 0,
+          Column: (int) 0
         },
         EndPosition: (*source.Position)(<nil>)
       }),
       End: (*source.Meta)({
         Position: (source.Position) {
-          Line: (int) 21,
+          Line: (int) 1,
           Column: (int) 0
         },
         EndPosition: (*source.Position)(<nil>)

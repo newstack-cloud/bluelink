@@ -41,7 +41,11 @@ func (s *DiagnosticsFromErrorTestSuite) Test_returns_diagnostics_extracted_from_
 		Line:       &line,
 		Column:     &column,
 		ChildErrors: []error{
-			createChildLoadError(),
+			createChildLoadError(
+				true, /* hasDescendants */
+				5,    /* levels */
+				1,    /* currentLevel */
+			),
 			createSchemaError(),
 			createParseErrors(10, 30),
 			createParseError(15, 25),
@@ -51,7 +55,6 @@ func (s *DiagnosticsFromErrorTestSuite) Test_returns_diagnostics_extracted_from_
 			createLexError(320, 5),
 			createLexErrorsNoChildren(),
 			createGeneralError(),
-			// Run error should be ignored when producing diagnostics.
 			createRunError(),
 		},
 	}
@@ -102,23 +105,37 @@ func (s *DiagnosticsFromErrorTestSuite) Test_returns_diagnostics_extracted_from_
 	s.Require().NoError(err)
 }
 
-func (s *DiagnosticsFromErrorTestSuite) Test_returns_empty_slice_for_a_run_error() {
+func (s *DiagnosticsFromErrorTestSuite) Test_returns_diagnostics_extracted_from_run_error() {
 	diagnostics := DiagnosticsFromBlueprintValidationError(
 		createRunError(),
 		s.logger,
 		/* fallbackToGeneralDiagnostic */ false,
 	)
-	s.Assert().Empty(diagnostics)
+
+	err := testhelpers.Snapshot(
+		diagnostics,
+	)
+	s.Require().NoError(err)
 }
 
-func createChildLoadError() error {
+func createChildLoadError(hasDescendants bool, levels int, currentLevel int) error {
 	line := 10
 	column := 1
+	childErrors := []error{}
+
+	if hasDescendants {
+		childLevel := currentLevel + 1
+		childErrors = []error{
+			createChildLoadError(childLevel <= levels, levels, childLevel),
+		}
+	}
+
 	return &bperrors.LoadError{
-		ReasonCode: container.ErrorReasonCodeVariableValidationErrors,
-		Err:        fmt.Errorf("test child error"),
-		Line:       &line,
-		Column:     &column,
+		ReasonCode:  container.ErrorReasonCodeVariableValidationErrors,
+		Err:         fmt.Errorf("test child error level %d", currentLevel),
+		Line:        &line,
+		Column:      &column,
+		ChildErrors: childErrors,
 	}
 }
 

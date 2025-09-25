@@ -23,6 +23,8 @@ type Service interface {
 	// LoadPlugins loads plugins and returns a map of plugin names to their implementations
 	// that can be used with the blueprint framework.
 	LoadPlugins(ctx context.Context) (*plugin.PluginMaps, error)
+	// Manager returns the underlying manager for the plugin host service.
+	Manager() pluginservicev1.Manager
 	// Close the plugin host service and cleans up resources
 	// used by the plugin host.
 	// This will usually close the server backing the plugin host instance.
@@ -43,6 +45,7 @@ type serviceImpl struct {
 	executor              plugin.PluginExecutor
 	instanceFactory       pluginservicev1.PluginFactory
 	launcher              *plugin.Launcher
+	manager               pluginservicev1.Manager
 	providers             map[string]provider.Provider
 	transformers          map[string]transform.SpecTransformer
 	fs                    afero.Fs
@@ -135,13 +138,17 @@ func LoadDefaultService(
 	return service, nil
 }
 
+func (s *serviceImpl) Manager() pluginservicev1.Manager {
+	return s.manager
+}
+
 func (s *serviceImpl) Initialise() error {
 	hostID, err := s.idGenerator.GenerateID()
 	if err != nil {
 		return err
 	}
 
-	manager := pluginservicev1.NewManager(
+	s.manager = pluginservicev1.NewManager(
 		map[pluginservicev1.PluginType]string{
 			pluginservicev1.PluginType_PLUGIN_TYPE_PROVIDER:    providerserverv1.ProtocolVersion,
 			pluginservicev1.PluginType_PLUGIN_TYPE_TRANSFORMER: transformerserverv1.ProtocolVersion,
@@ -152,7 +159,7 @@ func (s *serviceImpl) Initialise() error {
 
 	s.launcher = plugin.NewLauncher(
 		s.config.GetPluginPath(),
-		manager,
+		s.manager,
 		s.executor,
 		s.logger,
 		plugin.WithLauncherWaitTimeout(
@@ -177,10 +184,9 @@ func (s *serviceImpl) Initialise() error {
 	)
 
 	pluginService := pluginservicev1.NewServiceServer(
-		manager,
+		s.manager,
 		functionRegistry,
-		/* resourceDeployService */ resourceRegistry,
-		/* resourceLookupService */ resourceRegistry,
+		/* resourceService */ resourceRegistry,
 		hostID,
 		pluginservicev1.WithPluginToPluginCallTimeout(
 			s.config.GetPluginToPluginCallTimeoutMS(),

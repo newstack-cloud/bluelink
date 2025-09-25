@@ -1,0 +1,17 @@
+services:
+  oidc-local-server:
+    build:
+      context: ./tools/oidc-local-server
+      dockerfile: Dockerfile
+    container_name: oidc-local-server
+    networks:
+      - bluelink_deploy_engine_host_network
+    ports:
+      - "8023:80"
+    environment:
+      OIDC_CLIENT_ID: "test-client"
+      OIDC_CLIENT_SECRET: "test-secret"
+
+networks:
+  bluelink_deploy_engine_host_network:
+    name: bluelink_deploy_engine_host_network

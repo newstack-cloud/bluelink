@@ -402,6 +402,8 @@ func (c *Controller) prepareAndSaveEvents(
 		c.logger,
 		/* fallbackToGeneralDiagnostic */ true,
 	)
+	fmt.Printf("errDiagnostics: %+v\n", errDiagnostics)
+	fmt.Printf("err: %+v\n", err)
 
 	allDiagnostics := append(
 		initialDiagnostics,
@@ -411,6 +413,7 @@ func (c *Controller) prepareAndSaveEvents(
 		allDiagnostics,
 		errDiagnostics...,
 	)
+	fmt.Printf("allDiagnostics: %+v\n", allDiagnostics)
 
 	currentTimestamp := c.clock.Now().Unix()
 
@@ -439,6 +442,16 @@ func (c *Controller) prepareAndSaveEvents(
 			continue
 		}
 
+		logger.Debug(
+			"saving event for validation diagnostic",
+			core.StringLogField("eventId", eventID),
+			core.StringLogField("eventType", eventTypeDiagnostic),
+			core.StringLogField("channelType", helpersv1.ChannelTypeValidation),
+			core.StringLogField("channelId", blueprintValidation.ID),
+			core.StringLogField("data", string(serialisedDiagnostic)),
+			core.IntegerLogField("timestamp", currentTimestamp),
+			core.BoolLogField("end", isEnd),
+		)
 		err = c.eventStore.Save(
 			ctx,
 			&manage.Event{

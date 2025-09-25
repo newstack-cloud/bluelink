@@ -123,6 +123,7 @@ func Setup(
 	pluginConfigPreparer := pluginconfig.NewDefaultPreparer(
 		pluginconfig.ToConfigDefinitionProviders(pluginMaps.Providers),
 		pluginconfig.ToConfigDefinitionProviders(pluginMaps.Transformers),
+		pluginHostService.Manager(),
 	)
 
 	validateLoader := container.NewDefaultLoader(

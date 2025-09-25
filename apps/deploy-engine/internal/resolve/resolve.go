@@ -1,6 +1,7 @@
 package resolve
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -79,6 +80,7 @@ func BlueprintDocumentInfoToInclude(
 	blueprintDocInfo *BlueprintDocumentInfo,
 ) (*subengine.ResolvedInclude, error) {
 	fileSourceScheme := blueprintDocInfo.FileSourceScheme
+	fmt.Println("fileSourceScheme", fileSourceScheme)
 	if fileSourceScheme == "file" {
 		return createOSFileInclude(blueprintDocInfo), nil
 	}

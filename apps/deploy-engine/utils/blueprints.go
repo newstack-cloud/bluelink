@@ -44,6 +44,15 @@ func HasAtLeastOneError(diagnostics []*core.Diagnostic) bool {
 	})
 }
 
+// Helper type to collect diagnostics while traversing an error tree.
+type diagnosticsCollector struct {
+	diagnostics []*core.Diagnostic
+}
+
+func (c *diagnosticsCollector) collect(diagnostic *core.Diagnostic) {
+	c.diagnostics = append(c.diagnostics, diagnostic)
+}
+
 // DiagnosticsFromBlueprintValidationError extracts diagnostics from a blueprint
 // validation error.
 func DiagnosticsFromBlueprintValidationError(
@@ -51,38 +60,36 @@ func DiagnosticsFromBlueprintValidationError(
 	logger core.Logger,
 	fallbackToGeneralDiagnostic bool,
 ) []*core.Diagnostic {
-	diagnostics := []*core.Diagnostic{}
+	collector := &diagnosticsCollector{}
 
 	if err == nil {
 		logger.Debug("no error to convert to diagnostics")
-		return diagnostics
+		return collector.diagnostics
 	}
 
 	logger.Debug("converting blueprint validation error to diagnostics", core.ErrorLogField("error", err))
 	loadErr, isLoadErr := err.(*bperrors.LoadError)
 	if isLoadErr {
-		collectLoadErrors(loadErr, &diagnostics, nil, logger)
-		return diagnostics
+		collectLoadErrors(loadErr, collector, nil, logger)
+		return collector.diagnostics
 	}
 
 	schemaErr, isSchemaErr := err.(*schema.Error)
 	if isSchemaErr {
-		collectSchemaError(schemaErr, &diagnostics)
-		return diagnostics
+		collectSchemaError(schemaErr, collector)
+		return collector.diagnostics
 	}
 
-	_, isRunErr := err.(*bperrors.RunError)
+	runErr, isRunErr := err.(*bperrors.RunError)
 	if isRunErr {
-		// Skip capturing run errors during validation,
-		// they are useful at runtime but may appear during validation
-		// in loading provider and transformer plugins.
-		return diagnostics
+		collectRunError(runErr, collector)
+		return collector.diagnostics
 	}
 
 	if !fallbackToGeneralDiagnostic {
 		// In contexts where the error should be treated differently
 		// from a diagnostic, we don't want to produce a diagnostic.
-		return diagnostics
+		return collector.diagnostics
 	}
 
 	return getGeneralErrorDiagnostics(err)
@@ -110,7 +117,7 @@ func getGeneralErrorDiagnostics(err error) []*core.Diagnostic {
 
 func collectLoadErrors(
 	err *bperrors.LoadError,
-	diagnostics *[]*core.Diagnostic,
+	collector *diagnosticsCollector,
 	parentLoadErr *bperrors.LoadError,
 	logger core.Logger,
 ) {
@@ -123,7 +130,7 @@ func collectLoadErrors(
 	if len(err.ChildErrors) == 0 {
 		level := core.DiagnosticLevelError
 		line, col := positionFromParentLoadError(parentLoadErr)
-		*diagnostics = append(*diagnostics, &core.Diagnostic{
+		collector.collect(&core.Diagnostic{
 			Range: &core.DiagnosticRange{
 				Start: &source.Meta{Position: source.Position{
 					Line:   line,
@@ -136,6 +143,7 @@ func collectLoadErrors(
 			},
 			Level:   level,
 			Message: err.Error(),
+			Context: err.Context,
 		})
 	}
 
@@ -144,71 +152,69 @@ func collectLoadErrors(
 		childLoadErr, isLoadErr := childErr.(*bperrors.LoadError)
 		if isLoadErr {
 			logger.Debug("child load error", core.StringLogField("error", childLoadErr.Error()))
-			collectLoadErrors(childLoadErr, diagnostics, err, logger)
+			collectLoadErrors(childLoadErr, collector, err, logger)
 		}
 
 		childSchemaErr, isSchemaErr := childErr.(*schema.Error)
 		if isSchemaErr {
 			logger.Debug("child schema error", core.StringLogField("error", childSchemaErr.Error()))
-			collectSchemaError(childSchemaErr, diagnostics)
+			collectSchemaError(childSchemaErr, collector)
 		}
 
 		childParseErrs, isParseErrs := childErr.(*substitutions.ParseErrors)
 		if isParseErrs {
-			collectParseErrors(childParseErrs, diagnostics, err)
+			collectParseErrors(childParseErrs, collector, err)
 		}
 
 		childParseErr, isParseErr := childErr.(*substitutions.ParseError)
 		if isParseErr {
-			collectParseError(childParseErr, diagnostics)
+			collectParseError(childParseErr, collector)
 		}
 
 		childCoreErr, isCoreErr := childErr.(*core.Error)
 		if isCoreErr {
-			collectCoreError(childCoreErr, diagnostics, err)
+			collectCoreError(childCoreErr, collector, err)
 		}
 
 		childLexErrors, isLexErrs := childErr.(*substitutions.LexErrors)
 		if isLexErrs {
-			collectLexErrors(childLexErrors, diagnostics, err)
+			collectLexErrors(childLexErrors, collector, err)
 		}
 
 		childLexError, isLexErr := childErr.(*substitutions.LexError)
 		if isLexErr {
-			collectLexError(childLexError, diagnostics)
+			collectLexError(childLexError, collector)
 		}
 
-		_, isRunErr := childErr.(*bperrors.RunError)
+		childRunErr, isRunErr := childErr.(*bperrors.RunError)
 		if isRunErr {
-			// Skip capturing run errors during validation,
-			// they are useful at runtime but may appear during validation
-			// in loading provider and transformer plugins.
-			return
+			logger.Debug("child run error", core.StringLogField("error", childRunErr.Error()))
+			collectRunError(childRunErr, collector)
 		}
 
 		if !isLoadErr && !isSchemaErr && !isParseErrs &&
-			!isParseErr && !isCoreErr && !isLexErrs && !isLexErr {
-			collectGeneralError(childErr, diagnostics, err)
+			!isParseErr && !isCoreErr && !isLexErrs && !isLexErr && !isRunErr {
+			collectGeneralError(childErr, collector, err)
 		}
 	}
 }
 
 func collectParseErrors(
 	errs *substitutions.ParseErrors,
-	diagnostics *[]*core.Diagnostic,
+	collector *diagnosticsCollector,
 	parentLoadError *bperrors.LoadError,
 ) {
 	for _, childErr := range errs.ChildErrors {
 		childParseErr, isParseError := childErr.(*substitutions.ParseError)
 		if isParseError {
-			collectParseError(childParseErr, diagnostics)
+			collectParseError(childParseErr, collector)
 		}
 	}
 
 	if len(errs.ChildErrors) == 0 {
 		level := core.DiagnosticLevelError
 		line, col := positionFromParentLoadError(parentLoadError)
-		*diagnostics = append(*diagnostics, &core.Diagnostic{
+		collector.collect(&core.Diagnostic{
 			Range: &core.DiagnosticRange{
 				Start: &source.Meta{Position: source.Position{
 					Line:   line,
@@ -227,10 +233,10 @@ func collectParseErrors(
 
 func collectParseError(
 	err *substitutions.ParseError,
-	diagnostics *[]*core.Diagnostic,
+	collector *diagnosticsCollector,
 ) {
 	level := core.DiagnosticLevelError
-	*diagnostics = append(*diagnostics, &core.Diagnostic{
+	collector.collect(&core.Diagnostic{
 		Range: &core.DiagnosticRange{
 			Start: &source.Meta{Position: source.Position{
 				Line:   err.Line,
@@ -248,12 +254,12 @@ func collectParseError(
 
 func collectCoreError(
 	err *core.Error,
-	diagnostics *[]*core.Diagnostic,
+	collector *diagnosticsCollector,
 	parentLoadErr *bperrors.LoadError,
 ) {
 	line, col := positionFromCoreError(err, parentLoadErr)
 	level := core.DiagnosticLevelError
-	*diagnostics = append(*diagnostics, &core.Diagnostic{
+	collector.collect(&core.Diagnostic{
 		Range: &core.DiagnosticRange{
 			Start: &source.Meta{Position: source.Position{
 				Line:   line,
@@ -271,20 +277,20 @@ func collectCoreError(
 
 func collectLexErrors(
 	errs *substitutions.LexErrors,
-	diagnostics *[]*core.Diagnostic,
+	collector *diagnosticsCollector,
 	parentLoadErr *bperrors.LoadError,
 ) {
 	for _, childErr := range errs.ChildErrors {
 		childLexErr, isLexError := childErr.(*substitutions.LexError)
 		if isLexError {
-			collectLexError(childLexErr, diagnostics)
+			collectLexError(childLexErr, collector)
 		}
 	}
 
 	if len(errs.ChildErrors) == 0 {
 		line, col := positionFromParentLoadError(parentLoadErr)
 		level := core.DiagnosticLevelError
-		*diagnostics = append(*diagnostics, &core.Diagnostic{
+		collector.collect(&core.Diagnostic{
 			Range: &core.DiagnosticRange{
 				Start: &source.Meta{Position: source.Position{
 					Line:   line,
@@ -303,11 +309,11 @@ func collectLexErrors(
 
 func collectLexError(
 	err *substitutions.LexError,
-	diagnostics *[]*core.Diagnostic,
+	collector *diagnosticsCollector,
 ) {
 	line, col := positionFromLexError(err)
 	level := core.DiagnosticLevelError
-	*diagnostics = append(*diagnostics, &core.Diagnostic{
+	collector.collect(&core.Diagnostic{
 		Range: &core.DiagnosticRange{
 			Start: &source.Meta{Position: source.Position{
 				Line:   line,
@@ -336,11 +342,11 @@ func positionFromLexError(
 
 func collectSchemaError(
 	err *schema.Error,
-	diagnostics *[]*core.Diagnostic,
+	collector *diagnosticsCollector,
 ) {
 	line, col := positionFromSchemaError(err)
 	level := core.DiagnosticLevelError
-	*diagnostics = append(*diagnostics, &core.Diagnostic{
+	collector.collect(&core.Diagnostic{
 		Range: &core.DiagnosticRange{
 			Start: &source.Meta{Position: source.Position{
 				Line:   line,
@@ -402,10 +408,29 @@ func positionFromCoreError(
 	return *err.SourceLine, *err.SourceColumn
 }
 
-func collectGeneralError(err error, diagnostics *[]*core.Diagnostic, parentLoadError *bperrors.LoadError) {
+func collectRunError(err *bperrors.RunError, collector *diagnosticsCollector) {
+	level := core.DiagnosticLevelError
+	collector.collect(&core.Diagnostic{
+		Level:   level,
+		Message: err.Error(),
+		Range: &core.DiagnosticRange{
+			Start: &source.Meta{Position: source.Position{
+				Line:   0,
+				Column: 0,
+			}},
+			End: &source.Meta{Position: source.Position{
+				Line:   1,
+				Column: 0,
+			}},
+		},
+		Context: err.Context,
+	})
+}
+
+func collectGeneralError(err error, collector *diagnosticsCollector, parentLoadError *bperrors.LoadError) {
 	level := core.DiagnosticLevelError
 	line, col := positionFromParentLoadError(parentLoadError)
-	*diagnostics = append(*diagnostics, &core.Diagnostic{
+	collector.collect(&core.Diagnostic{
 		Range: &core.DiagnosticRange{
 			Start: &source.Meta{Position: source.Position{
 				Line:   line,

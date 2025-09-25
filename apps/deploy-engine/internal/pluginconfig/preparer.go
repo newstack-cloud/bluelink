@@ -8,6 +8,7 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginservicev1"
 )
 
 // DefinitionProvider is an interface that defines any plugin
@@ -34,8 +35,9 @@ type Preparer interface {
 }
 
 type preparerImpl struct {
-	providers    map[string]DefinitionProvider
-	transformers map[string]DefinitionProvider
+	providers     map[string]DefinitionProvider
+	transformers  map[string]DefinitionProvider
+	pluginManager pluginservicev1.Manager
 }
 
 // NewDefaultPreparer creates a new default implementation of a service
@@ -44,10 +46,12 @@ type preparerImpl struct {
 func NewDefaultPreparer(
 	providers map[string]DefinitionProvider,
 	transformers map[string]DefinitionProvider,
+	pluginManager pluginservicev1.Manager,
 ) Preparer {
 	return &preparerImpl{
-		providers:    providers,
-		transformers: transformers,
+		providers:     providers,
+		transformers:  transformers,
+		pluginManager: pluginManager,
 	}
 }
 
@@ -66,6 +70,7 @@ func (p *preparerImpl) Prepare(
 		Transformers:       map[string]map[string]*core.ScalarValue{},
 		ContextVariables:   blueprintOpConfig.ContextVariables,
 		BlueprintVariables: blueprintOpConfig.BlueprintVariables,
+		Dependencies:       blueprintOpConfig.Dependencies,
 	}
 
 	for providerName, config := range blueprintOpConfig.Providers {
@@ -98,6 +103,12 @@ func (p *preparerImpl) Prepare(
 		preparedBlueprintOpConfig.Transformers[transformerName] = preparedConfig
 	}
 
+	depsDiagnonstics, err := p.validateDependencies(blueprintOpConfig.Dependencies)
+	if err != nil {
+		return nil, nil, err
+	}
+	diagnostics = append(diagnostics, depsDiagnonstics...)
+
 	return preparedBlueprintOpConfig, diagnostics, nil
 }
 
@@ -109,7 +120,7 @@ func (p *preparerImpl) validateAndPreparePluginConfig(
 	validate bool,
 ) (map[string]*core.ScalarValue, []*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
-	plugin, ok := p.getPlugin(pluginName, pluginType)
+	plugin, ok := p.getPluginDefinitionProvider(pluginName, pluginType)
 	if !ok {
 		diagnostics = append(diagnostics, &core.Diagnostic{
 			Level: core.DiagnosticLevelWarning,
@@ -158,7 +169,66 @@ func (p *preparerImpl) validateAndPreparePluginConfig(
 	return preparedConfig, diagnostics, nil
 }
 
-func (p *preparerImpl) getPlugin(
+func (p *preparerImpl) validateDependencies(
+	dependencies map[string]string,
+) ([]*core.Diagnostic, error) {
+	diagnostics := []*core.Diagnostic{}
+
+	for pluginID, versionConstraint := range dependencies {
+		pluginInstance := p.getPluginInstance(pluginID)
+		if pluginInstance == nil {
+			diagnostics = append(diagnostics, &core.Diagnostic{
+				Level:   core.DiagnosticLevelError,
+				Message: fmt.Sprintf("plugin %q is not installed", pluginID),
+				Range:   defaultDiagnosticRange(),
+			})
+		}
+
+		installedVersion := getPluginVersionFromInstance(pluginInstance)
+		if installedVersion == "" {
+			return nil, fmt.Errorf("failed to get installed version for plugin %q", pluginID)
+		}
+
+		if isCompatible, err := CheckPluginVersionCompatibility(
+			installedVersion,
+			versionConstraint,
+		); err != nil {
+			return nil, err
+		} else if !isCompatible {
+			diagnostics = append(diagnostics, &core.Diagnostic{
+				Level: core.DiagnosticLevelError,
+				Message: fmt.Sprintf(
+					"plugin %q is installed with version %q which is "+
+						"not compatible with the version constraint %q",
+					pluginID,
+					pluginInstance.Info.Metadata.PluginVersion,
+					versionConstraint,
+				),
+				Range: defaultDiagnosticRange(),
+			})
+		}
+	}
+
+	return diagnostics, nil
+}
+
+func (p *preparerImpl) getPluginInstance(pluginID string) *pluginservicev1.PluginInstance {
+	providerInstance := p.pluginManager.GetPlugin(
+		pluginservicev1.PluginType_PLUGIN_TYPE_PROVIDER,
+		pluginID,
+	)
+
+	if providerInstance == nil {
+		return p.pluginManager.GetPlugin(
+			pluginservicev1.PluginType_PLUGIN_TYPE_TRANSFORMER,
+			pluginID,
+		)
+	}
+
+	return providerInstance
+}
+
+func (p *preparerImpl) getPluginDefinitionProvider(
 	pluginName string,
 	pluginType string,
 ) (DefinitionProvider, bool) {
@@ -172,6 +242,16 @@ func (p *preparerImpl) getPlugin(
 	default:
 		return nil, false
 	}
+}
+
+func getPluginVersionFromInstance(pluginInstance *pluginservicev1.PluginInstance) string {
+	if pluginInstance == nil ||
+		pluginInstance.Info == nil ||
+		pluginInstance.Info.Metadata == nil {
+		return ""
+	}
+
+	return pluginInstance.Info.Metadata.PluginVersion
 }
 
 func defaultDiagnosticRange() *core.DiagnosticRange {

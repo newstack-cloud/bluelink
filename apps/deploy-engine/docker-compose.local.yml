@@ -95,5 +95,5 @@ services:
       - 8080:8080
 
 networks:
-  BLUELINK_deploy_engine_network:
+  bluelink_deploy_engine_network:
     name: bluelink_deploy_engine_network

@@ -89,6 +89,7 @@ L:
 				break L
 			}
 		case err := <-errChan:
+			fmt.Println("writing error", err)
 			writeError(w, err, flusher)
 			break L
 		}

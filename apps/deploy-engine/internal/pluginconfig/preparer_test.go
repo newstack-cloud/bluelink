@@ -6,6 +6,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/types"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginservicev1"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -18,6 +19,7 @@ func (s *PreparerSuite) SetupTest() {
 	s.preparer = NewDefaultPreparer(
 		testProviders(),
 		testTransformers(),
+		createTestPluginManager(),
 	)
 }
 
@@ -366,6 +368,102 @@ func (p *testTransformer) ConfigDefinition(ctx context.Context) (*core.ConfigDef
 			},
 		},
 	}, nil
+}
+
+type testPluginManager struct {
+	plugins map[pluginservicev1.PluginType]map[string]*pluginservicev1.PluginInstance
+}
+
+func createTestPluginManager() pluginservicev1.Manager {
+	return &testPluginManager{
+		plugins: map[pluginservicev1.PluginType]map[string]*pluginservicev1.PluginInstance{
+			pluginservicev1.PluginType_PLUGIN_TYPE_PROVIDER: {
+				"test-provider": {
+					Info: &pluginservicev1.PluginInstanceInfo{
+						ID:         "newstack-cloud/test-provider",
+						PluginType: pluginservicev1.PluginType_PLUGIN_TYPE_PROVIDER,
+						Metadata: &pluginservicev1.PluginMetadata{
+							PluginVersion:        "1.0.0",
+							DisplayName:          "Test Provider",
+							PlainTextDescription: "Test Provider",
+							FormattedDescription: "Test Provider",
+							RepositoryUrl:        "https://github.com/newstack-cloud/bluelink-test-provider",
+							Author:               "Newstack Cloud",
+						},
+						InstanceID:       "1",
+						ProtocolVersions: []string{"1.0"},
+					},
+				},
+			},
+			pluginservicev1.PluginType_PLUGIN_TYPE_TRANSFORMER: {
+				"test-transformer": {
+					Info: &pluginservicev1.PluginInstanceInfo{
+						ID:         "newstack-cloud/test-transformer",
+						PluginType: pluginservicev1.PluginType_PLUGIN_TYPE_TRANSFORMER,
+						Metadata: &pluginservicev1.PluginMetadata{
+							PluginVersion:        "1.0.0",
+							DisplayName:          "Test Transformer",
+							PlainTextDescription: "Test Transformer",
+							FormattedDescription: "Test Transformer",
+							RepositoryUrl:        "https://github.com/newstack-cloud/bluelink-test-transformer",
+							Author:               "Newstack Cloud",
+						},
+						InstanceID:       "2",
+						ProtocolVersions: []string{"1.0"},
+					},
+				},
+			},
+		},
+	}
+}
+
+func (m *testPluginManager) RegisterPlugin(
+	info *pluginservicev1.PluginInstanceInfo,
+) error {
+	return nil
+}
+
+func (m *testPluginManager) DeregisterPlugin(
+	pluginType pluginservicev1.PluginType,
+	pluginID string,
+) error {
+	return nil
+}
+
+func (m *testPluginManager) GetPlugin(
+	pluginType pluginservicev1.PluginType,
+	pluginID string,
+) *pluginservicev1.PluginInstance {
+	return m.plugins[pluginType][pluginID]
+}
+
+func (m *testPluginManager) GetPluginMetadata(
+	pluginType pluginservicev1.PluginType,
+	pluginID string,
+) *pluginservicev1.PluginExtendedMetadata {
+	plugin := m.plugins[pluginType][pluginID]
+	if plugin == nil {
+		return nil
+	}
+	return &pluginservicev1.PluginExtendedMetadata{
+		PluginVersion:        plugin.Info.Metadata.PluginVersion,
+		DisplayName:          plugin.Info.Metadata.DisplayName,
+		PlainTextDescription: plugin.Info.Metadata.PlainTextDescription,
+		FormattedDescription: plugin.Info.Metadata.FormattedDescription,
+		RepositoryUrl:        plugin.Info.Metadata.RepositoryUrl,
+		Author:               plugin.Info.Metadata.Author,
+		ProtocolVersions:     plugin.Info.ProtocolVersions,
+	}
+}
+
+func (m *testPluginManager) GetPlugins(
+	pluginType pluginservicev1.PluginType,
+) []*pluginservicev1.PluginInstance {
+	instances := []*pluginservicev1.PluginInstance{}
+	for _, instance := range m.plugins[pluginType] {
+		instances = append(instances, instance)
+	}
+	return instances
 }
 
 func TestPrepareSuite(t *testing.T) {

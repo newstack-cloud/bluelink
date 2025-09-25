@@ -28,6 +28,9 @@ function help {
 Test runner
 Runs tests for the Deploy Engine:
 bash scripts/run-tests.sh
+
+Update snapshot output:
+bash scripts/run-tests.sh --update-snapshots
 EOF
 }
 
@@ -96,7 +99,11 @@ echo "" > coverage.txt
 # files when running the tests.
 go generate ./...
 
-go test -timeout 30000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(testutils))$'`
+if [ -n "$UPDATE_SNAPSHOTS" ]; then
+  UPDATE_SNAPSHOTS=true go test -timeout 30000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(testutils))$'`
+else
+  go test -timeout 30000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(testutils))$'`
+fi
 
 if [ -z "$GITHUB_ACTION" ]; then
   # We are on a dev machine so produce html output of coverage

@@ -11,4 +11,5 @@ type BlueprintOperationConfig struct {
 	Transformers       map[string]map[string]*core.ScalarValue `json:"transformers"`
 	ContextVariables   map[string]*core.ScalarValue            `json:"contextVariables"`
 	BlueprintVariables map[string]*core.ScalarValue            `json:"blueprintVariables"`
+	Dependencies       map[string]string                       `json:"dependencies,omitempty"`
 }
