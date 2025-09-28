@@ -115,6 +115,12 @@ func errAbstactResourceTypeNotFound(
 					Description: "Verify the abstract resource type name is correct",
 					Priority:    1,
 				},
+				{
+					Type:        string(errors.ActionTypeCheckResourceType),
+					Title:       "Check Resource Type",
+					Description: "Verify the resource type name is correct",
+					Priority:    2,
+				},
 			},
 			Metadata: map[string]any{
 				"abstractResourceType": resourceType,
