@@ -1844,7 +1844,7 @@ func errResourceMissingType(resourceName string, location *source.Meta) error {
 					Priority:    1,
 				},
 				{
-					Type:        string(errors.ActionTypeListAvailableResourceTypes),
+					Type:        string(errors.ActionTypeCheckResourceType),
 					Title:       "Check Available Resource Types",
 					Description: "See available resource types from installed providers",
 					Priority:    2,
