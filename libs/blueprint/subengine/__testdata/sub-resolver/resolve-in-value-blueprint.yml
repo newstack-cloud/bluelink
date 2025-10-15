@@ -1,4 +1,4 @@
-version: 2025-05-12
+version: 2025-05-12-draft
 variables:
   instanceType:
     type: aws/ec2/instanceType

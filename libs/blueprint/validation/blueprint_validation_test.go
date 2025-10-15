@@ -79,7 +79,7 @@ func (s *BlueprintValidationTestSuite) Test_reports_errors_when_the_version_is_n
 
 func (s *BlueprintValidationTestSuite) Test_reports_errors_when_the_version_is_incorrect(c *C) {
 	// In the intial version of blueprint framework, only version
-	// 2025-05-12 of the spec is supported.
+	// 2025-05-12-draft of the spec is supported.
 	instanceType := "t2.micro"
 	version := "2023-09-15"
 	blueprint := &schema.Blueprint{
@@ -114,7 +114,7 @@ func (s *BlueprintValidationTestSuite) Test_reports_errors_when_the_version_is_i
 		childLoadErr.Error(),
 		Equals,
 		"blueprint load error: validation failed due to an unsupported version \"2023-09-15\" being provided. "+
-			"supported versions include: 2025-05-12",
+			"supported versions include: 2025-05-12-draft",
 	)
 }
 
