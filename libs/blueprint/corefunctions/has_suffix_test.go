@@ -29,7 +29,7 @@ func (s *HasSuffixFunctionTestSuite) SetUpTest(c *C) {
 	}
 }
 
-func (s *HasSuffixFunctionTestSuite) Test_has_prefix(c *C) {
+func (s *HasSuffixFunctionTestSuite) Test_has_suffix(c *C) {
 	hasSuffixFunc := NewHasSuffixFunction()
 	s.callStack.Push(&function.Call{
 		FunctionName: "has_suffix",

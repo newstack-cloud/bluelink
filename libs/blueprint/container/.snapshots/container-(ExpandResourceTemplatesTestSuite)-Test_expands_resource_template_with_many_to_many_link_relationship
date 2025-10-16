@@ -16,7 +16,7 @@
       IntValue: (*int)(<nil>),
       BoolValue: (*bool)(<nil>),
       FloatValue: (*float64)(<nil>),
-      StringValue: (*string)((len=10) "2025-05-12-draft"),
+      StringValue: (*string)((len=16) "2025-05-12-draft"),
       SourceMeta: (*source.Meta)({
         Position: (source.Position) {
           Line: (int) 1,
@@ -24,7 +24,7 @@
         },
         EndPosition: (*source.Position)({
           Line: (int) 1,
-          Column: (int) 20
+          Column: (int) 26
         })
       })
     }),
