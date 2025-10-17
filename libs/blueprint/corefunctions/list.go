@@ -56,7 +56,7 @@ func (f *ListFunction) Call(
 	ctx context.Context,
 	input *provider.FunctionCallInput,
 ) (*provider.FunctionCallOutput, error) {
-	var params []interface{}
+	var params []any
 	if err := input.Arguments.GetVar(ctx, 0, &params); err != nil {
 		return nil, err
 	}
@@ -67,6 +67,6 @@ func (f *ListFunction) Call(
 		// it provides a way to create a list of values from the end-user perspective,
 		// variadic arguments are already passed as a slice of values to the function instead of
 		// individual arguments as there is no way of knowing how many arguments will be passed.
-		ResponseData: append([]interface{}{}, params...),
+		ResponseData: append([]any{}, params...),
 	}, nil
 }
