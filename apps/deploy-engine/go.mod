@@ -10,11 +10,11 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/lestrrat-go/jwx v1.2.31
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.33.0
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.35.0
 	github.com/newstack-cloud/bluelink/libs/blueprint-resolvers v0.0.0-20250624125550-4f0bdd0374f6
 	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.3.0
 	github.com/newstack-cloud/bluelink/libs/common v0.3.2
-	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.0.0-20250917115823-5370018a2ed3
+	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.0.0-20251018134826-3614482a20c9
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/spf13/afero v1.11.0
 	github.com/stretchr/testify v1.10.0

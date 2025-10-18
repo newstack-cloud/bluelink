@@ -61,11 +61,13 @@ func Setup(
 	}
 
 	clock := &bpcore.SystemClock{}
+	fileSourceRegistry := provider.NewFileSourceRegistry()
 	initialProviders := map[string]provider.Provider{
 		"core": providerhelpers.NewCoreProvider(
 			stateServices.container.Links(),
 			bpcore.BlueprintInstanceIDFromContext,
 			os.Getwd,
+			fileSourceRegistry,
 			clock,
 		),
 	}
