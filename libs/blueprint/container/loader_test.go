@@ -84,6 +84,7 @@ func (s *LoaderTestSuite) SetupSuite() {
 			stateContainer.Links(),
 			core.BlueprintInstanceIDFromContext,
 			os.Getwd,
+			provider.NewFileSourceRegistry(),
 			core.SystemClock{},
 		),
 	}

@@ -6,7 +6,6 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/common/testhelpers"
 	"github.com/stretchr/testify/suite"
@@ -45,7 +44,6 @@ func (s *SubstitutionMappingNodeResolverTestSuite) Test_resolves_substitutions_i
 			DataSourceRegistry: s.dataSourceRegistry,
 		},
 		s.stateContainer,
-		provider.NewFileSourceRegistry(),
 		s.resourceCache,
 		s.resourceTemplateInputElemCache,
 		s.childExportFieldCache,
@@ -94,7 +92,6 @@ func (s *SubstitutionMappingNodeResolverTestSuite) Test_resolves_substitutions_i
 			DataSourceRegistry: s.dataSourceRegistry,
 		},
 		s.stateContainer,
-		provider.NewFileSourceRegistry(),
 		s.resourceCache,
 		s.resourceTemplateInputElemCache,
 		s.childExportFieldCache,

@@ -11,13 +11,15 @@ import (
 // FileFunction provides the implementation of
 // a function that reads binary data from a file path.
 type FileFunction struct {
-	definition *function.Definition
+	definition         *function.Definition
+	fileSourceRegistry provider.FileSourceRegistry
 }
 
 // NewFileFunction creates a new instance of the FileFunction with
-// a complete function definition.
-func NewFileFunction() provider.Function {
+// a complete function definition and file source registry.
+func NewFileFunction(fileSourceRegistry provider.FileSourceRegistry) provider.Function {
 	return &FileFunction{
+		fileSourceRegistry: fileSourceRegistry,
 		definition: &function.Definition{
 			Description: "A function that reads binary data from a file path (local or remote) and returns it as raw bytes.",
 			FormattedDescription: "A function that reads binary data from a file path (local or remote) and returns it as raw bytes.\n\n" +
@@ -71,8 +73,7 @@ func (f *FileFunction) Call(
 	// Use the file source registry to read the file
 	// This allows host applications to register custom handlers
 	// for different URI schemes (s3://, gs://, etc.)
-	fileSourceRegistry := input.CallContext.FileSourceRegistry()
-	data, err := fileSourceRegistry.ReadFile(ctx, path)
+	data, err := f.fileSourceRegistry.ReadFile(ctx, path)
 	if err != nil {
 		return nil, function.NewFuncCallError(
 			fmt.Sprintf("unable to read file at path %q: %s", path, err.Error()),

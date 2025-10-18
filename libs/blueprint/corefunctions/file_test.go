@@ -50,7 +50,7 @@ func (s *FileFunctionTestSuite) Test_reads_text_file(c *C) {
 	err := os.WriteFile(testFile, content, 0644)
 	c.Assert(err, IsNil)
 
-	fileFunc := NewFileFunction()
+	fileFunc := NewFileFunction(provider.NewFileSourceRegistry())
 	s.callStack.Push(&function.Call{
 		FunctionName: "file",
 	})
@@ -73,7 +73,7 @@ func (s *FileFunctionTestSuite) Test_reads_binary_file(c *C) {
 	err := os.WriteFile(testFile, content, 0644)
 	c.Assert(err, IsNil)
 
-	fileFunc := NewFileFunction()
+	fileFunc := NewFileFunction(provider.NewFileSourceRegistry())
 	s.callStack.Push(&function.Call{
 		FunctionName: "file",
 	})
@@ -95,7 +95,7 @@ func (s *FileFunctionTestSuite) Test_reads_empty_file(c *C) {
 	err := os.WriteFile(testFile, []byte{}, 0644)
 	c.Assert(err, IsNil)
 
-	fileFunc := NewFileFunction()
+	fileFunc := NewFileFunction(provider.NewFileSourceRegistry())
 	s.callStack.Push(&function.Call{
 		FunctionName: "file",
 	})
@@ -112,7 +112,7 @@ func (s *FileFunctionTestSuite) Test_reads_empty_file(c *C) {
 }
 
 func (s *FileFunctionTestSuite) Test_returns_error_for_nonexistent_file(c *C) {
-	fileFunc := NewFileFunction()
+	fileFunc := NewFileFunction(provider.NewFileSourceRegistry())
 	s.callStack.Push(&function.Call{
 		FunctionName: "file",
 	})
@@ -132,7 +132,7 @@ func (s *FileFunctionTestSuite) Test_returns_error_for_nonexistent_file(c *C) {
 }
 
 func (s *FileFunctionTestSuite) Test_returns_error_for_invalid_argument_type(c *C) {
-	fileFunc := NewFileFunction()
+	fileFunc := NewFileFunction(provider.NewFileSourceRegistry())
 	s.callStack.Push(&function.Call{
 		FunctionName: "file",
 	})

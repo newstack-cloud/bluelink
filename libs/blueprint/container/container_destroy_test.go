@@ -46,6 +46,7 @@ func (s *ContainerDestroyTestSuite) SetupTest() {
 			stateContainer.Links(),
 			core.BlueprintInstanceIDFromContext,
 			os.Getwd,
+			provider.NewFileSourceRegistry(),
 			core.SystemClock{},
 		),
 	}

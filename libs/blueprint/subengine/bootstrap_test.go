@@ -74,6 +74,7 @@ func (s *SubResolverTestContainer) populateDependencies() {
 			s.stateContainer.Links(),
 			core.BlueprintInstanceIDFromContext,
 			os.Getwd,
+			provider.NewFileSourceRegistry(),
 			core.SystemClock{},
 		),
 	}

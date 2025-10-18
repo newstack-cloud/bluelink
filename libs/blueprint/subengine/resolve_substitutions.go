@@ -208,7 +208,6 @@ type defaultSubstitutionResolver struct {
 	funcRegistry                   provider.FunctionRegistry
 	resourceRegistry               resourcehelpers.Registry
 	dataSourceRegistry             provider.DataSourceRegistry
-	fileSourceRegistry             provider.FileSourceRegistry
 	stateContainer                 state.Container
 	spec                           speccore.BlueprintSpec
 	params                         bpcore.BlueprintParams
@@ -232,7 +231,6 @@ type Registries struct {
 func NewDefaultSubstitutionResolver(
 	registries *Registries,
 	stateContainer state.Container,
-	fileSourceRegistry provider.FileSourceRegistry,
 	// The resource cache is passed down from the container as resources
 	// are resolved before references to them are resolved.
 	// The substitution resolver can safely assume that ordering is taken care of
@@ -251,7 +249,6 @@ func NewDefaultSubstitutionResolver(
 		funcRegistry:                   registries.FuncRegistry,
 		resourceRegistry:               registries.ResourceRegistry,
 		dataSourceRegistry:             registries.DataSourceRegistry,
-		fileSourceRegistry:             fileSourceRegistry,
 		stateContainer:                 stateContainer,
 		spec:                           spec,
 		params:                         params,
@@ -1511,7 +1508,6 @@ func (r *defaultSubstitutionResolver) resolveSubstitutions(
 		functionCallDeps := createFunctionCallDependencies(
 			r.funcRegistry,
 			r.params,
-			r.fileSourceRegistry,
 			stringOrSubs.Values[0].SourceMeta,
 		)
 		return r.resolveSubstitution(
@@ -1529,7 +1525,6 @@ func (r *defaultSubstitutionResolver) resolveSubstitutions(
 		functionCallDeps := createFunctionCallDependencies(
 			r.funcRegistry,
 			r.params,
-			r.fileSourceRegistry,
 			value.SourceMeta,
 		)
 		resolvedValue, err := r.resolveSubstitution(
@@ -1570,7 +1565,6 @@ func (r *defaultSubstitutionResolver) ResolveSubstitution(
 	functionCallDeps := createFunctionCallDependencies(
 		r.funcRegistry,
 		r.params,
-		r.fileSourceRegistry,
 		value.SourceMeta,
 	)
 	mappingNode, err := r.resolveSubstitution(

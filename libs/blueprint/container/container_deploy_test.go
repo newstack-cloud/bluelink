@@ -54,6 +54,7 @@ func (s *ContainerDeployTestSuite) SetupTest() {
 			stateContainer.Links(),
 			core.BlueprintInstanceIDFromContext,
 			os.Getwd,
+			provider.NewFileSourceRegistry(),
 			core.SystemClock{},
 		),
 	}

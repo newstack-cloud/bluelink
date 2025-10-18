@@ -576,6 +576,7 @@ func NewDefaultLoader(
 			getStateContainerLinks(stateContainer),
 			bpcore.BlueprintInstanceIDFromContext,
 			loader.resolveWorkingDir,
+			loader.fileSourceRegistry,
 			loader.clock,
 		)
 	}
@@ -783,7 +784,6 @@ func (l *defaultLoader) buildFullBlueprintContainerDependencies(
 			DataSourceRegistry: l.dataSourceRegistry,
 		},
 		l.stateContainer,
-		l.fileSourceRegistry,
 		resourceCache,
 		resourceTemplateInputElemCache,
 		childExportFieldCache,
