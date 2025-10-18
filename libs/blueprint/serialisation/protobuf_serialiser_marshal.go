@@ -986,6 +986,12 @@ func ToScalarValuePB(scalarValue *core.ScalarValue, optional bool) (*schemapb.Sc
 		}, nil
 	}
 
+	if scalarValue.BytesValue != nil {
+		return &schemapb.ScalarValue{
+			Value: &schemapb.ScalarValue_BytesValue{BytesValue: *scalarValue.BytesValue},
+		}, nil
+	}
+
 	if scalarValue.IntValue != nil {
 		return &schemapb.ScalarValue{
 			Value: &schemapb.ScalarValue_IntValue{IntValue: int64(*scalarValue.IntValue)},

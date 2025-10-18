@@ -979,6 +979,12 @@ func FromScalarValuePB(scalarValue *schemapb.ScalarValue, optional bool) (*core.
 		}, nil
 	}
 
+	if bytesVal, isBytes := scalarValue.Value.(*schemapb.ScalarValue_BytesValue); isBytes {
+		return &core.ScalarValue{
+			BytesValue: &bytesVal.BytesValue,
+		}, nil
+	}
+
 	if intWrapper, isInt := scalarValue.Value.(*schemapb.ScalarValue_IntValue); isInt {
 		intVal := int(intWrapper.IntValue)
 		return &core.ScalarValue{
