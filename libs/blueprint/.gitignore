@@ -27,3 +27,6 @@ report.json
 
 # Directory for programs for manually testing blueprint framework features.
 playground
+
+# Any temporary documentation files that shouldn't be in version control.
+tmp-*.md
