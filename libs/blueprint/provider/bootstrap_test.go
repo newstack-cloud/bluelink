@@ -345,10 +345,11 @@ func (f *functionCallArgsMock) Export(ctx context.Context) ([]any, error) {
 }
 
 type functionCallContextMock struct {
-	params          *core.ParamsImpl
-	registry        FunctionRegistry
-	callStack       function.Stack
-	currentLocation *source.Meta
+	params             *core.ParamsImpl
+	registry           FunctionRegistry
+	callStack          function.Stack
+	fileSourceRegistry FileSourceRegistry
+	currentLocation    *source.Meta
 }
 
 func (f *functionCallContextMock) Registry() FunctionRegistry {
@@ -357,6 +358,13 @@ func (f *functionCallContextMock) Registry() FunctionRegistry {
 
 func (f *functionCallContextMock) Params() core.BlueprintParams {
 	return f.params
+}
+
+func (f *functionCallContextMock) FileSourceRegistry() FileSourceRegistry {
+	if f.fileSourceRegistry == nil {
+		return NewFileSourceRegistry()
+	}
+	return f.fileSourceRegistry
 }
 
 func (f *functionCallContextMock) NewCallArgs(args ...any) FunctionCallArguments {

@@ -7,6 +7,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -46,6 +47,7 @@ func (s *SubstitutionResourceEachResolverTestSuite) Test_resolves_substitutions_
 			DataSourceRegistry: s.dataSourceRegistry,
 		},
 		s.stateContainer,
+		provider.NewFileSourceRegistry(),
 		s.resourceCache,
 		s.resourceTemplateInputElemCache,
 		s.childExportFieldCache,
@@ -97,6 +99,7 @@ func (s *SubstitutionResourceEachResolverTestSuite) Test_fails_when_resource_eac
 			DataSourceRegistry: s.dataSourceRegistry,
 		},
 		s.stateContainer,
+		provider.NewFileSourceRegistry(),
 		s.resourceCache,
 		s.resourceTemplateInputElemCache,
 		s.childExportFieldCache,
@@ -134,6 +137,7 @@ func (s *SubstitutionResourceEachResolverTestSuite) Test_fails_when_resource_eac
 			DataSourceRegistry: s.dataSourceRegistry,
 		},
 		s.stateContainer,
+		provider.NewFileSourceRegistry(),
 		s.resourceCache,
 		s.resourceTemplateInputElemCache,
 		s.childExportFieldCache,
@@ -171,6 +175,7 @@ func (s *SubstitutionResourceEachResolverTestSuite) Test_fails_when_resource_eac
 			DataSourceRegistry: s.dataSourceRegistry,
 		},
 		s.stateContainer,
+		provider.NewFileSourceRegistry(),
 		s.resourceCache,
 		s.resourceTemplateInputElemCache,
 		s.childExportFieldCache,

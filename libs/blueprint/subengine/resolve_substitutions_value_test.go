@@ -8,6 +8,7 @@ import (
 	"github.com/bradleyjkemp/cupaloy/v2"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -44,6 +45,7 @@ func (s *SubstitutionValueResolverTestSuite) Test_resolves_substitutions_in_valu
 			DataSourceRegistry: s.dataSourceRegistry,
 		},
 		s.stateContainer,
+		provider.NewFileSourceRegistry(),
 		s.resourceCache,
 		s.resourceTemplateInputElemCache,
 		s.childExportFieldCache,

@@ -173,6 +173,7 @@ type defaultLoader struct {
 	funcRegistry                   provider.FunctionRegistry
 	resourceRegistry               resourcehelpers.Registry
 	dataSourceRegistry             provider.DataSourceRegistry
+	fileSourceRegistry             provider.FileSourceRegistry
 	linkRegistry                   provider.LinkRegistry
 	clock                          bpcore.Clock
 	resolveWorkingDir              corefunctions.WorkingDirResolver
@@ -269,6 +270,17 @@ func WithLoaderClock(clock bpcore.Clock) LoaderOption {
 func WithLoaderResolveWorkingDir(resolveWorkingDir corefunctions.WorkingDirResolver) LoaderOption {
 	return func(loader *defaultLoader) {
 		loader.resolveWorkingDir = resolveWorkingDir
+	}
+}
+
+// WithLoaderFileSourceRegistry sets the file source registry to be used by the loader.
+// This allows host applications to register custom file sources for different URI schemes
+// (e.g., s3://, gs://, https://) to extend the file() function.
+//
+// When this option is not provided, a default registry with only local file system support is used.
+func WithLoaderFileSourceRegistry(fileSourceRegistry provider.FileSourceRegistry) LoaderOption {
+	return func(loader *defaultLoader) {
+		loader.fileSourceRegistry = fileSourceRegistry
 	}
 }
 
@@ -503,6 +515,7 @@ func NewDefaultLoader(
 		childResolver:                  childResolver,
 		refChainCollectorFactory:       refgraph.NewRefChainCollector,
 		funcRegistry:                   funcRegistry,
+		fileSourceRegistry:             provider.NewFileSourceRegistry(),
 		linkRegistry:                   linkRegistry,
 		clock:                          clock,
 		resolveWorkingDir:              os.Getwd,
@@ -770,6 +783,7 @@ func (l *defaultLoader) buildFullBlueprintContainerDependencies(
 			DataSourceRegistry: l.dataSourceRegistry,
 		},
 		l.stateContainer,
+		l.fileSourceRegistry,
 		resourceCache,
 		resourceTemplateInputElemCache,
 		childExportFieldCache,

@@ -75,6 +75,11 @@ type FunctionCallContext interface {
 	// treated like global data from the perspective of function
 	// implementations.
 	Params() core.BlueprintParams
+	// FileSourceRegistry retrieves the file source registry that can be used
+	// to read files from various sources (local, S3, GCS, etc.).
+	// This allows the file() function to be extended by host applications
+	// to support remote file sources without modifying the core function.
+	FileSourceRegistry() FileSourceRegistry
 	// NewCallArgs creates a new instance of FunctionCallArguments
 	// to be passed into a function call.
 	NewCallArgs(args ...any) FunctionCallArguments

@@ -19,6 +19,7 @@ type functionCallDependencies struct {
 func createFunctionCallDependencies(
 	rootRegistry provider.FunctionRegistry,
 	params bpcore.BlueprintParams,
+	fileSourceRegistry provider.FileSourceRegistry,
 	location *source.Meta,
 ) *functionCallDependencies {
 	stack := function.NewStack()
@@ -27,6 +28,7 @@ func createFunctionCallDependencies(
 		stack,
 		scopedFunctionRegistry,
 		params,
+		fileSourceRegistry,
 		location,
 	)
 	return &functionCallDependencies{
@@ -149,10 +151,11 @@ func (f *functionCallArgs) Export(ctx context.Context) ([]any, error) {
 }
 
 type functionCallContext struct {
-	stack    function.Stack
-	registry provider.FunctionRegistry
-	params   bpcore.BlueprintParams
-	location *source.Meta
+	stack              function.Stack
+	registry           provider.FunctionRegistry
+	params             bpcore.BlueprintParams
+	fileSourceRegistry provider.FileSourceRegistry
+	location           *source.Meta
 }
 
 // NewFunctionCallContext creates a new call context that can be passed into function
@@ -162,13 +165,15 @@ func NewFunctionCallContext(
 	stack function.Stack,
 	registry provider.FunctionRegistry,
 	params bpcore.BlueprintParams,
+	fileSourceRegistry provider.FileSourceRegistry,
 	location *source.Meta,
 ) provider.FunctionCallContext {
 	return &functionCallContext{
-		stack,
-		registry,
-		params,
-		location,
+		stack:              stack,
+		registry:           registry,
+		params:             params,
+		fileSourceRegistry: fileSourceRegistry,
+		location:           location,
 	}
 }
 
@@ -178,6 +183,10 @@ func (c *functionCallContext) Registry() provider.FunctionRegistry {
 
 func (c *functionCallContext) Params() bpcore.BlueprintParams {
 	return c.params
+}
+
+func (c *functionCallContext) FileSourceRegistry() provider.FileSourceRegistry {
+	return c.fileSourceRegistry
 }
 
 func (c *functionCallContext) NewCallArgs(args ...any) provider.FunctionCallArguments {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/common/testhelpers"
 	"github.com/stretchr/testify/suite"
 )
@@ -43,6 +44,7 @@ func (s *SubstitutionIncludeResolverTestSuite) Test_resolves_substitutions_in_in
 			DataSourceRegistry: s.dataSourceRegistry,
 		},
 		s.stateContainer,
+		provider.NewFileSourceRegistry(),
 		s.resourceCache,
 		s.resourceTemplateInputElemCache,
 		s.childExportFieldCache,
