@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.35.0] - 2025-10-18
+
+### Added
+
+- Adds support for the `first` function to the core provider. This function allows for the retrieval of the first non-empty value from a list of values.
+- Adds support for the `lookup` function to the core provider. This function allows for the retrieval of a value from a mapping by key, falling back to a default value that must be provided.
+- Adds support for the `cidrsubnet` function to the core provider. This function allows for the calculation of a subnet from a CIDR block and a prefix length.
+- Adds support for the `sha256` function to the core provider. This function allows for the calculation of the SHA-256 hash of a string or byte array.
+- Adds support for the `md5` function to the core provider. This function allows for the calculation of the MD5 hash of a string or byte array.
+- Adds support for the `sha1` function to the core provider. This function allows for the calculation of the SHA-1 hash of a string or byte array.
+- Adds support for the `uuid` function to the core provider. This function allows for the generation of a UUID.
+- Adds support for the `base64encode` function to the core provider. This function allows for the encoding of a string or byte array to a base64 string.
+- Adds support for the `base64decode` function to the core provider. This function allows for the decoding of a base64 string to a byte array.
+- Adds support for the `min` function to the core provider. This function allows for the finding of the minimum value in a list of values.
+- Adds support for the `max` function to the core provider. This function allows for the finding of the maximum value in a list of values.
+- Adds support for the `abs` function to the core provider. This function allows for the finding of the absolute value of a number.
+- Adds support for the `file` function to the core provider. This function allows for the retrieval of the contents of a file from the file system and remote locations. Remote locations are supported using a `{scheme}://` prefix in the path parameter and the host applications are responsible for implementing and documenting the supported remote locations and their schemes.
+- Adds support for the `utf8` function to the core provider. This function allows for the conversion of a string to a UTF-8 encoded byte array.
+- Adds support for the `http_resource` function to the core provider. This function allows for the retrieval of the contents of a resource from a HTTP endpoint.
+- Adds support for the `if` function to the core provider. This function allows for conditional logic for choosing between two values based on a condition.
+- Adds support for storing byte arrays at runtime to allow for substitution functions that either take binary data as input or return binary data as output. All binary outputs will be encoded as UTF-8 strings automatically when used as the value of a blueprint element field. Serialisation of the `core.ScalarValue` struct will always convert byte arrays to UTF-8 strings, once serialised, the distinction between bytes and strings is lost and the value will be deserialised as a `core.ScalarValue` with a `StringValue` field.
+
 ## [0.34.1] - 2025-09-28
 
 ### Fixed
