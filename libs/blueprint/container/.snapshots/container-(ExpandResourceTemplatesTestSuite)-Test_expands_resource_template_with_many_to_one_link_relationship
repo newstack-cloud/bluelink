@@ -11,6 +11,7 @@
       IntValue: (*int)(<nil>),
       BoolValue: (*bool)(<nil>),
       FloatValue: (*float64)(<nil>),
+      BytesValue: (*[]uint8)(<nil>),
       StringValue: (*string)((len=16) "2025-05-12-draft"),
       SourceMeta: (*source.Meta)({
         Position: (source.Position) {
@@ -302,6 +303,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=23) "order-system-blueprints"),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
@@ -331,6 +333,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "eu-west-1"),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
@@ -360,6 +363,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=6) "aws/s3"),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
@@ -1048,6 +1052,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=6) "Orders"),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
@@ -1166,6 +1171,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=4) "tags"),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
@@ -1311,6 +1317,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=5) "vpcId"),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
@@ -1445,6 +1452,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=21) "variables.environment"),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
@@ -1512,6 +1520,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=7) "esbuild"),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {

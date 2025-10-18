@@ -19,6 +19,7 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=10) "Networking"),
           SourceMeta: (*source.Meta)(<nil>)
         }),
@@ -38,6 +39,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=4) "tags"),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
@@ -70,6 +72,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=27) "test-orders-table-309428320"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -105,6 +108,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=23) "The IDs of the subnets."),
             SourceMeta: (*source.Meta)(<nil>)
           }),
@@ -133,6 +137,7 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=5) "vpcId"),
           SourceMeta: (*source.Meta)({
             Position: (source.Position) {
@@ -150,6 +155,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=19) "The ID of the VPC.\n"),
             SourceMeta: (*source.Meta)(<nil>)
           }),
@@ -166,6 +172,7 @@
         IntValue: (*int)(<nil>),
         BoolValue: (*bool)(<nil>),
         FloatValue: (*float64)(<nil>),
+        BytesValue: (*[]uint8)(<nil>),
         StringValue: (*string)((len=41) "Networking resources for the application."),
         SourceMeta: (*source.Meta)(<nil>)
       }),

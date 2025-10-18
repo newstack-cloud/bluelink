@@ -31,6 +31,7 @@
                         IntValue: (*int)(<nil>),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=16) "dynamodb:PutItem"),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
@@ -60,6 +61,7 @@
                         IntValue: (*int)(<nil>),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=5) "Allow"),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
@@ -89,6 +91,7 @@
                         IntValue: (*int)(<nil>),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=52) "arn:aws:dynamodb:us-west-2:123456789012:table/Orders"),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
@@ -114,6 +117,7 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=10) "2012-10-17"),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {
@@ -149,6 +153,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=12) "SamplePolicy"),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
@@ -184,6 +189,7 @@
         IntValue: (*int)(<nil>),
         BoolValue: (*bool)(<nil>),
         FloatValue: (*float64)(<nil>),
+        BytesValue: (*[]uint8)(<nil>),
         StringValue: (*string)((len=37) "A sample policy for testing purposes."),
         SourceMeta: (*source.Meta)(<nil>)
       }),

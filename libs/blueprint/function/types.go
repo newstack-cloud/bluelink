@@ -918,6 +918,9 @@ const (
 	// ValueTypeString is for strings.
 	ValueTypeString ValueType = "string"
 
+	// ValueTypeBytes is for byte arrays.
+	ValueTypeBytes ValueType = "bytes"
+
 	// ValueTypeInt32 is for 32-bit signed integers.
 	ValueTypeInt32 ValueType = "int32"
 

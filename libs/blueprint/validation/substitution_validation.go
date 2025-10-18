@@ -1281,6 +1281,8 @@ func subFunctionValueType(valueType function.ValueType) string {
 	switch valueType {
 	case function.ValueTypeString:
 		return string(substitutions.ResolvedSubExprTypeString)
+	case function.ValueTypeBytes:
+		return string(substitutions.ResolvedSubExprTypeString)
 	case function.ValueTypeInt32:
 		return string(substitutions.ResolvedSubExprTypeInteger)
 	case function.ValueTypeInt64:

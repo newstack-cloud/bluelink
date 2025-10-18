@@ -17,6 +17,7 @@
       IntValue: (*int)(<nil>),
       BoolValue: (*bool)(<nil>),
       FloatValue: (*float64)(<nil>),
+      BytesValue: (*[]uint8)(<nil>),
       StringValue: (*string)((len=21) "variables.environment"),
       SourceMeta: (*source.Meta)({
         Position: (source.Position) {
@@ -34,6 +35,7 @@
         IntValue: (*int)(<nil>),
         BoolValue: (*bool)(<nil>),
         FloatValue: (*float64)(<nil>),
+        BytesValue: (*[]uint8)(<nil>),
         StringValue: (*string)((len=34) "The environment for the blueprint."),
         SourceMeta: (*source.Meta)(<nil>)
       }),

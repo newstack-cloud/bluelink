@@ -55,6 +55,28 @@ func (s *TransformMappingNodeTestSuite) Test_transform_go_bool_value_to_mapping_
 	}, mappingNode)
 }
 
+func (s *TransformMappingNodeTestSuite) Test_transform_go_byte_slice_to_mapping_node() {
+	byteSlice := []byte("Hello, World!")
+	mappingNode := GoValueToMappingNode(byteSlice)
+	expectedBytes := []byte("Hello, World!")
+	s.Assert().Equal(&core.MappingNode{
+		Scalar: &core.ScalarValue{
+			BytesValue: &expectedBytes,
+		},
+	}, mappingNode)
+}
+
+func (s *TransformMappingNodeTestSuite) Test_transform_bytes_mapping_node_to_go_value() {
+	inputBytes := []byte("Example bytes")
+	mappingNode := &core.MappingNode{
+		Scalar: &core.ScalarValue{
+			BytesValue: &inputBytes,
+		},
+	}
+	bytesVal := MappingNodeToGoValue(mappingNode)
+	s.Assert().Equal([]byte("Example bytes"), bytesVal)
+}
+
 func (s *TransformMappingNodeTestSuite) Test_transform_go_mixed_slice_value_to_mapping_node() {
 	intVal := 10000
 	stringVal := "string"

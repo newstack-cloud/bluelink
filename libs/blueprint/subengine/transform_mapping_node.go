@@ -45,6 +45,11 @@ func GoValueToMappingNode(value interface{}) *core.MappingNode {
 	}
 
 	if kindOfValue == reflect.Slice {
+		// Special handling for byte slices ([]byte) - store as bytes
+		if typeofValue.Elem().Kind() == reflect.Uint8 {
+			byteSlice := value.([]byte)
+			return toBytesMappingNode(byteSlice)
+		}
 		return toSliceMappingNode(value)
 	}
 
@@ -85,6 +90,10 @@ func toGoScalar(Scalar *core.ScalarValue) interface{} {
 
 	if Scalar.FloatValue != nil {
 		return *Scalar.FloatValue
+	}
+
+	if Scalar.BytesValue != nil {
+		return *Scalar.BytesValue
 	}
 
 	if Scalar.StringValue != nil {
@@ -144,6 +153,14 @@ func toBoolMappingNode(value bool) *core.MappingNode {
 	return &core.MappingNode{
 		Scalar: &core.ScalarValue{
 			BoolValue: &value,
+		},
+	}
+}
+
+func toBytesMappingNode(value []byte) *core.MappingNode {
+	return &core.MappingNode{
+		Scalar: &core.ScalarValue{
+			BytesValue: &value,
 		},
 	}
 }

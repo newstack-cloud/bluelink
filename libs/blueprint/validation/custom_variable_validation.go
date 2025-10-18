@@ -65,7 +65,7 @@ func ValidateCustomVariable(
 		return diagnostics, errRequiredVariableMissing(varName, getVarSourceMeta(varMap, varName))
 	}
 
-	if validateRuntimeParams && finalValue.StringValue == nil {
+	if validateRuntimeParams && !bpcore.IsScalarString(finalValue) {
 		return diagnostics, errVariableInvalidOrMissing(
 			varSchema.Type.Value,
 			varName,
@@ -74,7 +74,7 @@ func ValidateCustomVariable(
 		)
 	}
 
-	if validateRuntimeParams && strings.TrimSpace(*finalValue.StringValue) == "" {
+	if validateRuntimeParams && strings.TrimSpace(bpcore.StringValueFromScalar(finalValue)) == "" {
 		return diagnostics, errVariableEmptyValue(
 			varSchema.Type.Value,
 			varName,
@@ -82,7 +82,7 @@ func ValidateCustomVariable(
 		)
 	}
 
-	if validateRuntimeParams && !core.SliceContainsComparable(optionLabels, *finalValue.StringValue) {
+	if validateRuntimeParams && !core.SliceContainsComparable(optionLabels, bpcore.StringValueFromScalar(finalValue)) {
 		usingDefault := userProvidedValue == nil
 		return diagnostics, errCustomVariableValueNotInOptions(
 			varSchema.Type.Value,

@@ -5,6 +5,7 @@
         IntValue: (*int)(<nil>),
         BoolValue: (*bool)(<nil>),
         FloatValue: (*float64)(<nil>),
+        BytesValue: (*[]uint8)(<nil>),
         StringValue: (*string)((len=15) "core-infra.yaml"),
         SourceMeta: (*source.Meta)(<nil>)
       }),
@@ -22,6 +23,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=9) "us-west-2"),
             SourceMeta: (*source.Meta)(<nil>)
           }),
@@ -45,6 +47,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=23) "order-system-blueprints"),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
@@ -74,6 +77,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=9) "eu-west-1"),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
@@ -103,6 +107,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=6) "aws/s3"),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
@@ -138,6 +143,7 @@
         IntValue: (*int)(<nil>),
         BoolValue: (*bool)(<nil>),
         FloatValue: (*float64)(<nil>),
+        BytesValue: (*[]uint8)(<nil>),
         StringValue: (*string)((len=38) "core infrastructure for the Orders API"),
         SourceMeta: (*source.Meta)(<nil>)
       }),

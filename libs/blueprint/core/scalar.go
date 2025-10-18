@@ -21,14 +21,25 @@ import (
 // 1. int
 // 2. bool
 // 3. float64
-// 4. string
+// 4. bytes
+// 5. string
 //
 // The reason strings are the lowest priority is because
 // every other scalar type can be parsed as a string.
+//
+// IMPORTANT: BytesValue is a runtime-only field and should NEVER appear in
+// blueprint files. Bytes are only used internally during substitution resolution
+// to efficiently pass binary data between functions (e.g., file() -> base64encode()).
+// When a ScalarValue with BytesValue is marshalled to YAML/JSON for blueprint output,
+// it is automatically converted to a UTF-8 string. When a blueprint is loaded from
+// disk, bytes will never be present - only strings, integers, floats, and booleans.
+// This is because MappingNode was originally designed as part of the blueprint schema
+// which only supports these primitive types in the specification.
 type ScalarValue struct {
 	IntValue    *int
 	BoolValue   *bool
 	FloatValue  *float64
+	BytesValue  *[]byte // Runtime-only: never appears in blueprint files, converted to string on marshal
 	StringValue *string
 	SourceMeta  *source.Meta
 }
@@ -48,12 +59,17 @@ func (v *ScalarValue) ToString() string {
 	if v.FloatValue != nil {
 		return strconv.FormatFloat(*v.FloatValue, 'f', -1, 64)
 	}
+	if v.BytesValue != nil {
+		return string(*v.BytesValue)
+	}
 	return ""
 }
 
 // MarshalYAML fulfils the yaml.Marshaler interface
 // to marshal a blueprint value into one of the
 // supported scalar types.
+// NOTE: BytesValue is converted to a UTF-8 string during marshalling.
+// Bytes are runtime-only and never appear in serialized blueprints.
 func (v *ScalarValue) MarshalYAML() (any, error) {
 	if v.StringValue != nil {
 		return *v.StringValue, nil
@@ -63,6 +79,11 @@ func (v *ScalarValue) MarshalYAML() (any, error) {
 	}
 	if v.BoolValue != nil {
 		return *v.BoolValue, nil
+	}
+	if v.BytesValue != nil {
+		// Convert bytes to UTF-8 string for YAML output.
+		// Bytes are runtime-only and should never appear in blueprint files.
+		return string(*v.BytesValue), nil
 	}
 	return *v.FloatValue, nil
 }
@@ -121,6 +142,8 @@ func (v *ScalarValue) UnmarshalYAML(value *yaml.Node) error {
 // MarshalJSON fulfils the json.Marshaler interface
 // to marshal a blueprint value into one of the
 // supported scalar types.
+// NOTE: BytesValue is converted to a UTF-8 string during marshalling.
+// Bytes are runtime-only and never appear in serialized blueprints.
 func (v *ScalarValue) MarshalJSON() ([]byte, error) {
 	if v.StringValue != nil {
 		return json.Marshal(*v.StringValue)
@@ -132,6 +155,12 @@ func (v *ScalarValue) MarshalJSON() ([]byte, error) {
 
 	if v.BoolValue != nil {
 		return json.Marshal(*v.BoolValue)
+	}
+
+	if v.BytesValue != nil {
+		// Convert bytes to UTF-8 string for JSON output.
+		// Bytes are runtime-only and should never appear in blueprint files.
+		return json.Marshal(string(*v.BytesValue))
 	}
 
 	return json.Marshal(*v.FloatValue)
@@ -231,11 +260,26 @@ func (v *ScalarValue) Equal(otherScalar *ScalarValue) bool {
 		return *v.FloatValue == *otherScalar.FloatValue
 	}
 
+	if v.BytesValue != nil && otherScalar.BytesValue != nil {
+		vBytes := *v.BytesValue
+		oBytes := *otherScalar.BytesValue
+		if len(vBytes) != len(oBytes) {
+			return false
+		}
+		for i := range vBytes {
+			if vBytes[i] != oBytes[i] {
+				return false
+			}
+		}
+		return true
+	}
+
 	return false
 }
 
-// StringValueFromScalar extracts a Go string from a string
+// StringValueFromScalar extracts a Go string from a string or bytes
 // scalar value. If the scalar is nil, an empty string is returned.
+// NOTE: If the scalar has BytesValue, it is converted to a UTF-8 string.
 func StringValueFromScalar(scalar *ScalarValue) string {
 	if scalar == nil {
 		return ""
@@ -243,6 +287,10 @@ func StringValueFromScalar(scalar *ScalarValue) string {
 
 	if scalar.StringValue != nil {
 		return *scalar.StringValue
+	}
+
+	if scalar.BytesValue != nil {
+		return string(*scalar.BytesValue)
 	}
 
 	return ""
@@ -323,12 +371,16 @@ func IsScalarNil(scalar *ScalarValue) bool {
 	return scalar == nil || (scalar.StringValue == nil &&
 		scalar.IntValue == nil &&
 		scalar.BoolValue == nil &&
-		scalar.FloatValue == nil)
+		scalar.FloatValue == nil &&
+		scalar.BytesValue == nil)
 }
 
-// IsScalarString checks if a scalar value is a string.
+// IsScalarString checks if a scalar value is a string or bytes.
+// NOTE: Bytes are treated as strings because they are automatically
+// converted to UTF-8 strings during serialization. This ensures
+// validation treats bytes and strings consistently.
 func IsScalarString(scalar *ScalarValue) bool {
-	return scalar != nil && scalar.StringValue != nil
+	return scalar != nil && (scalar.StringValue != nil || scalar.BytesValue != nil)
 }
 
 // IsScalarInt checks if a scalar value is an int.
@@ -346,15 +398,47 @@ func IsScalarFloat(scalar *ScalarValue) bool {
 	return scalar != nil && scalar.FloatValue != nil
 }
 
+// IsScalarBytes checks if a scalar value is a byte array.
+// NOTE: Bytes are runtime-only and will never be true for scalars
+// loaded from blueprint files, only for values created during
+// substitution resolution.
+func IsScalarBytes(scalar *ScalarValue) bool {
+	return scalar != nil && scalar.BytesValue != nil
+}
+
+// BytesValueFromScalar extracts a Go byte slice from a bytes
+// scalar value. If the scalar is nil, nil is returned.
+// NOTE: This will only return non-nil for runtime-created scalars.
+// Bytes never appear in blueprint files and are converted to strings
+// during serialization.
+func BytesValueFromScalar(scalar *ScalarValue) []byte {
+	if scalar == nil {
+		return nil
+	}
+
+	if scalar.BytesValue != nil {
+		return *scalar.BytesValue
+	}
+
+	return nil
+}
+
+// ScalarFromBytes creates a scalar value from a byte slice.
+// NOTE: This should only be used at runtime during substitution resolution.
+// Bytes are never persisted to blueprint files and will be converted to
+// UTF-8 strings when marshalled to YAML/JSON.
+func ScalarFromBytes(value []byte) *ScalarValue {
+	return &ScalarValue{
+		BytesValue: &value,
+	}
+}
+
 // TypeFromScalarValue returns the type of a scalar value
 // as a ScalarType. If the scalar is nil, an empty string is returned.
+// NOTE: Bytes are treated as strings and will return ScalarTypeString.
 func TypeFromScalarValue(scalar *ScalarValue) ScalarType {
 	if scalar == nil {
 		return ""
-	}
-
-	if IsScalarString(scalar) {
-		return ScalarTypeString
 	}
 
 	if IsScalarInt(scalar) {
@@ -367,6 +451,12 @@ func TypeFromScalarValue(scalar *ScalarValue) ScalarType {
 
 	if IsScalarFloat(scalar) {
 		return ScalarTypeFloat
+	}
+
+	// Check for both StringValue and BytesValue
+	// Bytes are treated as strings since they convert to UTF-8 on serialization
+	if IsScalarString(scalar) {
+		return ScalarTypeString
 	}
 
 	return ""
@@ -385,6 +475,11 @@ const (
 	ScalarTypeFloat ScalarType = "float"
 	// ScalarTypeBool is the type of an element in a spec that is a boolean.
 	ScalarTypeBool ScalarType = "boolean"
+	// ScalarTypeBytes is the type of a runtime-only element that is a byte array.
+	// This type will NEVER appear in blueprint specifications and is only used
+	// during substitution resolution to pass binary data between functions.
+	// When serialized, bytes are always converted to UTF-8 strings.
+	ScalarTypeBytes ScalarType = "bytes"
 )
 
 func isIntegral(value float64) bool {

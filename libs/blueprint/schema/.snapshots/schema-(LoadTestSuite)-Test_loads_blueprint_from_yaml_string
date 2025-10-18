@@ -3,6 +3,7 @@
     IntValue: (*int)(<nil>),
     BoolValue: (*bool)(<nil>),
     FloatValue: (*float64)(<nil>),
+    BytesValue: (*[]uint8)(<nil>),
     StringValue: (*string)((len=10) "2021-12-18"),
     SourceMeta: (*source.Meta)({
       Position: (source.Position) {
@@ -54,6 +55,7 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=25) "The Orders DynamoDB Table"),
           SourceMeta: (*source.Meta)({
             Position: (source.Position) {
@@ -121,6 +123,7 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=22) "The Orders Event Topic"),
           SourceMeta: (*source.Meta)({
             Position: (source.Position) {
@@ -551,6 +554,7 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=19) "handlers.Authoriser"),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {
@@ -580,6 +584,7 @@
                 IntValue: (*int)(120),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)(<nil>),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {
@@ -801,6 +806,7 @@
                     IntValue: (*int)(<nil>),
                     BoolValue: (*bool)(<nil>),
                     FloatValue: (*float64)(<nil>),
+                    BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=3) "get"),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
@@ -830,6 +836,7 @@
                     IntValue: (*int)(<nil>),
                     BoolValue: (*bool)(<nil>),
                     FloatValue: (*float64)(<nil>),
+                    BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=7) "/orders"),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
@@ -893,6 +900,7 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=18) "handlers.GetOrders"),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {
@@ -922,6 +930,7 @@
                 IntValue: (*int)(120),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)(<nil>),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {
@@ -1058,6 +1067,7 @@
                       IntValue: (*int)(50),
                       BoolValue: (*bool)(<nil>),
                       FloatValue: (*float64)(<nil>),
+                      BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
@@ -1094,6 +1104,7 @@
                               IntValue: (*int)(<nil>),
                               BoolValue: (*bool)(<nil>),
                               FloatValue: (*float64)(<nil>),
+                              BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=10) "Orders API"),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
@@ -1123,6 +1134,7 @@
                               IntValue: (*int)(<nil>),
                               BoolValue: (*bool)(<nil>),
                               FloatValue: (*float64)(<nil>),
+                              BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=6) "70 100"),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
@@ -1152,6 +1164,7 @@
                               IntValue: (*int)(<nil>),
                               BoolValue: (*bool)(<nil>),
                               FloatValue: (*float64)(<nil>),
+                              BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=16) "getOrderEndpoint"),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
@@ -1226,6 +1239,7 @@
                       IntValue: (*int)(<nil>),
                       BoolValue: (*bool)(<nil>),
                       FloatValue: (*float64)(<nil>),
+                      BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=6) "20 100"),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
@@ -1255,6 +1269,7 @@
                       IntValue: (*int)(50),
                       BoolValue: (*bool)(<nil>),
                       FloatValue: (*float64)(<nil>),
+                      BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
@@ -1504,6 +1519,7 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=5) "go1.x"),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {
@@ -1533,6 +1549,7 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(true),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)(<nil>),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {
@@ -1892,6 +1909,7 @@
                     IntValue: (*int)(<nil>),
                     BoolValue: (*bool)(<nil>),
                     FloatValue: (*float64)(<nil>),
+                    BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=5) "go1.x"),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
@@ -1932,6 +1950,7 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=27) "build/shared-packages-layer"),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {
@@ -1961,6 +1980,7 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=19) "sharedPackagesLayer"),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {
@@ -2121,6 +2141,7 @@
                         IntValue: (*int)(10),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
@@ -2150,6 +2171,7 @@
                         IntValue: (*int)(<nil>),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=6) "pubsub"),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
@@ -2226,6 +2248,7 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=20) "handlers.UpdateOrder"),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {
@@ -2255,6 +2278,7 @@
                 IntValue: (*int)(120),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)(<nil>),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {
@@ -2429,6 +2453,7 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=4) "tags"),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {

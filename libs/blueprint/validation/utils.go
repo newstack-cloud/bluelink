@@ -29,7 +29,8 @@ func deriveVarType(value *core.ScalarValue) schema.VariableType {
 
 	// This should only ever be used in a context where
 	// the given scalar has a value, so string will always
-	// be the default.
+	// be the default. BytesValue is also treated as a string
+	// since it converts to UTF-8 string on serialization.
 	return schema.VariableTypeString
 }
 
@@ -44,6 +45,10 @@ func deriveScalarValueAsString(value *core.ScalarValue) string {
 
 	if value != nil && value.BoolValue != nil {
 		return fmt.Sprintf("%t", *value.BoolValue)
+	}
+
+	if value != nil && value.BytesValue != nil {
+		return string(*value.BytesValue)
 	}
 
 	if value != nil && value.StringValue != nil {
@@ -190,7 +195,8 @@ func isEmptyScalar(scalar *core.ScalarValue) bool {
 	return scalar == nil || (scalar.StringValue == nil &&
 		scalar.IntValue == nil &&
 		scalar.BoolValue == nil &&
-		scalar.FloatValue == nil)
+		scalar.FloatValue == nil &&
+		scalar.BytesValue == nil)
 }
 
 func deriveMappingNodeResourceDefinitionsType(node *core.MappingNode) provider.ResourceDefinitionsSchemaType {

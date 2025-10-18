@@ -111,7 +111,7 @@ func validateCoreStringVariable(
 		return diagnostics, errRequiredVariableMissing(varName, getVarSourceMeta(varMap, varName))
 	}
 
-	if validateRuntimeParams && finalValue.StringValue == nil {
+	if validateRuntimeParams && !bpcore.IsScalarString(finalValue) {
 		return diagnostics, errVariableInvalidOrMissing(
 			schema.VariableTypeString,
 			varName,
@@ -120,7 +120,7 @@ func validateCoreStringVariable(
 		)
 	}
 
-	if validateRuntimeParams && strings.TrimSpace(*finalValue.StringValue) == "" {
+	if validateRuntimeParams && strings.TrimSpace(bpcore.StringValueFromScalar(finalValue)) == "" {
 		return diagnostics, errVariableEmptyValue(
 			schema.VariableTypeString,
 			varName,
@@ -481,7 +481,7 @@ func getVarSourceMeta(varMap *schema.VariableMap, varName string) *source.Meta {
 }
 
 func scalarAllNil(scalar *bpcore.ScalarValue) bool {
-	return scalar.StringValue == nil && scalar.IntValue == nil && scalar.FloatValue == nil && scalar.BoolValue == nil
+	return scalar.StringValue == nil && scalar.IntValue == nil && scalar.FloatValue == nil && scalar.BoolValue == nil && scalar.BytesValue == nil
 }
 
 func checkVarDescription(

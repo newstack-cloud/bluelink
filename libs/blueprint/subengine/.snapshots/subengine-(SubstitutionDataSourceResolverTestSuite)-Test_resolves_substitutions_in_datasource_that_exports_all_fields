@@ -19,6 +19,7 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=10) "Networking"),
           SourceMeta: (*source.Meta)(<nil>)
         }),
@@ -38,6 +39,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=4) "tags"),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
@@ -94,6 +96,7 @@
         IntValue: (*int)(<nil>),
         BoolValue: (*bool)(<nil>),
         FloatValue: (*float64)(<nil>),
+        BytesValue: (*[]uint8)(<nil>),
         StringValue: (*string)((len=41) "Networking resources for the application."),
         SourceMeta: (*source.Meta)(<nil>)
       }),

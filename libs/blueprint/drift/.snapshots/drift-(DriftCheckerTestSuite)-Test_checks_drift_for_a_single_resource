@@ -9,6 +9,7 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=25) "saveOrderFunction.handler"),
           SourceMeta: (*source.Meta)(<nil>)
         }),
@@ -23,6 +24,7 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=66) "arn:aws:lambda:us-east-1:123456789012:function:save-order-function"),
           SourceMeta: (*source.Meta)(<nil>)
         }),
@@ -47,6 +49,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=25) "saveOrderFunction.handler"),
             SourceMeta: (*source.Meta)(<nil>)
           }),
@@ -61,6 +64,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=16) "orders.saveOrder"),
             SourceMeta: (*source.Meta)(<nil>)
           }),

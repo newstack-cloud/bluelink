@@ -7,6 +7,7 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(true),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
@@ -21,6 +22,7 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=7) "esbuild"),
           SourceMeta: (*source.Meta)({
             Position: (source.Position) {
@@ -50,6 +52,7 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(50392.296),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
@@ -64,6 +67,7 @@
           IntValue: (*int)(4039),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
@@ -81,6 +85,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=9) "eu-west-1"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -95,6 +100,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=15) "subnet-12345678"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -113,6 +119,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=15) "us-west-2-input"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -127,6 +134,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=15) "eu-west-1-infra"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -146,6 +154,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=12) "vpc-12345678"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -166,6 +175,7 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=27) "production-env Orders Table"),
           SourceMeta: (*source.Meta)(<nil>)
         }),
@@ -180,6 +190,7 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(false),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
@@ -194,6 +205,7 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=27) "test-orders-table-309428320"),
           SourceMeta: (*source.Meta)(<nil>)
         }),
@@ -212,6 +224,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=11) "test-info-1"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -226,6 +239,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=11) "test-info-2"),
               SourceMeta: (*source.Meta)(<nil>)
             }),

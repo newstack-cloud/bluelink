@@ -25,6 +25,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=51) "Stream that captures changes to the invoices table."),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -40,6 +41,7 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=30) "production-env Invoices Stream"),
                 SourceMeta: (*source.Meta)(<nil>)
               }),
@@ -98,6 +100,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=30) "production-env Invoices Stream"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -112,6 +115,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "US-WEST-2"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -141,6 +145,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=30) "production-env Invoices Stream"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -161,6 +166,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=8) "invoices"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -181,6 +187,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=30) "production-env Invoices Stream"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -201,6 +208,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=9) "US-WEST-2"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -261,6 +269,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=35) "Function that processes an invoice."),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -299,6 +308,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=26) "src/processInvoice.handler"),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
@@ -343,6 +353,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=8) "invoices"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -363,6 +374,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=26) "src/processInvoice.handler"),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
@@ -431,6 +443,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=72) "arn:aws:dynamodb:eu-west-1:123456789012:table/legacy-production-orders-1"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -445,6 +458,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "eu-west-1"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -459,6 +473,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=26) "legacy-production-orders-1"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -483,6 +498,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(true),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -497,6 +513,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(false),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -511,6 +528,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=21) "vpc-1234567890abcdef0"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -535,6 +553,7 @@
                         IntValue: (*int)(<nil>),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=34) "legacy-production-env Orders Table"),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
@@ -549,6 +568,7 @@
                         IntValue: (*int)(150),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
@@ -563,6 +583,7 @@
                         IntValue: (*int)(350),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
@@ -612,6 +633,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=44) "Table that stores orders for an application."),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -627,6 +649,7 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=27) "production-env Orders Table"),
                 SourceMeta: (*source.Meta)(<nil>)
               }),
@@ -644,6 +667,7 @@
                     IntValue: (*int)(<nil>),
                     BoolValue: (*bool)(true),
                     FloatValue: (*float64)(<nil>),
+                    BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)(<nil>),
                     SourceMeta: (*source.Meta)(<nil>)
                   }),
@@ -678,6 +702,7 @@
                         IntValue: (*int)(<nil>),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=27) "production-env Orders Table"),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
@@ -692,6 +717,7 @@
                         IntValue: (*int)(100),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
@@ -721,6 +747,7 @@
                         IntValue: (*int)(200),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
@@ -769,6 +796,7 @@
                     IntValue: (*int)(<nil>),
                     BoolValue: (*bool)(true),
                     FloatValue: (*float64)(<nil>),
+                    BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)(<nil>),
                     SourceMeta: (*source.Meta)(<nil>)
                   }),
@@ -791,6 +819,7 @@
                         IntValue: (*int)(<nil>),
                         BoolValue: (*bool)(true),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
@@ -810,6 +839,7 @@
                         IntValue: (*int)(<nil>),
                         BoolValue: (*bool)(false),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
@@ -838,6 +868,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(false),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -852,6 +883,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "US-WEST-2"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -866,6 +898,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=19) "production-orders-1"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -892,6 +925,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=21) "vpc-1234567890abcdef0"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -912,6 +946,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=34) "legacy-production-env Orders Table"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -926,6 +961,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=27) "production-env Orders Table"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -945,6 +981,7 @@
               IntValue: (*int)(150),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -959,6 +996,7 @@
               IntValue: (*int)(100),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
@@ -993,6 +1031,7 @@
               IntValue: (*int)(350),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1007,6 +1046,7 @@
               IntValue: (*int)(200),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
@@ -1041,6 +1081,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=34) "legacy-production-env Orders Table"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1055,6 +1096,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=27) "production-env Orders Table"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1074,6 +1116,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=9) "eu-west-1"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1088,6 +1131,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=9) "US-WEST-2"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1107,6 +1151,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=26) "legacy-production-orders-1"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1121,6 +1166,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=19) "production-orders-1"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1150,6 +1196,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(false),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1202,6 +1249,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=72) "arn:aws:dynamodb:eu-west-2:123456789012:table/legacy-production-orders-2"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -1216,6 +1264,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "eu-west-2"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -1230,6 +1279,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=26) "legacy-production-orders-2"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -1254,6 +1304,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(true),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -1268,6 +1319,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(false),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -1282,6 +1334,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=21) "vpc-1234567890abcdef0"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -1306,6 +1359,7 @@
                         IntValue: (*int)(<nil>),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=34) "legacy-production-env Orders Table"),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
@@ -1320,6 +1374,7 @@
                         IntValue: (*int)(150),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
@@ -1334,6 +1389,7 @@
                         IntValue: (*int)(350),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
@@ -1383,6 +1439,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=44) "Table that stores orders for an application."),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1398,6 +1455,7 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=27) "production-env Orders Table"),
                 SourceMeta: (*source.Meta)(<nil>)
               }),
@@ -1415,6 +1473,7 @@
                     IntValue: (*int)(<nil>),
                     BoolValue: (*bool)(true),
                     FloatValue: (*float64)(<nil>),
+                    BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)(<nil>),
                     SourceMeta: (*source.Meta)(<nil>)
                   }),
@@ -1449,6 +1508,7 @@
                         IntValue: (*int)(<nil>),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=27) "production-env Orders Table"),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
@@ -1463,6 +1523,7 @@
                         IntValue: (*int)(100),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
@@ -1492,6 +1553,7 @@
                         IntValue: (*int)(200),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
@@ -1540,6 +1602,7 @@
                     IntValue: (*int)(<nil>),
                     BoolValue: (*bool)(true),
                     FloatValue: (*float64)(<nil>),
+                    BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)(<nil>),
                     SourceMeta: (*source.Meta)(<nil>)
                   }),
@@ -1562,6 +1625,7 @@
                         IntValue: (*int)(<nil>),
                         BoolValue: (*bool)(true),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
@@ -1581,6 +1645,7 @@
                         IntValue: (*int)(<nil>),
                         BoolValue: (*bool)(false),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
@@ -1609,6 +1674,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(false),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -1623,6 +1689,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "US-WEST-2"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -1637,6 +1704,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=19) "production-orders-2"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -1663,6 +1731,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=21) "vpc-1234567890abcdef0"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1683,6 +1752,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=34) "legacy-production-env Orders Table"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1697,6 +1767,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=27) "production-env Orders Table"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1716,6 +1787,7 @@
               IntValue: (*int)(150),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1730,6 +1802,7 @@
               IntValue: (*int)(100),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
@@ -1764,6 +1837,7 @@
               IntValue: (*int)(350),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1778,6 +1852,7 @@
               IntValue: (*int)(200),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
@@ -1812,6 +1887,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=34) "legacy-production-env Orders Table"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1826,6 +1902,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=27) "production-env Orders Table"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1845,6 +1922,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=9) "eu-west-2"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1859,6 +1937,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=9) "US-WEST-2"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1878,6 +1957,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=26) "legacy-production-orders-2"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1892,6 +1972,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=19) "production-orders-2"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1921,6 +2002,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(false),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -1973,6 +2055,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=21) "src/saveOrder.handler"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -2017,6 +2100,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=45) "Function that saves an order to the database."),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -2059,6 +2143,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=21) "src/saveOrder.handler"),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
@@ -2118,6 +2203,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=26) "legacy-production-orders-1"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -2132,6 +2218,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=19) "production-orders-1"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -2151,6 +2238,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "eu-west-1"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -2165,6 +2253,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "US-WEST-2"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -2197,6 +2286,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=26) "legacy-production-orders-2"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -2211,6 +2301,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=19) "production-orders-2"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -2230,6 +2321,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "eu-west-2"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -2244,6 +2336,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "US-WEST-2"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -2307,6 +2400,7 @@
                       IntValue: (*int)(<nil>),
                       BoolValue: (*bool)(<nil>),
                       FloatValue: (*float64)(<nil>),
+                      BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=45) "complex-resource-provider/complex-resource-id"),
                       SourceMeta: (*source.Meta)(<nil>)
                     }),
@@ -2328,6 +2422,7 @@
                               IntValue: (*int)(<nil>),
                               BoolValue: (*bool)(<nil>),
                               FloatValue: (*float64)(<nil>),
+                              BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=25) "https://old.example.com/1"),
                               SourceMeta: (*source.Meta)(<nil>)
                             }),
@@ -2342,6 +2437,7 @@
                               IntValue: (*int)(<nil>),
                               BoolValue: (*bool)(<nil>),
                               FloatValue: (*float64)(<nil>),
+                              BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=25) "https://old.example.com/2"),
                               SourceMeta: (*source.Meta)(<nil>)
                             }),
@@ -2356,6 +2452,7 @@
                               IntValue: (*int)(<nil>),
                               BoolValue: (*bool)(<nil>),
                               FloatValue: (*float64)(<nil>),
+                              BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=25) "https://old.example.com/3"),
                               SourceMeta: (*source.Meta)(<nil>)
                             }),
@@ -2375,6 +2472,7 @@
                           IntValue: (*int)(<nil>),
                           BoolValue: (*bool)(false),
                           FloatValue: (*float64)(<nil>),
+                          BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)(<nil>),
                           SourceMeta: (*source.Meta)(<nil>)
                         }),
@@ -2395,6 +2493,7 @@
                       IntValue: (*int)(<nil>),
                       BoolValue: (*bool)(<nil>),
                       FloatValue: (*float64)(<nil>),
+                      BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=29) "old-example-other-config-item"),
                       SourceMeta: (*source.Meta)(<nil>)
                     }),
@@ -2416,6 +2515,7 @@
                               IntValue: (*int)(<nil>),
                               BoolValue: (*bool)(<nil>),
                               FloatValue: (*float64)(<nil>),
+                              BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=21) "old-example-vendor-id"),
                               SourceMeta: (*source.Meta)(<nil>)
                             }),
@@ -2430,6 +2530,7 @@
                               IntValue: (*int)(<nil>),
                               BoolValue: (*bool)(<nil>),
                               FloatValue: (*float64)(<nil>),
+                              BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=28) "old-example-vendor-namespace"),
                               SourceMeta: (*source.Meta)(<nil>)
                             }),
@@ -2459,6 +2560,7 @@
                           IntValue: (*int)(<nil>),
                           BoolValue: (*bool)(<nil>),
                           FloatValue: (*float64)(<nil>),
+                          BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)((len=24) "old-example-vendor-tag-1"),
                           SourceMeta: (*source.Meta)(<nil>)
                         }),
@@ -2473,6 +2575,7 @@
                           IntValue: (*int)(<nil>),
                           BoolValue: (*bool)(<nil>),
                           FloatValue: (*float64)(<nil>),
+                          BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)((len=24) "old-example-vendor-tag-2"),
                           SourceMeta: (*source.Meta)(<nil>)
                         }),
@@ -2522,6 +2625,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=24) "A complex resource type."),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -2549,6 +2653,7 @@
                               IntValue: (*int)(<nil>),
                               BoolValue: (*bool)(<nil>),
                               FloatValue: (*float64)(<nil>),
+                              BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=21) "https://example.com/1"),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
@@ -2578,6 +2683,7 @@
                               IntValue: (*int)(<nil>),
                               BoolValue: (*bool)(<nil>),
                               FloatValue: (*float64)(<nil>),
+                              BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=21) "https://example.com/2"),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
@@ -2612,6 +2718,7 @@
                           IntValue: (*int)(<nil>),
                           BoolValue: (*bool)(true),
                           FloatValue: (*float64)(<nil>),
+                          BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
@@ -2644,6 +2751,7 @@
                               IntValue: (*int)(<nil>),
                               BoolValue: (*bool)(<nil>),
                               FloatValue: (*float64)(<nil>),
+                              BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=14) "production-env"),
                               SourceMeta: (*source.Meta)(<nil>)
                             }),
@@ -2658,6 +2766,7 @@
                               IntValue: (*int)(<nil>),
                               BoolValue: (*bool)(<nil>),
                               FloatValue: (*float64)(<nil>),
+                              BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=9) "us-west-2"),
                               SourceMeta: (*source.Meta)(<nil>)
                             }),
@@ -2678,6 +2787,7 @@
                           IntValue: (*int)(80),
                           BoolValue: (*bool)(<nil>),
                           FloatValue: (*float64)(<nil>),
+                          BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)(<nil>),
                           SourceMeta: (*source.Meta)(<nil>)
                         }),
@@ -2704,6 +2814,7 @@
                               IntValue: (*int)(<nil>),
                               BoolValue: (*bool)(<nil>),
                               FloatValue: (*float64)(<nil>),
+                              BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=19) "Contents of value 1"),
                               SourceMeta: (*source.Meta)(<nil>)
                             }),
@@ -2718,6 +2829,7 @@
                               IntValue: (*int)(<nil>),
                               BoolValue: (*bool)(<nil>),
                               FloatValue: (*float64)(<nil>),
+                              BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=19) "Contents of value 2"),
                               SourceMeta: (*source.Meta)(<nil>)
                             }),
@@ -2751,6 +2863,7 @@
                               IntValue: (*int)(<nil>),
                               BoolValue: (*bool)(<nil>),
                               FloatValue: (*float64)(<nil>),
+                              BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=17) "example-vendor-id"),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
@@ -2780,6 +2893,7 @@
                               IntValue: (*int)(<nil>),
                               BoolValue: (*bool)(<nil>),
                               FloatValue: (*float64)(<nil>),
+                              BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=24) "example-vendor-namespace"),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
@@ -2832,6 +2946,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=25) "https://old.example.com/1"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -2846,6 +2961,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=21) "https://example.com/1"),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
@@ -2880,6 +2996,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=25) "https://old.example.com/2"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -2894,6 +3011,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=21) "https://example.com/2"),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
@@ -2928,6 +3046,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(false),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -2942,6 +3061,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(true),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
@@ -2976,6 +3096,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=29) "old-example-other-config-item"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -2996,6 +3117,7 @@
                           IntValue: (*int)(<nil>),
                           BoolValue: (*bool)(<nil>),
                           FloatValue: (*float64)(<nil>),
+                          BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)((len=19) "Contents of value 1"),
                           SourceMeta: (*source.Meta)(<nil>)
                         }),
@@ -3010,6 +3132,7 @@
                           IntValue: (*int)(<nil>),
                           BoolValue: (*bool)(<nil>),
                           FloatValue: (*float64)(<nil>),
+                          BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)((len=19) "Contents of value 2"),
                           SourceMeta: (*source.Meta)(<nil>)
                         }),
@@ -3041,6 +3164,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=21) "old-example-vendor-id"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -3055,6 +3179,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=17) "example-vendor-id"),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
@@ -3089,6 +3214,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=28) "old-example-vendor-namespace"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -3103,6 +3229,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=24) "example-vendor-namespace"),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
@@ -3141,6 +3268,7 @@
                       IntValue: (*int)(<nil>),
                       BoolValue: (*bool)(<nil>),
                       FloatValue: (*float64)(<nil>),
+                      BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=24) "old-example-vendor-tag-1"),
                       SourceMeta: (*source.Meta)(<nil>)
                     }),
@@ -3155,6 +3283,7 @@
                       IntValue: (*int)(<nil>),
                       BoolValue: (*bool)(<nil>),
                       FloatValue: (*float64)(<nil>),
+                      BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=24) "old-example-vendor-tag-2"),
                       SourceMeta: (*source.Meta)(<nil>)
                     }),
@@ -3183,6 +3312,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=14) "production-env"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -3203,6 +3333,7 @@
                   IntValue: (*int)(<nil>),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "us-west-2"),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -3223,6 +3354,7 @@
                   IntValue: (*int)(80),
                   BoolValue: (*bool)(<nil>),
                   FloatValue: (*float64)(<nil>),
+                  BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
@@ -3276,6 +3408,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=9) "US-WEST-2"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -3297,6 +3430,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=21) "legacy-production-env"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -3311,6 +3445,7 @@
               IntValue: (*int)(<nil>),
               BoolValue: (*bool)(<nil>),
               FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=14) "production-env"),
               SourceMeta: (*source.Meta)(<nil>)
             }),
@@ -3339,6 +3474,7 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=3) "tsc"),
                 SourceMeta: (*source.Meta)(<nil>)
               }),
@@ -3353,6 +3489,7 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=7) "esbuild"),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {
@@ -3404,6 +3541,7 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=21) "legacy-production-env"),
           SourceMeta: (*source.Meta)(<nil>)
         }),
@@ -3418,6 +3556,7 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=14) "production-env"),
           SourceMeta: (*source.Meta)(<nil>)
         }),
@@ -3446,6 +3585,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=3) "tsc"),
             SourceMeta: (*source.Meta)(<nil>)
           }),
@@ -3460,6 +3600,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=7) "esbuild"),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {

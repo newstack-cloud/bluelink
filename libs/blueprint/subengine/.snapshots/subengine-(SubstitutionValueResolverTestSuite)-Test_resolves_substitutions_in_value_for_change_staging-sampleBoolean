@@ -18,6 +18,7 @@
         IntValue: (*int)(<nil>),
         BoolValue: (*bool)(true),
         FloatValue: (*float64)(<nil>),
+        BytesValue: (*[]uint8)(<nil>),
         StringValue: (*string)(<nil>),
         SourceMeta: (*source.Meta)({
           Position: (source.Position) {
@@ -47,6 +48,7 @@
         IntValue: (*int)(<nil>),
         BoolValue: (*bool)(<nil>),
         FloatValue: (*float64)(<nil>),
+        BytesValue: (*[]uint8)(<nil>),
         StringValue: (*string)((len=38) "A sample boolean for testing purposes."),
         SourceMeta: (*source.Meta)(<nil>)
       }),

@@ -22,6 +22,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=9) "us-west-2"),
             SourceMeta: (*source.Meta)(<nil>)
           }),
@@ -36,6 +37,7 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=9) "us-east-1"),
             SourceMeta: (*source.Meta)(<nil>)
           }),
@@ -55,6 +57,7 @@
         IntValue: (*int)(<nil>),
         BoolValue: (*bool)(<nil>),
         FloatValue: (*float64)(<nil>),
+        BytesValue: (*[]uint8)(<nil>),
         StringValue: (*string)((len=42) "The regions to deploy the orders table to."),
         SourceMeta: (*source.Meta)(<nil>)
       }),
