@@ -65,7 +65,7 @@ func (f *KeysFunction) Call(
 	ctx context.Context,
 	input *provider.FunctionCallInput,
 ) (*provider.FunctionCallOutput, error) {
-	var mapping map[string]interface{}
+	var mapping map[string]any
 	if err := input.Arguments.GetVar(ctx, 0, &mapping); err != nil {
 		return nil, err
 	}
