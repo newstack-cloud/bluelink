@@ -34,7 +34,7 @@ bash scripts/run-tests.sh --update-snapshots
 EOF
 }
 
-if [ -n "$HELP" ]; then
+if [[ -n "$HELP" ]]; then
   help
   exit 0
 fi
@@ -42,7 +42,7 @@ fi
 set -e
 echo "" > coverage.txt
 
-if [ -n "$UPDATE_SNAPSHOTS" ]; then
+if [[ -n "$UPDATE_SNAPSHOTS" ]]; then
   # Exclude generated protobuf code from coverage.
   UPDATE_SNAPSHOTS=true go test -timeout 90000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(schemapb|testutils))$'`
 
@@ -51,13 +51,13 @@ else
   go test -timeout 90000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(schemapb|testutils))$'`
 fi
 
-if [ -z "$GITHUB_ACTION" ]; then
+if [[ -z "$GITHUB_ACTION" ]]; then
   # We are on a dev machine so produce html output of coverage
   # to get a visual to better reveal uncovered lines.
   go tool cover -html=coverage.txt -o coverage.html
 fi
 
-if [ -n "$GITHUB_ACTION" ]; then
+if [[ -n "$GITHUB_ACTION" ]]; then
   # We are in a CI environment so run tests again to generate JSON report.
   go test -timeout 90000ms -json -tags "$TEST_TYPES" `go list ./... | egrep -v '(/(schemapb|testutils))$'` > report.json
 fi
