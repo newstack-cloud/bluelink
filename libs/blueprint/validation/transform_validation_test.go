@@ -14,7 +14,7 @@ type TransformValidationTestSuite struct{}
 var _ = Suite(&TransformValidationTestSuite{})
 
 func (s *TransformValidationTestSuite) Test_succeeds_without_any_issues_for_a_valid_transform(c *C) {
-	version := Version2025_05_12
+	version := Version2025_11_02
 	blueprint := &schema.Blueprint{
 		Version: &core.ScalarValue{StringValue: &version},
 		Transform: &schema.TransformValueWrapper{
@@ -35,7 +35,7 @@ func (s *TransformValidationTestSuite) Test_succeeds_without_any_issues_for_a_va
 }
 
 func (s *BlueprintValidationTestSuite) Test_reports_error_for_sub_usage_in_transform(c *C) {
-	version := Version2025_05_12
+	version := Version2025_11_02
 	blueprint := &schema.Blueprint{
 		Version: &core.ScalarValue{StringValue: &version},
 		Transform: &schema.TransformValueWrapper{

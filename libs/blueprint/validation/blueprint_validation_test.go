@@ -16,7 +16,7 @@ var _ = Suite(&BlueprintValidationTestSuite{})
 func (s *BlueprintValidationTestSuite) Test_succeeds_without_any_issues_for_a_valid_blueprint(c *C) {
 
 	instanceType := "t2.micro"
-	version := Version2025_05_12
+	version := Version2025_11_02
 	blueprint := &schema.Blueprint{
 		Version: &core.ScalarValue{StringValue: &version},
 		Resources: &schema.ResourceMap{
@@ -119,7 +119,7 @@ func (s *BlueprintValidationTestSuite) Test_reports_errors_when_the_version_is_i
 }
 
 func (s *BlueprintValidationTestSuite) Test_reports_errors_when_the_resources_and_include_properties_are_missing(c *C) {
-	version := Version2025_05_12
+	version := Version2025_11_02
 	blueprint := &schema.Blueprint{
 		Version: &core.ScalarValue{StringValue: &version},
 	}
@@ -142,7 +142,7 @@ func (s *BlueprintValidationTestSuite) Test_reports_errors_when_the_resources_an
 }
 
 func (s *BlueprintValidationTestSuite) Test_reports_errors_when_no_resources_or_includes_are_provided(c *C) {
-	version := Version2025_05_12
+	version := Version2025_11_02
 	blueprint := &schema.Blueprint{
 		Version:   &core.ScalarValue{StringValue: &version},
 		Resources: &schema.ResourceMap{},
