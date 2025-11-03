@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
@@ -76,6 +77,19 @@ func (f *ReplaceFunction) Call(
 	ctx context.Context,
 	input *provider.FunctionCallInput,
 ) (*provider.FunctionCallOutput, error) {
+	// Get first argument as any to check for none marker
+	inputAny, err := input.Arguments.Get(ctx, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// If input is none, propagate none
+	if core.IsNoneMarker(inputAny) {
+		return &provider.FunctionCallOutput{
+			ResponseData: core.GetNoneMarker(),
+		}, nil
+	}
+
 	var inputStr string
 	var toReplace string
 	var replaceWith string

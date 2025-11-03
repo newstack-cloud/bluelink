@@ -182,3 +182,22 @@ func (s *Base64DecodeFunctionTestSuite) Test_base64_decode_roundtrip_with_encode
 	c.Assert(err, IsNil)
 	c.Assert(decodeOutput.ResponseData, DeepEquals, originalData)
 }
+
+func (s *Base64DecodeFunctionTestSuite) Test_propagates_none_value(c *C) {
+	base64DecodeFunc := NewBase64DecodeFunction()
+	s.callStack.Push(&function.Call{
+		FunctionName: "base64decode",
+	})
+	output, err := base64DecodeFunc.Call(context.TODO(), &provider.FunctionCallInput{
+		Arguments: &functionCallArgsMock{
+			args: []any{
+				core.GetNoneMarker(),
+			},
+			callCtx: s.callContext,
+		},
+		CallContext: s.callContext,
+	})
+
+	c.Assert(err, IsNil)
+	c.Assert(core.IsNoneMarker(output.ResponseData), Equals, true)
+}

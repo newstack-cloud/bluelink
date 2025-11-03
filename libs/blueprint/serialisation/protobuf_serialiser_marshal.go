@@ -1018,5 +1018,11 @@ func ToScalarValuePB(scalarValue *core.ScalarValue, optional bool) (*schemapb.Sc
 		}, nil
 	}
 
+	if scalarValue.NoneValue != nil {
+		return &schemapb.ScalarValue{
+			Value: &schemapb.ScalarValue_NoneValue{NoneValue: *scalarValue.NoneValue},
+		}, nil
+	}
+
 	return nil, errMissingScalarValue()
 }

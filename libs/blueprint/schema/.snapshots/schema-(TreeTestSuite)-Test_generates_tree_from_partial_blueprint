@@ -14,6 +14,7 @@
         FloatValue: (*float64)(<nil>),
         BytesValue: (*[]uint8)(<nil>),
         StringValue: (*string)((len=10) "2021-12-18"),
+        NoneValue: (*bool)(<nil>),
         SourceMeta: (*source.Meta)({
           Position: (source.Position) {
             Line: (int) 1,
@@ -139,6 +140,7 @@
                 FloatValue: (*float64)(<nil>),
                 BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=25) "The Orders DynamoDB Table"),
+                NoneValue: (*bool)(<nil>),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {
                     Line: (int) 7,
@@ -182,6 +184,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=25) "The Orders DynamoDB Table"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
                   Line: (int) 7,
@@ -260,6 +263,7 @@
                 FloatValue: (*float64)(<nil>),
                 BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=22) "The Orders Event Topic"),
+                NoneValue: (*bool)(<nil>),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {
                     Line: (int) 10,
@@ -303,6 +307,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=22) "The Orders Event Topic"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
                   Line: (int) 10,
@@ -431,6 +436,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=25) "The Orders DynamoDB Table"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
                   Line: (int) 7,
@@ -499,6 +505,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=22) "The Orders Event Topic"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
                   Line: (int) 10,
@@ -735,6 +742,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=4) "tags"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 20,
@@ -1014,6 +1022,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=4) "tags"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 20,
@@ -1142,6 +1151,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=4) "tags"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 20,
@@ -1652,6 +1662,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=4) "tags"),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 20,
@@ -1946,6 +1957,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=4) "tags"),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 20,
@@ -2360,6 +2372,7 @@
                                 FloatValue: (*float64)(<nil>),
                                 BytesValue: (*[]uint8)(<nil>),
                                 StringValue: (*string)((len=6) "20 100"),
+                                NoneValue: (*bool)(<nil>),
                                 SourceMeta: (*source.Meta)({
                                   Position: (source.Position) {
                                     Line: (int) 44,
@@ -2390,6 +2403,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=6) "20 100"),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 44,
@@ -2440,6 +2454,7 @@
                                 FloatValue: (*float64)(<nil>),
                                 BytesValue: (*[]uint8)(<nil>),
                                 StringValue: (*string)(<nil>),
+                                NoneValue: (*bool)(<nil>),
                                 SourceMeta: (*source.Meta)({
                                   Position: (source.Position) {
                                     Line: (int) 45,
@@ -2470,6 +2485,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)(<nil>),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 45,
@@ -2520,6 +2536,7 @@
                                 FloatValue: (*float64)(<nil>),
                                 BytesValue: (*[]uint8)(<nil>),
                                 StringValue: (*string)(<nil>),
+                                NoneValue: (*bool)(<nil>),
                                 SourceMeta: (*source.Meta)({
                                   Position: (source.Position) {
                                     Line: (int) 46,
@@ -2550,6 +2567,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)(<nil>),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 46,
@@ -2610,6 +2628,7 @@
                                         FloatValue: (*float64)(<nil>),
                                         BytesValue: (*[]uint8)(<nil>),
                                         StringValue: (*string)((len=16) "getOrderEndpoint"),
+                                        NoneValue: (*bool)(<nil>),
                                         SourceMeta: (*source.Meta)({
                                           Position: (source.Position) {
                                             Line: (int) 48,
@@ -2640,6 +2659,7 @@
                                       FloatValue: (*float64)(<nil>),
                                       BytesValue: (*[]uint8)(<nil>),
                                       StringValue: (*string)((len=16) "getOrderEndpoint"),
+                                      NoneValue: (*bool)(<nil>),
                                       SourceMeta: (*source.Meta)({
                                         Position: (source.Position) {
                                           Line: (int) 48,
@@ -2690,6 +2710,7 @@
                                         FloatValue: (*float64)(<nil>),
                                         BytesValue: (*[]uint8)(<nil>),
                                         StringValue: (*string)((len=6) "70 100"),
+                                        NoneValue: (*bool)(<nil>),
                                         SourceMeta: (*source.Meta)({
                                           Position: (source.Position) {
                                             Line: (int) 49,
@@ -2720,6 +2741,7 @@
                                       FloatValue: (*float64)(<nil>),
                                       BytesValue: (*[]uint8)(<nil>),
                                       StringValue: (*string)((len=6) "70 100"),
+                                      NoneValue: (*bool)(<nil>),
                                       SourceMeta: (*source.Meta)({
                                         Position: (source.Position) {
                                           Line: (int) 49,
@@ -2770,6 +2792,7 @@
                                         FloatValue: (*float64)(<nil>),
                                         BytesValue: (*[]uint8)(<nil>),
                                         StringValue: (*string)((len=10) "Orders API"),
+                                        NoneValue: (*bool)(<nil>),
                                         SourceMeta: (*source.Meta)({
                                           Position: (source.Position) {
                                             Line: (int) 50,
@@ -2800,6 +2823,7 @@
                                       FloatValue: (*float64)(<nil>),
                                       BytesValue: (*[]uint8)(<nil>),
                                       StringValue: (*string)((len=10) "Orders API"),
+                                      NoneValue: (*bool)(<nil>),
                                       SourceMeta: (*source.Meta)({
                                         Position: (source.Position) {
                                           Line: (int) 50,
@@ -2845,6 +2869,7 @@
                                       FloatValue: (*float64)(<nil>),
                                       BytesValue: (*[]uint8)(<nil>),
                                       StringValue: (*string)((len=10) "Orders API"),
+                                      NoneValue: (*bool)(<nil>),
                                       SourceMeta: (*source.Meta)({
                                         Position: (source.Position) {
                                           Line: (int) 50,
@@ -2875,6 +2900,7 @@
                                       FloatValue: (*float64)(<nil>),
                                       BytesValue: (*[]uint8)(<nil>),
                                       StringValue: (*string)((len=6) "70 100"),
+                                      NoneValue: (*bool)(<nil>),
                                       SourceMeta: (*source.Meta)({
                                         Position: (source.Position) {
                                           Line: (int) 49,
@@ -2905,6 +2931,7 @@
                                       FloatValue: (*float64)(<nil>),
                                       BytesValue: (*[]uint8)(<nil>),
                                       StringValue: (*string)((len=16) "getOrderEndpoint"),
+                                      NoneValue: (*bool)(<nil>),
                                       SourceMeta: (*source.Meta)({
                                         Position: (source.Position) {
                                           Line: (int) 48,
@@ -2988,6 +3015,7 @@
                                       FloatValue: (*float64)(<nil>),
                                       BytesValue: (*[]uint8)(<nil>),
                                       StringValue: (*string)((len=10) "Orders API"),
+                                      NoneValue: (*bool)(<nil>),
                                       SourceMeta: (*source.Meta)({
                                         Position: (source.Position) {
                                           Line: (int) 50,
@@ -3018,6 +3046,7 @@
                                       FloatValue: (*float64)(<nil>),
                                       BytesValue: (*[]uint8)(<nil>),
                                       StringValue: (*string)((len=6) "70 100"),
+                                      NoneValue: (*bool)(<nil>),
                                       SourceMeta: (*source.Meta)({
                                         Position: (source.Position) {
                                           Line: (int) 49,
@@ -3048,6 +3077,7 @@
                                       FloatValue: (*float64)(<nil>),
                                       BytesValue: (*[]uint8)(<nil>),
                                       StringValue: (*string)((len=16) "getOrderEndpoint"),
+                                      NoneValue: (*bool)(<nil>),
                                       SourceMeta: (*source.Meta)({
                                         Position: (source.Position) {
                                           Line: (int) 48,
@@ -3138,6 +3168,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)(<nil>),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 46,
@@ -3175,6 +3206,7 @@
                                       FloatValue: (*float64)(<nil>),
                                       BytesValue: (*[]uint8)(<nil>),
                                       StringValue: (*string)((len=10) "Orders API"),
+                                      NoneValue: (*bool)(<nil>),
                                       SourceMeta: (*source.Meta)({
                                         Position: (source.Position) {
                                           Line: (int) 50,
@@ -3205,6 +3237,7 @@
                                       FloatValue: (*float64)(<nil>),
                                       BytesValue: (*[]uint8)(<nil>),
                                       StringValue: (*string)((len=6) "70 100"),
+                                      NoneValue: (*bool)(<nil>),
                                       SourceMeta: (*source.Meta)({
                                         Position: (source.Position) {
                                           Line: (int) 49,
@@ -3235,6 +3268,7 @@
                                       FloatValue: (*float64)(<nil>),
                                       BytesValue: (*[]uint8)(<nil>),
                                       StringValue: (*string)((len=16) "getOrderEndpoint"),
+                                      NoneValue: (*bool)(<nil>),
                                       SourceMeta: (*source.Meta)({
                                         Position: (source.Position) {
                                           Line: (int) 48,
@@ -3310,6 +3344,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=6) "20 100"),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 44,
@@ -3340,6 +3375,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)(<nil>),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 45,
@@ -3429,6 +3465,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)(<nil>),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 46,
@@ -3466,6 +3503,7 @@
                                       FloatValue: (*float64)(<nil>),
                                       BytesValue: (*[]uint8)(<nil>),
                                       StringValue: (*string)((len=10) "Orders API"),
+                                      NoneValue: (*bool)(<nil>),
                                       SourceMeta: (*source.Meta)({
                                         Position: (source.Position) {
                                           Line: (int) 50,
@@ -3496,6 +3534,7 @@
                                       FloatValue: (*float64)(<nil>),
                                       BytesValue: (*[]uint8)(<nil>),
                                       StringValue: (*string)((len=6) "70 100"),
+                                      NoneValue: (*bool)(<nil>),
                                       SourceMeta: (*source.Meta)({
                                         Position: (source.Position) {
                                           Line: (int) 49,
@@ -3526,6 +3565,7 @@
                                       FloatValue: (*float64)(<nil>),
                                       BytesValue: (*[]uint8)(<nil>),
                                       StringValue: (*string)((len=16) "getOrderEndpoint"),
+                                      NoneValue: (*bool)(<nil>),
                                       SourceMeta: (*source.Meta)({
                                         Position: (source.Position) {
                                           Line: (int) 48,
@@ -3601,6 +3641,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=6) "20 100"),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 44,
@@ -3631,6 +3672,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)(<nil>),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 45,
@@ -3784,6 +3826,7 @@
                             FloatValue: (*float64)(<nil>),
                             BytesValue: (*[]uint8)(<nil>),
                             StringValue: (*string)(<nil>),
+                            NoneValue: (*bool)(<nil>),
                             SourceMeta: (*source.Meta)({
                               Position: (source.Position) {
                                 Line: (int) 46,
@@ -3821,6 +3864,7 @@
                                     FloatValue: (*float64)(<nil>),
                                     BytesValue: (*[]uint8)(<nil>),
                                     StringValue: (*string)((len=10) "Orders API"),
+                                    NoneValue: (*bool)(<nil>),
                                     SourceMeta: (*source.Meta)({
                                       Position: (source.Position) {
                                         Line: (int) 50,
@@ -3851,6 +3895,7 @@
                                     FloatValue: (*float64)(<nil>),
                                     BytesValue: (*[]uint8)(<nil>),
                                     StringValue: (*string)((len=6) "70 100"),
+                                    NoneValue: (*bool)(<nil>),
                                     SourceMeta: (*source.Meta)({
                                       Position: (source.Position) {
                                         Line: (int) 49,
@@ -3881,6 +3926,7 @@
                                     FloatValue: (*float64)(<nil>),
                                     BytesValue: (*[]uint8)(<nil>),
                                     StringValue: (*string)((len=16) "getOrderEndpoint"),
+                                    NoneValue: (*bool)(<nil>),
                                     SourceMeta: (*source.Meta)({
                                       Position: (source.Position) {
                                         Line: (int) 48,
@@ -3956,6 +4002,7 @@
                             FloatValue: (*float64)(<nil>),
                             BytesValue: (*[]uint8)(<nil>),
                             StringValue: (*string)((len=6) "20 100"),
+                            NoneValue: (*bool)(<nil>),
                             SourceMeta: (*source.Meta)({
                               Position: (source.Position) {
                                 Line: (int) 44,
@@ -3986,6 +4033,7 @@
                             FloatValue: (*float64)(<nil>),
                             BytesValue: (*[]uint8)(<nil>),
                             StringValue: (*string)(<nil>),
+                            NoneValue: (*bool)(<nil>),
                             SourceMeta: (*source.Meta)({
                               Position: (source.Position) {
                                 Line: (int) 45,
@@ -4650,6 +4698,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=5) "go1.x"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 71,
@@ -4680,6 +4729,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=5) "go1.x"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 71,
@@ -4730,6 +4780,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 74,
@@ -4760,6 +4811,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)(<nil>),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 74,
@@ -4928,6 +4980,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=5) "go1.x"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 71,
@@ -4958,6 +5011,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)(<nil>),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 74,
@@ -5099,6 +5153,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)(<nil>),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 46,
@@ -5136,6 +5191,7 @@
                                   FloatValue: (*float64)(<nil>),
                                   BytesValue: (*[]uint8)(<nil>),
                                   StringValue: (*string)((len=10) "Orders API"),
+                                  NoneValue: (*bool)(<nil>),
                                   SourceMeta: (*source.Meta)({
                                     Position: (source.Position) {
                                       Line: (int) 50,
@@ -5166,6 +5222,7 @@
                                   FloatValue: (*float64)(<nil>),
                                   BytesValue: (*[]uint8)(<nil>),
                                   StringValue: (*string)((len=6) "70 100"),
+                                  NoneValue: (*bool)(<nil>),
                                   SourceMeta: (*source.Meta)({
                                     Position: (source.Position) {
                                       Line: (int) 49,
@@ -5196,6 +5253,7 @@
                                   FloatValue: (*float64)(<nil>),
                                   BytesValue: (*[]uint8)(<nil>),
                                   StringValue: (*string)((len=16) "getOrderEndpoint"),
+                                  NoneValue: (*bool)(<nil>),
                                   SourceMeta: (*source.Meta)({
                                     Position: (source.Position) {
                                       Line: (int) 48,
@@ -5271,6 +5329,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)((len=6) "20 100"),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 44,
@@ -5301,6 +5360,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)(<nil>),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 45,
@@ -5552,6 +5612,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=5) "go1.x"),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 71,
@@ -5582,6 +5643,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)(<nil>),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 74,
@@ -6440,6 +6502,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=19) "handlers.Authoriser"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 99,
@@ -6470,6 +6533,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=19) "handlers.Authoriser"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 99,
@@ -6520,6 +6584,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 100,
@@ -6550,6 +6615,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)(<nil>),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 100,
@@ -6595,6 +6661,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=19) "handlers.Authoriser"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 99,
@@ -6625,6 +6692,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)(<nil>),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 100,
@@ -6914,6 +6982,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=19) "handlers.Authoriser"),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 99,
@@ -6944,6 +7013,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)(<nil>),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 100,
@@ -7239,6 +7309,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=18) "handlers.GetOrders"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 109,
@@ -7269,6 +7340,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=18) "handlers.GetOrders"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 109,
@@ -7319,6 +7391,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 110,
@@ -7349,6 +7422,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)(<nil>),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 110,
@@ -7404,6 +7478,7 @@
                             FloatValue: (*float64)(<nil>),
                             BytesValue: (*[]uint8)(<nil>),
                             StringValue: (*string)((len=3) "get"),
+                            NoneValue: (*bool)(<nil>),
                             SourceMeta: (*source.Meta)({
                               Position: (source.Position) {
                                 Line: (int) 112,
@@ -7434,6 +7509,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)((len=3) "get"),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 112,
@@ -7484,6 +7560,7 @@
                             FloatValue: (*float64)(<nil>),
                             BytesValue: (*[]uint8)(<nil>),
                             StringValue: (*string)((len=7) "/orders"),
+                            NoneValue: (*bool)(<nil>),
                             SourceMeta: (*source.Meta)({
                               Position: (source.Position) {
                                 Line: (int) 113,
@@ -7514,6 +7591,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)((len=7) "/orders"),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 113,
@@ -7852,6 +7930,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)((len=3) "get"),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 112,
@@ -7882,6 +7961,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)((len=7) "/orders"),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 113,
@@ -8044,6 +8124,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)((len=3) "get"),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 112,
@@ -8074,6 +8155,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)((len=7) "/orders"),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 113,
@@ -8138,6 +8220,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=18) "handlers.GetOrders"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 109,
@@ -8168,6 +8251,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)(<nil>),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 110,
@@ -8402,6 +8486,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=3) "get"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 112,
@@ -8432,6 +8517,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=7) "/orders"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 113,
@@ -8496,6 +8582,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=18) "handlers.GetOrders"),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 109,
@@ -8526,6 +8613,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)(<nil>),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 110,
@@ -8858,6 +8946,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=20) "handlers.UpdateOrder"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 129,
@@ -8888,6 +8977,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=20) "handlers.UpdateOrder"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 129,
@@ -8938,6 +9028,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 130,
@@ -8968,6 +9059,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)(<nil>),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 130,
@@ -9028,6 +9120,7 @@
                                 FloatValue: (*float64)(<nil>),
                                 BytesValue: (*[]uint8)(<nil>),
                                 StringValue: (*string)((len=6) "pubsub"),
+                                NoneValue: (*bool)(<nil>),
                                 SourceMeta: (*source.Meta)({
                                   Position: (source.Position) {
                                     Line: (int) 133,
@@ -9058,6 +9151,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=6) "pubsub"),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 133,
@@ -9108,6 +9202,7 @@
                                 FloatValue: (*float64)(<nil>),
                                 BytesValue: (*[]uint8)(<nil>),
                                 StringValue: (*string)(<nil>),
+                                NoneValue: (*bool)(<nil>),
                                 SourceMeta: (*source.Meta)({
                                   Position: (source.Position) {
                                     Line: (int) 136,
@@ -9138,6 +9233,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)(<nil>),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 136,
@@ -9183,6 +9279,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)(<nil>),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 136,
@@ -9213,6 +9310,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=6) "pubsub"),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 133,
@@ -9288,6 +9386,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)(<nil>),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 136,
@@ -9318,6 +9417,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=6) "pubsub"),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 133,
@@ -9416,6 +9516,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)(<nil>),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 136,
@@ -9446,6 +9547,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=6) "pubsub"),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 133,
@@ -9523,6 +9625,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=20) "handlers.UpdateOrder"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 129,
@@ -9553,6 +9656,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)(<nil>),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 130,
@@ -9718,6 +9822,7 @@
                             FloatValue: (*float64)(<nil>),
                             BytesValue: (*[]uint8)(<nil>),
                             StringValue: (*string)(<nil>),
+                            NoneValue: (*bool)(<nil>),
                             SourceMeta: (*source.Meta)({
                               Position: (source.Position) {
                                 Line: (int) 136,
@@ -9748,6 +9853,7 @@
                             FloatValue: (*float64)(<nil>),
                             BytesValue: (*[]uint8)(<nil>),
                             StringValue: (*string)((len=6) "pubsub"),
+                            NoneValue: (*bool)(<nil>),
                             SourceMeta: (*source.Meta)({
                               Position: (source.Position) {
                                 Line: (int) 133,
@@ -9825,6 +9931,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=20) "handlers.UpdateOrder"),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 129,
@@ -9855,6 +9962,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)(<nil>),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 130,
@@ -10192,6 +10300,7 @@
                             FloatValue: (*float64)(<nil>),
                             BytesValue: (*[]uint8)(<nil>),
                             StringValue: (*string)((len=5) "go1.x"),
+                            NoneValue: (*bool)(<nil>),
                             SourceMeta: (*source.Meta)({
                               Position: (source.Position) {
                                 Line: (int) 152,
@@ -10222,6 +10331,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)((len=5) "go1.x"),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 152,
@@ -10268,6 +10378,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)((len=5) "go1.x"),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 152,
@@ -10329,6 +10440,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=27) "build/shared-packages-layer"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 155,
@@ -10359,6 +10471,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=27) "build/shared-packages-layer"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 155,
@@ -10409,6 +10522,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=19) "sharedPackagesLayer"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 156,
@@ -10439,6 +10553,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=19) "sharedPackagesLayer"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 156,
@@ -10488,6 +10603,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)((len=5) "go1.x"),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 152,
@@ -10529,6 +10645,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=27) "build/shared-packages-layer"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 155,
@@ -10559,6 +10676,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=19) "sharedPackagesLayer"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 156,
@@ -10722,6 +10840,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=5) "go1.x"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 152,
@@ -10763,6 +10882,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=27) "build/shared-packages-layer"),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 155,
@@ -10793,6 +10913,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=19) "sharedPackagesLayer"),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 156,
@@ -11918,6 +12039,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=19) "handlers.Authoriser"),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 99,
@@ -11948,6 +12070,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)(<nil>),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 100,
@@ -12171,6 +12294,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=3) "get"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 112,
@@ -12201,6 +12325,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=7) "/orders"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 113,
@@ -12265,6 +12390,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=18) "handlers.GetOrders"),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 109,
@@ -12295,6 +12421,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)(<nil>),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 110,
@@ -12432,6 +12559,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)(<nil>),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 46,
@@ -12469,6 +12597,7 @@
                                   FloatValue: (*float64)(<nil>),
                                   BytesValue: (*[]uint8)(<nil>),
                                   StringValue: (*string)((len=10) "Orders API"),
+                                  NoneValue: (*bool)(<nil>),
                                   SourceMeta: (*source.Meta)({
                                     Position: (source.Position) {
                                       Line: (int) 50,
@@ -12499,6 +12628,7 @@
                                   FloatValue: (*float64)(<nil>),
                                   BytesValue: (*[]uint8)(<nil>),
                                   StringValue: (*string)((len=6) "70 100"),
+                                  NoneValue: (*bool)(<nil>),
                                   SourceMeta: (*source.Meta)({
                                     Position: (source.Position) {
                                       Line: (int) 49,
@@ -12529,6 +12659,7 @@
                                   FloatValue: (*float64)(<nil>),
                                   BytesValue: (*[]uint8)(<nil>),
                                   StringValue: (*string)((len=16) "getOrderEndpoint"),
+                                  NoneValue: (*bool)(<nil>),
                                   SourceMeta: (*source.Meta)({
                                     Position: (source.Position) {
                                       Line: (int) 48,
@@ -12604,6 +12735,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)((len=6) "20 100"),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 44,
@@ -12634,6 +12766,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)(<nil>),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 45,
@@ -12885,6 +13018,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=5) "go1.x"),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 71,
@@ -12915,6 +13049,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)(<nil>),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 74,
@@ -13276,6 +13411,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=5) "go1.x"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 152,
@@ -13317,6 +13453,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=27) "build/shared-packages-layer"),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 155,
@@ -13347,6 +13484,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=19) "sharedPackagesLayer"),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 156,
@@ -13508,6 +13646,7 @@
                             FloatValue: (*float64)(<nil>),
                             BytesValue: (*[]uint8)(<nil>),
                             StringValue: (*string)(<nil>),
+                            NoneValue: (*bool)(<nil>),
                             SourceMeta: (*source.Meta)({
                               Position: (source.Position) {
                                 Line: (int) 136,
@@ -13538,6 +13677,7 @@
                             FloatValue: (*float64)(<nil>),
                             BytesValue: (*[]uint8)(<nil>),
                             StringValue: (*string)((len=6) "pubsub"),
+                            NoneValue: (*bool)(<nil>),
                             SourceMeta: (*source.Meta)({
                               Position: (source.Position) {
                                 Line: (int) 133,
@@ -13615,6 +13755,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=20) "handlers.UpdateOrder"),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 129,
@@ -13645,6 +13786,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)(<nil>),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 130,
@@ -13775,6 +13917,7 @@
       FloatValue: (*float64)(<nil>),
       BytesValue: (*[]uint8)(<nil>),
       StringValue: (*string)((len=10) "2021-12-18"),
+      NoneValue: (*bool)(<nil>),
       SourceMeta: (*source.Meta)({
         Position: (source.Position) {
           Line: (int) 1,
@@ -13827,6 +13970,7 @@
             FloatValue: (*float64)(<nil>),
             BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=25) "The Orders DynamoDB Table"),
+            NoneValue: (*bool)(<nil>),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
                 Line: (int) 7,
@@ -13895,6 +14039,7 @@
             FloatValue: (*float64)(<nil>),
             BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=22) "The Orders Event Topic"),
+            NoneValue: (*bool)(<nil>),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
                 Line: (int) 10,
@@ -14173,6 +14318,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=19) "handlers.Authoriser"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 99,
@@ -14203,6 +14349,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 100,
@@ -14426,6 +14573,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=3) "get"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 112,
@@ -14456,6 +14604,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=7) "/orders"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 113,
@@ -14520,6 +14669,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=18) "handlers.GetOrders"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 109,
@@ -14550,6 +14700,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 110,
@@ -14687,6 +14838,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 46,
@@ -14724,6 +14876,7 @@
                                 FloatValue: (*float64)(<nil>),
                                 BytesValue: (*[]uint8)(<nil>),
                                 StringValue: (*string)((len=10) "Orders API"),
+                                NoneValue: (*bool)(<nil>),
                                 SourceMeta: (*source.Meta)({
                                   Position: (source.Position) {
                                     Line: (int) 50,
@@ -14754,6 +14907,7 @@
                                 FloatValue: (*float64)(<nil>),
                                 BytesValue: (*[]uint8)(<nil>),
                                 StringValue: (*string)((len=6) "70 100"),
+                                NoneValue: (*bool)(<nil>),
                                 SourceMeta: (*source.Meta)({
                                   Position: (source.Position) {
                                     Line: (int) 49,
@@ -14784,6 +14938,7 @@
                                 FloatValue: (*float64)(<nil>),
                                 BytesValue: (*[]uint8)(<nil>),
                                 StringValue: (*string)((len=16) "getOrderEndpoint"),
+                                NoneValue: (*bool)(<nil>),
                                 SourceMeta: (*source.Meta)({
                                   Position: (source.Position) {
                                     Line: (int) 48,
@@ -14859,6 +15014,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=6) "20 100"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 44,
@@ -14889,6 +15045,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 45,
@@ -15140,6 +15297,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=5) "go1.x"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 71,
@@ -15170,6 +15328,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 74,
@@ -15531,6 +15690,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=5) "go1.x"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 152,
@@ -15572,6 +15732,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=27) "build/shared-packages-layer"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 155,
@@ -15602,6 +15763,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=19) "sharedPackagesLayer"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 156,
@@ -15763,6 +15925,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)(<nil>),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 136,
@@ -15793,6 +15956,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)((len=6) "pubsub"),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 133,
@@ -15870,6 +16034,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=20) "handlers.UpdateOrder"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 129,
@@ -15900,6 +16065,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 130,
@@ -16075,6 +16241,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=4) "tags"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 20,

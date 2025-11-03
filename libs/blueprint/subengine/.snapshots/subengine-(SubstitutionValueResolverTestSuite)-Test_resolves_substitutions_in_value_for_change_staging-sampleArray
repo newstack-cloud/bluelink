@@ -24,6 +24,7 @@
             FloatValue: (*float64)(<nil>),
             BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=5) "item1"),
+            NoneValue: (*bool)(<nil>),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
                 Line: (int) 45,
@@ -54,6 +55,7 @@
             FloatValue: (*float64)(<nil>),
             BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=5) "item2"),
+            NoneValue: (*bool)(<nil>),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
                 Line: (int) 45,
@@ -84,6 +86,7 @@
             FloatValue: (*float64)(<nil>),
             BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=5) "item3"),
+            NoneValue: (*bool)(<nil>),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
                 Line: (int) 45,
@@ -119,6 +122,7 @@
         FloatValue: (*float64)(<nil>),
         BytesValue: (*[]uint8)(<nil>),
         StringValue: (*string)((len=36) "A sample array for testing purposes."),
+        NoneValue: (*bool)(<nil>),
         SourceMeta: (*source.Meta)(<nil>)
       }),
       Fields: (map[string]*core.MappingNode) <nil>,

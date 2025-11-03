@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
@@ -85,7 +86,20 @@ func (f *MapFunction) Call(
 	ctx context.Context,
 	input *provider.FunctionCallInput,
 ) (*provider.FunctionCallOutput, error) {
-	var items []interface{}
+	// Get the first argument to check if it's none
+	firstArg, err := input.Arguments.Get(ctx, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// If the input array is none, return none
+	if core.IsNoneMarker(firstArg) {
+		return &provider.FunctionCallOutput{
+			ResponseData: core.GetNoneMarker(),
+		}, nil
+	}
+
+	var items []any
 	var mapFuncInfo provider.FunctionRuntimeInfo
 	if err := input.Arguments.GetMultipleVars(ctx, &items, &mapFuncInfo); err != nil {
 		return nil, err
@@ -95,9 +109,9 @@ func (f *MapFunction) Call(
 	// at this stage, so we will pass each item to the provided function
 	// and trust the function will check the type and return an error
 	// when it encounters an item of the wrong type.
-	newItems := make([]interface{}, len(items))
+	newItems := []any{}
 	for i, item := range items {
-		callArgs := []interface{}{item}
+		callArgs := []any{item}
 		if mapFuncInfo.ArgsOffset == 1 {
 			callArgs = append(callArgs, mapFuncInfo.PartialArgs...)
 		} else if mapFuncInfo.ArgsOffset > 1 {
@@ -132,7 +146,10 @@ func (f *MapFunction) Call(
 			return nil, err
 		}
 
-		newItems[i] = output.ResponseData
+		// Filter out none values from the results - they should not appear in the final array
+		if !core.IsNoneMarker(output.ResponseData) {
+			newItems = append(newItems, output.ResponseData)
+		}
 	}
 
 	return &provider.FunctionCallOutput{

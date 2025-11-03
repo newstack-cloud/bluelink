@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
@@ -73,6 +74,13 @@ func (f *SHA256Function) Call(
 	var value any
 	if err := input.Arguments.GetVar(ctx, 0, &value); err != nil {
 		return nil, err
+	}
+
+	// If input is none, propagate none
+	if core.IsNoneMarker(value) {
+		return &provider.FunctionCallOutput{
+			ResponseData: core.GetNoneMarker(),
+		}, nil
 	}
 
 	var data []byte

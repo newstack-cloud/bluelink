@@ -132,7 +132,11 @@ func resolvedValueToString(
 		return fmt.Sprintf("%t", *value.Scalar.BoolValue), nil
 	}
 
-	return "", fmt.Errorf("expected a scalar string, int, float or bool value")
+	if value.Scalar.NoneValue != nil && *value.Scalar.NoneValue {
+		return "", nil
+	}
+
+	return "", fmt.Errorf("expected a scalar string, int, float, bool or none value")
 }
 
 func transformValueForFunctionCall(value *resolvedFunctionCallValue, _ int) any {

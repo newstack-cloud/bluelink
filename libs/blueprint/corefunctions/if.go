@@ -3,6 +3,7 @@ package corefunctions
 import (
 	"context"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
@@ -62,16 +63,25 @@ func (f *IfFunction) Call(
 	ctx context.Context,
 	input *provider.FunctionCallInput,
 ) (*provider.FunctionCallOutput, error) {
-	var condition bool
+	var conditionAny any
 	var thenValue any
 	var elseValue any
-	if err := input.Arguments.GetMultipleVars(
-		ctx,
-		&condition,
-		&thenValue,
-		&elseValue,
-	); err != nil {
+	if err := input.Arguments.GetMultipleVars(ctx, &conditionAny, &thenValue, &elseValue); err != nil {
 		return nil, err
+	}
+
+	// Treat none as falsy - evaluate to false branch
+	condition := false
+	if !core.IsNoneMarker(conditionAny) {
+		var ok bool
+		condition, ok = conditionAny.(bool)
+		if !ok {
+			return nil, function.NewFuncCallError(
+				"condition argument to `if` must be a boolean value",
+				function.FuncCallErrorCodeInvalidInput,
+				input.CallContext.CallStackSnapshot(),
+			)
+		}
 	}
 
 	if condition {

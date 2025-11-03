@@ -3,6 +3,7 @@ package corefunctions
 import (
 	"context"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
@@ -64,10 +65,41 @@ func (f *OrFunction) Call(
 	ctx context.Context,
 	input *provider.FunctionCallInput,
 ) (*provider.FunctionCallOutput, error) {
-	var lhs bool
-	var rhs bool
-	if err := input.Arguments.GetMultipleVars(ctx, &lhs, &rhs); err != nil {
+	// Get arguments as any to check for none markers
+	lhsAny, err := input.Arguments.Get(ctx, 0)
+	if err != nil {
 		return nil, err
+	}
+	rhsAny, err := input.Arguments.Get(ctx, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	// Treat none as falsy (false) in OR logic
+	lhs := false
+	if !core.IsNoneMarker(lhsAny) {
+		var ok bool
+		lhs, ok = lhsAny.(bool)
+		if !ok {
+			return nil, function.NewFuncCallError(
+				"left argument to `or` must be a boolean value",
+				function.FuncCallErrorCodeInvalidInput,
+				input.CallContext.CallStackSnapshot(),
+			)
+		}
+	}
+
+	rhs := false
+	if !core.IsNoneMarker(rhsAny) {
+		var ok bool
+		rhs, ok = rhsAny.(bool)
+		if !ok {
+			return nil, function.NewFuncCallError(
+				"right argument to `or` must be a boolean value",
+				function.FuncCallErrorCodeInvalidInput,
+				input.CallContext.CallStackSnapshot(),
+			)
+		}
 	}
 
 	return &provider.FunctionCallOutput{

@@ -18,6 +18,7 @@
       FloatValue: (*float64)(<nil>),
       BytesValue: (*[]uint8)(<nil>),
       StringValue: (*string)((len=10) "2025-11-02"),
+      NoneValue: (*bool)(<nil>),
       SourceMeta: (*source.Meta)({
         Position: (source.Position) {
           Line: (int) 1,
@@ -507,6 +508,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=23) "order-system-blueprints"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 66,
@@ -537,6 +539,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "eu-west-1"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 67,
@@ -567,6 +570,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=6) "aws/s3"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 65,
@@ -1758,6 +1762,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=4) "tags"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 24,
@@ -1904,6 +1909,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=5) "vpcId"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 32,
@@ -2039,6 +2045,7 @@
             FloatValue: (*float64)(<nil>),
             BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=21) "variables.environment"),
+            NoneValue: (*bool)(<nil>),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
                 Line: (int) 72,
@@ -2107,6 +2114,7 @@
             FloatValue: (*float64)(<nil>),
             BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=7) "esbuild"),
+            NoneValue: (*bool)(<nil>),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
                 Line: (int) 76,

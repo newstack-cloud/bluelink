@@ -27,6 +27,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=51) "Stream that captures changes to the invoices table."),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -43,6 +44,7 @@
                 FloatValue: (*float64)(<nil>),
                 BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=30) "production-env Invoices Stream"),
+                NoneValue: (*bool)(<nil>),
                 SourceMeta: (*source.Meta)(<nil>)
               }),
               Fields: (map[string]*core.MappingNode) <nil>,
@@ -102,6 +104,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=30) "production-env Invoices Stream"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -117,6 +120,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "US-WEST-2"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -147,6 +151,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=30) "production-env Invoices Stream"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -168,6 +173,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=8) "invoices"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -189,6 +195,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=30) "production-env Invoices Stream"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -210,6 +217,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=9) "US-WEST-2"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -271,6 +279,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=46) "Table that stores invoices for an application."),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -287,6 +296,7 @@
                 FloatValue: (*float64)(<nil>),
                 BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=29) "production-env Invoices Table"),
+                NoneValue: (*bool)(<nil>),
                 SourceMeta: (*source.Meta)(<nil>)
               }),
               Fields: (map[string]*core.MappingNode) <nil>,
@@ -323,6 +333,7 @@
                 FloatValue: (*float64)(<nil>),
                 BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)(<nil>),
+                NoneValue: (*bool)(<nil>),
                 SourceMeta: (*source.Meta)(<nil>)
               }),
               Fields: (map[string]*core.MappingNode) <nil>,
@@ -365,6 +376,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -380,6 +392,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "US-WEST-2"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -395,6 +408,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=19) "production-invoices"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -425,6 +439,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=29) "production-env Invoices Table"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -446,6 +461,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=8) "invoices"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -467,6 +483,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -488,6 +505,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=9) "US-WEST-2"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -509,6 +527,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=19) "production-invoices"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -577,6 +596,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=44) "Table that stores orders for an application."),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -593,6 +613,7 @@
                 FloatValue: (*float64)(<nil>),
                 BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=27) "production-env Orders Table"),
+                NoneValue: (*bool)(<nil>),
                 SourceMeta: (*source.Meta)(<nil>)
               }),
               Fields: (map[string]*core.MappingNode) <nil>,
@@ -611,6 +632,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)(<nil>),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)(<nil>)
                   }),
                   Fields: (map[string]*core.MappingNode) <nil>,
@@ -646,6 +668,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=27) "production-env Orders Table"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
                       Fields: (map[string]*core.MappingNode) <nil>,
@@ -661,6 +684,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 75,
@@ -691,6 +715,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 76,
@@ -740,6 +765,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)(<nil>),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)(<nil>)
                   }),
                   Fields: (map[string]*core.MappingNode) <nil>,
@@ -763,6 +789,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
                       Fields: (map[string]*core.MappingNode) <nil>,
@@ -783,6 +810,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
                       Fields: (map[string]*core.MappingNode) <nil>,
@@ -812,6 +840,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -827,6 +856,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "US-WEST-2"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -842,6 +872,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=19) "production-orders-1"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -872,6 +903,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -907,6 +939,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=27) "production-env Orders Table"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -928,6 +961,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
                   Line: (int) 75,
@@ -964,6 +998,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
                   Line: (int) 76,
@@ -1000,6 +1035,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=27) "production-env Orders Table"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -1021,6 +1057,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=6) "orders"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -1042,6 +1079,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -1063,6 +1101,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=9) "US-WEST-2"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -1084,6 +1123,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=19) "production-orders-1"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -1137,6 +1177,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=44) "Table that stores orders for an application."),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -1153,6 +1194,7 @@
                 FloatValue: (*float64)(<nil>),
                 BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=27) "production-env Orders Table"),
+                NoneValue: (*bool)(<nil>),
                 SourceMeta: (*source.Meta)(<nil>)
               }),
               Fields: (map[string]*core.MappingNode) <nil>,
@@ -1171,6 +1213,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)(<nil>),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)(<nil>)
                   }),
                   Fields: (map[string]*core.MappingNode) <nil>,
@@ -1206,6 +1249,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=27) "production-env Orders Table"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
                       Fields: (map[string]*core.MappingNode) <nil>,
@@ -1221,6 +1265,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 75,
@@ -1251,6 +1296,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 76,
@@ -1300,6 +1346,7 @@
                     FloatValue: (*float64)(<nil>),
                     BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)(<nil>),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)(<nil>)
                   }),
                   Fields: (map[string]*core.MappingNode) <nil>,
@@ -1323,6 +1370,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
                       Fields: (map[string]*core.MappingNode) <nil>,
@@ -1343,6 +1391,7 @@
                         FloatValue: (*float64)(<nil>),
                         BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)(<nil>),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
                       Fields: (map[string]*core.MappingNode) <nil>,
@@ -1372,6 +1421,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -1387,6 +1437,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "US-WEST-2"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -1402,6 +1453,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=19) "production-orders-2"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -1432,6 +1484,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -1467,6 +1520,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=27) "production-env Orders Table"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -1488,6 +1542,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
                   Line: (int) 75,
@@ -1524,6 +1579,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
                   Line: (int) 76,
@@ -1560,6 +1616,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=27) "production-env Orders Table"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -1581,6 +1638,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=6) "orders"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -1602,6 +1660,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)(<nil>),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -1623,6 +1682,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=9) "US-WEST-2"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -1644,6 +1704,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=19) "production-orders-2"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -1697,6 +1758,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=35) "Function that processes an invoice."),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -1736,6 +1798,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=26) "src/processInvoice.handler"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 119,
@@ -1781,6 +1844,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=8) "invoices"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -1802,6 +1866,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=26) "src/processInvoice.handler"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
                   Line: (int) 119,
@@ -1870,6 +1935,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=45) "Function that saves an order to the database."),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -1913,6 +1979,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=21) "src/saveOrder.handler"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 128,
@@ -1958,6 +2025,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=21) "src/saveOrder.handler"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
                   Line: (int) 128,
@@ -2009,6 +2077,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=19) "production-orders-1"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -2030,6 +2099,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "US-WEST-2"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -2055,6 +2125,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=16) "dynamodb:GetItem"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)(<nil>)
                     }),
                     Fields: (map[string]*core.MappingNode) <nil>,
@@ -2081,6 +2152,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=5) "Allow"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -2112,6 +2184,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=19) "production-orders-2"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -2133,6 +2206,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "US-WEST-2"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -2158,6 +2232,7 @@
                       FloatValue: (*float64)(<nil>),
                       BytesValue: (*[]uint8)(<nil>),
                       StringValue: (*string)((len=16) "dynamodb:GetItem"),
+                      NoneValue: (*bool)(<nil>),
                       SourceMeta: (*source.Meta)(<nil>)
                     }),
                     Fields: (map[string]*core.MappingNode) <nil>,
@@ -2184,6 +2259,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=5) "Allow"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -2243,6 +2319,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=24) "A complex resource type."),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -2271,6 +2348,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=21) "https://example.com/1"),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 20,
@@ -2301,6 +2379,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=21) "https://example.com/2"),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 21,
@@ -2336,6 +2415,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)(<nil>),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 22,
@@ -2369,6 +2449,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=14) "production-env"),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)(<nil>)
                             }),
                             Fields: (map[string]*core.MappingNode) <nil>,
@@ -2384,6 +2465,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=9) "us-west-2"),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)(<nil>)
                             }),
                             Fields: (map[string]*core.MappingNode) <nil>,
@@ -2405,6 +2487,7 @@
                           FloatValue: (*float64)(<nil>),
                           BytesValue: (*[]uint8)(<nil>),
                           StringValue: (*string)(<nil>),
+                          NoneValue: (*bool)(<nil>),
                           SourceMeta: (*source.Meta)(<nil>)
                         }),
                         Fields: (map[string]*core.MappingNode) <nil>,
@@ -2432,6 +2515,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=19) "Contents of value 1"),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)(<nil>)
                             }),
                             Fields: (map[string]*core.MappingNode) <nil>,
@@ -2447,6 +2531,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=19) "Contents of value 2"),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)(<nil>)
                             }),
                             Fields: (map[string]*core.MappingNode) <nil>,
@@ -2481,6 +2566,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=17) "example-vendor-id"),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 28,
@@ -2511,6 +2597,7 @@
                               FloatValue: (*float64)(<nil>),
                               BytesValue: (*[]uint8)(<nil>),
                               StringValue: (*string)((len=24) "example-vendor-namespace"),
+                              NoneValue: (*bool)(<nil>),
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 27,
@@ -2567,6 +2654,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=21) "https://example.com/1"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 20,
@@ -2603,6 +2691,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=21) "https://example.com/2"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 21,
@@ -2639,6 +2728,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 22,
@@ -2675,6 +2765,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=14) "production-env"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -2696,6 +2787,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=9) "us-west-2"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -2717,6 +2809,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)(<nil>),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -2738,6 +2831,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=19) "Contents of value 1"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -2759,6 +2853,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=19) "Contents of value 2"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -2780,6 +2875,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=17) "example-vendor-id"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 28,
@@ -2816,6 +2912,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=24) "example-vendor-namespace"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 27,
@@ -2875,6 +2972,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=14) "production-env"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -2896,6 +2994,7 @@
               FloatValue: (*float64)(<nil>),
               BytesValue: (*[]uint8)(<nil>),
               StringValue: (*string)((len=9) "US-WEST-2"),
+              NoneValue: (*bool)(<nil>),
               SourceMeta: (*source.Meta)(<nil>)
             }),
             Fields: (map[string]*core.MappingNode) <nil>,
@@ -2927,6 +3026,7 @@
           FloatValue: (*float64)(<nil>),
           BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=14) "production-env"),
+          NoneValue: (*bool)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
         Fields: (map[string]*core.MappingNode) <nil>,
@@ -2957,6 +3057,7 @@
             FloatValue: (*float64)(<nil>),
             BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=7) "esbuild"),
+            NoneValue: (*bool)(<nil>),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
                 Line: (int) 145,

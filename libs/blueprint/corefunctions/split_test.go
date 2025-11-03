@@ -83,3 +83,23 @@ func (s *SplitFunctionTestSuite) Test_returns_func_error_for_invalid_input(c *C)
 	})
 	c.Assert(funcErr.Code, Equals, function.FuncCallErrorCodeFunctionCall)
 }
+
+func (s *SplitFunctionTestSuite) Test_propagates_none_value(c *C) {
+	splitFunc := NewSplitFunction()
+	s.callStack.Push(&function.Call{
+		FunctionName: "split",
+	})
+	output, err := splitFunc.Call(context.TODO(), &provider.FunctionCallInput{
+		Arguments: &functionCallArgsMock{
+			args: []any{
+				core.GetNoneMarker(),
+				",",
+			},
+			callCtx: s.callContext,
+		},
+		CallContext: s.callContext,
+	})
+
+	c.Assert(err, IsNil)
+	c.Assert(core.IsNoneMarker(output.ResponseData), Equals, true)
+}

@@ -71,11 +71,11 @@ func (s *OrFunctionTestSuite) Test_returns_func_error_for_invalid_input(c *C) {
 	c.Assert(err, NotNil)
 	funcErr, isFuncErr := err.(*function.FuncCallError)
 	c.Assert(isFuncErr, Equals, true)
-	c.Assert(funcErr.Message, Equals, "argument at index 1 is of type int, but target is of type bool")
+	c.Assert(funcErr.Message, Equals, "right argument to `or` must be a boolean value")
 	c.Assert(funcErr.CallStack, DeepEquals, []*function.Call{
 		{
 			FunctionName: "or",
 		},
 	})
-	c.Assert(funcErr.Code, Equals, function.FuncCallErrorCodeInvalidArgumentType)
+	c.Assert(funcErr.Code, Equals, function.FuncCallErrorCodeInvalidInput)
 }

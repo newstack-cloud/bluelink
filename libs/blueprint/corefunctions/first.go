@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
@@ -71,9 +72,14 @@ func (f *FirstFunction) Call(
 	}
 
 	for _, param := range params {
+		// Skip none values - they should be treated as empty
+		if core.IsNoneMarker(param) {
+			continue
+		}
+
 		reflectParam := reflect.ValueOf(param)
 		isSlice := reflect.ValueOf(param).Kind() == reflect.Slice
-		if param != nil && param != "" && (isSlice && reflectParam.Len() > 0) {
+		if param != nil && param != "" && (!isSlice || reflectParam.Len() > 0) {
 			return &provider.FunctionCallOutput{
 				ResponseData: param,
 			}, nil

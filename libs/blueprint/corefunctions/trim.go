@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
@@ -59,9 +60,27 @@ func (f *TrimFunction) Call(
 	ctx context.Context,
 	input *provider.FunctionCallInput,
 ) (*provider.FunctionCallOutput, error) {
-	var inputStr string
-	if err := input.Arguments.GetVar(ctx, 0, &inputStr); err != nil {
+	// Get argument as any to check for none marker
+	inputAny, err := input.Arguments.Get(ctx, 0)
+	if err != nil {
 		return nil, err
+	}
+
+	// If input is none, propagate none
+	if core.IsNoneMarker(inputAny) {
+		return &provider.FunctionCallOutput{
+			ResponseData: core.GetNoneMarker(),
+		}, nil
+	}
+
+	// Convert to string and perform operation
+	inputStr, ok := inputAny.(string)
+	if !ok {
+		return nil, function.NewFuncCallError(
+			"argument to `trim` must be a string",
+			function.FuncCallErrorCodeInvalidInput,
+			input.CallContext.CallStackSnapshot(),
+		)
 	}
 
 	return &provider.FunctionCallOutput{

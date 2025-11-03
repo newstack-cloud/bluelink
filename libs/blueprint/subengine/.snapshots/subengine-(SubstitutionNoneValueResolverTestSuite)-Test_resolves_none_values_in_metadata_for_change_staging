@@ -1,0 +1,203 @@
+(*subengine.ResolveInMappingNodeResult)({
+  ResolvedMappingNode: (*core.MappingNode)({
+    Scalar: (*core.ScalarValue)(<nil>),
+    Fields: (map[string]*core.MappingNode) (len=5) {
+      (string) (len=14) "coalescedValue": (*core.MappingNode)({
+        Scalar: (*core.ScalarValue)({
+          IntValue: (*int)(<nil>),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
+          StringValue: (*string)((len=7) "present"),
+          NoneValue: (*bool)(<nil>),
+          SourceMeta: (*source.Meta)(<nil>)
+        }),
+        Fields: (map[string]*core.MappingNode) <nil>,
+        Items: ([]*core.MappingNode) <nil>,
+        StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+        SourceMeta: (*source.Meta)(<nil>),
+        FieldsSourceMeta: (map[string]*source.Meta) <nil>
+      }),
+      (string) (len=6) "config": (*core.MappingNode)({
+        Scalar: (*core.ScalarValue)(<nil>),
+        Fields: (map[string]*core.MappingNode) (len=2) {
+          (string) (len=7) "enabled": (*core.MappingNode)({
+            Scalar: (*core.ScalarValue)({
+              IntValue: (*int)(<nil>),
+              BoolValue: (*bool)(true),
+              FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
+              StringValue: (*string)(<nil>),
+              NoneValue: (*bool)(<nil>),
+              SourceMeta: (*source.Meta)({
+                Position: (source.Position) {
+                  Line: (int) 47,
+                  Column: (int) 14
+                },
+                EndPosition: (*source.Position)({
+                  Line: (int) 47,
+                  Column: (int) 18
+                })
+              })
+            }),
+            Fields: (map[string]*core.MappingNode) <nil>,
+            Items: ([]*core.MappingNode) <nil>,
+            StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+            SourceMeta: (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 47,
+                Column: (int) 14
+              },
+              EndPosition: (*source.Position)(<nil>)
+            }),
+            FieldsSourceMeta: (map[string]*source.Meta) <nil>
+          }),
+          (string) (len=7) "version": (*core.MappingNode)({
+            Scalar: (*core.ScalarValue)({
+              IntValue: (*int)(1),
+              BoolValue: (*bool)(<nil>),
+              FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
+              StringValue: (*string)(<nil>),
+              NoneValue: (*bool)(<nil>),
+              SourceMeta: (*source.Meta)({
+                Position: (source.Position) {
+                  Line: (int) 45,
+                  Column: (int) 14
+                },
+                EndPosition: (*source.Position)({
+                  Line: (int) 45,
+                  Column: (int) 15
+                })
+              })
+            }),
+            Fields: (map[string]*core.MappingNode) <nil>,
+            Items: ([]*core.MappingNode) <nil>,
+            StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+            SourceMeta: (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 45,
+                Column: (int) 14
+              },
+              EndPosition: (*source.Position)(<nil>)
+            }),
+            FieldsSourceMeta: (map[string]*source.Meta) <nil>
+          })
+        },
+        Items: ([]*core.MappingNode) <nil>,
+        StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+        SourceMeta: (*source.Meta)(<nil>),
+        FieldsSourceMeta: (map[string]*source.Meta) <nil>
+      }),
+      (string) (len=11) "environment": (*core.MappingNode)({
+        Scalar: (*core.ScalarValue)({
+          IntValue: (*int)(<nil>),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
+          StringValue: (*string)((len=8) "test-env"),
+          NoneValue: (*bool)(<nil>),
+          SourceMeta: (*source.Meta)(<nil>)
+        }),
+        Fields: (map[string]*core.MappingNode) <nil>,
+        Items: ([]*core.MappingNode) <nil>,
+        StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+        SourceMeta: (*source.Meta)(<nil>),
+        FieldsSourceMeta: (map[string]*source.Meta) <nil>
+      }),
+      (string) (len=17) "interpolatedValue": (*core.MappingNode)({
+        Scalar: (*core.ScalarValue)({
+          IntValue: (*int)(<nil>),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
+          StringValue: (*string)((len=14) "prefix--suffix"),
+          NoneValue: (*bool)(<nil>),
+          SourceMeta: (*source.Meta)(<nil>)
+        }),
+        Fields: (map[string]*core.MappingNode) <nil>,
+        Items: ([]*core.MappingNode) <nil>,
+        StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+        SourceMeta: (*source.Meta)(<nil>),
+        FieldsSourceMeta: (map[string]*source.Meta) <nil>
+      }),
+      (string) (len=7) "tagList": (*core.MappingNode)({
+        Scalar: (*core.ScalarValue)(<nil>),
+        Fields: (map[string]*core.MappingNode) <nil>,
+        Items: ([]*core.MappingNode) (len=2) {
+          (*core.MappingNode)({
+            Scalar: (*core.ScalarValue)({
+              IntValue: (*int)(<nil>),
+              BoolValue: (*bool)(<nil>),
+              FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
+              StringValue: (*string)((len=4) "tag1"),
+              NoneValue: (*bool)(<nil>),
+              SourceMeta: (*source.Meta)({
+                Position: (source.Position) {
+                  Line: (int) 49,
+                  Column: (int) 7
+                },
+                EndPosition: (*source.Position)({
+                  Line: (int) 49,
+                  Column: (int) 11
+                })
+              })
+            }),
+            Fields: (map[string]*core.MappingNode) <nil>,
+            Items: ([]*core.MappingNode) <nil>,
+            StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+            SourceMeta: (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 49,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)(<nil>)
+            }),
+            FieldsSourceMeta: (map[string]*source.Meta) <nil>
+          }),
+          (*core.MappingNode)({
+            Scalar: (*core.ScalarValue)({
+              IntValue: (*int)(<nil>),
+              BoolValue: (*bool)(<nil>),
+              FloatValue: (*float64)(<nil>),
+              BytesValue: (*[]uint8)(<nil>),
+              StringValue: (*string)((len=4) "tag2"),
+              NoneValue: (*bool)(<nil>),
+              SourceMeta: (*source.Meta)({
+                Position: (source.Position) {
+                  Line: (int) 51,
+                  Column: (int) 7
+                },
+                EndPosition: (*source.Position)({
+                  Line: (int) 51,
+                  Column: (int) 11
+                })
+              })
+            }),
+            Fields: (map[string]*core.MappingNode) <nil>,
+            Items: ([]*core.MappingNode) <nil>,
+            StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+            SourceMeta: (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 51,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)(<nil>)
+            }),
+            FieldsSourceMeta: (map[string]*source.Meta) <nil>
+          })
+        },
+        StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+        SourceMeta: (*source.Meta)(<nil>),
+        FieldsSourceMeta: (map[string]*source.Meta) <nil>
+      })
+    },
+    Items: ([]*core.MappingNode) <nil>,
+    StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+    SourceMeta: (*source.Meta)(<nil>),
+    FieldsSourceMeta: (map[string]*source.Meta) <nil>
+  }),
+  ResolveOnDeploy: ([]string) {
+  }
+})

@@ -80,3 +80,24 @@ func (s *ReplaceFunctionTestSuite) Test_returns_func_error_for_invalid_input(c *
 	})
 	c.Assert(funcErr.Code, Equals, function.FuncCallErrorCodeFunctionCall)
 }
+
+func (s *ReplaceFunctionTestSuite) Test_propagates_none_value(c *C) {
+	replaceFunc := NewReplaceFunction()
+	s.callStack.Push(&function.Call{
+		FunctionName: "replace",
+	})
+	output, err := replaceFunc.Call(context.TODO(), &provider.FunctionCallInput{
+		Arguments: &functionCallArgsMock{
+			args: []any{
+				core.GetNoneMarker(),
+				"https://",
+				"www.",
+			},
+			callCtx: s.callContext,
+		},
+		CallContext: s.callContext,
+	})
+
+	c.Assert(err, IsNil)
+	c.Assert(core.IsNoneMarker(output.ResponseData), Equals, true)
+}

@@ -21,6 +21,7 @@
           FloatValue: (*float64)(<nil>),
           BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=10) "Networking"),
+          NoneValue: (*bool)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
         Fields: (map[string]*core.MappingNode) <nil>,
@@ -41,6 +42,7 @@
             FloatValue: (*float64)(<nil>),
             BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=4) "tags"),
+            NoneValue: (*bool)(<nil>),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
                 Line: (int) 32,
@@ -74,6 +76,7 @@
                   FloatValue: (*float64)(<nil>),
                   BytesValue: (*[]uint8)(<nil>),
                   StringValue: (*string)((len=27) "test-orders-table-309428320"),
+                  NoneValue: (*bool)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 Fields: (map[string]*core.MappingNode) <nil>,
@@ -110,6 +113,7 @@
             FloatValue: (*float64)(<nil>),
             BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=23) "The IDs of the subnets."),
+            NoneValue: (*bool)(<nil>),
             SourceMeta: (*source.Meta)(<nil>)
           }),
           Fields: (map[string]*core.MappingNode) <nil>,
@@ -139,6 +143,7 @@
           FloatValue: (*float64)(<nil>),
           BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=5) "vpcId"),
+          NoneValue: (*bool)(<nil>),
           SourceMeta: (*source.Meta)({
             Position: (source.Position) {
               Line: (int) 40,
@@ -157,6 +162,7 @@
             FloatValue: (*float64)(<nil>),
             BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=19) "The ID of the VPC.\n"),
+            NoneValue: (*bool)(<nil>),
             SourceMeta: (*source.Meta)(<nil>)
           }),
           Fields: (map[string]*core.MappingNode) <nil>,
@@ -174,6 +180,7 @@
         FloatValue: (*float64)(<nil>),
         BytesValue: (*[]uint8)(<nil>),
         StringValue: (*string)((len=41) "Networking resources for the application."),
+        NoneValue: (*bool)(<nil>),
         SourceMeta: (*source.Meta)(<nil>)
       }),
       Fields: (map[string]*core.MappingNode) <nil>,

@@ -79,3 +79,25 @@ func (s *HasSuffixFunctionTestSuite) Test_returns_func_error_for_invalid_input(c
 	})
 	c.Assert(funcErr.Code, Equals, function.FuncCallErrorCodeInvalidArgumentType)
 }
+
+func (s *HasSuffixFunctionTestSuite) Test_returns_false_for_none_value(c *C) {
+	hasSuffixFunc := NewHasSuffixFunction()
+	s.callStack.Push(&function.Call{
+		FunctionName: "has_suffix",
+	})
+	output, err := hasSuffixFunc.Call(context.TODO(), &provider.FunctionCallInput{
+		Arguments: &functionCallArgsMock{
+			args: []any{
+				core.GetNoneMarker(),
+				"/config",
+			},
+			callCtx: s.callContext,
+		},
+		CallContext: s.callContext,
+	})
+
+	c.Assert(err, IsNil)
+	outputBool, isBool := output.ResponseData.(bool)
+	c.Assert(isBool, Equals, true)
+	c.Assert(outputBool, Equals, false)
+}

@@ -94,3 +94,22 @@ func (s *Base64EncodeFunctionTestSuite) Test_returns_func_error_for_invalid_inpu
 	})
 	c.Assert(funcErr.Code, Equals, function.FuncCallErrorCodeInvalidArgumentType)
 }
+
+func (s *Base64EncodeFunctionTestSuite) Test_propagates_none_value(c *C) {
+	base64EncodeFunc := NewBase64EncodeFunction()
+	s.callStack.Push(&function.Call{
+		FunctionName: "base64encode",
+	})
+	output, err := base64EncodeFunc.Call(context.TODO(), &provider.FunctionCallInput{
+		Arguments: &functionCallArgsMock{
+			args: []any{
+				core.GetNoneMarker(),
+			},
+			callCtx: s.callContext,
+		},
+		CallContext: s.callContext,
+	})
+
+	c.Assert(err, IsNil)
+	c.Assert(core.IsNoneMarker(output.ResponseData), Equals, true)
+}

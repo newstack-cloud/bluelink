@@ -79,3 +79,25 @@ func (s *HasPrefixFunctionTestSuite) Test_returns_func_error_for_invalid_input(c
 	})
 	c.Assert(funcErr.Code, Equals, function.FuncCallErrorCodeInvalidArgumentType)
 }
+
+func (s *HasPrefixFunctionTestSuite) Test_returns_false_for_none_value(c *C) {
+	hasPrefixFunc := NewHasPrefixFunction()
+	s.callStack.Push(&function.Call{
+		FunctionName: "has_prefix",
+	})
+	output, err := hasPrefixFunc.Call(context.TODO(), &provider.FunctionCallInput{
+		Arguments: &functionCallArgsMock{
+			args: []any{
+				core.GetNoneMarker(),
+				"https://",
+			},
+			callCtx: s.callContext,
+		},
+		CallContext: s.callContext,
+	})
+
+	c.Assert(err, IsNil)
+	outputBool, isBool := output.ResponseData.(bool)
+	c.Assert(isBool, Equals, true)
+	c.Assert(outputBool, Equals, false)
+}

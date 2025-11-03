@@ -8,6 +8,7 @@ import (
 
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
+	bpfunction "github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
@@ -1125,7 +1126,12 @@ func (r *defaultSubstitutionResolver) resolveInMappingNodeSlice(
 			return nil, finalErr
 		}
 
-		resolvedItems = append(resolvedItems, resolvedItem)
+		// Filter out `none` values from arrays - they should not appear in the final array
+		// according to the blueprint specification.
+		isNone := resolvedItem != nil && resolvedItem.Scalar != nil && bpcore.IsScalarNone(resolvedItem.Scalar)
+		if !isNone {
+			resolvedItems = append(resolvedItems, resolvedItem)
+		}
 	}
 
 	if len(resolveOnDeployErrs) > 0 {
@@ -1162,7 +1168,12 @@ func (r *defaultSubstitutionResolver) resolveInMappingNodeFields(
 			return nil, finalErr
 		}
 
-		resolvedFields[fieldName] = resolvedField
+		// Omit fields that resolve to `none` - they should be completely left out
+		// of the final output according to the blueprint specification.
+		isNone := resolvedField != nil && resolvedField.Scalar != nil && bpcore.IsScalarNone(resolvedField.Scalar)
+		if !isNone {
+			resolvedFields[fieldName] = resolvedField
+		}
 	}
 
 	if len(resolveOnDeployErrs) > 0 {
@@ -1772,6 +1783,12 @@ func (r *defaultSubstitutionResolver) resolveScalar(
 		}
 	}
 
+	if substitutionValue.NoneValue {
+		return &bpcore.MappingNode{
+			Scalar: bpcore.NoneScalar(),
+		}
+	}
+
 	return nil
 }
 
@@ -2332,9 +2349,35 @@ func (r *defaultSubstitutionResolver) resolveFunctionCall(
 		}
 	}
 
-	args := functionCallDeps.callCtx.NewCallArgs(
-		core.Map(resolvedArgs, transformValueForFunctionCall)...,
+	// Get the function definition to check if it uses variadic parameters
+	funcDefOutput, err := functionCallDeps.scopedRegistry.GetDefinition(
+		ctx,
+		string(function.FunctionName),
+		&provider.FunctionGetDefinitionInput{},
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	transformedArgs := core.Map(resolvedArgs, transformValueForFunctionCall)
+
+	// Check if the function has variadic parameters
+	// If it does, we need to pack all arguments into a single slice
+	hasVariadicParams := false
+	if funcDefOutput != nil && funcDefOutput.Definition != nil && len(funcDefOutput.Definition.Parameters) > 0 {
+		lastParam := funcDefOutput.Definition.Parameters[len(funcDefOutput.Definition.Parameters)-1]
+		_, hasVariadicParams = lastParam.(*bpfunction.VariadicParameter)
+	}
+
+	var args provider.FunctionCallArguments
+	if hasVariadicParams {
+		// For variadic functions, pack all arguments into a single slice
+		args = functionCallDeps.callCtx.NewCallArgs(transformedArgs)
+	} else {
+		// For non-variadic functions, pass arguments individually
+		args = functionCallDeps.callCtx.NewCallArgs(transformedArgs...)
+	}
+
 	output, err := functionCallDeps.scopedRegistry.Call(
 		ctx,
 		string(function.FunctionName),

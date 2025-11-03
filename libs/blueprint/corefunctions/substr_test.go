@@ -220,3 +220,24 @@ func (s *SubstrFunctionTestSuite) Test_returns_func_error_for_invalid_input(c *C
 	})
 	c.Assert(funcErr.Code, Equals, function.FuncCallErrorCodeInvalidArgumentType)
 }
+
+func (s *SubstrFunctionTestSuite) Test_propagates_none_value(c *C) {
+	substrFunc := NewSubstrFunction()
+	s.callStack.Push(&function.Call{
+		FunctionName: "substr",
+	})
+	output, err := substrFunc.Call(context.TODO(), &provider.FunctionCallInput{
+		Arguments: &functionCallArgsMock{
+			args: []any{
+				core.GetNoneMarker(),
+				int64(0),
+				int64(3),
+			},
+			callCtx: s.callContext,
+		},
+		CallContext: s.callContext,
+	})
+
+	c.Assert(err, IsNil)
+	c.Assert(core.IsNoneMarker(output.ResponseData), Equals, true)
+}

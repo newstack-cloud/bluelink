@@ -20,6 +20,7 @@
         FloatValue: (*float64)(<nil>),
         BytesValue: (*[]uint8)(<nil>),
         StringValue: (*string)(<nil>),
+        NoneValue: (*bool)(<nil>),
         SourceMeta: (*source.Meta)({
           Position: (source.Position) {
             Line: (int) 50,
@@ -50,6 +51,7 @@
         FloatValue: (*float64)(<nil>),
         BytesValue: (*[]uint8)(<nil>),
         StringValue: (*string)((len=38) "A sample integer for testing purposes."),
+        NoneValue: (*bool)(<nil>),
         SourceMeta: (*source.Meta)(<nil>)
       }),
       Fields: (map[string]*core.MappingNode) <nil>,

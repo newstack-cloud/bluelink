@@ -3,6 +3,7 @@ package corefunctions
 import (
 	"context"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
@@ -81,6 +82,19 @@ func (f *LookupFunction) Call(
 	ctx context.Context,
 	input *provider.FunctionCallInput,
 ) (*provider.FunctionCallOutput, error) {
+	// Get first argument to check for none marker
+	firstArg, err := input.Arguments.Get(ctx, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// If the input map/object is none, return none
+	if core.IsNoneMarker(firstArg) {
+		return &provider.FunctionCallOutput{
+			ResponseData: core.GetNoneMarker(),
+		}, nil
+	}
+
 	var mapping map[string]any
 	var key string
 	var defaultVal any

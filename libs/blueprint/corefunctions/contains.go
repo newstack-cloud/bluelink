@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
-	"github.com/newstack-cloud/bluelink/libs/common/core"
+	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
 )
 
 // ContainsFunction provides the implementation of
@@ -72,8 +73,21 @@ func (f *ContainsFunction) Call(
 	ctx context.Context,
 	input *provider.FunctionCallInput,
 ) (*provider.FunctionCallOutput, error) {
-	var haystack interface{}
-	var needle interface{}
+	// Get first argument as any to check for none marker
+	haystackAny, err := input.Arguments.Get(ctx, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// If haystack is none, return false (can't search in none)
+	if core.IsNoneMarker(haystackAny) {
+		return &provider.FunctionCallOutput{
+			ResponseData: false,
+		}, nil
+	}
+
+	var haystack any
+	var needle any
 	if err := input.Arguments.GetMultipleVars(ctx, &haystack, &needle); err != nil {
 		return nil, err
 	}
@@ -99,13 +113,13 @@ func (f *ContainsFunction) Call(
 		)
 	}
 
-	sliceHaystack, isHaystackSlice := haystack.([]interface{})
+	sliceHaystack, isHaystackSlice := haystack.([]any)
 	if isHaystackSlice {
 		found := false
 		i := 0
 		for !found && i < len(sliceHaystack) {
-			comparable, isComparable := sliceHaystack[i].(core.Comparable[any])
-			comparableNeedle, isComparableNeedle := needle.(core.Comparable[any])
+			comparable, isComparable := sliceHaystack[i].(commoncore.Comparable[any])
+			comparableNeedle, isComparableNeedle := needle.(commoncore.Comparable[any])
 			if isComparable && isComparableNeedle {
 				found = comparable.Equal(comparableNeedle)
 			} else {

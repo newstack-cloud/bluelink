@@ -69,11 +69,30 @@ func (s *ToUpperFunctionTestSuite) Test_returns_func_error_for_invalid_input(c *
 	c.Assert(err, NotNil)
 	funcErr, isFuncErr := err.(*function.FuncCallError)
 	c.Assert(isFuncErr, Equals, true)
-	c.Assert(funcErr.Message, Equals, "argument at index 0 is of type int, but target is of type string")
+	c.Assert(funcErr.Message, Equals, "argument to `to_upper` must be a string")
 	c.Assert(funcErr.CallStack, DeepEquals, []*function.Call{
 		{
 			FunctionName: "to_upper",
 		},
 	})
-	c.Assert(funcErr.Code, Equals, function.FuncCallErrorCodeInvalidArgumentType)
+	c.Assert(funcErr.Code, Equals, function.FuncCallErrorCodeInvalidInput)
+}
+
+func (s *ToUpperFunctionTestSuite) Test_propagates_none_value(c *C) {
+	toUpperFunc := NewToUpperFunction()
+	s.callStack.Push(&function.Call{
+		FunctionName: "to_upper",
+	})
+	output, err := toUpperFunc.Call(context.TODO(), &provider.FunctionCallInput{
+		Arguments: &functionCallArgsMock{
+			args: []any{
+				core.GetNoneMarker(),
+			},
+			callCtx: s.callContext,
+		},
+		CallContext: s.callContext,
+	})
+
+	c.Assert(err, IsNil)
+	c.Assert(core.IsNoneMarker(output.ResponseData), Equals, true)
 }

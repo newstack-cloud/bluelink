@@ -1,0 +1,82 @@
+(map[string]interface {}) (len=3) {
+  (string) (len=11) "environment": (*subengine.ResolveInExportResult)({
+    ResolvedExport: (*subengine.ResolvedExport)({
+      Type: (*schema.ExportTypeWrapper)({
+        Value: (schema.ExportType) (len=6) "string",
+        SourceMeta: (*source.Meta)({
+          Position: (source.Position) {
+            Line: (int) 32,
+            Column: (int) 11
+          },
+          EndPosition: (*source.Position)({
+            Line: (int) 32,
+            Column: (int) 17
+          })
+        })
+      }),
+      Field: (*core.ScalarValue)({
+        IntValue: (*int)(<nil>),
+        BoolValue: (*bool)(<nil>),
+        FloatValue: (*float64)(<nil>),
+        BytesValue: (*[]uint8)(<nil>),
+        StringValue: (*string)((len=21) "variables.environment"),
+        NoneValue: (*bool)(<nil>),
+        SourceMeta: (*source.Meta)({
+          Position: (source.Position) {
+            Line: (int) 33,
+            Column: (int) 12
+          },
+          EndPosition: (*source.Position)({
+            Line: (int) 33,
+            Column: (int) 33
+          })
+        })
+      }),
+      Description: (*core.MappingNode)(<nil>)
+    }),
+    ResolveOnDeploy: ([]string) {
+    }
+  }),
+  (string) (len=14) "optionalExport": (*subengine.ResolveInExportResult)({
+    ResolvedExport: (*subengine.ResolvedExport)({
+      Type: (*schema.ExportTypeWrapper)({
+        Value: (schema.ExportType) (len=6) "string",
+        SourceMeta: (*source.Meta)({
+          Position: (source.Position) {
+            Line: (int) 35,
+            Column: (int) 11
+          },
+          EndPosition: (*source.Position)({
+            Line: (int) 35,
+            Column: (int) 17
+          })
+        })
+      }),
+      Field: (*core.ScalarValue)(<nil>),
+      Description: (*core.MappingNode)(<nil>)
+    }),
+    ResolveOnDeploy: ([]string) {
+    }
+  }),
+  (string) (len=13) "presentExport": (*subengine.ResolveInExportResult)({
+    ResolvedExport: (*subengine.ResolvedExport)({
+      Type: (*schema.ExportTypeWrapper)({
+        Value: (schema.ExportType) (len=6) "string",
+        SourceMeta: (*source.Meta)({
+          Position: (source.Position) {
+            Line: (int) 38,
+            Column: (int) 11
+          },
+          EndPosition: (*source.Position)({
+            Line: (int) 38,
+            Column: (int) 17
+          })
+        })
+      }),
+      Field: (*core.ScalarValue)(<nil>),
+      Description: (*core.MappingNode)(<nil>)
+    }),
+    ResolveOnDeploy: ([]string) {
+    }
+  })
+}

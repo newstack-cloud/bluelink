@@ -79,3 +79,23 @@ func (s *IndexFunctionTestSuite) Test_returns_func_error_for_invalid_input(c *C)
 	})
 	c.Assert(funcErr.Code, Equals, function.FuncCallErrorCodeInvalidArgumentType)
 }
+
+func (s *IndexFunctionTestSuite) Test_propagates_none_value(c *C) {
+	indexFunc := NewIndexFunction()
+	s.callStack.Push(&function.Call{
+		FunctionName: "index",
+	})
+	output, err := indexFunc.Call(context.TODO(), &provider.FunctionCallInput{
+		Arguments: &functionCallArgsMock{
+			args: []any{
+				core.GetNoneMarker(),
+				"test",
+			},
+			callCtx: s.callContext,
+		},
+		CallContext: s.callContext,
+	})
+
+	c.Assert(err, IsNil)
+	c.Assert(core.IsNoneMarker(output.ResponseData), Equals, true)
+}

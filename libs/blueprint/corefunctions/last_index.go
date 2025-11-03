@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
@@ -68,6 +69,19 @@ func (f *LastIndexFunction) Call(
 	ctx context.Context,
 	input *provider.FunctionCallInput,
 ) (*provider.FunctionCallOutput, error) {
+	// Get first argument as any to check for none marker
+	haystackAny, err := input.Arguments.Get(ctx, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// If haystack is none, propagate none
+	if core.IsNoneMarker(haystackAny) {
+		return &provider.FunctionCallOutput{
+			ResponseData: core.GetNoneMarker(),
+		}, nil
+	}
+
 	var haystack string
 	var needle string
 	if err := input.Arguments.GetMultipleVars(ctx, &haystack, &needle); err != nil {

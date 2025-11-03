@@ -1,0 +1,53 @@
+version: 2025-11-02
+variables:
+  environment:
+    type: string
+
+resources:
+  testTable:
+    type: aws/dynamodb/table
+    description: Test table for none value handling
+    metadata:
+      displayName: ${variables.environment} Test Table
+      annotations:
+        optionalAnnotation: ${coalesce(none, none)}
+        requiredAnnotation: present-value
+      labels:
+        env: ${variables.environment}
+    spec:
+      tableName: test-table
+      region: us-west-2
+      optionalConfig: ${coalesce(none, none)}
+      settings:
+        timeout: 30
+        optionalTimeout: ${coalesce(none, none)}
+        retries: 3
+      tags:
+        - tag1
+        - ${coalesce(none, none)}
+        - tag2
+
+exports:
+  environment:
+    type: string
+    field: variables.environment
+  optionalExport:
+    type: string
+    value: ${coalesce(none, none)}
+  presentExport:
+    type: string
+    value: present-value
+
+metadata:
+  environment: ${variables.environment}
+  optionalMetadata: ${coalesce(none, none)}
+  config:
+    version: 1
+    optionalSetting: ${coalesce(none, none)}
+    enabled: true
+  tagList:
+    - tag1
+    - ${coalesce(none, none)}
+    - tag2
+  interpolatedValue: prefix-${coalesce(none, none)}-suffix
+  coalescedValue: ${coalesce(none, "present")}

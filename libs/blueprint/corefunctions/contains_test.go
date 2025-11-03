@@ -167,6 +167,28 @@ func (s *ContainsFunctionTestSuite) Test_returns_func_error_for_invalid_input_se
 	s.Assert().Equal(function.FuncCallErrorCodeInvalidInput, funcErr.Code)
 }
 
+func (s *ContainsFunctionTestSuite) Test_returns_false_for_none_value() {
+	containsFunc := NewContainsFunction()
+	s.callStack.Push(&function.Call{
+		FunctionName: "contains",
+	})
+	output, err := containsFunc.Call(context.TODO(), &provider.FunctionCallInput{
+		Arguments: &functionCallArgsMock{
+			args: []any{
+				core.GetNoneMarker(),
+				"substring",
+			},
+			callCtx: s.callContext,
+		},
+		CallContext: s.callContext,
+	})
+
+	s.Require().NoError(err)
+	outputBool, isBool := output.ResponseData.(bool)
+	s.Assert().True(isBool)
+	s.Assert().False(outputBool)
+}
+
 func TestContainsFunctionTestSuite(t *testing.T) {
 	suite.Run(t, new(ContainsFunctionTestSuite))
 }

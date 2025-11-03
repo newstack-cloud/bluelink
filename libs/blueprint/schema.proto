@@ -43,6 +43,7 @@ message ScalarValue {
         double float_value = 3;
         string string_value = 4;
         bytes bytes_value = 5;
+        bool none_value = 6;
     }
 }
 

@@ -1010,6 +1010,12 @@ func FromScalarValuePB(scalarValue *schemapb.ScalarValue, optional bool) (*core.
 		}, nil
 	}
 
+	if noneVal, isNone := scalarValue.Value.(*schemapb.ScalarValue_NoneValue); isNone {
+		return &core.ScalarValue{
+			NoneValue: &noneVal.NoneValue,
+		}, nil
+	}
+
 	return nil, errMissingScalarValue()
 }
 

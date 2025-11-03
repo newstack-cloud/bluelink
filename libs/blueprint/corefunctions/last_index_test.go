@@ -79,3 +79,23 @@ func (s *LastIndexFunctionTestSuite) Test_returns_func_error_for_invalid_input(c
 	})
 	c.Assert(funcErr.Code, Equals, function.FuncCallErrorCodeInvalidArgumentType)
 }
+
+func (s *LastIndexFunctionTestSuite) Test_propagates_none_value(c *C) {
+	lastIndexFunc := NewLastIndexFunction()
+	s.callStack.Push(&function.Call{
+		FunctionName: "last_index",
+	})
+	output, err := lastIndexFunc.Call(context.TODO(), &provider.FunctionCallInput{
+		Arguments: &functionCallArgsMock{
+			args: []any{
+				core.GetNoneMarker(),
+				"test",
+			},
+			callCtx: s.callContext,
+		},
+		CallContext: s.callContext,
+	})
+
+	c.Assert(err, IsNil)
+	c.Assert(core.IsNoneMarker(output.ResponseData), Equals, true)
+}

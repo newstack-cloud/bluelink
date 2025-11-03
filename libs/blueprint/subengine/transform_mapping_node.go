@@ -18,7 +18,14 @@ import (
 // convert Go values to mapping nodes.
 // There shouldn't be noticeable impact on performance unless very large, complex
 // structures are being converted or a blueprint contains 100s of function calls.
-func GoValueToMappingNode(value interface{}) *core.MappingNode {
+func GoValueToMappingNode(value any) *core.MappingNode {
+	// Check for none marker first - convert back to none scalar
+	if core.IsNoneMarker(value) {
+		return &core.MappingNode{
+			Scalar: core.NoneScalar(),
+		}
+	}
+
 	finalValue := dereferencePointer(value)
 
 	typeofValue := reflect.TypeOf(finalValue)
@@ -67,7 +74,7 @@ func GoValueToMappingNode(value interface{}) *core.MappingNode {
 // MappingNodeToGoValue converts a mapping node to a Go value
 // to be used as arguments for function calls as functions expect
 // Go values as arguments.
-func MappingNodeToGoValue(node *core.MappingNode) interface{} {
+func MappingNodeToGoValue(node *core.MappingNode) any {
 	if node.Scalar != nil {
 		return toGoScalar(node.Scalar)
 	}
@@ -83,7 +90,12 @@ func MappingNodeToGoValue(node *core.MappingNode) interface{} {
 	return nil
 }
 
-func toGoScalar(Scalar *core.ScalarValue) interface{} {
+func toGoScalar(Scalar *core.ScalarValue) any {
+	// Check for none value first - return the special marker
+	if core.IsScalarNone(Scalar) {
+		return core.GetNoneMarker()
+	}
+
 	if Scalar.IntValue != nil {
 		return *Scalar.IntValue
 	}

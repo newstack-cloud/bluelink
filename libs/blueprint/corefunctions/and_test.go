@@ -71,9 +71,9 @@ func (s *AndFunctionTestSuite) Test_returns_func_error_for_invalid_input() {
 	s.Require().Error(err)
 	funcErr, isFuncErr := err.(*function.FuncCallError)
 	s.Assert().True(isFuncErr)
-	s.Assert().Equal("argument at index 1 is of type int, but target is of type bool", funcErr.Message)
+	s.Assert().Equal("right argument to `and` must be a boolean value", funcErr.Message)
 	s.Assert().Equal([]*function.Call{{FunctionName: "and"}}, funcErr.CallStack)
-	s.Assert().Equal(function.FuncCallErrorCodeInvalidArgumentType, funcErr.Code)
+	s.Assert().Equal(function.FuncCallErrorCodeInvalidInput, funcErr.Code)
 }
 
 func TestAndTestSuite(t *testing.T) {

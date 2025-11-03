@@ -11,6 +11,54 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var (
+	// True is a helper var for pointers to booleans such as that
+	// of the NoneValue field of a scalar.
+	True = true
+)
+
+// NoneMarker is a special sentinel type used to represent `none` values
+// during substitution resolution and function calls.
+// This allows us to differentiate `none` from other "empty" values like nil,
+// empty strings, false, 0, etc.
+//
+// IMPORTANT: This marker is used throughout the resolution pipeline and
+// MUST be preserved when converting between Go values and MappingNodes.
+// When a function receives a NoneMarker as input, it should typically
+// return a NoneMarker to propagate the none value through the chain.
+//
+// The marker should NEVER appear in serialized blueprint files or protobuf
+// messages - it is strictly a runtime construct for the substitution engine.
+type NoneMarker struct{}
+
+// noneMarkerInstance is the singleton instance of NoneMarker
+// used throughout the codebase to represent none values.
+var noneMarkerInstance = &NoneMarker{}
+
+// GetNoneMarker returns the singleton instance of the none marker.
+// This should be used when converting none values to Go types and
+// when checking if a value is none.
+//
+// Example usage:
+//
+//	if value == core.GetNoneMarker() {
+//	    // Handle none value
+//	}
+func GetNoneMarker() *NoneMarker {
+	return noneMarkerInstance
+}
+
+// IsNoneMarker checks if a given value is the none marker.
+// This is the recommended way to check if a value represents none
+// in the substitution resolution pipeline.
+func IsNoneMarker(value any) bool {
+	if value == nil {
+		return false
+	}
+	_, ok := value.(*NoneMarker)
+	return ok
+}
+
 // ScalarValue represents a scalar value in
 // a blueprint specification.
 // Pointers are used as empty values such as "", 0 and false
@@ -36,12 +84,15 @@ import (
 // This is because MappingNode was originally designed as part of the blueprint schema
 // which only supports these primitive types in the specification.
 type ScalarValue struct {
-	IntValue    *int
-	BoolValue   *bool
-	FloatValue  *float64
-	BytesValue  *[]byte // Runtime-only: never appears in blueprint files, converted to string on marshal
+	IntValue   *int
+	BoolValue  *bool
+	FloatValue *float64
+	// Runtime-only: never appears in blueprint files, converted to string on marshal
+	BytesValue  *[]byte
 	StringValue *string
-	SourceMeta  *source.Meta
+	// Runtime-only: never appears in blueprint files, only used during substitution resolution
+	NoneValue  *bool
+	SourceMeta *source.Meta
 }
 
 // ToString returns the string representation of the scalar value
@@ -61,6 +112,9 @@ func (v *ScalarValue) ToString() string {
 	}
 	if v.BytesValue != nil {
 		return string(*v.BytesValue)
+	}
+	if v.NoneValue != nil {
+		return ""
 	}
 	return ""
 }
@@ -84,6 +138,10 @@ func (v *ScalarValue) MarshalYAML() (any, error) {
 		// Convert bytes to UTF-8 string for YAML output.
 		// Bytes are runtime-only and should never appear in blueprint files.
 		return string(*v.BytesValue), nil
+	}
+	if v.NoneValue != nil && *v.NoneValue {
+		// None values are serialised as empty strings.
+		return "", nil
 	}
 	return *v.FloatValue, nil
 }
@@ -161,6 +219,11 @@ func (v *ScalarValue) MarshalJSON() ([]byte, error) {
 		// Convert bytes to UTF-8 string for JSON output.
 		// Bytes are runtime-only and should never appear in blueprint files.
 		return json.Marshal(string(*v.BytesValue))
+	}
+
+	if v.NoneValue != nil && *v.NoneValue {
+		// None values are serialised as empty strings.
+		return json.Marshal("")
 	}
 
 	return json.Marshal(*v.FloatValue)
@@ -258,6 +321,10 @@ func (v *ScalarValue) Equal(otherScalar *ScalarValue) bool {
 
 	if v.FloatValue != nil && otherScalar.FloatValue != nil {
 		return *v.FloatValue == *otherScalar.FloatValue
+	}
+
+	if v.NoneValue != nil && otherScalar.NoneValue != nil {
+		return *v.NoneValue == *otherScalar.NoneValue
 	}
 
 	if v.BytesValue != nil && otherScalar.BytesValue != nil {
@@ -366,13 +433,21 @@ func ScalarFromFloat(value float64) *ScalarValue {
 	}
 }
 
+// NoneScalar creates a scalar value that represents a none value.
+func NoneScalar() *ScalarValue {
+	return &ScalarValue{
+		NoneValue: &True,
+	}
+}
+
 // IsScalarNil checks if a scalar value is nil or has no value.
 func IsScalarNil(scalar *ScalarValue) bool {
 	return scalar == nil || (scalar.StringValue == nil &&
 		scalar.IntValue == nil &&
 		scalar.BoolValue == nil &&
 		scalar.FloatValue == nil &&
-		scalar.BytesValue == nil)
+		scalar.BytesValue == nil &&
+		scalar.NoneValue == nil)
 }
 
 // IsScalarString checks if a scalar value is a string or bytes.
@@ -404,6 +479,11 @@ func IsScalarFloat(scalar *ScalarValue) bool {
 // substitution resolution.
 func IsScalarBytes(scalar *ScalarValue) bool {
 	return scalar != nil && scalar.BytesValue != nil
+}
+
+// IsScalarNone checks if a scalar value is a none value.
+func IsScalarNone(scalar *ScalarValue) bool {
+	return scalar != nil && scalar.NoneValue != nil && *scalar.NoneValue
 }
 
 // BytesValueFromScalar extracts a Go byte slice from a bytes

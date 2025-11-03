@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
@@ -66,6 +67,19 @@ func (f *HasPrefixFunction) Call(
 	ctx context.Context,
 	input *provider.FunctionCallInput,
 ) (*provider.FunctionCallOutput, error) {
+	// Get first argument as any to check for none marker
+	inputAny, err := input.Arguments.Get(ctx, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// If input is none, return false (none strings don't have prefixes)
+	if core.IsNoneMarker(inputAny) {
+		return &provider.FunctionCallOutput{
+			ResponseData: false,
+		}, nil
+	}
+
 	var inputStr string
 	var prefix string
 	if err := input.Arguments.GetMultipleVars(ctx, &inputStr, &prefix); err != nil {

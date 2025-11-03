@@ -104,3 +104,22 @@ func (s *SHA1FunctionTestSuite) Test_returns_error_for_invalid_argument_type(c *
 	c.Assert(funcErr.Message, Matches, "input argument at index 0 must be a string or byte array.*")
 	c.Assert(funcErr.Code, Equals, function.FuncCallErrorCodeInvalidArgumentType)
 }
+
+func (s *SHA1FunctionTestSuite) Test_propagates_none_value(c *C) {
+	sha1Func := NewSHA1Function()
+	s.callStack.Push(&function.Call{
+		FunctionName: "sha1",
+	})
+	output, err := sha1Func.Call(context.TODO(), &provider.FunctionCallInput{
+		Arguments: &functionCallArgsMock{
+			args: []any{
+				core.GetNoneMarker(),
+			},
+			callCtx: s.callContext,
+		},
+		CallContext: s.callContext,
+	})
+
+	c.Assert(err, IsNil)
+	c.Assert(core.IsNoneMarker(output.ResponseData), Equals, true)
+}

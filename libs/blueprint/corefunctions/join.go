@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
@@ -67,11 +68,29 @@ func (f *JoinFunction) Call(
 	ctx context.Context,
 	input *provider.FunctionCallInput,
 ) (*provider.FunctionCallOutput, error) {
+	// Get the first argument as any to check if it's none
+	firstArg, err := input.Arguments.Get(ctx, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// If the input array is none, return none
+	if core.IsNoneMarker(firstArg) {
+		return &provider.FunctionCallOutput{
+			ResponseData: core.GetNoneMarker(),
+		}, nil
+	}
+
 	var inputStrSlice []string
 	var delimiter string
 	if err := input.Arguments.GetMultipleVars(ctx, &inputStrSlice, &delimiter); err != nil {
 		return nil, err
 	}
+
+	// There is no need to filter out none values from the slice before joining.
+	// This is because GetMultipleVars converts to []string, so none markers would have
+	// already been converted. We need to handle this at a different level.
+	// For now, the filtering happens at the array resolution level in resolveInMappingNodeSlice.
 
 	joined := strings.Join(inputStrSlice, delimiter)
 

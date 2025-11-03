@@ -3,6 +3,7 @@ package corefunctions
 import (
 	"context"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
@@ -56,9 +57,24 @@ func (f *NotFunction) Call(
 	ctx context.Context,
 	input *provider.FunctionCallInput,
 ) (*provider.FunctionCallOutput, error) {
-	var toNegate bool
-	if err := input.Arguments.GetVar(ctx, 0, &toNegate); err != nil {
+	// Get argument as any to check for none marker
+	toNegateAny, err := input.Arguments.Get(ctx, 0)
+	if err != nil {
 		return nil, err
+	}
+
+	// Treat none as falsy (false), so !none = true
+	toNegate := false
+	if !core.IsNoneMarker(toNegateAny) {
+		var ok bool
+		toNegate, ok = toNegateAny.(bool)
+		if !ok {
+			return nil, function.NewFuncCallError(
+				"argument to `not` must be a boolean value",
+				function.FuncCallErrorCodeInvalidInput,
+				input.CallContext.CallStackSnapshot(),
+			)
+		}
 	}
 
 	return &provider.FunctionCallOutput{

@@ -104,3 +104,22 @@ func (s *MD5FunctionTestSuite) Test_returns_error_for_invalid_argument_type(c *C
 	c.Assert(funcErr.Message, Matches, "input argument at index 0 must be a string or byte array.*")
 	c.Assert(funcErr.Code, Equals, function.FuncCallErrorCodeInvalidArgumentType)
 }
+
+func (s *MD5FunctionTestSuite) Test_propagates_none_value(c *C) {
+	md5Func := NewMD5Function()
+	s.callStack.Push(&function.Call{
+		FunctionName: "md5",
+	})
+	output, err := md5Func.Call(context.TODO(), &provider.FunctionCallInput{
+		Arguments: &functionCallArgsMock{
+			args: []any{
+				core.GetNoneMarker(),
+			},
+			callCtx: s.callContext,
+		},
+		CallContext: s.callContext,
+	})
+
+	c.Assert(err, IsNil)
+	c.Assert(core.IsNoneMarker(output.ResponseData), Equals, true)
+}

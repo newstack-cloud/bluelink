@@ -61,6 +61,7 @@ func NewCoreProvider(
 		"keys":          corefunctions.NewKeysFunction(),
 		"vals":          corefunctions.NewValsFunction(),
 		"first":         corefunctions.NewFirstFunction(),
+		"coalesce":      corefunctions.NewCoalesceFunction(),
 		"lookup":        corefunctions.NewLookupFunction(),
 		"if":            corefunctions.NewIfFunction(),
 		"map":           corefunctions.NewMapFunction(),
