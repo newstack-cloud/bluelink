@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.36.0] - 2025-11-03
+
+### Added
+
+- Adds support for the `coalesce` function to the core provider. This function allows for the selection of the first non-none value from a list of values.
+- Adds support for `none` values in the substitution language as per the latest updates to the blueprint specification.
+
+### Fixed
+
+- Corrects the substitution engine behaviour for passing variadic arguments to functions. Variadic arguments are now passed as a single slice of values instead of individual arguments so that function implementations can distinguish between variadic and non-variadic arguments. When there is a known number of expected arguments, they are passed as individual arguments that can be extracted with the call context helpers, this doesn't work for variadic arguments as the number of arguments is not known until the function is called. Wrapping variadic arguments in a single slice means that functions do not need to know the number of arguments they are expected to receive in advance.
+
 ## [0.35.0] - 2025-10-18
 
 ### Added
