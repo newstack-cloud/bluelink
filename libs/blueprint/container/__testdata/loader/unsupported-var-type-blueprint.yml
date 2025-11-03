@@ -1,4 +1,4 @@
-version: 2025-05-12-draft
+version: 2025-11-02
 variables:
   parameter:
     # "aws/ec2/parameter" is not a supported variable type.

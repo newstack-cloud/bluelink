@@ -1,4 +1,4 @@
-version: 2025-05-12-draft
+version: 2025-11-02
 transform:
   # Only "serverless-2024" is a supported transform in the test loader.
   - serverless-2027
