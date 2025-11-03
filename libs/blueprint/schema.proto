@@ -148,6 +148,7 @@ message Substitution {
         int64 int_value = 10;
         double float_value = 11;
         bool bool_value = 12;
+        bool none_value = 13;
     }
 }
 

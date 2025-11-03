@@ -43,6 +43,7 @@
                             IntValue: (*int64)(<nil>),
                             FloatValue: (*float64)(<nil>),
                             BoolValue: (*bool)(<nil>),
+                            NoneValue: (bool) false,
                             SourceMeta: (*source.Meta)(<nil>)
                           }),
                           SourceMeta: (*source.Meta)(<nil>)
@@ -62,6 +63,7 @@
                             IntValue: (*int64)(<nil>),
                             FloatValue: (*float64)(<nil>),
                             BoolValue: (*bool)(<nil>),
+                            NoneValue: (bool) false,
                             SourceMeta: (*source.Meta)(<nil>)
                           }),
                           SourceMeta: (*source.Meta)(<nil>)
@@ -82,6 +84,7 @@
                     IntValue: (*int64)(<nil>),
                     FloatValue: (*float64)(<nil>),
                     BoolValue: (*bool)(<nil>),
+                    NoneValue: (bool) false,
                     SourceMeta: (*source.Meta)(<nil>)
                   }),
                   SourceMeta: (*source.Meta)(<nil>)
@@ -131,6 +134,7 @@
                           IntValue: (*int64)(<nil>),
                           FloatValue: (*float64)(<nil>),
                           BoolValue: (*bool)(<nil>),
+                          NoneValue: (bool) false,
                           SourceMeta: (*source.Meta)(<nil>)
                         }),
                         SourceMeta: (*source.Meta)(<nil>)
@@ -150,6 +154,7 @@
                           IntValue: (*int64)(<nil>),
                           FloatValue: (*float64)(<nil>),
                           BoolValue: (*bool)(<nil>),
+                          NoneValue: (bool) false,
                           SourceMeta: (*source.Meta)(<nil>)
                         }),
                         SourceMeta: (*source.Meta)(<nil>)
@@ -170,6 +175,7 @@
                   IntValue: (*int64)(<nil>),
                   FloatValue: (*float64)(<nil>),
                   BoolValue: (*bool)(<nil>),
+                  NoneValue: (bool) false,
                   SourceMeta: (*source.Meta)(<nil>)
                 }),
                 SourceMeta: (*source.Meta)(<nil>)
@@ -214,6 +220,7 @@
                       IntValue: (*int64)(<nil>),
                       FloatValue: (*float64)(<nil>),
                       BoolValue: (*bool)(<nil>),
+                      NoneValue: (bool) false,
                       SourceMeta: (*source.Meta)(<nil>)
                     }),
                     SourceMeta: (*source.Meta)(<nil>)
@@ -233,6 +240,7 @@
                       IntValue: (*int64)(<nil>),
                       FloatValue: (*float64)(<nil>),
                       BoolValue: (*bool)(<nil>),
+                      NoneValue: (bool) false,
                       SourceMeta: (*source.Meta)(<nil>)
                     }),
                     SourceMeta: (*source.Meta)(<nil>)
@@ -253,6 +261,7 @@
               IntValue: (*int64)(<nil>),
               FloatValue: (*float64)(<nil>),
               BoolValue: (*bool)(<nil>),
+              NoneValue: (bool) false,
               SourceMeta: (*source.Meta)(<nil>)
             }),
             SourceMeta: (*source.Meta)(<nil>)

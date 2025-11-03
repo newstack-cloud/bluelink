@@ -190,6 +190,7 @@
                             IntValue: (*int64)(<nil>),
                             FloatValue: (*float64)(<nil>),
                             BoolValue: (*bool)(<nil>),
+                            NoneValue: (bool) false,
                             SourceMeta: (*source.Meta)({
                               Position: (source.Position) {
                                 Line: (int) 13,
@@ -237,6 +238,7 @@
                     IntValue: (*int64)(<nil>),
                     FloatValue: (*float64)(<nil>),
                     BoolValue: (*bool)(<nil>),
+                    NoneValue: (bool) false,
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 13,
@@ -343,6 +345,7 @@
                             IntValue: (*int64)(<nil>),
                             FloatValue: (*float64)(<nil>),
                             BoolValue: (*bool)(<nil>),
+                            NoneValue: (bool) false,
                             SourceMeta: (*source.Meta)({
                               Position: (source.Position) {
                                 Line: (int) 17,
@@ -390,6 +393,7 @@
                     IntValue: (*int64)(<nil>),
                     FloatValue: (*float64)(<nil>),
                     BoolValue: (*bool)(<nil>),
+                    NoneValue: (bool) false,
                     SourceMeta: (*source.Meta)({
                       Position: (source.Position) {
                         Line: (int) 17,
@@ -765,6 +769,7 @@
                         IntValue: (*int64)(<nil>),
                         FloatValue: (*float64)(<nil>),
                         BoolValue: (*bool)(<nil>),
+                        NoneValue: (bool) false,
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 48,
@@ -932,6 +937,7 @@
                         IntValue: (*int64)(<nil>),
                         FloatValue: (*float64)(<nil>),
                         BoolValue: (*bool)(<nil>),
+                        NoneValue: (bool) false,
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 48,
@@ -1099,6 +1105,7 @@
                         IntValue: (*int64)(<nil>),
                         FloatValue: (*float64)(<nil>),
                         BoolValue: (*bool)(<nil>),
+                        NoneValue: (bool) false,
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 48,
@@ -1269,6 +1276,7 @@
                         IntValue: (*int64)(<nil>),
                         FloatValue: (*float64)(<nil>),
                         BoolValue: (*bool)(<nil>),
+                        NoneValue: (bool) false,
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 58,
@@ -1439,6 +1447,7 @@
                         IntValue: (*int64)(<nil>),
                         FloatValue: (*float64)(<nil>),
                         BoolValue: (*bool)(<nil>),
+                        NoneValue: (bool) false,
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 58,
@@ -1609,6 +1618,7 @@
                         IntValue: (*int64)(<nil>),
                         FloatValue: (*float64)(<nil>),
                         BoolValue: (*bool)(<nil>),
+                        NoneValue: (bool) false,
                         SourceMeta: (*source.Meta)({
                           Position: (source.Position) {
                             Line: (int) 58,

@@ -5,6 +5,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/common/testhelpers"
 	. "gopkg.in/check.v1"
 )
 
@@ -1693,6 +1694,27 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 			},
 		},
 	})
+}
+
+func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_none_value(c *C) {
+	parsed, err := ParseSubstitutionValues(
+		"",
+		`${ if(eq(variables.environment, "prod"), "large", none) }`,
+		// Emulate this substitution starting on line 100, column 50.
+		// Source meta values of substitution components are offset from the start
+		// of the input string.
+		&source.Meta{Position: source.Position{
+			Line:   100,
+			Column: 50,
+		}},
+		true,
+		false,
+		/* parentContextPrecedingCharCount */ 0,
+	)
+	c.Assert(err, IsNil)
+	c.Assert(len(parsed), Equals, 1)
+	err = testhelpers.Snapshot(parsed[0])
+	c.Assert(err, IsNil)
 }
 
 func (s *ParseSubstitutionsTestSuite) Test_fails_to_parse_susbstitution_reporting_correct_position(c *C) {

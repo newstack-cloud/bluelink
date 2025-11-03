@@ -1,0 +1,272 @@
+(*substitutions.StringOrSubstitution)({
+  StringValue: (*string)(<nil>),
+  SubstitutionValue: (*substitutions.Substitution)({
+    Function: (*substitutions.SubstitutionFunctionExpr)({
+      FunctionName: (substitutions.SubstitutionFunctionName) (len=2) "if",
+      Arguments: ([]*substitutions.SubstitutionFunctionArg) (len=3) {
+        (*substitutions.SubstitutionFunctionArg)({
+          Name: (string) "",
+          Value: (*substitutions.Substitution)({
+            Function: (*substitutions.SubstitutionFunctionExpr)({
+              FunctionName: (substitutions.SubstitutionFunctionName) (len=2) "eq",
+              Arguments: ([]*substitutions.SubstitutionFunctionArg) (len=2) {
+                (*substitutions.SubstitutionFunctionArg)({
+                  Name: (string) "",
+                  Value: (*substitutions.Substitution)({
+                    Function: (*substitutions.SubstitutionFunctionExpr)(<nil>),
+                    Variable: (*substitutions.SubstitutionVariable)({
+                      VariableName: (string) (len=11) "environment",
+                      SourceMeta: (*source.Meta)({
+                        Position: (source.Position) {
+                          Line: (int) 100,
+                          Column: (int) 59
+                        },
+                        EndPosition: (*source.Position)({
+                          Line: (int) 100,
+                          Column: (int) 80
+                        })
+                      })
+                    }),
+                    ValueReference: (*substitutions.SubstitutionValueReference)(<nil>),
+                    ElemReference: (*substitutions.SubstitutionElemReference)(<nil>),
+                    ElemIndexReference: (*substitutions.SubstitutionElemIndexReference)(<nil>),
+                    DataSourceProperty: (*substitutions.SubstitutionDataSourceProperty)(<nil>),
+                    ResourceProperty: (*substitutions.SubstitutionResourceProperty)(<nil>),
+                    Child: (*substitutions.SubstitutionChild)(<nil>),
+                    StringValue: (*string)(<nil>),
+                    IntValue: (*int64)(<nil>),
+                    FloatValue: (*float64)(<nil>),
+                    BoolValue: (*bool)(<nil>),
+                    NoneValue: (bool) false,
+                    SourceMeta: (*source.Meta)({
+                      Position: (source.Position) {
+                        Line: (int) 100,
+                        Column: (int) 59
+                      },
+                      EndPosition: (*source.Position)({
+                        Line: (int) 100,
+                        Column: (int) 80
+                      })
+                    })
+                  }),
+                  SourceMeta: (*source.Meta)({
+                    Position: (source.Position) {
+                      Line: (int) 100,
+                      Column: (int) 59
+                    },
+                    EndPosition: (*source.Position)({
+                      Line: (int) 100,
+                      Column: (int) 80
+                    })
+                  })
+                }),
+                (*substitutions.SubstitutionFunctionArg)({
+                  Name: (string) "",
+                  Value: (*substitutions.Substitution)({
+                    Function: (*substitutions.SubstitutionFunctionExpr)(<nil>),
+                    Variable: (*substitutions.SubstitutionVariable)(<nil>),
+                    ValueReference: (*substitutions.SubstitutionValueReference)(<nil>),
+                    ElemReference: (*substitutions.SubstitutionElemReference)(<nil>),
+                    ElemIndexReference: (*substitutions.SubstitutionElemIndexReference)(<nil>),
+                    DataSourceProperty: (*substitutions.SubstitutionDataSourceProperty)(<nil>),
+                    ResourceProperty: (*substitutions.SubstitutionResourceProperty)(<nil>),
+                    Child: (*substitutions.SubstitutionChild)(<nil>),
+                    StringValue: (*string)((len=4) "prod"),
+                    IntValue: (*int64)(<nil>),
+                    FloatValue: (*float64)(<nil>),
+                    BoolValue: (*bool)(<nil>),
+                    NoneValue: (bool) false,
+                    SourceMeta: (*source.Meta)({
+                      Position: (source.Position) {
+                        Line: (int) 100,
+                        Column: (int) 82
+                      },
+                      EndPosition: (*source.Position)({
+                        Line: (int) 100,
+                        Column: (int) 88
+                      })
+                    })
+                  }),
+                  SourceMeta: (*source.Meta)({
+                    Position: (source.Position) {
+                      Line: (int) 100,
+                      Column: (int) 82
+                    },
+                    EndPosition: (*source.Position)({
+                      Line: (int) 100,
+                      Column: (int) 88
+                    })
+                  })
+                })
+              },
+              Path: ([]*substitutions.SubstitutionPathItem) {
+              },
+              SourceMeta: (*source.Meta)({
+                Position: (source.Position) {
+                  Line: (int) 100,
+                  Column: (int) 56
+                },
+                EndPosition: (*source.Position)({
+                  Line: (int) 100,
+                  Column: (int) 89
+                })
+              })
+            }),
+            Variable: (*substitutions.SubstitutionVariable)(<nil>),
+            ValueReference: (*substitutions.SubstitutionValueReference)(<nil>),
+            ElemReference: (*substitutions.SubstitutionElemReference)(<nil>),
+            ElemIndexReference: (*substitutions.SubstitutionElemIndexReference)(<nil>),
+            DataSourceProperty: (*substitutions.SubstitutionDataSourceProperty)(<nil>),
+            ResourceProperty: (*substitutions.SubstitutionResourceProperty)(<nil>),
+            Child: (*substitutions.SubstitutionChild)(<nil>),
+            StringValue: (*string)(<nil>),
+            IntValue: (*int64)(<nil>),
+            FloatValue: (*float64)(<nil>),
+            BoolValue: (*bool)(<nil>),
+            NoneValue: (bool) false,
+            SourceMeta: (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 100,
+                Column: (int) 56
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 100,
+                Column: (int) 89
+              })
+            })
+          }),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 100,
+              Column: (int) 56
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 100,
+              Column: (int) 89
+            })
+          })
+        }),
+        (*substitutions.SubstitutionFunctionArg)({
+          Name: (string) "",
+          Value: (*substitutions.Substitution)({
+            Function: (*substitutions.SubstitutionFunctionExpr)(<nil>),
+            Variable: (*substitutions.SubstitutionVariable)(<nil>),
+            ValueReference: (*substitutions.SubstitutionValueReference)(<nil>),
+            ElemReference: (*substitutions.SubstitutionElemReference)(<nil>),
+            ElemIndexReference: (*substitutions.SubstitutionElemIndexReference)(<nil>),
+            DataSourceProperty: (*substitutions.SubstitutionDataSourceProperty)(<nil>),
+            ResourceProperty: (*substitutions.SubstitutionResourceProperty)(<nil>),
+            Child: (*substitutions.SubstitutionChild)(<nil>),
+            StringValue: (*string)((len=5) "large"),
+            IntValue: (*int64)(<nil>),
+            FloatValue: (*float64)(<nil>),
+            BoolValue: (*bool)(<nil>),
+            NoneValue: (bool) false,
+            SourceMeta: (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 100,
+                Column: (int) 91
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 100,
+                Column: (int) 98
+              })
+            })
+          }),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 100,
+              Column: (int) 91
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 100,
+              Column: (int) 98
+            })
+          })
+        }),
+        (*substitutions.SubstitutionFunctionArg)({
+          Name: (string) "",
+          Value: (*substitutions.Substitution)({
+            Function: (*substitutions.SubstitutionFunctionExpr)(<nil>),
+            Variable: (*substitutions.SubstitutionVariable)(<nil>),
+            ValueReference: (*substitutions.SubstitutionValueReference)(<nil>),
+            ElemReference: (*substitutions.SubstitutionElemReference)(<nil>),
+            ElemIndexReference: (*substitutions.SubstitutionElemIndexReference)(<nil>),
+            DataSourceProperty: (*substitutions.SubstitutionDataSourceProperty)(<nil>),
+            ResourceProperty: (*substitutions.SubstitutionResourceProperty)(<nil>),
+            Child: (*substitutions.SubstitutionChild)(<nil>),
+            StringValue: (*string)(<nil>),
+            IntValue: (*int64)(<nil>),
+            FloatValue: (*float64)(<nil>),
+            BoolValue: (*bool)(<nil>),
+            NoneValue: (bool) true,
+            SourceMeta: (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 100,
+                Column: (int) 100
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 100,
+                Column: (int) 104
+              })
+            })
+          }),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 100,
+              Column: (int) 100
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 100,
+              Column: (int) 104
+            })
+          })
+        })
+      },
+      Path: ([]*substitutions.SubstitutionPathItem) {
+      },
+      SourceMeta: (*source.Meta)({
+        Position: (source.Position) {
+          Line: (int) 100,
+          Column: (int) 53
+        },
+        EndPosition: (*source.Position)({
+          Line: (int) 100,
+          Column: (int) 105
+        })
+      })
+    }),
+    Variable: (*substitutions.SubstitutionVariable)(<nil>),
+    ValueReference: (*substitutions.SubstitutionValueReference)(<nil>),
+    ElemReference: (*substitutions.SubstitutionElemReference)(<nil>),
+    ElemIndexReference: (*substitutions.SubstitutionElemIndexReference)(<nil>),
+    DataSourceProperty: (*substitutions.SubstitutionDataSourceProperty)(<nil>),
+    ResourceProperty: (*substitutions.SubstitutionResourceProperty)(<nil>),
+    Child: (*substitutions.SubstitutionChild)(<nil>),
+    StringValue: (*string)(<nil>),
+    IntValue: (*int64)(<nil>),
+    FloatValue: (*float64)(<nil>),
+    BoolValue: (*bool)(<nil>),
+    NoneValue: (bool) false,
+    SourceMeta: (*source.Meta)({
+      Position: (source.Position) {
+        Line: (int) 100,
+        Column: (int) 53
+      },
+      EndPosition: (*source.Position)({
+        Line: (int) 100,
+        Column: (int) 105
+      })
+    })
+  }),
+  SourceMeta: (*source.Meta)({
+    Position: (source.Position) {
+      Line: (int) 100,
+      Column: (int) 50
+    },
+    EndPosition: (*source.Position)({
+      Line: (int) 100,
+      Column: (int) 107
+    })
+  })
+})

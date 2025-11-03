@@ -37,6 +37,7 @@ const (
 	tokenIntLiteral         tokenType = "intLiteral"
 	tokenFloatLiteral       tokenType = "floatLiteral"
 	tokenBoolLiteral        tokenType = "boolLiteral"
+	tokenNoneLiteral        tokenType = "noneLiteral"
 	tokenStringLiteral      tokenType = "stringLiteral"
 	tokenNameStringLiteral  tokenType = "nameStringLiteral"
 	tokenIdent              tokenType = "identifier"
@@ -60,6 +61,7 @@ type token struct {
 var (
 	whiteSpacePattern           = regexp.MustCompile(`\s`)
 	boolPattern                 = regexp.MustCompile(`^(true|false)`)
+	nonePattern                 = regexp.MustCompile(`^none`)
 	lexStringLiteralNamePattern = regexp.MustCompile(`([A-Za-z0-9_-]|\.)+`)
 )
 
@@ -99,6 +101,13 @@ func lex(sequence string, parentSourceStart *source.Meta) ([]*token, error) {
 		}
 
 		charsConsumed, bytesConsumed := checkNumber(sequence, i, lexState)
+		if bytesConsumed > 0 {
+			i += bytesConsumed
+			lexState.relativeLineInfo.Column += charsConsumed
+			continue
+		}
+
+		charsConsumed, bytesConsumed = checkNoneLiteral(sequence, i, lexState)
 		if bytesConsumed > 0 {
 			i += bytesConsumed
 			lexState.relativeLineInfo.Column += charsConsumed
@@ -244,6 +253,14 @@ func lexCheckStringLiteral(sequence string, startPos int, state *lexState) (int,
 	return 0, 0, nil
 }
 
+func checkNoneLiteral(sequence string, startPos int, state *lexState) (int, int) {
+	char, _ := utf8.DecodeRuneInString(sequence[startPos:])
+	if char == 'n' {
+		return takeNoneLiteral(state, sequence, startPos)
+	}
+	return 0, 0
+}
+
 func checkBoolLiteral(sequence string, startPos int, state *lexState) (int, int) {
 	char, _ := utf8.DecodeRuneInString(sequence[startPos:])
 	if char == 't' || char == 'f' {
@@ -382,7 +399,7 @@ func takeStringLiteral(state *lexState, sequence string, startPos int) (int, int
 	if prevTokenOpenBracket && lexStringLiteralNamePattern.MatchString(value) {
 		state.tokens = append(state.tokens, &token{
 			tokenType:    tokenNameStringLiteral,
-			value:        strings.Replace(value, "\\\"", "\"", -1),
+			value:        strings.ReplaceAll(value, "\\\"", "\""),
 			relativeLine: state.relativeLineInfo.Line,
 			relativeCol:  state.relativeLineInfo.Column,
 		})
@@ -391,7 +408,7 @@ func takeStringLiteral(state *lexState, sequence string, startPos int) (int, int
 
 	state.tokens = append(state.tokens, &token{
 		tokenType:    tokenStringLiteral,
-		value:        strings.Replace(value, "\\\"", "\"", -1),
+		value:        strings.ReplaceAll(value, "\\\"", "\""),
 		relativeLine: state.relativeLineInfo.Line,
 		relativeCol:  state.relativeLineInfo.Column,
 	})
@@ -444,6 +461,21 @@ func deriveIdentOrKeywordTokenType(value string) tokenType {
 	default:
 		return tokenIdent
 	}
+}
+
+func takeNoneLiteral(state *lexState, sequence string, startPos int) (int, int) {
+	subSequence := sequence[startPos:]
+	value := nonePattern.FindString(subSequence)
+	if len(value) > 0 {
+		state.tokens = append(state.tokens, &token{
+			tokenType:    tokenNoneLiteral,
+			value:        value,
+			relativeLine: state.relativeLineInfo.Line,
+			relativeCol:  state.relativeLineInfo.Column,
+		})
+	}
+
+	return utf8.RuneCountInString(value), len(value)
 }
 
 func takeBoolLiteral(state *lexState, sequence string, startPos int) (int, int) {

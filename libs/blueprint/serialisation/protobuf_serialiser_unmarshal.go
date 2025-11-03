@@ -781,6 +781,12 @@ func fromSubstitutionPB(substitution *schemapb.Substitution) (*substitutions.Sub
 		}, nil
 	}
 
+	if noneVal, isNone := substitution.Sub.(*schemapb.Substitution_NoneValue); isNone {
+		return &substitutions.Substitution{
+			NoneValue: noneVal.NoneValue,
+		}, nil
+	}
+
 	if boolVal, isBool := substitution.Sub.(*schemapb.Substitution_BoolValue); isBool {
 		return &substitutions.Substitution{
 			BoolValue: &boolVal.BoolValue,

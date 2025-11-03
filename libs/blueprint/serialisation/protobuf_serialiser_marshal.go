@@ -765,6 +765,14 @@ func toSubstitutionPB(substitution *substitutions.Substitution) (*schemapb.Subst
 		}, nil
 	}
 
+	if substitution.NoneValue {
+		return &schemapb.Substitution{
+			Sub: &schemapb.Substitution_NoneValue{
+				NoneValue: true,
+			},
+		}, nil
+	}
+
 	return nil, errMissingSubstitutionValue()
 }
 

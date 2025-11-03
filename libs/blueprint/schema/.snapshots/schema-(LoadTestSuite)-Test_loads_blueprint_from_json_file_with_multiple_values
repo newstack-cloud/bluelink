@@ -291,6 +291,7 @@
                   IntValue: (*int64)(<nil>),
                   FloatValue: (*float64)(<nil>),
                   BoolValue: (*bool)(<nil>),
+                  NoneValue: (bool) false,
                   SourceMeta: (*source.Meta)({
                     Position: (source.Position) {
                       Line: (int) 22,
@@ -1298,6 +1299,7 @@
                           IntValue: (*int64)(<nil>),
                           FloatValue: (*float64)(<nil>),
                           BoolValue: (*bool)(<nil>),
+                          NoneValue: (bool) false,
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 43,
@@ -2406,6 +2408,7 @@
                           IntValue: (*int64)(<nil>),
                           FloatValue: (*float64)(<nil>),
                           BoolValue: (*bool)(<nil>),
+                          NoneValue: (bool) false,
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 211,
@@ -3207,6 +3210,7 @@
                               IntValue: (*int64)(<nil>),
                               FloatValue: (*float64)(<nil>),
                               BoolValue: (*bool)(<nil>),
+                              NoneValue: (bool) false,
                               SourceMeta: (*source.Meta)({
                                 Position: (source.Position) {
                                   Line: (int) 154,
@@ -3597,6 +3601,7 @@
                       IntValue: (*int64)(<nil>),
                       FloatValue: (*float64)(<nil>),
                       BoolValue: (*bool)(<nil>),
+                      NoneValue: (bool) false,
                       SourceMeta: (*source.Meta)({
                         Position: (source.Position) {
                           Line: (int) 282,
@@ -4551,6 +4556,7 @@
                           IntValue: (*int64)(<nil>),
                           FloatValue: (*float64)(<nil>),
                           BoolValue: (*bool)(<nil>),
+                          NoneValue: (bool) false,
                           SourceMeta: (*source.Meta)({
                             Position: (source.Position) {
                               Line: (int) 94,

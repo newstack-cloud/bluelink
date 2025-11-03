@@ -145,6 +145,15 @@ func (p *Parser) substitition() (*Substitution, error) {
 		return nil, err
 	}
 
+	var noneLiteral *bool
+	if noneLiteral = p.noneLiteral(); noneLiteral != nil {
+		noneSourceMeta := p.sourceMeta(p.previous())
+		return &Substitution{
+			NoneValue:  true,
+			SourceMeta: noneSourceMeta,
+		}, nil
+	}
+
 	var boolLiteral *bool
 	if boolLiteral = p.boolLiteral(); boolLiteral != nil {
 		boolSourceMeta := p.sourceMeta(p.previous())
@@ -576,6 +585,14 @@ func (p *Parser) floatLiteral() *float64 {
 		// extract valid floats as float literal tokens.
 		value, _ := strconv.ParseFloat(p.previous().value, 64)
 		return &value
+	}
+	return nil
+}
+
+func (p *Parser) noneLiteral() *bool {
+	if p.match(tokenNoneLiteral) {
+		isNoneValue := true
+		return &isNoneValue
 	}
 	return nil
 }

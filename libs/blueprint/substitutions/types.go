@@ -26,6 +26,7 @@ type Substitution struct {
 	IntValue           *int64
 	FloatValue         *float64
 	BoolValue          *bool
+	NoneValue          bool
 	SourceMeta         *source.Meta
 }
 
