@@ -29,7 +29,7 @@ type ServerV1WithMemfileStorageEngineTestSuite struct {
 }
 
 func (s *ServerV1WithMemfileStorageEngineTestSuite) SetupSuite() {
-	config, err := core.LoadConfigFromEnv()
+	config, err := core.LoadConfig()
 	s.Require().NoError(err, "error loading config")
 
 	config.State.StorageEngine = "memfile"

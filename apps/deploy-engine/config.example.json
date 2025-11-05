@@ -1,0 +1,57 @@
+{
+  "api_version": "v1",
+  "port": 8325,
+  "use_unix_socket": false,
+  "unix_socket_path": "/tmp/bluelink.sock",
+  "loopback_only": true,
+  "environment": "production",
+  "log_level": "info",
+  "auth": {
+    "oauth2_oidc_jwt_issuer": "",
+    "oauth2_oidc_jwt_issuer_secure": true,
+    "oauth2_oidc_jwt_audience": "",
+    "oauth2_oidc_jwt_signature_algorithm": "HS256",
+    "bluelink_signature_v1_key_pairs": {},
+    "bluelink_api_keys": []
+  },
+  "plugins_v1": {
+    "plugin_path": "$HOME/.bluelink/engine/plugins/bin",
+    "log_file_root_dir": "$HOME/.bluelink/engine/plugins/logs",
+    "launch_wait_timeout_ms": 15000,
+    "total_launch_wait_timeout_ms": 60000,
+    "resource_stabilisation_polling_timeout_ms": 3600000,
+    "plugin_to_plugin_call_timeout_ms": 120000
+  },
+  "blueprints": {
+    "validate_after_transform": false,
+    "enable_drift_check": true,
+    "resource_stabilisation_polling_interval_ms": 5000,
+    "default_retry_policy": "{\"maxRetries\":5,\"firstRetryDelay\":2,\"maxDelay\":300,\"backofFactor\":2,\"jitter\":true}",
+    "deployment_timeout": 10800
+  },
+  "state": {
+    "storage_engine": "memfile",
+    "recently_queued_events_threshold": 300,
+    "memfile_state_dir": "$HOME/.bluelink/engine/state",
+    "memfile_max_guide_file_size": 1048576,
+    "memfile_max_event_partition_size": 10485760,
+    "postgres_user": "",
+    "postgres_password": "",
+    "postgres_host": "localhost",
+    "postgres_port": 5432,
+    "postgres_database": "",
+    "postgres_ssl_mode": "disable",
+    "postgres_pool_max_conns": 100,
+    "postgres_pool_max_conn_lifetime": "1h30m"
+  },
+  "resolvers": {
+    "s3_endpoint": "",
+    "gcs_endpoint": "",
+    "https_client_timeout": 30
+  },
+  "maintenance": {
+    "blueprint_validation_retention_period": 604800,
+    "changeset_retention_period": 604800,
+    "events_retention_period": 604800
+  }
+}

@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	config, err := core.LoadConfigFromEnv()
+	config, err := core.LoadConfig()
 	if err != nil {
 		log.Fatalf("error loading config: %s", err)
 	}

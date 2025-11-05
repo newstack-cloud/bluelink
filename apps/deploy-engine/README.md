@@ -29,7 +29,66 @@ docker pull ghcr.io/newstack-cloud/bluelink-deploy-engine:latest
 
 ## Configuration
 
-The deploy engine is configured through environment variables. This section lists both required and optional configuration along with default values.
+The deploy engine can be configured through environment variables or configuration files. This section lists both required and optional configuration along with default values.
+
+### Configuration Methods
+
+The deploy engine supports two configuration methods:
+
+1. **Environment Variables** - Set environment variables with the `BLUELINK_DEPLOY_ENGINE_` prefix
+2. **Configuration Files** - Use JSON, YAML, or TOML configuration files
+
+#### Configuration Priority
+
+When both methods are used, the configuration is applied in the following order (highest to lowest priority):
+
+1. Environment variables
+2. Configuration file values
+3. Default values
+
+This means environment variables will always override values set in configuration files.
+
+#### Configuration Files
+
+The deploy engine will search for a configuration file named `config.json`, `config.yaml`, or `config.toml` in the following locations (in order):
+
+1. Current working directory (`.`)
+2. OS-specific default config directory:
+   - **Linux/macOS:** `$HOME/.bluelink/engine`
+   - **Windows:** `%LOCALAPPDATA%\Bluelink\engine`
+3. Custom path specified by the `BLUELINK_DEPLOY_ENGINE_CONFIG_PATH` environment variable
+
+A [config.example.json](config.example.json) file is provided as a reference for the structure of the configuration file.
+
+**Example config.json:**
+
+```json
+{
+  "port": 8325,
+  "log_level": "info",
+  "state": {
+    "storage_engine": "memfile"
+  }
+}
+```
+
+#### Environment Variables
+
+All configuration options can be set via environment variables using the `BLUELINK_DEPLOY_ENGINE_` prefix. Nested configuration fields use underscores to separate levels.
+
+For example, the `state.storage_engine` configuration field can be set with:
+
+```bash
+BLUELINK_DEPLOY_ENGINE_STATE_STORAGE_ENGINE=postgres
+```
+
+**Special Environment Variable Handling:**
+
+- **String slices** - Use comma-separated values: `"key1,key2,key3"` becomes `["key1", "key2", "key3"]`
+- **Maps** - Use comma-separated key:value pairs: `"key1:value1,key2:value2"` becomes `{"key1": "value1", "key2": "value2"}`
+- **Path expansion** - Environment variables in path values (e.g., `$HOME`, `%HOME%`) are automatically expanded
+
+### Configuration Options
 
 - [Server](#server)
 - [Authentication](#authentication)
@@ -47,6 +106,8 @@ Core configuration for the Deploy Engine server.
 
 `BLUELINK_DEPLOY_ENGINE_API_VERSION`
 
+_Config field:_ `api_version`
+
 _**optional**_
 
 The version of the deploy engine API. This is used to identify the version of the deploy engine HTTP API to use.
@@ -59,6 +120,8 @@ For the current implementation of the deploy engine, only `v1` is supported.
 
 `BLUELINK_DEPLOY_ENGINE_PORT`
 
+_Config field:_ `port`
+
 _**optional**_
 
 The port that the deploy engine will listen on for incoming requests. This is used to configure the HTTP server.
@@ -68,6 +131,8 @@ The port that the deploy engine will listen on for incoming requests. This is us
 #### Use Unix Socket?
 
 `BLUELINK_DEPLOY_ENGINE_USE_UNIX_SOCKET`
+
+_Config field:_ `use_unix_socket`
 
 _**optional**_
 
@@ -79,6 +144,8 @@ If set to `true`, the deploy engine will use a Unix socket instead of a TCP sock
 
 `BLUELINK_DEPLOY_ENGINE_UNIX_SOCKET_PATH`
 
+_Config field:_ `unix_socket_path`
+
 _**optional**_
 
 The path to the Unix socket that the deploy engine will listen on for incoming requests. This is used to configure the HTTP server and should only be used when the deploy engine is running on a local machine where deployments and Bluelink applications are managed with local state.
@@ -89,6 +156,8 @@ This will only be used if `BLUELINK_DEPLOY_ENGINE_USE_UNIX_SOCKET` is set to `tr
 #### Loopback Interface Only
 
 `BLUELINK_DEPLOY_ENGINE_LOOPBACK_ONLY`
+
+_Config field:_ `loopback_only`
 
 _**optional**_
 
@@ -103,6 +172,8 @@ This needs to be intentionally set to `false` to allow access over a wider priva
 
 `BLUELINK_DEPLOY_ENGINE_ENVIRONMENT`
 
+_Config field:_ `environment`
+
 _**optional**_
 
 The environment that the deploy engine is running in. This is used to determine things like the formatting of logs, in development mode, logs are formatted in a more human readable format,
@@ -114,6 +185,8 @@ This can be set to `development` or `production`.
 #### Log Level
 
 `BLUELINK_DEPLOY_ENGINE_LOG_LEVEL`
+
+_Config field:_ `log_level`
 
 _**optional**_
 
@@ -131,6 +204,7 @@ Configuration for the authentication methods that the deploy engine will use to 
 #### OAuth2/OIDC JWT Issuer
 
 `BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_ISSUER`
+_Config field:_ `auth.oauth2_oidc_jwt_issuer`
 
 _**required, if JWT authentication will be used**_
 
@@ -141,6 +215,7 @@ This will be checked before the Bluelink signature and API key authentication me
 See the [JWTs](https://bluelink.dev/docs/auth/jwts) documentation for more information on the requirements for the issuer.
 
 **Example:**
+
 ```
 BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_ISSUER=oauth.example.com
 ```
@@ -148,6 +223,7 @@ BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_ISSUER=oauth.example.com
 #### OAuth2/OIDC JWT Issuer Secure
 
 `BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_ISSUER_SECURE`
+_Config field:_ `auth.oauth2_oidc_jwt_issuer_secure`
 
 _**optional**_
 
@@ -160,6 +236,7 @@ This should be set to `true` for production deployments and `false` for local de
 #### OAuth2/OIDC JWT Audience
 
 `BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_AUDIENCE`
+_Config field:_ `auth.oauth2_oidc_jwt_audience`
 
 _**required, if JWT authentication will be used**_
 
@@ -168,13 +245,15 @@ The audience of the OAuth2/OIDC JWT token that can be used to authenticate with 
 See the [JWTs](https://bluelink.dev/docs/auth/jwts) documentation for more information on the requirements for the audience.
 
 **Example:**
+
 ```
 BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_AUDIENCE=deploy-engine-app-client-id
 ```
 
-### OAuth2/OIDC JWT Signing Algorithm
+#### OAuth2/OIDC JWT Signing Algorithm
 
 `BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_SIGNATURE_ALGORITHM`
+_Config field:_ `auth.oauth2_oidc_jwt_signature_algorithm`
 
 _**optional**_
 
@@ -201,6 +280,7 @@ This can be set to any of the following signing algorithms:
 #### Bluelink Signature v1 Key Pairs
 
 `BLUELINK_DEPLOY_ENGINE_AUTH_BLUELINK_SIGNATURE_V1_KEY_PAIRS`
+_Config field:_ `auth.bluelink_signature_v1_key_pairs`
 
 _**required, if Bluelink Signature v1 authentication will be used**_
 
@@ -212,13 +292,16 @@ The deploy engine will check the `Bluelink-Signature-V1` header of all requests.
 This will be checked after the OAuth2/OIDC JWT bearer token authentication method and before the API key authentication method.
 
 **Example:**
+
 ```
 BLUELINK_DEPLOY_ENGINE_AUTH_BLUELINK_SIGNATURE_V1_KEY_PAIRS=keyId1:secretKey1,keyId2:secretKey2
 ```
 
 #### API Keys
 
-`BLUELINK_DEPLOY_ENGINE_AUTH_API_KEYS`
+`BLUELINK_DEPLOY_ENGINE_AUTH_BLUELINK_API_KEYS`
+
+_Config field:_ `auth.bluelink_api_keys`
 
 _**required, if API key authentication will be used**_
 
@@ -227,6 +310,7 @@ The deploy engine will check the `Bluelink-Api-Key` header of all requests.
 This will be checked after the JWT bearer token and Bluelink signature authentication methods.
 
 **Example:**
+
 ```
 BLUELINK_DEPLOY_ENGINE_AUTH_API_KEYS=key1,key2,key3
 ```
@@ -239,27 +323,32 @@ Configuration for the plugin host used to manage and interact with plugins for p
 
 `BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH`
 
+_Config field:_ `plugins_v1.plugin_path`
+
 _**optional**_
 
 The path to one or more plugin root directories separated by colons.
 This environment variable, generally should be set globally when installed on developer machine as is used by multiple components of the Bluelink framework.
 
-**default value:** `$HOME/.bluelink/deploy-engine/plugins/bin`
+**default value:** `$HOME/.bluelink/engine/plugins/bin`
 
 #### Plugin Log File Root Directory
 
 `BLUELINK_DEPLOY_ENGINE_PLUGIN_LOG_FILE_ROOT_DIR`
+
+_Config field:_ `plugins_v1.log_file_root_dir`
 
 _**optional**_
 
 The path to the root directory where plugin log files will be stored.
 stdout and stderr for each plugin will be redirected to log files under this directory.
 
-**default value:** `$HOME/.bluelink/deploy-engine/plugins/logs`
+**default value:** `$HOME/.bluelink/engine/plugins/logs`
 
 #### Plugin Launch Timeout in Milliseconds
 
-`BLUELINK_DEPLOY_ENGINE_PLUGIN_LAUNCH_WAIT_TIMEOUT_MS`
+`BLUELINK_DEPLOY_ENGINE_PLUGINS_V1_LAUNCH_WAIT_TIMEOUT_MS`
+_Config field:_ `plugins_v1.launch_wait_timeout_ms`
 
 _**optional**_
 
@@ -270,7 +359,8 @@ This is used when the plugin host is started and a plugin is expected to registe
 
 #### Total Plugin Launch Timeout in Milliseconds
 
-`BLUELINK_DEPLOY_ENGINE_PLUGIN_TOTAL_LAUNCH_WAIT_TIMEOUT_MS`
+`BLUELINK_DEPLOY_ENGINE_PLUGINS_V1_TOTAL_LAUNCH_WAIT_TIMEOUT_MS`
+_Config field:_ `plugins_v1.total_launch_wait_timeout_ms`
 
 _**optional**_
 
@@ -281,7 +371,8 @@ This is used when the plugin host is started and all plugins are expected to reg
 
 #### Resource Stabilisation Polling Timeout in Milliseconds
 
-`BLUELINK_DEPLOY_ENGINE_RESOURCE_STABILISATION_POLLING_TIMEOUT_MS`
+`BLUELINK_DEPLOY_ENGINE_PLUGINS_V1_RESOURCE_STABILISATION_POLLING_TIMEOUT_MS`
+_Config field:_ `plugins_v1.resource_stabilisation_polling_timeout_ms`
 
 _**optional**_
 
@@ -298,7 +389,8 @@ In the deploy engine, this will be used to wait for resources to stabilise befor
 
 #### Plugin to Plugin Call Timeout in Milliseconds
 
-`BLUELINK_DEPLOY_ENGINE_PLUGIN_TO_PLUGIN_CALL_TIMEOUT_MS`
+`BLUELINK_DEPLOY_ENGINE_PLUGINS_V1_PLUGIN_TO_PLUGIN_CALL_TIMEOUT_MS`
+_Config field:_ `plugins_v1.plugin_to_plugin_call_timeout_ms`
 
 _**optional**_
 
@@ -317,6 +409,8 @@ Configuration for the blueprint loader/container used to load and manage bluepri
 
 `BLUELINK_DEPLOY_ENGINE_BLUEPRINTS_VALIDATE_AFTER_TRANSFORM`
 
+_Config field:_ `blueprints.validate_after_transform`
+
 _**optional**_
 
 Determines whether or not the blueprint loader should validate blueprints after applying transformations.
@@ -329,6 +423,8 @@ plugins producing invalid output.
 
 `BLUELINK_DEPLOY_ENGINE_BLUEPRINTS_ENABLE_DRIFT_CHECK`
 
+_Config field:_ `blueprints.enable_drift_check`
+
 _**optional**_
 
 Determines whether or not the deploy engine should check for drift in the state of resources
@@ -340,6 +436,8 @@ Drift checks use the `GetExternalState` method of a resource implementation to c
 #### Resource Stabilisation Polling Interval in Milliseconds
 
 `BLUELINK_DEPLOY_ENGINE_BLUEPRINTS_RESOURCE_STABILISATION_POLLING_INTERVAL_MS`
+
+_Config field:_ `blueprints.resource_stabilisation_polling_interval_ms`
 
 _**optional**_
 
@@ -356,31 +454,61 @@ In the deploy engine, this will be used to wait for resources to stabilise befor
 
 `BLUELINK_DEPLOY_ENGINE_BLUEPRINTS_DEFAULT_RETRY_POLICY`
 
+_Config field:_ `blueprints.default_retry_policy`
+
 _**optional**_
 
 The default retry policy to use when a provider returns a retryable error for actions
 that support retries.
-This should be a serialised JSON string that matches the structure of the `provider.RetryPolicy` struct.
+
+**important:** This must be a **serialised JSON string** regardless of the configuration format used (environment variable, JSON config file, YAML config file, etc.). The value should always be a JSON string, not a native object/map structure.
+
 The built-in default will be used if this is not set or the JSON is not in the correct format.
 When a provider plugin has its own retry policy, that will always be used instead of the default.
 
-**Example:**
+The JSON string should match the structure of the `provider.RetryPolicy` struct:
+
+**Example JSON structure:**
 
 ```json
 {
-    "maxRetries": 5,
-    "firstRetryDelay": 2,
-    "maxDelay": 300,
-    "backofFactor": 2,
-    "jitter": true
+  "maxRetries": 5,
+  "firstRetryDelay": 2,
+  "maxDelay": 300,
+  "backofFactor": 2,
+  "jitter": true
 }
 ```
 
-The actual value in the environment variable will need to be in a single line and escaped appropriately.
+**Example in environment variable:**
+The value must be in a single line and escaped appropriately:
+
+```bash
+BLUELINK_DEPLOY_ENGINE_BLUEPRINTS_DEFAULT_RETRY_POLICY='{"maxRetries":5,"firstRetryDelay":2,"maxDelay":300,"backofFactor":2,"jitter":true}'
+```
+
+**Example in config.json:**
+
+```json
+{
+  "blueprints": {
+    "default_retry_policy": "{\"maxRetries\":5,\"firstRetryDelay\":2,\"maxDelay\":300,\"backofFactor\":2,\"jitter\":true}"
+  }
+}
+```
+
+**Example in config.yaml:**
+
+```yaml
+blueprints:
+  default_retry_policy: '{"maxRetries":5,"firstRetryDelay":2,"maxDelay":300,"backofFactor":2,"jitter":true}'
+```
 
 #### Deployment Timeout in Seconds
 
 `BLUELINK_DEPLOY_ENGINE_BLUEPRINTS_DEPLOYMENT_TIMEOUT`
+
+_Config field:_ `blueprints.deployment_timeout`
 
 _**optional**_
 
@@ -396,6 +524,8 @@ Configuration for the state management/persistence layer used by the deploy engi
 #### Storage Engine
 
 `BLUELINK_DEPLOY_ENGINE_STATE_STORAGE_ENGINE`
+
+_Config field:_ `state.storage_engine`
 
 _**optional**_
 
@@ -417,6 +547,8 @@ to avoid losing all state in the event of a failure or destruction of the host m
 
 `BLUELINK_DEPLOY_ENGINE_STATE_RECENTLY_QUEUED_EVENTS_THRESHOLD`
 
+_Config field:_ `state.recently_queued_events_threshold`
+
 _**optional**_
 
 The threshold in seconds for retrieving recently queued events for a stream when a starting event ID is not provided.
@@ -431,16 +563,20 @@ This applies to all storage engines.
 
 `BLUELINK_DEPLOY_ENGINE_STATE_MEMFILE_STATE_DIR`
 
+_Config field:_ `state.memfile_state_dir`
+
 _**optional**_
 
 The directory to use for persisting state files when using the in-memory storage with file system
 (memfile) persistence engine.
 
-**default value:** `$HOME/.bluelink/deploy-engine/state`
+**default value:** `$HOME/.bluelink/engine/state`
 
 #### `memfile` Storage Engine Max Guide File Size
 
 `BLUELINK_DEPLOY_ENGINE_STATE_MEMFILE_MAX_GUIDE_FILE_SIZE`
+
+_Config field:_ `state.memfile_max_guide_file_size`
 
 _**optional**_
 
@@ -455,6 +591,8 @@ This is only a guide, the actual size of the files are often likely to be larger
 #### `memfile` Storage Engine Max Event Partition File Size
 
 `BLUELINK_DEPLOY_ENGINE_STATE_MEMFILE_MAX_EVENT_PARTITION_SIZE`
+
+_Config field:_ `state.memfile_max_event_partition_size`
 
 _**optional**_
 
@@ -472,6 +610,8 @@ will not be persisted.
 
 `BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_USER`
 
+_Config field:_ `state.postgres_user`
+
 _**required, if postgres storage engine is used**_
 
 The user to use to connect to the PostgreSQL database
@@ -481,6 +621,8 @@ when using the postgres storage engine.
 
 `BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_PASSWORD`
 
+_Config field:_ `state.postgres_password`
+
 _**required, if postgres storage engine is used**_
 
 The password to for the user used to connect to the PostgreSQL database
@@ -489,6 +631,8 @@ when using the postgres storage engine.
 #### `postgres` Storage Engine Host
 
 `BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_HOST`
+
+_Config field:_ `state.postgres_host`
 
 _**optional**_
 
@@ -501,6 +645,8 @@ when using the postgres storage engine.
 
 `BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_PORT`
 
+_Config field:_ `state.postgres_port`
+
 _**optional**_
 
 The port to use to connect to the PostgreSQL database
@@ -512,6 +658,8 @@ when using the postgres storage engine.
 
 `BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_DATABASE`
 
+_Config field:_ `state.postgres_database`
+
 _**required, if postgres storage engine is used**_
 
 The name of the PostgreSQL database to connect to
@@ -520,6 +668,8 @@ when using the postgres storage engine.
 #### `postgres` Storage Engine SSL Mode
 
 `BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_SSL_MODE`
+
+_Config field:_ `state.postgres_ssl_mode`
 
 _**optional**_
 
@@ -534,6 +684,8 @@ This can be set to `disable`, `require`, `verify-ca` or `verify-full`.
 
 `BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_POOL_MAX_CONNS`
 
+_Config field:_ `state.postgres_pool_max_conns`
+
 _**optional**_
 
 The maximum number of connections to the PostgreSQL database
@@ -544,6 +696,8 @@ in the client pool when using the postgres storage engine.
 #### `postgres` Storage Engine Pool Max Connection Lifetime
 
 `BLUELINK_DEPLOY_ENGINE_STATE_POSTGRES_POOL_MAX_CONN_LIFETIME`
+
+_Config field:_ `state.postgres_pool_max_conn_lifetime`
 
 _**optional**_
 
@@ -561,6 +715,7 @@ Configuration for child blueprint resolvers used by the deploy engine.
 #### Resolver S3 Endpoint
 
 `BLUELINK_DEPLOY_ENGINE_RESOLVERS_S3_ENDPOINT`
+_Config field:_ `resolvers.s3_endpoint`
 
 _**optional**_
 
@@ -572,6 +727,8 @@ When empty, the default AWS S3 endpoint will be used.
 
 `BLUELINK_DEPLOY_ENGINE_RESOLVERS_GCS_ENDPOINT`
 
+_Config field:_ `resolvers.gcs_endpoint`
+
 _**optional**_
 
 A custom endpoint to use to connect to a Google Cloud Storage-compatible object storage service
@@ -581,6 +738,8 @@ When empty, the default Google Cloud Storage endpoint will be used.
 #### Resolver HTTPS Client Timeout
 
 `BLUELINK_DEPLOY_ENGINE_RESOLVERS_HTTPS_CLIENT_TIMEOUT`
+
+_Config field:_ `resolvers.https_client_timeout`
 
 _**optional**_
 
@@ -592,12 +751,14 @@ that use the `https` source type.
 
 ### Maintenance
 
-Configuration for the maintenance of short-lived resources in the deploy engine. 
+Configuration for the maintenance of short-lived resources in the deploy engine.
 This is used for things like the retention periods for blueprint validations and change sets.
 
 #### Blueprint Validation Retention Period
 
 `BLUELINK_DEPLOY_ENGINE_MAINTENANCE_BLUEPRINT_VALIDATION_RETENTION_PERIOD`
+
+_Config field:_ `maintenance.blueprint_validation_retention_period`
 
 _**optional**_
 
@@ -613,6 +774,8 @@ it will delete all validation results that are older than this period.
 
 `BLUELINK_DEPLOY_ENGINE_MAINTENANCE_CHANGESET_RETENTION_PERIOD`
 
+_Config field:_ `maintenance.changeset_retention_period`
+
 _**optional**_
 
 The retention period in seconds for change sets.
@@ -626,6 +789,8 @@ it will delete all change sets that are older than this period.
 #### Events Retention Period
 
 `BLUELINK_DEPLOY_ENGINE_MAINTENANCE_EVENTS_RETENTION_PERIOD`
+
+_Config field:_ `maintenance.events_retention_period`
 
 _**optional**_
 

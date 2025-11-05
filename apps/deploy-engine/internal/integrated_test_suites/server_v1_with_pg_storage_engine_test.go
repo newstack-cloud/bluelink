@@ -29,7 +29,7 @@ type ServerV1WithPGStorageEngineTestSuite struct {
 }
 
 func (s *ServerV1WithPGStorageEngineTestSuite) SetupSuite() {
-	config, err := core.LoadConfigFromEnv()
+	config, err := core.LoadConfig()
 	s.Require().NoError(err, "error loading config")
 
 	config.State.StorageEngine = "postgres"
