@@ -204,6 +204,7 @@ Configuration for the authentication methods that the deploy engine will use to 
 #### OAuth2/OIDC JWT Issuer
 
 `BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_ISSUER`
+
 _Config field:_ `auth.oauth2_oidc_jwt_issuer`
 
 _**required, if JWT authentication will be used**_
@@ -223,6 +224,7 @@ BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_ISSUER=oauth.example.com
 #### OAuth2/OIDC JWT Issuer Secure
 
 `BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_ISSUER_SECURE`
+
 _Config field:_ `auth.oauth2_oidc_jwt_issuer_secure`
 
 _**optional**_
@@ -236,6 +238,7 @@ This should be set to `true` for production deployments and `false` for local de
 #### OAuth2/OIDC JWT Audience
 
 `BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_AUDIENCE`
+
 _Config field:_ `auth.oauth2_oidc_jwt_audience`
 
 _**required, if JWT authentication will be used**_
@@ -253,6 +256,7 @@ BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_AUDIENCE=deploy-engine-app-client-id
 #### OAuth2/OIDC JWT Signing Algorithm
 
 `BLUELINK_DEPLOY_ENGINE_AUTH_OAUTH2_OIDC_JWT_SIGNATURE_ALGORITHM`
+
 _Config field:_ `auth.oauth2_oidc_jwt_signature_algorithm`
 
 _**optional**_
@@ -280,6 +284,7 @@ This can be set to any of the following signing algorithms:
 #### Bluelink Signature v1 Key Pairs
 
 `BLUELINK_DEPLOY_ENGINE_AUTH_BLUELINK_SIGNATURE_V1_KEY_PAIRS`
+
 _Config field:_ `auth.bluelink_signature_v1_key_pairs`
 
 _**required, if Bluelink Signature v1 authentication will be used**_
