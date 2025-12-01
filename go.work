@@ -1,14 +1,16 @@
-go 1.23.4
+go 1.24.0
+
+toolchain go1.24.4
 
 use (
+	./apps/cli
+	./apps/deploy-engine
 	./libs/blueprint
 	./libs/blueprint-resolvers
 	./libs/blueprint-state
 	./libs/common
-	./libs/plugin-framework
 	./libs/deploy-engine-client
+	./libs/plugin-framework
 	./tools/blueprint-ls
 	./tools/plugin-docgen
-	./apps/cli
-	./apps/deploy-engine
 )

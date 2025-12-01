@@ -1,0 +1,39 @@
+# Development files
+Dockerfile.local
+docker-compose*.yml
+.air.toml
+.env*
+!.env.example
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+
+# Test artifacts
+*_test.go
+coverage.out
+test-report.json
+coverage.html
+
+# Documentation
+*.md
+docs/
+
+# Build artifacts
+tmp/
+bin/
+
+# Local tools
+tools/oidc-local-server/
+
+# Scripts (not needed in image)
+scripts/
+
+# Static analysis reports
+*.out
+sonar-project.properties
