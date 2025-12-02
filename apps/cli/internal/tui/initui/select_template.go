@@ -10,8 +10,6 @@ type SelectTemplateModel struct {
 	selectTemplate   tea.Model
 	selectedTemplate string
 	autoSelect       bool
-	quitting         bool
-	err              error
 }
 
 type SelectTemplateMsg struct {

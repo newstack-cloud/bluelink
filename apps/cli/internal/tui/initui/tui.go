@@ -7,17 +7,10 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/styles"
 )
 
-const listHeight = 14
-
 var (
 	bluelinkStyles = styles.DefaultBluelinkStyles
 
-	titleStyle        = bluelinkStyles.Title.MarginLeft(2)
-	itemStyle         = bluelinkStyles.ListItem
-	selectedItemStyle = bluelinkStyles.SelectedListItem.PaddingLeft(2)
-	paginationStyle   = bluelinkStyles.Pagination
-	helpStyle         = bluelinkStyles.Help
-	quitTextStyle     = bluelinkStyles.Muted.Margin(1, 0, 2, 4)
+	quitTextStyle = bluelinkStyles.Muted.Margin(1, 0, 2, 4)
 )
 
 type initStage int
