@@ -16,8 +16,8 @@ COPY . .
 ARG DEPLOY_ENGINE_APPLICATION_VERSION=dev
 
 # Target platform args (automatically set by BuildKit when using --platform)
-ARG TARGETOS=linux
-ARG TARGETARCH=amd64
+ARG TARGETOS
+ARG TARGETARCH
 
 # Generate version file and build the binary
 RUN DEPLOY_ENGINE_APPLICATION_VERSION=${DEPLOY_ENGINE_APPLICATION_VERSION} go generate ./... && \
