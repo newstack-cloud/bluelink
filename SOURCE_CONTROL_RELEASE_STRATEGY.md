@@ -37,7 +37,9 @@ Releases are automated using [release-please](https://github.com/googleapis/rele
 
 3. **Merging creates the release** - When the release PR is merged:
    - A GitHub release is created
-   - Git tag is created in the appropriate format (e.g., `libs/blueprint/v0.37.0`)
+   - Two git tags are created:
+     - **Short tag** (e.g., `blueprint/v0.37.0`) - Used internally by release-please for tracking. Do not use this tag for anything else.
+     - **Full path tag** (e.g., `libs/blueprint/v0.37.0`) - The canonical Go module tag. Use this for dependencies, workflows, and references.
 
 4. **Post-release automation**:
    - **Libraries**: The `index-go-library.yml` workflow automatically indexes new versions with pkg.go.dev

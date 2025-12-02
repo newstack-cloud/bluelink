@@ -41,7 +41,9 @@ Releases are automated using [release-please](https://github.com/googleapis/rele
 
 3. **Merging creates the release** - When the release PR is merged:
    - A GitHub release is created
-   - Git tag is created in format `tools/blueprint-ls/v{version}` (e.g., `tools/blueprint-ls/v1.0.0`)
+   - Two git tags are created:
+     - `blueprint-ls/v{version}` - Used internally by release-please for tracking. Do not use this tag.
+     - `tools/blueprint-ls/v{version}` - The canonical tag. Use this for workflows and references.
 
 ### Build artifacts
 

@@ -68,9 +68,6 @@ jobs:
                   echo "Creating Go module tag: $new_tag (from $tag)"
                   git tag "$new_tag" HEAD
                   git push origin "$new_tag"
-
-                  # Optionally delete the original tag
-                  # git push origin --delete "$tag"
                 fi
               fi
             fi

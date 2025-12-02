@@ -35,7 +35,9 @@ Releases are automated using [release-please](https://github.com/googleapis/rele
 
 3. **Merging creates the release** - When the release PR is merged:
    - A GitHub release is created
-   - Git tag is created in format `libs/common/v{version}` (e.g., `libs/common/v0.4.0`)
+   - Two git tags are created:
+     - `common/v{version}` - Used internally by release-please for tracking. Do not use this tag.
+     - `libs/common/v{version}` - The canonical Go module tag. Use this for dependencies and references.
 
 ### Go module indexing
 

@@ -70,7 +70,9 @@ Releases are automated using [release-please](https://github.com/googleapis/rele
 
 3. **Merging creates the release** - When the release PR is merged:
    - A GitHub release is created
-   - Git tag is created in format `apps/deploy-engine/v{version}` (e.g., `apps/deploy-engine/v1.0.0`)
+   - Two git tags are created:
+     - `deploy-engine/v{version}` - Used internally by release-please for tracking. Do not use this tag.
+     - `apps/deploy-engine/v{version}` - The canonical tag. Use this for workflows and references.
 
 ### Build artifacts
 
