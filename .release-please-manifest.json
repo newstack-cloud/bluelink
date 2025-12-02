@@ -4,7 +4,7 @@
   "libs/blueprint": "0.36.0",
   "libs/blueprint-resolvers": "0.0.0",
   "libs/blueprint-state": "0.4.0",
-  "libs/common": "0.3.2",
+  "libs/common": "0.3.3",
   "libs/deploy-engine-client": "0.0.0",
   "libs/plugin-framework": "0.0.0",
   "tools/blueprint-ls": "0.0.0",
