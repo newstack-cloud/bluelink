@@ -1,0 +1,24 @@
+# Test blueprint validation with deploy engine completes and produces diagnostics
+# Uses a blueprint file stored in MinIO (S3-compatible storage)
+# The blueprint is uploaded by minio-setup container at startup
+#
+# Note: The blueprint will produce validation errors because no provider plugins
+# are installed in the deploy engine. This test verifies the CLI can connect to
+# the engine, fetch the blueprint from S3, and receive validation diagnostics.
+
+wait_engine
+
+! exec bluelink validate --blueprint-file=s3://test-blueprints/valid.blueprint.yaml --connect-protocol=tcp --engine-endpoint=$BLUELINK_ENGINE_ENDPOINT --engine-auth-config-file=engine.auth.json
+stdout 'Validation complete'
+stdout 'diagnostic'
+stdout 'error'
+stdout 'provider "example" not found for resource type "example/resource"'
+
+-- bluelink.config.toml --
+# Empty config file
+
+-- engine.auth.json --
+{
+  "method": "apiKey",
+  "apiKey": "test-api-key"
+}

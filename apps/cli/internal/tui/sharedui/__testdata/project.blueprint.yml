@@ -1,0 +1,175 @@
+version: 2025-05-12-draft
+transform:
+  - celerity-2022-01-22
+variables:
+  dynamoDBTable:
+    type: string
+    description: The Orders DynamoDB Table
+  ordersTopicName:
+    type: string
+    description: The Orders Event Topic
+  environment:
+    type: string
+    descrpition: The environment to deploy to
+values:
+  alteredTable:
+    type: string
+    description: An altered table name
+    value: "${variables.dynamoDBTable}-altered"
+datasources:
+  network:
+    type: "aws/vpc"
+    metadata:
+      displayName: Network source
+    filter:
+      field: tags
+      operator: has key
+      search: ${variables.environment}
+    exports:
+      subnets:
+        type: array
+      securityGroups:
+        type: array
+      vpc:
+        type: string
+resources:
+  # An API resource must be defined even if there are no endpoint handlers
+  # for an application as env vars, runtime and tracing config for all handlers
+  # are defined at the API level.
+  orderApi:
+    # For Makeshift to be fully compatible with celerity, we'll use the
+    # celerity namespace for all Makeshift resources.
+    type: "celerity/api"
+    metadata:
+      displayName: Order API
+      labels:
+        app: orderApi
+      custom:
+        visual:
+          point: 20 100
+          width: 50
+          height: 50
+          linkPorts:
+            - linkTo: getOrderEndpoint
+              connectAt: 70 100
+              annotation: Orders API
+    linkSelector:
+      byLabel:
+        app: orderApi
+    spec:
+      # Environment variables are set at the API level so the spec is compatible
+      # with a containerised deployment without undesired, confusing behaviour
+      # when you define env vars for individual handlers and some values would
+      # be overridden when deployed as an API server.
+      #
+      # The linking behaviour also injects environment variables to be used at runtime,
+      # these environment variables are displayed in the `deploy` and `dry-run` commands
+      # and can be exported to a file, so you know what environment variables you can
+      # reference from code.
+      environment:
+        variables:
+          DYNAMODB_TABLE: ${variables.dynamoDBTable}
+      # All handlers need to use the same runtime to be compatible with a containerised
+      # deployment.
+      # The closest equivalent runtime will be selected for each cloud provider.
+      # If a runtime is not supported by the given provider, an error will occur.
+      runtime: go1.x
+      # Tracing needs to be set API-wide to be compatible with a containerised
+      # deployment. This will also enable tracing for handlers.
+      tracingEnabled: true
+
+  # In the serverless deployments this will be an AWS Lambda Authoriser, as the function
+  # will be wrapped by a Makeshift/Celerity Handler wrapper it will be adapted into the Lambda interface
+  # for authorisers.
+  # In containerised API server deployments this will be a middleware, as handlers and middleware
+  # have exactly the same interface, this will work perfectly.
+  authoriser:
+    type: "celerity/handler"
+    metadata:
+      displayName: Authoriser
+      annotations:
+        # Gives more context for the API resource
+        # that links to this handler so it knows to use
+        # it as an authoriser and not an endpoint.
+        authoriser: true
+        # Custom annotations that enrich the handler with authorisation
+        # configuration that will be picked up to configure
+        # the authoriser when deploying the API.
+        authoriser.identity.header: MyCustomAuthHeader
+        authoriser.identity.validationExpression: "Bearer .*"
+        authoriser.identity.reauthoriseEvery: 20
+      labels:
+        app: orderApi
+    spec:
+      handler: handlers.Authoriser
+      timeout: 120
+
+  getOrdersHandler:
+    type: "celerity/handler"
+    metadata:
+      displayName: Get Orders Handler
+      labels:
+        app: orderApi
+    spec:
+      handler: handlers.GetOrders
+      timeout: 120
+      endpoint:
+        method: get
+        path: /orders
+        authoriser: ${authoriser}
+
+  # This is a consumer handler function.
+  updateOrderFunction:
+    type: "celerity/handler"
+    metadata:
+      displayName: Update Order Function
+      labels:
+        workflow: orderPubSub
+        # This is required so the linking logic knows the type of relationship
+        # due to the fact that this handler can have it's own linkSelector that
+        # can select by the same label and handlers can have a publisher and
+        # consumer relationship with a pubsub resource.
+        pubsubType: consumer
+    spec:
+      handler: handlers.UpdateOrder
+      timeout: 120
+      events:
+        orderEvent:
+          type: pubsub
+          # The pub/sub topic is automatically linked with the
+          # resource via the link selector.
+          batchSize: 10
+
+  sharedPackagesLayer:
+    # When the provider is AWS and the deployment target is serverless,
+    # this becomes a lambda layer.
+    # Layers are bundled in the root directory of a serverless function or
+    # a container in every other situation. For containers, the makeshift
+    # CLI will augment the Dockerfile for your project to make sure these
+    # packages are included if they aren't already.
+    type: "celerity/layerVersion"
+    metadata:
+      displayName: Shared Packages Layer
+      labels:
+        workflow: orderPubSub
+        app: orderApi
+    spec:
+      compatibleRuntimes: ["go1.x"]
+      # A file path on the local file system where the spec
+      # is being deployed.
+      content: build/shared-packages-layer
+      layerName: sharedPackagesLayer
+  orderPubSub:
+    # This creates an SNS topic (if it doesn't already exist) and an SQS queue
+    # subscription in AWS. For compatibility with Google Cloud pub/sub which will
+    # create a single resource we use the notion of pub/sub for the entire resource.
+    type: "celerity/pubsub"
+    metadata:
+      displayName: Order Pub/Sub
+      labels:
+        workflow: orderPubSub
+    linkSelector:
+      byLabel:
+        workflow: orderPubSub
+    spec:
+      topicName: ${variables.ordersTopicName}

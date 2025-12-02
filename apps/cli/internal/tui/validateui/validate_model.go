@@ -2,26 +2,40 @@ package validateui
 
 import (
 	"fmt"
-	"log"
+	"io"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/newstack-cloud/bluelink/apps/cli/diagutils"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/engine"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/sharedui"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/styles"
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
 	"go.uber.org/zap"
 )
 
 var (
-	validateCategroyStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#4f46e5"))
-	diagnosticLevelErrorStyle = lipgloss.NewStyle().MarginLeft(2).Foreground(lipgloss.Color("#dc2626"))
-	diagnosticLevelWarnStyle  = lipgloss.NewStyle().MarginLeft(2).Foreground(lipgloss.Color("#f97316"))
-	diagnosticLevelInfoStyle  = lipgloss.NewStyle().MarginLeft(2).Foreground(lipgloss.Color("#2563eb"))
-	diagnosticMessageStyle    = lipgloss.NewStyle().MarginLeft(2)
-	locationStyle             = lipgloss.NewStyle().MarginLeft(2).Foreground(lipgloss.Color("#4f46e5"))
+	bluelinkStyles = styles.DefaultBluelinkStyles
+
+	validateCategoryStyle     = bluelinkStyles.Category
+	diagnosticLevelErrorStyle = bluelinkStyles.Error.MarginLeft(2)
+	diagnosticLevelWarnStyle  = bluelinkStyles.Warning.MarginLeft(2)
+	diagnosticLevelInfoStyle  = bluelinkStyles.Info.MarginLeft(2)
+	diagnosticMessageStyle    = bluelinkStyles.DiagnosticMessage
+	locationStyle             = bluelinkStyles.Location
+	diagnosticActionStyle     = bluelinkStyles.DiagnosticAction
+
+	infoStyle = func() lipgloss.Style {
+		b := lipgloss.RoundedBorder()
+		b.Left = "┤"
+		return bluelinkStyles.Title.BorderStyle(b)
+	}()
 )
 
 type ValidateResultMsg *types.BlueprintValidationEvent
@@ -32,28 +46,30 @@ type ValidateErrMsg struct {
 
 type ValidateStreamMsg struct{}
 
-type item struct {
-	result     *types.BlueprintValidationEvent
-	filterText string
-}
-
-func (i item) FilterValue() string {
-	return i.filterText
-}
-
 type ValidateModel struct {
-	spinner       spinner.Model
-	list          list.Model
-	engine        engine.DeployEngine
-	blueprintFile string
-	resultStream  chan types.BlueprintValidationEvent
-	collected     []*types.BlueprintValidationEvent
-	errStream     chan error
-	streaming     bool
-	err           error
-	width         int
-	finished      bool
-	logger        *zap.Logger
+	spinner         spinner.Model
+	viewport        viewport.Model
+	hasDimensions   bool
+	engine          engine.DeployEngine
+	blueprintFile   string
+	blueprintSource string
+	resultStream    chan types.BlueprintValidationEvent
+	collected       []*types.BlueprintValidationEvent
+	errStream       chan error
+	streaming       bool
+	err             error
+	width           int
+	finished        bool
+	// This is separate from an error in the sense that it indicates
+	// that validation failed to the parent context to ensure that the program
+	// exits with a non-zero exit code.
+	// This is separate from the err field so that it allows us to render the
+	// diagnostics in the TUI before exiting.
+	validationFailed bool
+	logger           *zap.Logger
+	renderer         *glamour.TermRenderer
+	headless         bool
+	headlessWriter   io.Writer
 }
 
 func (m ValidateModel) Init() tea.Cmd {
@@ -65,8 +81,15 @@ func (m ValidateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
-	case SelectBlueprintMsg:
-		m.blueprintFile = msg.blueprintFile
+		footerHeight := lipgloss.Height(m.footerView())
+
+		if !m.hasDimensions {
+			m.viewport = viewport.New(msg.Width, msg.Height-footerHeight)
+			m.hasDimensions = true
+		}
+	case sharedui.SelectBlueprintMsg:
+		m.blueprintFile = msg.BlueprintFile
+		m.blueprintSource = msg.Source
 		// SelectBlueprintMsg can be sent multiple times, we need to make sure we aren't collecting
 		// duplicate results from the stream by not dispatching commands that will create multiple
 		// consumers.
@@ -75,15 +98,20 @@ func (m ValidateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.streaming = true
 	case ValidateResultMsg:
-		if msg == nil {
-			m.finished = true
-			return m, tea.Quit
-		}
 		m.collected = append(m.collected, msg)
-		setListItemsCmd := m.list.SetItems(listItemsFromResults(m.collected))
-		cmds = append(cmds, setListItemsCmd, waitForNextResultCmd(m), checkForErrCmd(m))
+		cmds = append(cmds, checkForErrCmd(m))
+		if !msg.End {
+			cmds = append(cmds, waitForNextResultCmd(m))
+		} else {
+			m.finished = true
+			m.validationFailed = checkForValidationFailure(m.collected)
+			m.viewport.SetContent(m.resultContents())
+			if m.headless {
+				// Make sure we exit after validation completes in headless mode.
+				cmds = append(cmds, tea.Quit)
+			}
+		}
 	case spinner.TickMsg:
-		log.Println("ValidateModel: spinner tick")
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
@@ -94,74 +122,312 @@ func (m ValidateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	var listCmd tea.Cmd
-	m.list, listCmd = m.list.Update(msg)
-	cmds = append(cmds, listCmd)
+	var viewportCmd tea.Cmd
+	m.viewport, viewportCmd = m.viewport.Update(msg)
+	cmds = append(cmds, viewportCmd)
 
 	return m, tea.Batch(cmds...)
 }
 
+func (m ValidateModel) footerView() string {
+	info := infoStyle.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
+	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)))
+	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
+}
+
 func (m ValidateModel) View() string {
-	log.Printf("ValidateModel: Rendering view m.collected length: %d", len(m.collected))
+	if m.headless {
+		// In headless mode, print directly to configured writer and return empty string
+		m.renderHeadless()
+		return ""
+	}
+
 	if m.err != nil {
 		return renderError(m.err)
 	}
 
+	if !m.finished {
+		return fmt.Sprintf("\n\n %s Validating project...\n\n", m.spinner.View())
+	}
+
+	return fmt.Sprintf("%s\n%s", m.viewport.View(), m.footerView())
+}
+
+func (m ValidateModel) resultContents() string {
 	sb := strings.Builder{}
 
 	for _, result := range m.collected {
 		containerStyle := lipgloss.NewStyle().Padding(1, 1).Width(m.width)
 
 		itemSB := strings.Builder{}
-		itemSB.WriteString(validateCategroyStyle.Render("diagnostic"))
-		if result.Diagnostic.Level == bpcore.DiagnosticLevelError {
-			itemSB.WriteString(
-				diagnosticLevelErrorStyle.Render(
-					diagnosticLevelName(result.Diagnostic.Level),
-				),
-			)
-		} else if result.Diagnostic.Level == bpcore.DiagnosticLevelWarning {
-			itemSB.WriteString(
-				diagnosticLevelWarnStyle.Render(
-					diagnosticLevelName(result.Diagnostic.Level),
-				),
-			)
-		} else if result.Diagnostic.Level == bpcore.DiagnosticLevelInfo {
-			itemSB.WriteString(
-				diagnosticLevelInfoStyle.Render(
-					diagnosticLevelName(result.Diagnostic.Level),
-				),
-			)
+		itemSB.WriteString(validateCategoryStyle.Render("diagnostic"))
+
+		levelOutput := renderDiagnosticLevel(result.Diagnostic.Level)
+		itemSB.WriteString(levelOutput)
+
+		messageOutput, err := renderDiagnosticMessage(&result.Diagnostic, m.renderer)
+		if err != nil {
+			return renderError(err)
 		}
-		itemSB.WriteString(diagnosticMessageStyle.Render(result.Diagnostic.Message))
-		if hasPreciseRange(result.Diagnostic.Range) {
-			itemSB.WriteString(
-				locationStyle.Render(
-					fmt.Sprintf("(line %d, column %d)", result.Diagnostic.Range.Start.Line, result.Diagnostic.Range.Start.Column),
-				),
-			)
-		}
+
+		itemSB.WriteString(messageOutput)
+
 		containerRendered := containerStyle.Render(itemSB.String())
 		sb.WriteString(containerRendered)
-		sb.WriteString("\n")
 	}
-	if !m.finished {
-		sb.WriteString(fmt.Sprintf("\n\n %s Validating project...\n\n", m.spinner.View()))
-	}
+
 	return sb.String()
 }
 
-func NewValidateModel(engine engine.DeployEngine, logger *zap.Logger) ValidateModel {
+func (m ValidateModel) renderHeadless() {
+	if m.err != nil {
+		fmt.Fprintln(m.headlessWriter, renderError(m.err))
+		return
+	}
+
+	fmt.Fprintf(m.headlessWriter, "Validating blueprint: %s\n\n", m.blueprintFile)
+
+	for _, result := range m.collected {
+		containerStyle := lipgloss.NewStyle().Padding(1, 1).Width(m.width)
+
+		itemSB := strings.Builder{}
+		itemSB.WriteString(validateCategoryStyle.Render("diagnostic"))
+
+		levelOutput := renderDiagnosticLevel(result.Diagnostic.Level)
+		itemSB.WriteString(levelOutput)
+
+		messageOutput, err := renderDiagnosticMessagePlain(&result.Diagnostic)
+		if err != nil {
+			fmt.Fprintln(m.headlessWriter, renderError(err))
+			continue
+		}
+
+		itemSB.WriteString(messageOutput)
+
+		containerRendered := containerStyle.Render(itemSB.String())
+		fmt.Fprintln(m.headlessWriter, containerRendered)
+	}
+
+	if !m.finished {
+		fmt.Fprintln(m.headlessWriter, "\nValidating project...")
+	} else {
+		fmt.Fprintln(m.headlessWriter, "\nValidation complete.")
+	}
+}
+
+func renderDiagnosticMessagePlain(diagnostic *bpcore.Diagnostic) (string, error) {
+	sb := strings.Builder{}
+
+	if diagnostic.Context == nil {
+		sb.WriteString(diagnosticMessageStyle.Render(diagnostic.Message))
+		if hasPreciseRange(diagnostic.Range) {
+			sb.WriteString(locationStyle.Render(
+				fmt.Sprintf(
+					"(line %d, column %d)",
+					diagnostic.Range.Start.Line,
+					diagnostic.Range.Start.Column,
+				),
+			))
+		}
+		return sb.String(), nil
+	}
+
+	sb.WriteString(diagnosticMessageStyle.Render(string(diagnostic.Message)))
+	suggestedActions, err := renderSuggestedActionsPlain(
+		diagnostic.Context.SuggestedActions,
+		diagnostic.Context.Metadata,
+	)
+	if err != nil {
+		return sb.String(), err
+	}
+
+	sb.WriteString(suggestedActions)
+	return sb.String(), nil
+}
+
+func renderSuggestedActionsPlain(
+	suggestedActions []errors.SuggestedAction,
+	diagMetadata map[string]any,
+) (string, error) {
+	sb := strings.Builder{}
+
+	if len(suggestedActions) > 0 {
+		sb.WriteString("\nSuggested Actions:\n")
+	}
+
+	for i, suggestedAction := range suggestedActions {
+		sb.WriteString(fmt.Sprintf("  %d. %s\n", i+1, suggestedAction.Title))
+		sb.WriteString(fmt.Sprintf("     %s\n", suggestedAction.Description))
+
+		concreteAction := diagutils.GetConcreteAction(suggestedAction, diagMetadata)
+		if concreteAction != nil {
+			concreteActionOutput := concreteActionPlain(concreteAction)
+			sb.WriteString(fmt.Sprintf("     %s\n", concreteActionOutput))
+		}
+
+		if i < len(suggestedActions)-1 {
+			sb.WriteString("\n")
+		}
+	}
+
+	return sb.String(), nil
+}
+
+func concreteActionPlain(concreteAction *diagutils.ConcreteAction) string {
+	if concreteAction == nil {
+		return ""
+	}
+
+	sb := strings.Builder{}
+	if len(concreteAction.Commands) > 0 {
+		sb.WriteString("Commands:\n")
+		for _, command := range concreteAction.Commands {
+			sb.WriteString(fmt.Sprintf("  - %s\n", command))
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(concreteAction.Links) > 0 {
+		sb.WriteString("Links:\n")
+		for _, link := range concreteAction.Links {
+			sb.WriteString(fmt.Sprintf("  - %s (%s)\n", link.Title, link.URL))
+		}
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
+}
+
+func renderDiagnosticMessage(diagnostic *bpcore.Diagnostic, renderer *glamour.TermRenderer) (string, error) {
+	sb := strings.Builder{}
+
+	if diagnostic.Context == nil {
+		sb.WriteString(diagnosticMessageStyle.Render(diagnostic.Message))
+		if hasPreciseRange(diagnostic.Range) {
+			sb.WriteString(locationStyle.Render(
+				fmt.Sprintf(
+					"(line %d, column %d)",
+					diagnostic.Range.Start.Line,
+					diagnostic.Range.Start.Column,
+				),
+			))
+		}
+		return sb.String(), nil
+	}
+
+	sb.WriteString(diagnosticMessageStyle.Render(string(diagnostic.Message)))
+	suggestedActions, err := renderSuggestedActions(
+		diagnostic.Context.SuggestedActions,
+		renderer,
+		diagnostic.Context.Metadata,
+	)
+	if err != nil {
+		return sb.String(), err
+	}
+
+	sb.WriteString(diagnosticActionStyle.Render(suggestedActions))
+	return sb.String(), nil
+}
+
+func renderSuggestedActions(
+	suggestedActions []errors.SuggestedAction,
+	renderer *glamour.TermRenderer,
+	diagMetadata map[string]any,
+) (string, error) {
+	sb := strings.Builder{}
+
+	if len(suggestedActions) > 0 {
+		sb.WriteString("\n# Suggested Actions\n")
+	}
+
+	for _, suggestedAction := range suggestedActions {
+		markdown := suggestedActionMarkdown(suggestedAction, diagMetadata)
+		sb.WriteString(markdown)
+
+	}
+
+	return renderer.Render(sb.String())
+}
+
+func suggestedActionMarkdown(suggestedAction errors.SuggestedAction, diagMetadata map[string]any) string {
+	sb := strings.Builder{}
+
+	sb.WriteString(fmt.Sprintf("## %s\n\n%s\n", suggestedAction.Title, suggestedAction.Description))
+	concreteAction := diagutils.GetConcreteAction(suggestedAction, diagMetadata)
+	if concreteAction != nil {
+		concreteActionOutput := concreteActionMarkdown(concreteAction)
+		sb.WriteString(fmt.Sprintf("\n%s\n", concreteActionOutput))
+	}
+
+	return sb.String()
+}
+
+func concreteActionMarkdown(concreteAction *diagutils.ConcreteAction) string {
+	if concreteAction == nil {
+		return ""
+	}
+
+	sb := strings.Builder{}
+	if len(concreteAction.Commands) > 0 {
+		sb.WriteString("Try running one of the following commands:\n")
+		for _, command := range concreteAction.Commands {
+			sb.WriteString(fmt.Sprintf("  ```bash\n%s\n```\n", command))
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(concreteAction.Links) > 0 {
+		sb.WriteString("Try visiting one of the following links:\n\n")
+		for _, link := range concreteAction.Links {
+			sb.WriteString(fmt.Sprintf("[%s](%s)\n", link.Title, link.URL))
+		}
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
+}
+
+func renderDiagnosticLevel(level bpcore.DiagnosticLevel) string {
+	switch level {
+	case bpcore.DiagnosticLevelError:
+		return diagnosticLevelErrorStyle.Render(
+			diagnosticLevelName(level),
+		)
+	case bpcore.DiagnosticLevelWarning:
+		return diagnosticLevelWarnStyle.Render(
+			diagnosticLevelName(level),
+		)
+	case bpcore.DiagnosticLevelInfo:
+		return diagnosticLevelInfoStyle.Render(
+			diagnosticLevelName(level),
+		)
+	default:
+		return ""
+	}
+}
+
+func NewValidateModel(
+	engine engine.DeployEngine,
+	logger *zap.Logger,
+	headless bool,
+	headlessWriter io.Writer,
+) ValidateModel {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	s.Style = bluelinkStyles.Spinner
+	renderer, _ := glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(80),
+	)
 	return ValidateModel{
-		spinner:      s,
-		engine:       engine,
-		logger:       logger,
-		list:         list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0),
-		resultStream: make(chan types.BlueprintValidationEvent),
-		errStream:    make(chan error),
+		spinner:        s,
+		engine:         engine,
+		logger:         logger,
+		resultStream:   make(chan types.BlueprintValidationEvent),
+		errStream:      make(chan error),
+		renderer:       renderer,
+		headless:       headless,
+		headlessWriter: headlessWriter,
 	}
 }
 
@@ -182,33 +448,18 @@ func hasPreciseRange(r *bpcore.DiagnosticRange) bool {
 	return r != nil && r.Start.Line > 0 && r.Start.Column > 0
 }
 
-func listItemsFromResults(results []*types.BlueprintValidationEvent) []list.Item {
-	items := []list.Item{}
-	for _, result := range results {
-		items = append(items, item{
-			result:     result,
-			filterText: resultToPlainText(result),
-		})
-	}
-	return items
-}
-
-func resultToPlainText(result *types.BlueprintValidationEvent) string {
-	sb := strings.Builder{}
-	sb.WriteString("diagnostic")
-	sb.WriteString(" ")
-	sb.WriteString(diagnosticLevelName(result.Diagnostic.Level))
-	sb.WriteString(" ")
-	sb.WriteString(result.Diagnostic.Message)
-	if hasPreciseRange(result.Diagnostic.Range) {
-		sb.WriteString(fmt.Sprintf(" (line %d, column %d)", result.Diagnostic.Range.Start.Line, result.Diagnostic.Range.Start.Column))
-	}
-	return sb.String()
-}
-
 func renderError(err error) string {
 	sb := strings.Builder{}
 	sb.WriteString(diagnosticLevelErrorStyle.Render(err.Error()))
 	sb.WriteString("\n")
 	return sb.String()
+}
+
+func checkForValidationFailure(diagnostics []*types.BlueprintValidationEvent) bool {
+	for _, diagnostic := range diagnostics {
+		if diagnostic.Diagnostic.Level == bpcore.DiagnosticLevelError {
+			return true
+		}
+	}
+	return false
 }

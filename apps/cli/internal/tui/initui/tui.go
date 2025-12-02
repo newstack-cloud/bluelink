@@ -1,124 +1,202 @@
 package initui
 
 import (
-	"fmt"
-	"io"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/styles"
 )
 
 const listHeight = 14
 
 var (
-	titleStyle        = lipgloss.NewStyle().MarginLeft(2)
-	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
-	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
-	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-	helpStyle         = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
-	quitTextStyle     = lipgloss.NewStyle().Margin(1, 0, 2, 4)
+	bluelinkStyles = styles.DefaultBluelinkStyles
+
+	titleStyle        = bluelinkStyles.Title.MarginLeft(2)
+	itemStyle         = bluelinkStyles.ListItem
+	selectedItemStyle = bluelinkStyles.SelectedListItem.PaddingLeft(2)
+	paginationStyle   = bluelinkStyles.Pagination
+	helpStyle         = bluelinkStyles.Help
+	quitTextStyle     = bluelinkStyles.Muted.Margin(1, 0, 2, 4)
 )
 
-type item struct {
-	key   string
-	label string
-}
+type initStage int
 
-func (i item) FilterValue() string {
-	return ""
-}
+const (
+	// Stage where the user selects the template for the project.
+	selectTemplateStage initStage = iota
 
-type itemDelegate struct{}
+	// Stage where the user inputs the project name,
+	// selects blueprint format and whether to use git.
+	inputFormStage
 
-func (d itemDelegate) Height() int {
-	return 1
-}
+	// Stage where the user enters the directory for the project.
+	selectDirectoryStage
 
-func (d itemDelegate) Spacing() int {
-	return 0
-}
-
-func (d itemDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd {
-	return nil
-}
-
-func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	i, ok := listItem.(item)
-	if !ok {
-		return
-	}
-
-	str := fmt.Sprintf("%d. %s", index+1, i.label)
-
-	fn := itemStyle.Render
-	if index == m.Index() {
-		fn = func(s ...string) string {
-			return selectedItemStyle.Render("> " + strings.Join(s, " "))
-		}
-	}
-
-	fmt.Fprint(w, fn(str))
-}
+	// Stage where the user has completed the init process.
+	initCompleteStage
+)
 
 type InitModel struct {
-	list     list.Model
-	choice   string
-	quitting bool
+	stage                   initStage
+	selectTemplate          tea.Model
+	inputForm               tea.Model
+	template                string
+	selectedTemplate        bool
+	projectName             string
+	selectedProjectName     bool
+	blueprintFormat         string
+	selectedBlueprintFormat bool
+	noGit                   *bool
+	selectedNoGit           bool
+	directory               string
+	quitting                bool
+	Error                   error
 }
 
-func (i InitModel) Init() tea.Cmd {
+func (m InitModel) Init() tea.Cmd {
+	switch m.stage {
+	case selectTemplateStage:
+		return m.selectTemplate.Init()
+	case inputFormStage:
+		return m.inputForm.Init()
+	}
 	return nil
 }
 
 func (m InitModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.list.SetWidth(msg.Width)
-		return m, nil
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "esc":
+		case "ctrl+c":
 			m.quitting = true
 			return m, tea.Quit
-		case "enter":
-			i, ok := m.list.SelectedItem().(item)
-			if ok {
-				m.choice = string(i.key)
-			}
-			return m, tea.Quit
 		}
+	case SelectTemplateMsg:
+		if len(strings.TrimSpace(msg.Template)) > 0 {
+			m.template = msg.Template
+			m.selectedTemplate = true
+			m.stage = inputFormStage
+			// Initialize the input form when transitioning to it
+			return m, m.inputForm.Init()
+		}
+	case InputFormCompleteMsg:
+		m.projectName = msg.ProjectName
+		m.selectedProjectName = true
+		m.blueprintFormat = msg.BlueprintFormat
+		m.selectedBlueprintFormat = true
+		noGit := msg.NoGit
+		m.noGit = &noGit
+		m.selectedNoGit = true
+		m.stage = selectDirectoryStage
+		// TODO: Initialize directory selection stage when implemented
+		return m, nil
 	}
+
+	// Route updates to the current stage's model
 	var cmd tea.Cmd
-	m.list, cmd = m.list.Update(msg)
+	switch m.stage {
+	case selectTemplateStage:
+		m.selectTemplate, cmd = m.selectTemplate.Update(msg)
+	case inputFormStage:
+		m.inputForm, cmd = m.inputForm.Update(msg)
+	}
 	return m, cmd
 }
 
 func (m InitModel) View() string {
-	if m.choice != "" {
-		return quitTextStyle.Render(fmt.Sprintf("%s? Sounds good to me.", m.choice))
-	}
 	if m.quitting {
-		return quitTextStyle.Render("Not hungry? That’s cool.")
+		return quitTextStyle.Render("Not hungry? That's cool.")
 	}
-	return "\n" + m.list.View()
+
+	switch m.stage {
+	case selectTemplateStage:
+		return "\n" + m.selectTemplate.View()
+	case inputFormStage:
+		return "\n" + m.inputForm.View()
+	case selectDirectoryStage:
+		// TODO: Implement directory selection view
+		return "\n  Directory selection stage (not yet implemented)\n"
+	case initCompleteStage:
+		return "\n  Project initialization complete!\n"
+	}
+
+	return "\n"
 }
 
-func NewInitApp(initialLanguage string) *InitModel {
-	items := []list.Item{}
+// InitialState is the initial state for the init TUI app
+// to initialise a new project.
+type InitialState struct {
+	Template                 string
+	IsDefaultTemplate        bool
+	ProjectName              string
+	BlueprintFormat          string
+	IsDefaultBlueprintFormat bool
+	NoGit                    *bool
+	IsDefaultNoGit           bool
+	Directory                string
+}
 
-	const defaultWidth = 20
-
-	l := list.New(items, itemDelegate{}, defaultWidth, listHeight)
-	l.Title = "What language/framework do you want to use for your project?"
-	l.SetShowStatusBar(false)
-	l.SetFilteringEnabled(false)
-	l.Styles.Title = titleStyle
-	l.Styles.PaginationStyle = paginationStyle
-	l.Styles.HelpStyle = helpStyle
-	return &InitModel{
-		list:   l,
-		choice: initialLanguage,
+func NewInitApp(
+	initialState InitialState,
+	bluelinkStyles *styles.BluelinkStyles,
+) (*InitModel, error) {
+	selectTemplate, err := NewSelectTemplateModel(
+		bluelinkStyles,
+		initialState.IsDefaultTemplate,
+	)
+	if err != nil {
+		return nil, err
 	}
+
+	// Create input form model
+	inputForm := NewInputFormModel(
+		InputFormInitialValues{
+			ProjectName:              initialState.ProjectName,
+			BlueprintFormat:          initialState.BlueprintFormat,
+			IsDefaultBlueprintFormat: initialState.IsDefaultBlueprintFormat,
+			NoGit:                    initialState.NoGit,
+			IsDefaultNoGit:           initialState.IsDefaultNoGit,
+		},
+		bluelinkStyles,
+	)
+
+	stage := stageFromInitialState(initialState)
+	return &InitModel{
+		stage:                   stage,
+		selectTemplate:          selectTemplate,
+		inputForm:               inputForm,
+		template:                initialState.Template,
+		selectedTemplate:        initialState.IsDefaultTemplate,
+		projectName:             initialState.ProjectName,
+		blueprintFormat:         initialState.BlueprintFormat,
+		selectedBlueprintFormat: initialState.IsDefaultBlueprintFormat,
+		noGit:                   initialState.NoGit,
+		selectedNoGit:           initialState.IsDefaultNoGit,
+		directory:               initialState.Directory,
+	}, nil
+}
+
+func stageFromInitialState(initialState InitialState) initStage {
+	isTemplateSelected := (initialState.Template != "" && !initialState.IsDefaultTemplate)
+
+	if !isTemplateSelected {
+		return selectTemplateStage
+	}
+
+	isProjectNameSelected := strings.TrimSpace(initialState.ProjectName) != ""
+
+	isBlueprintFormatSelected := initialState.BlueprintFormat != "" && !initialState.IsDefaultBlueprintFormat
+
+	isNoGitSelected := initialState.NoGit != nil && !initialState.IsDefaultNoGit
+
+	if !isProjectNameSelected || !isBlueprintFormatSelected || !isNoGitSelected {
+		return inputFormStage
+	}
+
+	if strings.TrimSpace(initialState.Directory) == "" {
+		return selectDirectoryStage
+	}
+
+	return initCompleteStage
 }

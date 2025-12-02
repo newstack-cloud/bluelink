@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"log"
 	"os"
 
@@ -9,7 +8,6 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/config"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/engine"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/handlers"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/styles"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/validateui"
 	"github.com/spf13/cobra"
@@ -38,32 +36,38 @@ func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider)
 			}
 			blueprintFile, isDefault := confProvider.GetString("validateBlueprintFile")
 
-			inTerminal := term.IsTerminal(int(os.Stdout.Fd()))
-			if !inTerminal {
-				handler := handlers.NewValidateHandler(
-					deployEngine,
-					blueprintFile,
-					// When not in a terminal, print output
-					// that is intended primarily for a human to read
-					// should always go to stdout for the process.
-					os.Stdout,
-					// Logger is used to for more verbose, technical output
-					// that is intended primarily for debugging.
-					logger,
-				)
-				return handler.Handle(context.TODO())
-			}
-
 			if _, err := tea.LogToFile("bluelink-output.log", "simple"); err != nil {
 				log.Fatal(err)
 			}
 
+			// From this point onwards, errors will not be related to usage
+			// so the usage should not be printed if validation fails,
+			// we still need to return an error to allow cobra to exit with a non-zero exit code.
+			cmd.SilenceUsage = true
+
 			styles := styles.NewDefaultBluelinkStyles()
-			app, err := validateui.NewValidateApp(deployEngine, logger, blueprintFile, isDefault, styles)
+			inTerminal := term.IsTerminal(int(os.Stdout.Fd()))
+			app, err := validateui.NewValidateApp(
+				deployEngine,
+				logger,
+				blueprintFile,
+				isDefault,
+				styles,
+				!inTerminal,
+				os.Stdout,
+			)
 			if err != nil {
 				return err
 			}
-			finalModel, err := tea.NewProgram(app).Run()
+
+			options := []tea.ProgramOption{}
+			if inTerminal {
+				options = append(options, tea.WithAltScreen(), tea.WithMouseCellMotion())
+			} else {
+				options = append(options, tea.WithInput(nil), tea.WithoutRenderer())
+			}
+
+			finalModel, err := tea.NewProgram(app, options...).Run()
 			if err != nil {
 				return err
 			}
@@ -77,11 +81,15 @@ func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider)
 		},
 	}
 
-	validateCmd.PersistentFlags().StringP(
+	validateCmd.PersistentFlags().String(
 		"blueprint-file",
-		"b",
-		"app.blueprint.yaml",
-		"The blueprint file to use in the validation process.",
+		"project.blueprint.yaml",
+		"The blueprint file to validate. "+
+			"This can be a local file, a public URL or a path to a file in an object storage bucket. "+
+			"Local files can be specified as a relative or absolute path to the file. "+
+			"Public URLs must start with https:// and represent a valid URL to a blueprint file. "+
+			"Object storage bucket files must be specified in the format of {scheme}://{bucket-name}/{object-path}, "+
+			"where {scheme} is one of the following: s3, gcs, azureblob.",
 	)
 	confProvider.BindPFlag("validateBlueprintFile", validateCmd.PersistentFlags().Lookup("blueprint-file"))
 	confProvider.BindEnvVar("validateBlueprintFile", "BLUELINK_CLI_VALIDATE_BLUEPRINT_FILE")

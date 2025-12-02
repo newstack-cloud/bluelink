@@ -1,19 +1,19 @@
 package validateui
 
 import (
-	"log"
+	"errors"
+	"io"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/engine"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/sharedui"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/styles"
 	"go.uber.org/zap"
 )
 
 var (
-	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("#4f46e5"))
-	quitTextStyle     = lipgloss.NewStyle().Margin(1, 0, 2, 4)
+	quitTextStyle = styles.DefaultBluelinkStyles.Muted.Margin(1, 0, 2, 4)
 )
 
 // ValidateStage is an enum that represents the different stages
@@ -45,6 +45,7 @@ type MainModel struct {
 	quitting        bool
 	selectBlueprint tea.Model
 	validate        tea.Model
+	styles          *styles.BluelinkStyles
 	Error           error
 }
 
@@ -57,13 +58,13 @@ func (m MainModel) Init() tea.Cmd {
 func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds := []tea.Cmd{}
 	switch msg := msg.(type) {
-	case SelectBlueprintMsg:
+	case sharedui.SelectBlueprintMsg:
 		m.sessionState = validateView
-		m.blueprintFile = msg.blueprintFile
+		m.blueprintFile = sharedui.ToFullBlueprintPath(msg.BlueprintFile, msg.Source)
 		var cmd tea.Cmd
 		m.validate, cmd = m.validate.Update(msg)
 		cmds = append(cmds, cmd)
-	case ClearSelectedBlueprintMsg:
+	case sharedui.ClearSelectedBlueprintMsg:
 		m.sessionState = validateBlueprintSelect
 		m.blueprintFile = ""
 	case tea.WindowSizeMsg:
@@ -74,7 +75,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, bpCmd, validateCmd)
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "esc":
+		case "ctrl+c", "q":
 			m.quitting = true
 			return m, tea.Quit
 		}
@@ -87,7 +88,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.sessionState {
 	case validateBlueprintSelect:
 		newSelectBlueprint, newCmd := m.selectBlueprint.Update(msg)
-		selectBlueprintModel, ok := newSelectBlueprint.(SelectBlueprintModel)
+		selectBlueprintModel, ok := newSelectBlueprint.(sharedui.SelectBlueprintModel)
 		if !ok {
 			panic("failed to perform assertion on select blueprint model in validate")
 		}
@@ -102,8 +103,10 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.validate = validateModel
 		cmds = append(cmds, newCmd)
 		if validateModel.err != nil {
-			log.Println("setting validate model error:", validateModel.err)
 			m.Error = validateModel.err
+		}
+		if validateModel.validationFailed {
+			m.Error = errors.New("validation failed")
 		}
 	}
 	return m, tea.Batch(cmds...)
@@ -116,7 +119,8 @@ func (m MainModel) View() string {
 	if m.sessionState == validateBlueprintSelect {
 		return m.selectBlueprint.View()
 	}
-	selected := "\n  You selected blueprint: " + selectedItemStyle.Render(m.blueprintFile) + "\n"
+
+	selected := "\n  You selected blueprint: " + m.styles.Selected.Render(m.blueprintFile) + "\n"
 	return selected + m.validate.View()
 }
 
@@ -126,23 +130,39 @@ func NewValidateApp(
 	blueprintFile string,
 	isDefaultBlueprintFile bool,
 	bluelinkStyles *styles.BluelinkStyles,
+	headless bool,
+	headlessWriter io.Writer,
 ) (*MainModel, error) {
 	sessionState := validateBlueprintSelect
-	autoValidate := blueprintFile != "" && !isDefaultBlueprintFile
+	// In headless mode, use the default blueprint file
+	// if no explicit file is provided.
+	autoValidate := (blueprintFile != "" && !isDefaultBlueprintFile) || headless
 
 	if autoValidate {
 		sessionState = validateView
 	}
 
-	selectBlueprint, err := NewSelectBlueprint(blueprintFile, autoValidate, bluelinkStyles)
+	fp, err := sharedui.BlueprintLocalFilePicker(bluelinkStyles)
 	if err != nil {
 		return nil, err
 	}
-	validate := NewValidateModel(engine, logger)
+
+	selectBlueprint, err := sharedui.NewSelectBlueprint(
+		blueprintFile,
+		autoValidate,
+		"validate",
+		bluelinkStyles,
+		&fp,
+	)
+	if err != nil {
+		return nil, err
+	}
+	validate := NewValidateModel(engine, logger, headless, headlessWriter)
 	return &MainModel{
 		sessionState:    sessionState,
 		blueprintFile:   blueprintFile,
 		selectBlueprint: selectBlueprint,
 		validate:        validate,
+		styles:          bluelinkStyles,
 	}, nil
 }

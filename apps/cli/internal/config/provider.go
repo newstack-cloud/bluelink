@@ -41,9 +41,10 @@ type Provider struct {
 // values for the CLI.
 func NewProvider() *Provider {
 	return &Provider{
-		config:  map[string]string{},
-		pFlags:  map[string]*pflag.Flag{},
-		envVars: map[string]string{},
+		config:   map[string]string{},
+		pFlags:   map[string]*pflag.Flag{},
+		envVars:  map[string]string{},
+		defaults: map[string]string{},
 	}
 }
 
@@ -87,7 +88,7 @@ func (p *Provider) SetDefault(configName, value string) {
 func (p *Provider) GetString(configName string) (string, bool) {
 	flag, hasFlag := p.pFlags[configName]
 	defaultFlagValue := ""
-	if hasFlag {
+	if hasFlag && flag != nil {
 		value := flag.Value.String()
 		if strings.TrimSpace(value) != "" {
 			if flag.Changed {

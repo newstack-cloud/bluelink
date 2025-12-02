@@ -15,11 +15,59 @@ If you want to install dependencies manually you can run:
 go mod download
 ```
 
+### Prepare engine auth file
+
+For running the CLI locally, you need an an engine auth config file
+to authenticate with the deploy engine.
+
+You can copy `engine.auth.example.json` to `engine.auth.json` and update the file with the appropriate credentials, default credentials should work out of the box for local development.
+
 ## Running tests
+
+
+### Unit tests only
 
 ```bash
 bash ./scripts/run-tests.sh
 ```
+
+### Unit tests and E2E tests
+
+```bash
+bash ./scripts/run-tests.sh --e2e
+```
+
+## Testing the CLI locally
+
+### Interactive mode (default in a terminal)
+
+Testing in an interactive mode can be done by running:
+
+```bash
+go run ./cmd/main.go <command> <options>
+```
+
+For example:
+
+```bash
+go run ./cmd/main.go validate --blueprint-file app.blueprint.yml
+```
+
+### Non-interactive mode
+
+Testing in a non-interactive mode can be done by running:
+
+```bash
+go run ./cmd/main.go <command> <options>  2>&1 | tee debug.log
+```
+
+For example:
+
+```bash
+go run ./cmd/main.go validate --blueprint-file app.blueprint.yml 2>&1 | tee debug.log
+```
+
+This will output the output to the console and also to the `debug.log` file.
 
 ## Releasing
 

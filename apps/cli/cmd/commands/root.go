@@ -40,10 +40,9 @@ This CLI validates, stages changes for, and deploys blueprints.`,
 	rootCmd.SetUsageTemplate(utils.UsageTemplate)
 	rootCmd.SetHelpTemplate(utils.HelpTemplate)
 
-	rootCmd.Flags().StringVarP(
+	rootCmd.PersistentFlags().StringVar(
 		&configFile,
 		"config",
-		"c",
 		"bluelink.config.toml",
 		"Specify a config file to source config from as an alternative to flags",
 	)
@@ -51,8 +50,8 @@ This CLI validates, stages changes for, and deploys blueprints.`,
 	rootCmd.PersistentFlags().String(
 		"deploy-config-file",
 		"bluelink.deploy.json",
-		"The path to the deployment configuration JSON file that will be used as"+
-			" a source of blueprint variable overrides, provider configuration, "+
+		"The path to the deployment configuration JSON file that will be used as "+
+			"a source of blueprint variable overrides, provider configuration, "+
 			"transformer configuration and general configuration. "+
 			"The contents of this file is sent in requests to the deploy engine for "+
 			"validation, change staging and deployment.",
@@ -79,6 +78,14 @@ This CLI validates, stages changes for, and deploys blueprints.`,
 	)
 	confProvider.BindPFlag("engineEndpoint", rootCmd.PersistentFlags().Lookup("engine-endpoint"))
 	confProvider.BindEnvVar("engineEndpoint", "BLUELINK_CLI_ENGINE_ENDPOINT")
+
+	rootCmd.PersistentFlags().String(
+		"engine-auth-config-file",
+		"engine.auth.json",
+		"The path to the authentication configuration file to use to connect to the deploy engine, this must be a JSON file.",
+	)
+	confProvider.BindPFlag("engineAuthConfigFile", rootCmd.PersistentFlags().Lookup("engine-auth-config-file"))
+	confProvider.BindEnvVar("engineAuthConfigFile", "BLUELINK_CLI_ENGINE_AUTH_CONFIG_FILE")
 
 	rootCmd.PersistentFlags().Bool(
 		"skip-plugin-config-validation",

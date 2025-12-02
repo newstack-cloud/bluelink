@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -12,7 +10,8 @@ func setupVersionCommand(rootCmd *cobra.Command) {
 		Short: "Print the version number of Bluelink CLI",
 		Long:  `All software has versions. This is Bluelink CLI's`,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("Bluelink CLI v0.1")
+			// TODO: Use goreleaser to inject version
+			cmd.Println("Bluelink CLI v0.1.0")
 		},
 	}
 

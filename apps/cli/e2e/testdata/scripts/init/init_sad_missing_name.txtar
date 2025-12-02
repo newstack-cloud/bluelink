@@ -1,0 +1,8 @@
+# Test init fails in headless mode without project name
+
+! exec bluelink init
+stderr 'project-name'
+stderr 'non-interactive'
+
+-- bluelink.config.toml --
+# Empty config file to prevent config loading error

@@ -1,0 +1,16 @@
+# Test validate fails when blueprint file does not exist
+# The error comes from the deploy engine not being able to resolve the blueprint
+
+wait_engine
+
+! exec bluelink validate --blueprint-file=nonexistent.yaml --connect-protocol=tcp --engine-endpoint=$BLUELINK_ENGINE_ENDPOINT --engine-auth-config-file=engine.auth.json
+stderr 'could not be resolved'
+
+-- bluelink.config.toml --
+# Empty config file
+
+-- engine.auth.json --
+{
+  "method": "apiKey",
+  "apiKey": "test-api-key"
+}

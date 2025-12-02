@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CLI_DIR="$SCRIPT_DIR/.."
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]
@@ -15,6 +17,10 @@ case $key in
     UPDATE_SNAPSHOTS=yes
     shift # past argument
     ;;
+    --e2e)
+    E2E=yes
+    shift # past argument
+    ;;
     *)    # unknown option
     POSITIONAL+=("$1") # save it in an array for later
     shift # past argument
@@ -27,7 +33,24 @@ function help {
   cat << EOF
 Test runner
 Runs tests for the CLI:
-bash scripts/run-tests.sh
+
+Usage:
+  bash scripts/run-tests.sh [options]
+
+Options:
+  -h, --help           Show this help message
+  --update-snapshots   Update test snapshots
+  --e2e                Include E2E tests (requires Docker)
+                       This will start the deploy-engine in Docker,
+                       run E2E tests with coverage, and merge coverage
+                       with unit test coverage.
+
+Examples:
+  # Run unit tests only
+  bash scripts/run-tests.sh
+
+  # Run all tests including E2E (requires Docker)
+  bash scripts/run-tests.sh --e2e
 EOF
 }
 
@@ -37,17 +60,77 @@ if [ -n "$HELP" ]; then
 fi
 
 set -e
-echo "" > coverage.txt
 
-go test -timeout 30000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(testutils))$'`
+cd "$CLI_DIR"
+
+# Create coverage directory
+mkdir -p coverage
+
+# Run unit tests
+echo "Running unit tests..."
+echo "" > coverage/unit.txt
+go test -timeout 30000ms -race -coverprofile=coverage/unit.txt -coverpkg=./... -covermode=atomic $(go list ./... | grep -v '/e2e$' | grep -v '/testutils$')
+
+if [ -n "$E2E" ]; then
+  echo ""
+  echo "Running E2E tests..."
+
+  # Start deploy-engine
+  echo "Starting deploy-engine..."
+  docker compose -f "$CLI_DIR/e2e/docker-compose.test.yaml" up -d --wait
+
+  cleanup() {
+    echo "Stopping deploy-engine..."
+    # docker compose -f "$CLI_DIR/e2e/docker-compose.test.yaml" down
+  }
+  trap cleanup EXIT
+
+  # Create E2E coverage directory
+  E2E_COVER_DIR="$CLI_DIR/coverage/e2e"
+  mkdir -p "$E2E_COVER_DIR"
+
+  # Run E2E tests with coverage
+  GOCOVERDIR="$E2E_COVER_DIR" go test -tags=e2e -timeout 120000ms -v ./e2e/...
+
+  # Convert E2E coverage data to text format
+  echo "Processing E2E coverage..."
+  go tool covdata textfmt -i="$E2E_COVER_DIR" -o=coverage/e2e.txt
+
+  # Merge coverage files
+  echo "Merging coverage..."
+  # Use gocovmerge if available, otherwise just use unit coverage
+  if command -v gocovmerge &> /dev/null; then
+    gocovmerge coverage/unit.txt coverage/e2e.txt > coverage/total.txt
+  else
+    echo "Note: gocovmerge not installed. Install with: go install github.com/wadey/gocovmerge@latest"
+    echo "Using unit test coverage only for combined report."
+    cp coverage/unit.txt coverage/total.txt
+  fi
+
+  COVERAGE_FILE="coverage/total.txt"
+else
+  COVERAGE_FILE="coverage/unit.txt"
+fi
+
+# Copy to legacy location for backwards compatibility
+cp "$COVERAGE_FILE" coverage.txt
 
 if [ -z "$GITHUB_ACTION" ]; then
   # We are on a dev machine so produce html output of coverage
   # to get a visual to better reveal uncovered lines.
-  go tool cover -html=coverage.txt -o coverage.html
+  go tool cover -html="$COVERAGE_FILE" -o coverage.html
+  echo ""
+  echo "Coverage report: coverage.html"
 fi
 
 if [ -n "$GITHUB_ACTION" ]; then
   # We are in a CI environment so run tests again to generate JSON report.
-  go test -timeout 30000ms -json -tags "$TEST_TYPES" `go list ./... | egrep -v '(/(testutils))$'` > report.json
+  TEST_TAGS=""
+  if [ -n "$E2E" ]; then
+    TEST_TAGS="e2e"
+  fi
+  go test -timeout 30000ms -json -tags "$TEST_TAGS" $(go list ./... | grep -v '/testutils$') > report.json
 fi
+
+echo ""
+echo "Tests complete!"
