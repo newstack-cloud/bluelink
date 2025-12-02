@@ -13,7 +13,7 @@
     { "type": "deps", "section": "Dependencies" },
     { "type": "chore", "section": "Miscellaneous", "hidden": true }
   ],
-  "pull-request-title-pattern": "chore(${component}): release ${version}",
+  "pull-request-title-pattern": "chore: release ${component} ${version}",
   "packages": {
     "apps/cli": {
       "component": "cli",
