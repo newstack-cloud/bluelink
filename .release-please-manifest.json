@@ -1,5 +1,5 @@
 {
-  "apps/cli": "0.1.0",
+  "apps/cli": "0.1.1",
   "apps/deploy-engine": "0.1.0",
   "libs/blueprint": "0.36.0",
   "libs/blueprint-resolvers": "0.1.0",
