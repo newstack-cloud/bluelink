@@ -37,6 +37,8 @@ bash ./scripts/run-tests.sh
 bash ./scripts/run-tests.sh --e2e
 ```
 
+For detailed information about E2E tests, including how to write and run them, see [E2E_TESTS.md](E2E_TESTS.md).
+
 ## Testing the CLI locally
 
 ### Interactive mode (default in a terminal)
