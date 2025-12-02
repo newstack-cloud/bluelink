@@ -1,0 +1,59 @@
+{
+  "include-component-in-tag": true,
+  "tag-separator": "/",
+  "release-type": "go",
+  "separate-pull-requests": true,
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": true,
+  "prerelease-type": "alpha",
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "perf", "section": "Performance Improvements" },
+    { "type": "deps", "section": "Dependencies" },
+    { "type": "chore", "section": "Miscellaneous", "hidden": true }
+  ],
+  "pull-request-title-pattern": "chore(${component}): release ${version}",
+  "packages": {
+    "apps/cli": {
+      "component": "cli",
+      "package-name": "cli"
+    },
+    "apps/deploy-engine": {
+      "component": "deploy-engine",
+      "package-name": "deploy-engine"
+    },
+    "libs/blueprint": {
+      "component": "blueprint",
+      "package-name": "blueprint"
+    },
+    "libs/blueprint-resolvers": {
+      "component": "blueprint-resolvers",
+      "package-name": "blueprint-resolvers"
+    },
+    "libs/blueprint-state": {
+      "component": "blueprint-state",
+      "package-name": "blueprint-state"
+    },
+    "libs/common": {
+      "component": "common",
+      "package-name": "common"
+    },
+    "libs/deploy-engine-client": {
+      "component": "deploy-engine-client",
+      "package-name": "deploy-engine-client"
+    },
+    "libs/plugin-framework": {
+      "component": "plugin-framework",
+      "package-name": "plugin-framework"
+    },
+    "tools/blueprint-ls": {
+      "component": "blueprint-ls",
+      "package-name": "blueprint-ls"
+    },
+    "tools/plugin-docgen": {
+      "component": "plugin-docgen",
+      "package-name": "plugin-docgen"
+    }
+  }
+}

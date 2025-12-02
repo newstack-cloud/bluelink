@@ -1,0 +1,75 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
+      paths_released: ${{ steps.release.outputs.paths_released }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # Post-process tags for Go module compatibility
+  fix-go-tags:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Go module tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Map component names to paths
+          declare -A COMPONENT_TO_PATH=(
+            ["cli"]="apps/cli"
+            ["deploy-engine"]="apps/deploy-engine"
+            ["blueprint"]="libs/blueprint"
+            ["blueprint-resolvers"]="libs/blueprint-resolvers"
+            ["blueprint-state"]="libs/blueprint-state"
+            ["common"]="libs/common"
+            ["deploy-engine-client"]="libs/deploy-engine-client"
+            ["plugin-framework"]="libs/plugin-framework"
+            ["blueprint-ls"]="tools/blueprint-ls"
+            ["plugin-docgen"]="tools/plugin-docgen"
+          )
+
+          # Get newly created tags from release-please
+          for tag in $(git tag --points-at HEAD); do
+            # Extract component and version (format: component/vX.Y.Z)
+            if [[ "$tag" =~ ^([^/]+)/(.+)$ ]]; then
+              component="${BASH_REMATCH[1]}"
+              version="${BASH_REMATCH[2]}"
+
+              if [[ -n "${COMPONENT_TO_PATH[$component]}" ]]; then
+                path="${COMPONENT_TO_PATH[$component]}"
+                new_tag="${path}/${version}"
+
+                if [[ "$tag" != "$new_tag" ]]; then
+                  echo "Creating Go module tag: $new_tag (from $tag)"
+                  git tag "$new_tag" HEAD
+                  git push origin "$new_tag"
+
+                  # Optionally delete the original tag
+                  # git push origin --delete "$tag"
+                fi
+              fi
+            fi
+          done

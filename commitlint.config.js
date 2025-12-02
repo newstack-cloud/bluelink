@@ -17,7 +17,8 @@ module.exports = {
         "refactor",
         "perf",
         "test",
-        "instr"
+        "instr",
+        "deps"
       ],
     ],
     "scope-enum": [
