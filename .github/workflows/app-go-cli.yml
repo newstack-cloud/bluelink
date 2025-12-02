@@ -34,7 +34,10 @@ jobs:
 
     # Install global Go dependencies
     - name: Install Go Global Dependencies
-      run: go install honnef.co/go/tools/cmd/staticcheck@latest && go get -u golang.org/x/sys/unix
+      run: |
+        go install honnef.co/go/tools/cmd/staticcheck@latest
+        go install github.com/wadey/gocovmerge@latest
+        go get -u golang.org/x/sys/unix
       working-directory: ${{env.working-directory}}
 
     # SonarCloud scan runs in a docker container where the workspace directory gets mounted to /github/workspace
@@ -47,7 +50,7 @@ jobs:
       working-directory: ${{env.working-directory}}
 
     - name: Run Tests
-      run: bash scripts/run-tests.sh
+      run: bash scripts/run-tests.sh --e2e
       working-directory: ${{env.working-directory}}
 
     - name: SonarCloud Scan
