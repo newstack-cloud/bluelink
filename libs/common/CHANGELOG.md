@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3](https://github.com/newstack-cloud/bluelink/compare/common/v0.3.2...common/v0.3.3) (2025-12-02)
+
+
+### Features
+
+* **common:** add clock and refactor test suite to testify ([abc2688](https://github.com/newstack-cloud/bluelink/commit/abc268859a5d44b4b7188639b03bd0b92092e0d0))
+* **common:** add helper for snapshots with safe file names ([3311f67](https://github.com/newstack-cloud/bluelink/commit/3311f67d5d415e67a3c17e364629994af14a52cd))
+* **common:** add signature v1 implementation for go ([407ee4a](https://github.com/newstack-cloud/bluelink/commit/407ee4a2bfbebd2051c7a34f50acc3a66f038a3d))
+
+
+### Bug Fixes
+
+* **common:** update celerity signature to bluelink signature ([39c50a9](https://github.com/newstack-cloud/bluelink/commit/39c50a92b864d13a8cd726086b9a8f286f939a20))
+
 ## [0.3.2] - 2025-06-24
 
 ### Fixed
