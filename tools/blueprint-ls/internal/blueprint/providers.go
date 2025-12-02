@@ -22,6 +22,7 @@ func LoadProviders(ctx context.Context) (map[string]provider.Provider, error) {
 		/* linkStateRetriever */ nil,
 		/* blueprintInstanceIDRetriever */ nil,
 		/* resolveWorkingDir */ nil,
+		/* fileSourceRegistry */ nil,
 		/* clock */ nil,
 	)
 

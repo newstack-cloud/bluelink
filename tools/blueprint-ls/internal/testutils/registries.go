@@ -207,6 +207,33 @@ func (r *ResourceRegistryMock) WithParams(
 	return r
 }
 
+func (r *ResourceRegistryMock) AcquireResourceLock(
+	ctx context.Context,
+	input *provider.AcquireResourceLockInput,
+) error {
+	return nil
+}
+
+func (r *ResourceRegistryMock) ReleaseResourceLock(
+	ctx context.Context,
+	instanceID string,
+	resourceName string,
+) {
+}
+
+func (r *ResourceRegistryMock) ReleaseResourceLocks(
+	ctx context.Context,
+	instanceID string,
+) {
+}
+
+func (r *ResourceRegistryMock) ReleaseResourceLocksAcquiredBy(
+	ctx context.Context,
+	instanceID string,
+	acquiredBy string,
+) {
+}
+
 type DataSourceRegistryMock struct {
 	DataSources map[string]provider.DataSource
 }
