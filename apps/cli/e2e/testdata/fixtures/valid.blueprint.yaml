@@ -1,0 +1,6 @@
+version: "2024-04-01"
+resources:
+  testResource:
+    type: example/resource
+    metadata:
+      displayName: Test Resource

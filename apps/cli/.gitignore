@@ -32,6 +32,8 @@ test-*.sh
 
 # Test blueprint files used when testing the CLI during development.
 *.blueprint.yaml
+# But allow e2e test fixtures
+!e2e/testdata/fixtures/*.blueprint.yaml
 
 .claude
 
