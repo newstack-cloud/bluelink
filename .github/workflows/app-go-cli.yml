@@ -40,7 +40,6 @@ jobs:
     - name: Install Go Global Dependencies
       run: |
         go install honnef.co/go/tools/cmd/staticcheck@latest
-        go install github.com/wadey/gocovmerge@latest
         go get -u golang.org/x/sys/unix
       working-directory: ${{env.working-directory}}
 

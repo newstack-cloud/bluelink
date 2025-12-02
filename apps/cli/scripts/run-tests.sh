@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLI_DIR="$SCRIPT_DIR/.."
+CLI_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]
@@ -76,8 +76,9 @@ if [ -n "$E2E" ]; then
   echo "Running E2E tests..."
 
   # Start deploy-engine
+  # Run from e2e directory so relative volume paths in docker-compose.test.yaml resolve correctly
   echo "Starting deploy-engine..."
-  docker compose -f "$CLI_DIR/e2e/docker-compose.test.yaml" up -d --wait
+  docker compose -f "$CLI_DIR/e2e/docker-compose.test.yaml" --project-directory "$CLI_DIR/e2e" up -d --wait
 
   cleanup() {
     echo "Stopping deploy-engine..."
@@ -98,14 +99,32 @@ if [ -n "$E2E" ]; then
 
   # Merge coverage files
   echo "Merging coverage..."
-  # Use gocovmerge if available, otherwise just use unit coverage
-  if command -v gocovmerge &> /dev/null; then
-    gocovmerge coverage/unit.txt coverage/e2e.txt > coverage/total.txt
-  else
-    echo "Note: gocovmerge not installed. Install with: go install github.com/wadey/gocovmerge@latest"
-    echo "Using unit test coverage only for combined report."
-    cp coverage/unit.txt coverage/total.txt
-  fi
+  # Merge by taking the maximum count for each coverage block
+  # Coverage format: file:startLine.startCol,endLine.endCol numStatements count
+  {
+    echo "mode: atomic"
+    # Combine both files, skip mode lines, sort by file:line, and take max count for duplicates
+    cat coverage/unit.txt coverage/e2e.txt | \
+      grep -v "^mode:" | \
+      grep -v "^$" | \
+      sort | \
+      awk '{
+        # Format: file:line.col,line.col numStatements count
+        key = $1 " " $2
+        count = $3
+        if (key in counts) {
+          if (count + 0 > counts[key] + 0) counts[key] = count
+        } else {
+          counts[key] = count
+          order[++n] = key
+        }
+      }
+      END {
+        for (i = 1; i <= n; i++) {
+          print order[i] " " counts[order[i]]
+        }
+      }'
+  } > coverage/total.txt
 
   COVERAGE_FILE="coverage/total.txt"
 else
