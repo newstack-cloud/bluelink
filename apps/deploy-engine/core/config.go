@@ -286,6 +286,12 @@ type ResolversConfig struct {
 	// A custom endpoint to use to make calls to Amazon S3
 	// to retrieve the contents of child blueprint files.
 	S3Endpoint string `mapstructure:"s3_endpoint"`
+	// Whether to use path-style addressing for S3 requests.
+	// When true, requests will be made to {endpoint}/{bucket}/{key} instead of
+	// {bucket}.{endpoint}/{key}. This is required for S3-compatible services
+	// like MinIO that don't support virtual-hosted-style addressing.
+	// Defaults to false.
+	S3UsePathStyle bool `mapstructure:"s3_use_path_style"`
 	// A custom endpoint to use to make calls to Google Cloud Storage
 	// to retrieve the contents of child blueprint files.
 	GCSEndpoint string `mapstructure:"gcs_endpoint"`
@@ -503,6 +509,7 @@ func bindEnvVars(viperInstance *viper.Viper) {
 	viperInstance.BindEnv("state.postgres_pool_max_conn_lifetime")
 
 	viperInstance.BindEnv("resolvers.s3_endpoint")
+	viperInstance.BindEnv("resolvers.s3_use_path_style")
 	viperInstance.BindEnv("resolvers.gcs_endpoint")
 	viperInstance.BindEnv("resolvers.https_client_timeout")
 

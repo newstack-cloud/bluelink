@@ -728,6 +728,20 @@ A custom endpoint to use to connect to an S3-compatible object storage service
 when resolving the source files for child blueprints.
 When empty, the default AWS S3 endpoint will be used.
 
+#### Resolver S3 Use Path Style
+
+`BLUELINK_DEPLOY_ENGINE_RESOLVERS_S3_USE_PATH_STYLE`
+
+_Config field:_ `resolvers.s3_use_path_style`
+
+_**optional**_
+
+Whether to use path-style addressing for S3 requests.
+When true, requests will be made to `{endpoint}/{bucket}/{key}` instead of
+`{bucket}.{endpoint}/{key}`. This is required for S3-compatible services
+like MinIO that don't support virtual-hosted-style addressing.
+Defaults to `false`.
+
 #### Resolver Google Cloud Storage Endpoint
 
 `BLUELINK_DEPLOY_ENGINE_RESOLVERS_GCS_ENDPOINT`

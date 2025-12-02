@@ -103,7 +103,7 @@ func Setup(
 	}
 
 	fsResolver := resolverfs.NewResolver(fileSystem)
-	s3Resolver := s3.NewResolver(config.Resolvers.S3Endpoint, false)
+	s3Resolver := s3.NewResolver(config.Resolvers.S3Endpoint, config.Resolvers.S3UsePathStyle)
 	gcsResolver := gcs.NewResolver(config.Resolvers.GCSEndpoint)
 	httpClient := httputils.NewHTTPClient(config.Resolvers.HTTPSClientTimeout)
 	httpsResolver := resolverhttps.NewResolver(
