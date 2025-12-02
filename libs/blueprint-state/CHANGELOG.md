@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.4.0...blueprint-state/v0.4.1) (2025-12-02)
+
+
+### Features
+
+* **blueprint-state:** add blueprint state library with memfile implementation ([31beba3](https://github.com/newstack-cloud/bluelink/commit/31beba325799acb4611b0447f618c8364e012d94))
+* **blueprint-state:** add blueprint validation state implementation to memfile ([9a9cab3](https://github.com/newstack-cloud/bluelink/commit/9a9cab385672ee73e2c8875815c2571ae5d1cba7))
+* **blueprint-state:** add change set state implementation to memfile ([676e372](https://github.com/newstack-cloud/bluelink/commit/676e37287aaec598d88fceed3dd73540aa2a2d9a))
+* **blueprint-state:** add event state implementation to memfile ([16e55e2](https://github.com/newstack-cloud/bluelink/commit/16e55e2989d98c95e6e63657bc6688ee54217178))
+* **blueprint-state:** add functionality to clean up events before given time ([896bba3](https://github.com/newstack-cloud/bluelink/commit/896bba3665ad188e1c8b6f040096da3c93e702a8))
+* **blueprint-state:** add instance name column and behaviour to lookup instance by name ([8957ca8](https://github.com/newstack-cloud/bluelink/commit/8957ca89c9b4dfcd2aacd906d3e74cfbb9ec39c0))
+* **blueprint-state:** add pg implementation for streaming events ([979ff33](https://github.com/newstack-cloud/bluelink/commit/979ff33faf8fd12d54e6b7ba36927484497ebfe6))
+* **blueprint-state:** add postgres implementation for blueprint validations ([ed096cb](https://github.com/newstack-cloud/bluelink/commit/ed096cb89aa0bb84a66cc9ad69468b92bb978439))
+* **blueprint-state:** add postgres implementation for change sets ([74b99c3](https://github.com/newstack-cloud/bluelink/commit/74b99c3bf2217b75046de37b6d77600049fc3df6))
+* **blueprint-state:** add postgres state container implementation ([3600a1d](https://github.com/newstack-cloud/bluelink/commit/3600a1d0ece1ecf3d030ecb3dd55cbb9ceab6457))
+* **blueprint-state:** add support for link resource data mappings ([7b164fc](https://github.com/newstack-cloud/bluelink/commit/7b164fc6b17e59c010a3334901a407cc3735b755))
+* **blueprint-state:** improve memfile event streaming behaviour ([5e3771d](https://github.com/newstack-cloud/bluelink/commit/5e3771dbc88bd34632e75c546991bec083502962))
+* **blueprint-state:** improve postgres event streaming behaviour ([56780dd](https://github.com/newstack-cloud/bluelink/commit/56780ddf5bcf6c9c305d4f5ce7ed84a95a50ef4c))
+* **blueprint-state:** update blueprint framework version and add support for resource type ([eee53b0](https://github.com/newstack-cloud/bluelink/commit/eee53b055dce26e353c74c4363927c31b0ea96dc))
+
+
+### Bug Fixes
+
+* **blueprint-state:** add correction to postgres state container to update on conflict ([27a330f](https://github.com/newstack-cloud/bluelink/commit/27a330fe19f77face6b2b5e9207a49562f10dcad))
+* **blueprint-state:** add memfile fix for saving events in-memory ([e74ebe8](https://github.com/newstack-cloud/bluelink/commit/e74ebe89b99c3d14a0cce3c238986759133844d5))
+* **blueprint-state:** add memfile fix for streaming queued events ([a251dfc](https://github.com/newstack-cloud/bluelink/commit/a251dfc4178f419cbf5abd4b83c3b8a3746e3085))
+* **blueprint-state:** add postgres fix for streaming queued events ([f1fe30d](https://github.com/newstack-cloud/bluelink/commit/f1fe30d453c6f428c01f5844ee6e98885ed72812))
+* **blueprint-state:** make sure change set is added to chunk on update ([fa2e9a9](https://github.com/newstack-cloud/bluelink/commit/fa2e9a9cd7079a09c9a671d73e892f14e2128c62))
+* **blueprint-state:** make sure end field is copied for events ([b350b35](https://github.com/newstack-cloud/bluelink/commit/b350b3540487b6546b9db1d07a4015d7f21d8122))
+* **blueprint-state:** update dependencies to use versions in new org ([82bec4a](https://github.com/newstack-cloud/bluelink/commit/82bec4a4b1cabbc1f6824b83a3587b204a277060))
+
 ## [0.4.0] - 2025-07-20
 
 ### Added
