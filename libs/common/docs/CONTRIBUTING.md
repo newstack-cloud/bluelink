@@ -23,53 +23,29 @@ bash ./scripts/run-tests.sh
 
 ## Releasing
 
-To release a new version of the library, you need to create a new tag and push it to the repository.
+Releases are automated using [release-please](https://github.com/googleapis/release-please).
 
-The format must be `libs/common/vX.Y.Z` where `X.Y.Z` is the semantic version number.
-The reason for this is that Go's mechanism for picking up modules from multi-repo packages is based on the sub-directory path being in the version tag.
+### How it works
 
-See [here](https://go.dev/wiki/Modules#publishing-a-release).
+1. **Conventional commits drive releases** - Commits with scopes matching this library (e.g., `feat(common): ...` or `fix(common): ...`) are tracked by release-please.
 
-1. add a change log entry to the `CHANGELOG.md` file following the template below:
+2. **Release PRs are created automatically** - When releasable commits land on `main`, release-please opens/updates a PR with:
+   - Version bump based on commit types (feat = minor, fix = patch)
+   - CHANGELOG.md updates
 
-```markdown
-## [0.2.0] - 2024-06-05
+3. **Merging creates the release** - When the release PR is merged:
+   - A GitHub release is created
+   - Git tag is created in format `libs/common/v{version}` (e.g., `libs/common/v0.4.0`)
 
-### Fixed
+### Go module indexing
 
-- Fixes bugs in the slice search utility function.
+When a library release tag is pushed, the `index-go-library.yml` workflow automatically indexes the new version with the Go module proxy (pkg.go.dev).
 
-### Added
+### Tag format
 
-- Adds new utility functions for handling maps.
-```
+Tags follow Go module conventions: `libs/common/vX.Y.Z`
 
-2. Create and push the new tag prefixed by sub-directory path:
-
-```bash
-git tag -a libs/common/v0.2.0 -m "chore(common): Release v0.2.0"
-git push --tags
-```
-
-Be sure to add a release for the tag with notes following this template:
-
-Title: `Common - v0.2.0`
-
-```markdown
-### Fixed
-
-- Fixes bugs in the slice search utility function.
-
-### Added
-
-- Adds new utility functions for handling maps.
-```
-
-3. Prompt Go to update its index of modules with the new release:
-
-```bash
-GOPROXY=proxy.golang.org go list -m github.com/newstack-cloud/bluelink/libs/common@v0.2.0
-```
+Example: `libs/common/v0.4.0`
 
 ## Commit scope
 

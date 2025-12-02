@@ -73,55 +73,29 @@ This will output the output to the console and also to the `debug.log` file.
 
 ## Releasing
 
-TODO: Outline a more involved release process to ship binaries!
+Releases are automated using [release-please](https://github.com/googleapis/release-please).
 
-To release a new version of the library, you need to create a new tag and push it to the repository.
+### How it works
 
-The format must be `apps/cli/vX.Y.Z` where `X.Y.Z` is the semantic version number.
-The reason for this is that Go's mechanism for picking up modules from multi-repo packages is based on the sub-directory path being in the version tag.
+1. **Conventional commits drive releases** - Commits with scopes matching this app (e.g., `feat(cli): ...` or `fix(cli): ...`) are tracked by release-please.
 
-See [here](https://go.dev/wiki/Modules#publishing-a-release).
+2. **Release PRs are created automatically** - When releasable commits land on `main`, release-please opens/updates a PR with:
+   - Version bump based on commit types (feat = minor, fix = patch)
+   - CHANGELOG.md updates
 
-1. add a change log entry to the `CHANGELOG.md` file following the template below:
+3. **Merging creates the release** - When the release PR is merged:
+   - A GitHub release is created
+   - Git tag is created in format `apps/cli/v{version}` (e.g., `apps/cli/v1.0.0`)
 
-```markdown
-## [0.2.0] - 2024-06-05
+### Build artifacts
 
-### Fixed:
+When a release tag is pushed, separate workflows will build and publish artifacts (binaries). These workflows are triggered by tags matching `apps/cli/v*`.
 
-- Corrects error reporting for change staging.
+### Tag format
 
-### Added
+Tags follow the pattern: `apps/cli/vX.Y.Z`
 
-- Adds retry behaviour to resource providers.
-```
-
-2. Create and push the new tag prefixed by sub-directory path:
-
-```bash
-git tag -a apps/blueprint/v0.2.0 -m "chore(cli): Release v0.2.0"
-git push --tags
-```
-
-Be sure to add a release for the tag with notes following this template:
-
-Title: `Blueprint Framework - v0.2.0`
-
-```markdown
-## Fixed:
-
-- Corrects claims handling for JWT middleware.
-
-## Added
-
-- Adds dihandlers-compatible middleware for access control.
-```
-
-3. Prompt Go to update its index of modules with the new release:
-
-```bash
-GOPROXY=proxy.golang.org go list -m github.com/newstack-cloud/bluelink/apps/cli@v0.2.0
-```
+Example: `apps/cli/v1.0.0`
 
 ## Commit scope
 

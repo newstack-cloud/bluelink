@@ -9,29 +9,36 @@
 
 ## Release strategy
 
-To allow for a high degree of flexibility, every key component has its own version. Tags used for releases need to be in the following format:
+Every component (library, app, or tool) has its own version. Tags use Go module conventions with the full path prefix:
 
 ```
-{app_or_package}-MAJOR.MINOR.PATCH
+{path}/vMAJOR.MINOR.PATCH
 
-e.g. blueprint-0.1.0
+e.g. libs/blueprint/v0.37.0
+     apps/deploy-engine/v1.0.0
+     tools/blueprint-ls/v1.0.0
 ```
 
-Each key component will specify the release tag format in the README.
+Each component specifies its release tag format in its CONTRIBUTING.md.
 
-**_A key component consists of one or more related applications and libraries. (e.g. the nodejs runtime which consists of an application and multiple NPM packages)_**
-
-You will find each key component listed in the commit scopes section of the [commit guidelines](./COMMIT_GUIDELINES.md#commit-scopes).
-
-The automated tooling bundled with Bluelink will handle ensuring the correct release tags are produced and the corresponding artifacts are published, given you follow the release workflow outlined in the following section.
+You will find each component listed in the commit scopes section of the [commit guidelines](./COMMIT_GUIDELINES.md#commit-scopes).
 
 ## Release workflow
 
-This current iteration of the release workflow needs to be carried out for each key component individually.
-The reason releases should be carried out individually is to ensure the neccessary level of care is taken when making new releases. Automating the workflow to automatically publish all the changed packages and applications across Bluelink would make it hard to track and review the changes made to each individually versioned key component, therefore leading to an increased likelihood of error-prone releases.
+Releases are automated using [release-please](https://github.com/googleapis/release-please).
 
-1. Ensure all relevant changes have been merged (rebased) into the trunk (main).
-2. Create a new release branch for `release/{app_or_package}-MAJOR.MINOR.PATCH` (e.g. `release/blueprint-0.1.1`) with the approximate next version. (This branch is short-lived so it is not crucial to get the version 100% correct)
-3. Push the release branch and this will trigger a GitHub actions workflow that will determine the actual version from commits and update the change log for the target application or library.
-4. The automated workflow from step 3 will create a PR that generates a preliminary set of release notes. Review and edit the release notes accordingly and then rebase the PR into main. (These release notes will be used in a further automated release publishing step)
-5. Rebasing the PR into main will trigger the process of creating the tag and release in GitHub along with building and publishing artifacts for the libraries and applications of the target key component.
+### How it works
+
+1. **Conventional commits drive releases** - Commits with scopes matching a component (e.g., `feat(blueprint): ...` or `fix(cli): ...`) are tracked by release-please.
+
+2. **Release PRs are created automatically** - When releasable commits land on `main`, release-please opens/updates a PR with:
+   - Version bump based on commit types (feat = minor, fix = patch)
+   - CHANGELOG.md updates
+
+3. **Merging creates the release** - When the release PR is merged:
+   - A GitHub release is created
+   - Git tag is created in the appropriate format (e.g., `libs/blueprint/v0.37.0`)
+
+4. **Post-release automation**:
+   - **Libraries**: The `index-go-library.yml` workflow automatically indexes new versions with pkg.go.dev
+   - **Apps/Tools**: Separate workflows build and publish artifacts (Docker images, binaries) triggered by tag patterns

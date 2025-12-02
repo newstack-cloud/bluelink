@@ -50,55 +50,37 @@ bash ./scripts/run-local.sh
 2. Run the script to prepare the environment and bring up the local application and dependency stack.
 
 ```bash
-# You'll need to either set the storage engine to `memfile` as a postgres
-# database is not brought up when running locally as an application on the host machine.
+# You'll either need to bring up a postgres database first or
+# set the storage engine to `memfile` as a postgres
+# database will not be brought up automatically when running locally as an application on the host machine.
 bash ./scripts/run-local.sh --host
 ```
 
 ## Releasing
 
-To release a new version of the deploy engine, you need to create a new tag and push it to the repository.
+Releases are automated using [release-please](https://github.com/googleapis/release-please).
 
-The format must be `apps/deploy-engine/vX.Y.Z` where `X.Y.Z` is the semantic version number.
-The reason for this is that Go's mechanism for picking up modules from multi-repo packages is based on the sub-directory path being in the version tag.
-Even though the deploy engine is an executable, we use the same mechanism as libraries in this repo to be consistent.
+### How it works
 
-See [here](https://go.dev/wiki/Modules#publishing-a-release).
+1. **Conventional commits drive releases** - Commits with scopes matching this app (e.g., `feat(deploy-engine): ...` or `fix(deploy-engine): ...`) are tracked by release-please.
 
-1. add a change log entry to the `CHANGELOG.md` file following the template below:
+2. **Release PRs are created automatically** - When releasable commits land on `main`, release-please opens/updates a PR with:
+   - Version bump based on commit types (feat = minor, fix = patch)
+   - CHANGELOG.md updates
 
-```markdown
-## [0.2.0] - 2024-06-05
+3. **Merging creates the release** - When the release PR is merged:
+   - A GitHub release is created
+   - Git tag is created in format `apps/deploy-engine/v{version}` (e.g., `apps/deploy-engine/v1.0.0`)
 
-### Fixed:
+### Build artifacts
 
-- Corrects error reporting for change staging.
+When a release tag is pushed, separate workflows will build and publish artifacts (Docker images). These workflows are triggered by tags matching `apps/deploy-engine/v*`.
 
-### Added
+### Tag format
 
-- Adds retry behaviour to resource providers.
-```
+Tags follow the pattern: `apps/deploy-engine/vX.Y.Z`
 
-2. Create and push the new tag prefixed by sub-directory path:
-
-```bash
-git tag -a apps/deploy-engine/v0.2.0 -m "chore(deploy-engine): Release v0.2.0"
-git push --tags
-```
-
-Be sure to add a release for the tag with notes following this template:
-
-Title: `Deploy Engine - v0.2.0`
-
-```markdown
-## Fixed:
-
-- Corrects claims handling for JWT middleware.
-
-## Added
-
-- Adds dihandlers-compatible middleware for access control.
-```
+Example: `apps/deploy-engine/v1.0.0`
 
 ## Commit scope
 

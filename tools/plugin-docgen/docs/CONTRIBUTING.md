@@ -44,49 +44,29 @@ The trunk should contain the `versions.go` file generated for the latest release
 
 ## Releasing
 
-To release a new version of the server, you need to create a new tag and push it to the repository.
+Releases are automated using [release-please](https://github.com/googleapis/release-please).
 
-The format must be `tools/plugin-docgen/vX.Y.Z` where `X.Y.Z` is the semantic version number.
-The reason for this is that Go's mechanism for picking up modules from multi-repo packages is based on the sub-directory path being in the version tag.
+### How it works
 
-This is a binary application but follows the same convention as a library for consistency.
+1. **Conventional commits drive releases** - Commits with scopes matching this tool (e.g., `feat(plugin-docgen): ...` or `fix(plugin-docgen): ...`) are tracked by release-please.
 
-See [here](https://go.dev/wiki/Modules#publishing-a-release).
+2. **Release PRs are created automatically** - When releasable commits land on `main`, release-please opens/updates a PR with:
+   - Version bump based on commit types (feat = minor, fix = patch)
+   - CHANGELOG.md updates
 
-1. add a change log entry to the `CHANGELOG.md` file following the template below:
+3. **Merging creates the release** - When the release PR is merged:
+   - A GitHub release is created
+   - Git tag is created in format `tools/plugin-docgen/v{version}` (e.g., `tools/plugin-docgen/v1.0.0`)
 
-```markdown
-## [0.2.0] - 2024-06-05
+### Build artifacts
 
-### Fixed:
+When a release tag is pushed, separate workflows will build and publish artifacts (binaries). These workflows are triggered by tags matching `tools/plugin-docgen/v*`.
 
-- Adds correction for missing config field generation.
+### Tag format
 
-### Added
+Tags follow the pattern: `tools/plugin-docgen/vX.Y.Z`
 
-- Adds support for generating metadata for the plugin docgen tool.
-```
-
-2. Create and push the new tag prefixed by sub-directory path:
-
-```bash
-git tag -a tools/plugin-docgen/v0.2.0 -m "chore(plugin-docgen): Release v0.2.0"
-git push --tags
-```
-
-Be sure to add a release for the tag with notes following this template:
-
-Title: `Plugin JSON Doc Generator - v0.2.0`
-
-```markdown
-## Fixed:
-
-- Adds correction for missing config field generation.
-
-## Added
-
-- Adds support for generating metadata for the plugin docgen tool.
-```
+Example: `tools/plugin-docgen/v1.0.0`
 
 ## Commit scope
 
