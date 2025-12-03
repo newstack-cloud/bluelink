@@ -50,6 +50,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ needs.prepare.outputs.tag }}
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -77,7 +78,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GPG_FINGERPRINT: ${{ steps.gpg.outputs.fingerprint }}
-          GORELEASER_CURRENT_TAG: ${{ needs.prepare.outputs.version }}
+          GORELEASER_CURRENT_TAG: ${{ needs.prepare.outputs.tag }}
           DEPLOY_ENGINE_APPLICATION_VERSION: ${{ needs.prepare.outputs.version }}
 
       - name: Upload artifacts to existing release
