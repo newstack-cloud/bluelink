@@ -453,7 +453,7 @@ func addConfigPaths(viperInstance *viper.Viper) {
 
 func getOSDefaultConfigDirPath() string {
 	if runtime.GOOS == "windows" {
-		return "%LOCALAPPDATA%\\Bluelink\\engine"
+		return "%LOCALAPPDATA%\\NewStack\\Bluelink\\engine"
 	} else {
 		return "$HOME/.bluelink/engine"
 	}
@@ -574,7 +574,7 @@ func setDefaults(viperInstance *viper.Viper) {
 
 func getOSDefaultPluginPath() string {
 	if runtime.GOOS == "windows" {
-		return "%LOCALAPPDATA%\\Bluelink\\engine\\plugins"
+		return "%LOCALAPPDATA%\\NewStack\\Bluelink\\engine\\plugins"
 	} else {
 		return "$HOME/.bluelink/engine/plugins/bin"
 	}
@@ -582,7 +582,7 @@ func getOSDefaultPluginPath() string {
 
 func getOSDefaultPluginLogFileRootDir() string {
 	if runtime.GOOS == "windows" {
-		return "%LOCALAPPDATA%\\Bluelink\\engine\\plugins\\logs"
+		return "%LOCALAPPDATA%\\NewStack\\Bluelink\\engine\\plugins\\logs"
 	} else {
 		return "$HOME/.bluelink/engine/plugins/logs"
 	}
@@ -590,7 +590,7 @@ func getOSDefaultPluginLogFileRootDir() string {
 
 func getOSDefaultMemFileStateDir() string {
 	if runtime.GOOS == "windows" {
-		return "%LOCALAPPDATA%\\Bluelink\\engine\\state"
+		return "%LOCALAPPDATA%\\NewStack\\Bluelink\\engine\\state"
 	} else {
 		return "$HOME/.bluelink/engine/state"
 	}

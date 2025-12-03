@@ -55,7 +55,7 @@ The deploy engine will search for a configuration file named `config.json`, `con
 1. Current working directory (`.`)
 2. OS-specific default config directory:
    - **Linux/macOS:** `$HOME/.bluelink/engine`
-   - **Windows:** `%LOCALAPPDATA%\Bluelink\engine`
+   - **Windows:** `%LOCALAPPDATA%\NewStack\Bluelink\engine`
 3. Custom path specified by the `BLUELINK_DEPLOY_ENGINE_CONFIG_PATH` environment variable
 
 A [config.example.json](config.example.json) file is provided as a reference for the structure of the configuration file.
