@@ -19,6 +19,7 @@ permissions:
   contents: write
   packages: write
   id-token: write
+  attestations: write
 
 jobs:
   prepare:
@@ -142,7 +143,7 @@ jobs:
   sign-and-attest:
     name: Sign and Attest Image
     runs-on: ubuntu-latest
-    needs: [prepare, build-docker]
+    needs: [build-docker]
     steps:
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -176,4 +177,11 @@ jobs:
         run: |
           cosign attest --yes --predicate container-sbom.spdx.json --type spdxjson \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build-docker.outputs.digest }}
+
+      - name: Generate GitHub attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ needs.build-docker.outputs.digest }}
+          push-to-registry: true
 
