@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="Bluelink"
+    Manufacturer="NewStack Cloud"
+    Version="$(var.ProductVersion)"
+    UpgradeCode="E417E6C1-4B4E-4FD1-A1FC-7E8B6D02BED5"
+    Scope="perMachine">
+
+    <SummaryInformation
+      Description="Bluelink - Infrastructure management simplified"
+      Manufacturer="NewStack Cloud" />
+
+    <MajorUpgrade
+      DowngradeErrorMessage="A newer version of Bluelink is already installed."
+      AllowSameVersionUpgrades="yes" />
+
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- License agreement -->
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+
+    <!-- Directory structure - Program Files -->
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Bluelink">
+        <Directory Id="BinFolder" Name="bin" />
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Directory structure - App Data: %LOCALAPPDATA%\NewStack\Bluelink\ -->
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="NewStackAppData" Name="NewStack">
+        <Directory Id="BluelinkAppData" Name="Bluelink">
+          <!-- CLI config -->
+          <Directory Id="ConfigDir" Name="config" />
+          <!-- Deploy Engine data -->
+          <Directory Id="EngineDir" Name="engine">
+            <Directory Id="PluginsDir" Name="plugins">
+              <Directory Id="PluginsLogsDir" Name="logs" />
+            </Directory>
+            <Directory Id="StateDir" Name="state" />
+          </Directory>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Components - Binaries -->
+    <ComponentGroup Id="BinComponents" Directory="BinFolder">
+      <!-- Bluelink CLI -->
+      <Component Id="BluelinkCLI" Guid="BF0DFACA-6012-448A-A079-A854028162C2">
+        <File Id="BluelinkExe" Source="$(var.BinariesDir)\bluelink.exe" KeyPath="yes" />
+      </Component>
+
+      <!-- Deploy Engine -->
+      <Component Id="DeployEngine" Guid="341708A9-B76E-4BF6-A37E-303DBC0924A8">
+        <File Id="DeployEngineExe" Source="$(var.BinariesDir)\deploy-engine.exe" KeyPath="yes" />
+        <!-- Register as Windows Service -->
+        <ServiceInstall
+          Id="DeployEngineService"
+          Name="BluelinkDeployEngine"
+          DisplayName="Bluelink Deploy Engine"
+          Description="Bluelink infrastructure deployment engine service"
+          Type="ownProcess"
+          Start="auto"
+          ErrorControl="normal" />
+        <ServiceControl
+          Id="DeployEngineServiceControl"
+          Name="BluelinkDeployEngine"
+          Start="install"
+          Stop="both"
+          Remove="uninstall"
+          Wait="yes" />
+      </Component>
+
+      <!-- Blueprint Language Server -->
+      <Component Id="BlueprintLS" Guid="3FBA0415-79D0-4657-B3DB-7452064BA6C6">
+        <File Id="BlueprintLSExe" Source="$(var.BinariesDir)\blueprint-ls.exe" KeyPath="yes" />
+      </Component>
+
+      <!-- Setup script -->
+      <Component Id="SetupScript" Guid="465A25AC-6A04-4A5F-AF9D-2980E6C03F72">
+        <File Id="SetupBluelinkPs1" Source="$(var.BinariesDir)\Setup-Bluelink.ps1" KeyPath="yes" />
+      </Component>
+
+      <!-- PATH environment variable -->
+      <Component Id="PathEnv" Guid="3DF66E6E-7DBD-429F-A037-7D5A6F705EF0">
+        <Environment
+          Id="PATH"
+          Name="PATH"
+          Value="[BinFolder]"
+          Permanent="no"
+          Part="last"
+          Action="set"
+          System="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- Components - App Data Directories -->
+    <ComponentGroup Id="AppDataComponents">
+      <!-- Config directory: %LOCALAPPDATA%\NewStack\Bluelink\config -->
+      <Component Id="ConfigDirComp" Guid="BB04AA9F-A24E-41BA-BD1A-44AA11FAD286" Directory="ConfigDir">
+        <CreateFolder />
+      </Component>
+
+      <!-- Plugins directory: %LOCALAPPDATA%\NewStack\Bluelink\engine\plugins -->
+      <Component Id="PluginsDirComp" Guid="159863F4-CF28-41AA-BAA3-A176CEF8FD57" Directory="PluginsDir">
+        <CreateFolder />
+      </Component>
+
+      <!-- Plugin logs directory: %LOCALAPPDATA%\NewStack\Bluelink\engine\plugins\logs -->
+      <Component Id="PluginsLogsDirComp" Guid="F5DBE15C-F6DA-4E58-9B17-D11471D7DD71" Directory="PluginsLogsDir">
+        <CreateFolder />
+      </Component>
+
+      <!-- State directory: %LOCALAPPDATA%\NewStack\Bluelink\engine\state -->
+      <Component Id="StateDirComp" Guid="63A98380-ABA9-404A-9F48-DA05B3387F58" Directory="StateDir">
+        <CreateFolder />
+      </Component>
+    </ComponentGroup>
+
+    <!-- Feature tree -->
+    <Feature Id="Complete" Title="Bluelink" Level="1">
+      <Feature Id="MainFeature" Title="Bluelink Tools" Level="1">
+        <ComponentGroupRef Id="BinComponents" />
+        <ComponentGroupRef Id="AppDataComponents" />
+      </Feature>
+    </Feature>
+
+    <!-- Custom action to run setup script after install (before service starts) -->
+    <CustomAction
+      Id="RunSetupScript"
+      Directory="BinFolder"
+      ExeCommand="powershell.exe -ExecutionPolicy Bypass -NoProfile -NonInteractive -File &quot;[BinFolder]Setup-Bluelink.ps1&quot;"
+      Execute="deferred"
+      Impersonate="no"
+      Return="check" />
+
+    <InstallExecuteSequence>
+      <!-- Run setup after files are installed but before service installation -->
+      <Custom Action="RunSetupScript" After="InstallFiles" Condition="NOT Installed">
+        <![CDATA[NOT Installed]]>
+      </Custom>
+    </InstallExecuteSequence>
+
+    <!-- UI with license and custom exit dialog -->
+    <UI>
+      <UIRef Id="WixUI_Minimal" />
+      <!-- Custom completion message -->
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchRegistryUrl" Condition="NOT Installed">1</Publish>
+    </UI>
+
+    <!-- Exit dialog text override -->
+    <WixVariable Id="WixUIExitDialogDescription" Value="Bluelink has been installed successfully.&#13;&#10;&#13;&#10;Next steps:&#13;&#10;1. Open a new terminal (PowerShell or Command Prompt)&#13;&#10;2. Browse plugins at registry.bluelink.dev&#13;&#10;3. Install plugins: bluelink plugins install newstack-cloud/aws&#13;&#10;4. Run: bluelink --help" />
+
+    <!-- Optional: Launch registry URL on finish -->
+    <CustomAction Id="LaunchRegistryUrl" Directory="BinFolder" ExeCommand="cmd.exe /c start https://registry.bluelink.dev" Return="asyncNoWait" />
+
+  </Package>
+</Wix>

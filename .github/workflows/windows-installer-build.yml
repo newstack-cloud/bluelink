@@ -1,0 +1,218 @@
+name: Windows Installer Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_engine_version:
+        description: "Deploy Engine version (e.g., v0.1.1)"
+        required: true
+        type: string
+      blueprint_ls_version:
+        description: "Blueprint LS version (e.g., v0.1.0)"
+        required: true
+        type: string
+      cli_version:
+        description: "CLI version (e.g., v0.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-msi:
+    name: Build MSI Installer
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Derive installer version from CLI version
+        id: version
+        run: |
+          # Strip 'v' prefix from CLI version to use as installer version
+          $version = "${{ inputs.cli_version }}" -replace '^v', ''
+          echo "installer_version=$version" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
+      - name: Create binaries directory
+        run: New-Item -ItemType Directory -Force -Path binaries
+        shell: pwsh
+
+      - name: Download Deploy Engine
+        run: |
+          gh release download "apps/deploy-engine/${{ inputs.deploy_engine_version }}" `
+            --pattern "*_windows_amd64.zip" `
+            --dir staging
+          Expand-Archive -Path staging\*_windows_amd64.zip -DestinationPath staging\deploy-engine
+          Copy-Item staging\deploy-engine\deploy-engine.exe binaries\
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Blueprint LS
+        run: |
+          gh release download "tools/blueprint-ls/${{ inputs.blueprint_ls_version }}" `
+            --pattern "*_windows_amd64.zip" `
+            --dir staging
+          Expand-Archive -Path staging\*_windows_amd64.zip -DestinationPath staging\blueprint-ls
+          Copy-Item staging\blueprint-ls\blueprint-ls.exe binaries\
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download CLI
+        run: |
+          gh release download "apps/cli/${{ inputs.cli_version }}" `
+            --pattern "*_windows_amd64.zip" `
+            --dir staging
+          Expand-Archive -Path staging\*_windows_amd64.zip -DestinationPath staging\cli
+          Copy-Item staging\cli\bluelink.exe binaries\
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Copy setup script to binaries
+        run: |
+          Copy-Item tools\windows-installer\Setup-Bluelink.ps1 binaries\
+        shell: pwsh
+
+      - name: Verify binaries
+        run: |
+          Write-Host "Binaries directory contents:"
+          Get-ChildItem binaries
+          if (-not (Test-Path binaries\bluelink.exe)) { throw "bluelink.exe not found" }
+          if (-not (Test-Path binaries\deploy-engine.exe)) { throw "deploy-engine.exe not found" }
+          if (-not (Test-Path binaries\blueprint-ls.exe)) { throw "blueprint-ls.exe not found" }
+          if (-not (Test-Path binaries\Setup-Bluelink.ps1)) { throw "Setup-Bluelink.ps1 not found" }
+        shell: pwsh
+
+      - name: Install WiX Toolset
+        run: dotnet tool install --global wix
+
+      - name: Add WiX UI extension
+        run: wix extension add WixToolset.UI.wixext
+
+      - name: Build MSI
+        run: |
+          wix build tools/windows-installer/Package.wxs `
+            -d ProductVersion=${{ steps.version.outputs.installer_version }} `
+            -d BinariesDir=${{ github.workspace }}\binaries `
+            -arch x64 `
+            -ext WixToolset.UI.wixext `
+            -out Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi
+        shell: pwsh
+
+      - name: Sign MSI (if certificate available)
+        if: env.WINDOWS_SIGN_CERT != ''
+        run: |
+          # Decode certificate
+          $certBytes = [Convert]::FromBase64String($env:WINDOWS_SIGN_CERT)
+          [IO.File]::WriteAllBytes("cert.pfx", $certBytes)
+
+          # Sign MSI
+          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe" sign `
+            /fd sha256 `
+            /tr http://timestamp.digicert.com `
+            /td sha256 `
+            /f cert.pfx `
+            /p $env:WINDOWS_SIGN_PASSWORD `
+            Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi
+
+          # Clean up
+          Remove-Item cert.pfx
+        shell: pwsh
+        env:
+          WINDOWS_SIGN_CERT: ${{ secrets.WINDOWS_SIGN_CERT }}
+          WINDOWS_SIGN_PASSWORD: ${{ secrets.WINDOWS_SIGN_PASSWORD }}
+
+      - name: Generate checksum
+        run: |
+          $hash = Get-FileHash -Algorithm SHA256 Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi
+          "$($hash.Hash.ToLower())  Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi" | Out-File -Encoding utf8 Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi.sha256
+        shell: pwsh
+
+      - name: Upload to Latest Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: windows-installer/latest
+          name: Bluelink Windows Installer (Latest)
+          draft: false
+          prerelease: false
+          make_latest: false
+          files: |
+            Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi
+            Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi.sha256
+          body: |
+            ## Bluelink Windows Installer
+
+            **Version:** ${{ steps.version.outputs.installer_version }}
+            **Built:** ${{ github.event.repository.updated_at }}
+
+            This installer bundles the following components:
+            - **Bluelink CLI**: ${{ inputs.cli_version }}
+            - **Deploy Engine**: ${{ inputs.deploy_engine_version }}
+            - **Blueprint Language Server**: ${{ inputs.blueprint_ls_version }}
+
+            ### Installation
+
+            1. Download `Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi`
+            2. Run the installer (requires Administrator privileges)
+            3. The tools will be installed to `C:\Program Files\Bluelink\bin\` and added to your PATH
+
+            ### What Gets Installed
+
+            - **Binaries** in `C:\Program Files\Bluelink\bin\`
+            - **Deploy Engine Windows Service** (auto-starts on boot)
+            - **App Data** in `%LOCALAPPDATA%\NewStack\Bluelink\`
+            - **API Key** auto-generated for CLI ↔ Deploy Engine communication
+
+            ### Next Steps: Install Plugins
+
+            Bluelink requires plugins to deploy infrastructure. Browse available plugins at the **[Bluelink Registry](https://registry.bluelink.dev)** and install them with:
+
+            ```powershell
+            # List available plugins
+            bluelink plugins search
+
+            # Install a plugin (e.g., AWS provider)
+            bluelink plugins install newstack-cloud/aws
+
+            # View installed plugins
+            bluelink plugins list
+            ```
+
+            Common plugins include providers for AWS, Azure, GCP, Kubernetes, and more.
+
+            ### Managing the Deploy Engine Service
+
+            ```powershell
+            Get-Service BluelinkDeployEngine
+            Stop-Service BluelinkDeployEngine
+            Start-Service BluelinkDeployEngine
+            ```
+
+            ### Updating
+
+            To update Bluelink, download and run the latest MSI installer. It will automatically upgrade your existing installation while preserving your configuration and plugins.
+
+            ### Uninstalling
+
+            1. Open **Settings** → **Apps** → **Installed apps**
+            2. Search for "Bluelink"
+            3. Click the menu (⋯) and select **Uninstall**
+
+            Or via PowerShell (Admin):
+            ```powershell
+            Get-Package -Name "Bluelink" | Uninstall-Package
+            ```
+
+            Note: Configuration and plugins in `%LOCALAPPDATA%\NewStack\Bluelink\` are preserved. Delete this folder manually if you want a clean removal.
+
+            ### Verify Download
+
+            ```powershell
+            (Get-FileHash Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi -Algorithm SHA256).Hash.ToLower()
+            ```
+
+            Compare with the checksum in `Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi.sha256`
