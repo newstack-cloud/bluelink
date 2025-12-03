@@ -12,10 +12,11 @@ require (
 	github.com/charmbracelet/huh v0.7.0
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
 	github.com/charmbracelet/x/exp/teatest v0.0.0-20250922100529-c9afca5d6f21
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.34.1
-	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.2.6
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.0
+	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.4.0
 	github.com/newstack-cloud/bluelink/libs/common v0.3.2
 	github.com/newstack-cloud/bluelink/libs/deploy-engine-client v0.0.0-20250624142139-f50ab5a59de1
+	github.com/rogpeppe/go-internal v1.14.1
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.10.0
@@ -63,7 +64,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/r3labs/sse/v2 v2.10.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/sahilm/fuzzy v0.1.1 // indirect
 	github.com/tailscale/hujson v0.0.0-20250226034555-ec1d1c113d33 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
