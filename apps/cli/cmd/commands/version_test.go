@@ -44,7 +44,8 @@ func (s *VersionCommandSuite) Test_prints_version() {
 	err := rootCmd.Execute()
 	s.NoError(err)
 	s.Contains(buf.String(), "Bluelink CLI")
-	s.Contains(buf.String(), "v0.1.0")
+	// Version is "dev" by default, or set via ldflags at build time
+	s.Contains(buf.String(), Version)
 }
 
 func TestVersionCommandSuite(t *testing.T) {
