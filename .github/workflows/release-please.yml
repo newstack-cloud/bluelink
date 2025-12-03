@@ -10,6 +10,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write
 
 jobs:
   release-please:
@@ -68,6 +69,17 @@ jobs:
                   echo "Creating Go module tag: $new_tag (from $tag)"
                   git tag "$new_tag" HEAD
                   git push origin "$new_tag"
+
+                  # Associate the new tag with the existing release
+                  echo "Associating $new_tag with release $tag"
+                  gh release edit "$tag" --tag "$new_tag"
+
+                  # Trigger component release workflow if it exists
+                  workflow_file="${component}-release.yml"
+                  if gh workflow view "$workflow_file" &>/dev/null; then
+                    echo "Triggering $workflow_file for tag: $new_tag"
+                    gh workflow run "$workflow_file" -f tag="$new_tag"
+                  fi
                 fi
               fi
             fi
