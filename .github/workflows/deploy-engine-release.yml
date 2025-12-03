@@ -52,11 +52,11 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.prepare.outputs.tag }}
 
-      - name: Fetch latest GoReleaser config
+      - name: Create version tag for GoReleaser
         run: |
-          # Fetch the latest .goreleaser.yml from main to get monorepo config
-          git fetch origin main
-          git checkout origin/main -- apps/deploy-engine/.goreleaser.yml
+          # GoReleaser OSS doesn't support monorepo tag prefixes
+          # Create a local tag without the prefix for GoReleaser to detect
+          git tag "${{ needs.prepare.outputs.version }}" HEAD
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -79,12 +79,12 @@ jobs:
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release
+          args: release --clean
           workdir: ./apps/deploy-engine
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GPG_FINGERPRINT: ${{ steps.gpg.outputs.fingerprint }}
-          GORELEASER_CURRENT_TAG: ${{ needs.prepare.outputs.tag }}
+          GORELEASER_CURRENT_TAG: ${{ needs.prepare.outputs.version }}
           DEPLOY_ENGINE_APPLICATION_VERSION: ${{ needs.prepare.outputs.version }}
 
       - name: Upload artifacts to existing release
