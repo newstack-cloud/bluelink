@@ -1,0 +1,63 @@
+version: 2
+
+project_name: blueprint-ls
+dist: dist
+
+before:
+  hooks:
+    - go mod download
+    - go generate ./...
+
+builds:
+  - id: blueprint-ls
+    main: ./cmd/main.go
+    binary: blueprint-ls
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: blueprint-ls-archive
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+signs:
+  - artifacts: checksum
+    cmd: gpg2
+    args:
+      - "--batch"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}"
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
+
+sboms:
+  - id: blueprint-ls-sbom
+    artifacts: archive
+
+changelog:
+  disable: true
+
+release:
+  disable: true
