@@ -25,6 +25,7 @@ a base for more advanced tooling to allow for efficient searches for decisions a
 - `perf:` - Should be used for a commit that represents performance improvements.
 - `test:` - Should be used for commits that are purely for automated tests.
 - `instr:` - Should be used for commit that are for instrumentation purposes. (e.g. logs, trace spans and telemetry configuration)
+- `deps:` - Should be used for commit that are for dependency updates.
 
 ### Commit scopes
 
@@ -41,6 +42,8 @@ This list will evolve as more applications and libraries are added to Bluelink.
 - `deploy-engine-client` - This commit scope should be used for a commit that represents work that pertains to the deploy engine client library that is used to communicate with the deploy engine.
 - `common` - This commit scope should be used for a commit that represents work that pertains to the common Go library.
 - `cli` - This commit scope should be used for a commit that represents work that pertains to the CLI for the test/build/package/deploy tooling.
+- `manager` - This commit scope should be used for a commit that represents work that pertains to the bluelink manager tool that is used to install and manage Bluelink on Unix systems.
+- `win-installer` - This commit scope should be used for a commit that represents work that pertains to the Windows installer for Bluelink.
 
 The commit scope can be omitted for changes that cut across these scopes.
 However, it's best to check in commits that map to a specific scope where possible.

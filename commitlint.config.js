@@ -34,7 +34,9 @@ module.exports = {
         "deploy-engine-client",
         "plugin-framework",
         "common",
-        "cli"
+        "cli",
+        "manager",
+        "win-installer"
       ],
     ],
   },
