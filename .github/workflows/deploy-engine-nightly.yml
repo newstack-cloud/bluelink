@@ -137,7 +137,7 @@ jobs:
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --snapshot --clean --skip=sbom
+          args: release --snapshot --clean --skip=sbom,sign
           workdir: ./apps/deploy-engine
         env:
           GORELEASER_CURRENT_TAG: ${{ steps.version.outputs.version }}
