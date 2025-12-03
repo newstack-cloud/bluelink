@@ -79,11 +79,12 @@ jobs:
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: release
           workdir: ./apps/deploy-engine
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GPG_FINGERPRINT: ${{ steps.gpg.outputs.fingerprint }}
+          GORELEASER_CURRENT_TAG: ${{ needs.prepare.outputs.tag }}
           DEPLOY_ENGINE_APPLICATION_VERSION: ${{ needs.prepare.outputs.version }}
 
       - name: Upload artifacts to existing release
