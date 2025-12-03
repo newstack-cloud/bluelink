@@ -15,8 +15,9 @@ env:
   IMAGE_NAME: newstack-cloud/deploy-engine
 
 permissions:
-  contents: read
+  contents: write  # Needed for nightly release
   packages: write
+  id-token: write  # For cosign keyless signing
 
 jobs:
   check-changes:
@@ -125,10 +126,67 @@ jobs:
           echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.24"
+          cache-dependency-path: apps/deploy-engine/go.sum
+
+      - name: Run GoReleaser (snapshot)
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --snapshot --clean --skip=sbom
+          workdir: ./apps/deploy-engine
+        env:
+          GORELEASER_CURRENT_TAG: ${{ steps.version.outputs.version }}
+          DEPLOY_ENGINE_APPLICATION_VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Upload binaries to nightly release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: deploy-engine-nightly
+          name: Deploy Engine Nightly
+          prerelease: true
+          body: |
+            Automated nightly build of deploy-engine.
+
+            **Version:** ${{ steps.version.outputs.version }}
+            **Built:** ${{ github.run_id }}
+            **Commit:** ${{ github.sha }}
+
+            ⚠️ **Warning:** Nightly builds are for testing only. Use official releases for production.
+          files: |
+            apps/deploy-engine/dist/*.tar.gz
+            apps/deploy-engine/dist/*.zip
+            apps/deploy-engine/dist/checksums.txt
+
+  sign-docker:
+    name: Sign Docker Image
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: needs.build-and-push.outputs.digest != ''
+    steps:
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image with cosign (keyless)
+        run: |
+          cosign sign --yes \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build-and-push.outputs.digest }}
+
   cleanup:
     name: Cleanup Old Nightly Images
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: sign-docker
     steps:
       - name: Delete old nightly versions
         uses: actions/delete-package-versions@v5
