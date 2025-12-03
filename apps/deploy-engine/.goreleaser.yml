@@ -3,6 +3,9 @@ version: 2
 project_name: deploy-engine
 dist: dist
 
+monorepo:
+  tag_prefix: apps/deploy-engine/
+
 before:
   hooks:
     - go mod download
