@@ -37,7 +37,9 @@ jobs:
 
       - name: Build
         working-directory: ${{ matrix.module }}
-        run: go build ./...
+        run: |
+          go generate ./...
+          go build ./...
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
