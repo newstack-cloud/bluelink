@@ -1,16 +1,16 @@
 module github.com/newstack-cloud/bluelink/libs/blueprint-state
 
-go 1.23
+go 1.23.0
 
 toolchain go1.24.4
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v5 v5.7.2
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.30.1
+	github.com/jackc/pgx/v5 v5.7.6
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.0
 	github.com/newstack-cloud/bluelink/libs/common v0.3.2
-	github.com/spf13/afero v1.11.0
-	github.com/stretchr/testify v1.10.0
+	github.com/spf13/afero v1.15.0
+	github.com/stretchr/testify v1.11.1
 )
 
 require (
@@ -26,8 +26,8 @@ require (
 	github.com/tailscale/hujson v0.0.0-20250226034555-ec1d1c113d33 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.31.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/crypto v0.37.0 // indirect
+	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
