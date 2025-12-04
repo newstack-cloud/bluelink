@@ -35,6 +35,7 @@ jobs:
       - name: Run Trivy config scan
         uses: aquasecurity/trivy-action@0.33.1
         with:
+          version: "v0.68.1"
           scan-type: "config"
           scan-ref: "."
           format: "sarif"
