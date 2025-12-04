@@ -6,12 +6,11 @@
 FROM golang:1.24.2-bookworm AS build
 
 # Add non-root user
-RUN useradd -u 1001 bluelink
-
-RUN apt update && \
-  apt upgrade -y && \
-  apt install -y git build-essential curl && \
-  apt install openssh-server -y
+RUN useradd -u 1001 bluelink && \
+  apt-get update && \
+  apt-get upgrade -y && \
+  apt-get install -y git build-essential curl && \
+  apt-get install openssh-server -y
 
 WORKDIR /app/oidc_local_server
 
@@ -21,9 +20,8 @@ COPY go.sum ./go.sum
 
 COPY main.go ./main.go
 
-RUN go mod download
-
-RUN go build \
+RUN go mod download && \
+  go build \
   # Build with static linking to ensure everything is included in the binary
   # which allows us to run the binary with scratch.
   -ldflags="-linkmode external -extldflags -static" \
