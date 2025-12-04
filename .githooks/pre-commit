@@ -32,6 +32,7 @@ lint_project libs/deploy-engine-client
 
 lint_project tools/blueprint-ls
 lint_project tools/plugin-docgen
+lint_project tools/bluelink-manager
 
 lint_project apps/deploy-engine
 lint_project apps/cli
