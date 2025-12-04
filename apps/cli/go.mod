@@ -5,11 +5,11 @@ go 1.24.0
 toolchain go1.24.4
 
 require (
-	github.com/BurntSushi/toml v1.4.0
-	github.com/charmbracelet/bubbles v0.21.0
-	github.com/charmbracelet/bubbletea v1.3.5
+	github.com/BurntSushi/toml v1.5.0
+	github.com/charmbracelet/bubbles v0.21.1-0.20250623103423-23b8fd6302d7
+	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/glamour v0.10.0
-	github.com/charmbracelet/huh v0.7.0
+	github.com/charmbracelet/huh v0.8.0
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
 	github.com/charmbracelet/x/exp/teatest v0.0.0-20250922100529-c9afca5d6f21
 	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.0
@@ -17,11 +17,11 @@ require (
 	github.com/newstack-cloud/bluelink/libs/common v0.3.2
 	github.com/newstack-cloud/bluelink/libs/deploy-engine-client v0.0.0-20250624142139-f50ab5a59de1
 	github.com/rogpeppe/go-internal v1.14.1
-	github.com/spf13/cobra v1.8.1
-	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.10.0
-	go.uber.org/zap v1.27.0
-	golang.org/x/term v0.33.0
+	github.com/spf13/cobra v1.10.2
+	github.com/spf13/pflag v1.0.9
+	github.com/stretchr/testify v1.11.1
+	go.uber.org/zap v1.27.1
+	golang.org/x/term v0.37.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -77,8 +77,7 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/net v0.42.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/tools v0.35.0 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
