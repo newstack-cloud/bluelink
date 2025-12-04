@@ -1,0 +1,141 @@
+version: 2
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci(deps)"
+
+  # Docker base images
+  - package-ecosystem: "docker"
+    directory: "/apps/deploy-engine"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(docker)"
+
+  # Go modules - Apps
+  - package-ecosystem: "gomod"
+    directory: "/apps/cli"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(cli)"
+    groups:
+      go-deps:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "gomod"
+    directory: "/apps/deploy-engine"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(deploy-engine)"
+    groups:
+      go-deps:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # Go modules - Libraries
+  - package-ecosystem: "gomod"
+    directory: "/libs/blueprint"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(blueprint)"
+    groups:
+      go-deps:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "gomod"
+    directory: "/libs/blueprint-resolvers"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(blueprint-resolvers)"
+    groups:
+      go-deps:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "gomod"
+    directory: "/libs/blueprint-state"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(blueprint-state)"
+    groups:
+      go-deps:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "gomod"
+    directory: "/libs/common"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(common)"
+    groups:
+      go-deps:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "gomod"
+    directory: "/libs/deploy-engine-client"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(deploy-engine-client)"
+    groups:
+      go-deps:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "gomod"
+    directory: "/libs/plugin-framework"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(plugin-framework)"
+    groups:
+      go-deps:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # Go modules - Tools
+  - package-ecosystem: "gomod"
+    directory: "/tools/blueprint-ls"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(blueprint-ls)"
+    groups:
+      go-deps:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "gomod"
+    directory: "/tools/bluelink-manager"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(bluelink-manager)"
+    groups:
+      go-deps:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "gomod"
+    directory: "/tools/plugin-docgen"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(plugin-docgen)"
+    groups:
+      go-deps:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

@@ -1,0 +1,75 @@
+name: Infrastructure Security
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**/Dockerfile*"
+      - "**/docker-compose*.yml"
+      - "**/docker-compose*.yaml"
+      - ".github/workflows/**"
+      - "**/*.sh"
+  pull_request:
+    paths:
+      - "**/Dockerfile*"
+      - "**/docker-compose*.yml"
+      - "**/docker-compose*.yaml"
+      - ".github/workflows/**"
+      - "**/*.sh"
+  schedule:
+    - cron: "0 6 * * 1" # Weekly Monday 6AM UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write # For actionlint PR reviews
+
+jobs:
+  trivy-config:
+    name: Infrastructure Config Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy config scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: "config"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+          exit-code: "1" # Fail on CRITICAL/HIGH
+
+      - name: Upload to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
+          category: "infrastructure-security"
+
+  hadolint:
+    name: Dockerfile Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint Dockerfiles
+        uses: hadolint/hadolint-action@v3.3.0
+        with:
+          recursive: true
+          ignore: DL3008,DL3013
+          failure-threshold: warning
+
+  actionlint:
+    name: Actions Workflow Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint GitHub Actions workflows
+        uses: reviewdog/action-actionlint@v1
+        with:
+          reporter: github-pr-review
+          fail_level: error

@@ -3,16 +3,8 @@ name: Windows Installer Build
 on:
   workflow_dispatch:
     inputs:
-      deploy_engine_version:
-        description: "Deploy Engine version (e.g., v0.1.1)"
-        required: true
-        type: string
-      blueprint_ls_version:
-        description: "Blueprint LS version (e.g., v0.1.0)"
-        required: true
-        type: string
-      cli_version:
-        description: "CLI version (e.g., v0.1.0)"
+      manager_version:
+        description: "Bluelink Manager version (e.g., v0.1.0)"
         required: true
         type: string
 
@@ -27,11 +19,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Derive installer version from CLI version
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache-dependency-path: tools/bluelink-manager/go.sum
+
+      - name: Derive installer version
         id: version
         run: |
-          # Strip 'v' prefix from CLI version to use as installer version
-          $version = "${{ inputs.cli_version }}" -replace '^v', ''
+          # Strip 'v' prefix from version
+          $version = "${{ inputs.manager_version }}" -replace '^v', ''
           echo "installer_version=$version" >> $env:GITHUB_OUTPUT
         shell: pwsh
 
@@ -39,52 +37,20 @@ jobs:
         run: New-Item -ItemType Directory -Force -Path binaries
         shell: pwsh
 
-      - name: Download Deploy Engine
+      - name: Build Bluelink Manager
         run: |
-          gh release download "apps/deploy-engine/${{ inputs.deploy_engine_version }}" `
-            --pattern "*_windows_amd64.zip" `
-            --dir staging
-          Expand-Archive -Path staging\*_windows_amd64.zip -DestinationPath staging\deploy-engine
-          Copy-Item staging\deploy-engine\deploy-engine.exe binaries\
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download Blueprint LS
-        run: |
-          gh release download "tools/blueprint-ls/${{ inputs.blueprint_ls_version }}" `
-            --pattern "*_windows_amd64.zip" `
-            --dir staging
-          Expand-Archive -Path staging\*_windows_amd64.zip -DestinationPath staging\blueprint-ls
-          Copy-Item staging\blueprint-ls\blueprint-ls.exe binaries\
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download CLI
-        run: |
-          gh release download "apps/cli/${{ inputs.cli_version }}" `
-            --pattern "*_windows_amd64.zip" `
-            --dir staging
-          Expand-Archive -Path staging\*_windows_amd64.zip -DestinationPath staging\cli
-          Copy-Item staging\cli\bluelink.exe binaries\
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Copy setup script to binaries
-        run: |
-          Copy-Item tools\windows-installer\Setup-Bluelink.ps1 binaries\
+          cd tools/bluelink-manager
+          $version = "${{ inputs.manager_version }}" -replace '^v', ''
+          go build -ldflags "-X github.com/newstack-cloud/bluelink/tools/bluelink-manager/cmd/commands.Version=$version" -o ..\..\binaries\bluelink-manager.exe ./cmd
         shell: pwsh
 
       - name: Verify binaries
         run: |
           Write-Host "Binaries directory contents:"
           Get-ChildItem binaries
-          if (-not (Test-Path binaries\bluelink.exe)) { throw "bluelink.exe not found" }
-          if (-not (Test-Path binaries\deploy-engine.exe)) { throw "deploy-engine.exe not found" }
-          if (-not (Test-Path binaries\blueprint-ls.exe)) { throw "blueprint-ls.exe not found" }
-          if (-not (Test-Path binaries\Setup-Bluelink.ps1)) { throw "Setup-Bluelink.ps1 not found" }
+          if (-not (Test-Path binaries\bluelink-manager.exe)) { throw "bluelink-manager.exe not found" }
+          # Test that the binary runs
+          & binaries\bluelink-manager.exe version
         shell: pwsh
 
       - name: Install WiX Toolset
@@ -132,11 +98,11 @@ jobs:
           "$($hash.Hash.ToLower())  Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi" | Out-File -Encoding utf8 Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi.sha256
         shell: pwsh
 
-      - name: Upload to Latest Release
+      - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: windows-installer/latest
-          name: Bluelink Windows Installer (Latest)
+          tag_name: tools/bluelink-manager/${{ inputs.manager_version }}
+          name: Bluelink Windows Installer ${{ inputs.manager_version }}
           draft: false
           prerelease: false
           make_latest: false
@@ -147,67 +113,51 @@ jobs:
             ## Bluelink Windows Installer
 
             **Version:** ${{ steps.version.outputs.installer_version }}
-            **Built:** ${{ github.event.repository.updated_at }}
 
-            This installer bundles the following components:
-            - **Bluelink CLI**: ${{ inputs.cli_version }}
-            - **Deploy Engine**: ${{ inputs.deploy_engine_version }}
-            - **Blueprint Language Server**: ${{ inputs.blueprint_ls_version }}
+            This installer sets up Bluelink on Windows. It installs the Bluelink Manager and automatically downloads and configures all Bluelink components.
 
             ### Installation
 
             1. Download `Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi`
-            2. Run the installer (requires Administrator privileges)
-            3. The tools will be installed to `C:\Program Files\Bluelink\bin\` and added to your PATH
+            2. Run the installer (no Administrator privileges required)
+            3. Wait for the installation to complete (downloads ~100MB of components)
+            4. Open a new terminal and run: `bluelink --help`
 
             ### What Gets Installed
 
-            - **Binaries** in `C:\Program Files\Bluelink\bin\`
-            - **Deploy Engine Windows Service** (auto-starts on boot)
-            - **App Data** in `%LOCALAPPDATA%\NewStack\Bluelink\`
-            - **API Key** auto-generated for CLI ↔ Deploy Engine communication
+            - **Bluelink CLI** - Command-line interface for infrastructure management
+            - **Deploy Engine** - Background service for deployments (auto-starts)
+            - **Blueprint Language Server** - IDE support for .blueprint.(yaml|yml|jsonc) files
+            - **Bluelink Manager** - Tool for managing and updating Bluelink
 
-            ### Next Steps: Install Plugins
+            All binaries are installed to `%LOCALAPPDATA%\NewStack\Bluelink\bin\`
 
-            Bluelink requires plugins to deploy infrastructure. Browse available plugins at the **[Bluelink Registry](https://registry.bluelink.dev)** and install them with:
-
-            ```powershell
-            # List available plugins
-            bluelink plugins search
-
-            # Install a plugin (e.g., AWS provider)
-            bluelink plugins install newstack-cloud/aws
-
-            # View installed plugins
-            bluelink plugins list
-            ```
-
-            Common plugins include providers for AWS, Azure, GCP, Kubernetes, and more.
-
-            ### Managing the Deploy Engine Service
+            ### Managing Bluelink
 
             ```powershell
-            Get-Service BluelinkDeployEngine
-            Stop-Service BluelinkDeployEngine
-            Start-Service BluelinkDeployEngine
+            # Check installation status
+            bluelink-manager status
+
+            # Update all components to latest versions
+            bluelink-manager update
+
+            # Manage the Deploy Engine service
+            bluelink-manager start
+            bluelink-manager stop
+            bluelink-manager restart
+
+            # Uninstall components (keeps config)
+            bluelink-manager uninstall
+
+            # Uninstall everything including config
+            bluelink-manager uninstall --all
             ```
-
-            ### Updating
-
-            To update Bluelink, download and run the latest MSI installer. It will automatically upgrade your existing installation while preserving your configuration and plugins.
 
             ### Uninstalling
 
-            1. Open **Settings** → **Apps** → **Installed apps**
-            2. Search for "Bluelink"
-            3. Click the menu (⋯) and select **Uninstall**
-
-            Or via PowerShell (Admin):
-            ```powershell
-            Get-Package -Name "Bluelink" | Uninstall-Package
-            ```
-
-            Note: Configuration and plugins in `%LOCALAPPDATA%\NewStack\Bluelink\` are preserved. Delete this folder manually if you want a clean removal.
+            1. Run `bluelink-manager uninstall --all` to remove all Bluelink components
+            2. Open **Settings** > **Apps** > **Installed apps**
+            3. Search for "Bluelink" and uninstall
 
             ### Verify Download
 

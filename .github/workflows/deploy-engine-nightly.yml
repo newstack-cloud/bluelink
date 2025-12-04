@@ -18,6 +18,7 @@ permissions:
   contents: write  # Needed for nightly release
   packages: write
   id-token: write  # For cosign keyless signing
+  security-events: write  # For Trivy SARIF upload
 
 jobs:
   check-changes:
@@ -89,6 +90,13 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Generated version: $VERSION"
 
+      - name: Read deploy-engine description
+        id: readme
+        run: |
+          # Extract first paragraph from README as description
+          DESCRIPTION=$(sed -n '/^[^#]/p' apps/deploy-engine/README.md | head -1 | cut -c1-150)
+          echo "description=$DESCRIPTION" >> $GITHUB_OUTPUT
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -98,6 +106,10 @@ jobs:
             type=raw,value=nightly
             type=raw,value=${{ steps.version.outputs.version }}
             type=sha,prefix=sha-
+          labels: |
+            org.opencontainers.image.title=Bluelink Deploy Engine
+            org.opencontainers.image.description=${{ steps.readme.outputs.description }}
+            org.opencontainers.image.documentation=https://github.com/newstack-cloud/bluelink/blob/main/apps/deploy-engine/README.md
 
       - name: Build and push
         id: build
@@ -162,10 +174,34 @@ jobs:
             apps/deploy-engine/dist/*.zip
             apps/deploy-engine/dist/checksums.txt
 
+  scan-image:
+    name: Scan Container Image
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: needs.build-and-push.outputs.digest != ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build-and-push.outputs.digest }}"
+          format: "sarif"
+          output: "trivy-image.sarif"
+          severity: "CRITICAL,HIGH"
+          exit-code: "0" # Report-only for nightly builds
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-image.sarif"
+          category: "container-vulnerabilities-nightly"
+
   sign-docker:
     name: Sign Docker Image
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: [build-and-push, scan-image]
     if: needs.build-and-push.outputs.digest != ''
     steps:
       - name: Login to GHCR
