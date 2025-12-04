@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/bradleyjkemp/cupaloy/v2 v2.8.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 )
 
 require (
