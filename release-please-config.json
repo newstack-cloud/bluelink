@@ -55,6 +55,10 @@
     "tools/plugin-docgen": {
       "component": "plugin-docgen",
       "package-name": "plugin-docgen"
+    },
+    "tools/bluelink-manager": {
+      "component": "bluelink-manager",
+      "package-name": "bluelink-manager"
     }
   }
 }
