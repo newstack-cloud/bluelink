@@ -8,10 +8,10 @@ require (
 	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.0
 	github.com/newstack-cloud/bluelink/libs/common v0.3.2
 	github.com/newstack-cloud/ls-builder v0.2.4
-	github.com/sourcegraph/jsonrpc2 v0.2.0
-	github.com/stretchr/testify v1.10.0
+	github.com/sourcegraph/jsonrpc2 v0.2.1
+	github.com/stretchr/testify v1.11.1
 	github.com/tailscale/hujson v0.0.0-20250226034555-ec1d1c113d33
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
