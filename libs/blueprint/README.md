@@ -8,7 +8,7 @@ The blueprint framework is the foundation for blueprint deployments managed by t
 
 The framework is made up of a collection of modules containing orchestration functionality for planning and deploying blueprints along with a collection of interfaces for resource provider plugins, state persistence, and other useful components in the framework's model. See the [architecture](docs/ARCHITECTURE.md) or the [blueprint framework](https://www.bluelink.dev/blueprint-framework/docs/intro) docs for more information.
 
-This is an implementation of the [Blueprint Specification](https://bluelink.dev/docs/blueprint/specification).
+This is an implementation of the [Blueprint Specification](https://www.bluelink.dev/docs/bluelink/blueprints/specification/).
 
 ## Additional documentation
 

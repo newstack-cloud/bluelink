@@ -10,14 +10,14 @@ Infrastructure management simplified
 
 ## Blueprints
 
-Blueprints are a way to define and manage the lifecycle of resources defined in a blueprint. Blueprints adhere to a [specification](https://bluelink.dev/docs/blueprint/specification) that is the foundation of the Bluelink resource model used at build time and runtime.
+Blueprints are a way to define and manage the lifecycle of resources defined in a blueprint. Blueprints adhere to a [specification](https://www.bluelink.dev/docs/bluelink/blueprints/specification/) that is the foundation of the Bluelink resource model used at build time and runtime.
 The specification is broad and can be used to define resources in any environment (e.g. Cloud provider resources from the likes of AWS, Azure and Google Cloud).
 
 ### Blueprint Framework
 
 The blueprint framework provides a set of interfaces and tools to deploy and manage the lifecycle of resources that can be represented as a blueprint. The framework is designed to be minimal at its core, yet extensible and can be used to deploy resources in any environment.
 
-The blueprint framework is an implementation of the [Bluelink Blueprint Specification](https://bluelink.dev/docs/blueprint/specification).
+The blueprint framework is an implementation of the [Bluelink Blueprint Specification](https://www.bluelink.dev/docs/bluelink/blueprints/specification/).
 
 [Blueprint Framework](./libs/blueprint)
 

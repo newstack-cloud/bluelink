@@ -9,7 +9,7 @@ A blueprint is a specification of resources the can be deployed to a upstream pr
 Providers are implemented on a per-namespace basis and there are no limitations around the type
 of providers and resources that can be implemented in the model this library providers.
 
-The blueprint specification can be found [here](https://bluelink.dev/docs/blueprint/specification).
+The blueprint specification can be found [here](https://www.bluelink.dev/docs/bluelink/blueprints/specification/).
 
 The mechanism is focused on parsing and validating blueprints along with managing the life cycle
 of blueprint instances with interfaces for you to implement your own resource providers
