@@ -5,23 +5,23 @@ go 1.24.0
 toolchain go1.24.4
 
 require (
-	github.com/auth0/go-jwt-middleware/v2 v2.3.0
-	github.com/caarlos0/env/v11 v11.3.1
-	github.com/go-playground/validator/v10 v10.26.0
+	github.com/auth0/go-jwt-middleware/v2 v2.3.1
+	github.com/go-playground/validator/v10 v10.28.0
+	github.com/go-viper/mapstructure/v2 v2.4.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/jackc/pgx/v5 v5.7.4
+	github.com/jackc/pgx/v5 v5.7.6
 	github.com/lestrrat-go/jwx v1.2.31
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.35.0
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.0
 	github.com/newstack-cloud/bluelink/libs/blueprint-resolvers v0.0.0-20250624125550-4f0bdd0374f6
-	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.3.0
+	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.4.0
 	github.com/newstack-cloud/bluelink/libs/common v0.3.2
 	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.0.0-20251018134826-3614482a20c9
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/spf13/afero v1.15.0
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 	gopkg.in/square/go-jose.v2 v2.6.0
 )
 
@@ -71,12 +71,11 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v1.1.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.10 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -116,13 +115,12 @@ require (
 	go.opentelemetry.io/otel/trace v1.29.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/crypto v0.35.0 // indirect
-	golang.org/x/mod v0.30.0 // indirect
-	golang.org/x/net v0.34.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/oauth2 v0.23.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/sync v0.18.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
 	google.golang.org/api v0.203.0 // indirect
 	google.golang.org/genproto v0.0.0-20241015192408-796eee8c2d53 // indirect
