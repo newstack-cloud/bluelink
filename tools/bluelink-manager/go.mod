@@ -5,11 +5,11 @@ go 1.24.0
 toolchain go1.24.4
 
 require (
-	github.com/spf13/cobra v1.8.1
-	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.10.0
-	golang.org/x/sys v0.35.0
-	golang.org/x/term v0.33.0
+	github.com/spf13/cobra v1.10.2
+	github.com/spf13/pflag v1.0.9
+	github.com/stretchr/testify v1.11.1
+	golang.org/x/sys v0.38.0
+	golang.org/x/term v0.37.0
 )
 
 require (
