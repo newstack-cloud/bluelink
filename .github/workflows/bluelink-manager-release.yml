@@ -52,7 +52,7 @@ jobs:
           git tag "${{ needs.prepare.outputs.version }}" HEAD
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: "1.24"
           cache-dependency-path: tools/bluelink-manager/go.sum
