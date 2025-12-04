@@ -1,0 +1,91 @@
+name: Bluelink Manager Release
+
+on:
+  push:
+    tags:
+      - "tools/bluelink-manager/v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g., tools/bluelink-manager/v1.0.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Determine tag
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          VERSION="${TAG##*/}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+  goreleaser:
+    name: Build Binaries
+    runs-on: ubuntu-latest
+    needs: prepare
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.prepare.outputs.tag }}
+
+      - name: Create version tag for GoReleaser
+        run: |
+          # GoReleaser OSS doesn't support monorepo tag prefixes
+          # Create a local tag without the prefix for GoReleaser to detect
+          git tag "${{ needs.prepare.outputs.version }}" HEAD
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: tools/bluelink-manager/go.sum
+
+      - name: Import GPG key
+        id: gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@v0
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+          workdir: ./tools/bluelink-manager
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GPG_FINGERPRINT: ${{ steps.gpg.outputs.fingerprint }}
+          GORELEASER_CURRENT_TAG: ${{ needs.prepare.outputs.version }}
+
+      - name: Upload artifacts to existing release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          files: |
+            tools/bluelink-manager/dist/*.tar.gz
+            tools/bluelink-manager/dist/*.zip
+            tools/bluelink-manager/dist/checksums.txt
+            tools/bluelink-manager/dist/checksums.txt.sig
+            tools/bluelink-manager/dist/*.sbom.json

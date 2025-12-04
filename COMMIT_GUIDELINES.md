@@ -42,7 +42,7 @@ This list will evolve as more applications and libraries are added to Bluelink.
 - `deploy-engine-client` - This commit scope should be used for a commit that represents work that pertains to the deploy engine client library that is used to communicate with the deploy engine.
 - `common` - This commit scope should be used for a commit that represents work that pertains to the common Go library.
 - `cli` - This commit scope should be used for a commit that represents work that pertains to the CLI for the test/build/package/deploy tooling.
-- `manager` - This commit scope should be used for a commit that represents work that pertains to the bluelink manager tool that is used to install and manage Bluelink on Unix systems.
+- `bluelink-manager` - This commit scope should be used for a commit that represents work that pertains to the bluelink manager tool that is used to install and manage Bluelink on Unix systems.
 - `win-installer` - This commit scope should be used for a commit that represents work that pertains to the Windows installer for Bluelink.
 
 The commit scope can be omitted for changes that cut across these scopes.

@@ -11,6 +11,7 @@ use (
 	./libs/common
 	./libs/deploy-engine-client
 	./libs/plugin-framework
+	./tools/bluelink-manager
 	./tools/blueprint-ls
 	./tools/plugin-docgen
 )

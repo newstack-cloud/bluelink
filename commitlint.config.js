@@ -35,7 +35,7 @@ module.exports = {
         "plugin-framework",
         "common",
         "cli",
-        "manager",
+        "bluelink-manager",
         "win-installer"
       ],
     ],

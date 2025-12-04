@@ -1,0 +1,31 @@
+# Code generated pre-build, (e.g genny generics templates)
+gen-*.go
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+plugin-docgen
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+coverage.txt
+coverage.html
+
+# Test report for sonar.
+report.json
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Any log files.
+*.log
+logs
+
+# Output JSON file from the plugin-docgen tool
+docs.json

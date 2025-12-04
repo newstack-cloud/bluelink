@@ -1,0 +1,75 @@
+name: Bluelink Manager CI
+
+on:
+  push:
+    branches: [main]
+    paths: ["tools/bluelink-manager/**"]
+  pull_request:
+    branches: [main]
+    paths: ["tools/bluelink-manager/**"]
+  workflow_dispatch:
+    inputs: {}
+
+jobs:
+  lint-and-test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+    env:
+      working-directory: ./tools/bluelink-manager
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: tools/bluelink-manager/go.sum
+
+      - name: Install Go Global Dependencies
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+        working-directory: ${{ env.working-directory }}
+
+      - name: Linting
+        run: export PATH=$PATH:$(go env GOPATH)/bin && bash scripts/lint.sh
+        working-directory: ${{ env.working-directory }}
+
+      - name: Run Tests
+        run: bash scripts/run-tests.sh
+        working-directory: ${{ env.working-directory }}
+
+  # Verify build tags compile correctly for all platforms
+  # This is NOT a release build - it just ensures platform-specific code compiles
+  verify-build-tags:
+    name: Verify Build Tags (${{ matrix.os }}/${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: darwin
+            arch: amd64
+          - os: darwin
+            arch: arm64
+          - os: linux
+            arch: amd64
+          - os: linux
+            arch: arm64
+          - os: windows
+            arch: amd64
+    defaults:
+      run:
+        working-directory: ./tools/bluelink-manager
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: tools/bluelink-manager/go.sum
+
+      # Cross-compile to verify build tags are correct (output discarded)
+      - name: Verify ${{ matrix.os }}/${{ matrix.arch }} compiles
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+        run: go build -o /dev/null ./cmd
