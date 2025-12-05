@@ -170,7 +170,7 @@ jobs:
         uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build-docker.outputs.digest }}"
-          format: "sarif"
+          format: "sarif,table"
           output: "trivy-image.sarif"
           severity: "CRITICAL,HIGH"
           exit-code: "1" # Fail release on CRITICAL/HIGH

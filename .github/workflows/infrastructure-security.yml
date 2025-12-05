@@ -38,7 +38,7 @@ jobs:
           version: "v0.68.1"
           scan-type: "config"
           scan-ref: "."
-          format: "sarif"
+          format: "sarif,table"
           output: "trivy-results.sarif"
           severity: "CRITICAL,HIGH"
           exit-code: "1" # Fail on CRITICAL/HIGH
