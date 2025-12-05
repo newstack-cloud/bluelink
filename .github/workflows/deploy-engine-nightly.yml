@@ -182,14 +182,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner (table output)
         uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build-and-push.outputs.digest }}"
-          format: "sarif,table"
-          output: "trivy-image.sarif"
+          format: "table"
           severity: "CRITICAL,HIGH"
           exit-code: "0" # Report-only for nightly builds
+
+      - name: Run Trivy vulnerability scanner (SARIF)
+        if: always()
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build-and-push.outputs.digest }}"
+          format: "sarif"
+          output: "trivy-image.sarif"
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
