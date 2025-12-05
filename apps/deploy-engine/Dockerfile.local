@@ -18,7 +18,17 @@ RUN go get ./...
 # Remove go module files to use the mounted volume versions instead.
 RUN rm go.mod go.sum
 
+# Create a non-root user
+RUN groupadd --gid 1000 appuser && \
+  useradd --uid 1000 --gid 1000 -m appuser
+
 # Prepare an empty directory for plugins.
-RUN mkdir -p /root/.bluelink/deploy-engine/plugins/bin
+RUN mkdir -p /home/appuser/.bluelink/deploy-engine/plugins/bin && \
+  chown -R appuser:appuser /home/appuser/.bluelink
+
+# Set ownership of the app directory
+RUN chown -R appuser:appuser /app
+
+USER appuser
 
 CMD air

@@ -9,8 +9,8 @@ FROM golang:1.24.2-bookworm AS build
 RUN useradd -u 1001 bluelink && \
   apt-get update && \
   apt-get upgrade -y && \
-  apt-get install -y git build-essential curl && \
-  apt-get install openssh-server -y
+  apt-get install -y --no-install-recommends git build-essential curl && \
+  apt-get install --no-install-recommends openssh-server -y
 
 WORKDIR /app/oidc_local_server
 
