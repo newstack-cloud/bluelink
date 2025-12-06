@@ -18,6 +18,12 @@
 
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
 
+    <!-- Application icon for Add/Remove Programs -->
+    <Icon Id="BluelinkIcon" SourceFile="bluelink.ico" />
+    <Property Id="ARPPRODUCTICON" Value="BluelinkIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://bluelink.dev" />
+    <Property Id="ARPURLUPDATEINFO" Value="https://www.bluelink.dev/docs/bluelink/installing-bluelink" />
+
     <!-- License agreement -->
     <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
 
@@ -28,6 +34,11 @@
           <Directory Id="BinFolder" Name="bin" />
         </Directory>
       </Directory>
+    </StandardDirectory>
+
+    <!-- Start Menu shortcut directory -->
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="BluelinkStartMenuFolder" Name="Bluelink" />
     </StandardDirectory>
 
     <!-- Components - Bluelink Manager binary -->
@@ -50,10 +61,26 @@
       </Component>
     </ComponentGroup>
 
+    <!-- Start Menu shortcut -->
+    <ComponentGroup Id="ShortcutComponents" Directory="BluelinkStartMenuFolder">
+      <Component Id="BluelinkShortcut" Guid="B2C3D4E5-F6A7-8901-BCDE-F23456789012">
+        <Shortcut Id="BluelinkShortcut"
+          Name="Bluelink"
+          Description="Infrastructure management simplified"
+          Target="[SystemFolder]cmd.exe"
+          Arguments="/k bluelink --help"
+          WorkingDirectory="BinFolder"
+          Icon="BluelinkIcon" />
+        <RemoveFolder Id="RemoveBluelinkStartMenuFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\NewStack\Bluelink" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
     <!-- Feature tree -->
     <Feature Id="Complete" Title="Bluelink" Level="1">
       <Feature Id="MainFeature" Title="Bluelink" Level="1">
         <ComponentGroupRef Id="BinComponents" />
+        <ComponentGroupRef Id="ShortcutComponents" />
       </Feature>
     </Feature>
 
