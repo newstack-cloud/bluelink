@@ -36,6 +36,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.24'
+
       - name: Create Go module tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -80,6 +84,13 @@ jobs:
                   if gh workflow view "$workflow_file" &>/dev/null; then
                     echo "Triggering $workflow_file for tag: $new_tag"
                     gh workflow run "$workflow_file" -f tag="$new_tag"
+                  fi
+
+                  # Index Go library modules with the Go proxy
+                  if [[ "$path" == libs/* ]]; then
+                    MODULE="github.com/${{ github.repository }}/${path}"
+                    echo "Indexing Go module: ${MODULE}@${version}"
+                    GOPROXY=proxy.golang.org go list -m "${MODULE}@${version}" || echo "Warning: Failed to index ${MODULE}@${version}"
                   fi
                 fi
               fi
