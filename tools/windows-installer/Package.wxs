@@ -58,12 +58,11 @@
     </Feature>
 
     <!-- Custom action: Run bluelink-manager install after files are installed -->
-    <!-- Opens a visible terminal window so user can see download progress -->
     <CustomAction
       Id="RunBluelinkInstall"
-      Directory="BinFolder"
-      ExeCommand="cmd.exe /c &quot;[BinFolder]bluelink-manager.exe&quot; install --no-modify-path"
-      Execute="commit"
+      FileRef="BluelinkManagerExe"
+      ExeCommand="install --no-modify-path"
+      Execute="deferred"
       Impersonate="yes"
       Return="check" />
 
