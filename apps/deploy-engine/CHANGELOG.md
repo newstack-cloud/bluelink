@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.1.2...deploy-engine/v0.1.3) (2025-12-06)
+
+
+### Bug Fixes
+
+* **deploy-engine:** make sure env vars are expanded in log file root directory ([62d979c](https://github.com/newstack-cloud/bluelink/commit/62d979cf9f8ac1bd9d4fc0ec88c4f0db46837748))
+
 ## [0.1.2](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.1.1...deploy-engine/v0.1.2) (2025-12-06)
 
 
