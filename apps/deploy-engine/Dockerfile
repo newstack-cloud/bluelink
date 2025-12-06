@@ -7,7 +7,9 @@ WORKDIR /build
 
 # Copy dependency files first for layer caching
 COPY go.mod go.sum ./
-RUN go mod download
+COPY tools/genversions/go.mod tools/genversions/go.sum ./tools/genversions/
+RUN go mod download && \
+    cd tools/genversions && go mod download
 
 # Copy source code
 COPY . .
