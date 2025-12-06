@@ -66,9 +66,20 @@
       Impersonate="yes"
       Return="check" />
 
+    <!-- Custom action: Run bluelink-manager uninstall before files are removed -->
+    <CustomAction
+      Id="RunBluelinkUninstall"
+      FileRef="BluelinkManagerExe"
+      ExeCommand="uninstall"
+      Execute="deferred"
+      Impersonate="yes"
+      Return="ignore" />
+
     <InstallExecuteSequence>
       <!-- Run install after files are copied, only on fresh install (not upgrade/uninstall) -->
       <Custom Action="RunBluelinkInstall" After="InstallFiles" Condition="NOT Installed AND NOT REMOVE" />
+      <!-- Run uninstall before files are removed, only on uninstall -->
+      <Custom Action="RunBluelinkUninstall" Before="RemoveFiles" Condition="REMOVE=&quot;ALL&quot;" />
     </InstallExecuteSequence>
 
     <!-- InstallDir UI with license and maintenance options -->
