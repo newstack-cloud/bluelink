@@ -71,8 +71,12 @@
       <Custom Action="RunBluelinkInstall" After="InstallFiles" Condition="NOT Installed AND NOT REMOVE" />
     </InstallExecuteSequence>
 
-    <!-- Minimal UI with license -->
-    <ui:WixUI Id="WixUI_Minimal" />
+    <!-- InstallDir UI with license and maintenance options -->
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    <ui:WixUI Id="WixUI_InstallDir" />
+
+    <!-- Exit dialog text shown on successful install -->
+    <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="The following components were installed:&#13;&#10;  &#x2022; Bluelink CLI&#13;&#10;  &#x2022; Deploy Engine (starts automatically at login)&#13;&#10;  &#x2022; Blueprint Language Server&#13;&#10;&#13;&#10;Open a new terminal and run: bluelink --help" />
 
   </Package>
 </Wix>
