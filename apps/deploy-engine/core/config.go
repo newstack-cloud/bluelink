@@ -453,10 +453,9 @@ func addConfigPaths(viperInstance *viper.Viper) {
 
 func getOSDefaultConfigDirPath() string {
 	if runtime.GOOS == "windows" {
-		return "%LOCALAPPDATA%\\NewStack\\Bluelink\\engine"
-	} else {
-		return "$HOME/.bluelink/engine"
+		return utils.ExpandEnv("%LOCALAPPDATA%\\NewStack\\Bluelink\\engine")
 	}
+	return os.ExpandEnv("$HOME/.bluelink/engine")
 }
 
 func bindEnvVars(viperInstance *viper.Viper) {
@@ -574,26 +573,23 @@ func setDefaults(viperInstance *viper.Viper) {
 
 func getOSDefaultPluginPath() string {
 	if runtime.GOOS == "windows" {
-		return "%LOCALAPPDATA%\\NewStack\\Bluelink\\engine\\plugins"
-	} else {
-		return "$HOME/.bluelink/engine/plugins/bin"
+		return utils.ExpandEnv("%LOCALAPPDATA%\\NewStack\\Bluelink\\engine\\plugins")
 	}
+	return os.ExpandEnv("$HOME/.bluelink/engine/plugins/bin")
 }
 
 func getOSDefaultPluginLogFileRootDir() string {
 	if runtime.GOOS == "windows" {
-		return "%LOCALAPPDATA%\\NewStack\\Bluelink\\engine\\plugins\\logs"
-	} else {
-		return "$HOME/.bluelink/engine/plugins/logs"
+		return utils.ExpandEnv("%LOCALAPPDATA%\\NewStack\\Bluelink\\engine\\plugins\\logs")
 	}
+	return os.ExpandEnv("$HOME/.bluelink/engine/plugins/logs")
 }
 
 func getOSDefaultMemFileStateDir() string {
 	if runtime.GOOS == "windows" {
-		return "%LOCALAPPDATA%\\NewStack\\Bluelink\\engine\\state"
-	} else {
-		return "$HOME/.bluelink/engine/state"
+		return utils.ExpandEnv("%LOCALAPPDATA%\\NewStack\\Bluelink\\engine\\state")
 	}
+	return os.ExpandEnv("$HOME/.bluelink/engine/state")
 }
 
 func configHook() mapstructure.DecodeHookFuncType {
