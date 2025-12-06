@@ -2,11 +2,9 @@ module github.com/newstack-cloud/bluelink/libs/plugin-framework
 
 go 1.24.0
 
-replace github.com/newstack-cloud/bluelink/libs/blueprint => ../blueprint
-
 require (
 	github.com/google/uuid v1.6.0
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.35.0
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.0
 	github.com/newstack-cloud/bluelink/libs/common v0.3.2
 	github.com/spf13/afero v1.15.0
 	github.com/stretchr/testify v1.11.1
