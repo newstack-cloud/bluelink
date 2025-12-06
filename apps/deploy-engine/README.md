@@ -332,7 +332,7 @@ _Config field:_ `plugins_v1.plugin_path`
 
 _**optional**_
 
-The path to one or more plugin root directories separated by colons.
+The path to one or more plugin root directories separated by an OS path list separator (colon on Unix, semicolon on Windows).
 This environment variable, generally should be set globally when installed on developer machine as is used by multiple components of the Bluelink framework.
 
 **default value:** `$HOME/.bluelink/engine/plugins/bin`

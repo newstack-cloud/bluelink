@@ -126,17 +126,17 @@ func (p *Config) GetPluginToPluginCallTimeoutMS() int {
 // implemented by the deploy engine.
 type PluginsV1Config struct {
 	// PluginPath is the path to one or more plugin root directories
-	// separated by colons.
+	// separated by os.PathListSeparator (colon on Unix, semicolon on Windows).
 	// Defaults to $HOME/.bluelink/engine/plugins/bin on Linux and macOS,
 	// where $HOME will be expanded to the current user's home directory.
-	// Defaults to %LOCALAPPDATA%\Bluelink\engine\plugins on Windows.
+	// Defaults to %LOCALAPPDATA%\NewStack\Bluelink\engine\plugins on Windows.
 	PluginPath string `mapstructure:"plugin_path"`
 	// LogFileRootDir is the path to a single root directory used to store
 	// logs for all plugins. stdout and stderr for each plugin
 	// will be redirected to log files under this directory.
 	// Defaults to $HOME/.bluelink/engine/plugins/logs on Linux and macOS,
 	// where $HOME will be expanded to the current user's home directory.
-	// Defaults to %LOCALAPPDATA%\Bluelink\engine\plugins\logs on Windows.
+	// Defaults to %LOCALAPPDATA%\NewStack\Bluelink\engine\plugins\logs on Windows.
 	LogFileRootDir string `mapstructure:"log_file_root_dir"`
 	// LaunchWaitTimeoutMS is the timeout in milliseconds
 	// to wait for a plugin to register with the host.
