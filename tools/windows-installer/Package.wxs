@@ -58,14 +58,13 @@
     </Feature>
 
     <!-- Custom action: Run bluelink-manager install after files are installed -->
-    <!-- Using Return="ignore" temporarily to debug - install completes even if this fails -->
     <CustomAction
       Id="RunBluelinkInstall"
       FileRef="BluelinkManagerExe"
       ExeCommand="install --no-modify-path"
       Execute="deferred"
       Impersonate="yes"
-      Return="ignore" />
+      Return="check" />
 
     <InstallExecuteSequence>
       <!-- Run install after files are copied, only on fresh install (not upgrade/uninstall) -->
@@ -75,10 +74,9 @@
     <!-- Minimal UI with license -->
     <ui:WixUI Id="WixUI_Minimal" />
 
-    <!-- Exit dialog text - only show details on fresh install -->
-    <SetProperty Id="WIXUI_EXITDIALOGOPTIONALTEXT" After="InstallFinalize" Sequence="execute"
-      Value="The following components were installed:&#13;&#10;  • Bluelink CLI&#13;&#10;  • Deploy Engine (starts automatically at login)&#13;&#10;  • Blueprint Language Server&#13;&#10;&#13;&#10;Open a new terminal and run: bluelink --help"
-      Condition="NOT Installed AND NOT REMOVE" />
+    <!-- Custom exit dialog -->
+    <UIRef Id="BluelinkExitUI" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="The following components were installed:&#13;&#10;  &#x2022; Bluelink CLI&#13;&#10;  &#x2022; Deploy Engine (starts automatically at login)&#13;&#10;  &#x2022; Blueprint Language Server&#13;&#10;&#13;&#10;Open a new terminal and run: bluelink --help" />
 
   </Package>
 </Wix>
