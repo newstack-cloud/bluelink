@@ -29,11 +29,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: tools/bluelink-manager/${{ inputs.manager_version }}
 
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.23"
+          go-version: "1.24"
           cache-dependency-path: tools/bluelink-manager/go.sum
 
       - name: Derive installer version
