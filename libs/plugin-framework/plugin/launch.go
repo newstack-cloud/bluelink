@@ -128,8 +128,8 @@ func NewLauncher(
 // This returns a set of adaptors that can be used as maps of providers
 // and transformers to be used to create a blueprint loader.
 //
-// The provided plugin path is expected to be a colon-separated
-// list of root directories to search for plugins in.
+// The provided plugin path is expected to be a list of root directories
+// separated by os.PathListSeparator (colon on Unix, semicolon on Windows).
 //
 // The provided context should set a deadline to avoid waiting
 // indefinitely for plugins to register with the host service.

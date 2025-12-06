@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -23,7 +24,7 @@ func (s *DiscoverSuite) SetupTest() {
 }
 
 func (s *DiscoverSuite) Test_discovers_plugins() {
-	pluginPath := strings.Join(testPluginRootPaths, ":")
+	pluginPath := strings.Join(testPluginRootPaths, string(os.PathListSeparator))
 	discoveredPlugins, err := DiscoverPlugins(pluginPath, s.fs, core.NewNopLogger())
 	s.Require().NoError(err)
 	s.Require().Len(discoveredPlugins, len(s.expected))

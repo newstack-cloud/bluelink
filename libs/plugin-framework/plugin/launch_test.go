@@ -2,6 +2,7 @@ package plugin
 
 import (
 	context "context"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -30,7 +31,7 @@ func (s *LaunchSuite) SetupTest() {
 	err := loadPluginsIntoFS(s.expected, s.fs)
 	s.Require().NoError(err)
 
-	pluginPath := strings.Join(testPluginRootPaths, ":")
+	pluginPath := strings.Join(testPluginRootPaths, string(os.PathListSeparator))
 	manager := &mockPluginManager{
 		pluginMap: map[pluginservicev1.PluginType]map[string]*pluginservicev1.PluginInstance{
 			pluginservicev1.PluginType_PLUGIN_TYPE_PROVIDER:    {},

@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -43,12 +44,12 @@ type PluginPathInfo struct {
 
 // DiscoverPlugins handles the discovery of plugins
 // in the current host environment.
-// The provided plugin path is expected to be a colon-separated
-// list of root directories to search for plugins in.
+// The provided plugin path is expected to be a list of root directories
+// separated by os.PathListSeparator (colon on Unix, semicolon on Windows).
 // This returns a list of discovered plugin paths with important
 // plugin metadata extracted from the file paths.
 func DiscoverPlugins(pluginPath string, fs afero.Fs, logger bpcore.Logger) ([]*PluginPathInfo, error) {
-	pluginRootDirs := strings.Split(pluginPath, ":")
+	pluginRootDirs := strings.Split(pluginPath, string(os.PathListSeparator))
 	discoveredPlugins := []*PluginPathInfo{}
 
 	for _, pluginRootDir := range pluginRootDirs {
