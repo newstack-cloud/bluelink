@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/newstack-cloud/bluelink/compare/bluelink-manager/v0.1.1...bluelink-manager/v0.1.2) (2025-12-06)
+
+
+### Bug Fixes
+
+* **bluelink-manager:** add fix to github release artifact download urls ([38387f2](https://github.com/newstack-cloud/bluelink/commit/38387f286f0f7b16e570dfc3b1b68678777d3875))
+
 ## [0.1.1](https://github.com/newstack-cloud/bluelink/compare/bluelink-manager/v0.1.0...bluelink-manager/v0.1.1) (2025-12-06)
 
 
