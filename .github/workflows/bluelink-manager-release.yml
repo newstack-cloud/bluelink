@@ -89,3 +89,11 @@ jobs:
             tools/bluelink-manager/dist/checksums.txt
             tools/bluelink-manager/dist/checksums.txt.sig
             tools/bluelink-manager/dist/*.sbom.json
+
+  windows-installer:
+    name: Build Windows Installer
+    needs: [prepare, goreleaser]
+    uses: ./.github/workflows/windows-installer-build.yml
+    with:
+      manager_version: ${{ needs.prepare.outputs.version }}
+    secrets: inherit

@@ -7,6 +7,17 @@ on:
         description: "Bluelink Manager version (e.g., v0.1.0)"
         required: true
         type: string
+  workflow_call:
+    inputs:
+      manager_version:
+        description: "Bluelink Manager version (e.g., v0.1.0)"
+        required: true
+        type: string
+    secrets:
+      WINDOWS_SIGN_CERT:
+        required: false
+      WINDOWS_SIGN_PASSWORD:
+        required: false
 
 permissions:
   contents: write
