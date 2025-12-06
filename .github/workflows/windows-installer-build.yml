@@ -79,18 +79,32 @@ jobs:
             -d BinariesDir=${{ github.workspace }}\binaries `
             -arch x64 `
             -ext WixToolset.UI.wixext `
+            -bindpath tools/windows-installer `
             -out Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi
         shell: pwsh
 
       - name: Sign MSI (if certificate available)
-        if: env.WINDOWS_SIGN_CERT != ''
         run: |
+          if (-not $env:WINDOWS_SIGN_CERT) {
+            Write-Host "No signing certificate configured, skipping code signing"
+            exit 0
+          }
+
           # Decode certificate
           $certBytes = [Convert]::FromBase64String($env:WINDOWS_SIGN_CERT)
           [IO.File]::WriteAllBytes("cert.pfx", $certBytes)
 
+          # Find signtool.exe dynamically
+          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "signtool.exe" |
+            Where-Object { $_.FullName -match "x64" } |
+            Sort-Object { [version]($_.Directory.Parent.Name) } -Descending |
+            Select-Object -First 1
+
+          if (-not $signtool) { throw "signtool.exe not found" }
+          Write-Host "Using signtool: $($signtool.FullName)"
+
           # Sign MSI
-          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe" sign `
+          & $signtool.FullName sign `
             /fd sha256 `
             /tr http://timestamp.digicert.com `
             /td sha256 `
@@ -114,8 +128,8 @@ jobs:
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: tools/bluelink-manager/${{ inputs.manager_version }}
-          name: Bluelink Windows Installer ${{ inputs.manager_version }}
+          tag_name: windows-installer-latest
+          name: Bluelink Windows Installer
           draft: false
           prerelease: false
           make_latest: false
@@ -126,6 +140,7 @@ jobs:
             ## Bluelink Windows Installer
 
             **Version:** ${{ steps.version.outputs.installer_version }}
+            **Manager Version:** ${{ inputs.manager_version }}
 
             This installer sets up Bluelink on Windows. It installs the Bluelink Manager and automatically downloads and configures all Bluelink components.
 
