@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.1.1...plugin-framework/v0.1.2) (2025-12-06)
+
+
+### Bug Fixes
+
+* **plugin-framework:** prepare plugin framework library for indexing in the go registry ([e89bba3](https://github.com/newstack-cloud/bluelink/commit/e89bba39e17fe4e5467813a5eb100e9ac95baafc))
+
 ## [0.1.1](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.1.0...plugin-framework/v0.1.1) (2025-12-06)
 
 

@@ -6,7 +6,7 @@
   "libs/blueprint-state": "0.4.0",
   "libs/common": "0.3.2",
   "libs/deploy-engine-client": "0.1.0",
-  "libs/plugin-framework": "0.1.1",
+  "libs/plugin-framework": "0.1.2",
   "tools/blueprint-ls": "0.1.1",
   "tools/plugin-docgen": "0.1.0",
   "tools/bluelink-manager": "0.1.3"
