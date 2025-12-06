@@ -12,46 +12,41 @@ import (
 
 	"github.com/newstack-cloud/bluelink/tools/bluelink-manager/internal/paths"
 	"github.com/newstack-cloud/bluelink/tools/bluelink-manager/internal/ui"
+	"golang.org/x/sys/windows/registry"
 )
 
 const (
-	taskName = "BluelinkDeployEngine"
+	registryKeyName = "BluelinkDeployEngine"
+	runKeyPath      = `Software\Microsoft\Windows\CurrentVersion\Run`
 )
 
-// Install installs the Deploy Engine as a Windows scheduled task that runs at user login.
-// This approach doesn't require admin privileges unlike Windows services.
+// Installs the Deploy Engine to start automatically at user login.
+// Uses the Windows Registry Run key, which doesn't require admin privileges.
 func Install() error {
 	binPath := filepath.Join(paths.BinDir(), "deploy-engine.exe")
 
-	// Check if task already exists
-	queryCmd := exec.Command("schtasks.exe", "/Query", "/TN", taskName)
-	queryCmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	if err := queryCmd.Run(); err == nil {
-		ui.Info("Task already exists, updating...")
-		return updateTask(binPath)
-	}
-
-	// Create scheduled task that runs at user logon
-	// /SC ONLOGON - triggers at user login
-	// /RL LIMITED - runs with limited privileges (no elevation)
-	// /F - force create (overwrite if exists)
-	cmd := exec.Command("schtasks.exe", "/Create",
-		"/TN", taskName,
-		"/TR", binPath,
-		"/SC", "ONLOGON",
-		"/RL", "LIMITED",
-		"/F",
-	)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-
-	output, err := cmd.CombinedOutput()
+	// Open the Run key for the current user
+	key, err := registry.OpenKey(registry.CURRENT_USER, runKeyPath, registry.SET_VALUE|registry.QUERY_VALUE)
 	if err != nil {
-		return fmt.Errorf("failed to create scheduled task: %s: %w", string(output), err)
+		return fmt.Errorf("failed to open registry key: %w", err)
+	}
+	defer key.Close()
+
+	// Check if already registered
+	existingPath, _, err := key.GetStringValue(registryKeyName)
+	if err == nil && existingPath == binPath {
+		ui.Info("Already registered, starting...")
+	} else {
+		// Set the registry value
+		if err := key.SetStringValue(registryKeyName, binPath); err != nil {
+			return fmt.Errorf("failed to set registry value: %w", err)
+		}
+		ui.Success("Registered to start at login")
 	}
 
-	// Start the task immediately
+	// Start the process immediately
 	if err := Start(); err != nil {
-		ui.Warn("Task created but failed to start: %v", err)
+		ui.Warn("Registered but failed to start: %v", err)
 		ui.Info("The Deploy Engine will start automatically at next login")
 		ui.Info("Or start it manually with: bluelink-manager start")
 		return nil
@@ -64,49 +59,32 @@ func Install() error {
 	return nil
 }
 
-func updateTask(binPath string) error {
-	// Stop the running process first
-	_ = Stop()
-
-	// Update the task with new binary path
-	cmd := exec.Command("schtasks.exe", "/Change",
-		"/TN", taskName,
-		"/TR", binPath,
-	)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to update scheduled task: %s: %w", string(output), err)
-	}
-
-	// Start the task
-	return Start()
-}
-
-// Uninstall removes the Deploy Engine scheduled task.
+// Uninstall removes the Deploy Engine from auto-start.
 func Uninstall() error {
 	// Stop the running process first
 	_ = Stop()
 
-	cmd := exec.Command("schtasks.exe", "/Delete", "/TN", taskName, "/F")
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-
-	output, err := cmd.CombinedOutput()
+	// Open the Run key
+	key, err := registry.OpenKey(registry.CURRENT_USER, runKeyPath, registry.SET_VALUE)
 	if err != nil {
-		if strings.Contains(string(output), "cannot find") ||
-			strings.Contains(string(output), "does not exist") {
-			return nil // Already uninstalled
+		// Key doesn't exist or can't be opened - nothing to uninstall
+		return nil
+	}
+	defer key.Close()
+
+	// Delete the registry value
+	if err := key.DeleteValue(registryKeyName); err != nil {
+		// Value doesn't exist - already uninstalled
+		if err == registry.ErrNotExist {
+			return nil
 		}
-		return fmt.Errorf("failed to delete scheduled task: %s: %w", string(output), err)
+		return fmt.Errorf("failed to delete registry value: %w", err)
 	}
 
 	return nil
 }
 
 // Start starts the Deploy Engine process.
-// Since scheduled tasks with ONLOGON don't support on-demand start via schtasks /Run,
-// we start the process directly.
 func Start() error {
 	// Check if already running
 	running, _ := IsRunning()
