@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.36.1](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.36.0...blueprint/v0.36.1) (2025-12-06)
+
+
+### Dependencies
+
+* **blueprint:** bump the go-deps group ([ef381e8](https://github.com/newstack-cloud/bluelink/commit/ef381e8d881fea096bc32e3267f984a1236ecee0))
+
 ## [0.36.0] - 2025-11-03
 
 ### Added
