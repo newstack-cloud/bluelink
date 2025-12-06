@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.5](https://github.com/newstack-cloud/bluelink/compare/bluelink-manager/v0.1.4...bluelink-manager/v0.1.5) (2025-12-06)
+
+
+### Bug Fixes
+
+* **bluelink-manager:** add missing plugins bin directory during installation ([4556e3a](https://github.com/newstack-cloud/bluelink/commit/4556e3ac3dc44400b1f81ca0c3691aa815fc1635))
+* **bluelink-manager:** fix grep in installer for checksum verification ([8462145](https://github.com/newstack-cloud/bluelink/commit/84621459e1e71970dde89231be55a3d467eb10da))
+
 ## [0.1.4](https://github.com/newstack-cloud/bluelink/compare/bluelink-manager/v0.1.3...bluelink-manager/v0.1.4) (2025-12-06)
 
 
