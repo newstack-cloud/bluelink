@@ -72,11 +72,18 @@
       <Custom Action="RunBluelinkInstall" After="InstallFiles" Condition="NOT Installed AND NOT REMOVE" />
     </InstallExecuteSequence>
 
-    <!-- UI with license -->
-    <ui:WixUI Id="WixUI_Minimal" />
+    <!-- UI with license and exit dialog -->
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    <!-- Lock the install directory so users can't change it -->
+    <SetProperty Id="INSTALLFOLDER" Before="CostInitialize" Sequence="ui" Value="[LocalAppDataFolder]NewStack\Bluelink" />
+    <ui:WixUI Id="WixUI_InstallDir" />
+
+    <!-- Publish conditions to skip the directory dialog by going directly from License to Verify -->
+    <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="3" Condition="LicenseAccepted = &quot;1&quot;" />
+    <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="LicenseAgreementDlg" Order="1" />
 
     <!-- Exit dialog text override -->
-    <WixVariable Id="WixUIExitDialogDescription" Value="Bluelink has been installed successfully!&#13;&#10;&#13;&#10;The following components were installed:&#13;&#10;  - Bluelink CLI&#13;&#10;  - Deploy Engine (running as a service)&#13;&#10;  - Blueprint Language Server&#13;&#10;&#13;&#10;Open a new terminal and run: bluelink --help" />
+    <WixVariable Id="WixUIExitDialogDescription" Value="Bluelink has been installed successfully!&#13;&#10;&#13;&#10;The following components were installed:&#13;&#10;  - Bluelink CLI&#13;&#10;  - Deploy Engine (starts automatically at login)&#13;&#10;  - Blueprint Language Server&#13;&#10;&#13;&#10;Open a new terminal and run: bluelink --help" />
 
   </Package>
 </Wix>
