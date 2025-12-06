@@ -2,6 +2,7 @@ package github
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"compress/gzip"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -82,7 +83,14 @@ func (c *Client) DownloadComponent(name, tagPrefix, version, archiveName, binary
 	ui.Info("Downloading %s v%s...", name, version)
 
 	tag := fmt.Sprintf("%s/v%s", tagPrefix, version)
-	archive := fmt.Sprintf("%s_%s_%s.tar.gz", archiveName, version, platform.String())
+
+	// Windows uses .zip, others use .tar.gz
+	ext := ".tar.gz"
+	if platform.OS == "windows" {
+		ext = ".zip"
+	}
+	archive := fmt.Sprintf("%s_%s_%s%s", archiveName, version, platform.String(), ext)
+
 	url := fmt.Sprintf(
 		"https://github.com/%s/%s/releases/download/%s/%s",
 		repoOwner,
@@ -98,7 +106,7 @@ func (c *Client) DownloadComponent(name, tagPrefix, version, archiveName, binary
 	)
 
 	// Download archive to temp file
-	tmpFile, err := os.CreateTemp("", "bluelink-*.tar.gz")
+	tmpFile, err := os.CreateTemp("", "bluelink-*"+ext)
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
@@ -115,7 +123,7 @@ func (c *Client) DownloadComponent(name, tagPrefix, version, archiveName, binary
 	}
 
 	// Extract binary
-	if err := extractBinary(tmpFile.Name(), binaryName, paths.BinDir()); err != nil {
+	if err := extractBinary(tmpFile.Name(), binaryName, paths.BinDir(), platform.OS == "windows"); err != nil {
 		return fmt.Errorf("failed to extract %s: %w", name, err)
 	}
 
@@ -192,7 +200,53 @@ func (c *Client) verifyChecksum(filePath, archiveName, checksumsURL string) erro
 	return nil
 }
 
-func extractBinary(archivePath, binaryName, destDir string) error {
+func extractBinary(archivePath, binaryName, destDir string, isZip bool) error {
+	if isZip {
+		return extractBinaryFromZip(archivePath, binaryName, destDir)
+	}
+	return extractBinaryFromTarGz(archivePath, binaryName, destDir)
+}
+
+func extractBinaryFromZip(archivePath, binaryName, destDir string) error {
+	r, err := zip.OpenReader(archivePath)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	// On Windows, the binary has .exe extension
+	binaryWithExt := binaryName + ".exe"
+
+	for _, f := range r.File {
+		name := filepath.Base(f.Name)
+		if name == binaryWithExt && !f.FileInfo().IsDir() {
+			rc, err := f.Open()
+			if err != nil {
+				return err
+			}
+
+			destPath := filepath.Join(destDir, binaryWithExt)
+			outFile, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
+			if err != nil {
+				rc.Close()
+				return err
+			}
+
+			if _, err := io.Copy(outFile, rc); err != nil {
+				outFile.Close()
+				rc.Close()
+				return err
+			}
+			outFile.Close()
+			rc.Close()
+			return nil
+		}
+	}
+
+	return fmt.Errorf("binary %s not found in archive", binaryWithExt)
+}
+
+func extractBinaryFromTarGz(archivePath, binaryName, destDir string) error {
 	f, err := os.Open(archivePath)
 	if err != nil {
 		return err
