@@ -70,7 +70,7 @@ Replace `{plugin}` with the unique ID of your plugin. (e.g. `newstack-cloud/aws`
 
 **_required_**
 
-The absolute path to the root directory from which the tool can discover the plugin.
+The path to one or more plugin root directories separated by an OS path list separator (colon on Unix, semicolon on Windows).
 See [Usage](#usage) for more details on preparing the directory structure.
 
 ### Log File Root Directory
