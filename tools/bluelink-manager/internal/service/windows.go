@@ -94,11 +94,14 @@ func Start() error {
 
 	binPath := filepath.Join(paths.BinDir(), "deploy-engine.exe")
 
-	// Start the process detached from this console
+	// Start the process fully detached from this console
+	// DETACHED_PROCESS (0x8) - process has no console
+	// CREATE_NEW_PROCESS_GROUP (0x200) - new process group for ctrl+c handling
+	const DETACHED_PROCESS = 0x00000008
 	cmd := exec.Command(binPath)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		HideWindow:    true,
-		CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
+		CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS,
 	}
 
 	// Set environment
