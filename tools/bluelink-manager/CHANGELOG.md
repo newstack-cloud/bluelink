@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/newstack-cloud/bluelink/compare/bluelink-manager/v0.1.2...bluelink-manager/v0.1.3) (2025-12-06)
+
+
+### Bug Fixes
+
+* **bluelink-manager:** use scheduled task for deploy engine instead of service ([63ffa59](https://github.com/newstack-cloud/bluelink/commit/63ffa592228518a839a94178a0a58eaca951ffec))
+
 ## [0.1.2](https://github.com/newstack-cloud/bluelink/compare/bluelink-manager/v0.1.1...bluelink-manager/v0.1.2) (2025-12-06)
 
 
