@@ -103,6 +103,7 @@ func (s *PathsSuite) Test_EnsureDirectories_creates_all_directories() {
 	s.DirExists(BinDir())
 	s.DirExists(ConfigDir())
 	s.DirExists(PluginsDir())
+	s.DirExists(filepath.Join(PluginsDir(), "bin"))
 	s.DirExists(filepath.Join(PluginsDir(), "logs"))
 	s.DirExists(StateDir())
 }

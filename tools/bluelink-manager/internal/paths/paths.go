@@ -104,6 +104,7 @@ func EnsureDirectories() error {
 		BinDir(),
 		ConfigDir(),
 		PluginsDir(),
+		filepath.Join(PluginsDir(), "bin"),
 		filepath.Join(PluginsDir(), "logs"),
 		StateDir(),
 	}
