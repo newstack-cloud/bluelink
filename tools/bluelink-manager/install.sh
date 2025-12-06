@@ -5,7 +5,7 @@
 # which handles the full installation of Bluelink components.
 #
 # Usage:
-#   curl --proto '=https' --tlsv1.2 -sSf https://install.bluelink.dev | sh
+#   curl --proto '=https' --tlsv1.2 -sSf https://manager-sh.bluelink.dev | sh
 #
 # Environment variables:
 #   BLUELINK_INSTALL_DIR - Installation directory (default: ~/.bluelink)
