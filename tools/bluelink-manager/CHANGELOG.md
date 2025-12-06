@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.4](https://github.com/newstack-cloud/bluelink/compare/bluelink-manager/v0.1.3...bluelink-manager/v0.1.4) (2025-12-06)
+
+
+### Bug Fixes
+
+* **bluelink-manager:** add correction to auto-start deploy engine without admin privileges ([50ec588](https://github.com/newstack-cloud/bluelink/commit/50ec588463cbfd19ef196b3a70faac5916671557))
+* **bluelink-manager:** detach deploy engine task process ([dea32c8](https://github.com/newstack-cloud/bluelink/commit/dea32c83295d718155db753f5832972cd5888f1b))
+
 ## [0.1.3](https://github.com/newstack-cloud/bluelink/compare/bluelink-manager/v0.1.2...bluelink-manager/v0.1.3) (2025-12-06)
 
 
