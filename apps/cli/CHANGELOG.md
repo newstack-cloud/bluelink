@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/newstack-cloud/bluelink/compare/cli/v0.1.1...cli/v0.1.2) (2025-12-06)
+
+
+### Dependencies
+
+* **cli:** bump the go-deps group in /apps/cli with 8 updates ([0719ebf](https://github.com/newstack-cloud/bluelink/commit/0719ebfaa6732ea62acfac2dad5712c019b5da59))
+
 ## [0.1.1](https://github.com/newstack-cloud/bluelink/compare/cli/v0.1.0...cli/v0.1.1) (2025-12-03)
 
 
