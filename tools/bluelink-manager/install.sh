@@ -5,7 +5,7 @@
 # which handles the full installation of Bluelink components.
 #
 # Usage:
-#   curl --proto '=https' --tlsv1.2 -sSf https://manager-sh.bluelink.dev | sh
+#   curl --proto '=https' --tlsv1.2 -sSfL https://manager-sh.bluelink.dev | sh
 #
 # Environment variables:
 #   BLUELINK_INSTALL_DIR - Installation directory (default: ~/.bluelink)
@@ -67,8 +67,8 @@ verify_checksum() {
         return 0
     fi
 
-    # Find expected hash
-    expected_hash=$(grep "$archive_name" "$checksums_file" | awk '{print $1}')
+    # Find expected hash (match exact filename at end of line)
+    expected_hash=$(grep "  $archive_name\$" "$checksums_file" | awk '{print $1}')
     if [ -z "$expected_hash" ]; then
         info "Checksum not found for $archive_name, skipping verification"
         return 0
