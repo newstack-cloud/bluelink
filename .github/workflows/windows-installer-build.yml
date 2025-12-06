@@ -125,6 +125,22 @@ jobs:
           "$($hash.Hash.ToLower())  Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi" | Out-File -Encoding utf8 Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi.sha256
         shell: pwsh
 
+      - name: Delete old release assets
+        run: |
+          # Get all assets from the windows-installer-latest release and delete them
+          $assets = gh release view windows-installer-latest --json assets --jq '.assets[].name' 2>$null
+          if ($LASTEXITCODE -eq 0 -and $assets) {
+            foreach ($asset in $assets) {
+              Write-Host "Deleting old asset: $asset"
+              gh release delete-asset windows-installer-latest $asset --yes
+            }
+          } else {
+            Write-Host "No existing release or assets found"
+          }
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
