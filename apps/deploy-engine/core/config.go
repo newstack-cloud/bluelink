@@ -419,6 +419,12 @@ func LoadConfig() (Config, error) {
 		config.PluginsV1.PluginPath = utils.ExpandEnv(config.PluginsV1.PluginPath)
 	}
 
+	// Ensure the environment variables in the plugin log directory are expanded
+	// as the plugin executor only works with absolute paths.
+	if config.PluginsV1.LogFileRootDir != "" {
+		config.PluginsV1.LogFileRootDir = utils.ExpandEnv(config.PluginsV1.LogFileRootDir)
+	}
+
 	// Ensure the environment variables in the state directory are expanded
 	// as the state container only works with absolute paths.
 	if config.State.MemFileStateDir != "" {
