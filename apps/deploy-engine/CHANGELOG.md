@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.1.3...deploy-engine/v0.1.4) (2025-12-06)
+
+
+### Bug Fixes
+
+* **deploy-engine:** correct plugin path to support windows path list separators ([68cf4b6](https://github.com/newstack-cloud/bluelink/commit/68cf4b60bfbdffd9d93db0728f8a0fa6b647374f))
+
 ## [0.1.3](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.1.2...deploy-engine/v0.1.3) (2025-12-06)
 
 
