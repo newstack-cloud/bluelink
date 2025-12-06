@@ -58,13 +58,14 @@
     </Feature>
 
     <!-- Custom action: Run bluelink-manager install after files are installed -->
+    <!-- Using Return="ignore" temporarily to debug - install completes even if this fails -->
     <CustomAction
       Id="RunBluelinkInstall"
       FileRef="BluelinkManagerExe"
       ExeCommand="install --no-modify-path"
       Execute="deferred"
       Impersonate="yes"
-      Return="check" />
+      Return="ignore" />
 
     <InstallExecuteSequence>
       <!-- Run install after files are copied, only on fresh install (not upgrade/uninstall) -->
