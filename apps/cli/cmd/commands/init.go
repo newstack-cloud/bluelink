@@ -5,10 +5,11 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/config"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/headless"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/initui"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/styles"
+	"github.com/newstack-cloud/deploy-cli-sdk/config"
+	"github.com/newstack-cloud/deploy-cli-sdk/headless"
+	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -49,7 +50,10 @@ func setupInitCommand(rootCmd *cobra.Command, confProvider *config.Provider) {
 				log.Fatal(err)
 			}
 
-			styles := styles.NewDefaultBluelinkStyles()
+			styles := stylespkg.NewStyles(
+				lipgloss.NewRenderer(os.Stdout),
+				stylespkg.NewBluelinkPalette(),
+			)
 			inTerminal := term.IsTerminal(int(os.Stdout.Fd()))
 			app, err := initui.NewInitApp(
 				initui.InitialState{

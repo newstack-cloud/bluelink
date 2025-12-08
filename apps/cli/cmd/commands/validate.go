@@ -5,11 +5,12 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/config"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/engine"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/styles"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/validateui"
+	"github.com/newstack-cloud/deploy-cli-sdk/config"
+	"github.com/newstack-cloud/deploy-cli-sdk/engine"
+	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -45,7 +46,10 @@ func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider)
 			// we still need to return an error to allow cobra to exit with a non-zero exit code.
 			cmd.SilenceUsage = true
 
-			styles := styles.NewDefaultBluelinkStyles()
+			styles := stylespkg.NewStyles(
+				lipgloss.NewRenderer(os.Stdout),
+				stylespkg.NewBluelinkPalette(),
+			)
 			inTerminal := term.IsTerminal(int(os.Stdout.Fd()))
 			app, err := validateui.NewValidateApp(
 				deployEngine,

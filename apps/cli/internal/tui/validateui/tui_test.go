@@ -7,12 +7,12 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/exp/teatest"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/testutils"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/styles"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
+	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
+	"github.com/newstack-cloud/deploy-cli-sdk/testutils"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 )
@@ -27,7 +27,7 @@ func (s *ValidateTUISuite) Test_successful_validation() {
 		zap.NewNop(),
 		"test.blueprint.yaml",
 		/* isDefaultBlueprintFile */ false,
-		styles.NewBluelinkStyles(lipgloss.NewRenderer(os.Stdout)),
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		/* headless */ false,
 		os.Stdout,
 	)
@@ -63,7 +63,7 @@ func (s *ValidateTUISuite) Test_successful_validation_headless() {
 		zap.NewNop(),
 		"test.blueprint.yaml",
 		/* isDefaultBlueprintFile */ false,
-		styles.NewBluelinkStyles(lipgloss.NewRenderer(os.Stdout)),
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		/* headless */ true,
 		headlessOutput,
 	)
@@ -93,7 +93,7 @@ func (s *ValidateTUISuite) Test_validation_failed() {
 		zap.NewNop(),
 		"test.blueprint.yaml",
 		/* isDefaultBlueprintFile */ false,
-		styles.NewBluelinkStyles(lipgloss.NewRenderer(os.Stdout)),
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		/* headless */ false,
 		os.Stdout,
 	)
@@ -135,7 +135,7 @@ func (s *ValidateTUISuite) Test_validation_failed_headless() {
 		zap.NewNop(),
 		"test.blueprint.yaml",
 		/* isDefaultBlueprintFile */ false,
-		styles.NewBluelinkStyles(lipgloss.NewRenderer(os.Stdout)),
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		/* headless */ true,
 		headlessOutput,
 	)

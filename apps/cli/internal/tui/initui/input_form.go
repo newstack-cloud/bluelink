@@ -6,14 +6,14 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/styles"
+	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 )
 
 // InputFormModel handles the input form stage where users provide
 // project name, blueprint format, and git initialization preference.
 type InputFormModel struct {
 	form         *huh.Form
-	styles       *styles.BluelinkStyles
+	styles       *stylespkg.Styles
 	autoComplete bool
 
 	// Bound form values
@@ -78,7 +78,7 @@ func (m InputFormModel) View() string {
 // NewInputFormModel creates a new InputFormModel with the given initial values.
 func NewInputFormModel(
 	initialValues InputFormInitialValues,
-	bluelinkStyles *styles.BluelinkStyles,
+	bluelinkStyles *stylespkg.Styles,
 ) *InputFormModel {
 	model := &InputFormModel{
 		styles:          bluelinkStyles,
@@ -139,7 +139,7 @@ func NewInputFormModel(
 				Negative("No, use git").
 				Value(&model.noGit),
 		),
-	).WithTheme(styles.NewBluelinkHuhTheme())
+	).WithTheme(stylespkg.NewBluelinkHuhTheme())
 
 	return model
 }

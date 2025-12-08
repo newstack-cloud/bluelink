@@ -6,14 +6,16 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/engine"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/sharedui"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/styles"
+	"github.com/newstack-cloud/deploy-cli-sdk/engine"
+	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
+	sharedui "github.com/newstack-cloud/deploy-cli-sdk/ui"
 	"go.uber.org/zap"
 )
 
 var (
-	quitTextStyle = styles.DefaultBluelinkStyles.Muted.Margin(1, 0, 2, 4)
+	quitTextStyle = stylespkg.NewDefaultStyles(
+		stylespkg.NewBluelinkPalette(),
+	).Muted.Margin(1, 0, 2, 4)
 )
 
 // ValidateStage is an enum that represents the different stages
@@ -45,7 +47,7 @@ type MainModel struct {
 	quitting        bool
 	selectBlueprint tea.Model
 	validate        tea.Model
-	styles          *styles.BluelinkStyles
+	styles          *stylespkg.Styles
 	Error           error
 }
 
@@ -129,7 +131,7 @@ func NewValidateApp(
 	logger *zap.Logger,
 	blueprintFile string,
 	isDefaultBlueprintFile bool,
-	bluelinkStyles *styles.BluelinkStyles,
+	bluelinkStyles *stylespkg.Styles,
 	headless bool,
 	headlessWriter io.Writer,
 ) (*MainModel, error) {

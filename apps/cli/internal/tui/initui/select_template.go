@@ -2,8 +2,8 @@ package initui
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/sharedui"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/styles"
+	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
+	sharedui "github.com/newstack-cloud/deploy-cli-sdk/ui"
 )
 
 type SelectTemplateModel struct {
@@ -57,7 +57,7 @@ func (m SelectTemplateModel) View() string {
 }
 
 func NewSelectTemplateModel(
-	bluelinkStyles *styles.BluelinkStyles,
+	bluelinkStyles *stylespkg.Styles,
 	autoSelect bool,
 ) (*SelectTemplateModel, error) {
 

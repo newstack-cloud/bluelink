@@ -2,7 +2,7 @@ package initui
 
 import (
 	"github.com/charmbracelet/bubbles/list"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/sharedui"
+	sharedui "github.com/newstack-cloud/deploy-cli-sdk/ui"
 )
 
 func selectTemplateListItems() []list.Item {

@@ -11,17 +11,17 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/apps/cli/diagutils"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/engine"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/sharedui"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/styles"
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
+	"github.com/newstack-cloud/deploy-cli-sdk/engine"
+	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
+	sharedui "github.com/newstack-cloud/deploy-cli-sdk/ui"
 	"go.uber.org/zap"
 )
 
 var (
-	bluelinkStyles = styles.DefaultBluelinkStyles
+	bluelinkStyles = stylespkg.NewDefaultStyles(stylespkg.NewBluelinkPalette())
 
 	validateCategoryStyle     = bluelinkStyles.Category
 	diagnosticLevelErrorStyle = bluelinkStyles.Error.MarginLeft(2)

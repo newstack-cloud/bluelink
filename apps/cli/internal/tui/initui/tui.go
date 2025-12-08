@@ -4,13 +4,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/styles"
-)
-
-var (
-	bluelinkStyles = styles.DefaultBluelinkStyles
-
-	quitTextStyle = bluelinkStyles.Muted.Margin(1, 0, 2, 4)
+	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 )
 
 type initStage int
@@ -45,6 +39,7 @@ type InitModel struct {
 	directory               string
 	quitting                bool
 	Error                   error
+	styles                  *stylespkg.Styles
 }
 
 func (m InitModel) Init() tea.Cmd {
@@ -99,7 +94,7 @@ func (m InitModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m InitModel) View() string {
 	if m.quitting {
-		return quitTextStyle.Render("Not hungry? That's cool.")
+		return m.styles.Muted.Margin(1, 0, 2, 4).Render("Not hungry? That's cool.")
 	}
 
 	switch m.stage {
@@ -132,7 +127,7 @@ type InitialState struct {
 
 func NewInitApp(
 	initialState InitialState,
-	bluelinkStyles *styles.BluelinkStyles,
+	bluelinkStyles *stylespkg.Styles,
 ) (*InitModel, error) {
 	selectTemplate, err := NewSelectTemplateModel(
 		bluelinkStyles,

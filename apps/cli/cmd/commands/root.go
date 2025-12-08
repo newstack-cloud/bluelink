@@ -6,7 +6,7 @@ import (
 	"runtime"
 
 	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/config"
+	"github.com/newstack-cloud/deploy-cli-sdk/config"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/headless"
+	"github.com/newstack-cloud/deploy-cli-sdk/headless"
 	"github.com/stretchr/testify/suite"
 )
 

@@ -7,9 +7,9 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/consts"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/engine"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
+	"github.com/newstack-cloud/deploy-cli-sdk/consts"
+	"github.com/newstack-cloud/deploy-cli-sdk/engine"
 	"go.uber.org/zap"
 )
 
