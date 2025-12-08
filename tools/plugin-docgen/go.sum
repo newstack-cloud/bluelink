@@ -26,8 +26,8 @@ github.com/newstack-cloud/bluelink/libs/blueprint v0.36.0 h1:R0ZyBByMamzmW00bMn4
 github.com/newstack-cloud/bluelink/libs/blueprint v0.36.0/go.mod h1:5Unn3mYYUB7WHiuoy+QvHmw8cCQFV0rZY4sK8+dqoBk=
 github.com/newstack-cloud/bluelink/libs/common v0.3.2 h1:YqD47176o62SwJyEqpTH/87nlaJJ7uowVrQFi0bJvfc=
 github.com/newstack-cloud/bluelink/libs/common v0.3.2/go.mod h1:b18HJMiIRGIFyom6jiweqcxA8vRO6D5Gkfssrq9C+Wc=
-github.com/newstack-cloud/bluelink/libs/plugin-framework v0.0.0-20250624111215-07bed274d714 h1:nm3vrYCCEBgaU7AY4xMlWJ6VPih58GCS+oE639lveMo=
-github.com/newstack-cloud/bluelink/libs/plugin-framework v0.0.0-20250624111215-07bed274d714/go.mod h1:zTgj/U0i6idOSl6hHDqsu+78QtJ9rsdoEntX/4II3oI=
+github.com/newstack-cloud/bluelink/libs/plugin-framework v0.1.2 h1:25BfN6H4to6mmcj8+54IhJajInEbXo+yPO801ZJoOYY=
+github.com/newstack-cloud/bluelink/libs/plugin-framework v0.1.2/go.mod h1:OdG/6bO8vdt7tis112zxETuYlHcQ9Y0vsWp7JKjlFe4=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/spf13/afero v1.15.0 h1:b/YBCLWAJdFWJTN9cLhiXXcD7mzKn9Dm86dNnfyQw1I=
