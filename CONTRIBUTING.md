@@ -26,13 +26,16 @@ Tools and libraries that make up the Bluelink "build-time engine" that handles e
 ### Binary applications
 
 - [Bluelink CLI](./apps/cli)
-- [Bluelink API](./apps/api)
+- [Bluelink Deploy Engine](./apps/deploy-engine)
 
 ### Libraries
 
 - [Blueprint](./libs/blueprint)
-- [Deploy Engine](./libs/deploy-engine)
 - [Common](./libs/common)
+- [Plugin Framework](./libs/plugin-framework)
+- [Blueprint Resolvers](./libs/blueprint-resolvers)
+- [Blueprint State](./libs/blueprint-state)
+- [Deploy Engine Client](./libs/deploy-engine-client)
 
 ## Further documentation
 
