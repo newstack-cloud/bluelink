@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.36.1](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.36.0...blueprint/v0.36.1) (2025-12-09)
+
+
+### Bug Fixes
+
+* **blueprint:** ensure link context is set for method calls to link implementations ([b3c18df](https://github.com/newstack-cloud/bluelink/commit/b3c18df25b2e2986bd81fd76b424ae44c3ce399d))
+
+
+### Dependencies
+
+* **blueprint:** bump the go-deps group ([ef381e8](https://github.com/newstack-cloud/bluelink/commit/ef381e8d881fea096bc32e3267f984a1236ecee0))
+
 ## [0.36.0] - 2025-11-03
 
 ### Added
