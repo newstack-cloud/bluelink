@@ -53,9 +53,13 @@ func DiscoverPlugins(pluginPath string, fs afero.Fs, logger bpcore.Logger) ([]*P
 	discoveredPlugins := []*PluginPathInfo{}
 
 	for _, pluginRootDir := range pluginRootDirs {
+		// Clean the path to normalize it (e.g., remove "./" prefix).
+		// This ensures consistency with filepath.Join which also cleans paths,
+		// allowing TrimPrefix to work correctly when extracting relative paths.
+		cleanedRootDir := filepath.Clean(pluginRootDir)
 		err := discoverPluginsInDir(
-			pluginRootDir,
-			pluginRootDir,
+			cleanedRootDir,
+			cleanedRootDir,
 			fs,
 			logger,
 			0,
