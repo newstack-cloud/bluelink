@@ -698,9 +698,10 @@ func groupFixture3RefChains(
 }
 
 func collectNodesAsRefs(nodes []*DeploymentNode, collector refgraph.RefChainCollector) error {
+	params := createParams()
 	for _, node := range nodes {
 		if node.Type() == DeploymentNodeTypeResource {
-			err := collectLinksFromChain(context.TODO(), node.ChainLinkNode, collector)
+			err := collectLinksFromChain(context.TODO(), node.ChainLinkNode, collector, params)
 			if err != nil {
 				return err
 			}

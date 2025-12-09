@@ -53,6 +53,7 @@ func collectLinksFromChain(
 	ctx context.Context,
 	chain *links.ChainLinkNode,
 	refChainCollector refgraph.RefChainCollector,
+	params core.BlueprintParams,
 ) error {
 	// Always collect the resource that the chain is starting from to account for the case
 	// when the chain is a single resource, none of the links are hard or the root resource
@@ -69,14 +70,19 @@ func collectLinksFromChain(
 			return err
 		}
 
-		linkKindOutput, err := linkImplementation.GetKind(ctx, &provider.LinkGetKindInput{})
+		linkCtx := provider.NewLinkContextFromParams(params)
+		linkKindOutput, err := linkImplementation.GetKind(ctx, &provider.LinkGetKindInput{
+			LinkContext: linkCtx,
+		})
 		if err != nil {
 			return err
 		}
 
 		priorityResourceOutput, err := linkImplementation.GetPriorityResource(
 			ctx,
-			&provider.LinkGetPriorityResourceInput{},
+			&provider.LinkGetPriorityResourceInput{
+				LinkContext: linkCtx,
+			},
 		)
 		if err != nil {
 			return err
@@ -106,6 +112,7 @@ func collectLinksFromChain(
 				linkKindOutput.Kind,
 				referencedByResourceID,
 				link,
+				params,
 			)
 			if err != nil {
 				return err
@@ -123,6 +130,7 @@ func collectResourceFromLink(
 	linkKind provider.LinkKind,
 	referencedByResourceID string,
 	childLink *links.ChainLinkNode,
+	params core.BlueprintParams,
 ) error {
 	// Only collect link for cycle detection if it is a hard link.
 	// Soft links do not require a specific order of deployment/resolution.
@@ -138,7 +146,7 @@ func collectResourceFromLink(
 
 	// There is no risk of infinite recursion due to cyclic links as at this point,
 	// any pure link cycles have been detected and reported.
-	err := collectLinksFromChain(ctx, childLink, refChainCollector)
+	err := collectLinksFromChain(ctx, childLink, refChainCollector, params)
 	if err != nil {
 		return err
 	}

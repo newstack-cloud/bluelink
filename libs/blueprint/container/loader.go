@@ -700,7 +700,7 @@ func (l *defaultLoader) loadSpecAndLinkInfo(
 	// we can capture links as references to include in checks
 	// for reference/link cycles to catch the case where a resource selects another through
 	// a link and the other resource references a property of the first resource.
-	err = l.collectLinksAsReferences(ctx, linkInfo, refChainCollector)
+	err = l.collectLinksAsReferences(ctx, linkInfo, refChainCollector, params)
 	if err != nil {
 		return container, diagnostics, err
 	}
@@ -882,6 +882,7 @@ func (l *defaultLoader) collectLinksAsReferences(
 	ctx context.Context,
 	linkInfo links.SpecLinkInfo,
 	refChainCollector refgraph.RefChainCollector,
+	params bpcore.BlueprintParams,
 ) error {
 	chains, err := linkInfo.Links(ctx)
 	if err != nil {
@@ -889,7 +890,7 @@ func (l *defaultLoader) collectLinksAsReferences(
 	}
 
 	for _, chain := range chains {
-		err = collectLinksFromChain(ctx, chain, refChainCollector)
+		err = collectLinksFromChain(ctx, chain, refChainCollector, params)
 		if err != nil {
 			return err
 		}

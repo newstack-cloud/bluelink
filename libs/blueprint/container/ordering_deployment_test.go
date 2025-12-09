@@ -329,8 +329,9 @@ func orderFixture1RefChains(
 	linkChains []*links.ChainLinkNode,
 ) (refgraph.RefChainCollector, error) {
 	collector := refgraph.NewRefChainCollector()
+	params := createParams()
 	for _, link := range linkChains {
-		err := collectLinksFromChain(context.TODO(), link, collector)
+		err := collectLinksFromChain(context.TODO(), link, collector, params)
 		if err != nil {
 			return nil, err
 		}
@@ -496,8 +497,9 @@ func orderFixture2RefChains(
 	linkChains []*links.ChainLinkNode,
 ) (refgraph.RefChainCollector, error) {
 	collector := refgraph.NewRefChainCollector()
+	params := createParams()
 	for _, link := range linkChains {
-		err := collectLinksFromChain(context.TODO(), link, collector)
+		err := collectLinksFromChain(context.TODO(), link, collector, params)
 		if err != nil {
 			return nil, err
 		}
@@ -699,8 +701,9 @@ func orderFixture3RefChains(
 	linkChains []*links.ChainLinkNode,
 ) (refgraph.RefChainCollector, error) {
 	collector := refgraph.NewRefChainCollector()
+	params := createParams()
 	for _, link := range linkChains {
-		err := collectLinksFromChain(context.TODO(), link, collector)
+		err := collectLinksFromChain(context.TODO(), link, collector, params)
 		if err != nil {
 			return nil, err
 		}
