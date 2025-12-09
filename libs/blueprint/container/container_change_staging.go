@@ -487,6 +487,15 @@ func (c *defaultBlueprintContainer) resolveAndCollectMetadataChanges(
 	stagingState ChangeStagingState,
 ) error {
 	if blueprint.Metadata == nil {
+		// Still need to set empty metadata changes to avoid nil dereference
+		// in ExtractBlueprintChanges
+		emptyChanges := changes.MetadataChanges{
+			NewFields:       []provider.FieldChange{},
+			ModifiedFields:  []provider.FieldChange{},
+			RemovedFields:   []string{},
+			UnchangedFields: []string{},
+		}
+		stagingState.UpdateMetadataChanges(&emptyChanges, nil)
 		return nil
 	}
 

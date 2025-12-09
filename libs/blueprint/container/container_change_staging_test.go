@@ -23,27 +23,29 @@ import (
 )
 
 const (
-	blueprint1InstanceID      = "blueprint-instance-1"
-	blueprint1InstanceName    = "BlueprintInstance1"
-	blueprint2InstanceID      = "blueprint-instance-2"
-	blueprint3InstanceID      = "blueprint-instance-3"
-	blueprint3ChildInstanceID = "blueprint-instance-3-child-core-infra"
-	blueprint4InstanceID      = "blueprint-instance-4"
-	blueprint5InstanceID      = "blueprint-instance-5"
-	blueprint6InstanceID      = "blueprint-instance-6"
-	blueprint7InstanceID      = "blueprint-instance-7"
+	blueprint1InstanceID            = "blueprint-instance-1"
+	blueprint1InstanceName          = "BlueprintInstance1"
+	blueprint2InstanceID            = "blueprint-instance-2"
+	blueprint3InstanceID            = "blueprint-instance-3"
+	blueprint3ChildInstanceID       = "blueprint-instance-3-child-core-infra"
+	blueprint4InstanceID            = "blueprint-instance-4"
+	blueprint5InstanceID            = "blueprint-instance-5"
+	blueprint6InstanceID            = "blueprint-instance-6"
+	blueprint7InstanceID            = "blueprint-instance-7"
+	blueprint8NoMetadataInstanceID  = "blueprint-instance-8-no-metadata"
 )
 
 const timeoutMessage = "timed out waiting for changes to be staged"
 
 type ContainerChangeStagingTestSuite struct {
-	blueprint1Container BlueprintContainer
-	blueprint2Container BlueprintContainer
-	blueprint3Container BlueprintContainer
-	blueprint4Container BlueprintContainer
-	blueprint5Container BlueprintContainer
-	blueprint6Container BlueprintContainer
-	blueprint7Container BlueprintContainer
+	blueprint1Container            BlueprintContainer
+	blueprint2Container            BlueprintContainer
+	blueprint3Container            BlueprintContainer
+	blueprint4Container            BlueprintContainer
+	blueprint5Container            BlueprintContainer
+	blueprint6Container            BlueprintContainer
+	blueprint7Container            BlueprintContainer
+	blueprint8NoMetadataContainer  BlueprintContainer
 	suite.Suite
 }
 
@@ -135,6 +137,14 @@ func (s *ContainerChangeStagingTestSuite) SetupSuite() {
 	)
 	s.Require().NoError(err)
 	s.blueprint7Container = blueprint7Container
+
+	blueprint8NoMetadataContainer, err := loader.Load(
+		context.Background(),
+		"__testdata/container/change-staging/blueprint8-no-metadata.yml",
+		baseBlueprintParams(),
+	)
+	s.Require().NoError(err)
+	s.blueprint8NoMetadataContainer = blueprint8NoMetadataContainer
 }
 
 func (s *ContainerChangeStagingTestSuite) Test_stage_changes_to_existing_blueprint_instance() {
@@ -460,6 +470,50 @@ func (s *ContainerChangeStagingTestSuite) Test_stage_changes_when_removed_child_
 
 	err = testhelpers.Snapshot(normaliseBlueprintChanges(fullChangeSet))
 	s.Require().NoError(err)
+}
+
+func (s *ContainerChangeStagingTestSuite) Test_stage_changes_for_blueprint_without_metadata() {
+	// This test verifies that staging changes works correctly when the blueprint
+	// has no metadata section. Previously this would cause a nil pointer dereference
+	// in ExtractBlueprintChanges when accessing MetadataChanges.
+	channels := createChangeStagingChannels()
+	params := baseBlueprintParams()
+
+	err := s.blueprint8NoMetadataContainer.StageChanges(
+		context.Background(),
+		&StageChangesInput{
+			InstanceID: blueprint8NoMetadataInstanceID,
+		},
+		channels,
+		params,
+	)
+	s.Require().NoError(err)
+
+	resourceChangeMessages := []ResourceChangesMessage{}
+	fullChangeSet := (*changes.BlueprintChanges)(nil)
+	for err == nil &&
+		(fullChangeSet == nil ||
+			len(resourceChangeMessages) < 1) {
+		select {
+		case msg := <-channels.ResourceChangesChan:
+			resourceChangeMessages = append(resourceChangeMessages, msg)
+		case <-channels.ChildChangesChan:
+		case <-channels.LinkChangesChan:
+		case changeSet := <-channels.CompleteChan:
+			fullChangeSet = &changeSet
+		case err = <-channels.ErrChan:
+		case <-time.After(60 * time.Second):
+			err = errors.New(timeoutMessage)
+		}
+	}
+	s.Require().NoError(err)
+
+	// Verify that MetadataChanges is properly initialized (empty, not nil)
+	s.Assert().NotNil(fullChangeSet)
+	s.Assert().Empty(fullChangeSet.MetadataChanges.NewFields)
+	s.Assert().Empty(fullChangeSet.MetadataChanges.ModifiedFields)
+	s.Assert().Empty(fullChangeSet.MetadataChanges.RemovedFields)
+	s.Assert().Empty(fullChangeSet.MetadataChanges.UnchangedFields)
 }
 
 func (s *ContainerChangeStagingTestSuite) populateCurrentState(stateContainer state.Container) error {

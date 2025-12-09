@@ -1,0 +1,13 @@
+version: 2025-11-02
+variables:
+  environment:
+    type: string
+    description: "The environment to deploy to."
+
+resources:
+  ordersTable:
+    type: aws/dynamodb/table
+    description: "Table that stores orders for an application."
+    spec:
+      tableName: '${variables.environment}-orders'
+      region: "us-west-2"
