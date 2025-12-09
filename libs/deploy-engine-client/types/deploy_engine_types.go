@@ -90,7 +90,7 @@ const (
 	// ChangeStagingEventTypeCompleteChanges is the type of change staging event
 	// that is sent to a change staging stream for a change set
 	// when the change staging process has been completed.
-	ChangeStagingEventTypeCompleteChanges ChangeStagingEventType = "completeChanges"
+	ChangeStagingEventTypeCompleteChanges ChangeStagingEventType = "changeStagingComplete"
 )
 
 // ChangeStagingEvent holds the data for change staging event
