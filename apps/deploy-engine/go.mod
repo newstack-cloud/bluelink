@@ -2,8 +2,6 @@ module github.com/newstack-cloud/bluelink/apps/deploy-engine
 
 go 1.24.4
 
-toolchain go1.24.4
-
 // Exclude the old separate grpc/stats/opentelemetry module.
 // Starting with grpc v1.67+, this package is included in the main grpc module.
 exclude google.golang.org/grpc/stats/opentelemetry v0.0.0-20240907200651-3ffb98b2c93a
