@@ -1,0 +1,15 @@
+# Test init command happy path - creates a new project from template
+
+exec bluelink init ./my-project --template scaffold --project-name MyTestProject --blueprint-format yaml --no-git
+stdout 'Project initialized successfully'
+stdout 'MyTestProject'
+stdout './my-project'
+
+# Verify project was created
+exists ./my-project
+exists ./my-project/project.blueprint.yaml
+! exists ./my-project/project.blueprint.jsonc
+! exists ./my-project/.git
+
+-- bluelink.config.toml --
+# Empty config file

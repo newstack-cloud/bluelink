@@ -6,6 +6,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/git"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/project"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/initui"
 	"github.com/newstack-cloud/deploy-cli-sdk/config"
 	"github.com/newstack-cloud/deploy-cli-sdk/headless"
@@ -30,10 +32,7 @@ func setupInitCommand(rootCmd *cobra.Command, confProvider *config.Provider) {
 			projectName, isDefaultProjectName := confProvider.GetString("initProjectName")
 			blueprintFormat, isDefaultBlueprintFormat := confProvider.GetString("initBlueprintFormat")
 			noGit, isDefaultNoGit := confProvider.GetBool("initNoGit")
-			noGitPtr := (*bool)(nil)
-			if noGit {
-				noGitPtr = &noGit
-			}
+			noGitPtr := &noGit
 
 			// Validate required flags in headless mode
 			if err := headless.Validate(
@@ -49,6 +48,8 @@ func setupInitCommand(rootCmd *cobra.Command, confProvider *config.Provider) {
 			if _, err := tea.LogToFile("bluelink-output.log", "simple"); err != nil {
 				log.Fatal(err)
 			}
+
+			gitService := git.NewDefaultGit()
 
 			styles := stylespkg.NewStyles(
 				lipgloss.NewRenderer(os.Stdout),
@@ -67,6 +68,10 @@ func setupInitCommand(rootCmd *cobra.Command, confProvider *config.Provider) {
 					Directory:                directory,
 				},
 				styles,
+				gitService,
+				project.NewDefaultPreparer(),
+				!inTerminal,
+				os.Stdout,
 			)
 			if err != nil {
 				return err

@@ -59,9 +59,11 @@ func (m InputFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if m.form.State == huh.StateCompleted {
 		cmds = append(cmds, inputFormCompleteCmd(
-			m.projectName,
-			m.blueprintFormat,
-			m.noGit,
+			// Use the form values to make sure we are retrieving
+			// the values from the original pointers bound to the form.
+			m.form.GetString("projectName"),
+			m.form.GetString("blueprintFormat"),
+			m.form.GetBool("noGit"),
 		))
 	}
 

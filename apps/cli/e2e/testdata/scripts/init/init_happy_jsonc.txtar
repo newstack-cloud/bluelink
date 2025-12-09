@@ -1,0 +1,11 @@
+# Test init command with jsonc blueprint format
+
+exec bluelink init ./jsonc-project --template scaffold --project-name "JSONC Project" --blueprint-format jsonc --no-git
+stdout 'Project initialized successfully'
+
+# Verify correct blueprint format was kept
+exists ./jsonc-project/project.blueprint.jsonc
+! exists ./jsonc-project/project.blueprint.yaml
+
+-- bluelink.config.toml --
+# Empty config file

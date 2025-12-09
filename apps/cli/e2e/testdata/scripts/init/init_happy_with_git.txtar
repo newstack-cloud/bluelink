@@ -1,0 +1,10 @@
+# Test init command initializes git repo by default
+
+exec bluelink init ./git-project --template scaffold --project-name "Git Project" --blueprint-format yaml
+stdout 'Project initialized successfully'
+
+# Verify git was initialized
+exists ./git-project/.git
+
+-- bluelink.config.toml --
+# Empty config file
