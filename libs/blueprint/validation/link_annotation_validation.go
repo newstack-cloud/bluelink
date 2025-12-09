@@ -212,6 +212,12 @@ func validateResourceLinkAnnotations(
 			return nil
 		}
 
+		// Skip validation for non-required annotations that are not defined.
+		if !resourceAnnotationInfo.hasResourceAnnotation ||
+			substitutions.IsNilStringSubs(resourceAnnotationInfo.annotation) {
+			continue
+		}
+
 		parsedValue, isCorrectTypeAndValueKnown := validateAnnotationType(
 			resourceAnnotationInfo,
 			definition,

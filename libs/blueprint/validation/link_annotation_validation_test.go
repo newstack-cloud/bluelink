@@ -219,9 +219,28 @@ func (s *LinkAnnotationValidationTestSuite) Test_reports_errors_for_annotation_t
 	)
 }
 
+func (s *LinkAnnotationValidationTestSuite) Test_does_not_panic_for_missing_optional_annotations() {
+	// This test verifies that validation doesn't panic when optional annotations
+	// are not defined. Previously this would cause a nil pointer dereference
+	// when accessing annotation values for non-required annotations that were missing.
+	linkChains := createTestLinkChain(
+		&fixtureConfig{
+			omitOptionalAnnotations: true,
+		},
+	)
+	diagnostics, err := ValidateLinkAnnotations(
+		context.Background(),
+		linkChains,
+		createParams(),
+	)
+	s.Assert().NoError(err)
+	s.Assert().Empty(diagnostics)
+}
+
 type fixtureConfig struct {
 	includeSubstitutions    bool
 	omitRequiredAnnotations bool
+	omitOptionalAnnotations bool
 	invalidTypes            bool
 	invalidAllowedValues    bool
 	failsCustomValidation   bool
@@ -366,6 +385,16 @@ func createTestLinkChain(
 					},
 				},
 			}
+	}
+
+	if fixtureConf.omitOptionalAnnotations {
+		// Remove optional annotations (test.int.annotation is not required)
+		// and optional annotations on resourceB (test.bool.annotation and test.float.annotation)
+		// to test that validation doesn't panic when optional annotations are missing.
+		delete(resourceANode.Resource.Metadata.Annotations.Values, "test.int.annotation")
+		delete(resourceANode.Resource.Metadata.Annotations.Values, "test.string.resourceB.annotation")
+		delete(resourceBNode.Resource.Metadata.Annotations.Values, "test.bool.annotation")
+		delete(resourceBNode.Resource.Metadata.Annotations.Values, "test.float.annotation")
 	}
 
 	return []*links.ChainLinkNode{
