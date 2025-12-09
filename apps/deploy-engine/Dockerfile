@@ -24,9 +24,13 @@ ARG DEPLOY_ENGINE_APPLICATION_VERSION=dev
 ARG TARGETOS
 ARG TARGETARCH
 
-# Generate version file and build the binary
-RUN DEPLOY_ENGINE_APPLICATION_VERSION=${DEPLOY_ENGINE_APPLICATION_VERSION} go generate ./... && \
-    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+# Generate version file using the tool's own module (has golang.org/x/mod dependency)
+WORKDIR /build/tools/genversions
+RUN DEPLOY_ENGINE_APPLICATION_VERSION=${DEPLOY_ENGINE_APPLICATION_VERSION} go run main.go
+WORKDIR /build
+
+# Build the binary
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
     -ldflags="-s -w" \
     -o /app/deploy-engine \
     ./cmd/main.go

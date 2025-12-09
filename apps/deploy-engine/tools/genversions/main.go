@@ -47,7 +47,15 @@ const (
 		dependencyVersions.pluginFrameworkVersion,
 	)
 
-	err = os.WriteFile(("versions.go"), []byte(versionsCode), 0644)
+	// Determine output path based on where we're running from
+	// When run from core/ via go:generate, write to current directory
+	// When run from tools/genversions/, write to ../../core/
+	outputPath := "versions.go"
+	if _, err := os.Stat("../../core"); err == nil {
+		outputPath = "../../core/versions.go"
+	}
+
+	err = os.WriteFile(outputPath, []byte(versionsCode), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -59,7 +67,13 @@ type depVersions struct {
 }
 
 func parseDependencyVersions() (depVersions, error) {
-	fileBytes, err := os.ReadFile("../go.mod")
+	// Try reading from parent directory first (when run from core/ via go:generate)
+	// Fall back to ../../go.mod (when run directly from tools/genversions/)
+	goModPath := "../go.mod"
+	if _, err := os.Stat(goModPath); os.IsNotExist(err) {
+		goModPath = "../../go.mod"
+	}
+	fileBytes, err := os.ReadFile(goModPath)
 	if err != nil {
 		return depVersions{}, err
 	}
