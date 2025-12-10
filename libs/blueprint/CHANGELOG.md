@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.36.2](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.36.1...blueprint/v0.36.2) (2025-12-10)
+
+
+### Features
+
+* **blueprint:** add support for resolving relative child blueprints from local fs ([e3806b3](https://github.com/newstack-cloud/bluelink/commit/e3806b36359d2f0dc84a10f6aed725830f08987c))
+
+
+### Bug Fixes
+
+* **blueprint:** add fix for nil pointer derefs for change staging ([f4a7932](https://github.com/newstack-cloud/bluelink/commit/f4a7932c4b2a1a80e0cd5afdfaf1a44b1a8a1f67))
+* **blueprint:** add fix for validating optional link annotations ([7983c7f](https://github.com/newstack-cloud/bluelink/commit/7983c7fbcad9535deba4d80ca793bac6a2af3075))
+
 ## [0.36.1](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.36.0...blueprint/v0.36.1) (2025-12-09)
 
 
