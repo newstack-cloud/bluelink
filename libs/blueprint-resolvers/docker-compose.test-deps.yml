@@ -27,7 +27,7 @@ services:
     container_name: "azurite_bluelink_blueprint_resolver_tests"
     hostname: azurite
     restart: always
-    command: ["azurite-blob", "--blobHost", "0.0.0.0", "--blobPort", "10000"]
+    command: ["azurite-blob", "--blobHost", "0.0.0.0", "--blobPort", "10000", "--skipApiVersionCheck"]
     ports:
       - "10000:10000"
       - "10001:10001"
