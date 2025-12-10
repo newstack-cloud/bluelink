@@ -13,7 +13,9 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/inputvalidation"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/types"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
+	resolverfs "github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/fs"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
@@ -104,6 +106,8 @@ func (c *Controller) CreateChangesetHandler(
 		Created:           c.clock.Now().Unix(),
 	}
 
+	// Add blueprint directory to context variables for resolving relative child blueprint paths.
+	finalConfig = ensureBlueprintDirContextVar(finalConfig, payload.BlueprintDocumentInfo.Directory)
 	params := c.paramsProvider.CreateFromRequestConfig(finalConfig)
 
 	go c.startChangeStaging(
@@ -586,4 +590,28 @@ func changesetWithStatus(
 		Changes:           changeset.Changes,
 		Created:           changeset.Created,
 	}
+}
+
+// ensureBlueprintDirContextVar adds the blueprint directory to the context variables
+// so that the file system resolver can resolve relative child blueprint paths.
+// If the config is nil, a new config is created with just the context variable.
+// Returns the config (possibly newly created) with the blueprint directory set.
+func ensureBlueprintDirContextVar(config *types.BlueprintOperationConfig, directory string) *types.BlueprintOperationConfig {
+	if directory == "" {
+		return config
+	}
+
+	if config == nil {
+		config = &types.BlueprintOperationConfig{}
+	}
+
+	if config.ContextVariables == nil {
+		config.ContextVariables = make(map[string]*core.ScalarValue)
+	}
+
+	config.ContextVariables[resolverfs.BlueprintDirectoryContextVar] = &core.ScalarValue{
+		StringValue: &directory,
+	}
+
+	return config
 }
