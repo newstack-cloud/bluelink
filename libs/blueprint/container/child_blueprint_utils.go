@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/includes"
@@ -62,6 +63,9 @@ func loadChildBlueprint(
 		return nil, err
 	}
 
+	// Derive the child blueprint's directory for resolving nested relative paths.
+	childBlueprintDir := deriveChildBlueprintDir(childBlueprintInfo, resolvedInclude, paramOverrides)
+
 	childParams := paramOverrides.
 		WithBlueprintVariables(
 			extractIncludeVariables(resolvedInclude),
@@ -72,6 +76,7 @@ func loadChildBlueprint(
 				input.parentInstanceID,
 				input.parentInstanceTreePath,
 				input.includeTreePath,
+				childBlueprintDir,
 			),
 			/* keepExisting */ true,
 		)
@@ -132,6 +137,42 @@ func loadChildBlueprint(
 		childParams:    childParams,
 		includeName:    includeName,
 	}, nil
+}
+
+// deriveChildBlueprintDir derives the directory of the child blueprint
+// from the resolved include path. This is used to update the __blueprintDir
+// context variable so that nested child blueprints can resolve relative paths.
+func deriveChildBlueprintDir(
+	childBlueprintInfo *includes.ChildBlueprintInfo,
+	resolvedInclude *subengine.ResolvedInclude,
+	params core.BlueprintParams,
+) string {
+	// If the resolver provided an absolute path, use its directory.
+	if childBlueprintInfo.AbsolutePath != nil {
+		return filepath.Dir(*childBlueprintInfo.AbsolutePath)
+	}
+
+	// Otherwise, derive the directory from the include path.
+	includePath := core.StringValue(resolvedInclude.Path)
+	if includePath == "" {
+		return ""
+	}
+
+	// If the include path is absolute, use its directory.
+	if filepath.IsAbs(includePath) {
+		return filepath.Dir(includePath)
+	}
+
+	// If the include path is relative, resolve it against the parent's blueprint directory.
+	if params != nil {
+		parentDir := params.ContextVariable(BlueprintDirectoryContextVar)
+		if parentDir != nil && parentDir.StringValue != nil && *parentDir.StringValue != "" {
+			resolvedPath := filepath.Join(*parentDir.StringValue, includePath)
+			return filepath.Dir(resolvedPath)
+		}
+	}
+
+	return ""
 }
 
 func getChildState(

@@ -68,6 +68,9 @@ func (d *defaultChildBlueprintDestroyer) Destroy(
 				parentInstanceID,
 				parentInstanceTreePath,
 				includeTreePath,
+				// Empty blueprint dir for destroy operations - child blueprints
+				// don't need to be resolved during destruction.
+				"",
 			),
 			/* keepExisting */ true,
 		)

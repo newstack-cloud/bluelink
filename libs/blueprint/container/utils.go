@@ -382,12 +382,18 @@ func hasBlueprintCycle(
 	return slices.Contains(instances, instanceID)
 }
 
+// BlueprintDirectoryContextVar is the name of the context variable
+// that holds the directory of the current blueprint being processed.
+// This is used to resolve relative paths in child blueprint includes.
+const BlueprintDirectoryContextVar = "__blueprintDir"
+
 func createContextVarsForChildBlueprint(
 	parentInstanceID string,
 	instanceTreePath string,
 	includeTreePath string,
+	blueprintDir string,
 ) map[string]*core.ScalarValue {
-	return map[string]*core.ScalarValue{
+	contextVars := map[string]*core.ScalarValue{
 		"parentInstanceID": {
 			StringValue: &parentInstanceID,
 		},
@@ -398,6 +404,14 @@ func createContextVarsForChildBlueprint(
 			StringValue: &includeTreePath,
 		},
 	}
+
+	if blueprintDir != "" {
+		contextVars[BlueprintDirectoryContextVar] = &core.ScalarValue{
+			StringValue: &blueprintDir,
+		}
+	}
+
+	return contextVars
 }
 
 func createResourceTypeProviderMap(
