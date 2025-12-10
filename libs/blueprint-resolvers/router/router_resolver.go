@@ -51,6 +51,10 @@ func (r *routerChildResolver) Resolve(
 	params core.BlueprintParams,
 ) (*includes.ChildBlueprintInfo, error) {
 
+	if include.Metadata == nil {
+		return r.defaultResolver.Resolve(ctx, includeName, include, params)
+	}
+
 	sourceType := core.StringValue(include.Metadata.Fields["sourceType"])
 	if sourceType == "" {
 		return r.defaultResolver.Resolve(ctx, includeName, include, params)
