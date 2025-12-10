@@ -101,6 +101,35 @@ func TestScriptsValidate(t *testing.T) {
 	})
 }
 
+// TestScriptsStage runs stage command test scripts.
+// These tests require the deploy engine to be running.
+func TestScriptsStage(t *testing.T) {
+	engineEndpoint := os.Getenv("DEPLOY_ENGINE_ENDPOINT")
+	if engineEndpoint == "" {
+		// Use port 18325 to avoid conflicts with locally running deploy-engine on 8325
+		engineEndpoint = "http://localhost:18325"
+	}
+
+	testscript.Run(t, testscript.Params{
+		Dir: "testdata/scripts/stage",
+		Setup: func(env *testscript.Env) error {
+			env.Setenv("PATH", filepath.Dir(binaryPath)+":"+env.Getenv("PATH"))
+			env.Setenv("BLUELINK_ENGINE_ENDPOINT", engineEndpoint)
+			env.Setenv("BLUELINK_CONNECT_PROTOCOL", "tcp")
+
+			// Use the absolute path stored during TestMain
+			if coverDir != "" {
+				env.Setenv("GOCOVERDIR", coverDir)
+			}
+
+			return nil
+		},
+		Cmds: map[string]func(ts *testscript.TestScript, neg bool, args []string){
+			"wait_engine": waitForEngine,
+		},
+	})
+}
+
 // waitForEngine waits for the deploy-engine to be ready by polling its health endpoint.
 // Usage in .txtar: wait_engine [timeout_seconds]
 // Default timeout is 30 seconds.

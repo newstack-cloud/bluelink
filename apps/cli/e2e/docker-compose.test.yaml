@@ -1,4 +1,31 @@
+# Docker Compose configuration for e2e tests.
+# This builds the test provider inside Docker (for Linux compatibility) and
+# mounts it into the deploy-engine container.
+#
+# Start the infrastructure:
+#   docker compose -f e2e/docker-compose.test.yaml up -d --wait
+#
+# Run tests:
+#   go test -tags=e2e -v ./e2e/...
+
 services:
+  # Build the test provider as a Linux binary inside Docker
+  # The testprovider is a standalone Go module with its own go.mod
+  test-provider-builder:
+    image: golang:1.24-alpine
+    working_dir: /testprovider
+    command: ["go", "build", "-o", "/output/plugin", "."]
+    volumes:
+      # Mount the testprovider directory (which has its own go.mod)
+      - ./testprovider:/testprovider:ro
+      # Output directory for the built binary
+      - test-provider-bin:/output
+    environment:
+      # Ensure we build for Linux
+      GOOS: linux
+      GOARCH: amd64
+      CGO_ENABLED: "0"
+
   deploy-engine:
     image: ghcr.io/newstack-cloud/deploy-engine:nightly
     ports:
@@ -15,12 +42,20 @@ services:
       # Configure S3 resolver to use MinIO
       BLUELINK_DEPLOY_ENGINE_RESOLVERS_S3_ENDPOINT: "http://minio:9000"
       # Use path-style addressing for MinIO compatibility
-      # (requires deploy-engine with S3 path-style support)
       BLUELINK_DEPLOY_ENGINE_RESOLVERS_S3_USE_PATH_STYLE: "true"
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
       AWS_REGION: us-east-1
+      # Configure the plugin discovery path
+      # The deploy engine discovers plugins in this directory following the structure:
+      # {plugin_path}/providers/{org}/{provider}/{version}/plugin
+      BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH: /plugins
+    volumes:
+      # Mount the built test provider binary from the shared volume
+      - test-provider-bin:/plugins/providers/bluelink-test/aws/1.0.0:ro
     depends_on:
+      test-provider-builder:
+        condition: service_completed_successfully
       minio-setup:
         condition: service_completed_successfully
     healthcheck:
@@ -55,6 +90,7 @@ services:
       mc alias set myminio http://minio:9000 minioadmin minioadmin &&
       mc mb myminio/test-blueprints --ignore-existing &&
       mc cp /fixtures/valid.blueprint.yaml myminio/test-blueprints/ &&
+      mc cp /fixtures/lambda-function.blueprint.yaml myminio/test-blueprints/ &&
       echo 'MinIO setup complete'
       "
     volumes:
@@ -62,4 +98,8 @@ services:
 
 networks:
   default:
-    name: bluelink-e2e-test
+    name: bluelink-e2e-test-with-provider
+
+volumes:
+  # Shared volume for the built test provider binary
+  test-provider-bin:

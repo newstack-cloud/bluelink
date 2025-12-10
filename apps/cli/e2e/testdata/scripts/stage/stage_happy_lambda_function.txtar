@@ -1,0 +1,21 @@
+# Test staging a new Lambda function with stub provider
+# This test requires the stub provider to be installed in the deploy engine.
+# Use docker-compose.test.yaml to start the infrastructure.
+
+wait_engine
+
+exec bluelink stage --blueprint-file=s3://test-blueprints/lambda-function.blueprint.yaml --connect-protocol=tcp --engine-endpoint=$BLUELINK_ENGINE_ENDPOINT --engine-auth-config-file=engine.auth.json
+stdout 'Change staging complete'
+stdout 'Changeset ID:'
+stdout 'processOrder'
+stdout 'CREATE'
+stdout 'bluelink deploy'
+
+-- bluelink.config.toml --
+# Empty config file
+
+-- engine.auth.json --
+{
+  "method": "apiKey",
+  "apiKey": "test-api-key"
+}

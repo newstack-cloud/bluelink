@@ -75,14 +75,14 @@ if [ -n "$E2E" ]; then
   echo ""
   echo "Running E2E tests..."
 
-  # Start deploy-engine
+  # Start deploy-engine with test provider
   # Run from e2e directory so relative volume paths in docker-compose.test.yaml resolve correctly
-  echo "Starting deploy-engine..."
+  echo "Starting deploy-engine with test provider..."
   docker compose -f "$CLI_DIR/e2e/docker-compose.test.yaml" --project-directory "$CLI_DIR/e2e" up -d --wait
 
   cleanup() {
     echo "Stopping deploy-engine..."
-    # docker compose -f "$CLI_DIR/e2e/docker-compose.test.yaml" down
+    docker compose -f "$CLI_DIR/e2e/docker-compose.test.yaml" --project-directory "$CLI_DIR/e2e" down
   }
   trap cleanup EXIT
 

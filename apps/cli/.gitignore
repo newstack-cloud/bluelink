@@ -38,3 +38,6 @@ test-*.sh
 .claude
 
 engine.auth.json
+
+# E2E test provider binary (built by docker-compose)
+e2e/testprovider/bluelink-test-provider

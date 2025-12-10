@@ -1,0 +1,8 @@
+version: "2025-11-02"
+resources:
+  processOrder:
+    type: aws/lambda/function
+    metadata:
+      displayName: Process Order Function
+    spec:
+      functionName: process-order-function
