@@ -36,6 +36,10 @@ type CreateChangesetRequestPayload struct {
 // the deployment process for new or existing blueprint instances.
 type BlueprintInstanceRequestPayload struct {
 	resolve.BlueprintDocumentInfo
+	// The user-defined name for the blueprint instance.
+	// This is required when creating a new blueprint instance and must be unique.
+	// This should be left empty when updating an existing instance.
+	InstanceName string `json:"instanceName"`
 	// The ID of the change set to use to deploy the blueprint instance.
 	// When deploying blueprint instances,
 	// a change set is used instead of the deployment process re-computing the changes

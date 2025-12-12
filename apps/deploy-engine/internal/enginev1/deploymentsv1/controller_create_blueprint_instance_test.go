@@ -83,6 +83,58 @@ func (s *ControllerTestSuite) Test_create_blueprint_instance_handler() {
 	)
 }
 
+func (s *ControllerTestSuite) Test_create_blueprint_instance_handler_with_instance_name() {
+	// Create the test change set to be used to start the deployment
+	// process for the new blueprint instance.
+	err := s.saveTestChangeset()
+	s.Require().NoError(err)
+
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/deployments/instances",
+		s.ctrl.CreateBlueprintInstanceHandler,
+	).Methods("POST")
+
+	newInstanceName := "my-new-instance"
+	reqPayload := &BlueprintInstanceRequestPayload{
+		BlueprintDocumentInfo: resolve.BlueprintDocumentInfo{
+			FileSourceScheme: "file",
+			Directory:        "/test/dir",
+			BlueprintFile:    "test.blueprint.yaml",
+		},
+		InstanceName: newInstanceName,
+		ChangeSetID:  testChangesetID,
+	}
+
+	reqBytes, err := json.Marshal(reqPayload)
+	s.Require().NoError(err)
+
+	req := httptest.NewRequest("POST", "/deployments/instances", bytes.NewReader(reqBytes))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+	result := w.Result()
+	defer result.Body.Close()
+	respData, err := io.ReadAll(result.Body)
+	s.Require().NoError(err)
+
+	instance := &state.InstanceState{}
+	err = json.Unmarshal(respData, instance)
+	s.Require().NoError(err)
+
+	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
+	_, err = uuid.Parse(instance.InstanceID)
+	s.Assert().NoError(err, "ID should be a valid UUID (as per the configured generator)")
+	s.Assert().Equal(
+		newInstanceName,
+		instance.InstanceName,
+	)
+	s.Assert().Equal(
+		core.InstanceStatusPreparing,
+		instance.Status,
+	)
+}
+
 func (s *ControllerTestSuite) Test_create_blueprint_instance_handler_with_stream_error() {
 	// Create the test change set to be used to start the deployment
 	// process for the new blueprint instance.

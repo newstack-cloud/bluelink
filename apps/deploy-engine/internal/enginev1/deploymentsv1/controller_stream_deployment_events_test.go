@@ -15,6 +15,10 @@ import (
 )
 
 func (s *ControllerTestSuite) Test_stream_deployment_events_handler() {
+	// Create the blueprint instance that events will be streamed for.
+	_, err := s.saveTestBlueprintInstance()
+	s.Require().NoError(err)
+
 	// Store some events in the mock event store to be streamed.
 	expectedEvents, err := s.saveDeploymentEvents()
 	s.Require().NoError(err)

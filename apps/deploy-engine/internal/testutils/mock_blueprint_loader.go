@@ -199,6 +199,7 @@ func (m *MockBlueprintContainer) Deploy(
 			ctx,
 			state.InstanceState{
 				InstanceID:                instanceID,
+				InstanceName:              input.InstanceName,
 				Status:                    core.InstanceStatusPreparing,
 				LastStatusUpdateTimestamp: int(currentTimestamp),
 			},

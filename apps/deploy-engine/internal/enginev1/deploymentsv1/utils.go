@@ -1,6 +1,7 @@
 package deploymentsv1
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
@@ -65,6 +66,69 @@ func getInstanceID(
 	}
 
 	return instance.InstanceID
+}
+
+// resolveInstance resolves an instance from the provided identifier,
+// which can be either an instance ID or an instance name.
+// It first tries to get the instance by ID, and if not found,
+// falls back to looking up the ID by name and then fetching the instance.
+func resolveInstance(
+	ctx context.Context,
+	identifier string,
+	instances state.InstancesContainer,
+) (state.InstanceState, error) {
+	// First, try to get the instance directly by ID.
+	instance, err := instances.Get(ctx, identifier)
+	if err == nil {
+		return instance, nil
+	}
+
+	// If not found by ID, try to look up by name.
+	if state.IsInstanceNotFound(err) {
+		instanceID, lookupErr := instances.LookupIDByName(ctx, identifier)
+		if lookupErr == nil {
+			return instances.Get(ctx, instanceID)
+		}
+		// If lookup by name also fails, return the original "not found" error
+		// with the original identifier for a clearer error message.
+		if state.IsInstanceNotFound(lookupErr) {
+			return state.InstanceState{}, err
+		}
+		return state.InstanceState{}, lookupErr
+	}
+
+	return state.InstanceState{}, err
+}
+
+// resolveInstanceID resolves an instance ID from the provided identifier,
+// which can be either an instance ID or an instance name.
+// Use this when you only need the ID and not the full instance state.
+func resolveInstanceID(
+	ctx context.Context,
+	identifier string,
+	instances state.InstancesContainer,
+) (string, error) {
+	// First, try to get the instance directly by ID.
+	_, err := instances.Get(ctx, identifier)
+	if err == nil {
+		return identifier, nil
+	}
+
+	// If not found by ID, try to look up by name.
+	if state.IsInstanceNotFound(err) {
+		instanceID, lookupErr := instances.LookupIDByName(ctx, identifier)
+		if lookupErr == nil {
+			return instanceID, nil
+		}
+		// If lookup by name also fails, return the original "not found" error
+		// with the original identifier for a clearer error message.
+		if state.IsInstanceNotFound(lookupErr) {
+			return "", err
+		}
+		return "", lookupErr
+	}
+
+	return "", err
 }
 
 // A placeholder template used to be able to make use of the blueprint loader

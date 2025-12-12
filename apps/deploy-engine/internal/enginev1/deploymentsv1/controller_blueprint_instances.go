@@ -41,19 +41,17 @@ func (c *Controller) CreateBlueprintInstanceHandler(
 // UpdateBlueprintInstanceHandler is the handler for the PATCH /deployments/instances/{id}
 // endpoint that updates an existing blueprint instance and begins the deployment
 // process for the updates described in the specified change set.
+// The {id} path parameter can be either an instance ID or an instance name.
 func (c *Controller) UpdateBlueprintInstanceHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
 	params := mux.Vars(r)
-	instanceID := params["id"]
+	instanceIDOrName := params["id"]
 
-	instance, err := c.instances.Get(
-		r.Context(),
-		instanceID,
-	)
+	instance, err := resolveInstance(r.Context(), instanceIDOrName, c.instances)
 	if err != nil {
-		c.handleGetInstanceError(w, err, instanceID)
+		c.handleGetInstanceError(w, err, instanceIDOrName)
 		return
 	}
 
@@ -66,9 +64,16 @@ func (c *Controller) UpdateBlueprintInstanceHandler(
 
 // StreamDeploymentEventsHandler is the handler for the GET /deployments/instances/{id}/stream endpoint
 // that streams deployment events to the client using Server-Sent Events (SSE).
+// The {id} path parameter can be either an instance ID or an instance name.
 func (c *Controller) StreamDeploymentEventsHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	instanceID := params["id"]
+	instanceIDOrName := params["id"]
+
+	instanceID, err := resolveInstanceID(r.Context(), instanceIDOrName, c.instances)
+	if err != nil {
+		c.handleGetInstanceError(w, err, instanceIDOrName)
+		return
+	}
 
 	helpersv1.SSEStreamEvents(
 		w,
@@ -87,19 +92,17 @@ func (c *Controller) StreamDeploymentEventsHandler(w http.ResponseWriter, r *htt
 
 // GetBlueprintInstanceHandler is the handler for the GET /deployments/instances/{id} endpoint
 // that retrieves the full state of a blueprint instance.
+// The {id} path parameter can be either an instance ID or an instance name.
 func (c *Controller) GetBlueprintInstanceHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
 	params := mux.Vars(r)
-	instanceID := params["id"]
+	instanceIDOrName := params["id"]
 
-	instance, err := c.instances.Get(
-		r.Context(),
-		instanceID,
-	)
+	instance, err := resolveInstance(r.Context(), instanceIDOrName, c.instances)
 	if err != nil {
-		c.handleGetInstanceError(w, err, instanceID)
+		c.handleGetInstanceError(w, err, instanceIDOrName)
 		return
 	}
 
@@ -113,12 +116,19 @@ func (c *Controller) GetBlueprintInstanceHandler(
 // GetBlueprintInstanceExportsHandler is the handler for the
 // GET /deployments/instances/{id}/exports endpoint that retrieves the
 // exports of a blueprint instance.
+// The {id} path parameter can be either an instance ID or an instance name.
 func (c *Controller) GetBlueprintInstanceExportsHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
 	params := mux.Vars(r)
-	instanceID := params["id"]
+	instanceIDOrName := params["id"]
+
+	instanceID, err := resolveInstanceID(r.Context(), instanceIDOrName, c.instances)
+	if err != nil {
+		c.handleGetInstanceError(w, err, instanceIDOrName)
+		return
+	}
 
 	exports, err := c.exports.GetAll(
 		r.Context(),
@@ -142,19 +152,17 @@ func (c *Controller) GetBlueprintInstanceExportsHandler(
 // This is a `POST` request as the destroy operation relies
 // on inputs including configuration values that need to be
 // provided in the request body.
+// The {id} path parameter can be either an instance ID or an instance name.
 func (c *Controller) DestroyBlueprintInstanceHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
 	pathParams := mux.Vars(r)
-	instanceID := pathParams["id"]
+	instanceIDOrName := pathParams["id"]
 
-	instance, err := c.instances.Get(
-		r.Context(),
-		instanceID,
-	)
+	instance, err := resolveInstance(r.Context(), instanceIDOrName, c.instances)
 	if err != nil {
-		c.handleGetInstanceError(w, err, instanceID)
+		c.handleGetInstanceError(w, err, instanceIDOrName)
 		return
 	}
 
@@ -271,6 +279,7 @@ func (c *Controller) handleDeployRequest(
 		blueprintInfo,
 		changeset,
 		getInstanceID(existingInstance),
+		payload.InstanceName,
 		payload.Rollback,
 		helpersv1.GetFormat(payload.BlueprintFile),
 		params,
@@ -363,6 +372,7 @@ func (c *Controller) startDeployment(
 	blueprintInfo *includes.ChildBlueprintInfo,
 	changeset *manage.Changeset,
 	deployInstanceID string,
+	instanceName string,
 	forRollback bool,
 	format schema.SpecFormat,
 	params core.BlueprintParams,
@@ -390,9 +400,10 @@ func (c *Controller) startDeployment(
 	err = blueprintContainer.Deploy(
 		ctxWithTimeout,
 		&container.DeployInput{
-			InstanceID: deployInstanceID,
-			Changes:    changeset.Changes,
-			Rollback:   forRollback,
+			InstanceID:   deployInstanceID,
+			InstanceName: instanceName,
+			Changes:      changeset.Changes,
+			Rollback:     forRollback,
 		},
 		channels,
 		params,

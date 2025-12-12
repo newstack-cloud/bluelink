@@ -59,6 +59,50 @@ func (s *ControllerTestSuite) Test_get_blueprint_instance_handler() {
 	)
 }
 
+func (s *ControllerTestSuite) Test_get_blueprint_instance_handler_by_name() {
+	expectedExports, err := s.saveTestBlueprintInstance()
+	s.Require().NoError(err)
+
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/deployments/instances/{id}",
+		s.ctrl.GetBlueprintInstanceHandler,
+	).Methods("GET")
+
+	// Use the instance name instead of the ID
+	path := fmt.Sprintf("/deployments/instances/%s", testInstanceName)
+	req := httptest.NewRequest("GET", path, nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+	result := w.Result()
+	defer result.Body.Close()
+	respData, err := io.ReadAll(result.Body)
+	s.Require().NoError(err)
+
+	instance := &state.InstanceState{}
+	err = json.Unmarshal(respData, instance)
+	s.Require().NoError(err)
+
+	s.Assert().Equal(http.StatusOK, result.StatusCode)
+	s.Assert().Equal(
+		testInstanceID,
+		instance.InstanceID,
+	)
+	s.Assert().Equal(
+		testInstanceName,
+		instance.InstanceName,
+	)
+	s.Assert().Equal(
+		core.InstanceStatusDeploying,
+		instance.Status,
+	)
+	s.Assert().Equal(
+		expectedExports,
+		instance.Exports,
+	)
+}
+
 func (s *ControllerTestSuite) Test_get_blueprint_instance_handler_returns_404_not_found() {
 	_, err := s.saveTestBlueprintInstance()
 	s.Require().NoError(err)

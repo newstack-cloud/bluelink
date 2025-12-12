@@ -76,6 +76,67 @@ func (s *ControllerTestSuite) Test_update_blueprint_instance() {
 	)
 }
 
+func (s *ControllerTestSuite) Test_update_blueprint_instance_by_name() {
+	// Create the blueprint instance to be updated.
+	_, err := s.saveTestBlueprintInstance()
+	s.Require().NoError(err)
+
+	// Create the test change set to be used to start the deployment
+	// process for the existing blueprint instance.
+	err = s.saveTestChangeset()
+	s.Require().NoError(err)
+
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/deployments/instances/{id}",
+		s.ctrl.UpdateBlueprintInstanceHandler,
+	).Methods("PATCH")
+
+	reqPayload := &BlueprintInstanceRequestPayload{
+		BlueprintDocumentInfo: resolve.BlueprintDocumentInfo{
+			FileSourceScheme: "file",
+			Directory:        "/test/dir",
+			BlueprintFile:    "test.blueprint.yaml",
+		},
+		ChangeSetID: testChangesetID,
+	}
+
+	reqBytes, err := json.Marshal(reqPayload)
+	s.Require().NoError(err)
+
+	// Use the instance name instead of the ID
+	path := fmt.Sprintf(
+		"/deployments/instances/%s",
+		testInstanceName,
+	)
+	req := httptest.NewRequest("PATCH", path, bytes.NewReader(reqBytes))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+	result := w.Result()
+	defer result.Body.Close()
+	respData, err := io.ReadAll(result.Body)
+	s.Require().NoError(err)
+
+	instance := &state.InstanceState{}
+	err = json.Unmarshal(respData, instance)
+	s.Require().NoError(err)
+
+	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
+	s.Assert().Equal(
+		testInstanceID,
+		instance.InstanceID,
+	)
+	s.Assert().Equal(
+		testInstanceName,
+		instance.InstanceName,
+	)
+	s.Assert().Equal(
+		core.InstanceStatusDeploying,
+		instance.Status,
+	)
+}
+
 func (s *ControllerTestSuite) Test_update_blueprint_instance_handler_fails_for_invalid_plugin_config() {
 	// Create the blueprint instance to be updated.
 	_, err := s.saveTestBlueprintInstance()
