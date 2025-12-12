@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.5](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.1.4...deploy-engine/v0.1.5) (2025-12-12)
+
+
+### Bug Fixes
+
+* **deploy-engine:** add missing support for lookup by name and required name for instance creation ([505a1d4](https://github.com/newstack-cloud/bluelink/commit/505a1d4ae5edd3c0fed209b728e3354c465ad6d3))
+* **deploy-engine:** add support for resolving relative paths for child blueprints ([f9bba1c](https://github.com/newstack-cloud/bluelink/commit/f9bba1c87ab8ae10719e3fe4c322fe6acaf8ef49))
+
+
+### Dependencies
+
+* **deploy-engine:** update blueprint and resolver libs to versions with fixes ([f76b512](https://github.com/newstack-cloud/bluelink/commit/f76b51237b4b4c7c352553fbe7bba474cdbc98f1))
+
 ## [0.1.4](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.1.3...deploy-engine/v0.1.4) (2025-12-06)
 
 
