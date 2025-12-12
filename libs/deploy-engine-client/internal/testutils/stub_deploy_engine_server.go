@@ -164,6 +164,9 @@ type postRequestPayload struct {
 	FileSourceScheme string `json:"fileSourceScheme"`
 	// Will be checked to produce 500 error responses.
 	BlueprintFile string `json:"blueprintFile"`
+	// InstanceName is the user-defined name for the blueprint instance.
+	// This is used when creating a new blueprint instance.
+	InstanceName string `json:"instanceName"`
 }
 
 func (c *stubDeployEngineController) createBlueprintValidationHandler(
@@ -348,9 +351,16 @@ func (c *stubDeployEngineController) createBlueprintInstanceHandler(
 		return
 	}
 
+	// Use the provided instance name from the payload if available,
+	// otherwise fall back to a default test name.
+	instanceName := payload.InstanceName
+	if instanceName == "" {
+		instanceName = "test-instance-name"
+	}
+
 	blueprintInstance := &state.InstanceState{
 		InstanceID:   "test-instance-id",
-		InstanceName: "test-instance-name",
+		InstanceName: instanceName,
 		Status:       core.InstanceStatusDeploying,
 	}
 

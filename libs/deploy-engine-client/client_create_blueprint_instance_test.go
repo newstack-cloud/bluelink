@@ -52,6 +52,46 @@ func (s *ClientSuite) Test_create_blueprint_instance() {
 	)
 }
 
+func (s *ClientSuite) Test_create_blueprint_instance_with_instance_name() {
+	// Create a new client with OAuth2.
+	client, err := NewClient(
+		WithClientEndpoint(s.deployEngineServer.URL),
+		WithClientAuthMethod(AuthMethodOAuth2),
+		WithClientOAuth2Config(&OAuth2Config{
+			TokenEndpoint: fmt.Sprintf(
+				"%s/oauth2/v1/token",
+				s.oauthServer.URL,
+			),
+			ClientID:     testClientID,
+			ClientSecret: testClientSecret,
+		}),
+	)
+	s.Require().NoError(err)
+
+	// Make a request to create a blueprint instance with a custom instance name
+	payload := &types.BlueprintInstancePayload{
+		BlueprintDocumentInfo: types.BlueprintDocumentInfo{
+			FileSourceScheme: "file",
+		},
+		InstanceName: "my-custom-instance",
+	}
+
+	blueprintInstance, err := client.CreateBlueprintInstance(
+		context.Background(),
+		payload,
+	)
+	s.Require().NoError(err)
+
+	s.Assert().Equal(
+		&state.InstanceState{
+			InstanceID:   "test-instance-id",
+			InstanceName: "my-custom-instance",
+			Status:       core.InstanceStatusDeploying,
+		},
+		blueprintInstance,
+	)
+}
+
 func (s *ClientSuite) Test_create_blueprint_instance_fails_for_unauthorised_client() {
 	// Create a new client with invalid API key auth.
 	client, err := NewClient(

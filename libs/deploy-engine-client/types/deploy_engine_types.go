@@ -204,6 +204,12 @@ type CompleteChangesEventData struct {
 // and starting the deployment process.
 type BlueprintInstancePayload struct {
 	BlueprintDocumentInfo
+	// A unique, user-defined name for the blueprint instance.
+	// This name must be unique across all blueprint instances in the system
+	// and can be used as an alternative to the instance ID when referencing
+	// the blueprint instance in other API calls.
+	// This is required when creating a new blueprint instance.
+	InstanceName string `json:"instanceName,omitempty"`
 	// The ID of the change set to use to deploy the blueprint instance.
 	// When deploying blueprint instances,
 	// a change set is used instead of the deployment process re-computing the changes

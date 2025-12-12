@@ -594,6 +594,9 @@ func (c *Client) CreateBlueprintInstance(
 // It will return the current state of the blueprint instance,
 // the same ID provided should be used to stream deployment events as they occur.
 // This is the `PATCH {baseURL}/v1/deployments/instances/{id}` API endpoint.
+//
+// The instanceID parameter can be either the unique instance ID or
+// the user-defined instance name.
 func (c *Client) UpdateBlueprintInstance(
 	ctx context.Context,
 	instanceID string,
@@ -625,6 +628,9 @@ func (c *Client) UpdateBlueprintInstance(
 // This will return the current status of the deployment along with
 // the current state of the blueprint intance.
 // This is the `GET {baseURL}/v1/deployments/instances/{id}` API endpoint.
+//
+// The instanceID parameter can be either the unique instance ID or
+// the user-defined instance name.
 func (c *Client) GetBlueprintInstance(
 	ctx context.Context,
 	instanceID string,
@@ -652,6 +658,9 @@ func (c *Client) GetBlueprintInstance(
 // deployment instance.
 // This will return the exported fields from the blueprint instance.
 // This is the `GET {baseURL}/v1/deployments/instances/{id}/exports` API endpoint.
+//
+// The instanceID parameter can be either the unique instance ID or
+// the user-defined instance name.
 func (c *Client) GetBlueprintInstanceExports(
 	ctx context.Context,
 	instanceID string,
@@ -680,6 +689,9 @@ func (c *Client) GetBlueprintInstanceExports(
 // It will return the current state of the blueprint instance,
 // the same ID provided should be used to stream destroy events as they occur.
 // This is the `POST {baseURL}/v1/deployments/instances/{id}/destroy` API endpoint.
+//
+// The instanceID parameter can be either the unique instance ID or
+// the user-defined instance name.
 func (c *Client) DestroyBlueprintInstance(
 	ctx context.Context,
 	instanceID string,
@@ -726,6 +738,9 @@ func (c *Client) DestroyBlueprintInstance(
 // event received.
 //
 // This is the `GET {baseURL}/v1/deployments/instances/{id}/stream` API SSE stream endpoint.
+//
+// The instanceID parameter can be either the unique instance ID or
+// the user-defined instance name.
 func (c *Client) StreamBlueprintInstanceEvents(
 	ctx context.Context,
 	instanceID string,
