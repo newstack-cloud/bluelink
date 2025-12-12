@@ -120,9 +120,14 @@ type StreamError struct {
 func (e *StreamError) Error() string {
 	diagnosticsMessage := ""
 	if len(e.Event.Diagnostics) > 0 {
+		diagnosticWord := "diagnostics"
+		if len(e.Event.Diagnostics) == 1 {
+			diagnosticWord = "diagnostic"
+		}
 		diagnosticsMessage = fmt.Sprintf(
-			" (%d diagnostics)",
+			" (%d %s)",
 			len(e.Event.Diagnostics),
+			diagnosticWord,
 		)
 	}
 
