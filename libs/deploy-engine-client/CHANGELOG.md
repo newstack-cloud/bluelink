@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.1.1...deploy-engine-client/v0.1.2) (2025-12-12)
+
+
+### Bug Fixes
+
+* **deploy-engine-client:** add missing instance name for creating blueprint instances ([cdb64a3](https://github.com/newstack-cloud/bluelink/commit/cdb64a3781d03ae2a90c7526d1c6e24cc7a8c718))
+
 ## [0.1.1](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.1.0...deploy-engine-client/v0.1.1) (2025-12-10)
 
 
