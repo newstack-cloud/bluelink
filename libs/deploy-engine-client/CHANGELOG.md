@@ -7,6 +7,11 @@
 
 * **deploy-engine-client:** add missing instance name for creating blueprint instances ([cdb64a3](https://github.com/newstack-cloud/bluelink/commit/cdb64a3781d03ae2a90c7526d1c6e24cc7a8c718))
 
+
+### Dependencies
+
+* **deploy-engine-client:** bump golang.org/x/oauth2 ([22ff502](https://github.com/newstack-cloud/bluelink/commit/22ff50297ef25d45ae983134c5eb88e602b3272f))
+
 ## [0.1.1](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.1.0...deploy-engine-client/v0.1.1) (2025-12-10)
 
 
