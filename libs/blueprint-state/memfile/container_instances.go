@@ -52,6 +52,17 @@ func (c *instancesContainerImpl) LookupIDByName(
 	defer c.mu.RUnlock()
 	instanceID, hasInstanceID := c.instanceIDLookup[instanceName]
 	if hasInstanceID {
+		// Verify the instance actually exists in the instances map
+		_, instanceExists := c.instances[instanceID]
+		if !instanceExists {
+			// Stale lookup entry - the instance was deleted but lookup wasn't cleaned up
+			c.logger.Warn(
+				"stale instance ID lookup entry found, instance does not exist",
+				core.StringLogField("instanceName", instanceName),
+				core.StringLogField("instanceId", instanceID),
+			)
+			return "", state.InstanceNotFoundError(instanceName)
+		}
 		return instanceID, nil
 	}
 
@@ -162,6 +173,9 @@ func (c *instancesContainerImpl) Remove(
 	}
 
 	delete(c.instances, instanceID)
+	// Clean up the name-to-ID lookup to prevent stale lookups
+	// after the instance is removed.
+	delete(c.instanceIDLookup, instance.InstanceName)
 	instanceLogger.Debug(
 		"cleaning up resource drift entries for instance being removed",
 	)
