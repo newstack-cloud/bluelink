@@ -168,6 +168,39 @@ func (s *ProtobufSerialiserTestSuite) Test_fails_to_marshal_blueprint_fixture_wi
 	}
 }
 
+func (s *ProtobufSerialiserTestSuite) Test_ToMappingNodePB_returns_nil_for_empty_mapping_node_when_optional(c *C) {
+	// An empty mapping node is a non-nil MappingNode with all fields set to nil.
+	// This can occur when a resource state is saved before the spec data is fully populated
+	// (e.g. during a failed deployment).
+	emptyMappingNode := &core.MappingNode{}
+
+	result, err := ToMappingNodePB(emptyMappingNode, true /* optional */)
+	c.Assert(err, IsNil)
+	c.Assert(result, IsNil)
+}
+
+func (s *ProtobufSerialiserTestSuite) Test_ToMappingNodePB_returns_nil_for_nil_mapping_node_when_optional(c *C) {
+	result, err := ToMappingNodePB(nil, true /* optional */)
+	c.Assert(err, IsNil)
+	c.Assert(result, IsNil)
+}
+
+func (s *ProtobufSerialiserTestSuite) Test_ToMappingNodePB_fails_for_empty_mapping_node_when_not_optional(c *C) {
+	// An empty mapping node should fail when optional is false,
+	// as it represents invalid data that must have content.
+	emptyMappingNode := &core.MappingNode{}
+
+	_, err := ToMappingNodePB(emptyMappingNode, false /* optional */)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "expanded blueprint serialise error: missing mapping node value")
+}
+
+func (s *ProtobufSerialiserTestSuite) Test_ToMappingNodePB_fails_for_nil_mapping_node_when_not_optional(c *C) {
+	_, err := ToMappingNodePB(nil, false /* optional */)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "expanded blueprint serialise error: required mapping node is set to nil")
+}
+
 var testRuntime = "go1.x"
 var testTracingEnabled = true
 var version = "2021-12-18"

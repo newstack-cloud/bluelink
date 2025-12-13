@@ -575,7 +575,11 @@ func toAnnotationsPB(
 // ToMappingNodePB converts a core.MappingNode to a schemapb.MappingNode
 // that can be stored and transmitted as a protobuf message.
 func ToMappingNodePB(mappingNode *core.MappingNode, optional bool) (*schemapb.MappingNode, error) {
-	if optional && mappingNode == nil {
+	// Use IsNilMappingNode to handle both nil and empty mapping nodes
+	// (mapping nodes with all fields set to nil).
+	// Empty mapping nodes can occur when a resource state is saved
+	// before the spec data is fully populated (e.g. during a failed deployment).
+	if optional && core.IsNilMappingNode(mappingNode) {
 		return nil, nil
 	}
 
