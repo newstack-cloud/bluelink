@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.4.0...blueprint-state/v0.4.1) (2025-12-13)
+
+
+### Bug Fixes
+
+* **blueprint-state:** add fix to gracefully handle when instances chunk file is missing ([36266e7](https://github.com/newstack-cloud/bluelink/commit/36266e77d24d374c38a493a01c9cd1c099c32044))
+* **blueprint-state:** initialise empty maps for instance state in memfile state container ([32dadf1](https://github.com/newstack-cloud/bluelink/commit/32dadf1ec5d56015b1663c0d37eafb529ce87bac))
+
+
+### Dependencies
+
+* **blueprint-state:** bump the go-deps group ([1a530f9](https://github.com/newstack-cloud/bluelink/commit/1a530f972ad22fb5705dbb3dfd1798088db7b36b))
+* **blueprint-state:** bump up blueprint lib to 0.36.3 ([ee669cb](https://github.com/newstack-cloud/bluelink/commit/ee669cb4b2ad2ad44ae358aababc97cf2f4d2841))
+* **blueprint-state:** update blueprint lib and snapshots with mapping node updates ([45a3650](https://github.com/newstack-cloud/bluelink/commit/45a36507ff3b38b9477a9245d4e00fe732d211b6))
+
 ## [0.4.0] - 2025-07-20
 
 ### Added
