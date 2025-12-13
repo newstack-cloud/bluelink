@@ -9,7 +9,9 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=24) "src/handlersv2.saveOrder"),
+          NoneValue: (*bool)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
         Fields: (map[string]*core.MappingNode) <nil>,
@@ -33,7 +35,9 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=21) "src/saveOrder.handler"),
+            NoneValue: (*bool)(<nil>),
             SourceMeta: (*source.Meta)(<nil>)
           }),
           Fields: (map[string]*core.MappingNode) <nil>,
@@ -47,7 +51,9 @@
             IntValue: (*int)(<nil>),
             BoolValue: (*bool)(<nil>),
             FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
             StringValue: (*string)((len=24) "src/handlersv2.saveOrder"),
+            NoneValue: (*bool)(<nil>),
             SourceMeta: (*source.Meta)(<nil>)
           }),
           Fields: (map[string]*core.MappingNode) <nil>,

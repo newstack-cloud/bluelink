@@ -17,7 +17,9 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=72) "arn:aws:dynamodb:eu-west-1:123456789012:table/legacy-production-orders-1"),
+          NoneValue: (*bool)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
         Fields: (map[string]*core.MappingNode) <nil>,
@@ -31,7 +33,9 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=9) "eu-west-1"),
+          NoneValue: (*bool)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
         Fields: (map[string]*core.MappingNode) <nil>,
@@ -45,7 +49,9 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=26) "legacy-production-orders-1"),
+          NoneValue: (*bool)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
         Fields: (map[string]*core.MappingNode) <nil>,
@@ -69,7 +75,9 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(true),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)(<nil>),
+          NoneValue: (*bool)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
         Fields: (map[string]*core.MappingNode) <nil>,
@@ -83,7 +91,9 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(false),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)(<nil>),
+          NoneValue: (*bool)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
         Fields: (map[string]*core.MappingNode) <nil>,
@@ -97,7 +107,9 @@
           IntValue: (*int)(<nil>),
           BoolValue: (*bool)(<nil>),
           FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
           StringValue: (*string)((len=21) "vpc-1234567890abcdef0"),
+          NoneValue: (*bool)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
         Fields: (map[string]*core.MappingNode) <nil>,
@@ -121,7 +133,9 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=34) "legacy-production-env Orders Table"),
+                NoneValue: (*bool)(<nil>),
                 SourceMeta: (*source.Meta)(<nil>)
               }),
               Fields: (map[string]*core.MappingNode) <nil>,
@@ -135,7 +149,9 @@
                 IntValue: (*int)(150),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)(<nil>),
+                NoneValue: (*bool)(<nil>),
                 SourceMeta: (*source.Meta)(<nil>)
               }),
               Fields: (map[string]*core.MappingNode) <nil>,
@@ -149,7 +165,9 @@
                 IntValue: (*int)(350),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)(<nil>),
+                NoneValue: (*bool)(<nil>),
                 SourceMeta: (*source.Meta)(<nil>)
               }),
               Fields: (map[string]*core.MappingNode) <nil>,

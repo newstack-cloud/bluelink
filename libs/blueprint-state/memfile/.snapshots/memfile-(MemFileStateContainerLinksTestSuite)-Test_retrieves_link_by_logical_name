@@ -21,7 +21,9 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=26) "legacy-production-orders-1"),
+                NoneValue: (*bool)(<nil>),
                 SourceMeta: (*source.Meta)(<nil>)
               }),
               Fields: (map[string]*core.MappingNode) <nil>,
@@ -35,7 +37,9 @@
                 IntValue: (*int)(<nil>),
                 BoolValue: (*bool)(<nil>),
                 FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
                 StringValue: (*string)((len=9) "eu-west-1"),
+                NoneValue: (*bool)(<nil>),
                 SourceMeta: (*source.Meta)(<nil>)
               }),
               Fields: (map[string]*core.MappingNode) <nil>,
@@ -65,7 +69,9 @@
                         IntValue: (*int)(<nil>),
                         BoolValue: (*bool)(<nil>),
                         FloatValue: (*float64)(<nil>),
+                        BytesValue: (*[]uint8)(<nil>),
                         StringValue: (*string)((len=16) "dynamodb:PutItem"),
+                        NoneValue: (*bool)(<nil>),
                         SourceMeta: (*source.Meta)(<nil>)
                       }),
                       Fields: (map[string]*core.MappingNode) <nil>,
@@ -84,7 +90,9 @@
                     IntValue: (*int)(<nil>),
                     BoolValue: (*bool)(<nil>),
                     FloatValue: (*float64)(<nil>),
+                    BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=5) "Allow"),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)(<nil>)
                   }),
                   Fields: (map[string]*core.MappingNode) <nil>,
@@ -98,7 +106,9 @@
                     IntValue: (*int)(<nil>),
                     BoolValue: (*bool)(<nil>),
                     FloatValue: (*float64)(<nil>),
+                    BytesValue: (*[]uint8)(<nil>),
                     StringValue: (*string)((len=72) "arn:aws:dynamodb:eu-west-1:123456789012:table/legacy-production-orders-1"),
+                    NoneValue: (*bool)(<nil>),
                     SourceMeta: (*source.Meta)(<nil>)
                   }),
                   Fields: (map[string]*core.MappingNode) <nil>,
