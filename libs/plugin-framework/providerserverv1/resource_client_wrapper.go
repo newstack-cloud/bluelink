@@ -633,9 +633,13 @@ func (r *resourceProviderClientWrapper) GetExternalState(
 
 	switch result := response.Response.(type) {
 	case *GetResourceExternalStateResponse_ResourceSpecState:
+		// Use optional=true to handle cases where the provider returns an empty
+		// spec state (e.g., when the external resource has no state or doesn't exist).
+		// This can happen during drift checking for resources that failed to deploy
+		// or were partially created.
 		specState, err := serialisation.FromMappingNodePB(
 			result.ResourceSpecState,
-			/* optional */ false,
+			/* optional */ true,
 		)
 		if err != nil {
 			return nil, errorsv1.CreateGeneralError(
