@@ -22,6 +22,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/includes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
 // CreateChangesetHandler is the handler for the POST /deployments/changes
@@ -554,7 +555,16 @@ func (c *Controller) deriveInstanceID(
 	}
 
 	if payload.InstanceID == "" && payload.InstanceName != "" {
-		return c.instances.LookupIDByName(ctx, payload.InstanceName)
+		instanceID, err := c.instances.LookupIDByName(ctx, payload.InstanceName)
+		if err != nil {
+			// If the instance is not found by name, this is a new deployment.
+			// Return empty string to indicate no existing instance.
+			if state.IsInstanceNotFound(err) {
+				return "", nil
+			}
+			return "", err
+		}
+		return instanceID, nil
 	}
 
 	// If no instance ID or name is provided, then there is no
