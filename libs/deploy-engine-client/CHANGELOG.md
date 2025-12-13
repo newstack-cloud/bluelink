@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.1.2...deploy-engine-client/v0.1.3) (2025-12-13)
+
+
+### Bug Fixes
+
+* **deploy-engine-client:** add fix for error message summary ([4f469be](https://github.com/newstack-cloud/bluelink/commit/4f469be15dac21d20703304d6b3740f1a1223bbf))
+
 ## [0.1.2](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.1.1...deploy-engine-client/v0.1.2) (2025-12-12)
 
 
