@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.36.3](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.36.2...blueprint/v0.36.3) (2025-12-13)
+
+
+### Bug Fixes
+
+* **blueprint:** initialise missing maps in initial instance state ([8bb3766](https://github.com/newstack-cloud/bluelink/commit/8bb3766e3916e5dffbcbbacde0935c0c6182503f))
+
 ## [0.36.2](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.36.1...blueprint/v0.36.2) (2025-12-10)
 
 
