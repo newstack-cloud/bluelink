@@ -538,6 +538,9 @@ func (c *defaultBlueprintContainer) saveNewInstance(
 			InstanceID:   instanceID,
 			InstanceName: instanceName,
 			Status:       currentStatus,
+			ResourceIDs:  make(map[string]string),
+			Resources:    make(map[string]*state.ResourceState),
+			Links:        make(map[string]*state.LinkState),
 		},
 	)
 }
