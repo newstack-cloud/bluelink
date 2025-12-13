@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.6](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.1.5...deploy-engine/v0.1.6) (2025-12-13)
+
+
+### Bug Fixes
+
+* **deploy-engine:** add correction to handle instance name provided for new deployment ([a156e07](https://github.com/newstack-cloud/bluelink/commit/a156e073bc5a92d3d1d174ae72ac3e94c8598f93))
+
+
+### Dependencies
+
+* **deploy-engine:** update blueprint and blueprint state libs ([2733329](https://github.com/newstack-cloud/bluelink/commit/2733329ff183d0d1119af7f0b28f1a75ad4166d4))
+
 ## [0.1.5](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.1.4...deploy-engine/v0.1.5) (2025-12-12)
 
 
