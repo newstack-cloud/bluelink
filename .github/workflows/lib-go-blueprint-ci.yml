@@ -7,10 +7,14 @@ name: Go Blueprint Framework
 on:
   push:
     branches: [ main ]
-    paths: ['libs/blueprint/**']
+    paths:
+      - 'libs/blueprint/**'
+      - '.github/workflows/lib-go-blueprint-ci.yml'
   pull_request:
     branches: [ main ]
-    paths: ['libs/blueprint/**']
+    paths:
+      - 'libs/blueprint/**'
+      - '.github/workflows/lib-go-blueprint-ci.yml'
   workflow_dispatch:
     inputs: {}
 
@@ -31,6 +35,7 @@ jobs:
     - uses: actions/setup-go@v6
       with:
         go-version: '1.24'
+        cache-dependency-path: libs/blueprint/go.sum
 
     # Install global Go dependencies
     - name: Install Go Global Dependencies
