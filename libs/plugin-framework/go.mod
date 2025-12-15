@@ -4,12 +4,12 @@ go 1.24.0
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.1
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.3
 	github.com/newstack-cloud/bluelink/libs/common v0.3.2
 	github.com/spf13/afero v1.15.0
 	github.com/stretchr/testify v1.11.1
 	google.golang.org/grpc v1.77.0
-	google.golang.org/protobuf v1.36.10
+	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
 )
 
