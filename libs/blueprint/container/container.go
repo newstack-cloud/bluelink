@@ -118,6 +118,9 @@ type StageChangesInput struct {
 	// If this is set to true, the change set will be generated for removal all components
 	// in the current state of the blueprint instance.
 	Destroy bool
+	// SkipDriftCheck, when true, skips drift detection during change staging.
+	// When false or not set, the loader-level driftCheckEnabled setting is used.
+	SkipDriftCheck bool
 }
 
 // DeployInput contains the primary input needed to deploy a blueprint instance.
@@ -137,6 +140,11 @@ type DeployInput struct {
 	// The loaded blueprint is expected to be the version of the blueprint to roll back to
 	// for a given blueprint instance.
 	Rollback bool
+	// Force bypasses state validation checks that prevent deployment when the instance
+	// is already in an active state (e.g., Deploying, Updating).
+	// This is an escape hatch for recovering from stuck states where the instance
+	// is in an inconsistent state due to a crash or unexpected termination.
+	Force bool
 }
 
 // DestroyInput contains the primary input needed to destroy a blueprint instance.
@@ -156,6 +164,12 @@ type DestroyInput struct {
 	// This is useful for ensuring the correct statuses are applied when changes within a child
 	// blueprint need to be rolled back due to a failure in the parent blueprint.
 	Rollback bool
+	// Force continues the destroy operation even if individual resource/link/child
+	// destruction fails, and removes the blueprint instance record from state
+	// regardless of whether all resources were successfully destroyed.
+	// This is useful for removing instances where underlying resources were manually
+	// deleted or when a provider is unavailable.
+	Force bool
 }
 
 type defaultBlueprintContainer struct {

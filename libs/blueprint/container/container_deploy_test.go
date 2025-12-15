@@ -25,18 +25,20 @@ type ContainerDeployTestSuite struct {
 	blueprint2Fixture blueprintDeployFixture
 	blueprint3Fixture blueprintDeployFixture
 	blueprint4Fixture blueprintDeployFixture
+	blueprint5Fixture blueprintDeployFixture
 	stateContainer    state.Container
 	fixture1Params    core.BlueprintParams
 	fixture2Params    core.BlueprintParams
 	fixture3Params    core.BlueprintParams
 	fixture4Params    core.BlueprintParams
+	fixture5Params    core.BlueprintParams
 	suite.Suite
 }
 
 func (s *ContainerDeployTestSuite) SetupTest() {
 	stateContainer := memstate.NewMemoryStateContainer()
 	s.stateContainer = stateContainer
-	fixtureInstances := []int{1, 3, 4}
+	fixtureInstances := []int{1, 3, 4, 5}
 	err := populateCurrentState(fixtureInstances, stateContainer, "deploy")
 	s.Require().NoError(err)
 
@@ -118,6 +120,20 @@ func (s *ContainerDeployTestSuite) SetupTest() {
 		4,
 		loader,
 		s.fixture4Params,
+		schema.YAMLSpecFormat,
+	)
+	s.Require().NoError(err)
+
+	// Fixture 5 uses blueprint1's spec but with a state file that has
+	// status=Updating (13) to test force deploy on stuck instances.
+	s.fixture5Params = blueprint1DeployParams(
+		/* includeInvoices */ false,
+	)
+	s.blueprint5Fixture, err = createBlueprintDeployFixture(
+		"deploy",
+		5,
+		loader,
+		s.fixture5Params,
 		schema.YAMLSpecFormat,
 	)
 	s.Require().NoError(err)
@@ -463,6 +479,157 @@ func (s *ContainerDeployTestSuite) Test_fails_to_deploy_blueprint_instance_alrea
 	s.Assert().Equal([]string{
 		instanceInProgressDeployFailedMessage("blueprint-instance-4", false),
 	}, finishMsg.FailureReasons)
+}
+
+func (s *ContainerDeployTestSuite) Test_force_deploys_blueprint_instance_stuck_in_updating() {
+	channels := CreateDeployChannels()
+	// Stage changes before deploying to get a change set derived from the test fixture
+	// state without having to manually create a change set fixture.
+	changes, changeStagingErr := s.stageChanges(
+		context.Background(),
+		"blueprint-instance-5",
+		s.blueprint5Fixture.blueprintContainer,
+		s.fixture5Params,
+	)
+	s.Require().NoError(changeStagingErr)
+
+	// Blueprint instance 5 is in "Updating" status (from fixture setup) simulating
+	// a stuck instance that crashed during an update operation.
+	// With Force=true, the deployment should proceed instead of failing.
+	err := s.blueprint5Fixture.blueprintContainer.Deploy(
+		context.Background(),
+		&DeployInput{
+			InstanceID: "blueprint-instance-5",
+			Changes:    changes,
+			Rollback:   false,
+			Force:      true, // Force bypasses the in-progress check
+		},
+		channels,
+		s.fixture5Params,
+	)
+	s.Require().NoError(err)
+
+	var finishMsg *DeploymentFinishedMessage
+	for err == nil && finishMsg == nil {
+		select {
+		case <-channels.ResourceUpdateChan:
+		case <-channels.ChildUpdateChan:
+		case <-channels.LinkUpdateChan:
+		case msg := <-channels.FinishChan:
+			finishMsg = &msg
+		case <-channels.DeploymentUpdateChan:
+		case err = <-channels.ErrChan:
+		case <-time.After(60 * time.Second):
+			err = errors.New(timeoutMessage)
+		}
+	}
+	s.Assert().NoError(err)
+	s.Assert().NotNil(finishMsg)
+	// With force=true, the deployment should succeed (status Updated)
+	// since the instance already has resources and this is an update.
+	s.Assert().Equal(core.InstanceStatusUpdated, finishMsg.Status)
+}
+
+func (s *ContainerDeployTestSuite) Test_context_cancellation_drains_in_progress_items() {
+	channels := CreateDeployChannels()
+	// Stage changes before deploying to get a change set derived from the test fixture
+	// state without having to manually create a change set fixture.
+	changes, changeStagingErr := s.stageChanges(
+		context.Background(),
+		"blueprint-instance-1",
+		s.blueprint1Fixture.blueprintContainer,
+		s.fixture1Params,
+	)
+	s.Require().NoError(changeStagingErr)
+
+	// Create a context that is already cancelled to simulate mid-deployment cancellation
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	err := s.blueprint1Fixture.blueprintContainer.Deploy(
+		ctx,
+		&DeployInput{
+			InstanceID: "blueprint-instance-1",
+			Changes:    changes,
+			Rollback:   false,
+		},
+		channels,
+		s.fixture1Params,
+	)
+	s.Require().NoError(err)
+
+	// Collect remaining messages - we should get a proper error message
+	// due to the draining behavior, not just hang forever
+	var finishMsg *DeploymentFinishedMessage
+	var channelErr error
+	for channelErr == nil && finishMsg == nil {
+		select {
+		case <-channels.ResourceUpdateChan:
+		case <-channels.ChildUpdateChan:
+		case <-channels.LinkUpdateChan:
+		case msg := <-channels.FinishChan:
+			finishMsg = &msg
+		case <-channels.DeploymentUpdateChan:
+		case channelErr = <-channels.ErrChan:
+		case <-time.After(60 * time.Second):
+			channelErr = errors.New(timeoutMessage)
+		}
+	}
+
+	// We should get a context cancelled error propagated
+	s.Assert().Error(channelErr)
+	s.Assert().ErrorIs(channelErr, context.Canceled)
+}
+
+func (s *ContainerDeployTestSuite) Test_context_timeout_during_deployment_returns_error() {
+	channels := CreateDeployChannels()
+	// Stage changes before deploying to get a change set derived from the test fixture
+	// state without having to manually create a change set fixture.
+	changes, changeStagingErr := s.stageChanges(
+		context.Background(),
+		"blueprint-instance-1",
+		s.blueprint1Fixture.blueprintContainer,
+		s.fixture1Params,
+	)
+	s.Require().NoError(changeStagingErr)
+
+	// Create a context that is already timed out
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-1*time.Second))
+	defer cancel()
+
+	err := s.blueprint1Fixture.blueprintContainer.Deploy(
+		ctx,
+		&DeployInput{
+			InstanceID: "blueprint-instance-1",
+			Changes:    changes,
+			Rollback:   false,
+		},
+		channels,
+		s.fixture1Params,
+	)
+	s.Require().NoError(err)
+
+	// Collect messages - we should get an error due to the timeout
+	// The draining behavior ensures we don't hang forever
+	var finishMsg *DeploymentFinishedMessage
+	var channelErr error
+	for channelErr == nil && finishMsg == nil {
+		select {
+		case <-channels.ResourceUpdateChan:
+		case <-channels.ChildUpdateChan:
+		case <-channels.LinkUpdateChan:
+		case msg := <-channels.FinishChan:
+			finishMsg = &msg
+		case <-channels.DeploymentUpdateChan:
+		case channelErr = <-channels.ErrChan:
+		case <-time.After(60 * time.Second):
+			channelErr = errors.New(timeoutMessage)
+		}
+	}
+
+	// We should get a context deadline exceeded error propagated
+	s.Assert().Error(channelErr)
+	s.Assert().ErrorIs(channelErr, context.DeadlineExceeded)
 }
 
 func (s *ContainerDeployTestSuite) stageChanges(

@@ -44,11 +44,11 @@ echo "" > coverage.txt
 
 if [[ -n "$UPDATE_SNAPSHOTS" ]]; then
   # Exclude generated protobuf code from coverage.
-  UPDATE_SNAPSHOTS=true go test -timeout 90000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(schemapb|testutils))$'`
+  UPDATE_SNAPSHOTS=true go test -timeout 120000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(schemapb|testutils))$'`
 
 else
   # Exclude generated protobuf code from coverage.
-  go test -timeout 90000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(schemapb|testutils))$'`
+  go test -timeout 120000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(schemapb|testutils))$'`
 fi
 
 if [[ -z "$GITHUB_ACTION" ]]; then
@@ -59,5 +59,5 @@ fi
 
 if [[ -n "$GITHUB_ACTION" ]]; then
   # We are in a CI environment so run tests again to generate JSON report.
-  go test -timeout 90000ms -json -tags "$TEST_TYPES" `go list ./... | egrep -v '(/(schemapb|testutils))$'` > report.json
+  go test -timeout 120000ms -json -tags "$TEST_TYPES" `go list ./... | egrep -v '(/(schemapb|testutils))$'` > report.json
 fi

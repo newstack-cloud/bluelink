@@ -1,0 +1,54 @@
+{
+  "id": "blueprint-instance-5-child-core-infra",
+  "status": 2,
+  "lastDeployedTimestamp": 1733145428,
+  "lastDeployAttemptTimestamp": 1733145428,
+  "resourceIds": {
+    "complexResource": "complex-resource-5-id"
+  },
+  "resources": {
+    "complex-resource-5-id": {
+      "id": "complex-resource-5-id",
+      "name": "complexResource",
+      "type": "example/complex",
+      "instanceId": "blueprint-instance-5-child-core-infra",
+      "status": 2,
+      "preciseStatus": 3,
+      "lastDeployedTimestamp": 1733145428,
+      "lastDeployAttemptTimestamp": 1733145428,
+      "specData": {
+        "id": "complex-resource-provider/complex-resource-5-id",
+        "itemConfig": {
+          "endpoints": [
+            "https://stuck-updating.example.com/1",
+            "https://stuck-updating.example.com/2",
+            "https://stuck-updating.example.com/3"
+          ],
+          "ipv4": false
+        },
+        "otherItemConfig": "stuck-updating-other-config-item",
+        "vendorTags": ["stuck-updating-vendor-tag-1", "stuck-updating-vendor-tag-2"],
+        "vendorConfig": [
+          {
+            "vendorNamespace": "stuck-updating-vendor-namespace",
+            "vendorId": "stuck-updating-vendor-id"
+          }
+        ]
+      },
+      "description": "A complex resource type.",
+      "failureReasons": []
+    }
+  },
+  "links": {},
+  "metadata": {
+    "build": "tsc"
+  },
+  "exports": {
+    "environment": {
+      "value": "stuck-updating-env",
+      "type": "string",
+      "field": "variables.environment"
+    }
+  },
+  "childBlueprints": {}
+}

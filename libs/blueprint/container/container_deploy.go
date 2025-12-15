@@ -87,6 +87,7 @@ func (c *defaultBlueprintContainer) Deploy(
 			InstanceName: input.InstanceName,
 			Changes:      input.Changes,
 			Rollback:     input.Rollback,
+			Force:        input.Force,
 		},
 		rewiredChannels,
 		state,
@@ -181,7 +182,7 @@ func (c *defaultBlueprintContainer) deploy(
 		}
 	}
 
-	if isInstanceInProgress(&currentInstanceState, input.Rollback) {
+	if !input.Force && isInstanceInProgress(&currentInstanceState, input.Rollback) {
 		deployLogger.Info("instance is already in progress, exiting deployment early")
 		channels.FinishChan <- c.createDeploymentFinishedMessage(
 			input.InstanceID,
@@ -662,6 +663,106 @@ func (c *defaultBlueprintContainer) deployNode(
 	}
 }
 
+// deploymentEventLoopState tracks the state of the deployment event loop,
+// including any error that occurred and the drain deadline for graceful shutdown.
+type deploymentEventLoopState struct {
+	err           error
+	drainDeadline <-chan time.Time
+}
+
+// setError sets the first error encountered and starts the drain timeout.
+// Subsequent errors are ignored to preserve the original error.
+func (s *deploymentEventLoopState) setError(err error, drainTimeout time.Duration) {
+	if s.err == nil {
+		s.err = err
+		s.drainDeadline = time.After(drainTimeout)
+	}
+}
+
+// isDraining returns true if an error has occurred and we're draining in-progress items.
+func (s *deploymentEventLoopState) isDraining() bool {
+	return s.err != nil
+}
+
+func (c *defaultBlueprintContainer) processResourceUpdate(
+	ctx context.Context,
+	instanceID string,
+	msg ResourceDeployUpdateMessage,
+	deployCtx *DeployContext,
+	finished map[string]*deployUpdateMessageWrapper,
+	internalChannels *DeployChannels,
+	state *deploymentEventLoopState,
+) {
+	if state.isDraining() {
+		c.trackResourceCompletion(msg, deployCtx.Rollback, finished)
+		return
+	}
+
+	err := c.handleResourceUpdateMessage(
+		ctx,
+		instanceID,
+		msg,
+		// As this handler spans multiple deployment groups,
+		// the deploy context must always be enhanced with the group index
+		// of the message being processed to ensure logic to determine
+		// which elements to deploy next functions correctly.
+		DeployContextWithGroup(deployCtx, msg.Group),
+		finished,
+		internalChannels,
+	)
+	if err != nil {
+		state.setError(err, 30*time.Second)
+	}
+}
+
+func (c *defaultBlueprintContainer) processChildUpdate(
+	ctx context.Context,
+	instanceID string,
+	msg ChildDeployUpdateMessage,
+	deployCtx *DeployContext,
+	finished map[string]*deployUpdateMessageWrapper,
+	internalChannels *DeployChannels,
+	state *deploymentEventLoopState,
+) {
+	if state.isDraining() {
+		c.trackChildCompletion(msg, deployCtx.Rollback, finished)
+		return
+	}
+
+	err := c.handleChildUpdateMessage(
+		ctx,
+		instanceID,
+		msg,
+		DeployContextWithGroup(deployCtx, msg.Group),
+		finished,
+		internalChannels,
+	)
+	if err != nil {
+		state.setError(err, 30*time.Second)
+	}
+}
+
+func (c *defaultBlueprintContainer) processLinkUpdate(
+	ctx context.Context,
+	instanceID string,
+	msg LinkDeployUpdateMessage,
+	deployCtx *DeployContext,
+	finished map[string]*deployUpdateMessageWrapper,
+	state *deploymentEventLoopState,
+) {
+	if state.isDraining() {
+		c.trackLinkCompletion(msg, deployCtx.Rollback, finished)
+		return
+	}
+
+	// Link messages are not associated with a group, so the deploy context
+	// does not need to be enhanced like it is for resource and child messages.
+	err := c.handleLinkUpdateMessage(ctx, instanceID, msg, deployCtx, finished)
+	if err != nil {
+		state.setError(err, 30*time.Second)
+	}
+}
+
 func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 	ctx context.Context,
 	instanceID string,
@@ -676,44 +777,38 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 	// taking resources, links and child blueprints into account.
 	elementsToDeploy := countElementsToDeploy(changes)
 
-	var err error
-	for (len(finished) < elementsToDeploy) &&
-		err == nil {
+	state := &deploymentEventLoopState{}
+
+	// Keep looping until ALL elements report completion (success or failure).
+	// If an error occurs, we continue draining until either all elements finish
+	// or the drain timeout is reached.
+	for len(finished) < elementsToDeploy {
 		select {
 		case <-ctx.Done():
-			err = ctx.Err()
+			state.setError(ctx.Err(), 30*time.Second)
+
+		case <-state.drainDeadline:
+			return true, state.err
+
 		case msg := <-internalChannels.ResourceUpdateChan:
-			err = c.handleResourceUpdateMessage(
-				ctx,
-				instanceID,
-				msg,
-				// As this handler spans multiple deployment groups,
-				// the deploy context must always be enhanced with the group index
-				// of the message being processed to ensure logic to determine
-				// which elements to deploy next functions correctly.
-				DeployContextWithGroup(deployCtx, msg.Group),
-				finished,
-				internalChannels,
-			)
+			c.processResourceUpdate(ctx, instanceID, msg, deployCtx, finished, internalChannels, state)
+
 		case msg := <-internalChannels.ChildUpdateChan:
-			err = c.handleChildUpdateMessage(
-				ctx,
-				instanceID,
-				msg,
-				DeployContextWithGroup(deployCtx, msg.Group),
-				finished,
-				internalChannels,
-			)
+			c.processChildUpdate(ctx, instanceID, msg, deployCtx, finished, internalChannels, state)
+
 		case msg := <-internalChannels.LinkUpdateChan:
-			// Link messages are not associated with a group, so the deploy context
-			// does not need to be enhanced like it is for resource and child messages.
-			err = c.handleLinkUpdateMessage(ctx, instanceID, msg, deployCtx, finished)
-		case err = <-internalChannels.ErrChan:
+			c.processLinkUpdate(ctx, instanceID, msg, deployCtx, finished, state)
+
+		case newErr := <-internalChannels.ErrChan:
+			// Use a shorter drain timeout for errors from ErrChan since
+			// the erroring goroutine may have already terminated without
+			// sending a completion message.
+			state.setError(newErr, 5*time.Second)
 		}
 	}
 
-	if err != nil {
-		return true, err
+	if state.err != nil {
+		return true, state.err
 	}
 
 	failed := getFailedElementDeploymentsAndUpdateState(finished, changes, deployCtx)
@@ -734,6 +829,58 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 	}
 
 	return false, nil
+}
+
+// trackResourceCompletion tracks when a resource has finished deploying (success or failure)
+// without triggering new deployments. This is used during the draining phase after an error occurs.
+func (c *defaultBlueprintContainer) trackResourceCompletion(
+	msg ResourceDeployUpdateMessage,
+	rollback bool,
+	finished map[string]*deployUpdateMessageWrapper,
+) {
+	elementName := core.ResourceElementID(msg.ResourceName)
+	if finishedUpdatingResource(msg, rollback) ||
+		finishedCreatingResource(msg, rollback) ||
+		finishedDestroyingResource(msg, rollback) {
+		finished[elementName] = &deployUpdateMessageWrapper{
+			resourceUpdateMessage: &msg,
+		}
+	}
+}
+
+// trackChildCompletion tracks when a child blueprint has finished deploying (success or failure)
+// without triggering new deployments. This is used during the draining phase after an error occurs.
+func (c *defaultBlueprintContainer) trackChildCompletion(
+	msg ChildDeployUpdateMessage,
+	rollback bool,
+	finished map[string]*deployUpdateMessageWrapper,
+) {
+	childName := core.ChildElementID(msg.ChildName)
+	// finishedDeployingChild and finishedUpdatingChild take the status directly,
+	// while finishedDestroyingChild takes the full message
+	if finishedDeployingChild(msg.Status, rollback) ||
+		finishedUpdatingChild(msg.Status, rollback) ||
+		finishedDestroyingChild(msg, rollback) {
+		finished[childName] = &deployUpdateMessageWrapper{
+			childUpdateMessage: &msg,
+		}
+	}
+}
+
+// trackLinkCompletion tracks when a link has finished deploying (success or failure)
+// without triggering new deployments. This is used during the draining phase after an error occurs.
+func (c *defaultBlueprintContainer) trackLinkCompletion(
+	msg LinkDeployUpdateMessage,
+	rollback bool,
+	finished map[string]*deployUpdateMessageWrapper,
+) {
+	if finishedCreatingLink(msg, rollback) ||
+		finishedUpdatingLink(msg, rollback) ||
+		finishedDestroyingLink(msg, rollback) {
+		finished[msg.LinkName] = &deployUpdateMessageWrapper{
+			linkUpdateMessage: &msg,
+		}
+	}
 }
 
 func (c *defaultBlueprintContainer) handleResourceUpdateMessage(

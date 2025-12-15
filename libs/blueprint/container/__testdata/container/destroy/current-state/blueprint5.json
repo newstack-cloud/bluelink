@@ -1,0 +1,184 @@
+{
+  "id": "blueprint-instance-5",
+  "name": "BlueprintInstance5",
+  "status": 7,
+  "lastDeployedTimestamp": 1733145428,
+  "lastDeployAttemptTimestamp": 1733145428,
+  "resourceIds": {
+    "ordersTable_0": "test-orders-table-5-0-id",
+    "ordersTable_1": "test-orders-table-5-1-id",
+    "saveOrderFunction": "test-save-order-function-5-id",
+    "invoicesTable": "test-invoices-table-5-id"
+  },
+  "resources": {
+    "test-orders-table-5-0-id": {
+      "id": "test-orders-table-5-0-id",
+      "name": "ordersTable_0",
+      "templateName": "ordersTable",
+      "type": "aws/dynamodb/table",
+      "instanceId": "blueprint-instance-5",
+      "status": 2,
+      "preciseStatus": 3,
+      "lastDeployedTimestamp": 1733145428,
+      "lastDeployAttemptTimestamp": 1733145428,
+      "specData": {
+        "tableName": "stuck-destroying-orders-1",
+        "region": "eu-west-1",
+        "id": "arn:aws:dynamodb:eu-west-1:123456789012:table/stuck-destroying-orders-1"
+      },
+      "description": "Table that stores orders for an application.",
+      "metadata": {
+        "displayName": "stuck-destroying-env Orders Table",
+        "annotations": {
+          "aws.dynamodb.trigger": false,
+          "aws.dynamodb.vpc": "vpc-1234567890abcdef0",
+          "aws.dynamodb.legacy.flag1": true
+        },
+        "labels": {
+          "app": "orders"
+        },
+        "custom": {
+          "visual": {
+            "x": 150,
+            "y": 350,
+            "label": "stuck-destroying-env Orders Table"
+          }
+        }
+      },
+      "failureReasons": []
+    },
+    "test-orders-table-5-1-id": {
+      "id": "test-orders-table-5-1-id",
+      "name": "ordersTable_1",
+      "templateName": "ordersTable",
+      "type": "aws/dynamodb/table",
+      "instanceId": "blueprint-instance-5",
+      "status": 2,
+      "preciseStatus": 3,
+      "lastDeployedTimestamp": 1733145428,
+      "lastDeployAttemptTimestamp": 1733145428,
+      "specData": {
+        "tableName": "stuck-destroying-orders-2",
+        "region": "eu-west-2",
+        "id": "arn:aws:dynamodb:eu-west-2:123456789012:table/stuck-destroying-orders-2"
+      },
+      "description": "Table that stores orders for an application.",
+      "metadata": {
+        "displayName": "stuck-destroying-env Orders Table",
+        "annotations": {
+          "aws.dynamodb.trigger": false,
+          "aws.dynamodb.vpc": "vpc-1234567890abcdef0",
+          "aws.dynamodb.legacy.flag1": true
+        },
+        "labels": {
+          "app": "orders"
+        },
+        "custom": {
+          "visual": {
+            "x": 150,
+            "y": 350,
+            "label": "stuck-destroying-env Orders Table"
+          }
+        }
+      },
+      "failureReasons": []
+    },
+    "test-save-order-function-5-id": {
+      "id": "test-save-order-function-5-id",
+      "name": "saveOrderFunction",
+      "type": "aws/lambda/function",
+      "instanceId": "blueprint-instance-5",
+      "status": 2,
+      "preciseStatus": 3,
+      "lastDeployedTimestamp": 1733145428,
+      "lastDeployAttemptTimestamp": 1733145428,
+      "specData": {
+        "handler": "src/saveOrder.handler"
+      },
+      "description": "Function that saves an order to the database.",
+      "failureReasons": []
+    },
+    "test-invoices-table-5-id": {
+      "id": "test-invoices-table-5-id",
+      "name": "invoicesTable",
+      "type": "aws/dynamodb/table",
+      "instanceId": "blueprint-instance-5",
+      "status": 2,
+      "preciseStatus": 3,
+      "lastDeployedTimestamp": 1733145428,
+      "lastDeployAttemptTimestamp": 1733145428,
+      "specData": {
+        "tableName": "stuck-destroying-invoices",
+        "region": "eu-west-2",
+        "id": "arn:aws:dynamodb:eu-west-2:123456789012:table/stuck-destroying-invoices"
+      },
+      "description": "Table that stores invoices for an application.",
+      "failureReasons": []
+    }
+  },
+  "links": {
+    "saveOrderFunction::ordersTable_0": {
+      "id": "test-link-5-1",
+      "name": "saveOrderFunction::ordersTable_0",
+      "instanceId": "blueprint-instance-5",
+      "status": 2,
+      "preciseStatus": 8,
+      "lastDeployedTimestamp": 1733145428,
+      "lastDeployAttemptTimestamp": 1733145428,
+      "intermediaryResourceStates": [],
+      "data": {
+        "saveOrderFunction": {
+          "environmentVariables": {
+            "TABLE_NAME_ordersTable_0": "stuck-destroying-orders-1",
+            "TABLE_REGION_ordersTable_0": "eu-west-1"
+          },
+          "iam.policyStatements": {
+            "0": {
+              "effect": "Allow",
+              "action": ["dynamodb:PutItem"],
+              "resource": "arn:aws:dynamodb:eu-west-1:123456789012:table/stuck-destroying-orders-1"
+            }
+          }
+        }
+      },
+      "failureReasons": []
+    },
+    "saveOrderFunction::ordersTable_1": {
+      "id": "test-link-5-2",
+      "name": "saveOrderFunction::ordersTable_1",
+      "instanceId": "blueprint-instance-5",
+      "status": 2,
+      "preciseStatus": 8,
+      "lastDeployedTimestamp": 1733145428,
+      "lastDeployAttemptTimestamp": 1733145428,
+      "intermediaryResourceStates": [],
+      "data": {
+        "saveOrderFunction": {
+          "environmentVariables": {
+            "TABLE_NAME_ordersTable_1": "stuck-destroying-orders-2",
+            "TABLE_REGION_ordersTable_1": "eu-west-2"
+          },
+          "iam.policyStatements": {
+            "0": {
+              "effect": "Allow",
+              "action": ["dynamodb:PutItem"],
+              "resource": "arn:aws:dynamodb:eu-west-2:123456789012:table/stuck-destroying-orders-2"
+            }
+          }
+        }
+      },
+      "failureReasons": []
+    }
+  },
+  "metadata": {
+    "build": "tsc"
+  },
+  "exports": {
+    "environment": {
+      "value": "stuck-destroying-env",
+      "type": "string",
+      "field": "variables.environment"
+    }
+  },
+  "childBlueprints": {}
+}

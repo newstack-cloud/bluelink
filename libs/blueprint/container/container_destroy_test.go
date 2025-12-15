@@ -24,6 +24,7 @@ type ContainerDestroyTestSuite struct {
 	blueprint2Fixture blueprintDeployFixture
 	blueprint3Fixture blueprintDeployFixture
 	blueprint4Fixture blueprintDeployFixture
+	blueprint5Fixture blueprintDeployFixture
 	stateContainer    state.Container
 	suite.Suite
 }
@@ -31,7 +32,7 @@ type ContainerDestroyTestSuite struct {
 func (s *ContainerDestroyTestSuite) SetupTest() {
 	stateContainer := memstate.NewMemoryStateContainer()
 	s.stateContainer = stateContainer
-	fixtureInstances := []int{1, 2, 3, 4}
+	fixtureInstances := []int{1, 2, 3, 4, 5}
 	err := populateCurrentState(fixtureInstances, stateContainer, "destroy")
 	s.Require().NoError(err)
 
@@ -93,6 +94,15 @@ func (s *ContainerDestroyTestSuite) SetupTest() {
 	s.blueprint4Fixture, err = createBlueprintDeployFixture(
 		"destroy",
 		4,
+		loader,
+		baseBlueprintParams(),
+		schema.YAMLSpecFormat,
+	)
+	s.Require().NoError(err)
+
+	s.blueprint5Fixture, err = createBlueprintDeployFixture(
+		"destroy",
+		5,
 		loader,
 		baseBlueprintParams(),
 		schema.YAMLSpecFormat,
@@ -359,6 +369,234 @@ func (s *ContainerDestroyTestSuite) Test_fails_to_destroys_blueprint_instance_du
 	s.Assert().Equal("blueprint-instance-4", instance.InstanceID)
 }
 
+func (s *ContainerDestroyTestSuite) Test_fails_to_destroy_blueprint_instance_already_being_destroyed() {
+	channels := CreateDeployChannels()
+	// Blueprint instance 5 is in "Destroying" status (status=7) from fixture setup,
+	// simulating a stuck instance that crashed during a destroy operation.
+	// Without Force=true, the destroy should fail.
+	s.blueprint5Fixture.blueprintContainer.Destroy(
+		context.Background(),
+		&DestroyInput{
+			InstanceID: "blueprint-instance-5",
+			Changes:    blueprint5RemovalChanges(),
+			Rollback:   false,
+		},
+		channels,
+		blueprintDestroyParams(),
+	)
+
+	var finishMsg *DeploymentFinishedMessage
+	var err error
+	for err == nil && finishMsg == nil {
+		select {
+		case <-channels.ResourceUpdateChan:
+		case <-channels.ChildUpdateChan:
+		case <-channels.LinkUpdateChan:
+		case msg := <-channels.FinishChan:
+			finishMsg = &msg
+		case <-channels.DeploymentUpdateChan:
+		case err = <-channels.ErrChan:
+		case <-time.After(60 * time.Second):
+			err = errors.New(timeoutMessage)
+		}
+	}
+	s.Assert().NoError(err)
+	s.Assert().NotNil(finishMsg)
+	s.Assert().Equal(core.InstanceStatusDestroyFailed, finishMsg.Status)
+	s.Assert().Equal([]string{
+		instanceInProgressDeployFailedMessage("blueprint-instance-5", false),
+	}, finishMsg.FailureReasons)
+}
+
+func (s *ContainerDestroyTestSuite) Test_force_destroys_blueprint_instance_stuck_in_destroying() {
+	channels := CreateDeployChannels()
+	// Blueprint instance 5 is in "Destroying" status (from fixture setup) simulating
+	// a stuck instance that crashed during a destroy operation.
+	// With Force=true, the destroy should proceed instead of failing.
+	s.blueprint5Fixture.blueprintContainer.Destroy(
+		context.Background(),
+		&DestroyInput{
+			InstanceID: "blueprint-instance-5",
+			Changes:    blueprint5RemovalChanges(),
+			Rollback:   false,
+			Force:      true, // Force bypasses the in-progress check
+		},
+		channels,
+		blueprintDestroyParams(),
+	)
+
+	resourceUpdateMessages := []ResourceDeployUpdateMessage{}
+	childDeployUpdateMessages := []ChildDeployUpdateMessage{}
+	linkDeployUpdateMessages := []LinkDeployUpdateMessage{}
+	deploymentUpdateMessages := []DeploymentUpdateMessage{}
+	finishedMessage := (*DeploymentFinishedMessage)(nil)
+	var err error
+	for err == nil &&
+		finishedMessage == nil {
+		select {
+		case msg := <-channels.ResourceUpdateChan:
+			resourceUpdateMessages = append(resourceUpdateMessages, msg)
+		case msg := <-channels.ChildUpdateChan:
+			childDeployUpdateMessages = append(childDeployUpdateMessages, msg)
+		case msg := <-channels.LinkUpdateChan:
+			linkDeployUpdateMessages = append(linkDeployUpdateMessages, msg)
+		case msg := <-channels.FinishChan:
+			finishedMessage = &msg
+		case msg := <-channels.DeploymentUpdateChan:
+			deploymentUpdateMessages = append(deploymentUpdateMessages, msg)
+		case err = <-channels.ErrChan:
+		case <-time.After(60 * time.Second):
+			err = errors.New(timeoutMessage)
+		}
+	}
+	s.Require().NoError(err)
+
+	actualMessages := &actualMessages{
+		resourceDeployUpdateMessages: resourceUpdateMessages,
+		childDeployUpdateMessages:    childDeployUpdateMessages,
+		linkDeployUpdateMessages:     linkDeployUpdateMessages,
+		deploymentUpdateMessages:     deploymentUpdateMessages,
+		finishedMessage:              finishedMessage,
+	}
+	assertDeployMessageOrder(actualMessages, s.blueprint5Fixture.expected, &s.Suite)
+
+	// With force=true, the destroy should succeed and instance should be removed
+	_, err = s.stateContainer.Instances().Get(context.Background(), "blueprint-instance-5")
+	s.Assert().Error(err)
+	stateErr, isStateErr := err.(*state.Error)
+	s.Assert().True(isStateErr)
+	s.Assert().Equal(state.ErrInstanceNotFound, stateErr.Code)
+}
+
+func (s *ContainerDestroyTestSuite) Test_force_destroys_blueprint_instance_despite_resource_failure() {
+	channels := CreateDeployChannels()
+	// Blueprint instance 3 has a failing resource (failingOrderFunction).
+	// With Force=true, the destroy should continue and remove the instance from state
+	// even though the resource removal failed.
+	s.blueprint3Fixture.blueprintContainer.Destroy(
+		context.Background(),
+		&DestroyInput{
+			InstanceID: "blueprint-instance-3",
+			Changes:    blueprint3RemovalChanges(),
+			Rollback:   false,
+			Force:      true, // Force continues despite element removal failures
+		},
+		channels,
+		blueprintDestroyParams(),
+	)
+
+	finishedMessage := (*DeploymentFinishedMessage)(nil)
+	var err error
+	for err == nil &&
+		finishedMessage == nil {
+		select {
+		case <-channels.ResourceUpdateChan:
+		case <-channels.ChildUpdateChan:
+		case <-channels.LinkUpdateChan:
+		case msg := <-channels.FinishChan:
+			finishedMessage = &msg
+		case <-channels.DeploymentUpdateChan:
+		case err = <-channels.ErrChan:
+		case <-time.After(60 * time.Second):
+			err = errors.New(timeoutMessage)
+		}
+	}
+	s.Require().NoError(err)
+	s.Require().NotNil(finishedMessage)
+	// The finish message indicates the destroy failed due to the resource failure,
+	// but with Force=true the instance should still be removed from state.
+	s.Assert().Equal(core.InstanceStatusDestroyFailed, finishedMessage.Status)
+
+	// With force=true, the instance should be removed from state despite failure
+	_, err = s.stateContainer.Instances().Get(context.Background(), "blueprint-instance-3")
+	s.Assert().Error(err)
+	stateErr, isStateErr := err.(*state.Error)
+	s.Assert().True(isStateErr)
+	s.Assert().Equal(state.ErrInstanceNotFound, stateErr.Code)
+}
+
+func (s *ContainerDestroyTestSuite) Test_context_cancellation_drains_in_progress_destroy_items() {
+	channels := CreateDeployChannels()
+
+	// Create a context that is already cancelled to simulate mid-destroy cancellation
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	s.blueprint1Fixture.blueprintContainer.Destroy(
+		ctx,
+		&DestroyInput{
+			InstanceID: "blueprint-instance-1",
+			Changes:    blueprint1RemovalChanges(),
+			Rollback:   false,
+		},
+		channels,
+		blueprintDestroyParams(),
+	)
+
+	// Collect remaining messages - we should get a proper error message
+	// due to the draining behavior, not just hang forever
+	var finishMsg *DeploymentFinishedMessage
+	var channelErr error
+	for channelErr == nil && finishMsg == nil {
+		select {
+		case <-channels.ResourceUpdateChan:
+		case <-channels.ChildUpdateChan:
+		case <-channels.LinkUpdateChan:
+		case msg := <-channels.FinishChan:
+			finishMsg = &msg
+		case <-channels.DeploymentUpdateChan:
+		case channelErr = <-channels.ErrChan:
+		case <-time.After(60 * time.Second):
+			channelErr = errors.New(timeoutMessage)
+		}
+	}
+
+	// We should get a context cancelled error propagated
+	s.Assert().Error(channelErr)
+	s.Assert().ErrorIs(channelErr, context.Canceled)
+}
+
+func (s *ContainerDestroyTestSuite) Test_context_timeout_during_destroy_returns_error() {
+	channels := CreateDeployChannels()
+
+	// Create a context that is already timed out
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-1*time.Second))
+	defer cancel()
+
+	s.blueprint1Fixture.blueprintContainer.Destroy(
+		ctx,
+		&DestroyInput{
+			InstanceID: "blueprint-instance-1",
+			Changes:    blueprint1RemovalChanges(),
+			Rollback:   false,
+		},
+		channels,
+		blueprintDestroyParams(),
+	)
+
+	// Collect messages - we should get an error due to the timeout
+	// The draining behavior ensures we don't hang forever
+	var finishMsg *DeploymentFinishedMessage
+	var channelErr error
+	for channelErr == nil && finishMsg == nil {
+		select {
+		case <-channels.ResourceUpdateChan:
+		case <-channels.ChildUpdateChan:
+		case <-channels.LinkUpdateChan:
+		case msg := <-channels.FinishChan:
+			finishMsg = &msg
+		case <-channels.DeploymentUpdateChan:
+		case channelErr = <-channels.ErrChan:
+		case <-time.After(60 * time.Second):
+			channelErr = errors.New(timeoutMessage)
+		}
+	}
+
+	// We should get a context deadline exceeded error propagated
+	s.Assert().Error(channelErr)
+	s.Assert().ErrorIs(channelErr, context.DeadlineExceeded)
+}
+
 func blueprint1RemovalChanges() *changes.BlueprintChanges {
 	return &changes.BlueprintChanges{
 		RemovedResources: []string{
@@ -466,6 +704,37 @@ func blueprint4RemovalChanges() *changes.BlueprintChanges {
 		RemovedLinks: []string{
 			"preprocessOrderFunction::ordersTableFailingLink_0",
 			"preprocessOrderFunction::ordersTable_1",
+		},
+		RemovedExports: []string{
+			"environment",
+		},
+		ChildChanges: map[string]changes.BlueprintChanges{
+			"coreInfra": {
+				RemovedResources: []string{
+					"complexResource",
+				},
+				RemovedChildren: []string{},
+				RemovedLinks:    []string{},
+				RemovedExports:  []string{},
+			},
+		},
+	}
+}
+
+func blueprint5RemovalChanges() *changes.BlueprintChanges {
+	return &changes.BlueprintChanges{
+		RemovedResources: []string{
+			"ordersTable_0",
+			"ordersTable_1",
+			"saveOrderFunction",
+			"invoicesTable",
+		},
+		RemovedChildren: []string{
+			"coreInfra",
+		},
+		RemovedLinks: []string{
+			"saveOrderFunction::ordersTable_0",
+			"saveOrderFunction::ordersTable_1",
 		},
 		RemovedExports: []string{
 			"environment",

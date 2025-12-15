@@ -1,0 +1,41 @@
+version: 2025-11-02
+variables:
+  environment:
+    type: string
+  region:
+    type: string
+
+values:
+  region:
+    type: string
+    value: "${to_upper(variables.region)}"
+
+resources:
+  complexResource:
+    type: example/complex
+    description: "A complex resource type."
+    spec:
+      itemConfig:
+        endpoints:
+          - "https://example.com/1"
+          - "https://example.com/2"
+        ipv4: true
+        metadata:
+          region: ${variables.region}
+          environment: ${variables.environment}
+      vendorConfig:
+        - vendorNamespace: "example-vendor-namespace"
+          vendorId: "example-vendor-id"
+
+exports:
+  environment:
+    type: string
+    field: variables.environment
+    description: "The environment for the blueprint."
+  region:
+    type: string
+    field: values.region
+    description: "The region for the blueprint."
+
+metadata:
+  build: esbuild

@@ -41,7 +41,7 @@ func (c *defaultBlueprintContainer) StageChanges(
 		)
 	}
 
-	err = c.checkDrift(ctxWithInstanceID, resolvedInstanceID, paramOverrides)
+	err = c.checkDrift(ctxWithInstanceID, resolvedInstanceID, input.SkipDriftCheck, paramOverrides)
 	if err != nil {
 		return err
 	}
@@ -84,9 +84,10 @@ func (c *defaultBlueprintContainer) StageChanges(
 func (c *defaultBlueprintContainer) checkDrift(
 	ctx context.Context,
 	instanceID string,
+	skipDriftCheck bool,
 	params core.BlueprintParams,
 ) error {
-	if !c.driftCheckEnabled {
+	if skipDriftCheck || !c.driftCheckEnabled {
 		return nil
 	}
 

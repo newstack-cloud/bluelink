@@ -89,10 +89,10 @@ func (c *defaultBlueprintContainer) destroy(
 		return
 	}
 
-	if isInstanceInProgress(&currentInstanceState, input.Rollback) {
+	if !input.Force && isInstanceInProgress(&currentInstanceState, input.Rollback) {
 		channels.FinishChan <- c.createDeploymentFinishedMessage(
 			resolvedInstanceID,
-			determineInstanceDeployFailedStatus(input.Rollback, false /* newInstance */),
+			determineInstanceDestroyFailedStatus(input.Rollback),
 			[]string{instanceInProgressDeployFailedMessage(resolvedInstanceID, input.Rollback)},
 			c.clock.Since(startTime),
 			/* prepareElapsedTime */ nil,
@@ -137,19 +137,45 @@ func (c *defaultBlueprintContainer) destroy(
 			InstanceName: currentInstanceState.InstanceName,
 			Changes:      input.Changes,
 			Rollback:     input.Rollback,
+			Force:        input.Force,
 		},
 		deployCtx,
 		[]*DeploymentNode{},
 		/* isNewInstance */ false,
 	)
-	if err != nil {
-		channels.ErrChan <- wrapErrorForChildContext(err, paramOverrides)
-		return
+
+	// When force=true, we continue to remove the instance from state even if
+	// removeElements failed. This allows cleaning up instances where resources
+	// were manually deleted or providers are unavailable.
+	// We track whether element removal had failures for force mode reporting.
+	elementRemovalHadFailures := err != nil || sentFinishedMessage
+
+	if !input.Force {
+		if err != nil {
+			channels.ErrChan <- wrapErrorForChildContext(err, paramOverrides)
+			return
+		}
+
+		if sentFinishedMessage {
+			return
+		}
+	} else if elementRemovalHadFailures {
+		// Log the failure but continue with force destroy
+		if err != nil {
+			deployCtx.Logger.Warn(
+				"force destroy: continuing despite error during element removal",
+				core.ErrorLogField("error", err),
+			)
+		} else {
+			deployCtx.Logger.Warn(
+				"force destroy: some elements failed to be removed, continuing to remove instance",
+			)
+		}
 	}
 
-	if sentFinishedMessage {
-		return
-	}
+	// For force mode: a failure finish message may have been sent by removeElements,
+	// in which case we skip sending any further finish messages.
+	skipFinalMessage := input.Force && sentFinishedMessage
 
 	sentFinishedMessage = c.removeBlueprintInstanceFromState(
 		ctx,
@@ -158,13 +184,15 @@ func (c *defaultBlueprintContainer) destroy(
 			InstanceName: input.InstanceName,
 			Changes:      input.Changes,
 			Rollback:     input.Rollback,
+			Force:        input.Force,
 		},
 		channels,
 		startTime,
 		instances,
 		deployCtx.State,
+		skipFinalMessage,
 	)
-	if sentFinishedMessage {
+	if sentFinishedMessage || skipFinalMessage {
 		return
 	}
 
@@ -185,17 +213,22 @@ func (c *defaultBlueprintContainer) removeBlueprintInstanceFromState(
 	startTime time.Time,
 	instances state.InstancesContainer,
 	state DeploymentState,
+	// skipFinishMessage indicates whether to skip sending a finish message
+	// (e.g., because one was already sent from removeElements failure in force mode).
+	skipFinishMessage bool,
 ) bool {
 	_, err := instances.Remove(ctx, input.InstanceID)
 	if err != nil {
-		channels.FinishChan <- c.createDeploymentFinishedMessage(
-			input.InstanceID,
-			determineInstanceDestroyFailedStatus(input.Rollback),
-			[]string{err.Error()},
-			c.clock.Since(startTime),
-			/* prepareElapsedTime */
-			state.GetPrepareDuration(),
-		)
+		if !skipFinishMessage {
+			channels.FinishChan <- c.createDeploymentFinishedMessage(
+				input.InstanceID,
+				determineInstanceDestroyFailedStatus(input.Rollback),
+				[]string{err.Error()},
+				c.clock.Since(startTime),
+				/* prepareElapsedTime */
+				state.GetPrepareDuration(),
+			)
+		}
 		return true
 	}
 
