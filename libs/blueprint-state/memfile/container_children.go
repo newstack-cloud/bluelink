@@ -55,6 +55,9 @@ func (c *childrenContainerImpl) Attach(
 
 	if parentInstance, ok := getInstance(c.instances, parentInstanceID); ok {
 		if childInstance, ok := getInstance(c.instances, childInstanceID); ok {
+			if parentInstance.ChildBlueprints == nil {
+				parentInstance.ChildBlueprints = make(map[string]*state.InstanceState)
+			}
 			parentInstance.ChildBlueprints[childName] = childInstance
 			childLogger.Debug("persisting child instance attachment to parent instance")
 			return c.persister.updateInstance(parentInstance)
