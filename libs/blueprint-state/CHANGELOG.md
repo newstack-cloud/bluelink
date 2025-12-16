@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.2](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.4.1...blueprint-state/v0.4.2) (2025-12-16)
+
+
+### Bug Fixes
+
+* **blueprint-state:** add nil check for child blueprints when attaching to parent ([f01dbf5](https://github.com/newstack-cloud/bluelink/commit/f01dbf5eec3a6d3b2be1964faff3c22d90ecc679))
+
+
+### Dependencies
+
+* **blueprint-state:** update blueprint lib to 0.36.4 ([e87f069](https://github.com/newstack-cloud/bluelink/commit/e87f069bca1b953f73e723ca8c402c90b2204acc))
+
 ## [0.4.1](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.4.0...blueprint-state/v0.4.1) (2025-12-13)
 
 
