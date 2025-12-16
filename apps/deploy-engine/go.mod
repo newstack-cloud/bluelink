@@ -8,17 +8,17 @@ exclude google.golang.org/grpc/stats/opentelemetry v0.0.0-20240907200651-3ffb98b
 
 require (
 	github.com/auth0/go-jwt-middleware/v2 v2.3.1
-	github.com/go-playground/validator/v10 v10.28.0
+	github.com/go-playground/validator/v10 v10.29.0
 	github.com/go-viper/mapstructure/v2 v2.4.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/lestrrat-go/jwx v1.2.31
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.3
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.4
 	github.com/newstack-cloud/bluelink/libs/blueprint-resolvers v0.1.1
-	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.4.1
+	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.4.2
 	github.com/newstack-cloud/bluelink/libs/common v0.3.2
-	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.1.3
+	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.1.4
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/spf13/afero v1.15.0
 	github.com/spf13/viper v1.21.0
@@ -73,7 +73,7 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v1.2.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.10 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.11 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
