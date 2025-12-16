@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.36.4](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.36.3...blueprint/v0.36.4) (2025-12-16)
+
+
+### Features
+
+* **blueprint:** add behaviour to reverse a change set ([bbbdb1a](https://github.com/newstack-cloud/bluelink/commit/bbbdb1acd7983580eace24ee397d9456bf60dfb5))
+* **blueprint:** add improvements to blueprint container ([39c5e2e](https://github.com/newstack-cloud/bluelink/commit/39c5e2e3a1e01c603cb521e7a08bf4bbf7b56cae))
+
+
+### Bug Fixes
+
+* **blueprint:** ensure empty mapping nodes are treated correctly for protobuf conversion ([1822d2f](https://github.com/newstack-cloud/bluelink/commit/1822d2fe03cede073bcf63d6c5d60fc2009bdc9a))
+
 ## [0.36.3](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.36.2...blueprint/v0.36.3) (2025-12-13)
 
 
