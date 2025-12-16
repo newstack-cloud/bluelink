@@ -59,5 +59,7 @@ fi
 
 if [[ -n "$GITHUB_ACTION" ]]; then
   # We are in a CI environment so run tests again to generate JSON report.
-  go test -timeout 120000ms -json -tags "$TEST_TYPES" `go list ./... | egrep -v '(/(schemapb|testutils))$'` > report.json
+  # Use tee to both save to file and show output, preserving the exit code with PIPESTATUS.
+  go test -timeout 120000ms -json `go list ./... | egrep -v '(/(schemapb|testutils))$'` 2>&1 | tee report.json
+  test ${PIPESTATUS[0]} -eq 0
 fi
