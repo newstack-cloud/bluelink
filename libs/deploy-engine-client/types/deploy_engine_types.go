@@ -65,6 +65,10 @@ type CreateChangesetPayload struct {
 	// This will only be used if the `instanceId` or `instanceName` fields are provided.
 	// If this is not provided, the default value will be false.
 	Destroy bool `json:"destroy"`
+	// SkipDriftCheck, when true, skips drift detection during change staging.
+	// Drift detection checks for external changes to resources that were made
+	// outside of the deploy engine.
+	SkipDriftCheck bool `json:"skipDriftCheck"`
 	// Config values for the change staging process
 	// that will be used in plugins and passed into the blueprint.
 	Config *BlueprintOperationConfig `json:"config"`
@@ -224,7 +228,16 @@ type BlueprintInstancePayload struct {
 	// for a previously destroyed blueprint instance.
 	// If true, and an existing blueprint instance is being updated,
 	// the update will be treated as a rollback operation for the previous state.
-	Rollback bool `json:"rollback"`
+	AsRollback bool `json:"asRollback"`
+	// If true, the deployment will automatically rollback on failure.
+	// For new deployments, this destroys partially created resources.
+	// For updates, this reverts to the previous instance state.
+	// For destroys, this recreates destroyed resources from the previous state.
+	AutoRollback bool `json:"autoRollback"`
+	// Force bypasses state validation checks that prevent deployment when the instance
+	// is already in an active state (e.g., Deploying, Updating).
+	// This is an escape hatch for recovering from stuck states.
+	Force bool `json:"force"`
 	// Config values for the deployment process
 	// that will be used in plugins and passed into the blueprint.
 	Config *BlueprintOperationConfig `json:"config"`
