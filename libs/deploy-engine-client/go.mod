@@ -6,8 +6,8 @@ toolchain go1.24.4
 
 require (
 	github.com/gorilla/mux v1.8.1
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.0
-	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.4.0
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.4
+	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.4.2
 	github.com/newstack-cloud/bluelink/libs/common v0.3.2
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/stretchr/testify v1.11.1
@@ -30,7 +30,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
-	go.uber.org/zap v1.27.0 // indirect
+	go.uber.org/zap v1.27.1 // indirect
 	golang.org/x/net v0.0.0-20191116160921-f9c825593386 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
