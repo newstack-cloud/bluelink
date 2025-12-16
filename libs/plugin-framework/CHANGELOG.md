@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.4](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.1.3...plugin-framework/v0.1.4) (2025-12-16)
+
+
+### Bug Fixes
+
+* **plugin-framework:** allow empty resource spec states to reveal more useful errors ([9b51614](https://github.com/newstack-cloud/bluelink/commit/9b516148c3b84129bfbca35bdf0111bfb5d5adec))
+
+
+### Dependencies
+
+* **plugin-framework:** update blueprint lib to 0.36.4 ([87c8ec5](https://github.com/newstack-cloud/bluelink/commit/87c8ec51ed4a49b1233b116eb2643602babd9b41))
+
 ## [0.1.3](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.1.2...plugin-framework/v0.1.3) (2025-12-09)
 
 
