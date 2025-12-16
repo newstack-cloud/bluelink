@@ -9,12 +9,15 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/blueprint"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/inputvalidation"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
+	internalutils "github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/utils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/includes"
@@ -205,7 +208,8 @@ func (c *Controller) DestroyBlueprintInstanceHandler(
 	go c.startDestroy(
 		changeset,
 		instance.InstanceID,
-		payload.Rollback,
+		payload.AsRollback,
+		payload.Force,
 		params,
 	)
 
@@ -273,6 +277,8 @@ func (c *Controller) handleDeployRequest(
 		return
 	}
 
+	// Add blueprint directory to context variables for resolving relative child blueprint paths.
+	finalConfig = internalutils.EnsureBlueprintDirContextVar(finalConfig, payload.BlueprintDocumentInfo.Directory)
 	params := c.paramsProvider.CreateFromRequestConfig(finalConfig)
 
 	instanceID, err := c.startDeployment(
@@ -280,7 +286,10 @@ func (c *Controller) handleDeployRequest(
 		changeset,
 		getInstanceID(existingInstance),
 		payload.InstanceName,
-		payload.Rollback,
+		payload.AsRollback,
+		payload.AutoRollback,
+		payload.Force,
+		existingInstance,
 		helpersv1.GetFormat(payload.BlueprintFile),
 		params,
 	)
@@ -374,6 +383,9 @@ func (c *Controller) startDeployment(
 	deployInstanceID string,
 	instanceName string,
 	forRollback bool,
+	autoRollback bool,
+	force bool,
+	previousInstanceState *state.InstanceState,
 	format schema.SpecFormat,
 	params core.BlueprintParams,
 ) (string, error) {
@@ -404,6 +416,7 @@ func (c *Controller) startDeployment(
 			InstanceName: instanceName,
 			Changes:      changeset.Changes,
 			Rollback:     forRollback,
+			Force:        force,
 		},
 		channels,
 		params,
@@ -433,6 +446,9 @@ func (c *Controller) startDeployment(
 		finalInstanceID,
 		"deploying blueprint instance",
 		channels,
+		changeset,
+		autoRollback,
+		previousInstanceState,
 		c.logger.Named("deployment").WithFields(
 			core.StringLogField("instanceId", finalInstanceID),
 		),
@@ -477,6 +493,7 @@ func (c *Controller) startDestroy(
 	changeset *manage.Changeset,
 	destroyInstanceID string,
 	forRollback bool,
+	force bool,
 	params core.BlueprintParams,
 ) {
 	ctxWithTimeout, cancel := context.WithTimeout(
@@ -511,6 +528,7 @@ func (c *Controller) startDestroy(
 			InstanceID: destroyInstanceID,
 			Changes:    changeset.Changes,
 			Rollback:   forRollback,
+			Force:      force,
 		},
 		channels,
 		params,
@@ -522,6 +540,9 @@ func (c *Controller) startDestroy(
 		destroyInstanceID,
 		"destroying blueprint instance",
 		channels,
+		changeset,
+		false, // autoRollback is not applicable for destroy operations
+		nil,   // no previous state needed for destroy operations
 		c.logger.Named("destroy").WithFields(
 			core.StringLogField("instanceId", destroyInstanceID),
 		),
@@ -534,6 +555,9 @@ func (c *Controller) listenForDeploymentUpdates(
 	instanceID string,
 	action string,
 	channels *container.DeployChannels,
+	changeset *manage.Changeset,
+	autoRollback bool,
+	previousInstanceState *state.InstanceState,
 	logger core.Logger,
 ) {
 	defer cancelCtx()
@@ -551,7 +575,13 @@ func (c *Controller) listenForDeploymentUpdates(
 		case msg := <-channels.DeploymentUpdateChan:
 			c.handleDeploymentUpdateMessage(ctx, msg, instanceID, action, logger)
 		case msg := <-channels.FinishChan:
-			c.handleDeploymentFinishUpdateMessage(ctx, msg, instanceID, action, logger)
+			shouldRollback, _ := shouldTriggerAutoRollback(msg.Status)
+			willAutoRollback := autoRollback && shouldRollback
+			// If auto-rollback will trigger, don't mark this as end of stream
+			// as the rollback events will follow.
+			c.handleDeploymentFinishUpdateMessageWithEndOfStream(
+				ctx, msg, instanceID, action, !willAutoRollback, logger,
+			)
 			finishMsg = &msg
 		case err = <-channels.ErrChan:
 		case <-ctx.Done():
@@ -567,6 +597,25 @@ func (c *Controller) listenForDeploymentUpdates(
 			action,
 			logger,
 		)
+		return
+	}
+
+	// Check if auto-rollback should be triggered after deployment failure
+	if finishMsg != nil && autoRollback {
+		shouldRollback, rollbackType := shouldTriggerAutoRollback(finishMsg.Status)
+		if shouldRollback {
+			logger.Info(
+				"auto-rollback triggered due to deployment failure",
+				core.IntegerLogField("status", int64(finishMsg.Status)),
+				core.IntegerLogField("rollbackType", int64(rollbackType)),
+			)
+			switch rollbackType {
+			case AutoRollbackTypeDestroy:
+				c.executeNewDeploymentRollback(instanceID, changeset)
+			case AutoRollbackTypeRevert:
+				c.executeUpdateRollback(instanceID, changeset, previousInstanceState, logger)
+			}
+		}
 	}
 }
 
@@ -646,11 +695,12 @@ func (c *Controller) handleDeploymentUpdateMessage(
 	)
 }
 
-func (c *Controller) handleDeploymentFinishUpdateMessage(
+func (c *Controller) handleDeploymentFinishUpdateMessageWithEndOfStream(
 	ctx context.Context,
 	msg container.DeploymentFinishedMessage,
 	instanceID string,
 	action string,
+	endOfStream bool,
 	logger core.Logger,
 ) {
 	c.saveDeploymentEvent(
@@ -658,10 +708,169 @@ func (c *Controller) handleDeploymentFinishUpdateMessage(
 		eventTypeDeployFinished,
 		&msg,
 		msg.UpdateTimestamp,
-		/* endOfStream */ true,
+		endOfStream,
 		instanceID,
 		action,
 		logger,
+	)
+}
+
+// AutoRollbackType specifies the type of automatic rollback to perform.
+type AutoRollbackType int
+
+const (
+	// AutoRollbackTypeNone indicates no auto-rollback should be performed.
+	AutoRollbackTypeNone AutoRollbackType = iota
+	// AutoRollbackTypeDestroy indicates the failed deployment should be rolled back
+	// by destroying partially-created resources (used for DeployFailed).
+	AutoRollbackTypeDestroy
+	// AutoRollbackTypeRevert indicates the failed update/destroy should be rolled back
+	// by reverting to the previous state using a reverse changeset.
+	AutoRollbackTypeRevert
+)
+
+// shouldTriggerAutoRollback determines if auto-rollback should be triggered
+// based on the deployment finish status.
+// Returns (true, AutoRollbackTypeDestroy) for failed new deployments that need destruction.
+// Returns (true, AutoRollbackTypeRevert) for failed updates/destroys that need state reversal.
+// Returns (false, AutoRollbackTypeNone) for all other statuses.
+func shouldTriggerAutoRollback(status core.InstanceStatus) (bool, AutoRollbackType) {
+	switch status {
+	case core.InstanceStatusDeployFailed:
+		// New deployment failed - destroy partially created resources
+		return true, AutoRollbackTypeDestroy
+	case core.InstanceStatusUpdateFailed:
+		// Update failed - revert to previous state using reverse changeset
+		return true, AutoRollbackTypeRevert
+	case core.InstanceStatusDestroyFailed:
+		// Destroy failed - recreate destroyed resources from previous state
+		return true, AutoRollbackTypeRevert
+	default:
+		// Don't rollback for:
+		// - Already rolling back statuses
+		// - Successful statuses (Deployed, Updated, Destroyed)
+		return false, AutoRollbackTypeNone
+	}
+}
+
+// Initiates an automatic rollback after a deployment failure.
+// For new instances, this destroys the partially created resources.
+func (c *Controller) executeNewDeploymentRollback(
+	instanceID string,
+	changeset *manage.Changeset,
+) {
+	// Use startDestroy with forRollback=true to destroy the failed instance.
+	// This will create a new context and event stream for the rollback operation.
+	// The rollback events will be sent to the same channel as the original deployment,
+	// keeping the stream open until rollback completes.
+	c.startDestroy(
+		changeset,
+		instanceID,
+		true,  // forRollback - marks this as a rollback operation
+		false, // force - auto-rollback does not use force mode
+		// Use empty params as we don't need blueprint params for destroy
+		blueprint.CreateEmptyBlueprintParams(),
+	)
+}
+
+// Initiates an automatic rollback after an update or destroy failure.
+// This generates a reverse changeset from the original changes and previous state,
+// then deploys the reverse changes to restore the instance to its previous state.
+func (c *Controller) executeUpdateRollback(
+	instanceID string,
+	changeset *manage.Changeset,
+	previousInstanceState *state.InstanceState,
+	logger core.Logger,
+) {
+	if changeset == nil || changeset.Changes == nil {
+		logger.Warn(
+			"cannot execute update rollback: changeset or changes is nil",
+			core.StringLogField("instanceId", instanceID),
+		)
+		return
+	}
+
+	if previousInstanceState == nil {
+		logger.Warn(
+			"cannot execute update rollback: previous instance state is nil",
+			core.StringLogField("instanceId", instanceID),
+		)
+		return
+	}
+
+	// Generate the reverse changeset to undo the original changes
+	reverseChanges, err := changes.ReverseChangeset(changeset.Changes, previousInstanceState)
+	if err != nil {
+		logger.Error(
+			"failed to generate reverse changeset for update rollback",
+			core.ErrorLogField("error", err),
+			core.StringLogField("instanceId", instanceID),
+		)
+		return
+	}
+	if reverseChanges == nil {
+		logger.Warn(
+			"cannot execute update rollback: reverse changeset generation returned nil",
+			core.StringLogField("instanceId", instanceID),
+		)
+		return
+	}
+
+	ctxWithTimeout, cancel := context.WithTimeout(
+		context.Background(),
+		c.deploymentTimeout,
+	)
+
+	// Load the blueprint from the original changeset location
+	blueprintContainer, err := c.blueprintLoader.Load(
+		ctxWithTimeout,
+		changeset.BlueprintLocation,
+		blueprint.CreateEmptyBlueprintParams(),
+	)
+	if err != nil {
+		cancel()
+		logger.Error(
+			"failed to load blueprint for update rollback",
+			core.ErrorLogField("error", err),
+			core.StringLogField("instanceId", instanceID),
+			core.StringLogField("blueprintLocation", changeset.BlueprintLocation),
+		)
+		return
+	}
+
+	channels := container.CreateDeployChannels()
+	err = blueprintContainer.Deploy(
+		ctxWithTimeout,
+		&container.DeployInput{
+			InstanceID:   instanceID,
+			InstanceName: previousInstanceState.InstanceName,
+			Changes:      reverseChanges,
+			Rollback:     true, // Mark as rollback operation
+		},
+		channels,
+		blueprint.CreateEmptyBlueprintParams(),
+	)
+	if err != nil {
+		cancel()
+		logger.Error(
+			"failed to start update rollback deployment",
+			core.ErrorLogField("error", err),
+			core.StringLogField("instanceId", instanceID),
+		)
+		return
+	}
+
+	// Listen for rollback deployment updates without triggering further auto-rollback
+	c.listenForDeploymentUpdates(
+		ctxWithTimeout,
+		cancel,
+		instanceID,
+		"rolling back update",
+		channels,
+		changeset,
+		false, // autoRollback=false to prevent infinite rollback loops
+		nil,   // no previous state needed for rollback of rollback
+		logger.Named("updateRollback"),
 	)
 }
 

@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,6 +24,96 @@ type MockBlueprintLoader struct {
 	changeStagingEventSequence []ChangeStagingEvent
 	deployError                error
 	changeStagingError         error
+	// DestroyTracker tracks calls to the Destroy method for testing auto-rollback.
+	DestroyTracker *DestroyTracker
+	// DeployTracker tracks calls to the Deploy method for testing update rollback.
+	DeployTracker *DeployTracker
+	// DestroyEventSequence is the sequence of events to emit during destroy operations.
+	destroyEventSequence []container.DeployEvent
+	// RollbackDeployEventSequence is the sequence of events to emit during rollback deploy operations.
+	rollbackDeployEventSequence []container.DeployEvent
+}
+
+// DestroyTracker tracks calls to the Destroy method for testing.
+type DestroyTracker struct {
+	mu sync.Mutex
+	// DestroyCalls contains all the destroy inputs that were passed to the Destroy method.
+	DestroyCalls []*container.DestroyInput
+}
+
+// NewDestroyTracker creates a new DestroyTracker.
+func NewDestroyTracker() *DestroyTracker {
+	return &DestroyTracker{
+		DestroyCalls: []*container.DestroyInput{},
+	}
+}
+
+// RecordCall records a destroy call.
+func (t *DestroyTracker) RecordCall(input *container.DestroyInput) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.DestroyCalls = append(t.DestroyCalls, input)
+}
+
+// WasDestroyCalled returns true if Destroy was called at least once.
+func (t *DestroyTracker) WasDestroyCalled() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return len(t.DestroyCalls) > 0
+}
+
+// GetRollbackCalls returns only the destroy calls that were made as rollback operations.
+func (t *DestroyTracker) GetRollbackCalls() []*container.DestroyInput {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	var rollbackCalls []*container.DestroyInput
+	for _, call := range t.DestroyCalls {
+		if call.Rollback {
+			rollbackCalls = append(rollbackCalls, call)
+		}
+	}
+	return rollbackCalls
+}
+
+// DeployTracker tracks calls to the Deploy method for testing.
+type DeployTracker struct {
+	mu sync.Mutex
+	// DeployCalls contains all the deploy inputs that were passed to the Deploy method.
+	DeployCalls []*container.DeployInput
+}
+
+// NewDeployTracker creates a new DeployTracker.
+func NewDeployTracker() *DeployTracker {
+	return &DeployTracker{
+		DeployCalls: []*container.DeployInput{},
+	}
+}
+
+// RecordCall records a deploy call.
+func (t *DeployTracker) RecordCall(input *container.DeployInput) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.DeployCalls = append(t.DeployCalls, input)
+}
+
+// WasDeployCalled returns true if Deploy was called at least once.
+func (t *DeployTracker) WasDeployCalled() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return len(t.DeployCalls) > 0
+}
+
+// GetRollbackDeployCalls returns only the deploy calls that were made as rollback operations.
+func (t *DeployTracker) GetRollbackDeployCalls() []*container.DeployInput {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	var rollbackCalls []*container.DeployInput
+	for _, call := range t.DeployCalls {
+		if call.Rollback {
+			rollbackCalls = append(rollbackCalls, call)
+		}
+	}
+	return rollbackCalls
 }
 
 type MockBlueprintLoaderOption func(*MockBlueprintLoader)
@@ -36,6 +127,34 @@ func WithMockBlueprintLoaderDeployError(err error) MockBlueprintLoaderOption {
 func WithMockBlueprintLoaderChangeStagingError(err error) MockBlueprintLoaderOption {
 	return func(loader *MockBlueprintLoader) {
 		loader.changeStagingError = err
+	}
+}
+
+// WithDestroyTracker configures a DestroyTracker to track destroy calls.
+func WithDestroyTracker(tracker *DestroyTracker) MockBlueprintLoaderOption {
+	return func(loader *MockBlueprintLoader) {
+		loader.DestroyTracker = tracker
+	}
+}
+
+// WithDestroyEventSequence configures the event sequence for destroy operations.
+func WithDestroyEventSequence(events []container.DeployEvent) MockBlueprintLoaderOption {
+	return func(loader *MockBlueprintLoader) {
+		loader.destroyEventSequence = events
+	}
+}
+
+// WithDeployTracker configures a DeployTracker to track deploy calls.
+func WithDeployTracker(tracker *DeployTracker) MockBlueprintLoaderOption {
+	return func(loader *MockBlueprintLoader) {
+		loader.DeployTracker = tracker
+	}
+}
+
+// WithRollbackDeployEventSequence configures the event sequence for rollback deploy operations.
+func WithRollbackDeployEventSequence(events []container.DeployEvent) MockBlueprintLoaderOption {
+	return func(loader *MockBlueprintLoader) {
+		loader.rollbackDeployEventSequence = events
 	}
 }
 
@@ -68,13 +187,17 @@ func (m *MockBlueprintLoader) Load(
 	params core.BlueprintParams,
 ) (container.BlueprintContainer, error) {
 	return &MockBlueprintContainer{
-		stubDiagnostics:            m.stubDiagnostics,
-		clock:                      m.clock,
-		instances:                  m.instances,
-		deployEventSequence:        m.deployEventSequence,
-		changeStagingEventSequence: m.changeStagingEventSequence,
-		deployError:                m.deployError,
-		changeStagingError:         m.changeStagingError,
+		stubDiagnostics:             m.stubDiagnostics,
+		clock:                       m.clock,
+		instances:                   m.instances,
+		deployEventSequence:         m.deployEventSequence,
+		changeStagingEventSequence:  m.changeStagingEventSequence,
+		deployError:                 m.deployError,
+		changeStagingError:          m.changeStagingError,
+		destroyTracker:              m.DestroyTracker,
+		deployTracker:               m.DeployTracker,
+		destroyEventSequence:        m.destroyEventSequence,
+		rollbackDeployEventSequence: m.rollbackDeployEventSequence,
 	}, nil
 }
 
@@ -95,13 +218,17 @@ func (m *MockBlueprintLoader) LoadString(
 	params core.BlueprintParams,
 ) (container.BlueprintContainer, error) {
 	return &MockBlueprintContainer{
-		stubDiagnostics:            m.stubDiagnostics,
-		clock:                      m.clock,
-		instances:                  m.instances,
-		deployEventSequence:        m.deployEventSequence,
-		changeStagingEventSequence: m.changeStagingEventSequence,
-		deployError:                m.deployError,
-		changeStagingError:         m.changeStagingError,
+		stubDiagnostics:             m.stubDiagnostics,
+		clock:                       m.clock,
+		instances:                   m.instances,
+		deployEventSequence:         m.deployEventSequence,
+		changeStagingEventSequence:  m.changeStagingEventSequence,
+		deployError:                 m.deployError,
+		changeStagingError:          m.changeStagingError,
+		destroyTracker:              m.DestroyTracker,
+		deployTracker:               m.DeployTracker,
+		destroyEventSequence:        m.destroyEventSequence,
+		rollbackDeployEventSequence: m.rollbackDeployEventSequence,
 	}, nil
 }
 
@@ -122,13 +249,17 @@ func (m *MockBlueprintLoader) LoadFromSchema(
 	params core.BlueprintParams,
 ) (container.BlueprintContainer, error) {
 	return &MockBlueprintContainer{
-		stubDiagnostics:            m.stubDiagnostics,
-		clock:                      m.clock,
-		instances:                  m.instances,
-		deployEventSequence:        m.deployEventSequence,
-		changeStagingEventSequence: m.changeStagingEventSequence,
-		deployError:                m.deployError,
-		changeStagingError:         m.changeStagingError,
+		stubDiagnostics:             m.stubDiagnostics,
+		clock:                       m.clock,
+		instances:                   m.instances,
+		deployEventSequence:         m.deployEventSequence,
+		changeStagingEventSequence:  m.changeStagingEventSequence,
+		deployError:                 m.deployError,
+		changeStagingError:          m.changeStagingError,
+		destroyTracker:              m.DestroyTracker,
+		deployTracker:               m.DeployTracker,
+		destroyEventSequence:        m.destroyEventSequence,
+		rollbackDeployEventSequence: m.rollbackDeployEventSequence,
 	}, nil
 }
 
@@ -143,13 +274,17 @@ func (m *MockBlueprintLoader) ValidateFromSchema(
 }
 
 type MockBlueprintContainer struct {
-	stubDiagnostics            []*core.Diagnostic
-	clock                      commoncore.Clock
-	instances                  state.InstancesContainer
-	deployEventSequence        []container.DeployEvent
-	changeStagingEventSequence []ChangeStagingEvent
-	changeStagingError         error
-	deployError                error
+	stubDiagnostics             []*core.Diagnostic
+	clock                       commoncore.Clock
+	instances                   state.InstancesContainer
+	deployEventSequence         []container.DeployEvent
+	changeStagingEventSequence  []ChangeStagingEvent
+	changeStagingError          error
+	deployError                 error
+	destroyTracker              *DestroyTracker
+	deployTracker               *DeployTracker
+	destroyEventSequence        []container.DeployEvent
+	rollbackDeployEventSequence []container.DeployEvent
 }
 
 func (m *MockBlueprintContainer) StageChanges(
@@ -189,10 +324,22 @@ func (m *MockBlueprintContainer) Deploy(
 	channels *container.DeployChannels,
 	paramOverrides core.BlueprintParams,
 ) error {
+	// Track the deploy call if a tracker is configured
+	if m.deployTracker != nil {
+		m.deployTracker.RecordCall(input)
+	}
+
 	instanceID := input.InstanceID
 	if instanceID == "" {
 		instanceID = uuid.New().String()
 	}
+
+	// Use rollback event sequence if this is a rollback deploy and one is configured
+	eventSequence := m.deployEventSequence
+	if input.Rollback && len(m.rollbackDeployEventSequence) > 0 {
+		eventSequence = m.rollbackDeployEventSequence
+	}
+
 	go func() {
 		currentTimestamp := m.clock.Now().Unix()
 		err := m.instances.Save(
@@ -209,7 +356,7 @@ func (m *MockBlueprintContainer) Deploy(
 			return
 		}
 
-		for i, event := range m.deployEventSequence {
+		for i, event := range eventSequence {
 			if event.ResourceUpdateEvent != nil {
 				event.ResourceUpdateEvent.InstanceID = instanceID
 				channels.ResourceUpdateChan <- *event.ResourceUpdateEvent
@@ -250,7 +397,31 @@ func (m *MockBlueprintContainer) Destroy(
 	channels *container.DeployChannels,
 	paramOverrides core.BlueprintParams,
 ) {
-	// Destroy doesn't need to do anything in the mock implementation.
+	// Track the destroy call if a tracker is configured
+	if m.destroyTracker != nil {
+		m.destroyTracker.RecordCall(input)
+	}
+
+	// Emit destroy events if configured
+	if len(m.destroyEventSequence) > 0 {
+		go func() {
+			for _, event := range m.destroyEventSequence {
+				if event.ResourceUpdateEvent != nil {
+					event.ResourceUpdateEvent.InstanceID = input.InstanceID
+					channels.ResourceUpdateChan <- *event.ResourceUpdateEvent
+				}
+				if event.DeploymentUpdateEvent != nil {
+					event.DeploymentUpdateEvent.InstanceID = input.InstanceID
+					channels.DeploymentUpdateChan <- *event.DeploymentUpdateEvent
+				}
+				if event.FinishEvent != nil {
+					event.FinishEvent.InstanceID = input.InstanceID
+					channels.FinishChan <- *event.FinishEvent
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
+		}()
+	}
 }
 
 func (m *MockBlueprintContainer) SpecLinkInfo() links.SpecLinkInfo {

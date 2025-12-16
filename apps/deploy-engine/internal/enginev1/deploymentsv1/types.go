@@ -26,6 +26,8 @@ type CreateChangesetRequestPayload struct {
 	// This will only be used if the `instanceId` or `instanceName` fields are provided.
 	// If this is not provided, the default value will be false.
 	Destroy bool `json:"destroy"`
+	// SkipDriftCheck, when true, skips drift detection during change staging.
+	SkipDriftCheck bool `json:"skipDriftCheck"`
 	// Config values for the change staging process
 	// that will be used in plugins and passed into the blueprint.
 	Config *types.BlueprintOperationConfig `json:"config"`
@@ -54,7 +56,26 @@ type BlueprintInstanceRequestPayload struct {
 	// for a previously destroyed blueprint instance.
 	// If true, and an existing blueprint instance is being updated,
 	// the update will be treated as a rollback operation for the previous state.
-	Rollback bool `json:"rollback"`
+	AsRollback bool `json:"asRollback"`
+	// If true, the deployment will automatically rollback on failure.
+	// Auto-rollback is supported for:
+	//
+	// - New deployments (DeployFailed): Destroys partially created resources,
+	//   ensuring a clean state where users can fix issues and retry.
+	//
+	// - Updates (UpdateFailed): Reverts to the previous instance state by
+	//   generating and deploying a reverse changeset that undoes the failed changes.
+	//
+	// - Destroys (DestroyFailed): Recreates destroyed resources from the previous
+	//   instance state using a reverse changeset.
+	//
+	// Rollback operations have auto-rollback disabled to prevent infinite loops.
+	AutoRollback bool `json:"autoRollback"`
+	// Force bypasses state validation checks that prevent deployment when the instance
+	// is already in an active state (e.g., Deploying, Updating).
+	// This is an escape hatch for recovering from stuck states where the instance
+	// is in an inconsistent state due to a crash or unexpected termination.
+	Force bool `json:"force"`
 	// Config values for the deployment process
 	// that will be used in plugins and passed into the blueprint.
 	Config *types.BlueprintOperationConfig `json:"config"`
@@ -73,7 +94,13 @@ type BlueprintInstanceDestroyRequestPayload struct {
 	// This will usually be set to true when rolling back a recent first time
 	// deployment that needs to be rolled back due to failure in a parent
 	// blueprint instance.
-	Rollback bool `json:"rollback"`
+	AsRollback bool `json:"asRollback"`
+	// Force continues the destroy operation even if individual resource/link/child
+	// destruction fails, and removes the blueprint instance record from state
+	// regardless of whether all resources were successfully destroyed.
+	// This is useful for removing instances where underlying resources were manually
+	// deleted or when a provider is unavailable.
+	Force bool `json:"force"`
 	// Config values for the destroy process
 	// that will be used in plugins.
 	Config *types.BlueprintOperationConfig `json:"config"`

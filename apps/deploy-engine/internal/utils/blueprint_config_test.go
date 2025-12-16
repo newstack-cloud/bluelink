@@ -1,4 +1,4 @@
-package deploymentsv1
+package utils
 
 import (
 	"testing"
@@ -9,17 +9,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_ensureBlueprintDirContextVar_adds_directory_to_empty_config(t *testing.T) {
+func TestEnsureBlueprintDirContextVar_adds_directory_to_empty_config(t *testing.T) {
 	config := &types.BlueprintOperationConfig{}
 	directory := "/path/to/blueprint"
 
-	result := ensureBlueprintDirContextVar(config, directory)
+	result := EnsureBlueprintDirContextVar(config, directory)
 
 	assert.NotNil(t, result.ContextVariables)
 	assert.Equal(t, directory, *result.ContextVariables[resolverfs.BlueprintDirectoryContextVar].StringValue)
 }
 
-func Test_ensureBlueprintDirContextVar_adds_directory_to_existing_context_vars(t *testing.T) {
+func TestEnsureBlueprintDirContextVar_adds_directory_to_existing_context_vars(t *testing.T) {
 	existingValue := "existing-value"
 	config := &types.BlueprintOperationConfig{
 		ContextVariables: map[string]*core.ScalarValue{
@@ -30,41 +30,41 @@ func Test_ensureBlueprintDirContextVar_adds_directory_to_existing_context_vars(t
 	}
 	directory := "/path/to/blueprint"
 
-	result := ensureBlueprintDirContextVar(config, directory)
+	result := EnsureBlueprintDirContextVar(config, directory)
 
 	assert.Equal(t, directory, *result.ContextVariables[resolverfs.BlueprintDirectoryContextVar].StringValue)
 	// Existing var should still be present
 	assert.Equal(t, existingValue, *result.ContextVariables["existingVar"].StringValue)
 }
 
-func Test_ensureBlueprintDirContextVar_creates_config_for_nil_input(t *testing.T) {
+func TestEnsureBlueprintDirContextVar_creates_config_for_nil_input(t *testing.T) {
 	directory := "/path/to/blueprint"
 
-	result := ensureBlueprintDirContextVar(nil, directory)
+	result := EnsureBlueprintDirContextVar(nil, directory)
 
 	assert.NotNil(t, result)
 	assert.NotNil(t, result.ContextVariables)
 	assert.Equal(t, directory, *result.ContextVariables[resolverfs.BlueprintDirectoryContextVar].StringValue)
 }
 
-func Test_ensureBlueprintDirContextVar_returns_nil_for_empty_directory_and_nil_config(t *testing.T) {
-	result := ensureBlueprintDirContextVar(nil, "")
+func TestEnsureBlueprintDirContextVar_returns_nil_for_empty_directory_and_nil_config(t *testing.T) {
+	result := EnsureBlueprintDirContextVar(nil, "")
 
 	// Should return nil since no directory was provided
 	assert.Nil(t, result)
 }
 
-func Test_ensureBlueprintDirContextVar_returns_config_unchanged_for_empty_directory(t *testing.T) {
+func TestEnsureBlueprintDirContextVar_returns_config_unchanged_for_empty_directory(t *testing.T) {
 	config := &types.BlueprintOperationConfig{}
 
-	result := ensureBlueprintDirContextVar(config, "")
+	result := EnsureBlueprintDirContextVar(config, "")
 
 	// Should return same config unchanged
 	assert.Same(t, config, result)
 	assert.Nil(t, result.ContextVariables)
 }
 
-func Test_ensureBlueprintDirContextVar_overwrites_existing_blueprint_dir(t *testing.T) {
+func TestEnsureBlueprintDirContextVar_overwrites_existing_blueprint_dir(t *testing.T) {
 	oldDir := "/old/path"
 	config := &types.BlueprintOperationConfig{
 		ContextVariables: map[string]*core.ScalarValue{
@@ -75,7 +75,7 @@ func Test_ensureBlueprintDirContextVar_overwrites_existing_blueprint_dir(t *test
 	}
 	newDir := "/new/path"
 
-	result := ensureBlueprintDirContextVar(config, newDir)
+	result := EnsureBlueprintDirContextVar(config, newDir)
 
 	assert.Equal(t, newDir, *result.ContextVariables[resolverfs.BlueprintDirectoryContextVar].StringValue)
 }
