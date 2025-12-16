@@ -507,12 +507,16 @@ func (s *ContainerDestroyTestSuite) Test_force_destroys_blueprint_instance_despi
 	// but with Force=true the instance should still be removed from state.
 	s.Assert().Equal(core.InstanceStatusDestroyFailed, finishedMessage.Status)
 
-	// With force=true, the instance should be removed from state despite failure
-	_, err = s.stateContainer.Instances().Get(context.Background(), "blueprint-instance-3")
-	s.Assert().Error(err)
-	stateErr, isStateErr := err.(*state.Error)
-	s.Assert().True(isStateErr)
-	s.Assert().Equal(state.ErrInstanceNotFound, stateErr.Code)
+	// With force=true, the instance should be removed from state despite failure.
+	// The finish message is sent before state removal completes, so we poll briefly.
+	s.Require().Eventually(func() bool {
+		_, err := s.stateContainer.Instances().Get(context.Background(), "blueprint-instance-3")
+		if err == nil {
+			return false
+		}
+		stateErr, isStateErr := err.(*state.Error)
+		return isStateErr && stateErr.Code == state.ErrInstanceNotFound
+	}, 1*time.Second, 10*time.Millisecond)
 }
 
 func (s *ContainerDestroyTestSuite) Test_context_cancellation_drains_in_progress_destroy_items() {
