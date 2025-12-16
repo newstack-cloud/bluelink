@@ -280,6 +280,7 @@ type InitialState struct {
 	NoGit                    *bool
 	IsDefaultNoGit           bool
 	Directory                string
+	SkipPrompts              bool
 }
 
 func NewInitApp(
@@ -306,6 +307,7 @@ func NewInitApp(
 			IsDefaultBlueprintFormat: initialState.IsDefaultBlueprintFormat,
 			NoGit:                    initialState.NoGit,
 			IsDefaultNoGit:           initialState.IsDefaultNoGit,
+			SkipPrompts:              initialState.SkipPrompts,
 		},
 		bluelinkStyles,
 	)
@@ -349,7 +351,9 @@ func NewInitApp(
 }
 
 func stageFromInitialState(initialState InitialState, headless bool) initStage {
-	isTemplateSelected := (initialState.Template != "" && !initialState.IsDefaultTemplate)
+	// In headless mode or with --skip-prompts, accept default template
+	skipAllPrompts := headless || initialState.SkipPrompts
+	isTemplateSelected := (initialState.Template != "" && !initialState.IsDefaultTemplate) || skipAllPrompts
 
 	if !isTemplateSelected {
 		return selectTemplateStage
@@ -357,11 +361,11 @@ func stageFromInitialState(initialState InitialState, headless bool) initStage {
 
 	isProjectNameSelected := strings.TrimSpace(initialState.ProjectName) != ""
 
-	// In headless mode, accept default values for blueprint format and noGit
+	// In headless mode or with --skip-prompts, accept default values for blueprint format and noGit
 	// since they have sensible defaults (yaml and false respectively)
-	isBlueprintFormatSelected := initialState.BlueprintFormat != "" && (!initialState.IsDefaultBlueprintFormat || headless)
+	isBlueprintFormatSelected := initialState.BlueprintFormat != "" && (!initialState.IsDefaultBlueprintFormat || skipAllPrompts)
 
-	isNoGitSelected := initialState.NoGit != nil && (!initialState.IsDefaultNoGit || headless)
+	isNoGitSelected := initialState.NoGit != nil && (!initialState.IsDefaultNoGit || skipAllPrompts)
 
 	if !isProjectNameSelected || !isBlueprintFormatSelected || !isNoGitSelected {
 		return inputFormStage

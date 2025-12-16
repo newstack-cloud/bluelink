@@ -30,6 +30,7 @@ type InputFormInitialValues struct {
 	IsDefaultBlueprintFormat bool
 	NoGit                    *bool
 	IsDefaultNoGit           bool
+	SkipPrompts              bool
 }
 
 func (m InputFormModel) Init() tea.Cmd {
@@ -101,9 +102,10 @@ func NewInputFormModel(
 
 	// Determine if we should auto-complete (skip the form)
 	// Skip only if ALL values are explicitly set (non-default)
+	// With --skip-prompts, accept default values for blueprint format and noGit
 	projectNameSet := strings.TrimSpace(initialValues.ProjectName) != ""
-	blueprintFormatSet := initialValues.BlueprintFormat != "" && !initialValues.IsDefaultBlueprintFormat
-	noGitSet := initialValues.NoGit != nil && !initialValues.IsDefaultNoGit
+	blueprintFormatSet := initialValues.BlueprintFormat != "" && (!initialValues.IsDefaultBlueprintFormat || initialValues.SkipPrompts)
+	noGitSet := initialValues.NoGit != nil && (!initialValues.IsDefaultNoGit || initialValues.SkipPrompts)
 
 	model.autoComplete = projectNameSet && blueprintFormatSet && noGitSet
 

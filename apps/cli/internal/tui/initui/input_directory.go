@@ -2,7 +2,6 @@ package initui
 
 import (
 	"errors"
-	"log"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -76,8 +75,6 @@ func NewInputDirectoryModel(
 		styles:    bluelinkStyles,
 		directory: initialValues.Directory,
 	}
-
-	log.Printf("DEBUG: projectName=%q, directory=%q\n", projectName, model.directory)
 
 	// Determine if we should auto-complete (skip the form)
 	// Skip only if the directory value is explicitly set (non-default)

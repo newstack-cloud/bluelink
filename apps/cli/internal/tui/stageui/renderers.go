@@ -401,17 +401,26 @@ func sortStageItems(items []splitpane.Item) {
 }
 
 // StageFooterRenderer implements splitpane.FooterRenderer for stage UI.
+// It supports a delegate pattern to allow custom footer rendering (e.g., for deploy flow).
 type StageFooterRenderer struct {
 	ChangesetID  string
 	InstanceID   string
 	InstanceName string
+	// Delegate is an optional custom footer renderer that takes precedence when set.
+	// This allows the deploy flow to inject its own footer (e.g., confirmation form).
+	Delegate splitpane.FooterRenderer
 }
 
 // Ensure StageFooterRenderer implements splitpane.FooterRenderer
 var _ splitpane.FooterRenderer = (*StageFooterRenderer)(nil)
 
 // RenderFooter renders the stage-specific footer with changeset and deploy instructions.
+// If a Delegate is set, it defers to the delegate for rendering.
 func (r *StageFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.Styles) string {
+	// If a delegate is set, use it for rendering
+	if r.Delegate != nil {
+		return r.Delegate.RenderFooter(model, s)
+	}
 	sb := strings.Builder{}
 	sb.WriteString("\n")
 

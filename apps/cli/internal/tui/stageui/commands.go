@@ -8,6 +8,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
 	"github.com/newstack-cloud/deploy-cli-sdk/consts"
 )
@@ -23,6 +24,14 @@ type StageErrorMsg struct {
 // StageStartedMsg is a message indicating that staging has started.
 type StageStartedMsg struct {
 	ChangesetID string
+}
+
+// StageCompleteMsg is a message indicating that staging has completed.
+// This is emitted to allow parent models to react to staging completion.
+type StageCompleteMsg struct {
+	ChangesetID string
+	Changes     *changes.BlueprintChanges
+	Items       []StageItem
 }
 
 func startStagingCmd(model StageModel) tea.Cmd {
@@ -83,15 +92,17 @@ func createChangesetPayloadForLocalFile(
 	}
 	directory := filepath.Dir(absPath)
 	file := filepath.Base(absPath)
+
 	return &types.CreateChangesetPayload{
 		BlueprintDocumentInfo: types.BlueprintDocumentInfo{
 			FileSourceScheme: "file",
 			Directory:        directory,
 			BlueprintFile:    file,
 		},
-		InstanceID:   model.instanceID,
-		InstanceName: model.instanceName,
-		Destroy:      model.destroy,
+		InstanceID:     model.instanceID,
+		InstanceName:   model.instanceName,
+		Destroy:        model.destroy,
+		SkipDriftCheck: model.skipDriftCheck,
 	}, nil
 }
 
@@ -125,37 +136,39 @@ func createChangesetPayloadForObjectStorage(
 			Directory:        directory,
 			BlueprintFile:    file,
 		},
-		InstanceID:   model.instanceID,
-		InstanceName: model.instanceName,
-		Destroy:      model.destroy,
+		InstanceID:     model.instanceID,
+		InstanceName:   model.instanceName,
+		Destroy:        model.destroy,
+		SkipDriftCheck: model.skipDriftCheck,
 	}, nil
 }
 
 func createChangesetPayloadForHTTPS(
 	model StageModel,
 ) (*types.CreateChangesetPayload, error) {
-	url, err := url.Parse(model.blueprintFile)
+	parsedURL, err := url.Parse(model.blueprintFile)
 	if err != nil {
 		return nil, err
 	}
 
-	basePath := path.Dir(url.Path)
+	basePath := path.Dir(parsedURL.Path)
 	if basePath == "/" {
 		basePath = ""
 	}
-	file := path.Base(url.Path)
+	file := path.Base(parsedURL.Path)
 	return &types.CreateChangesetPayload{
 		BlueprintDocumentInfo: types.BlueprintDocumentInfo{
 			FileSourceScheme: "https",
 			Directory:        basePath,
 			BlueprintFile:    file,
 			BlueprintLocationMetadata: map[string]any{
-				"host": url.Host,
+				"host": parsedURL.Host,
 			},
 		},
-		InstanceID:   model.instanceID,
-		InstanceName: model.instanceName,
-		Destroy:      model.destroy,
+		InstanceID:     model.instanceID,
+		InstanceName:   model.instanceName,
+		Destroy:        model.destroy,
+		SkipDriftCheck: model.skipDriftCheck,
 	}, nil
 }
 

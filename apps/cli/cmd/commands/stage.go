@@ -57,6 +57,7 @@ Examples:
 			instanceID, _ := confProvider.GetString("stageInstanceID")
 			instanceName, _ := confProvider.GetString("stageInstanceName")
 			destroy, _ := confProvider.GetBool("stageDestroy")
+			skipDriftCheck, _ := confProvider.GetBool("stageSkipDriftCheck")
 
 			if _, err := tea.LogToFile("bluelink-output.log", "simple"); err != nil {
 				log.Fatal(err)
@@ -80,6 +81,7 @@ Examples:
 				instanceID,
 				instanceName,
 				destroy,
+				skipDriftCheck,
 				styles,
 				!inTerminal,
 				os.Stdout,
@@ -152,6 +154,14 @@ Examples:
 	)
 	confProvider.BindPFlag("stageDestroy", stageCmd.PersistentFlags().Lookup("destroy"))
 	confProvider.BindEnvVar("stageDestroy", "BLUELINK_CLI_STAGE_DESTROY")
+
+	stageCmd.PersistentFlags().Bool(
+		"skip-drift-check",
+		false,
+		"Skip detection of external resource changes during staging.",
+	)
+	confProvider.BindPFlag("stageSkipDriftCheck", stageCmd.PersistentFlags().Lookup("skip-drift-check"))
+	confProvider.BindEnvVar("stageSkipDriftCheck", "BLUELINK_CLI_STAGE_SKIP_DRIFT_CHECK")
 
 	rootCmd.AddCommand(stageCmd)
 }

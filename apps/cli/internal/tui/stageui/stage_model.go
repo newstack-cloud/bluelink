@@ -97,6 +97,7 @@ type StageModel struct {
 	instanceID      string
 	instanceName    string
 	destroy         bool
+	skipDriftCheck  bool
 
 	// Headless
 	headlessMode   bool
@@ -187,6 +188,17 @@ func (m StageModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.completeChanges = eventData.Changes
 			// Transfer items to splitpane
 			m.splitPane.SetItems(ToSplitPaneItems(m.items))
+			// Emit completion message for parent models to react
+			changesetID := m.changesetID
+			completeChanges := m.completeChanges
+			items := m.items
+			cmds = append(cmds, func() tea.Msg {
+				return StageCompleteMsg{
+					ChangesetID: changesetID,
+					Changes:     completeChanges,
+					Items:       items,
+				}
+			})
 			if m.headlessMode {
 				m.printHeadlessSummary()
 				cmds = append(cmds, tea.Quit)
@@ -669,6 +681,7 @@ func NewStageModel(
 	instanceID string,
 	instanceName string,
 	destroy bool,
+	skipDriftCheck bool,
 	styles *stylespkg.Styles,
 	isHeadless bool,
 	headlessWriter io.Writer,
@@ -721,6 +734,7 @@ func NewStageModel(
 		instanceID:      instanceID,
 		instanceName:    instanceName,
 		destroy:         destroy,
+		skipDriftCheck:  skipDriftCheck,
 		styles:          styles,
 		headlessMode:    isHeadless,
 		headlessWriter:  headlessWriter,
@@ -765,4 +779,83 @@ func (m *StageModel) countByType() (resources, children, links int) {
 		}
 	}
 	return
+}
+
+// ---- Exported accessor methods for integration with deploy flow ----
+
+// IsFinished returns true if staging has completed.
+func (m *StageModel) IsFinished() bool {
+	return m.finished
+}
+
+// GetChangesetID returns the changeset ID created during staging.
+func (m *StageModel) GetChangesetID() string {
+	return m.changesetID
+}
+
+// GetChanges returns the complete blueprint changes from staging.
+func (m *StageModel) GetChanges() *changes.BlueprintChanges {
+	return m.completeChanges
+}
+
+// GetItems returns the staged items collected during streaming.
+func (m *StageModel) GetItems() []StageItem {
+	return m.items
+}
+
+// GetError returns any error that occurred during staging.
+func (m *StageModel) GetError() error {
+	return m.err
+}
+
+// CountChangeSummary returns counts of create, update, delete, recreate actions.
+// This is the exported version of countChangeSummary.
+func (m *StageModel) CountChangeSummary() (create, update, delete, recreate int) {
+	return m.countChangeSummary()
+}
+
+// ---- Exported setter methods for configuration ----
+
+// SetBlueprintFile sets the blueprint file path.
+func (m *StageModel) SetBlueprintFile(file string) {
+	m.blueprintFile = file
+}
+
+// SetBlueprintSource sets the blueprint source type.
+func (m *StageModel) SetBlueprintSource(source string) {
+	m.blueprintSource = source
+}
+
+// SetInstanceName sets the instance name.
+func (m *StageModel) SetInstanceName(name string) {
+	m.instanceName = name
+	if m.footerRenderer != nil {
+		m.footerRenderer.InstanceName = name
+	}
+}
+
+// SetInstanceID sets the instance ID.
+func (m *StageModel) SetInstanceID(id string) {
+	m.instanceID = id
+	if m.footerRenderer != nil {
+		m.footerRenderer.InstanceID = id
+	}
+}
+
+// SetFooterRenderer sets a custom footer renderer that overrides the default stage footer.
+// This allows parent models (like deploy) to inject their own footer rendering.
+func (m *StageModel) SetFooterRenderer(renderer splitpane.FooterRenderer) {
+	if m.footerRenderer != nil {
+		m.footerRenderer.Delegate = renderer
+	}
+}
+
+// StartStaging initiates the staging process.
+// Returns a tea.Cmd that starts the staging workflow.
+func (m *StageModel) StartStaging() tea.Cmd {
+	if m.streaming {
+		return nil
+	}
+	m.streaming = true
+	return tea.Batch(startStagingCmd(*m), waitForNextEventCmd(*m), checkForErrCmd(*m))
 }

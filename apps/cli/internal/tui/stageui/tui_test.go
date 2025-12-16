@@ -235,6 +235,7 @@ func (s *StageTUISuite) Test_successful_staging_with_resource_create() {
 		"",              // instanceID
 		"test-instance", // instanceName
 		false,           // destroy
+		false,           // skipDriftCheck
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false, // headless
 		os.Stdout,
@@ -280,6 +281,7 @@ func (s *StageTUISuite) Test_successful_staging_with_resource_update() {
 		"",
 		"test-instance",
 		false,
+		false, // skipDriftCheck
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
@@ -320,6 +322,7 @@ func (s *StageTUISuite) Test_successful_staging_with_resource_delete() {
 		"",
 		"test-instance",
 		false,
+		false, // skipDriftCheck
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
@@ -360,6 +363,7 @@ func (s *StageTUISuite) Test_successful_staging_with_resource_recreate() {
 		"",
 		"test-instance",
 		false,
+		false, // skipDriftCheck
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
@@ -400,6 +404,7 @@ func (s *StageTUISuite) Test_successful_staging_with_child_blueprint() {
 		"",
 		"test-instance",
 		false,
+		false, // skipDriftCheck
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
@@ -440,6 +445,7 @@ func (s *StageTUISuite) Test_successful_staging_with_link() {
 		"",
 		"test-instance",
 		false,
+		false, // skipDriftCheck
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
@@ -480,6 +486,7 @@ func (s *StageTUISuite) Test_successful_staging_with_mixed_items() {
 		"",
 		"test-instance",
 		false,
+		false, // skipDriftCheck
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
@@ -529,6 +536,7 @@ func (s *StageTUISuite) Test_successful_staging_headless() {
 		"",
 		"test-instance",
 		false,
+		false, // skipDriftCheck
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		true, // headless
 		headlessOutput,
@@ -569,6 +577,7 @@ func (s *StageTUISuite) Test_staging_headless_shows_progress() {
 		"",
 		"test-instance",
 		false,
+		false, // skipDriftCheck
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		true,
 		headlessOutput,
@@ -608,6 +617,7 @@ func (s *StageTUISuite) Test_staging_headless_shows_summary() {
 		"",
 		"test-instance",
 		false,
+		false, // skipDriftCheck
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		true,
 		headlessOutput,
@@ -647,6 +657,7 @@ func (s *StageTUISuite) Test_staging_headless_shows_field_changes() {
 		"",
 		"test-instance",
 		false,
+		false, // skipDriftCheck
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		true,
 		headlessOutput,
@@ -698,6 +709,7 @@ func (s *StageTUISuite) Test_staging_validation_error() {
 		"",
 		"test-instance",
 		false,
+		false, // skipDriftCheck
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
@@ -748,6 +760,7 @@ func (s *StageTUISuite) Test_staging_validation_error_headless() {
 		"",
 		"test-instance",
 		false,
+		false, // skipDriftCheck
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		true,
 		headlessOutput,
@@ -787,6 +800,7 @@ func (s *StageTUISuite) Test_staging_generic_error() {
 		"",
 		"test-instance",
 		false,
+		false, // skipDriftCheck
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
@@ -828,6 +842,7 @@ func (s *StageTUISuite) Test_quit_with_q() {
 		"",
 		"test-instance",
 		false,
+		false, // skipDriftCheck
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,

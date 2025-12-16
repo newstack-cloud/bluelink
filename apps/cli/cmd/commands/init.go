@@ -33,6 +33,7 @@ func setupInitCommand(rootCmd *cobra.Command, confProvider *config.Provider) {
 			blueprintFormat, isDefaultBlueprintFormat := confProvider.GetString("initBlueprintFormat")
 			noGit, isDefaultNoGit := confProvider.GetBool("initNoGit")
 			noGitPtr := &noGit
+			skipPrompts, _ := confProvider.GetBool("initSkipPrompts")
 
 			// Validate required flags in headless mode
 			if err := headless.Validate(
@@ -66,6 +67,7 @@ func setupInitCommand(rootCmd *cobra.Command, confProvider *config.Provider) {
 					NoGit:                    noGitPtr,
 					IsDefaultNoGit:           isDefaultNoGit,
 					Directory:                directory,
+					SkipPrompts:              skipPrompts,
 				},
 				styles,
 				gitService,
@@ -133,6 +135,16 @@ func setupInitCommand(rootCmd *cobra.Command, confProvider *config.Provider) {
 	)
 	confProvider.BindPFlag("initNoGit", initCmd.PersistentFlags().Lookup("no-git"))
 	confProvider.BindEnvVar("initNoGit", "BLUELINK_CLI_INIT_NO_GIT")
+
+	initCmd.PersistentFlags().Bool(
+		"skip-prompts",
+		false,
+		"Skip interactive prompts and use flag values directly. "+
+			"Requires --project-name to be provided. Default values will be used for "+
+			"--blueprint-format (yaml) and --no-git (false) if not explicitly set.",
+	)
+	confProvider.BindPFlag("initSkipPrompts", initCmd.PersistentFlags().Lookup("skip-prompts"))
+	confProvider.BindEnvVar("initSkipPrompts", "BLUELINK_CLI_INIT_SKIP_PROMPTS")
 
 	rootCmd.AddCommand(initCmd)
 }

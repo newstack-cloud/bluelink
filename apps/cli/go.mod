@@ -9,8 +9,8 @@ require (
 	github.com/charmbracelet/huh v0.8.0
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
 	github.com/charmbracelet/x/exp/teatest v0.0.0-20251201173703-9f73bfd934ff
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.2
-	github.com/newstack-cloud/bluelink/libs/deploy-engine-client v0.1.1
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.3
+	github.com/newstack-cloud/bluelink/libs/deploy-engine-client v0.1.2
 	github.com/newstack-cloud/deploy-cli-sdk v0.1.2
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/spf13/cobra v1.10.2
@@ -74,7 +74,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/net v0.42.0 // indirect
-	golang.org/x/oauth2 v0.33.0 // indirect
+	golang.org/x/oauth2 v0.34.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/tools v0.35.0 // indirect
