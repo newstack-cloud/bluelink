@@ -102,6 +102,39 @@ type BlueprintContainer interface {
 	// should also be unpacked to get the precise location and information about the reason loading the
 	// blueprint failed.
 	Diagnostics() []*core.Diagnostic
+	// CheckReconciliation checks for resources and links that need reconciliation.
+	// This is a read-only operation that fetches external state and compares it to
+	// persisted state to identify elements needing attention.
+	// Use this when:
+	// - Elements are in an interrupted state from a previous deployment
+	// - Drift detection found discrepancies between cloud and persisted state
+	// - A manual state refresh is needed
+	//
+	// The result contains detailed information about each element including the
+	// external state, persisted state, and a diff showing the changes.
+	// Parameter overrides can be provided to resolve any substitutions needed
+	// when fetching external state.
+	CheckReconciliation(
+		ctx context.Context,
+		input *CheckReconciliationInput,
+		paramOverrides core.BlueprintParams,
+	) (*ReconciliationCheckResult, error)
+	// ApplyReconciliation applies the specified reconciliation actions.
+	// This updates persisted state based on the actions specified for each element.
+	// Typically called after CheckReconciliation with user-approved actions.
+	//
+	// Actions include:
+	// - AcceptExternal: Update persisted state to match external cloud state
+	// - UpdateStatus: Only update the element's status
+	// - MarkFailed: Mark the element as failed
+	//
+	// Parameter overrides can be provided for any substitutions needed during
+	// the reconciliation process.
+	ApplyReconciliation(
+		ctx context.Context,
+		input *ApplyReconciliationInput,
+		paramOverrides core.BlueprintParams,
+	) (*ApplyReconciliationResult, error)
 }
 
 // StageChangesInput contains the primary input needed to stage changes
@@ -118,9 +151,6 @@ type StageChangesInput struct {
 	// If this is set to true, the change set will be generated for removal all components
 	// in the current state of the blueprint instance.
 	Destroy bool
-	// SkipDriftCheck, when true, skips drift detection during change staging.
-	// When false or not set, the loader-level driftCheckEnabled setting is used.
-	SkipDriftCheck bool
 }
 
 // DeployInput contains the primary input needed to deploy a blueprint instance.
@@ -197,7 +227,6 @@ type defaultBlueprintContainer struct {
 	linkDestroyer            LinkDestroyer
 	linkDeployer             LinkDeployer
 	driftChecker             drift.Checker
-	driftCheckEnabled        bool
 	resourceDeployer         ResourceDeployer
 	childDeployer            ChildBlueprintDeployer
 	defaultRetryPolicy       *provider.RetryPolicy
@@ -257,7 +286,6 @@ type BlueprintContainerDependencies struct {
 // to a provider.
 func NewDefaultBlueprintContainer(
 	spec speccore.BlueprintSpec,
-	driftCheckEnabled bool,
 	deps *BlueprintContainerDependencies,
 	diagnostics []*core.Diagnostic,
 ) BlueprintContainer {
@@ -285,7 +313,6 @@ func NewDefaultBlueprintContainer(
 		deps.LinkDestroyer,
 		deps.LinkDeployer,
 		deps.DriftChecker,
-		driftCheckEnabled,
 		deps.ResourceDeployer,
 		deps.ChildBlueprintDeployer,
 		deps.DefaultRetryPolicy,

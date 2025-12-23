@@ -428,6 +428,326 @@ func orderResourceDriftFieldChanges(
 	return orderedFieldChanges
 }
 
+func (s *DriftCheckerTestSuite) Test_checks_link_drift_via_resource_data_mappings() {
+	// Set up state with a link that has ResourceDataMappings
+	// where the link.Data differs from the external resource state
+	err := s.populateLinkDriftState()
+	s.Require().NoError(err)
+
+	// Create a drift checker with the same providers
+	s.driftChecker = NewDefaultChecker(
+		s.stateContainer,
+		map[string]provider.Provider{
+			"aws": newTestAWSProvider(
+				s.dynamoDBTableExternalState(),
+				s.lambdaFunctionExternalState(),
+			),
+			"example": newTestExampleProvider(
+				s.exampleComplexResourceExternalState(),
+			),
+		},
+		changes.NewDefaultResourceChangeGenerator(),
+		core.SystemClock{},
+		core.NewNopLogger(),
+	)
+
+	linkDriftState, err := s.driftChecker.CheckLinkDrift(
+		context.Background(),
+		instance1ID,
+		"test-link-drift-1",
+		createParams(),
+	)
+	s.Require().NoError(err)
+	s.Require().NotNil(linkDriftState)
+
+	// Normalise timestamp for snapshot comparison
+	normalisedDriftState := normaliseLinkDriftState(linkDriftState)
+	err = testhelpers.Snapshot(normalisedDriftState)
+	s.Require().NoError(err)
+
+	// Verify drift was persisted
+	links := s.stateContainer.Links()
+	persistedDriftState, err := links.GetDrift(
+		context.Background(),
+		"test-link-drift-1",
+	)
+	s.Require().NoError(err)
+	s.Assert().Equal(linkDriftState.LinkID, persistedDriftState.LinkID)
+	s.Assert().Equal(linkDriftState.LinkName, persistedDriftState.LinkName)
+}
+
+func (s *DriftCheckerTestSuite) Test_checks_all_link_drift_in_instance() {
+	// Set up state with multiple links
+	err := s.populateLinkDriftState()
+	s.Require().NoError(err)
+
+	s.driftChecker = NewDefaultChecker(
+		s.stateContainer,
+		map[string]provider.Provider{
+			"aws": newTestAWSProvider(
+				s.dynamoDBTableExternalState(),
+				s.lambdaFunctionExternalState(),
+			),
+			"example": newTestExampleProvider(
+				s.exampleComplexResourceExternalState(),
+			),
+		},
+		changes.NewDefaultResourceChangeGenerator(),
+		core.SystemClock{},
+		core.NewNopLogger(),
+	)
+
+	linkDriftMap, err := s.driftChecker.CheckAllLinkDrift(
+		context.Background(),
+		instance1ID,
+		createParams(),
+	)
+	s.Require().NoError(err)
+
+	// Should have drift for the link with mismatched data
+	s.Assert().Len(linkDriftMap, 1)
+	s.Assert().Contains(linkDriftMap, "test-link-drift-1")
+
+	// Normalise for snapshot
+	normalisedMap := normaliseLinkDriftStateMap(linkDriftMap)
+	err = testhelpers.Snapshot(normalisedMap)
+	s.Require().NoError(err)
+}
+
+func (s *DriftCheckerTestSuite) Test_no_link_drift_when_data_matches_external_state() {
+	// Set up state where link data matches the external resource state
+	err := s.populateLinkNoDriftState()
+	s.Require().NoError(err)
+
+	s.driftChecker = NewDefaultChecker(
+		s.stateContainer,
+		map[string]provider.Provider{
+			"aws": newTestAWSProvider(
+				s.dynamoDBTableExternalState(),
+				s.lambdaFunctionExternalState(),
+			),
+			"example": newTestExampleProvider(
+				s.exampleComplexResourceExternalState(),
+			),
+		},
+		changes.NewDefaultResourceChangeGenerator(),
+		core.SystemClock{},
+		core.NewNopLogger(),
+	)
+
+	linkDriftState, err := s.driftChecker.CheckLinkDrift(
+		context.Background(),
+		instance1ID,
+		"test-link-no-drift-1",
+		createParams(),
+	)
+	s.Require().NoError(err)
+	s.Assert().Nil(linkDriftState)
+
+	// Verify no drift was persisted
+	links := s.stateContainer.Links()
+	persistedDriftState, err := links.GetDrift(
+		context.Background(),
+		"test-link-no-drift-1",
+	)
+	s.Require().NoError(err)
+	// Empty drift state indicates no drift
+	s.Assert().Empty(persistedDriftState.LinkID)
+}
+
+func (s *DriftCheckerTestSuite) populateLinkDriftState() error {
+	// Lambda function external state has handler "orders.saveOrder"
+	// We'll set up link.Data with a different handler value to create drift
+	instanceState := state.InstanceState{
+		InstanceID:   instance1ID,
+		InstanceName: instance1ID,
+		Status:       core.InstanceStatusDeployed,
+		ResourceIDs: map[string]string{
+			saveOrderFunctionName: saveOrderFunctionID,
+			ordersTableName:       ordersTableID,
+		},
+		Resources: map[string]*state.ResourceState{
+			saveOrderFunctionID: {
+				ResourceID:    saveOrderFunctionID,
+				Name:          saveOrderFunctionName,
+				Type:          "aws/lambda/function",
+				InstanceID:    instance1ID,
+				Status:        core.ResourceStatusCreated,
+				PreciseStatus: core.PreciseResourceStatusCreated,
+				SpecData: &core.MappingNode{
+					Fields: map[string]*core.MappingNode{
+						"id": core.MappingNodeFromString(
+							"arn:aws:lambda:us-east-1:123456789012:function:save-order-function",
+						),
+						"handler": core.MappingNodeFromString("saveOrderFunction.handler"),
+					},
+				},
+				Drifted: false,
+			},
+			ordersTableID: {
+				ResourceID:    ordersTableID,
+				Name:          ordersTableName,
+				Type:          "aws/dynamodb/table",
+				InstanceID:    instance1ID,
+				Status:        core.ResourceStatusCreated,
+				PreciseStatus: core.PreciseResourceStatusCreated,
+				SpecData: &core.MappingNode{
+					Fields: map[string]*core.MappingNode{
+						"tableName": core.MappingNodeFromString("ORDERS_TABLE"),
+						"region":    core.MappingNodeFromString("us-east-1"),
+					},
+				},
+				Drifted: false,
+			},
+		},
+		Links: map[string]*state.LinkState{
+			"saveOrderFunction::ordersTable": {
+				LinkID:     "test-link-drift-1",
+				Name:       "saveOrderFunction::ordersTable",
+				InstanceID: instance1ID,
+				Status:     core.LinkStatusCreated,
+				// Link data has handler "old.handler" but external state has "orders.saveOrder"
+				// This creates drift when checked via ResourceDataMappings
+				Data: map[string]*core.MappingNode{
+					"saveOrderFunction": {
+						Fields: map[string]*core.MappingNode{
+							"handler": core.MappingNodeFromString("old.handler"),
+						},
+					},
+				},
+				ResourceDataMappings: map[string]string{
+					"saveOrderFunction::spec.handler": "saveOrderFunction.handler",
+				},
+			},
+		},
+	}
+
+	return s.stateContainer.Instances().Save(
+		context.Background(),
+		instanceState,
+	)
+}
+
+func (s *DriftCheckerTestSuite) populateLinkNoDriftState() error {
+	// Set up link.Data that matches the external resource state
+	// External state has handler "orders.saveOrder"
+	instanceState := state.InstanceState{
+		InstanceID:   instance1ID,
+		InstanceName: instance1ID,
+		Status:       core.InstanceStatusDeployed,
+		ResourceIDs: map[string]string{
+			saveOrderFunctionName: saveOrderFunctionID,
+			ordersTableName:       ordersTableID,
+		},
+		Resources: map[string]*state.ResourceState{
+			saveOrderFunctionID: {
+				ResourceID:    saveOrderFunctionID,
+				Name:          saveOrderFunctionName,
+				Type:          "aws/lambda/function",
+				InstanceID:    instance1ID,
+				Status:        core.ResourceStatusCreated,
+				PreciseStatus: core.PreciseResourceStatusCreated,
+				SpecData: &core.MappingNode{
+					Fields: map[string]*core.MappingNode{
+						"id": core.MappingNodeFromString(
+							"arn:aws:lambda:us-east-1:123456789012:function:save-order-function",
+						),
+						"handler": core.MappingNodeFromString("saveOrderFunction.handler"),
+					},
+				},
+				Drifted: false,
+			},
+			ordersTableID: {
+				ResourceID:    ordersTableID,
+				Name:          ordersTableName,
+				Type:          "aws/dynamodb/table",
+				InstanceID:    instance1ID,
+				Status:        core.ResourceStatusCreated,
+				PreciseStatus: core.PreciseResourceStatusCreated,
+				SpecData: &core.MappingNode{
+					Fields: map[string]*core.MappingNode{
+						"tableName": core.MappingNodeFromString("ORDERS_TABLE"),
+						"region":    core.MappingNodeFromString("us-east-1"),
+					},
+				},
+				Drifted: false,
+			},
+		},
+		Links: map[string]*state.LinkState{
+			"saveOrderFunction::ordersTable": {
+				LinkID:     "test-link-no-drift-1",
+				Name:       "saveOrderFunction::ordersTable",
+				InstanceID: instance1ID,
+				Status:     core.LinkStatusCreated,
+				// Link data matches the external state (handler "orders.saveOrder")
+				Data: map[string]*core.MappingNode{
+					"saveOrderFunction": {
+						Fields: map[string]*core.MappingNode{
+							"handler": core.MappingNodeFromString("orders.saveOrder"),
+						},
+					},
+				},
+				ResourceDataMappings: map[string]string{
+					"saveOrderFunction::spec.handler": "saveOrderFunction.handler",
+				},
+			},
+		},
+	}
+
+	return s.stateContainer.Instances().Save(
+		context.Background(),
+		instanceState,
+	)
+}
+
+func normaliseLinkDriftState(
+	driftState *state.LinkDriftState,
+) *state.LinkDriftState {
+	if driftState == nil {
+		return nil
+	}
+	replacementTimestamp := -1
+	return &state.LinkDriftState{
+		LinkID:            driftState.LinkID,
+		LinkName:          driftState.LinkName,
+		ResourceADrift:    driftState.ResourceADrift,
+		ResourceBDrift:    driftState.ResourceBDrift,
+		IntermediaryDrift: normaliseIntermediaryDriftStates(driftState.IntermediaryDrift),
+		Timestamp:         &replacementTimestamp,
+	}
+}
+
+func normaliseLinkDriftStateMap(
+	driftStateMap map[string]*state.LinkDriftState,
+) map[string]*state.LinkDriftState {
+	normalised := map[string]*state.LinkDriftState{}
+	for k, v := range driftStateMap {
+		normalised[k] = normaliseLinkDriftState(v)
+	}
+	return normalised
+}
+
+func normaliseIntermediaryDriftStates(
+	intermediaryDrift map[string]*state.IntermediaryDriftState,
+) map[string]*state.IntermediaryDriftState {
+	if intermediaryDrift == nil {
+		return nil
+	}
+	normalised := map[string]*state.IntermediaryDriftState{}
+	replacementTimestamp := -1
+	for k, v := range intermediaryDrift {
+		normalised[k] = &state.IntermediaryDriftState{
+			ResourceID:     v.ResourceID,
+			ResourceType:   v.ResourceType,
+			PersistedState: v.PersistedState,
+			ExternalState:  v.ExternalState,
+			Exists:         v.Exists,
+			Timestamp:      &replacementTimestamp,
+		}
+	}
+	return normalised
+}
+
 func TestDriftCheckerTestSuite(t *testing.T) {
 	suite.Run(t, new(DriftCheckerTestSuite))
 }

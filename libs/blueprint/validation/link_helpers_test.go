@@ -131,3 +131,10 @@ func (l *testResourceTypeAResourceTypeBLink) UpdateIntermediaryResources(
 ) (*provider.LinkUpdateIntermediaryResourcesOutput, error) {
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
 }
+
+func (l *testResourceTypeAResourceTypeBLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}

@@ -30,6 +30,7 @@ func NewMemoryStateContainer() state.Container {
 	resources := map[string]*state.ResourceState{}
 	resourceDrift := map[string]*state.ResourceDriftState{}
 	links := map[string]*state.LinkState{}
+	linkDrift := map[string]*state.LinkDriftState{}
 	resourceDataMappingIDs := map[string]map[string][]string{}
 
 	mu := &sync.RWMutex{}
@@ -50,6 +51,7 @@ func NewMemoryStateContainer() state.Container {
 		linksContainer: &memoryLinksContainer{
 			instances:              instances,
 			links:                  links,
+			linkDrift:              linkDrift,
 			resourceDataMappingIDs: resourceDataMappingIDs,
 			mu:                     mu,
 		},
@@ -378,6 +380,7 @@ func (c *memoryResourcesContainer) RemoveDrift(
 type memoryLinksContainer struct {
 	instances map[string]*state.InstanceState
 	links     map[string]*state.LinkState
+	linkDrift map[string]*state.LinkDriftState
 	// A Mapping of the form {instanceID} -> {resourceName} -> []string (link IDs)
 	// used to quickly find links that have resource data mappings for a specific
 	// resource in a blueprint instance.
@@ -543,6 +546,71 @@ func (c *memoryLinksContainer) Remove(ctx context.Context, linkID string) (state
 	}
 
 	return state.LinkState{}, state.LinkNotFoundError(linkID)
+}
+
+func (c *memoryLinksContainer) GetDrift(
+	ctx context.Context,
+	linkID string,
+) (state.LinkDriftState, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	_, ok := c.links[linkID]
+	if !ok {
+		return state.LinkDriftState{}, state.LinkNotFoundError(linkID)
+	}
+
+	if driftState, ok := c.linkDrift[linkID]; ok {
+		return *driftState, nil
+	}
+
+	// Return empty drift state if no drift has been recorded
+	return state.LinkDriftState{}, nil
+}
+
+func (c *memoryLinksContainer) SaveDrift(
+	ctx context.Context,
+	driftState state.LinkDriftState,
+) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	link, ok := c.links[driftState.LinkID]
+	if !ok {
+		return state.LinkNotFoundError(driftState.LinkID)
+	}
+
+	// Update the link's drift tracking fields
+	link.Drifted = true
+	link.LastDriftDetectedTimestamp = driftState.Timestamp
+
+	c.linkDrift[driftState.LinkID] = &driftState
+	return nil
+}
+
+func (c *memoryLinksContainer) RemoveDrift(
+	ctx context.Context,
+	linkID string,
+) (state.LinkDriftState, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	link, ok := c.links[linkID]
+	if !ok {
+		return state.LinkDriftState{}, state.LinkNotFoundError(linkID)
+	}
+
+	// Clear the link's drift tracking fields
+	link.Drifted = false
+	link.LastDriftDetectedTimestamp = nil
+
+	if driftState, ok := c.linkDrift[linkID]; ok {
+		delete(c.linkDrift, linkID)
+		return *driftState, nil
+	}
+
+	// Return empty drift state if no drift was recorded
+	return state.LinkDriftState{}, nil
 }
 
 type memoryMetadataContainer struct {
@@ -924,10 +992,12 @@ func copyLink(linkState *state.LinkState) state.LinkState {
 		IntermediaryResourceStates: copyIntermediaryResources(
 			linkState.IntermediaryResourceStates,
 		),
-		Data:                 linkState.Data,
-		ResourceDataMappings: resourceDataMappings,
-		FailureReasons:       linkState.FailureReasons,
-		Durations:            linkState.Durations,
+		Data:                       linkState.Data,
+		ResourceDataMappings:       resourceDataMappings,
+		FailureReasons:             linkState.FailureReasons,
+		Drifted:                    linkState.Drifted,
+		LastDriftDetectedTimestamp: linkState.LastDriftDetectedTimestamp,
+		Durations:                  linkState.Durations,
 	}
 }
 
@@ -946,9 +1016,12 @@ func copyIntermediaryResources(
 				ResourceID:                 value.ResourceID,
 				ResourceType:               value.ResourceType,
 				InstanceID:                 value.InstanceID,
+				Status:                     value.Status,
+				PreciseStatus:              value.PreciseStatus,
 				LastDeployedTimestamp:      value.LastDeployedTimestamp,
 				LastDeployAttemptTimestamp: value.LastDeployAttemptTimestamp,
 				ResourceSpecData:           value.ResourceSpecData,
+				FailureReasons:             value.FailureReasons,
 			},
 		)
 	}

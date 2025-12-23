@@ -1059,6 +1059,14 @@ func (l *testApiGatewayLambdaLink) UpdateIntermediaryResources(
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
 }
 
+// GetIntermediaryExternalState is not used for spec link info!
+func (l *testApiGatewayLambdaLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
 // The functionality provided by link implementations is not used for building
 // chain links. The spec link info behaviour that builds out the chain links
 // prepares link implementations so they can be used by the blueprint container.
@@ -1134,6 +1142,14 @@ func (l *testSQSQueueLambdaLink) UpdateIntermediaryResources(
 	input *provider.LinkUpdateIntermediaryResourcesInput,
 ) (*provider.LinkUpdateIntermediaryResourcesOutput, error) {
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
+}
+
+// GetIntermediaryExternalState is not used for spec link info!
+func (l *testSQSQueueLambdaLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
 // The functionality provided by link implementations is not used for building
@@ -1214,6 +1230,14 @@ func (l *testLambdaDynamoDBTableLink) UpdateIntermediaryResources(
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
 }
 
+// GetIntermediaryExternalState is not used for spec link info!
+func (l *testLambdaDynamoDBTableLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
 // The functionality provided by link implementations is not used for building
 // chain links. The spec link info behaviour that builds out the chain links
 // prepares link implementations so they can be used by the blueprint container.
@@ -1291,6 +1315,14 @@ func (l *testStratosLambdaDynamoDBTableLink) UpdateIntermediaryResources(
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
 }
 
+// GetIntermediaryExternalState is not used for spec link info!
+func (l *testStratosLambdaDynamoDBTableLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
 // The functionality provided by link implementations is not used for building
 // chain links. The spec link info behaviour that builds out the chain links
 // prepares link implementations so they can be used by the blueprint container.
@@ -1366,6 +1398,14 @@ func (l *testLambdaSQSQueueLink) UpdateIntermediaryResources(
 	input *provider.LinkUpdateIntermediaryResourcesInput,
 ) (*provider.LinkUpdateIntermediaryResourcesOutput, error) {
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
+}
+
+// GetIntermediaryExternalState is not used for spec link info!
+func (l *testLambdaSQSQueueLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
 // The functionality provided by link implementations is not used for building
@@ -1446,6 +1486,14 @@ func (l *testDynamoDBTableStreamLink) UpdateIntermediaryResources(
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
 }
 
+// GetIntermediaryExternalState is not used for spec link info!
+func (l *testDynamoDBTableStreamLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
 // The functionality provided by link implementations is not used for building
 // chain links. The spec link info behaviour that builds out the chain links
 // prepares link implementations so they can be used by the blueprint container.
@@ -1522,6 +1570,14 @@ func (l *testDynamoDBStreamLambdaLink) UpdateIntermediaryResources(
 	input *provider.LinkUpdateIntermediaryResourcesInput,
 ) (*provider.LinkUpdateIntermediaryResourcesOutput, error) {
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
+}
+
+// GetIntermediaryExternalState is not used for spec link info!
+func (l *testDynamoDBStreamLambdaLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
 // The functionality provided by link implementations is not used for building
@@ -1602,6 +1658,14 @@ func (l *testDynamoDBStreamStratosLambdaLink) UpdateIntermediaryResources(
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
 }
 
+// GetIntermediaryExternalState is not used for spec link info!
+func (l *testDynamoDBStreamStratosLambdaLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
 // The functionality provided by link implementations is not used for building
 // chain links. The spec link info behaviour that builds out the chain links
 // prepares link implementations so they can be used by the blueprint container.
@@ -1680,6 +1744,14 @@ func (l *testIAMRoleLambdaLink) UpdateIntermediaryResources(
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
 }
 
+// GetIntermediaryExternalState is not used for spec link info!
+func (l *testIAMRoleLambdaLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
 // The functionality provided by link implementations is not used for building
 // chain links. The spec link info behaviour that builds out the chain links
 // prepares link implementations so they can be used by the blueprint container.
@@ -1755,6 +1827,14 @@ func (l *testStratosIAMRoleLambdaLink) UpdateIntermediaryResources(
 	input *provider.LinkUpdateIntermediaryResourcesInput,
 ) (*provider.LinkUpdateIntermediaryResourcesOutput, error) {
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
+}
+
+// GetIntermediaryExternalState is not used for spec link info!
+func (l *testStratosIAMRoleLambdaLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
 // The functionality provided by link implementations is not used for building
@@ -1835,6 +1915,14 @@ func (l *testLambdaIAMRoleLink) UpdateIntermediaryResources(
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
 }
 
+// GetIntermediaryExternalState is not used for spec link info!
+func (l *testLambdaIAMRoleLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
 // The functionality provided by link implementations is not used for building
 // chain links. The spec link info behaviour that builds out the chain links
 // prepares link implementations so they can be used by the blueprint container.
@@ -1910,6 +1998,14 @@ func (l *testLambdaStratosIAMRoleLink) UpdateIntermediaryResources(
 	input *provider.LinkUpdateIntermediaryResourcesInput,
 ) (*provider.LinkUpdateIntermediaryResourcesOutput, error) {
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
+}
+
+// GetIntermediaryExternalState is not used for spec link info!
+func (l *testLambdaStratosIAMRoleLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
 // Provides a version of a chain link purely for snapshot tests.

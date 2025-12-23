@@ -154,7 +154,6 @@ func Setup(
 		// caused by a transformer plugin that may be producing invalid output.
 		container.WithLoaderValidateAfterTransform(config.Blueprints.ValidateAfterTransform),
 		container.WithLoaderValidateRuntimeValues(true),
-		container.WithLoaderDriftCheckEnabled(config.Blueprints.EnableDriftCheck),
 		container.WithLoaderIDGenerator(idGenerator),
 		container.WithLoaderDefaultRetryPolicy(defaultRetryPolicy),
 		container.WithLoaderResourceStabilityPollingConfig(

@@ -93,6 +93,9 @@ type ResourceRegistryMock struct {
 	resourceLockTimeout       time.Duration
 	clock                     core.Clock
 	resourceLocksMu           *sync.Mutex
+	// OnLockAcquired is called after a lock is successfully acquired.
+	// This can be used in tests to cancel context after lock acquisition.
+	OnLockAcquired func()
 }
 
 type ResourceRegistryMockOption func(*ResourceRegistryMock)
@@ -361,6 +364,9 @@ func (r *ResourceRegistryMock) AcquireResourceLock(
 					acquiredBy:   input.AcquiredBy,
 				}
 				r.resourceLocksMu.Unlock()
+				if r.OnLockAcquired != nil {
+					r.OnLockAcquired()
+				}
 				return nil
 			}
 			r.resourceLocksMu.Unlock()
@@ -420,6 +426,14 @@ func (r *ResourceRegistryMock) ReleaseResourceLocksAcquiredBy(
 			delete(r.resourceLocks, lockKey)
 		}
 	}
+}
+
+// HasLocks returns true if there are any resource locks held.
+// This is useful for testing that locks are properly released.
+func (r *ResourceRegistryMock) HasLocks() bool {
+	r.resourceLocksMu.Lock()
+	defer r.resourceLocksMu.Unlock()
+	return len(r.resourceLocks) > 0
 }
 
 func createResourceLockKey(instanceID, resourceName string) string {

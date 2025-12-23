@@ -6,7 +6,6 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
 const (
@@ -301,24 +300,6 @@ func errMissingPartiallyResolvedResource(resourceName string) error {
 				"a partially resolved resource must be provided "+
 				"for each resource in the given set of changes",
 			resourceName,
-		),
-	}
-}
-
-func errDriftDetected(
-	driftResults map[string]*state.ResourceDriftState,
-) error {
-	var driftedResources []string
-	for resourceID := range driftResults {
-		driftedResources = append(driftedResources, resourceID)
-	}
-
-	return &errors.RunError{
-		ReasonCode: ErrorReasonCodeDriftDetected,
-		Err: fmt.Errorf(
-			"drift detected in resources: %v. This must be resolved before you can deploy a new update, "+
-				"you can load the state to see the drift details",
-			strings.Join(driftedResources, ", "),
 		),
 	}
 }

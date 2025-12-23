@@ -14,6 +14,17 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
+// sleepWithContext sleeps for the specified duration but can be interrupted
+// by context cancellation. Returns the context error if cancelled, nil otherwise.
+func sleepWithContext(ctx context.Context, duration time.Duration) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(duration):
+		return nil
+	}
+}
+
 // CreateDeployChannels creates a new DeployChannels struct that contains
 // all the channels required to process deploy/destroy events.
 func CreateDeployChannels() *DeployChannels {
@@ -2125,4 +2136,227 @@ func pluralise(singular, plural string, count int) string {
 	}
 
 	return plural
+}
+
+// isTerminalResourceFailure returns true if the resource update message
+// represents a terminal (non-retryable) failure.
+func isTerminalResourceFailure(msg ResourceDeployUpdateMessage, rollback bool) bool {
+	if msg.CanRetry {
+		return false
+	}
+
+	if rollback {
+		return msg.PreciseStatus == core.PreciseResourceStatusDestroyRollbackFailed ||
+			msg.PreciseStatus == core.PreciseResourceStatusUpdateRollbackFailed ||
+			msg.PreciseStatus == core.PreciseResourceStatusCreateRollbackFailed
+	}
+
+	return msg.PreciseStatus == core.PreciseResourceStatusCreateFailed ||
+		msg.PreciseStatus == core.PreciseResourceStatusUpdateFailed
+}
+
+// isTerminalChildFailure returns true if the child update message
+// represents a terminal failure.
+func isTerminalChildFailure(msg ChildDeployUpdateMessage, rollback bool) bool {
+	if rollback {
+		return msg.Status == core.InstanceStatusDestroyRollbackFailed ||
+			msg.Status == core.InstanceStatusUpdateRollbackFailed ||
+			msg.Status == core.InstanceStatusDeployRollbackFailed
+	}
+
+	return msg.Status == core.InstanceStatusDeployFailed ||
+		msg.Status == core.InstanceStatusUpdateFailed
+}
+
+// isTerminalLinkFailure returns true if the link update message
+// represents a terminal (non-retryable) failure.
+func isTerminalLinkFailure(msg LinkDeployUpdateMessage, rollback bool) bool {
+	if msg.CanRetryCurrentStage {
+		return false
+	}
+
+	if rollback {
+		return msg.PreciseStatus == core.PreciseLinkStatusResourceAUpdateRollbackFailed ||
+			msg.PreciseStatus == core.PreciseLinkStatusResourceBUpdateRollbackFailed ||
+			msg.PreciseStatus == core.PreciseLinkStatusIntermediaryResourceUpdateRollbackFailed
+	}
+
+	return msg.PreciseStatus == core.PreciseLinkStatusResourceAUpdateFailed ||
+		msg.PreciseStatus == core.PreciseLinkStatusResourceBUpdateFailed ||
+		msg.PreciseStatus == core.PreciseLinkStatusIntermediaryResourceUpdateFailed
+}
+
+// getFailedElementsFromFinished extracts the names of failed elements
+// from the finished map.
+func getFailedElementsFromFinished(
+	finished map[string]*deployUpdateMessageWrapper,
+	rollback bool,
+) []string {
+	failed := []string{}
+
+	for elementName, wrapper := range finished {
+		if wrapper.resourceUpdateMessage != nil {
+			if !creationWasSuccessful(wrapper, rollback) &&
+				!updateWasSuccessful(wrapper, rollback) {
+				failed = append(failed, elementName)
+			}
+		}
+
+		if wrapper.childUpdateMessage != nil {
+			if !creationWasSuccessful(wrapper, rollback) &&
+				!updateWasSuccessful(wrapper, rollback) {
+				failed = append(failed, elementName)
+			}
+		}
+
+		if wrapper.linkUpdateMessage != nil {
+			if !creationWasSuccessful(wrapper, rollback) &&
+				!updateWasSuccessful(wrapper, rollback) {
+				failed = append(failed, elementName)
+			}
+		}
+	}
+
+	return failed
+}
+
+// drainFailureMessages generates failure messages for a drained deployment,
+// combining the drain error with individual element failures.
+func drainFailureMessages(
+	deployCtx *DeployContext,
+	failed []string,
+) []string {
+	operation := determineOperation(deployCtx)
+	messages := []string{
+		fmt.Sprintf(
+			"failed to %s the blueprint instance due to %d %s",
+			operation,
+			len(failed),
+			pluralise("failure", "failures", len(failed)),
+		),
+	}
+	messageTemplate := "failed to %s %q"
+	for _, elementName := range failed {
+		messages = append(messages, fmt.Sprintf(messageTemplate, operation, elementName))
+	}
+	return messages
+}
+
+// drainFailureMessagesWithInterrupted generates failure messages for a drained
+// deployment that includes both failed and interrupted elements.
+func drainFailureMessagesWithInterrupted(
+	deployCtx *DeployContext,
+	failed []string,
+	interrupted []string,
+) []string {
+	operation := determineOperation(deployCtx)
+	totalFailures := len(failed) + len(interrupted)
+	messages := []string{
+		fmt.Sprintf(
+			"failed to %s the blueprint instance due to %d %s",
+			operation,
+			totalFailures,
+			pluralise("failure", "failures", totalFailures),
+		),
+	}
+
+	messageTemplate := "failed to %s %q"
+	for _, elementName := range failed {
+		messages = append(messages, fmt.Sprintf(messageTemplate, operation, elementName))
+	}
+
+	interruptedMessageTemplate := "%q was interrupted and its state is unknown"
+	for _, elementName := range interrupted {
+		messages = append(messages, fmt.Sprintf(interruptedMessageTemplate, elementName))
+	}
+
+	return messages
+}
+
+// getElementNames extracts the namespaced logical names from a slice of elements.
+func getElementNames(elements []state.Element) []string {
+	names := make([]string, 0, len(elements))
+	for _, elem := range elements {
+		names = append(names, getNamespacedLogicalName(elem))
+	}
+	return names
+}
+
+// determineResourceInterruptedStatus returns the appropriate interrupted status
+// for a resource based on whether the operation was a destroy or deploy/update.
+func determineResourceInterruptedStatus(
+	destroying bool,
+	rollback bool,
+) (core.ResourceStatus, core.PreciseResourceStatus) {
+	if destroying && !rollback {
+		return core.ResourceStatusDestroyInterrupted, core.PreciseResourceStatusDestroyInterrupted
+	}
+
+	if destroying && rollback {
+		// Destroying during rollback means we were rolling back a deployment
+		// by destroying the resource that was created.
+		return core.ResourceStatusCreateInterrupted, core.PreciseResourceStatusCreateInterrupted
+	}
+
+	if !destroying && rollback {
+		// Deploying during rollback means we were rolling back a destruction
+		// or rolling back an update.
+		return core.ResourceStatusUpdateInterrupted, core.PreciseResourceStatusUpdateInterrupted
+	}
+
+	// Normal deploy/update operation
+	// We use UpdateInterrupted as a general case since we can't distinguish
+	// between create and update at this point without more context.
+	// The reconciliation process will determine the actual state.
+	return core.ResourceStatusUpdateInterrupted, core.PreciseResourceStatusUpdateInterrupted
+}
+
+// determineLinkInterruptedStatus returns the appropriate interrupted status
+// for a link based on whether the operation was a destroy or deploy/update.
+func determineLinkInterruptedStatus(
+	destroying bool,
+	rollback bool,
+) (core.LinkStatus, core.PreciseLinkStatus) {
+	if destroying && !rollback {
+		return core.LinkStatusDestroyInterrupted, core.PreciseLinkStatusIntermediaryResourceUpdateInterrupted
+	}
+
+	if destroying && rollback {
+		// Destroying during rollback means we were rolling back a link creation.
+		return core.LinkStatusCreateInterrupted, core.PreciseLinkStatusIntermediaryResourceUpdateInterrupted
+	}
+
+	if !destroying && rollback {
+		// Deploying during rollback means we were rolling back a link destruction
+		// or rolling back an update.
+		return core.LinkStatusUpdateInterrupted, core.PreciseLinkStatusIntermediaryResourceUpdateInterrupted
+	}
+
+	// Normal deploy/update operation
+	return core.LinkStatusUpdateInterrupted, core.PreciseLinkStatusIntermediaryResourceUpdateInterrupted
+}
+
+// determineChildInterruptedStatus returns the appropriate interrupted status
+// for a child blueprint based on whether the operation was a destroy or deploy/update.
+func determineChildInterruptedStatus(
+	destroying bool,
+	rollback bool,
+) core.InstanceStatus {
+	if destroying && !rollback {
+		return core.InstanceStatusDestroyInterrupted
+	}
+
+	if destroying && rollback {
+		// Destroying during rollback means we were rolling back a deployment.
+		return core.InstanceStatusDeployInterrupted
+	}
+
+	if !destroying && rollback {
+		// Deploying during rollback means we were rolling back a destruction
+		// or rolling back an update.
+		return core.InstanceStatusUpdateInterrupted
+	}
+
+	// Normal deploy/update operation
+	return core.InstanceStatusUpdateInterrupted
 }

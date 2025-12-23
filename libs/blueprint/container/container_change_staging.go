@@ -41,11 +41,6 @@ func (c *defaultBlueprintContainer) StageChanges(
 		)
 	}
 
-	err = c.checkDrift(ctxWithInstanceID, resolvedInstanceID, input.SkipDriftCheck, paramOverrides)
-	if err != nil {
-		return err
-	}
-
 	if input.Destroy {
 		changeStagingLogger.Info("staging changes for destroying blueprint instance")
 		go c.stageInstanceRemoval(ctxWithInstanceID, resolvedInstanceID, channels)
@@ -77,34 +72,6 @@ func (c *defaultBlueprintContainer) StageChanges(
 		channels,
 		changeStagingLogger,
 	)
-
-	return nil
-}
-
-func (c *defaultBlueprintContainer) checkDrift(
-	ctx context.Context,
-	instanceID string,
-	skipDriftCheck bool,
-	params core.BlueprintParams,
-) error {
-	if skipDriftCheck || !c.driftCheckEnabled {
-		return nil
-	}
-
-	if instanceID == "" {
-		// The blueprint instance is for a new deployment,
-		// so there is no need to check for drift.
-		return nil
-	}
-
-	driftResults, err := c.driftChecker.CheckDrift(ctx, instanceID, params)
-	if err != nil {
-		return err
-	}
-
-	if len(driftResults) > 0 {
-		return errDriftDetected(driftResults)
-	}
 
 	return nil
 }

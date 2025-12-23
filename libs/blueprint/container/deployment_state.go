@@ -85,6 +85,14 @@ type DeploymentState interface {
 	// GetElementDependencies returns the dependencies of a resource or child blueprint
 	// element in the deployment state.
 	GetElementDependencies(element state.Element) *state.DependencyInfo
+	// GetStartedElementCount returns the number of elements that have been started
+	// for deployment. This is used to determine how many completions to wait for
+	// during drain mode when a terminal failure occurs.
+	GetStartedElementCount() int
+	// GetInFlightElements returns the elements that are currently in progress
+	// (started but not completed). This is used to mark elements as interrupted
+	// when drain timeout is reached.
+	GetInFlightElements() []state.Element
 }
 
 // CollectedResourceData holds the spec state and metadata for a resource that is being deployed,
@@ -432,6 +440,24 @@ func (d *defaultDeploymentState) GetElementDependencies(element state.Element) *
 		DependsOnResources: resourceDepsCopy,
 		DependsOnChildren:  childDepsCopy,
 	}
+}
+
+func (d *defaultDeploymentState) GetStartedElementCount() int {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	return len(d.deploymentStarted)
+}
+
+func (d *defaultDeploymentState) GetInFlightElements() []state.Element {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	inFlight := make([]state.Element, 0, len(d.inProgress))
+	for _, elem := range d.inProgress {
+		inFlight = append(inFlight, elem)
+	}
+	return inFlight
 }
 
 func copyLinkDeployResult(result *LinkDeployResult) *LinkDeployResult {

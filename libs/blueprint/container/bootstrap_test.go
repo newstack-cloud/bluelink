@@ -223,6 +223,13 @@ func (l *testApiGatewayLambdaLink) UpdateIntermediaryResources(
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
 }
 
+func (l *testApiGatewayLambdaLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
 type testLambdaDynamoDBTableLink struct {
 	// Tracks the number of resource A update attempts for each unique link name.
 	// This is used to emulate transient failures when updating links,
@@ -589,6 +596,13 @@ func (l *testLambdaDynamoDBTableLink) UpdateIntermediaryResources(
 	}, nil
 }
 
+func (l *testLambdaDynamoDBTableLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
 type testDynamoDBTableStreamLink struct{}
 
 func (l *testDynamoDBTableStreamLink) StageChanges(
@@ -658,6 +672,13 @@ func (l *testDynamoDBTableStreamLink) UpdateIntermediaryResources(
 	input *provider.LinkUpdateIntermediaryResourcesInput,
 ) (*provider.LinkUpdateIntermediaryResourcesOutput, error) {
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
+}
+
+func (l *testDynamoDBTableStreamLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
 type testDynamoDBStreamLambdaLink struct{}
@@ -731,6 +752,13 @@ func (l *testDynamoDBStreamLambdaLink) UpdateIntermediaryResources(
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
 }
 
+func (l *testDynamoDBStreamLambdaLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
 type testDynamoDBTableLambdaLink struct{}
 
 func (l *testDynamoDBTableLambdaLink) StageChanges(
@@ -802,6 +830,13 @@ func (l *testDynamoDBTableLambdaLink) UpdateIntermediaryResources(
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
 }
 
+func (l *testDynamoDBTableLambdaLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
 type testLambdaLambdaLink struct{}
 
 func (l *testLambdaLambdaLink) StageChanges(
@@ -871,6 +906,13 @@ func (l *testLambdaLambdaLink) UpdateIntermediaryResources(
 	input *provider.LinkUpdateIntermediaryResourcesInput,
 ) (*provider.LinkUpdateIntermediaryResourcesOutput, error) {
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
+}
+
+func (l *testLambdaLambdaLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
 type testLambdaLambda2Link struct{}
@@ -946,6 +988,13 @@ func (l *testLambdaLambda2Link) UpdateIntermediaryResources(
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
 }
 
+func (l *testLambdaLambda2Link) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
 type testSubnetVPCLink struct{}
 
 func (l *testSubnetVPCLink) StageChanges(
@@ -1015,6 +1064,13 @@ func (l *testSubnetVPCLink) UpdateIntermediaryResources(
 	input *provider.LinkUpdateIntermediaryResourcesInput,
 ) (*provider.LinkUpdateIntermediaryResourcesOutput, error) {
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
+}
+
+func (l *testSubnetVPCLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
 type testSecurityGroupVPCLink struct{}
@@ -1088,6 +1144,13 @@ func (l *testSecurityGroupVPCLink) UpdateIntermediaryResources(
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
 }
 
+func (l *testSecurityGroupVPCLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
 type testRouteTableVPCLink struct{}
 
 func (l *testRouteTableVPCLink) StageChanges(
@@ -1157,6 +1220,13 @@ func (l *testRouteTableVPCLink) UpdateIntermediaryResources(
 	input *provider.LinkUpdateIntermediaryResourcesInput,
 ) (*provider.LinkUpdateIntermediaryResourcesOutput, error) {
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
+}
+
+func (l *testRouteTableVPCLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
 type testRouteRouteTableLink struct{}
@@ -1230,6 +1300,13 @@ func (l *testRouteRouteTableLink) UpdateIntermediaryResources(
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
 }
 
+func (l *testRouteRouteTableLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
 type testRouteInternetGatewayLink struct{}
 
 func (l *testRouteInternetGatewayLink) StageChanges(
@@ -1299,4 +1376,11 @@ func (l *testRouteInternetGatewayLink) UpdateIntermediaryResources(
 	input *provider.LinkUpdateIntermediaryResourcesInput,
 ) (*provider.LinkUpdateIntermediaryResourcesOutput, error) {
 	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
+}
+
+func (l *testRouteInternetGatewayLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }

@@ -75,7 +75,55 @@ const (
 	// and the latest changes made to
 	// the current link have been rolled back.
 	LinkStatusUpdateRollbackComplete
+	// LinkStatusCreateInterrupted is used when
+	// a link creation was interrupted due to deployment
+	// being cancelled (e.g., drain timeout after terminal failure).
+	// The actual state of the link is unknown and needs reconciliation.
+	LinkStatusCreateInterrupted
+	// LinkStatusUpdateInterrupted is used when
+	// a link update was interrupted due to deployment
+	// being cancelled (e.g., drain timeout after terminal failure).
+	// The actual state of the link is unknown and needs reconciliation.
+	LinkStatusUpdateInterrupted
+	// LinkStatusDestroyInterrupted is used when
+	// a link destruction was interrupted due to deployment
+	// being cancelled (e.g., drain timeout after terminal failure).
+	// The actual state of the link is unknown and needs reconciliation.
+	LinkStatusDestroyInterrupted
 )
+
+var linkStatusStrings = map[LinkStatus]string{
+	LinkStatusUnknown:                 "UNKNOWN",
+	LinkStatusCreating:                "CREATING",
+	LinkStatusCreated:                 "CREATED",
+	LinkStatusCreateFailed:            "CREATE FAILED",
+	LinkStatusCreateRollingBack:       "CREATE ROLLING BACK",
+	LinkStatusCreateRollbackFailed:    "CREATE ROLLBACK FAILED",
+	LinkStatusCreateRollbackComplete:  "CREATE ROLLBACK COMPLETE",
+	LinkStatusDestroying:              "DESTROYING",
+	LinkStatusDestroyed:               "DESTROYED",
+	LinkStatusDestroyFailed:           "DESTROY FAILED",
+	LinkStatusDestroyRollingBack:      "DESTROY ROLLING BACK",
+	LinkStatusDestroyRollbackFailed:   "DESTROY ROLLBACK FAILED",
+	LinkStatusDestroyRollbackComplete: "DESTROY ROLLBACK COMPLETE",
+	LinkStatusUpdating:                "UPDATING",
+	LinkStatusUpdated:                 "UPDATED",
+	LinkStatusUpdateFailed:            "UPDATE FAILED",
+	LinkStatusUpdateRollingBack:       "UPDATE ROLLING BACK",
+	LinkStatusUpdateRollbackFailed:    "UPDATE ROLLBACK FAILED",
+	LinkStatusUpdateRollbackComplete:  "UPDATE ROLLBACK COMPLETE",
+	LinkStatusCreateInterrupted:       "CREATE INTERRUPTED",
+	LinkStatusUpdateInterrupted:       "UPDATE INTERRUPTED",
+	LinkStatusDestroyInterrupted:      "DESTROY INTERRUPTED",
+}
+
+func (s LinkStatus) String() string {
+	str, ok := linkStatusStrings[s]
+	if !ok {
+		return "UNKNOWN"
+	}
+	return str
+}
 
 // PreciseLinkStatus is used to represent a more precise
 // current state of a link in a blueprint instance.
@@ -168,4 +216,52 @@ const (
 	// and the current link for which intermediary resources were succsefully updated
 	// has been rolled back.
 	PreciseLinkStatusIntermediaryResourceUpdateRollbackComplete
+	// PreciseLinkStatusResourceAUpdateInterrupted is used when
+	// the resource A update for a link was interrupted due to deployment
+	// being cancelled (e.g., drain timeout after terminal failure).
+	// The actual state is unknown and needs reconciliation.
+	PreciseLinkStatusResourceAUpdateInterrupted
+	// PreciseLinkStatusResourceBUpdateInterrupted is used when
+	// the resource B update for a link was interrupted due to deployment
+	// being cancelled (e.g., drain timeout after terminal failure).
+	// The actual state is unknown and needs reconciliation.
+	PreciseLinkStatusResourceBUpdateInterrupted
+	// PreciseLinkStatusIntermediaryResourceUpdateInterrupted is used when
+	// the intermediary resources update for a link was interrupted due to deployment
+	// being cancelled (e.g., drain timeout after terminal failure).
+	// The actual state is unknown and needs reconciliation.
+	PreciseLinkStatusIntermediaryResourceUpdateInterrupted
 )
+
+var preciseLinkStatusStrings = map[PreciseLinkStatus]string{
+	PreciseLinkStatusUnknown:                                    "UNKNOWN",
+	PreciseLinkStatusUpdatingResourceA:                          "UPDATING RESOURCE A",
+	PreciseLinkStatusResourceAUpdated:                           "RESOURCE A UPDATED",
+	PreciseLinkStatusResourceAUpdateFailed:                      "RESOURCE A UPDATE FAILED",
+	PreciseLinkStatusResourceAUpdateRollingBack:                 "RESOURCE A UPDATE ROLLING BACK",
+	PreciseLinkStatusResourceAUpdateRollbackFailed:              "RESOURCE A UPDATE ROLLBACK FAILED",
+	PreciseLinkStatusResourceAUpdateRollbackComplete:            "RESOURCE A UPDATE ROLLBACK COMPLETE",
+	PreciseLinkStatusUpdatingResourceB:                          "UPDATING RESOURCE B",
+	PreciseLinkStatusResourceBUpdated:                           "RESOURCE B UPDATED",
+	PreciseLinkStatusResourceBUpdateFailed:                      "RESOURCE B UPDATE FAILED",
+	PreciseLinkStatusResourceBUpdateRollingBack:                 "RESOURCE B UPDATE ROLLING BACK",
+	PreciseLinkStatusResourceBUpdateRollbackFailed:              "RESOURCE B UPDATE ROLLBACK FAILED",
+	PreciseLinkStatusResourceBUpdateRollbackComplete:            "RESOURCE B UPDATE ROLLBACK COMPLETE",
+	PreciseLinkStatusUpdatingIntermediaryResources:              "UPDATING INTERMEDIARY RESOURCES",
+	PreciseLinkStatusIntermediaryResourcesUpdated:               "INTERMEDIARY RESOURCES UPDATED",
+	PreciseLinkStatusIntermediaryResourceUpdateFailed:           "INTERMEDIARY RESOURCES UPDATE FAILED",
+	PreciseLinkStatusIntermediaryResourceUpdateRollingBack:      "INTERMEDIARY RESOURCES UPDATE ROLLING BACK",
+	PreciseLinkStatusIntermediaryResourceUpdateRollbackFailed:   "INTERMEDIARY RESOURCES UPDATE ROLLBACK FAILED",
+	PreciseLinkStatusIntermediaryResourceUpdateRollbackComplete: "INTERMEDIARY RESOURCES UPDATE ROLLBACK COMPLETE",
+	PreciseLinkStatusResourceAUpdateInterrupted:                 "RESOURCE A UPDATE INTERRUPTED",
+	PreciseLinkStatusResourceBUpdateInterrupted:                 "RESOURCE B UPDATE INTERRUPTED",
+	PreciseLinkStatusIntermediaryResourceUpdateInterrupted:      "INTERMEDIARY RESOURCES UPDATE INTERRUPTED",
+}
+
+func (s PreciseLinkStatus) String() string {
+	str, ok := preciseLinkStatusStrings[s]
+	if !ok {
+		return "UNKNOWN"
+	}
+	return str
+}

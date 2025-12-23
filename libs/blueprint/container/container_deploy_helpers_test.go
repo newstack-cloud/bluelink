@@ -1055,3 +1055,19 @@ func (c *stubBlueprintContainer) ResourceTemplates() map[string]string {
 func (c *stubBlueprintContainer) Diagnostics() []*core.Diagnostic {
 	return []*core.Diagnostic{}
 }
+
+func (c *stubBlueprintContainer) CheckReconciliation(
+	ctx context.Context,
+	input *CheckReconciliationInput,
+	paramOverrides core.BlueprintParams,
+) (*ReconciliationCheckResult, error) {
+	return nil, nil
+}
+
+func (c *stubBlueprintContainer) ApplyReconciliation(
+	ctx context.Context,
+	input *ApplyReconciliationInput,
+	paramOverrides core.BlueprintParams,
+) (*ApplyReconciliationResult, error) {
+	return nil, nil
+}

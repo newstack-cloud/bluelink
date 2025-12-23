@@ -81,6 +81,14 @@ type Link interface {
 	// A soft link is where it does not matter which resource type in the relationship
 	// is created first.
 	GetKind(ctx context.Context, input *LinkGetKindInput) (*LinkGetKindOutput, error)
+	// GetIntermediaryExternalState fetches the current cloud state for intermediary
+	// resources owned by this link. Used for drift detection and reconciliation.
+	// Link implementations that don't manage intermediary resources should return
+	// an empty map or nil output.
+	GetIntermediaryExternalState(
+		ctx context.Context,
+		input *LinkGetIntermediaryExternalStateInput,
+	) (*LinkGetIntermediaryExternalStateOutput, error)
 }
 
 // LinkStageChangesInput provides the input required to
@@ -195,6 +203,42 @@ type LinkUpdateIntermediaryResourcesOutput struct {
 	//
 	// {resourceName} represents the logical name of the resource in single blueprint instance.
 	ResourceDataMappings map[string]string
+}
+
+// LinkGetIntermediaryExternalStateInput provides the input for fetching
+// external state of intermediary resources.
+type LinkGetIntermediaryExternalStateInput struct {
+	InstanceID   string
+	InstanceName string
+	LinkID       string
+	LinkName     string
+	ResourceAInfo *ResourceInfo
+	ResourceBInfo *ResourceInfo
+	// IntermediaryResourceIDs specifies which intermediary resources to fetch.
+	// If empty, fetch all known intermediary resources from CurrentLinkState.
+	IntermediaryResourceIDs []string
+	CurrentLinkState        *state.LinkState
+	LinkContext             LinkContext
+}
+
+// LinkGetIntermediaryExternalStateOutput contains the external state
+// of intermediary resources.
+type LinkGetIntermediaryExternalStateOutput struct {
+	// IntermediaryStates maps intermediary resource ID to its external state.
+	IntermediaryStates map[string]*IntermediaryExternalState
+}
+
+// IntermediaryExternalState contains the external (cloud) state
+// of an intermediary resource.
+type IntermediaryExternalState struct {
+	// ResourceID is the unique identifier for the intermediary resource.
+	ResourceID string
+	// ResourceType is the type of the intermediary resource.
+	ResourceType string
+	// SpecData holds the current cloud state of the intermediary resource.
+	SpecData *core.MappingNode
+	// Exists indicates whether the resource was found in the cloud.
+	Exists bool
 }
 
 type LinkExistingResourceUpdatesOutput struct {

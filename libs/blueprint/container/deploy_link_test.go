@@ -143,6 +143,72 @@ func (s *LinkDeployerTestSuite) Test_handles_intermediary_resources_update_termi
 	)
 }
 
+func (s *LinkDeployerTestSuite) Test_releases_lock_when_context_cancelled_after_lock_acquired() {
+	fixture := s.fixtures[1]
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Set up the mock registry to cancel context after lock is acquired.
+	mockRegistry := s.resourceRegistry.(*internal.ResourceRegistryMock)
+	mockRegistry.OnLockAcquired = func() {
+		cancel()
+	}
+	defer func() { mockRegistry.OnLockAcquired = nil }()
+
+	channels := CreateDeployChannels()
+	deployState := NewDefaultDeploymentState()
+
+	// Channel to receive the deploy error.
+	deployErrChan := make(chan error, 1)
+
+	go func() {
+		err := s.deployer.Deploy(
+			ctx,
+			fixture.linkElement,
+			fixture.instanceID,
+			fixture.instanceName,
+			provider.LinkUpdateTypeCreate,
+			&testLambdaDynamoDBTableLink{
+				resourceAUpdateAttempts: map[string]int{},
+			},
+			&DeployContext{
+				Channels:              channels,
+				State:                 deployState,
+				InstanceStateSnapshot: fixture.instanceStateSnapshot,
+				ParamOverrides:        deployLinkParams(),
+				ResourceTemplates:     map[string]string{},
+				ResourceRegistry:      s.resourceRegistry,
+				Logger:                s.logger,
+			},
+			provider.DefaultRetryPolicy,
+		)
+		deployErrChan <- err
+	}()
+
+	// Consume messages from the channels to prevent blocking.
+	go func() {
+		for {
+			select {
+			case <-channels.LinkUpdateChan:
+			case <-channels.ErrChan:
+				return
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	// Wait for deploy to complete with error or timeout.
+	select {
+	case err := <-deployErrChan:
+		s.Assert().ErrorIs(err, context.Canceled)
+	case <-time.After(5 * time.Second):
+		s.Fail("timeout waiting for deploy to complete")
+	}
+
+	// Verify lock was released.
+	s.Assert().False(mockRegistry.HasLocks(), "locks should be released after context cancellation")
+}
+
 func (s *LinkDeployerTestSuite) runDeployTest(
 	fixture *linkDeployerFixture,
 	updateType provider.LinkUpdateType,

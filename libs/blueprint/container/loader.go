@@ -187,7 +187,6 @@ type defaultLoader struct {
 	linkDestroyer                  LinkDestroyer
 	linkDeployer                   LinkDeployer
 	driftChecker                   drift.Checker
-	driftCheckEnabled              bool
 	// Allows for customisation of the blueprint container dependencies
 	// used for instantiating the blueprint container.
 	// This allows users to override the default implementations of services
@@ -244,15 +243,6 @@ func WithLoaderTransformSpec(transformSpec bool) LoaderOption {
 	}
 }
 
-// WithLoaderDriftCheckEnabled sets the flag to determine whether drift checking
-// should be enabled when staging changes for a blueprint.
-//
-// When this option is not provided, the default value is false.
-func WithLoaderDriftCheckEnabled(driftCheckEnabled bool) LoaderOption {
-	return func(loader *defaultLoader) {
-		loader.driftCheckEnabled = driftCheckEnabled
-	}
-}
 
 // WithLoaderClock sets the clock to be used by the loader.
 //
@@ -530,7 +520,6 @@ func NewDefaultLoader(
 		childBlueprintDestroyer:        NewDefaultChildBlueprintDestroyer(),
 		linkDestroyer:                  linkDestroyer,
 		linkDeployer:                   linkDeployer,
-		driftCheckEnabled:              false,
 		logger:                         logger,
 	}
 
@@ -596,7 +585,6 @@ func (l *defaultLoader) forChildBlueprint(
 		WithLoaderValidateRuntimeValues(l.validateRuntimeValues),
 		WithLoaderValidateAfterTransform(l.validateAfterTransform),
 		WithLoaderTransformSpec(l.transformSpec),
-		WithLoaderDriftCheckEnabled(l.driftCheckEnabled),
 		WithLoaderClock(l.clock),
 		WithLoaderResolveWorkingDir(l.resolveWorkingDir),
 		WithLoaderDerivedFromTemplates(derivedFromTemplate),
@@ -665,7 +653,6 @@ func (l *defaultLoader) loadSpecAndLinkInfo(
 		// but validation failed.
 		return NewDefaultBlueprintContainer(
 			blueprintSpec,
-			l.driftCheckEnabled,
 			l.buildPartialBlueprintContainerDependencies(refChainCollector),
 			diagnostics,
 		), diagnostics, err
@@ -678,7 +665,6 @@ func (l *defaultLoader) loadSpecAndLinkInfo(
 		// validation was successful but loading link information failed.
 		return NewDefaultBlueprintContainer(
 			blueprintSpec,
-			l.driftCheckEnabled,
 			l.buildPartialBlueprintContainerDependencies(refChainCollector),
 			diagnostics,
 		), diagnostics, err
@@ -686,7 +672,6 @@ func (l *defaultLoader) loadSpecAndLinkInfo(
 
 	container := NewDefaultBlueprintContainer(
 		blueprintSpec,
-		l.driftCheckEnabled,
 		l.buildFullBlueprintContainerDependencies(
 			refChainCollector,
 			blueprintSpec,

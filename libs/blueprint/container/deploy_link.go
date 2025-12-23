@@ -221,6 +221,20 @@ func (d *defaultLinkDeployer) updateLinkResourceA(
 		return nil, true, err
 	}
 
+	// Check for context cancellation before calling the plugin.
+	select {
+	case <-ctx.Done():
+		// Release the lock we just acquired before returning.
+		deployCtx.ResourceRegistry.ReleaseResourceLocksAcquiredBy(
+			ctx,
+			linkInfo.instanceID,
+			linkInfo.element.ID(),
+		)
+		deployCtx.Logger.Debug("context cancelled before link resource A update")
+		return nil, true, ctx.Err()
+	default:
+	}
+
 	deployCtx.Logger.Info(
 		"calling link plugin implementation to update resource A",
 		core.IntegerLogField("attempt", int64(updateResourceARetryInfo.Attempt)),
@@ -344,7 +358,10 @@ func (d *defaultLinkDeployer) handleUpdateLinkResourceARetry(
 
 	if !nextRetryInfo.ExceededMaxRetries {
 		waitTimeMS := provider.CalculateRetryWaitTimeMS(nextRetryInfo.Policy, nextRetryInfo.Attempt)
-		time.Sleep(time.Duration(waitTimeMS) * time.Millisecond)
+		if err := sleepWithContext(ctx, time.Duration(waitTimeMS)*time.Millisecond); err != nil {
+			deployCtx.Logger.Debug("context cancelled during link resource A retry wait")
+			return nil, true, err
+		}
 		return d.updateLinkResourceA(
 			ctx,
 			linkImplementation,
@@ -485,6 +502,20 @@ func (d *defaultLinkDeployer) updateLinkResourceB(
 		return nil, true, err
 	}
 
+	// Check for context cancellation before calling the plugin.
+	select {
+	case <-ctx.Done():
+		// Release the lock we just acquired before returning.
+		deployCtx.ResourceRegistry.ReleaseResourceLocksAcquiredBy(
+			ctx,
+			linkInfo.instanceID,
+			linkInfo.element.ID(),
+		)
+		deployCtx.Logger.Debug("context cancelled before link resource B update")
+		return nil, true, ctx.Err()
+	default:
+	}
+
 	deployCtx.Logger.Info(
 		"calling link plugin implementation to update resource B",
 		core.IntegerLogField("attempt", int64(updateResourceBRetryInfo.Attempt)),
@@ -608,7 +639,10 @@ func (d *defaultLinkDeployer) handleUpdateLinkResourceBRetry(
 
 	if !nextRetryInfo.ExceededMaxRetries {
 		waitTimeMS := provider.CalculateRetryWaitTimeMS(nextRetryInfo.Policy, nextRetryInfo.Attempt)
-		time.Sleep(time.Duration(waitTimeMS) * time.Millisecond)
+		if err := sleepWithContext(ctx, time.Duration(waitTimeMS)*time.Millisecond); err != nil {
+			deployCtx.Logger.Debug("context cancelled during link resource B retry wait")
+			return nil, true, err
+		}
 		return d.updateLinkResourceB(
 			ctx,
 			linkImplementation,
@@ -732,6 +766,14 @@ func (d *defaultLinkDeployer) updateLinkIntermediaryResources(
 		updateIntermediariesRetryInfo,
 		input.LinkUpdateType,
 	)
+
+	// Check for context cancellation before calling the plugin.
+	select {
+	case <-ctx.Done():
+		deployCtx.Logger.Debug("context cancelled before link intermediary resources update")
+		return ctx.Err()
+	default:
+	}
 
 	deployCtx.Logger.Info(
 		"calling link plugin implementation to update intermediary resources",
@@ -903,7 +945,10 @@ func (d *defaultLinkDeployer) handleUpdateLinkIntermediaryResourcesRetry(
 
 	if !nextRetryInfo.ExceededMaxRetries {
 		waitTimeMS := provider.CalculateRetryWaitTimeMS(nextRetryInfo.Policy, nextRetryInfo.Attempt)
-		time.Sleep(time.Duration(waitTimeMS) * time.Millisecond)
+		if err := sleepWithContext(ctx, time.Duration(waitTimeMS)*time.Millisecond); err != nil {
+			deployCtx.Logger.Debug("context cancelled during link intermediary resources retry wait")
+			return err
+		}
 		return d.updateLinkIntermediaryResources(
 			ctx,
 			linkImplementation,

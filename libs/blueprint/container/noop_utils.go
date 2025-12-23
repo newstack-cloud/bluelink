@@ -46,3 +46,24 @@ func (l *noopLinksContainer) Remove(
 ) (state.LinkState, error) {
 	return state.LinkState{}, nil
 }
+
+func (l *noopLinksContainer) GetDrift(
+	ctx context.Context,
+	linkID string,
+) (state.LinkDriftState, error) {
+	return state.LinkDriftState{}, nil
+}
+
+func (l *noopLinksContainer) SaveDrift(
+	ctx context.Context,
+	driftState state.LinkDriftState,
+) error {
+	return nil
+}
+
+func (l *noopLinksContainer) RemoveDrift(
+	ctx context.Context,
+	linkID string,
+) (state.LinkDriftState, error) {
+	return state.LinkDriftState{}, nil
+}

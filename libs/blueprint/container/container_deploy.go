@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"time"
 
@@ -668,6 +669,11 @@ func (c *defaultBlueprintContainer) deployNode(
 type deploymentEventLoopState struct {
 	err           error
 	drainDeadline <-chan time.Time
+	// terminalFailure indicates that the drain was triggered by a terminal
+	// deployment failure (e.g., a resource failed to create). In this case,
+	// we should send a finish message with failure details rather than
+	// propagating the error.
+	terminalFailure bool
 }
 
 // setError sets the first error encountered and starts the drain timeout.
@@ -676,6 +682,16 @@ func (s *deploymentEventLoopState) setError(err error, drainTimeout time.Duratio
 	if s.err == nil {
 		s.err = err
 		s.drainDeadline = time.After(drainTimeout)
+	}
+}
+
+// setTerminalFailure sets a terminal failure error and starts the drain timeout.
+// Terminal failures result in a finish message rather than error propagation.
+func (s *deploymentEventLoopState) setTerminalFailure(err error, drainTimeout time.Duration) {
+	if s.err == nil {
+		s.err = err
+		s.drainDeadline = time.After(drainTimeout)
+		s.terminalFailure = true
 	}
 }
 
@@ -695,6 +711,9 @@ func (c *defaultBlueprintContainer) processResourceUpdate(
 ) {
 	if state.isDraining() {
 		c.trackResourceCompletion(msg, deployCtx.Rollback, finished)
+		// Forward the message to the caller so they can track status changes
+		// for in-flight resources during drain.
+		deployCtx.Channels.ResourceUpdateChan <- msg
 		return
 	}
 
@@ -712,6 +731,16 @@ func (c *defaultBlueprintContainer) processResourceUpdate(
 	)
 	if err != nil {
 		state.setError(err, 30*time.Second)
+		return
+	}
+
+	// Trigger drain mode on terminal failure to stop new deployments
+	// and wait for in-flight operations to complete.
+	if isTerminalResourceFailure(msg, deployCtx.Rollback) {
+		state.setTerminalFailure(
+			fmt.Errorf("resource %q failed to deploy", msg.ResourceName),
+			30*time.Second,
+		)
 	}
 }
 
@@ -726,6 +755,9 @@ func (c *defaultBlueprintContainer) processChildUpdate(
 ) {
 	if state.isDraining() {
 		c.trackChildCompletion(msg, deployCtx.Rollback, finished)
+		// Forward the message to the caller so they can track status changes
+		// for in-flight child blueprints during drain.
+		deployCtx.Channels.ChildUpdateChan <- msg
 		return
 	}
 
@@ -739,6 +771,16 @@ func (c *defaultBlueprintContainer) processChildUpdate(
 	)
 	if err != nil {
 		state.setError(err, 30*time.Second)
+		return
+	}
+
+	// Trigger drain mode on terminal failure to stop new deployments
+	// and wait for in-flight operations to complete.
+	if isTerminalChildFailure(msg, deployCtx.Rollback) {
+		state.setTerminalFailure(
+			fmt.Errorf("child blueprint %q failed to deploy", msg.ChildName),
+			30*time.Second,
+		)
 	}
 }
 
@@ -752,6 +794,9 @@ func (c *defaultBlueprintContainer) processLinkUpdate(
 ) {
 	if state.isDraining() {
 		c.trackLinkCompletion(msg, deployCtx.Rollback, finished)
+		// Forward the message to the caller so they can track status changes
+		// for in-flight links during drain.
+		deployCtx.Channels.LinkUpdateChan <- msg
 		return
 	}
 
@@ -760,6 +805,16 @@ func (c *defaultBlueprintContainer) processLinkUpdate(
 	err := c.handleLinkUpdateMessage(ctx, instanceID, msg, deployCtx, finished)
 	if err != nil {
 		state.setError(err, 30*time.Second)
+		return
+	}
+
+	// Trigger drain mode on terminal failure to stop new deployments
+	// and wait for in-flight operations to complete.
+	if isTerminalLinkFailure(msg, deployCtx.Rollback) {
+		state.setTerminalFailure(
+			fmt.Errorf("link %q failed to deploy", msg.LinkName),
+			30*time.Second,
+		)
 	}
 }
 
@@ -779,15 +834,51 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 
 	state := &deploymentEventLoopState{}
 
-	// Keep looping until ALL elements report completion (success or failure).
-	// If an error occurs, we continue draining until either all elements finish
-	// or the drain timeout is reached.
-	for len(finished) < elementsToDeploy {
+	// Keep looping until expected elements report completion (success or failure).
+	// In normal mode, we wait for all planned elements.
+	// In drain mode (after a terminal failure), we only wait for elements that
+	// have actually started deploying since unstarted elements will never send
+	// completion messages.
+	for {
+		expectedCompletions := elementsToDeploy
+		if state.isDraining() {
+			expectedCompletions = deployCtx.State.GetStartedElementCount()
+		}
+
+		if len(finished) >= expectedCompletions {
+			break
+		}
+
 		select {
 		case <-ctx.Done():
 			state.setError(ctx.Err(), 30*time.Second)
 
 		case <-state.drainDeadline:
+			if state.terminalFailure {
+				// Mark all in-flight elements as interrupted since we can't
+				// determine their actual state after drain timeout.
+				inFlightElements := deployCtx.State.GetInFlightElements()
+				c.markInFlightElementsAsInterrupted(
+					ctx,
+					instanceID,
+					inFlightElements,
+					deployCtx,
+				)
+
+				failed := getFailedElementsFromFinished(finished, deployCtx.Rollback)
+				interrupted := getElementNames(inFlightElements)
+				deployCtx.Channels.FinishChan <- c.createDeploymentFinishedMessage(
+					instanceID,
+					determineFinishedFailureStatus(
+						/* destroyingInstance */ false,
+						deployCtx.Rollback,
+					),
+					drainFailureMessagesWithInterrupted(deployCtx, failed, interrupted),
+					c.clock.Since(deployCtx.StartTime),
+					deployCtx.State.GetPrepareDuration(),
+				)
+				return true, nil
+			}
 			return true, state.err
 
 		case msg := <-internalChannels.ResourceUpdateChan:
@@ -807,12 +898,30 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 		}
 	}
 
+	// If we exited the loop in drain mode (all started elements completed),
+	// handle based on whether it was a terminal failure or unexpected error.
 	if state.err != nil {
+		if state.terminalFailure {
+			failed := getFailedElementsFromFinished(finished, deployCtx.Rollback)
+			deployCtx.Channels.FinishChan <- c.createDeploymentFinishedMessage(
+				instanceID,
+				determineFinishedFailureStatus(
+					/* destroyingInstance */ false,
+					deployCtx.Rollback,
+				),
+				drainFailureMessages(deployCtx, failed),
+				c.clock.Since(deployCtx.StartTime),
+				deployCtx.State.GetPrepareDuration(),
+			)
+			return true, nil
+		}
+
 		return true, state.err
 	}
 
 	failed := getFailedElementDeploymentsAndUpdateState(finished, changes, deployCtx)
 	if len(failed) > 0 {
+		c.logger.Info("deployment failed, sending finished message", core.StringLogField("instanceID", instanceID))
 		deployCtx.Channels.FinishChan <- c.createDeploymentFinishedMessage(
 			instanceID,
 			determineFinishedFailureStatus(
@@ -2138,6 +2247,168 @@ func (c *defaultBlueprintContainer) createDeploymentFinishedMessage(
 	}
 
 	return msg
+}
+
+// markInFlightElementsAsInterrupted marks all in-flight elements as interrupted
+// and persists the interrupted status to the state container. This is called
+// when drain timeout is reached after a terminal failure.
+func (c *defaultBlueprintContainer) markInFlightElementsAsInterrupted(
+	ctx context.Context,
+	instanceID string,
+	inFlightElements []state.Element,
+	deployCtx *DeployContext,
+) {
+	currentTimestamp := int(c.clock.Now().Unix())
+
+	for _, elem := range inFlightElements {
+		switch elem.Kind() {
+		case state.ResourceElement:
+			c.markResourceAsInterrupted(ctx, elem, instanceID, currentTimestamp, deployCtx)
+		case state.LinkElement:
+			c.markLinkAsInterrupted(ctx, elem, instanceID, currentTimestamp, deployCtx)
+		case state.ChildElement:
+			c.markChildAsInterrupted(ctx, elem, instanceID, currentTimestamp, deployCtx)
+		}
+	}
+}
+
+func (c *defaultBlueprintContainer) markResourceAsInterrupted(
+	ctx context.Context,
+	elem state.Element,
+	instanceID string,
+	currentTimestamp int,
+	deployCtx *DeployContext,
+) {
+	resourceID := elem.ID()
+	if resourceID == "" {
+		// Resource hasn't been assigned an ID yet, nothing to persist
+		return
+	}
+
+	status, preciseStatus := determineResourceInterruptedStatus(deployCtx.Destroying, deployCtx.Rollback)
+
+	err := c.stateContainer.Resources().UpdateStatus(
+		ctx,
+		resourceID,
+		state.ResourceStatusInfo{
+			Status:                     status,
+			PreciseStatus:              preciseStatus,
+			LastStatusUpdateTimestamp:  &currentTimestamp,
+			LastDeployAttemptTimestamp: &currentTimestamp,
+			FailureReasons:             []string{"deployment was interrupted due to drain timeout"},
+		},
+	)
+	if err != nil {
+		c.logger.Warn(
+			"failed to persist interrupted status for resource",
+			core.StringLogField("resourceID", resourceID),
+			core.StringLogField("resourceName", elem.LogicalName()),
+			core.ErrorLogField("error", err),
+		)
+	}
+
+	// Send interrupted message to caller channels
+	deployCtx.Channels.ResourceUpdateChan <- ResourceDeployUpdateMessage{
+		InstanceID:      instanceID,
+		ResourceID:      resourceID,
+		ResourceName:    elem.LogicalName(),
+		Status:          status,
+		PreciseStatus:   preciseStatus,
+		UpdateTimestamp: int64(currentTimestamp),
+		FailureReasons:  []string{"deployment was interrupted due to drain timeout"},
+	}
+}
+
+func (c *defaultBlueprintContainer) markLinkAsInterrupted(
+	ctx context.Context,
+	elem state.Element,
+	instanceID string,
+	currentTimestamp int,
+	deployCtx *DeployContext,
+) {
+	linkID := elem.ID()
+	if linkID == "" {
+		// Link hasn't been assigned an ID yet, nothing to persist
+		return
+	}
+
+	status, preciseStatus := determineLinkInterruptedStatus(deployCtx.Destroying, deployCtx.Rollback)
+
+	err := c.stateContainer.Links().UpdateStatus(
+		ctx,
+		linkID,
+		state.LinkStatusInfo{
+			Status:                     status,
+			PreciseStatus:              preciseStatus,
+			LastStatusUpdateTimestamp:  &currentTimestamp,
+			LastDeployAttemptTimestamp: &currentTimestamp,
+			FailureReasons:             []string{"deployment was interrupted due to drain timeout"},
+		},
+	)
+	if err != nil {
+		c.logger.Warn(
+			"failed to persist interrupted status for link",
+			core.StringLogField("linkID", linkID),
+			core.StringLogField("linkName", elem.LogicalName()),
+			core.ErrorLogField("error", err),
+		)
+	}
+
+	// Send interrupted message to caller channels
+	deployCtx.Channels.LinkUpdateChan <- LinkDeployUpdateMessage{
+		InstanceID:      instanceID,
+		LinkID:          linkID,
+		LinkName:        elem.LogicalName(),
+		Status:          status,
+		PreciseStatus:   preciseStatus,
+		UpdateTimestamp: int64(currentTimestamp),
+		FailureReasons:  []string{"deployment was interrupted due to drain timeout"},
+	}
+}
+
+func (c *defaultBlueprintContainer) markChildAsInterrupted(
+	ctx context.Context,
+	elem state.Element,
+	instanceID string,
+	currentTimestamp int,
+	deployCtx *DeployContext,
+) {
+	childInstanceID := elem.ID()
+	if childInstanceID == "" {
+		// Child hasn't been assigned an ID yet, nothing to persist
+		return
+	}
+
+	status := determineChildInterruptedStatus(deployCtx.Destroying, deployCtx.Rollback)
+
+	err := c.stateContainer.Instances().UpdateStatus(
+		ctx,
+		childInstanceID,
+		state.InstanceStatusInfo{
+			Status:                     status,
+			LastStatusUpdateTimestamp:  &currentTimestamp,
+			LastDeployAttemptTimestamp: &currentTimestamp,
+			FailureReasons:             []string{"deployment was interrupted due to drain timeout"},
+		},
+	)
+	if err != nil {
+		c.logger.Warn(
+			"failed to persist interrupted status for child blueprint",
+			core.StringLogField("childInstanceID", childInstanceID),
+			core.StringLogField("childName", elem.LogicalName()),
+			core.ErrorLogField("error", err),
+		)
+	}
+
+	// Send interrupted message to caller channels
+	deployCtx.Channels.ChildUpdateChan <- ChildDeployUpdateMessage{
+		ParentInstanceID: instanceID,
+		ChildInstanceID:  childInstanceID,
+		ChildName:        elem.LogicalName(),
+		Status:           status,
+		UpdateTimestamp:  int64(currentTimestamp),
+		FailureReasons:   []string{"deployment was interrupted due to drain timeout"},
+	}
 }
 
 type deployUpdateMessageWrapper struct {

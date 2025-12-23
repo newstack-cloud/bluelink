@@ -81,4 +81,55 @@ const (
 	// This is useful for persisting a skeleton for an instance
 	// before the first deployment of a new blueprint instance.
 	InstanceStatusNotDeployed
+	// InstanceStatusDeployInterrupted is used when
+	// a blueprint instance deployment was interrupted due to
+	// being cancelled (e.g., drain timeout after terminal failure).
+	// The actual state of the instance is unknown and needs reconciliation.
+	InstanceStatusDeployInterrupted
+	// InstanceStatusUpdateInterrupted is used when
+	// a blueprint instance update was interrupted due to
+	// being cancelled (e.g., drain timeout after terminal failure).
+	// The actual state of the instance is unknown and needs reconciliation.
+	InstanceStatusUpdateInterrupted
+	// InstanceStatusDestroyInterrupted is used when
+	// a blueprint instance destruction was interrupted due to
+	// being cancelled (e.g., drain timeout after terminal failure).
+	// The actual state of the instance is unknown and needs reconciliation.
+	InstanceStatusDestroyInterrupted
 )
+
+var (
+	instanceStatusStrings = map[InstanceStatus]string{
+		InstanceStatusPreparing:               "PREPARING",
+		InstanceStatusDeploying:               "DEPLOYING",
+		InstanceStatusDeployed:                "DEPLOYED",
+		InstanceStatusDeployFailed:            "DEPLOY FAILED",
+		InstanceStatusDeployRollingBack:       "DEPLOY ROLLING BACK",
+		InstanceStatusDeployRollbackFailed:    "DEPLOY ROLLBACK FAILED",
+		InstanceStatusDeployRollbackComplete:  "DEPLOY ROLLBACK COMPLETE",
+		InstanceStatusDestroying:              "DESTROYING",
+		InstanceStatusDestroyed:               "DESTROYED",
+		InstanceStatusDestroyFailed:           "DESTROY FAILED",
+		InstanceStatusDestroyRollingBack:      "DESTROY ROLLING BACK",
+		InstanceStatusDestroyRollbackFailed:   "DESTROY ROLLBACK FAILED",
+		InstanceStatusDestroyRollbackComplete: "DESTROY ROLLBACK COMPLETE",
+		InstanceStatusUpdating:                "UPDATING",
+		InstanceStatusUpdated:                 "UPDATED",
+		InstanceStatusUpdateFailed:            "UPDATE FAILED",
+		InstanceStatusUpdateRollingBack:       "UPDATE ROLLING BACK",
+		InstanceStatusUpdateRollbackFailed:    "UPDATE ROLLBACK FAILED",
+		InstanceStatusUpdateRollbackComplete:  "UPDATE ROLLBACK COMPLETE",
+		InstanceStatusNotDeployed:             "NOT DEPLOYED",
+		InstanceStatusDeployInterrupted:       "DEPLOY INTERRUPTED",
+		InstanceStatusUpdateInterrupted:       "UPDATE INTERRUPTED",
+		InstanceStatusDestroyInterrupted:      "DESTROY INTERRUPTED",
+	}
+)
+
+func (s InstanceStatus) String() string {
+	str, ok := instanceStatusStrings[s]
+	if !ok {
+		return "UNKNOWN"
+	}
+	return str
+}

@@ -127,6 +127,12 @@ type LinksContainer interface {
 	// Remove deals with removing the state of a link from
 	// the system
 	Remove(ctx context.Context, linkID string) (LinkState, error)
+	// GetDrift deals with retrieving the current drift state for a given link.
+	GetDrift(ctx context.Context, linkID string) (LinkDriftState, error)
+	// SaveDrift deals with persisting the drift state for a given link.
+	SaveDrift(ctx context.Context, driftState LinkDriftState) error
+	// RemoveDrift deals with removing the drift state for a given link.
+	RemoveDrift(ctx context.Context, linkID string) (LinkDriftState, error)
 }
 
 // ChildrenContainer provides an interface for functionality related
@@ -328,6 +334,94 @@ type ResourceDriftFieldChange struct {
 	DriftedValue *core.MappingNode `json:"driftedValue"`
 }
 
+// LinkDriftState holds information about how a link has drifted
+// from the current state persisted in the blueprint framework.
+// Link drift is detected via ResourceDataMappings (comparing link.Data
+// against resource external state) and intermediary resources
+// (via GetIntermediaryExternalState on the link provider).
+type LinkDriftState struct {
+	// LinkID is the unique identifier for the link.
+	LinkID string `json:"linkId"`
+	// LinkName is the logical name of the link (format: "{resourceA}::{resourceB}").
+	LinkName string `json:"linkName"`
+	// ResourceADrift contains drift detected in ResourceA fields managed by this link.
+	// These are fields specified in ResourceDataMappings that map to ResourceA.
+	ResourceADrift *LinkResourceDrift `json:"resourceADrift,omitempty"`
+	// ResourceBDrift contains drift detected in ResourceB fields managed by this link.
+	// These are fields specified in ResourceDataMappings that map to ResourceB.
+	ResourceBDrift *LinkResourceDrift `json:"resourceBDrift,omitempty"`
+	// IntermediaryDrift contains drift detected in intermediary resources
+	// owned by this link. Key is the intermediary resource ID.
+	IntermediaryDrift map[string]*IntermediaryDriftState `json:"intermediaryDrift,omitempty"`
+	// Timestamp holds the unix timestamp of when the drift was detected.
+	Timestamp *int `json:"timestamp,omitempty"`
+}
+
+// LinkResourceDrift contains drift information for a linked resource's
+// fields that are managed by a link via ResourceDataMappings.
+type LinkResourceDrift struct {
+	// ResourceID is the ID of the resource.
+	ResourceID string `json:"resourceId"`
+	// ResourceName is the logical name of the resource in the blueprint.
+	ResourceName string `json:"resourceName"`
+	// MappedFieldChanges contains changes to fields managed by this link.
+	// These are the fields specified in ResourceDataMappings.
+	MappedFieldChanges []*LinkDriftFieldChange `json:"mappedFieldChanges"`
+}
+
+// LinkDriftFieldChange represents a change to a link-managed field
+// on a resource. This is used when detecting drift via ResourceDataMappings.
+type LinkDriftFieldChange struct {
+	// ResourceFieldPath is the path in the resource spec (e.g., "spec.policy.statements").
+	ResourceFieldPath string `json:"resourceFieldPath"`
+	// LinkDataPath is the corresponding path in link.Data.
+	LinkDataPath string `json:"linkDataPath"`
+	// LinkDataValue is what the link has stored.
+	LinkDataValue *core.MappingNode `json:"linkDataValue"`
+	// ExternalValue is what was found in the cloud.
+	ExternalValue *core.MappingNode `json:"externalValue"`
+}
+
+// IntermediaryDriftState contains drift information for an intermediary
+// resource owned by a link.
+type IntermediaryDriftState struct {
+	// ResourceID is the ID of the intermediary resource.
+	ResourceID string `json:"resourceId"`
+	// ResourceType is the type of the intermediary resource.
+	ResourceType string `json:"resourceType"`
+	// PersistedState is what we have in the state store.
+	PersistedState *core.MappingNode `json:"persistedState"`
+	// ExternalState is what was found in the cloud.
+	ExternalState *core.MappingNode `json:"externalState"`
+	// Changes contains the detailed diff between persisted and external state.
+	Changes *IntermediaryDriftChanges `json:"changes,omitempty"`
+	// Exists indicates whether the resource exists in the cloud.
+	Exists bool `json:"exists"`
+	// Timestamp holds the unix timestamp of when the drift was detected.
+	Timestamp *int `json:"timestamp,omitempty"`
+}
+
+// IntermediaryDriftChanges contains the field-level changes detected
+// between persisted and external state for an intermediary resource.
+type IntermediaryDriftChanges struct {
+	// ModifiedFields contains fields that exist in both states but have different values.
+	ModifiedFields []IntermediaryFieldChange `json:"modifiedFields,omitempty"`
+	// NewFields contains fields that exist in external state but not in persisted state.
+	NewFields []IntermediaryFieldChange `json:"newFields,omitempty"`
+	// RemovedFields contains fields that exist in persisted state but not in external state.
+	RemovedFields []IntermediaryFieldChange `json:"removedFields,omitempty"`
+}
+
+// IntermediaryFieldChange represents a single field change in an intermediary resource.
+type IntermediaryFieldChange struct {
+	// FieldPath is the path to the field (e.g., "spec.policy.statements").
+	FieldPath string `json:"fieldPath"`
+	// PrevValue is the value in persisted state.
+	PrevValue *core.MappingNode `json:"prevValue,omitempty"`
+	// NewValue is the value in external state.
+	NewValue *core.MappingNode `json:"newValue,omitempty"`
+}
+
 // ResourceStatusInfo holds information about the status of a resource
 // that is primarily used when updating the status of a resource.
 type ResourceStatusInfo struct {
@@ -489,6 +583,12 @@ type LinkState struct {
 	// Holds the latest reasons for failures in deploying a link,
 	// this only ever holds the results of the latest deployment attempt.
 	FailureReasons []string `json:"failureReasons"`
+	// Drifted indicates whether or not the link state has drifted
+	// due to changes in the upstream provider. This includes drift in
+	// resource fields managed via ResourceDataMappings and intermediary resources.
+	Drifted bool `json:"drifted,omitempty"`
+	// LastDriftDetectedTimestamp holds the unix timestamp when drift was last detected.
+	LastDriftDetectedTimestamp *int `json:"lastDriftDetectedTimestamp,omitempty"`
 	// Durations holds duration information for the latest deployment of the link.
 	Durations *LinkCompletionDurations `json:"durations,omitempty"`
 }

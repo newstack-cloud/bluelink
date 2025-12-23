@@ -1,0 +1,49 @@
+(*state.LinkDriftState)({
+  LinkID: (string) (len=17) "test-link-drift-1",
+  LinkName: (string) (len=30) "saveOrderFunction::ordersTable",
+  ResourceADrift: (*state.LinkResourceDrift)({
+    ResourceID: (string) (len=19) "save-order-function",
+    ResourceName: (string) (len=17) "saveOrderFunction",
+    MappedFieldChanges: ([]*state.LinkDriftFieldChange) (len=1) {
+      (*state.LinkDriftFieldChange)({
+        ResourceFieldPath: (string) (len=12) "spec.handler",
+        LinkDataPath: (string) (len=25) "saveOrderFunction.handler",
+        LinkDataValue: (*core.MappingNode)({
+          Scalar: (*core.ScalarValue)({
+            IntValue: (*int)(<nil>),
+            BoolValue: (*bool)(<nil>),
+            FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
+            StringValue: (*string)((len=11) "old.handler"),
+            NoneValue: (*bool)(<nil>),
+            SourceMeta: (*source.Meta)(<nil>)
+          }),
+          Fields: (map[string]*core.MappingNode) <nil>,
+          Items: ([]*core.MappingNode) <nil>,
+          StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+          SourceMeta: (*source.Meta)(<nil>),
+          FieldsSourceMeta: (map[string]*source.Meta) <nil>
+        }),
+        ExternalValue: (*core.MappingNode)({
+          Scalar: (*core.ScalarValue)({
+            IntValue: (*int)(<nil>),
+            BoolValue: (*bool)(<nil>),
+            FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
+            StringValue: (*string)((len=16) "orders.saveOrder"),
+            NoneValue: (*bool)(<nil>),
+            SourceMeta: (*source.Meta)(<nil>)
+          }),
+          Fields: (map[string]*core.MappingNode) <nil>,
+          Items: ([]*core.MappingNode) <nil>,
+          StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+          SourceMeta: (*source.Meta)(<nil>),
+          FieldsSourceMeta: (map[string]*source.Meta) <nil>
+        })
+      })
+    }
+  }),
+  ResourceBDrift: (*state.LinkResourceDrift)(<nil>),
+  IntermediaryDrift: (map[string]*state.IntermediaryDriftState) <nil>,
+  Timestamp: (*int)(-1)
+})

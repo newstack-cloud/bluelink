@@ -105,7 +105,7 @@ type BlueprintContainer interface {
 
     Destroy(
         ctx context.Context,
-        input *DeployInput,
+        input *DestroyInput,
         channels *DeployChannels,
         paramOverrides core.BlueprintParams,
     )
@@ -119,6 +119,18 @@ type BlueprintContainer interface {
     RefChainCollector() refgraph.RefChainCollector
 
     ResourceTemplates() map[string]string
+
+    CheckReconciliation(
+        ctx context.Context,
+        input *CheckReconciliationInput,
+        paramOverrides core.BlueprintParams,
+    ) (*ReconciliationCheckResult, error)
+
+    ApplyReconciliation(
+        ctx context.Context,
+        input *ApplyReconciliationInput,
+        paramOverrides core.BlueprintParams,
+    ) (*ApplyReconciliationResult, error)
 }
 ```
 
@@ -129,10 +141,30 @@ by the provider.
 The container also talks to the state container to load blueprint instances, save changes after deployments
 along with retrieving state for instances and resources in those instances.
 
-The blueprint container needs to be instantiated with a a state container, a map of resource names -> resource providers, a blueprint spec
+The container also provides reconciliation capabilities for handling interrupted deployments and drift resolution.
+`CheckReconciliation` fetches external state and compares it to persisted state to identify resources and links
+needing attention, while `ApplyReconciliation` applies user-approved actions to update persisted state.
+
+The blueprint container needs to be instantiated with a state container, a map of resource names -> resource providers, a blueprint spec
 and a spec link info provider.
 
 The core framework comes with a default blueprint container that should meet all your needs.
+
+### Reconciliation Workflow
+
+Reconciliation (handling interrupted deployments and drift) is performed as a **pre-flight check**
+by the caller before invoking `StageChanges` or `Deploy`. The typical flow is:
+
+1. Caller invokes `CheckReconciliation()` to detect interrupted resources or drift
+2. If reconciliation is needed, caller presents results to user and collects decisions
+3. Caller invokes `ApplyReconciliation()` with user-approved actions
+4. Caller proceeds with `StageChanges()` / `Deploy()` / `Destroy()`
+
+This separation allows the orchestration layer (e.g., Deploy Engine) to handle the interactive
+reconciliation workflow while keeping Blueprint Core focused on staging and deployment logic.
+
+Note: `StageChanges` and `Deploy` do not perform drift or reconciliation checks internally.
+The caller is responsible for checking reconciliation state before calling these methods.
 
 ## Spec Link Info Provider (links.SpecLinkInfo)
 
@@ -190,6 +222,8 @@ type InstancesContainer interface {
 
     Get(ctx context.Context, instanceID string) (InstanceState, error)
 
+    LookupIDByName(ctx context.Context, instanceName string) (string, error)
+
     Save(ctx context.Context, instanceState InstanceState) error
 
     UpdateStatus(
@@ -237,7 +271,6 @@ type ResourcesContainer interface {
 
     SaveDrift(
         ctx context.Context,
-        resourceID string,
         driftState ResourceDriftState,
     ) error
 
@@ -256,8 +289,15 @@ type LinksContainer interface {
 
     GetByName(
         ctx context.Context,
+        instanceID string,
         linkName string,
     ) (LinkState, error)
+
+    ListWithResourceDataMappings(
+        ctx context.Context,
+        instanceID string,
+        resourceName string,
+    ) ([]LinkState, error)
 
     Save(
         ctx context.Context,
@@ -274,6 +314,21 @@ type LinksContainer interface {
         ctx context.Context,
         linkID string,
     ) (LinkState, error)
+
+    GetDrift(
+        ctx context.Context,
+        linkID string,
+    ) (LinkDriftState, error)
+
+    SaveDrift(
+        ctx context.Context,
+        driftState LinkDriftState,
+    ) error
+
+    RemoveDrift(
+        ctx context.Context,
+        linkID string,
+    ) (LinkDriftState, error)
 }
 
 type ChildrenContainer interface {
@@ -298,11 +353,7 @@ type ChildrenContainer interface {
         dependencies *DependencyInfo,
     ) error
 
-    Remove(
-        ctx context.Context,
-        instanceID string,
-        childName string,
-    ) (InstanceState, error)
+    Detach(ctx context.Context, instanceID string, childName string) error
 }
 
 type MetadataContainer interface {
@@ -362,6 +413,8 @@ type Provider interface {
 
     Namespace(ctx context.Context) (string, error)
 
+    ConfigDefinition(ctx context.Context) (*core.ConfigDefinition, error)
+
     Resource(ctx context.Context, resourceType string) (Resource, error)
 
     DataSource(ctx context.Context, dataSourceType string) (DataSource, error)
@@ -372,13 +425,15 @@ type Provider interface {
 
     Function(ctx context.Context, functionName string) (Function, error)
 
-    ListFunctions(ctx context.Context) ([]string, error)
-
     ListResourceTypes(ctx context.Context) ([]string, error)
+
+    ListLinkTypes(ctx context.Context) ([]string, error)
 
     ListDataSourceTypes(ctx context.Context) ([]string, error)
 
     ListCustomVariableTypes(ctx context.Context) ([]string, error)
+
+    ListFunctions(ctx context.Context) ([]string, error)
 
     RetryPolicy(ctx context.Context) (*RetryPolicy, error)
 }
@@ -407,6 +462,10 @@ The core framework does NOT come with any provider implementations, you must imp
 
 ```go
 type SpecTransformer interface {
+
+    GetTransformName(ctx context.Context) (string, error)
+
+    ConfigDefinition(ctx context.Context) (*core.ConfigDefinition, error)
 
     Transform(
         ctx context.Context,
@@ -469,18 +528,68 @@ type Checker interface {
         params core.BlueprintParams,
     ) (map[string]*state.ResourceDriftState, error)
 
+    CheckDriftWithState(
+        ctx context.Context,
+        instanceState *state.InstanceState,
+        params core.BlueprintParams,
+    ) (map[string]*state.ResourceDriftState, error)
+
     CheckResourceDrift(
         ctx context.Context,
         instanceID string,
+        instanceName string,
         resourceID string,
         params core.BlueprintParams,
     ) (*state.ResourceDriftState, error)
+
+    CheckInterruptedResources(
+        ctx context.Context,
+        instanceID string,
+        params core.BlueprintParams,
+    ) ([]ReconcileResult, error)
+
+    CheckInterruptedResourcesWithState(
+        ctx context.Context,
+        instanceState *state.InstanceState,
+        params core.BlueprintParams,
+    ) ([]ReconcileResult, error)
+
+    CheckAllLinkDrift(
+        ctx context.Context,
+        instanceID string,
+        params core.BlueprintParams,
+    ) (map[string]*state.LinkDriftState, error)
+
+    CheckLinkDrift(
+        ctx context.Context,
+        instanceID string,
+        linkID string,
+        params core.BlueprintParams,
+    ) (*state.LinkDriftState, error)
+
+    CheckAllLinkDriftWithState(
+        ctx context.Context,
+        instanceState *state.InstanceState,
+        params core.BlueprintParams,
+    ) (map[string]*state.LinkDriftState, error)
+
+    ApplyReconciliation(
+        ctx context.Context,
+        results []ReconcileResult,
+    ) error
 }
 ```
 
 A drift checker checks for drift between the state of a resource in the external system and the state of the resource in the blueprint state container.
 Drift can be checked for a single resources or all resources in a blueprint instance.
 As a part of the check, the drift checker will in most cases update the state of the resources being checked, storing the drift including a set of differences along with metadata attached to the resource about whether it is in sync or not.
+
+The drift checker also provides reconciliation support for interrupted resources. `CheckInterruptedResources` detects resources left in an interrupted state (e.g., after a drain timeout) and determines their actual cloud state without updating persisted state. `ApplyReconciliation` then applies the reconciliation results to update persisted state after user approval.
+
+The `WithState` variants (`CheckDriftWithState`, `CheckInterruptedResourcesWithState`, `CheckAllLinkDriftWithState`) accept pre-fetched instance state instead of an instance ID. These methods avoid redundant state fetches when the caller already has the instance state loaded, which is important for performance when the state container is backed by a relational database like PostgreSQL.
+
+`CheckAllLinkDrift` and `CheckAllLinkDriftWithState` check for drift in all links within a blueprint instance, including intermediary resources managed by links.
+
 A default drift checker is provided by the core blueprint framework that should meet all your needs.
 
 ## BlueprintCache (cache.BlueprintCache)

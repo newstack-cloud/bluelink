@@ -51,7 +51,49 @@ const (
 	// and the latest change involving the current resource
 	// has been rolled back.
 	ResourceStatusRollbackComplete
+	// ResourceStatusCreateInterrupted is used when
+	// a resource creation was interrupted due to deployment
+	// being cancelled (e.g., drain timeout after terminal failure).
+	// The actual state of the resource is unknown and needs reconciliation.
+	ResourceStatusCreateInterrupted
+	// ResourceStatusUpdateInterrupted is used when
+	// a resource update was interrupted due to deployment
+	// being cancelled (e.g., drain timeout after terminal failure).
+	// The actual state of the resource is unknown and needs reconciliation.
+	ResourceStatusUpdateInterrupted
+	// ResourceStatusDestroyInterrupted is used when
+	// a resource destruction was interrupted due to deployment
+	// being cancelled (e.g., drain timeout after terminal failure).
+	// The actual state of the resource is unknown and needs reconciliation.
+	ResourceStatusDestroyInterrupted
 )
+
+var resourceStatusStrings = map[ResourceStatus]string{
+	ResourceStatusUnknown:            "UNKNOWN",
+	ResourceStatusCreating:           "CREATING",
+	ResourceStatusCreated:            "CREATED",
+	ResourceStatusCreateFailed:       "CREATE FAILED",
+	ResourceStatusDestroying:         "DESTROYING",
+	ResourceStatusDestroyed:          "DESTROYED",
+	ResourceStatusDestroyFailed:      "DESTROY FAILED",
+	ResourceStatusUpdating:           "UPDATING",
+	ResourceStatusUpdated:            "UPDATED",
+	ResourceStatusUpdateFailed:       "UPDATE FAILED",
+	ResourceStatusRollingBack:        "ROLLING BACK",
+	ResourceStatusRollbackFailed:     "ROLLBACK FAILED",
+	ResourceStatusRollbackComplete:   "ROLLBACK COMPLETE",
+	ResourceStatusCreateInterrupted:  "CREATE INTERRUPTED",
+	ResourceStatusUpdateInterrupted:  "UPDATE INTERRUPTED",
+	ResourceStatusDestroyInterrupted: "DESTROY INTERRUPTED",
+}
+
+func (s ResourceStatus) String() string {
+	str, ok := resourceStatusStrings[s]
+	if !ok {
+		return "UNKNOWN"
+	}
+	return str
+}
 
 // PreciseResourceStatus is used to represent a more precise
 // current state of a resource in a blueprint instance.
@@ -166,4 +208,56 @@ const (
 	// and the current resource that was successfully
 	// updated has been rolled back to the previous state.
 	PreciseResourceStatusUpdateRollbackComplete
+	// PreciseResourceStatusCreateInterrupted is used when
+	// a resource creation was interrupted due to deployment
+	// being cancelled (e.g., drain timeout after terminal failure).
+	// The actual state of the resource is unknown and needs reconciliation.
+	PreciseResourceStatusCreateInterrupted
+	// PreciseResourceStatusUpdateInterrupted is used when
+	// a resource update was interrupted due to deployment
+	// being cancelled (e.g., drain timeout after terminal failure).
+	// The actual state of the resource is unknown and needs reconciliation.
+	PreciseResourceStatusUpdateInterrupted
+	// PreciseResourceStatusDestroyInterrupted is used when
+	// a resource destruction was interrupted due to deployment
+	// being cancelled (e.g., drain timeout after terminal failure).
+	// The actual state of the resource is unknown and needs reconciliation.
+	PreciseResourceStatusDestroyInterrupted
 )
+
+var preciseResourceStatusStrings = map[PreciseResourceStatus]string{
+	PreciseResourceStatusUnknown:                       "UNKNOWN",
+	PreciseResourceStatusCreating:                      "CREATING",
+	PreciseResourceStatusConfigComplete:                "CONFIG COMPLETE",
+	PreciseResourceStatusCreated:                       "CREATED",
+	PreciseResourceStatusCreateFailed:                  "CREATE FAILED",
+	PreciseResourceStatusCreateRollingBack:             "CREATE ROLLING BACK",
+	PreciseResourceStatusCreateRollbackFailed:          "CREATE ROLLBACK FAILED",
+	PreciseResourceStatusCreateRollbackComplete:        "CREATE ROLLBACK COMPLETE",
+	PreciseResourceStatusDestroying:                    "DESTROYING",
+	PreciseResourceStatusDestroyed:                     "DESTROYED",
+	PreciseResourceStatusDestroyFailed:                 "DESTROY FAILED",
+	PreciseResourceStatusDestroyRollingBack:            "DESTROY ROLLING BACK",
+	PreciseResourceStatusDestroyRollbackFailed:         "DESTROY ROLLBACK FAILED",
+	PreciseResourceStatusDestroyRollbackConfigComplete: "DESTROY ROLLBACK CONFIG COMPLETE",
+	PreciseResourceStatusDestroyRollbackComplete:       "DESTROY ROLLBACK COMPLETE",
+	PreciseResourceStatusUpdating:                      "UPDATING",
+	PreciseResourceStatusUpdateConfigComplete:          "UPDATE CONFIG COMPLETE",
+	PreciseResourceStatusUpdated:                       "UPDATED",
+	PreciseResourceStatusUpdateFailed:                  "UPDATE FAILED",
+	PreciseResourceStatusUpdateRollingBack:             "UPDATE ROLLING BACK",
+	PreciseResourceStatusUpdateRollbackFailed:          "UPDATE ROLLBACK FAILED",
+	PreciseResourceStatusUpdateRollbackConfigComplete:  "UPDATE ROLLBACK CONFIG COMPLETE",
+	PreciseResourceStatusUpdateRollbackComplete:        "UPDATE ROLLBACK COMPLETE",
+	PreciseResourceStatusCreateInterrupted:             "CREATE INTERRUPTED",
+	PreciseResourceStatusUpdateInterrupted:             "UPDATE INTERRUPTED",
+	PreciseResourceStatusDestroyInterrupted:            "DESTROY INTERRUPTED",
+}
+
+func (s PreciseResourceStatus) String() string {
+	str, ok := preciseResourceStatusStrings[s]
+	if !ok {
+		return "UNKNOWN"
+	}
+	return str
+}

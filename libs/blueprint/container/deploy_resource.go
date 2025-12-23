@@ -213,6 +213,15 @@ func (d *defaultResourceDeployer) deployResource(
 		Attempt:         resourceRetryInfo.Attempt,
 	}
 
+	// Check for context cancellation before calling the plugin.
+	// This allows us to exit early if the deployment has been interrupted.
+	select {
+	case <-ctx.Done():
+		deployCtx.Logger.Debug("context cancelled before resource deployment")
+		return ctx.Err()
+	default:
+	}
+
 	deployCtx.Logger.Info(
 		"calling resource plugin implementation to deploy resource",
 		core.IntegerLogField("attempt", int64(resourceRetryInfo.Attempt)),
@@ -470,7 +479,10 @@ func (d *defaultResourceDeployer) handleHasStabilisedRetry(
 
 	if !nextRetryCtx.ExceededMaxRetries {
 		waitTimeMs := provider.CalculateRetryWaitTimeMS(nextRetryCtx.Policy, nextRetryCtx.Attempt)
-		time.Sleep(time.Duration(waitTimeMs) * time.Millisecond)
+		if err := sleepWithContext(ctx, time.Duration(waitTimeMs)*time.Millisecond); err != nil {
+			logger.Debug("context cancelled during stability check retry wait")
+			return nil, err
+		}
 		return d.hasStabilised(
 			ctx,
 			resource,
@@ -594,7 +606,10 @@ func (d *defaultResourceDeployer) handleDeployResourceRetry(
 
 	if !nextRetryInfo.ExceededMaxRetries {
 		waitTimeMs := provider.CalculateRetryWaitTimeMS(nextRetryInfo.Policy, nextRetryInfo.Attempt)
-		time.Sleep(time.Duration(waitTimeMs) * time.Millisecond)
+		if err := sleepWithContext(ctx, time.Duration(waitTimeMs)*time.Millisecond); err != nil {
+			deployCtx.Logger.Debug("context cancelled during retry wait")
+			return err
+		}
 		resolvedResource := getResolvedResourceFromChanges(resourceInfo.changes)
 		resourceType := changes.GetResourceTypeFromResolved(resolvedResource)
 		return d.deployResource(

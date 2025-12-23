@@ -283,12 +283,16 @@ func (c *Controller) startChangeStaging(
 	}
 
 	channels := createChangeStagingChannels()
+	// Note: skipDriftCheck is retained in the API for future use when
+	// Deploy Engine implements pre-flight reconciliation checks.
+	// For now it is not passed to StageChanges as Blueprint Core no longer
+	// performs drift checks internally.
+	_ = skipDriftCheck
 	err = blueprintContainer.StageChanges(
 		ctxWithTimeout,
 		&container.StageChangesInput{
-			InstanceID:     changeset.InstanceID,
-			Destroy:        changeset.Destroy,
-			SkipDriftCheck: skipDriftCheck,
+			InstanceID: changeset.InstanceID,
+			Destroy:    changeset.Destroy,
 		},
 		channels,
 		params,
