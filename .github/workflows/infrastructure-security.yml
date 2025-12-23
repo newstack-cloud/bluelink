@@ -30,7 +30,7 @@ jobs:
     name: Infrastructure Config Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Run Trivy config scan (table output)
         uses: aquasecurity/trivy-action@0.33.1
@@ -65,7 +65,7 @@ jobs:
     name: Dockerfile Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Lint Dockerfiles
         uses: hadolint/hadolint-action@v3.3.0
@@ -78,7 +78,7 @@ jobs:
     name: Actions Workflow Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Lint GitHub Actions workflows
         uses: reviewdog/action-actionlint@v1
