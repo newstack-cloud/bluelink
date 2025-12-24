@@ -531,6 +531,33 @@ func (c *memoryLinksContainer) Remove(ctx context.Context, linkID string) (state
 	return state.LinkState{}, state.LinkNotFoundError(linkID)
 }
 
+func (c *memoryLinksContainer) GetDrift(
+	ctx context.Context,
+	linkID string,
+) (state.LinkDriftState, error) {
+	// This is a stub implementation for testing purposes.
+	// Real implementations would store and retrieve drift state.
+	return state.LinkDriftState{}, nil
+}
+
+func (c *memoryLinksContainer) SaveDrift(
+	ctx context.Context,
+	driftState state.LinkDriftState,
+) error {
+	// This is a stub implementation for testing purposes.
+	// Real implementations would persist drift state.
+	return nil
+}
+
+func (c *memoryLinksContainer) RemoveDrift(
+	ctx context.Context,
+	linkID string,
+) (state.LinkDriftState, error) {
+	// This is a stub implementation for testing purposes.
+	// Real implementations would remove and return the drift state.
+	return state.LinkDriftState{}, nil
+}
+
 type memoryMetadataContainer struct {
 	instances map[string]*state.InstanceState
 	mu        *sync.RWMutex

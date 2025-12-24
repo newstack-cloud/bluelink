@@ -484,3 +484,70 @@ func (s *ProviderPluginV1Suite) Test_link_get_kind_reports_expected_error_for_fa
 		"internal error occurred when retrieving link kind",
 	)
 }
+
+func (s *ProviderPluginV1Suite) Test_link_get_intermediary_external_state() {
+	link, err := s.provider.Link(
+		context.Background(),
+		lambdaFunctionResourceType,
+		dynamoDBTableResourceType,
+	)
+	s.Require().NoError(err)
+
+	output, err := link.GetIntermediaryExternalState(
+		context.Background(),
+		linkGetIntermediaryExternalStateInput(),
+	)
+	s.Require().NoError(err)
+	expected := testprovider.LinkLambdaDynamoDBGetIntermediaryExternalStateOutput()
+	s.Assert().Equal(len(expected.IntermediaryStates), len(output.IntermediaryStates))
+	for id, expectedState := range expected.IntermediaryStates {
+		actualState, exists := output.IntermediaryStates[id]
+		s.Assert().True(exists, "expected intermediary state with id %s to exist", id)
+		s.Assert().Equal(expectedState.ResourceID, actualState.ResourceID)
+		s.Assert().Equal(expectedState.ResourceType, actualState.ResourceType)
+		s.Assert().Equal(expectedState.Exists, actualState.Exists)
+		s.Assert().Equal(
+			core.StringValue(expectedState.SpecData.Fields["arn"]),
+			core.StringValue(actualState.SpecData.Fields["arn"]),
+		)
+	}
+}
+
+func (s *ProviderPluginV1Suite) Test_link_get_intermediary_external_state_fails_for_unexpected_host() {
+	link, err := s.providerWrongHost.Link(
+		context.Background(),
+		lambdaFunctionResourceType,
+		dynamoDBTableResourceType,
+	)
+	s.Require().NoError(err)
+
+	_, err = link.GetIntermediaryExternalState(
+		context.Background(),
+		linkGetIntermediaryExternalStateInput(),
+	)
+	testutils.AssertInvalidHost(
+		err,
+		errorsv1.PluginActionProviderGetLinkIntermediaryExternalState,
+		testWrongHostID,
+		&s.Suite,
+	)
+}
+
+func (s *ProviderPluginV1Suite) Test_link_get_intermediary_external_state_reports_expected_error_for_failure() {
+	link, err := s.failingProvider.Link(
+		context.Background(),
+		lambdaFunctionResourceType,
+		dynamoDBTableResourceType,
+	)
+	s.Require().NoError(err)
+
+	_, err = link.GetIntermediaryExternalState(
+		context.Background(),
+		linkGetIntermediaryExternalStateInput(),
+	)
+	s.Assert().Error(err)
+	s.Assert().Contains(
+		err.Error(),
+		"internal error occurred when getting intermediary external state for link",
+	)
+}

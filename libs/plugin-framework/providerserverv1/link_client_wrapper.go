@@ -506,6 +506,146 @@ func (l *linkProviderClientWrapper) GetKind(
 	)
 }
 
+func (l *linkProviderClientWrapper) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	request, err := l.buildGetIntermediaryExternalStateRequest(input)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionProviderGetLinkIntermediaryExternalState,
+		)
+	}
+
+	response, err := l.client.GetLinkIntermediaryExternalState(ctx, request)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionProviderGetLinkIntermediaryExternalState,
+		)
+	}
+
+	switch result := response.Response.(type) {
+	case *GetLinkIntermediaryExternalStateResponse_CompleteResponse:
+		output, err := fromPBLinkIntermediaryExternalStateCompleteResponse(
+			result.CompleteResponse,
+		)
+		if err != nil {
+			return nil, errorsv1.CreateGeneralError(
+				err,
+				errorsv1.PluginActionProviderGetLinkIntermediaryExternalState,
+			)
+		}
+
+		return output, nil
+	case *GetLinkIntermediaryExternalStateResponse_ErrorResponse:
+		return nil, errorsv1.CreateErrorFromResponse(
+			result.ErrorResponse,
+			errorsv1.PluginActionProviderGetLinkIntermediaryExternalState,
+		)
+	}
+
+	return nil, errorsv1.CreateGeneralError(
+		errorsv1.ErrUnexpectedResponseType(
+			errorsv1.PluginActionProviderGetLinkIntermediaryExternalState,
+		),
+		errorsv1.PluginActionProviderGetLinkIntermediaryExternalState,
+	)
+}
+
+func (l *linkProviderClientWrapper) buildGetIntermediaryExternalStateRequest(
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*GetLinkIntermediaryExternalStateRequest, error) {
+	linkCtx, err := toPBLinkContext(input.LinkContext)
+	if err != nil {
+		return nil, err
+	}
+
+	currentLinkStatePB, err := toPBLinkState(input.CurrentLinkState)
+	if err != nil {
+		return nil, err
+	}
+
+	resourceAInfoPB, err := convertv1.ToPBResourceInfo(input.ResourceAInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	resourceBInfoPB, err := convertv1.ToPBResourceInfo(input.ResourceBInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetLinkIntermediaryExternalStateRequest{
+		LinkType: &LinkType{
+			Type: core.LinkType(
+				l.resourceTypeA,
+				l.resourceTypeB,
+			),
+		},
+		HostId:                  l.hostID,
+		InstanceId:              input.InstanceID,
+		InstanceName:            input.InstanceName,
+		LinkId:                  input.LinkID,
+		LinkName:                input.LinkName,
+		ResourceAInfo:           resourceAInfoPB,
+		ResourceBInfo:           resourceBInfoPB,
+		IntermediaryResourceIds: input.IntermediaryResourceIDs,
+		CurrentLinkState:        currentLinkStatePB,
+		Context:                 linkCtx,
+	}, nil
+}
+
+func fromPBLinkIntermediaryExternalStateCompleteResponse(
+	response *GetLinkIntermediaryExternalStateCompleteResponse,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	if response == nil {
+		return &provider.LinkGetIntermediaryExternalStateOutput{
+			IntermediaryStates: nil,
+		}, nil
+	}
+
+	intermediaryStates := make(
+		map[string]*provider.IntermediaryExternalState,
+		len(response.IntermediaryStates),
+	)
+	for id, pbState := range response.IntermediaryStates {
+		state, err := fromPBIntermediaryExternalState(pbState)
+		if err != nil {
+			return nil, err
+		}
+		intermediaryStates[id] = state
+	}
+
+	return &provider.LinkGetIntermediaryExternalStateOutput{
+		IntermediaryStates: intermediaryStates,
+	}, nil
+}
+
+func fromPBIntermediaryExternalState(
+	pbState *IntermediaryExternalState,
+) (*provider.IntermediaryExternalState, error) {
+	if pbState == nil {
+		return nil, nil
+	}
+
+	specData, err := serialisation.FromMappingNodePB(
+		pbState.SpecData,
+		/* optional */ true,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &provider.IntermediaryExternalState{
+		ResourceID:   pbState.ResourceId,
+		ResourceType: pbState.ResourceType,
+		SpecData:     specData,
+		Exists:       pbState.Exists,
+	}, nil
+}
+
 func (l *linkProviderClientWrapper) buildLinkRequest(
 	linkContext provider.LinkContext,
 ) (*LinkRequest, error) {

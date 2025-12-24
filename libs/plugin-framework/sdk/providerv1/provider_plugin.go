@@ -946,6 +946,47 @@ func (p *blueprintProviderPluginImpl) GetLinkKind(
 	return toPBGetLinkKindResponse(output), nil
 }
 
+func (p *blueprintProviderPluginImpl) GetLinkIntermediaryExternalState(
+	ctx context.Context,
+	req *providerserverv1.GetLinkIntermediaryExternalStateRequest,
+) (*providerserverv1.GetLinkIntermediaryExternalStateResponse, error) {
+	err := p.checkHostID(req.HostId)
+	if err != nil {
+		return toGetLinkIntermediaryExternalStateErrorResponse(err), nil
+	}
+
+	linkTypeInfo, err := extractLinkTypeInfo(req.LinkType)
+	if err != nil {
+		return toGetLinkIntermediaryExternalStateErrorResponse(err), nil
+	}
+
+	link, err := p.bpProvider.Link(
+		ctx,
+		linkTypeInfo.resourceTypeA,
+		linkTypeInfo.resourceTypeB,
+	)
+	if err != nil {
+		return toGetLinkIntermediaryExternalStateErrorResponse(err), nil
+	}
+
+	input, err := fromPBGetLinkIntermediaryExternalStateRequest(req)
+	if err != nil {
+		return toGetLinkIntermediaryExternalStateErrorResponse(err), nil
+	}
+
+	output, err := link.GetIntermediaryExternalState(ctx, input)
+	if err != nil {
+		return toGetLinkIntermediaryExternalStateErrorResponse(err), nil
+	}
+
+	response, err := toPBGetLinkIntermediaryExternalStateResponse(output)
+	if err != nil {
+		return toGetLinkIntermediaryExternalStateErrorResponse(err), nil
+	}
+
+	return response, nil
+}
+
 func (p *blueprintProviderPluginImpl) CustomValidateDataSource(
 	ctx context.Context,
 	req *providerserverv1.CustomValidateDataSourceRequest,

@@ -218,3 +218,13 @@ func linkGetKindInput() *provider.LinkGetKindInput {
 		LinkContext: testutils.CreateTestLinkContext(),
 	}
 }
+
+func linkGetIntermediaryExternalStateInput() *provider.LinkGetIntermediaryExternalStateInput {
+	return &provider.LinkGetIntermediaryExternalStateInput{
+		ResourceAInfo:            createLinkResourceAInfo(),
+		ResourceBInfo:            createLinkResourceBInfo(),
+		IntermediaryResourceIDs:  []string{"iam-role-1", "iam-policy-1"},
+		CurrentLinkState:         createCurrentLinkState(),
+		LinkContext:              testutils.CreateTestLinkContext(),
+	}
+}

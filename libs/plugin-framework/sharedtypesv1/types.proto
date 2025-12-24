@@ -1087,6 +1087,18 @@ enum ResourceStatus {
     // has failed and the latest change involving the current resource
     // has been rolled back.
     RESOURCE_STATUS_ROLLBACK_COMPLETE = 12;
+    // The status for when a resource creation was interrupted due to deployment
+    // being cancelled (e.g., drain timeout after terminal failure).
+    // The actual state of the resource is unknown and needs reconciliation.
+    RESOURCE_STATUS_CREATE_INTERRUPTED = 13;
+    // The status for when a resource update was interrupted due to deployment
+    // being cancelled (e.g., drain timeout after terminal failure).
+    // The actual state of the resource is unknown and needs reconciliation.
+    RESOURCE_STATUS_UPDATE_INTERRUPTED = 14;
+    // The status for when a resource destruction was interrupted due to deployment
+    // being cancelled (e.g., drain timeout after terminal failure).
+    // The actual state of the resource is unknown and needs reconciliation.
+    RESOURCE_STATUS_DESTROY_INTERRUPTED = 15;
 }
 
 // PreciseResourceStatus represents a more precise current state of a resource
@@ -1175,6 +1187,18 @@ enum PreciseResourceStatus {
     // and the current resource that was successfully updated has been
     // rolled back to the previous state.
     PRECISE_RESOURCE_STATUS_UPDATE_ROLLBACK_COMPLETE = 22;
+    // The status for when a resource creation was interrupted due to deployment
+    // being cancelled (e.g., drain timeout after terminal failure).
+    // The actual state of the resource is unknown and needs reconciliation.
+    PRECISE_RESOURCE_STATUS_CREATE_INTERRUPTED = 23;
+    // The status for when a resource update was interrupted due to deployment
+    // being cancelled (e.g., drain timeout after terminal failure).
+    // The actual state of the resource is unknown and needs reconciliation.
+    PRECISE_RESOURCE_STATUS_UPDATE_INTERRUPTED = 24;
+    // The status for when a resource destruction was interrupted due to deployment
+    // being cancelled (e.g., drain timeout after terminal failure).
+    // The actual state of the resource is unknown and needs reconciliation.
+    PRECISE_RESOURCE_STATUS_DESTROY_INTERRUPTED = 25;
 }
 
 

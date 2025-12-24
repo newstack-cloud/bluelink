@@ -11,19 +11,20 @@ import (
 func linkLambdaFunctionDynamoDBTable() provider.Link {
 	descriptionInfo := LinkLambdaFunctionDDBTableTypeDescriptionOutput()
 	return &providerv1.LinkDefinition{
-		ResourceTypeA:                   "aws/lambda/function",
-		ResourceTypeB:                   "aws/dynamodb/table",
-		Kind:                            provider.LinkKindHard,
-		PriorityResource:                provider.LinkPriorityResourceB,
-		PlainTextDescription:            descriptionInfo.PlainTextDescription,
-		FormattedDescription:            descriptionInfo.MarkdownDescription,
-		PlainTextSummary:                descriptionInfo.PlainTextSummary,
-		FormattedSummary:                descriptionInfo.MarkdownSummary,
-		AnnotationDefinitions:           LinkLambdaFunctionDDBTableAnnotations(),
-		StageChangesFunc:                linkLambdaFunctionDDBTableStageChanges,
-		UpdateResourceAFunc:             linkLambdaFunctionDDBTableUpdateResourceA,
-		UpdateResourceBFunc:             linkLambdaFunctionDDBTableUpdateResourceB,
-		UpdateIntermediaryResourcesFunc: linkLambdaFunctionDDBTableUpdateIntermediaryResources,
+		ResourceTypeA:                    "aws/lambda/function",
+		ResourceTypeB:                    "aws/dynamodb/table",
+		Kind:                             provider.LinkKindHard,
+		PriorityResource:                 provider.LinkPriorityResourceB,
+		PlainTextDescription:             descriptionInfo.PlainTextDescription,
+		FormattedDescription:             descriptionInfo.MarkdownDescription,
+		PlainTextSummary:                 descriptionInfo.PlainTextSummary,
+		FormattedSummary:                 descriptionInfo.MarkdownSummary,
+		AnnotationDefinitions:            LinkLambdaFunctionDDBTableAnnotations(),
+		StageChangesFunc:                 linkLambdaFunctionDDBTableStageChanges,
+		UpdateResourceAFunc:              linkLambdaFunctionDDBTableUpdateResourceA,
+		UpdateResourceBFunc:              linkLambdaFunctionDDBTableUpdateResourceB,
+		UpdateIntermediaryResourcesFunc:  linkLambdaFunctionDDBTableUpdateIntermediaryResources,
+		GetIntermediaryExternalStateFunc: linkLambdaFunctionDDBTableGetIntermediaryExternalState,
 	}
 }
 
@@ -210,6 +211,44 @@ func LinkLambdaDynamoDBUpdateIntermediaryResourcesOutput() *provider.LinkUpdateI
 	return &provider.LinkUpdateIntermediaryResourcesOutput{
 		LinkData: &core.MappingNode{
 			Fields: map[string]*core.MappingNode{},
+		},
+	}
+}
+
+func linkLambdaFunctionDDBTableGetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return LinkLambdaDynamoDBGetIntermediaryExternalStateOutput(), nil
+}
+
+// LinkLambdaDynamoDBGetIntermediaryExternalStateOutput returns test output for
+// the GetIntermediaryExternalState method.
+func LinkLambdaDynamoDBGetIntermediaryExternalStateOutput() *provider.LinkGetIntermediaryExternalStateOutput {
+	return &provider.LinkGetIntermediaryExternalStateOutput{
+		IntermediaryStates: map[string]*provider.IntermediaryExternalState{
+			"iam-role-1": {
+				ResourceID:   "iam-role-1",
+				ResourceType: "aws/iam/role",
+				SpecData: &core.MappingNode{
+					Fields: map[string]*core.MappingNode{
+						"arn":      core.MappingNodeFromString("arn:aws:iam::123456789012:role/lambda-dynamodb-access"),
+						"roleName": core.MappingNodeFromString("lambda-dynamodb-access"),
+					},
+				},
+				Exists: true,
+			},
+			"iam-policy-1": {
+				ResourceID:   "iam-policy-1",
+				ResourceType: "aws/iam/policy",
+				SpecData: &core.MappingNode{
+					Fields: map[string]*core.MappingNode{
+						"arn":        core.MappingNodeFromString("arn:aws:iam::123456789012:policy/dynamodb-read-write"),
+						"policyName": core.MappingNodeFromString("dynamodb-read-write"),
+					},
+				},
+				Exists: true,
+			},
 		},
 	}
 }

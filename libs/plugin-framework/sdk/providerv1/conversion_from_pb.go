@@ -343,6 +343,42 @@ func fromPBLinkRequestForKind(
 	}, nil
 }
 
+func fromPBGetLinkIntermediaryExternalStateRequest(
+	req *providerserverv1.GetLinkIntermediaryExternalStateRequest,
+) (*provider.LinkGetIntermediaryExternalStateInput, error) {
+	linkContext, err := fromPBLinkContext(req.Context)
+	if err != nil {
+		return nil, err
+	}
+
+	currentLinkState, err := fromPBLinkState(req.CurrentLinkState)
+	if err != nil {
+		return nil, err
+	}
+
+	resourceAInfo, err := convertv1.FromPBResourceInfo(req.ResourceAInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	resourceBInfo, err := convertv1.FromPBResourceInfo(req.ResourceBInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &provider.LinkGetIntermediaryExternalStateInput{
+		InstanceID:              req.InstanceId,
+		InstanceName:            req.InstanceName,
+		LinkID:                  req.LinkId,
+		LinkName:                req.LinkName,
+		ResourceAInfo:           &resourceAInfo,
+		ResourceBInfo:           &resourceBInfo,
+		IntermediaryResourceIDs: req.IntermediaryResourceIds,
+		CurrentLinkState:        currentLinkState,
+		LinkContext:             linkContext,
+	}, nil
+}
+
 func fromPBCustomValidateDataSourceRequest(
 	req *providerserverv1.CustomValidateDataSourceRequest,
 ) (*provider.DataSourceValidateInput, error) {

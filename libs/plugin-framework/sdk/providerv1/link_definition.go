@@ -121,6 +121,15 @@ type LinkDefinition struct {
 		ctx context.Context,
 		input *provider.LinkUpdateIntermediaryResourcesInput,
 	) (*provider.LinkUpdateIntermediaryResourcesOutput, error)
+
+	// A function that fetches the current cloud state for intermediary
+	// resources owned by this link. Used for drift detection and reconciliation.
+	// Link implementations that don't manage intermediary resources should leave
+	// this nil, which will return an empty result.
+	GetIntermediaryExternalStateFunc func(
+		ctx context.Context,
+		input *provider.LinkGetIntermediaryExternalStateInput,
+	) (*provider.LinkGetIntermediaryExternalStateOutput, error)
 }
 
 func (l *LinkDefinition) GetType(
@@ -209,6 +218,19 @@ func (l *LinkDefinition) UpdateIntermediaryResources(
 	// as the "acquiredBy" field when acquiring a resource lock.
 	ctxWithLinkID := context.WithValue(ctx, utils.ContextKeyLinkID, input.LinkID)
 	return l.UpdateIntermediaryResourcesFunc(ctxWithLinkID, input)
+}
+
+func (l *LinkDefinition) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	if l.GetIntermediaryExternalStateFunc == nil {
+		// Return empty result for links that don't manage intermediary resources
+		return &provider.LinkGetIntermediaryExternalStateOutput{
+			IntermediaryStates: nil,
+		}, nil
+	}
+	return l.GetIntermediaryExternalStateFunc(ctx, input)
 }
 
 func (l *LinkDefinition) getPriorityResourceType() string {

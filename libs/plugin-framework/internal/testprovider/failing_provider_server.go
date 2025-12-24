@@ -294,6 +294,16 @@ func (p *failingProviderServer) GetLinkKind(
 	)
 }
 
+func (p *failingProviderServer) GetLinkIntermediaryExternalState(
+	ctx context.Context,
+	req *providerserverv1.GetLinkIntermediaryExternalStateRequest,
+) (*providerserverv1.GetLinkIntermediaryExternalStateResponse, error) {
+	return nil, status.Error(
+		codes.Unknown,
+		"internal error occurred when getting intermediary external state for link",
+	)
+}
+
 func (p *failingProviderServer) CustomValidateDataSource(
 	ctx context.Context,
 	req *providerserverv1.CustomValidateDataSourceRequest,

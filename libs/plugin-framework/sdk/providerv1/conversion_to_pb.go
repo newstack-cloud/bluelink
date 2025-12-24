@@ -763,6 +763,70 @@ func toPBGetLinkKindResponse(
 	}
 }
 
+func toGetLinkIntermediaryExternalStateErrorResponse(
+	err error,
+) *providerserverv1.GetLinkIntermediaryExternalStateResponse {
+	return &providerserverv1.GetLinkIntermediaryExternalStateResponse{
+		Response: &providerserverv1.GetLinkIntermediaryExternalStateResponse_ErrorResponse{
+			ErrorResponse: errorsv1.CreateResponseFromError(err),
+		},
+	}
+}
+
+func toPBGetLinkIntermediaryExternalStateResponse(
+	output *provider.LinkGetIntermediaryExternalStateOutput,
+) (*providerserverv1.GetLinkIntermediaryExternalStateResponse, error) {
+	if output == nil {
+		return &providerserverv1.GetLinkIntermediaryExternalStateResponse{
+			Response: &providerserverv1.GetLinkIntermediaryExternalStateResponse_CompleteResponse{
+				CompleteResponse: &providerserverv1.GetLinkIntermediaryExternalStateCompleteResponse{
+					IntermediaryStates: nil,
+				},
+			},
+		}, nil
+	}
+
+	intermediaryStates := make(
+		map[string]*providerserverv1.IntermediaryExternalState,
+		len(output.IntermediaryStates),
+	)
+	for id, state := range output.IntermediaryStates {
+		pbState, err := toPBIntermediaryExternalState(state)
+		if err != nil {
+			return nil, err
+		}
+		intermediaryStates[id] = pbState
+	}
+
+	return &providerserverv1.GetLinkIntermediaryExternalStateResponse{
+		Response: &providerserverv1.GetLinkIntermediaryExternalStateResponse_CompleteResponse{
+			CompleteResponse: &providerserverv1.GetLinkIntermediaryExternalStateCompleteResponse{
+				IntermediaryStates: intermediaryStates,
+			},
+		},
+	}, nil
+}
+
+func toPBIntermediaryExternalState(
+	state *provider.IntermediaryExternalState,
+) (*providerserverv1.IntermediaryExternalState, error) {
+	if state == nil {
+		return nil, nil
+	}
+
+	specDataPB, err := serialisation.ToMappingNodePB(state.SpecData, /* optional */ true)
+	if err != nil {
+		return nil, err
+	}
+
+	return &providerserverv1.IntermediaryExternalState{
+		ResourceId:   state.ResourceID,
+		ResourceType: state.ResourceType,
+		SpecData:     specDataPB,
+		Exists:       state.Exists,
+	}, nil
+}
+
 func toCustomValidateDataSourceErrorResponse(
 	err error,
 ) *providerserverv1.CustomValidateDataSourceResponse {

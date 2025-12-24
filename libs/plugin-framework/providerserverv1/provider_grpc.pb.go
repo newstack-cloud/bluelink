@@ -48,6 +48,7 @@ const (
 	Provider_GetLinkTypeDescription_FullMethodName           = "/providerserverv1.Provider/GetLinkTypeDescription"
 	Provider_GetLinkAnnotationDefinitions_FullMethodName     = "/providerserverv1.Provider/GetLinkAnnotationDefinitions"
 	Provider_GetLinkKind_FullMethodName                      = "/providerserverv1.Provider/GetLinkKind"
+	Provider_GetLinkIntermediaryExternalState_FullMethodName = "/providerserverv1.Provider/GetLinkIntermediaryExternalState"
 	Provider_GetDataSourceType_FullMethodName                = "/providerserverv1.Provider/GetDataSourceType"
 	Provider_GetDataSourceTypeDescription_FullMethodName     = "/providerserverv1.Provider/GetDataSourceTypeDescription"
 	Provider_GetDataSourceExamples_FullMethodName            = "/providerserverv1.Provider/GetDataSourceExamples"
@@ -228,6 +229,11 @@ type ProviderClient interface {
 	// A soft link is where it does not matter which resource type in the relationship
 	// is created first.
 	GetLinkKind(ctx context.Context, in *LinkRequest, opts ...grpc.CallOption) (*LinkKindResponse, error)
+	// GetLinkIntermediaryExternalState fetches the current cloud state for intermediary
+	// resources owned by this link. Used for drift detection and reconciliation.
+	// Link implementations that don't manage intermediary resources should return
+	// an empty map or nil output.
+	GetLinkIntermediaryExternalState(ctx context.Context, in *GetLinkIntermediaryExternalStateRequest, opts ...grpc.CallOption) (*GetLinkIntermediaryExternalStateResponse, error)
 	// GetDataSourceType retrieves the type of a data source in a blueprint spec
 	// that can be used for documentation and tooling.
 	// This allows callers to get a human-readable label for the already known
@@ -574,6 +580,16 @@ func (c *providerClient) GetLinkKind(ctx context.Context, in *LinkRequest, opts 
 	return out, nil
 }
 
+func (c *providerClient) GetLinkIntermediaryExternalState(ctx context.Context, in *GetLinkIntermediaryExternalStateRequest, opts ...grpc.CallOption) (*GetLinkIntermediaryExternalStateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetLinkIntermediaryExternalStateResponse)
+	err := c.cc.Invoke(ctx, Provider_GetLinkIntermediaryExternalState_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *providerClient) GetDataSourceType(ctx context.Context, in *DataSourceRequest, opts ...grpc.CallOption) (*DataSourceTypeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DataSourceTypeResponse)
@@ -869,6 +885,11 @@ type ProviderServer interface {
 	// A soft link is where it does not matter which resource type in the relationship
 	// is created first.
 	GetLinkKind(context.Context, *LinkRequest) (*LinkKindResponse, error)
+	// GetLinkIntermediaryExternalState fetches the current cloud state for intermediary
+	// resources owned by this link. Used for drift detection and reconciliation.
+	// Link implementations that don't manage intermediary resources should return
+	// an empty map or nil output.
+	GetLinkIntermediaryExternalState(context.Context, *GetLinkIntermediaryExternalStateRequest) (*GetLinkIntermediaryExternalStateResponse, error)
 	// GetDataSourceType retrieves the type of a data source in a blueprint spec
 	// that can be used for documentation and tooling.
 	// This allows callers to get a human-readable label for the already known
@@ -1018,6 +1039,9 @@ func (UnimplementedProviderServer) GetLinkAnnotationDefinitions(context.Context,
 }
 func (UnimplementedProviderServer) GetLinkKind(context.Context, *LinkRequest) (*LinkKindResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLinkKind not implemented")
+}
+func (UnimplementedProviderServer) GetLinkIntermediaryExternalState(context.Context, *GetLinkIntermediaryExternalStateRequest) (*GetLinkIntermediaryExternalStateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLinkIntermediaryExternalState not implemented")
 }
 func (UnimplementedProviderServer) GetDataSourceType(context.Context, *DataSourceRequest) (*DataSourceTypeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetDataSourceType not implemented")
@@ -1583,6 +1607,24 @@ func _Provider_GetLinkKind_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Provider_GetLinkIntermediaryExternalState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLinkIntermediaryExternalStateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProviderServer).GetLinkIntermediaryExternalState(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Provider_GetLinkIntermediaryExternalState_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProviderServer).GetLinkIntermediaryExternalState(ctx, req.(*GetLinkIntermediaryExternalStateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Provider_GetDataSourceType_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DataSourceRequest)
 	if err := dec(in); err != nil {
@@ -1935,6 +1977,10 @@ var Provider_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetLinkKind",
 			Handler:    _Provider_GetLinkKind_Handler,
+		},
+		{
+			MethodName: "GetLinkIntermediaryExternalState",
+			Handler:    _Provider_GetLinkIntermediaryExternalState_Handler,
 		},
 		{
 			MethodName: "GetDataSourceType",

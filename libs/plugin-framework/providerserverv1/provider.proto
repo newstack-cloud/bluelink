@@ -185,6 +185,12 @@ service Provider {
 	// A soft link is where it does not matter which resource type in the relationship
 	// is created first.
     rpc GetLinkKind(LinkRequest) returns (LinkKindResponse) {}
+	// GetLinkIntermediaryExternalState fetches the current cloud state for intermediary
+	// resources owned by this link. Used for drift detection and reconciliation.
+	// Link implementations that don't manage intermediary resources should return
+	// an empty map or nil output.
+	rpc GetLinkIntermediaryExternalState(GetLinkIntermediaryExternalStateRequest)
+		returns (GetLinkIntermediaryExternalStateResponse) {}
 
     //////////////////////////////////////////////////////////////////////
     // Data source methods
@@ -1047,6 +1053,64 @@ message LinkRequest {
     LinkContext context = 3;
 }
 
+// GetLinkIntermediaryExternalStateRequest provides the input data needed
+// to fetch the external state of intermediary resources for a link.
+message GetLinkIntermediaryExternalStateRequest {
+    // The type of link to retrieve intermediary external state for.
+    // This should be in the form of `{resourceTypeA}::{resourceTypeB}`.
+    LinkType link_type = 1;
+    // The ID of the host making the request to the provider.
+    string host_id = 2;
+    // The globally unique identifier for the blueprint instance.
+    string instance_id = 3;
+    // The user-defined name for the blueprint instance.
+    string instance_name = 4;
+    // The globally unique identifier for the link.
+    string link_id = 5;
+    // The logical name of the link in the format `{resourceA}::{resourceB}`.
+    string link_name = 6;
+    // Information about resource A in the link.
+    sharedtypesv1.ResourceInfo resource_a_info = 7;
+    // Information about resource B in the link.
+    sharedtypesv1.ResourceInfo resource_b_info = 8;
+    // IDs of specific intermediary resources to fetch.
+    // If empty, fetch all intermediary resources for the link.
+    repeated string intermediary_resource_ids = 9;
+    // The current persisted state of the link.
+    LinkState current_link_state = 10;
+    // Runtime configuration for the current environment.
+    LinkContext context = 11;
+}
+
+// GetLinkIntermediaryExternalStateResponse contains the response
+// for fetching external state of intermediary resources.
+message GetLinkIntermediaryExternalStateResponse {
+    oneof response {
+        GetLinkIntermediaryExternalStateCompleteResponse complete_response = 1;
+        sharedtypesv1.ErrorResponse error_response = 2;
+    }
+}
+
+// GetLinkIntermediaryExternalStateCompleteResponse contains the external state
+// of intermediary resources.
+message GetLinkIntermediaryExternalStateCompleteResponse {
+    // Maps intermediary resource ID to its external state.
+    map<string, IntermediaryExternalState> intermediary_states = 1;
+}
+
+// IntermediaryExternalState contains the external (cloud) state
+// of an intermediary resource.
+message IntermediaryExternalState {
+    // The unique identifier for the intermediary resource.
+    string resource_id = 1;
+    // The type of the intermediary resource (e.g., "aws/iam/role_policy").
+    string resource_type = 2;
+    // The current external state of the intermediary resource spec.
+    schema.MappingNode spec_data = 3;
+    // Whether the resource exists in the external system.
+    bool exists = 4;
+}
+
 // LinkStatus represents the current state of a link
 // in a blueprint instance.
 enum LinkStatus {
@@ -1100,6 +1164,18 @@ enum LinkStatus {
     // The status for when another change in the same blueprint has failed
     // and the update of the current link has been rolled back.
     LINK_STATUS_UPDATE_ROLLBACK_COMPLETE = 18;
+    // The status for when a link creation was interrupted due to deployment
+    // being cancelled (e.g., drain timeout after terminal failure).
+    // The actual state of the link is unknown and needs reconciliation.
+    LINK_STATUS_CREATE_INTERRUPTED = 19;
+    // The status for when a link update was interrupted due to deployment
+    // being cancelled (e.g., drain timeout after terminal failure).
+    // The actual state of the link is unknown and needs reconciliation.
+    LINK_STATUS_UPDATE_INTERRUPTED = 20;
+    // The status for when a link destruction was interrupted due to deployment
+    // being cancelled (e.g., drain timeout after terminal failure).
+    // The actual state of the link is unknown and needs reconciliation.
+    LINK_STATUS_DESTROY_INTERRUPTED = 21;
 }
 
 // PreciseLinkStatus is used to represent a more precise
@@ -1174,6 +1250,18 @@ enum PreciseLinkStatus {
     // and the current link for which intermediary resources were successfully
     // updated has been rolled back.
     PRECISE_LINK_STATUS_INTERMEDIARY_RESOURCE_UPDATE_ROLLBACK_COMPLETE = 18;
+    // The status for when the resource A update for a link was interrupted due to
+    // deployment being cancelled (e.g., drain timeout after terminal failure).
+    // The actual state is unknown and needs reconciliation.
+    PRECISE_LINK_STATUS_RESOURCE_A_UPDATE_INTERRUPTED = 19;
+    // The status for when the resource B update for a link was interrupted due to
+    // deployment being cancelled (e.g., drain timeout after terminal failure).
+    // The actual state is unknown and needs reconciliation.
+    PRECISE_LINK_STATUS_RESOURCE_B_UPDATE_INTERRUPTED = 20;
+    // The status for when the intermediary resources update for a link was interrupted
+    // due to deployment being cancelled (e.g., drain timeout after terminal failure).
+    // The actual state is unknown and needs reconciliation.
+    PRECISE_LINK_STATUS_INTERMEDIARY_RESOURCE_UPDATE_INTERRUPTED = 21;
 }
 
 // LinkAnnotationDefinitionsResponse is the response
