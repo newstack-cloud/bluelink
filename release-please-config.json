@@ -4,7 +4,6 @@
   "release-type": "go",
   "separate-pull-requests": true,
   "bump-minor-pre-major": true,
-  "bump-patch-for-minor-pre-major": true,
   "prerelease-type": "alpha",
   "bootstrap-sha": "7e643341ec2e7bc1ae2e895fecd1c3f89fbb36c9",
   "changelog-sections": [
