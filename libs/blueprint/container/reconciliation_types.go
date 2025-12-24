@@ -64,43 +64,43 @@ type CheckReconciliationInput struct {
 // ReconciliationCheckResult contains all elements needing reconciliation.
 type ReconciliationCheckResult struct {
 	// InstanceID is the ID of the blueprint instance that was checked.
-	InstanceID string
+	InstanceID string `json:"instanceId"`
 	// Resources contains reconciliation details for each resource that needs attention.
-	Resources []ResourceReconcileResult
+	Resources []ResourceReconcileResult `json:"resources"`
 	// Links contains reconciliation details for each link that needs attention.
-	Links []LinkReconcileResult
+	Links []LinkReconcileResult `json:"links"`
 	// HasInterrupted is true if any elements are in an interrupted state.
-	HasInterrupted bool
+	HasInterrupted bool `json:"hasInterrupted"`
 	// HasDrift is true if any elements have drifted from expected state.
-	HasDrift bool
+	HasDrift bool `json:"hasDrift"`
 }
 
 // ResourceReconcileResult contains reconciliation details for a single resource.
 type ResourceReconcileResult struct {
 	// ResourceID is the unique identifier for the resource.
-	ResourceID string
+	ResourceID string `json:"resourceId"`
 	// ResourceName is the logical name of the resource in the blueprint.
-	ResourceName string
+	ResourceName string `json:"resourceName"`
 	// ResourceType is the provider resource type (e.g., "aws/s3Bucket").
-	ResourceType string
+	ResourceType string `json:"resourceType"`
 	// Type indicates why this resource needs reconciliation.
-	Type ReconciliationType
+	Type ReconciliationType `json:"type"`
 	// OldStatus is the status the resource had before reconciliation check.
-	OldStatus core.PreciseResourceStatus
+	OldStatus core.PreciseResourceStatus `json:"oldStatus"`
 	// NewStatus is the status determined from fetching external state.
-	NewStatus core.PreciseResourceStatus
+	NewStatus core.PreciseResourceStatus `json:"newStatus"`
 	// ExternalState contains the current cloud state if the resource exists.
 	// This will be nil if the resource doesn't exist in the cloud.
-	ExternalState *core.MappingNode
+	ExternalState *core.MappingNode `json:"externalState,omitempty"`
 	// PersistedState contains what we have in our state store.
-	PersistedState *core.MappingNode
+	PersistedState *core.MappingNode `json:"persistedState,omitempty"`
 	// Changes shows the detailed diff between persisted and external state.
 	// Generated using the same change detection as drift checking.
-	Changes *provider.Changes
+	Changes *provider.Changes `json:"changes,omitempty"`
 	// ResourceExists indicates whether the resource was found in the cloud.
-	ResourceExists bool
+	ResourceExists bool `json:"resourceExists"`
 	// RecommendedAction is the suggested action based on the reconciliation analysis.
-	RecommendedAction ReconciliationAction
+	RecommendedAction ReconciliationAction `json:"recommendedAction"`
 }
 
 // HasStateChanges returns true if the reconcile result has detected
@@ -119,49 +119,49 @@ func (r *ResourceReconcileResult) HasStateChanges() bool {
 // ResourceDataMappings rather than direct external state fetching.
 type LinkReconcileResult struct {
 	// LinkID is the unique identifier for the link.
-	LinkID string
+	LinkID string `json:"linkId"`
 	// LinkName is the logical name of the link (format: "{resourceA}::{resourceB}").
-	LinkName string
+	LinkName string `json:"linkName"`
 	// Type indicates why this link needs reconciliation.
-	Type ReconciliationType
+	Type ReconciliationType `json:"type"`
 	// OldStatus is the status the link had before reconciliation check.
-	OldStatus core.PreciseLinkStatus
+	OldStatus core.PreciseLinkStatus `json:"oldStatus"`
 	// NewStatus is the status determined from analyzing connected resources.
-	NewStatus core.PreciseLinkStatus
+	NewStatus core.PreciseLinkStatus `json:"newStatus"`
 	// ResourceAChanges contains changes attributed to this link on ResourceA.
 	// Populated from ResourceDataMappings when resource drift is detected.
-	ResourceAChanges *provider.Changes
+	ResourceAChanges *provider.Changes `json:"resourceAChanges,omitempty"`
 	// ResourceBChanges contains changes attributed to this link on ResourceB.
 	// Populated from ResourceDataMappings when resource drift is detected.
-	ResourceBChanges *provider.Changes
+	ResourceBChanges *provider.Changes `json:"resourceBChanges,omitempty"`
 	// IntermediaryChanges contains reconciliation details for intermediary resources
 	// owned by this link. Key is the intermediary resource name.
 	// Note: Intermediary resource reconciliation requires future provider interface changes.
-	IntermediaryChanges map[string]*IntermediaryReconcileResult
+	IntermediaryChanges map[string]*IntermediaryReconcileResult `json:"intermediaryChanges,omitempty"`
 	// RecommendedAction is the suggested action based on the reconciliation analysis.
-	RecommendedAction ReconciliationAction
+	RecommendedAction ReconciliationAction `json:"recommendedAction"`
 	// LinkDataUpdates contains the pre-computed updates to apply to link.Data when
 	// accepting external state. This is derived from ResourceDataMappings during the
 	// check phase, making it easy for callers to construct LinkReconcileAction.
 	// Key is the linkDataPath (e.g., "resourceA.handler"), value is the external value.
-	LinkDataUpdates map[string]*core.MappingNode
+	LinkDataUpdates map[string]*core.MappingNode `json:"linkDataUpdates,omitempty"`
 }
 
 // IntermediaryReconcileResult contains reconciliation details for an intermediary resource
 // owned by a link.
 type IntermediaryReconcileResult struct {
 	// Name is the name of the intermediary resource.
-	Name string
+	Name string `json:"name"`
 	// Type is the type of the intermediary resource.
-	Type string
+	Type string `json:"type"`
 	// ExternalState contains the current cloud state if the resource exists.
-	ExternalState *core.MappingNode
+	ExternalState *core.MappingNode `json:"externalState,omitempty"`
 	// PersistedState contains what we have in our state store.
-	PersistedState *core.MappingNode
+	PersistedState *core.MappingNode `json:"persistedState,omitempty"`
 	// Changes shows the detailed diff between persisted and external state.
-	Changes *provider.Changes
+	Changes *provider.Changes `json:"changes,omitempty"`
 	// Exists indicates whether the intermediary resource was found in the cloud.
-	Exists bool
+	Exists bool `json:"exists"`
 }
 
 // ApplyReconciliationInput specifies what reconciliation actions to apply.
