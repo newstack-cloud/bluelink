@@ -16,16 +16,17 @@ import (
 // along with methods to manage persistence for
 // blueprint validation requests, events and change sets.
 type StateContainer struct {
-	instancesContainer  *instancesContainerImpl
-	resourcesContainer  *resourcesContainerImpl
-	linksContainer      *linksContainerImpl
-	childrenContainer   *childrenContainerImpl
-	metadataContainer   *metadataContainerImpl
-	exportContainer     *exportContainerImpl
-	eventsContainer     *eventsContainerImpl
-	changesetsContainer *changesetsContainerImpl
-	validationContainer *validationContainerImpl
-	persister           *statePersister
+	instancesContainer              *instancesContainerImpl
+	resourcesContainer              *resourcesContainerImpl
+	linksContainer                  *linksContainerImpl
+	childrenContainer               *childrenContainerImpl
+	metadataContainer               *metadataContainerImpl
+	exportContainer                 *exportContainerImpl
+	eventsContainer                 *eventsContainerImpl
+	changesetsContainer             *changesetsContainerImpl
+	validationContainer             *validationContainerImpl
+	reconciliationResultsContainer  *reconciliationResultsContainerImpl
+	persister                       *statePersister
 }
 
 // Option is a type for options that can be passed to LoadStateContainer
@@ -103,21 +104,23 @@ func LoadStateContainer(
 	}
 
 	persister := &statePersister{
-		stateDir:                     stateDir,
-		fs:                           fs,
-		instanceIndex:                state.instanceIndex,
-		resourceDriftIndex:           state.resourceDriftIndex,
-		linkDriftIndex:               state.linkDriftIndex,
-		eventIndex:                   state.eventIndex,
-		changesetIndex:               state.changesetIndex,
-		blueprintValidationIndex:     state.blueprintValidationIndex,
-		maxGuideFileSize:             DefaultMaxGuideFileSize,
-		maxEventPartitionSize:        DefaultMaxEventParititionSize,
-		lastInstanceChunk:            getLastChunkFromIndex(state.instanceIndex),
-		lastResourceDriftChunk:       getLastChunkFromIndex(state.resourceDriftIndex),
-		lastLinkDriftChunk:           getLastChunkFromIndex(state.linkDriftIndex),
-		lastChangesetChunk:           getLastChunkFromIndex(state.changesetIndex),
-		lastBlueprintValidationChunk: getLastChunkFromIndex(state.blueprintValidationIndex),
+		stateDir:                      stateDir,
+		fs:                            fs,
+		instanceIndex:                 state.instanceIndex,
+		resourceDriftIndex:            state.resourceDriftIndex,
+		linkDriftIndex:                state.linkDriftIndex,
+		eventIndex:                    state.eventIndex,
+		changesetIndex:                state.changesetIndex,
+		blueprintValidationIndex:      state.blueprintValidationIndex,
+		reconciliationResultIndex:     state.reconciliationResultIndex,
+		maxGuideFileSize:              DefaultMaxGuideFileSize,
+		maxEventPartitionSize:         DefaultMaxEventParititionSize,
+		lastInstanceChunk:             getLastChunkFromIndex(state.instanceIndex),
+		lastResourceDriftChunk:        getLastChunkFromIndex(state.resourceDriftIndex),
+		lastLinkDriftChunk:            getLastChunkFromIndex(state.linkDriftIndex),
+		lastChangesetChunk:            getLastChunkFromIndex(state.changesetIndex),
+		lastBlueprintValidationChunk:  getLastChunkFromIndex(state.blueprintValidationIndex),
+		lastReconciliationResultChunk: getLastChunkFromIndex(state.reconciliationResultIndex),
 	}
 
 	container := &StateContainer{
@@ -200,6 +203,15 @@ func LoadStateContainer(
 			logger:      logger,
 			mu:          mu,
 		},
+		reconciliationResultsContainer: &reconciliationResultsContainerImpl{
+			reconciliationResults: state.reconciliationResults,
+			changesetIndex:        buildChangesetIndex(state.reconciliationResults),
+			instanceIndex:         buildInstanceIndex(state.reconciliationResults),
+			fs:                    fs,
+			persister:             persister,
+			logger:                logger,
+			mu:                    mu,
+		},
 	}
 
 	for _, opt := range opts {
@@ -243,6 +255,10 @@ func (c *StateContainer) Changesets() manage.Changesets {
 
 func (c *StateContainer) Validation() manage.Validation {
 	return c.validationContainer
+}
+
+func (c *StateContainer) ReconciliationResults() manage.ReconciliationResults {
+	return c.reconciliationResultsContainer
 }
 
 func getLastChunkFromIndex(index map[string]*indexLocation) int {

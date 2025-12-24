@@ -1,0 +1,9 @@
+DROP INDEX IF EXISTS idx_resources_type;
+DROP INDEX IF EXISTS idx_resources_template_name;
+DROP INDEX IF EXISTS idx_resources_status;
+DROP INDEX IF EXISTS idx_links_status;
+DROP INDEX IF EXISTS idx_changesets_status;
+DROP INDEX IF EXISTS idx_changesets_instance_status;
+DROP INDEX IF EXISTS idx_blueprint_instances_status;
+DROP INDEX IF EXISTS idx_resources_drifted;
+DROP INDEX IF EXISTS idx_links_drifted;

@@ -42,7 +42,7 @@ func saveEventQuery() string {
 			@timestamp,
 			@end
 		)
-		ON CONFLICT (id) DO NOTHING
+		ON CONFLICT (id, "timestamp") DO NOTHING
 	`
 }
 
@@ -75,6 +75,10 @@ func channelEventsQuery(
 			AND e.timestamp > @afterTimestamp
 		`
 	}
+
+	query += `
+		ORDER BY e.timestamp ASC, e.id ASC
+	`
 
 	return query
 }

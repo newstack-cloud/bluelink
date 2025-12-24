@@ -203,6 +203,18 @@ func (c *Controller) DestroyBlueprintInstanceHandler(
 		return
 	}
 
+	// Check if changeset has drift detected status and block the destroy unless force is set
+	if !payload.Force {
+		if changeset.Status == manage.ChangesetStatusDriftDetected {
+			respondWithDriftBlocked(
+				w,
+				instance.InstanceID,
+				changeset.ID,
+			)
+			return
+		}
+	}
+
 	params := c.paramsProvider.CreateFromRequestConfig(finalConfig)
 
 	go c.startDestroy(
@@ -275,6 +287,19 @@ func (c *Controller) handleDeployRequest(
 			payload.ChangeSetID,
 		)
 		return
+	}
+
+	// For updates (existing instances), check if changeset has drift detected status
+	// and block the deployment unless force is set
+	if existingInstance != nil && !payload.Force {
+		if changeset.Status == manage.ChangesetStatusDriftDetected {
+			respondWithDriftBlocked(
+				w,
+				existingInstance.InstanceID,
+				changeset.ID,
+			)
+			return
+		}
 	}
 
 	// Add blueprint directory to context variables for resolving relative child blueprint paths.
@@ -956,4 +981,24 @@ func (c *Controller) saveDeploymentEvent(
 		)
 		return
 	}
+}
+
+// respondWithDriftBlocked sends a 409 Conflict response when an operation
+// is blocked due to drift detection on the changeset.
+func respondWithDriftBlocked(
+	w http.ResponseWriter,
+	instanceID string,
+	changesetID string,
+) {
+	response := &DriftBlockedResponse{
+		Message:     "Operation blocked due to drift detection. Reconciliation is required before proceeding.",
+		InstanceID:  instanceID,
+		ChangesetID: changesetID,
+		Hint:        "Use the reconciliation endpoints to review and resolve drift, or set force=true to bypass this check.",
+	}
+	httputils.HTTPJSONResponse(
+		w,
+		http.StatusConflict,
+		response,
+	)
 }

@@ -17,15 +17,16 @@ import (
 // along with methods to manage persistence for
 // blueprint validation requests, events and change sets.
 type StateContainer struct {
-	instancesContainer  *instancesContainerImpl
-	resourcesContainer  *resourcesContainerImpl
-	linksContainer      *linksContainerImpl
-	childrenContainer   *childrenContainerImpl
-	metadataContainer   *metadataContainerImpl
-	exportContainer     *exportContainerImpl
-	validationContainer *validationContainerImpl
-	changesetsContainer *changesetsContainerImpl
-	eventsContainer     *eventsContainerImpl
+	instancesContainer              *instancesContainerImpl
+	resourcesContainer              *resourcesContainerImpl
+	linksContainer                  *linksContainerImpl
+	childrenContainer               *childrenContainerImpl
+	metadataContainer               *metadataContainerImpl
+	exportContainer                 *exportContainerImpl
+	validationContainer             *validationContainerImpl
+	changesetsContainer             *changesetsContainerImpl
+	eventsContainer                 *eventsContainerImpl
+	reconciliationResultsContainer  *reconciliationResultsContainerImpl
 }
 
 // Option is a type for options that can be passed to LoadStateContainer
@@ -103,6 +104,10 @@ func LoadStateContainer(
 			connPool: connPool,
 			logger:   logger,
 		},
+		reconciliationResultsContainer: &reconciliationResultsContainerImpl{
+			connPool: connPool,
+			logger:   logger,
+		},
 	}
 
 	for _, opt := range opts {
@@ -146,4 +151,8 @@ func (c *StateContainer) Changesets() manage.Changesets {
 
 func (c *StateContainer) Events() manage.Events {
 	return c.eventsContainer
+}
+
+func (c *StateContainer) ReconciliationResults() manage.ReconciliationResults {
+	return c.reconciliationResultsContainer
 }

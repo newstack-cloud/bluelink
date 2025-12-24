@@ -1,0 +1,5 @@
+DROP INDEX IF EXISTS idx_reconciliation_results_instance_created;
+DROP INDEX IF EXISTS idx_reconciliation_results_changeset_created;
+DROP INDEX IF EXISTS idx_reconciliation_results_instance_id;
+DROP INDEX IF EXISTS idx_reconciliation_results_changeset_id;
+DROP TABLE IF EXISTS reconciliation_results;

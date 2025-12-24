@@ -344,6 +344,16 @@ func setupDeploymentHandlers(
 		"/deployments/instances/{id}/destroy",
 		deploymentCtrl.DestroyBlueprintInstanceHandler,
 	).Methods("POST")
+
+	router.HandleFunc(
+		"/deployments/instances/{id}/reconciliation/check",
+		deploymentCtrl.CheckReconciliationHandler,
+	).Methods("POST")
+
+	router.HandleFunc(
+		"/deployments/instances/{id}/reconciliation/apply",
+		deploymentCtrl.ApplyReconciliationHandler,
+	).Methods("POST")
 }
 
 func setupEventManagementHandlers(

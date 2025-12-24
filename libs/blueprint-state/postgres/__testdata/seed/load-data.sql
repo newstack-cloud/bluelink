@@ -275,3 +275,23 @@ SELECT
 FROM temp_blueprint_validations;
 
 DROP TABLE IF EXISTS temp_blueprint_validations;
+
+-- Reconciliation result records
+CREATE TABLE IF NOT EXISTS temp_reconciliation_results (data jsonb);
+\COPY temp_reconciliation_results (data) FROM 'postgres/__testdata/seed/tmp/reconciliation-results.nd.json';
+INSERT INTO reconciliation_results (
+    id,
+    changeset_id,
+    instance_id,
+    result,
+    created
+)
+SELECT
+    (data->>'id')::uuid,
+    (data->>'changesetId')::uuid,
+    (data->>'instanceId')::uuid,
+    (data->>'result')::jsonb,
+    TO_TIMESTAMP((data->>'created')::bigint)
+FROM temp_reconciliation_results;
+
+DROP TABLE IF EXISTS temp_reconciliation_results;

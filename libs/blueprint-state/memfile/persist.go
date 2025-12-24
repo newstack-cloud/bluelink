@@ -8,21 +8,23 @@ import (
 )
 
 type statePersister struct {
-	stateDir                     string
-	fs                           afero.Fs
-	instanceIndex                map[string]*indexLocation
-	lastInstanceChunk            int
-	maxGuideFileSize             int64
-	resourceDriftIndex           map[string]*indexLocation
-	lastResourceDriftChunk       int
-	linkDriftIndex               map[string]*indexLocation
-	lastLinkDriftChunk           int
-	eventIndex                   map[string]*eventIndexLocation
-	maxEventPartitionSize        int64
-	changesetIndex               map[string]*indexLocation
-	lastChangesetChunk           int
-	blueprintValidationIndex     map[string]*indexLocation
-	lastBlueprintValidationChunk int
+	stateDir                      string
+	fs                            afero.Fs
+	instanceIndex                 map[string]*indexLocation
+	lastInstanceChunk             int
+	maxGuideFileSize              int64
+	resourceDriftIndex            map[string]*indexLocation
+	lastResourceDriftChunk        int
+	linkDriftIndex                map[string]*indexLocation
+	lastLinkDriftChunk            int
+	eventIndex                    map[string]*eventIndexLocation
+	maxEventPartitionSize         int64
+	changesetIndex                map[string]*indexLocation
+	lastChangesetChunk            int
+	blueprintValidationIndex      map[string]*indexLocation
+	lastBlueprintValidationChunk  int
+	reconciliationResultIndex     map[string]*indexLocation
+	lastReconciliationResultChunk int
 	// The persister has its own mutex, separate from
 	// the state container's read/write lock.
 	mu sync.Mutex

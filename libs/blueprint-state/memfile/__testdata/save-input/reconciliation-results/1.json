@@ -1,0 +1,43 @@
+{
+  "id": "f1234567-89ab-cdef-0123-456789abcdef",
+  "changesetId": "08dc456e-cafc-4199-b074-5f04cd4904f2",
+  "instanceId": "46324ee7-b515-4988-98b0-d5445746a997",
+  "result": {
+    "instanceId": "46324ee7-b515-4988-98b0-d5445746a997",
+    "resources": [
+      {
+        "resourceId": "res-001",
+        "resourceName": "ordersTable",
+        "resourceType": "aws/dynamodb/table",
+        "type": "drift",
+        "oldStatus": 3,
+        "newStatus": 3,
+        "externalState": {
+          "tableName": "orders-prod",
+          "region": "eu-west-1"
+        },
+        "persistedState": {
+          "tableName": "orders-prod",
+          "region": "us-east-1"
+        },
+        "changes": {
+          "modifiedFields": [
+            {
+              "fieldPath": "region",
+              "currentValue": "us-east-1",
+              "newValue": "eu-west-1"
+            }
+          ],
+          "newFields": [],
+          "removedFields": []
+        },
+        "resourceExists": true,
+        "recommendedAction": "accept_external"
+      }
+    ],
+    "links": [],
+    "hasInterrupted": false,
+    "hasDrift": true
+  },
+  "created": 1733145800
+}

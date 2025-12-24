@@ -438,6 +438,47 @@ func loadSaveBlueprintValidationFixture(fixtureNumber int) (SaveBlueprintValidat
 	}, nil
 }
 
+type SaveReconciliationResultFixture struct {
+	ReconciliationResult *manage.ReconciliationResult
+}
+
+func SetupSaveReconciliationResultFixtures(dirPath string) (map[int]SaveReconciliationResultFixture, error) {
+	dirEntries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	saveReconciliationResultFixtures := make(map[int]SaveReconciliationResultFixture)
+	for i := 1; i <= len(dirEntries); i++ {
+		fixture, err := loadSaveReconciliationResultFixture(i, dirPath)
+		if err != nil {
+			return nil, err
+		}
+		saveReconciliationResultFixtures[i] = fixture
+	}
+
+	return saveReconciliationResultFixtures, nil
+}
+
+func loadSaveReconciliationResultFixture(fixtureNumber int, dirPath string) (SaveReconciliationResultFixture, error) {
+	fileName := fmt.Sprintf("%d.json", fixtureNumber)
+	filePath := path.Join(dirPath, fileName)
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return SaveReconciliationResultFixture{}, err
+	}
+
+	reconciliationResult := &manage.ReconciliationResult{}
+	err = json.Unmarshal(data, reconciliationResult)
+	if err != nil {
+		return SaveReconciliationResultFixture{}, err
+	}
+
+	return SaveReconciliationResultFixture{
+		ReconciliationResult: reconciliationResult,
+	}, nil
+}
+
 func saveInputDir() string {
 	return path.Join("__testdata", "save-input")
 }

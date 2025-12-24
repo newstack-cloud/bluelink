@@ -1,0 +1,9 @@
+DROP INDEX IF EXISTS idx_events_timestamp;
+DROP INDEX IF EXISTS idx_events_channel_timestamp;
+DROP INDEX IF EXISTS idx_events_type;
+DROP INDEX IF EXISTS idx_changesets_created;
+DROP INDEX IF EXISTS idx_resource_drift_timestamp;
+DROP INDEX IF EXISTS idx_link_drift_timestamp;
+DROP INDEX IF EXISTS idx_resources_last_drift_detected;
+DROP INDEX IF EXISTS idx_links_last_drift_detected;
+DROP INDEX IF EXISTS idx_blueprint_instances_last_deployed;

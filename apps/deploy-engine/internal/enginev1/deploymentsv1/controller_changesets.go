@@ -282,12 +282,25 @@ func (c *Controller) startChangeStaging(
 		return
 	}
 
+	// Perform drift check before staging changes if:
+	// - skipDriftCheck is not set
+	// - There is an existing instance to check (not a new deployment)
+	if !skipDriftCheck && changeset.InstanceID != "" {
+		driftDetected := c.performDriftCheckForChangeStaging(
+			ctxWithTimeout,
+			blueprintContainer,
+			changeset,
+			params,
+			logger,
+		)
+		if driftDetected {
+			// Exit early - the drift check already handled saving the changeset
+			// and sending the drift detected event
+			return
+		}
+	}
+
 	channels := createChangeStagingChannels()
-	// Note: skipDriftCheck is retained in the API for future use when
-	// Deploy Engine implements pre-flight reconciliation checks.
-	// For now it is not passed to StageChanges as Blueprint Core no longer
-	// performs drift checks internally.
-	_ = skipDriftCheck
 	err = blueprintContainer.StageChanges(
 		ctxWithTimeout,
 		&container.StageChangesInput{
@@ -606,4 +619,95 @@ func changesetWithStatus(
 		Changes:           changeset.Changes,
 		Created:           changeset.Created,
 	}
+}
+
+// performDriftCheckForChangeStaging performs a reconciliation check before
+// staging changes to detect drift or interrupted state.
+// Returns true if drift/interrupted state was detected and the caller should
+// exit early (the method handles saving the changeset and sending events).
+func (c *Controller) performDriftCheckForChangeStaging(
+	ctx context.Context,
+	blueprintContainer container.BlueprintContainer,
+	changeset *manage.Changeset,
+	params core.BlueprintParams,
+	logger core.Logger,
+) bool {
+	logger.Debug("performing drift check before change staging")
+
+	result, err := blueprintContainer.CheckReconciliation(
+		ctx,
+		&container.CheckReconciliationInput{
+			InstanceID: changeset.InstanceID,
+			Scope:      container.ReconciliationScopeAll,
+		},
+		params,
+	)
+	if err != nil {
+		// If the drift check fails, treat it as an error and fail the changeset
+		c.handleChangesetErrorAsEvent(
+			ctx,
+			changeset,
+			fmt.Errorf("failed to check for drift: %w", err),
+			logger,
+		)
+		return true
+	}
+
+	// Check if any drift or interrupted state was detected
+	if !result.HasDrift && !result.HasInterrupted {
+		logger.Debug("no drift or interrupted state detected, proceeding with change staging")
+		return false
+	}
+
+	// Drift or interrupted state detected - block the change staging
+	logger.Info(
+		"drift or interrupted state detected, blocking change staging",
+		core.BoolLogField("hasDrift", result.HasDrift),
+		core.BoolLogField("hasInterrupted", result.HasInterrupted),
+	)
+
+	c.handleDriftDetectedForChangeset(ctx, changeset, result, logger)
+	return true
+}
+
+// handleDriftDetectedForChangeset saves the changeset with DRIFT_DETECTED status
+// and sends a driftDetected event to the stream.
+func (c *Controller) handleDriftDetectedForChangeset(
+	ctx context.Context,
+	changeset *manage.Changeset,
+	reconciliationResult *container.ReconciliationCheckResult,
+	logger core.Logger,
+) {
+	message := "Drift or interrupted state detected. Reconciliation " +
+		"required before staging changes."
+	if reconciliationResult.HasDrift && !reconciliationResult.HasInterrupted {
+		message = "Drift detected. External changes to resources require " +
+			"reconciliation before staging changes."
+	} else if !reconciliationResult.HasDrift && reconciliationResult.HasInterrupted {
+		message = "Interrupted state detected. Resources in interrupted" +
+			" states require reconciliation before staging changes."
+	}
+
+	eventData := &driftDetectedEvent{
+		Message:              message,
+		ReconciliationResult: reconciliationResult,
+		Timestamp:            c.clock.Now().Unix(),
+	}
+
+	c.saveChangeStagingEvent(
+		ctx,
+		eventTypeDriftDetected,
+		eventData,
+		eventData.Timestamp,
+		/* endOfStream */ true,
+		changeset,
+		logger,
+	)
+
+	c.saveChangeset(
+		ctx,
+		changeset,
+		manage.ChangesetStatusDriftDetected,
+		logger,
+	)
 }

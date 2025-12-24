@@ -1,0 +1,14 @@
+{
+  "d1234567-89ab-cdef-0123-456789abcdef": {
+    "chunkNumber": 0,
+    "offset": 0
+  },
+  "e2345678-89ab-cdef-0123-456789abcdef": {
+    "chunkNumber": 0,
+    "offset": 1
+  },
+  "c3456789-89ab-cdef-0123-456789abcdef": {
+    "chunkNumber": 0,
+    "offset": 2
+  }
+}

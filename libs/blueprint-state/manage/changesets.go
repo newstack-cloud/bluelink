@@ -76,4 +76,9 @@ const (
 	// ChangesetStatusFailed indicates that the change staging process
 	// has failed.
 	ChangesetStatusFailed ChangesetStatus = "FAILED"
+	// ChangesetStatusDriftDetected indicates that drift or interrupted state
+	// was detected during change staging and the process was blocked.
+	// The ReconciliationResult field on the changeset contains the full
+	// drift/interrupted state details.
+	ChangesetStatusDriftDetected ChangesetStatus = "DRIFT_DETECTED"
 )
