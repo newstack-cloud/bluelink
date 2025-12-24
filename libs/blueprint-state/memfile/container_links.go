@@ -13,8 +13,9 @@ import (
 )
 
 type linksContainerImpl struct {
-	links     map[string]*state.LinkState
-	instances map[string]*state.InstanceState
+	links            map[string]*state.LinkState
+	linkDriftEntries map[string]*state.LinkDriftState
+	instances        map[string]*state.InstanceState
 	// instance ID -> resourceName -> linkIDs
 	resourceDataMappingIDs map[string]map[string][]string
 	fs                     afero.Fs
@@ -233,6 +234,132 @@ func (c *linksContainerImpl) Remove(
 	return *link, c.persister.updateInstance(instance)
 }
 
+func (c *linksContainerImpl) GetDrift(
+	ctx context.Context,
+	linkID string,
+) (state.LinkDriftState, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	_, hasLink := c.links[linkID]
+	if !hasLink {
+		return state.LinkDriftState{}, state.LinkNotFoundError(linkID)
+	}
+
+	drift, hasDrift := c.linkDriftEntries[linkID]
+	if !hasDrift {
+		// An empty drift state is valid for a link that has not drifted.
+		return state.LinkDriftState{}, nil
+	}
+
+	return copyLinkDrift(drift), nil
+}
+
+func (c *linksContainerImpl) SaveDrift(
+	ctx context.Context,
+	driftState state.LinkDriftState,
+) error {
+	linkLogger := c.logger.WithFields(
+		core.StringLogField("linkId", driftState.LinkID),
+	)
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	link, hasLink := c.links[driftState.LinkID]
+	if !hasLink {
+		return state.LinkNotFoundError(driftState.LinkID)
+	}
+
+	instance, ok := c.instances[link.InstanceID]
+	if !ok {
+		// When a link exists but the instance does not,
+		// then something has corrupted the state.
+		return errMalformedState(
+			instanceNotFoundForLinkMessage(link.InstanceID, driftState.LinkID),
+		)
+	}
+
+	link.Drifted = true
+	link.LastDriftDetectedTimestamp = driftState.Timestamp
+
+	_, alreadyExists := c.linkDriftEntries[driftState.LinkID]
+	c.linkDriftEntries[driftState.LinkID] = &driftState
+
+	linkLogger.Debug("persisting updated or newly created link drift entry")
+	err := c.persistLinkDrift(&driftState, alreadyExists)
+	if err != nil {
+		return err
+	}
+
+	linkLogger.Debug("persisting link changes for latest drift state")
+	// Ensure that the instance is updated to reflect the drift field
+	// updates to the link.
+	return c.persister.updateInstance(instance)
+}
+
+func (c *linksContainerImpl) persistLinkDrift(
+	driftState *state.LinkDriftState,
+	alreadyExists bool,
+) error {
+	if alreadyExists {
+		return c.persister.updateLinkDrift(driftState)
+	}
+
+	return c.persister.createLinkDrift(driftState)
+}
+
+func (c *linksContainerImpl) RemoveDrift(
+	ctx context.Context,
+	linkID string,
+) (state.LinkDriftState, error) {
+	linkLogger := c.logger.WithFields(
+		core.StringLogField("linkId", linkID),
+	)
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	link, hasLink := c.links[linkID]
+	if !hasLink {
+		return state.LinkDriftState{}, state.LinkNotFoundError(linkID)
+	}
+
+	driftState, hasDrift := c.linkDriftEntries[linkID]
+	if !hasDrift {
+		return state.LinkDriftState{}, nil
+	}
+
+	instance, ok := c.instances[link.InstanceID]
+	if !ok {
+		// When a link exists but the instance does not,
+		// then something has corrupted the state.
+		return state.LinkDriftState{}, errMalformedState(
+			instanceNotFoundForLinkMessage(link.InstanceID, driftState.LinkID),
+		)
+	}
+
+	link.Drifted = false
+	link.LastDriftDetectedTimestamp = nil
+	delete(c.linkDriftEntries, linkID)
+
+	linkLogger.Debug("persisting removal of link drift entry")
+	err := c.persister.removeLinkDrift(driftState)
+	if err != nil {
+		return state.LinkDriftState{}, err
+	}
+
+	linkLogger.Debug("persisting link changes for removal of drift state")
+	// Ensure that the instance is updated to reflect the drift field
+	// updates to the link.
+	err = c.persister.updateInstance(instance)
+	if err != nil {
+		return state.LinkDriftState{}, err
+	}
+
+	return *driftState, nil
+}
+
 func copyLink(linkState *state.LinkState) state.LinkState {
 	if linkState == nil {
 		return state.LinkState{}
@@ -250,10 +377,12 @@ func copyLink(linkState *state.LinkState) state.LinkState {
 		IntermediaryResourceStates: copyIntermediaryResources(
 			linkState.IntermediaryResourceStates,
 		),
-		Data:                 linkState.Data,
-		ResourceDataMappings: linkState.ResourceDataMappings,
-		FailureReasons:       linkState.FailureReasons,
-		Durations:            linkState.Durations,
+		Data:                       linkState.Data,
+		ResourceDataMappings:       linkState.ResourceDataMappings,
+		FailureReasons:             linkState.FailureReasons,
+		Drifted:                    linkState.Drifted,
+		LastDriftDetectedTimestamp: linkState.LastDriftDetectedTimestamp,
+		Durations:                  linkState.Durations,
 	}
 }
 
@@ -273,6 +402,9 @@ func copyIntermediaryResources(
 			LastDeployedTimestamp:      value.LastDeployedTimestamp,
 			LastDeployAttemptTimestamp: value.LastDeployAttemptTimestamp,
 			ResourceSpecData:           value.ResourceSpecData,
+			Status:                     value.Status,
+			PreciseStatus:              value.PreciseStatus,
+			FailureReasons:             value.FailureReasons,
 		}
 	}
 
@@ -284,4 +416,120 @@ func instanceNotFoundForLinkMessage(
 	linkID string,
 ) string {
 	return fmt.Sprintf("instance %s not found for link %s", instanceID, linkID)
+}
+
+func copyLinkDrift(driftState *state.LinkDriftState) state.LinkDriftState {
+	if driftState == nil {
+		return state.LinkDriftState{}
+	}
+
+	timestampPtr := (*int)(nil)
+	if driftState.Timestamp != nil {
+		timestampValue := *driftState.Timestamp
+		timestampPtr = &timestampValue
+	}
+
+	return state.LinkDriftState{
+		LinkID:            driftState.LinkID,
+		LinkName:          driftState.LinkName,
+		ResourceADrift:    copyLinkResourceDrift(driftState.ResourceADrift),
+		ResourceBDrift:    copyLinkResourceDrift(driftState.ResourceBDrift),
+		IntermediaryDrift: copyIntermediaryDriftMap(driftState.IntermediaryDrift),
+		Timestamp:         timestampPtr,
+	}
+}
+
+func copyLinkResourceDrift(drift *state.LinkResourceDrift) *state.LinkResourceDrift {
+	if drift == nil {
+		return nil
+	}
+
+	fieldChanges := make([]*state.LinkDriftFieldChange, len(drift.MappedFieldChanges))
+	for i, fc := range drift.MappedFieldChanges {
+		fieldChanges[i] = &state.LinkDriftFieldChange{
+			ResourceFieldPath: fc.ResourceFieldPath,
+			LinkDataPath:      fc.LinkDataPath,
+			// Shallow copy for mapping nodes due to potentially expensive deep copy.
+			LinkDataValue: fc.LinkDataValue,
+			ExternalValue: fc.ExternalValue,
+		}
+	}
+
+	return &state.LinkResourceDrift{
+		ResourceID:         drift.ResourceID,
+		ResourceName:       drift.ResourceName,
+		MappedFieldChanges: fieldChanges,
+	}
+}
+
+func copyIntermediaryDriftMap(
+	drift map[string]*state.IntermediaryDriftState,
+) map[string]*state.IntermediaryDriftState {
+	if drift == nil {
+		return nil
+	}
+
+	driftCopy := make(map[string]*state.IntermediaryDriftState, len(drift))
+	for k, v := range drift {
+		driftCopy[k] = copyIntermediaryDriftState(v)
+	}
+	return driftCopy
+}
+
+func copyIntermediaryDriftState(
+	drift *state.IntermediaryDriftState,
+) *state.IntermediaryDriftState {
+	if drift == nil {
+		return nil
+	}
+
+	timestampPtr := (*int)(nil)
+	if drift.Timestamp != nil {
+		timestampValue := *drift.Timestamp
+		timestampPtr = &timestampValue
+	}
+
+	return &state.IntermediaryDriftState{
+		ResourceID:   drift.ResourceID,
+		ResourceType: drift.ResourceType,
+		// Shallow copy for mapping nodes due to potentially expensive deep copy.
+		PersistedState: drift.PersistedState,
+		ExternalState:  drift.ExternalState,
+		Changes:        copyIntermediaryDriftChanges(drift.Changes),
+		Exists:         drift.Exists,
+		Timestamp:      timestampPtr,
+	}
+}
+
+func copyIntermediaryDriftChanges(
+	changes *state.IntermediaryDriftChanges,
+) *state.IntermediaryDriftChanges {
+	if changes == nil {
+		return nil
+	}
+
+	return &state.IntermediaryDriftChanges{
+		ModifiedFields: copyIntermediaryFieldChanges(changes.ModifiedFields),
+		NewFields:      copyIntermediaryFieldChanges(changes.NewFields),
+		RemovedFields:  copyIntermediaryFieldChanges(changes.RemovedFields),
+	}
+}
+
+func copyIntermediaryFieldChanges(
+	changes []state.IntermediaryFieldChange,
+) []state.IntermediaryFieldChange {
+	if changes == nil {
+		return nil
+	}
+
+	changesCopy := make([]state.IntermediaryFieldChange, len(changes))
+	for i, c := range changes {
+		changesCopy[i] = state.IntermediaryFieldChange{
+			FieldPath: c.FieldPath,
+			// Shallow copy for mapping nodes.
+			PrevValue: c.PrevValue,
+			NewValue:  c.NewValue,
+		}
+	}
+	return changesCopy
 }

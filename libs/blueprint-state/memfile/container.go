@@ -107,6 +107,7 @@ func LoadStateContainer(
 		fs:                           fs,
 		instanceIndex:                state.instanceIndex,
 		resourceDriftIndex:           state.resourceDriftIndex,
+		linkDriftIndex:               state.linkDriftIndex,
 		eventIndex:                   state.eventIndex,
 		changesetIndex:               state.changesetIndex,
 		blueprintValidationIndex:     state.blueprintValidationIndex,
@@ -114,6 +115,7 @@ func LoadStateContainer(
 		maxEventPartitionSize:        DefaultMaxEventParititionSize,
 		lastInstanceChunk:            getLastChunkFromIndex(state.instanceIndex),
 		lastResourceDriftChunk:       getLastChunkFromIndex(state.resourceDriftIndex),
+		lastLinkDriftChunk:           getLastChunkFromIndex(state.linkDriftIndex),
 		lastChangesetChunk:           getLastChunkFromIndex(state.changesetIndex),
 		lastBlueprintValidationChunk: getLastChunkFromIndex(state.blueprintValidationIndex),
 	}
@@ -144,6 +146,7 @@ func LoadStateContainer(
 		},
 		linksContainer: &linksContainerImpl{
 			links:                  state.links,
+			linkDriftEntries:       state.linkDrift,
 			instances:              state.instances,
 			fs:                     fs,
 			persister:              persister,

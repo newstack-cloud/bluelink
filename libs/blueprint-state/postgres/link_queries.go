@@ -99,3 +99,65 @@ func updateLinkStatusQuery(statusInfo *state.LinkStatusInfo) string {
 func removeLinkQuery() string {
 	return `DELETE FROM links WHERE id = @linkId`
 }
+
+func linkDriftQuery() string {
+	return `
+	SELECT
+		json_build_object(
+			'linkId', ld.link_id,
+			'linkName', bil.link_name,
+			'resourceADrift', ld.resource_a_drift,
+			'resourceBDrift', ld.resource_b_drift,
+			'intermediaryDrift', ld.intermediary_drift,
+			'timestamp', EXTRACT(EPOCH FROM ld.timestamp)::bigint
+		) as json
+	FROM link_drift ld
+	LEFT JOIN blueprint_instance_links bil ON bil.link_id = ld.link_id
+	WHERE ld.link_id = @linkId`
+}
+
+func upsertLinkDriftQuery() string {
+	return `
+	INSERT INTO link_drift (
+		link_id,
+		resource_a_drift,
+		resource_b_drift,
+		intermediary_drift,
+		"timestamp"
+	) VALUES (
+		@linkId,
+		@resourceADrift,
+		@resourceBDrift,
+		@intermediaryDrift,
+		@timestamp
+	) ON CONFLICT (link_id) DO UPDATE SET
+		resource_a_drift = excluded.resource_a_drift,
+		resource_b_drift = excluded.resource_b_drift,
+		intermediary_drift = excluded.intermediary_drift,
+		"timestamp" = excluded."timestamp"
+	`
+}
+
+func removeLinkDriftQuery() string {
+	return `
+	DELETE FROM link_drift
+	WHERE link_id = @linkId
+	`
+}
+
+func updateLinkDriftedFieldsQuery(driftState state.LinkDriftState, drifted bool) string {
+	query := `
+	UPDATE links
+	SET
+		drifted = @drifted`
+
+	if drifted && driftState.Timestamp != nil {
+		query += `,
+		last_drift_detected_timestamp = @lastDriftDetectedTimestamp`
+	}
+
+	query += `
+	WHERE id = @linkId`
+
+	return query
+}

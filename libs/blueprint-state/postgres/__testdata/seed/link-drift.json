@@ -1,0 +1,36 @@
+[
+  {
+    "linkId": "c0d6d914-21a6-4a99-afb3-f6f45eefbdd3",
+    "instanceId": "46324ee7-b515-4988-98b0-d5445746a997",
+    "resourceADrift": {
+      "resourceId": "e78707ae-f21e-42e3-b3e1-ce295bf907dd",
+      "resourceName": "saveOrderFunction",
+      "mappedFieldChanges": [
+        {
+          "resourceFieldPath": "spec.environment.variables.TABLE_REGION_ordersTable_0",
+          "linkDataPath": "saveOrderFunction.environmentVariables.TABLE_REGION_ordersTable_0",
+          "linkDataValue": "eu-west-1",
+          "externalValue": "eu-west-2"
+        }
+      ]
+    },
+    "timestamp": 1733145728
+  },
+  {
+    "linkId": "e4a4a3be-f494-4dc8-87e0-3bd0ac33707b",
+    "instanceId": "46324ee7-b515-4988-98b0-d5445746a997",
+    "resourceADrift": {
+      "resourceId": "e78707ae-f21e-42e3-b3e1-ce295bf907dd",
+      "resourceName": "saveOrderFunction",
+      "mappedFieldChanges": [
+        {
+          "resourceFieldPath": "spec.environment.variables.TABLE_NAME_ordersTable_1",
+          "linkDataPath": "saveOrderFunction.environmentVariables.TABLE_NAME_ordersTable_1",
+          "linkDataValue": "legacy-production-orders-2",
+          "externalValue": "updated-production-orders-2"
+        }
+      ]
+    },
+    "timestamp": 1733145728
+  }
+]

@@ -185,6 +185,31 @@ FROM temp_blueprint_instance_links;
 
 DROP TABLE IF EXISTS temp_blueprint_instance_links;
 
+
+-- Link drift records
+CREATE TABLE IF NOT EXISTS temp_link_drift (data jsonb);
+\COPY temp_link_drift (data) FROM 'postgres/__testdata/seed/tmp/link-drift.nd.json';
+
+INSERT INTO link_drift (
+    link_id,
+    instance_id,
+    resource_a_drift,
+    resource_b_drift,
+    intermediary_drift,
+    "timestamp"
+)
+SELECT
+    (data->>'linkId')::uuid,
+    (data->>'instanceId')::uuid,
+    (data->>'resourceADrift')::jsonb,
+    (data->>'resourceBDrift')::jsonb,
+    (data->>'intermediaryDrift')::jsonb,
+    TO_TIMESTAMP((data->>'timestamp')::bigint)
+FROM temp_link_drift;
+
+DROP TABLE IF EXISTS temp_link_drift;
+
+
 -- Event records
 CREATE TABLE IF NOT EXISTS temp_events (data jsonb);
 \COPY temp_events (data) FROM 'postgres/__testdata/seed/tmp/events.nd.json';

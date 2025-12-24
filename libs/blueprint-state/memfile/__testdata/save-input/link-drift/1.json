@@ -1,0 +1,17 @@
+{
+  "linkId": "test-link-2",
+  "linkName": "saveOrderFunction::ordersTable_1",
+  "resourceADrift": {
+    "resourceId": "test-save-order-function-id",
+    "resourceName": "saveOrderFunction",
+    "mappedFieldChanges": [
+      {
+        "resourceFieldPath": "spec.environment.variables.TABLE_NAME_ordersTable_1",
+        "linkDataPath": "saveOrderFunction.environmentVariables.TABLE_NAME_ordersTable_1",
+        "linkDataValue": "legacy-production-orders-2",
+        "externalValue": "new-production-orders-2"
+      }
+    ]
+  },
+  "timestamp": 1733145828
+}

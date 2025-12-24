@@ -1,0 +1,17 @@
+{
+  "linkId": "fe050735-d406-43aa-8375-7fbc66eb3a7b",
+  "linkName": "saveOrderFunction::ordersTable_0",
+  "resourceADrift": {
+    "resourceId": "414bf1e7-b115-413e-9a85-dc93ad119c14",
+    "resourceName": "saveOrderFunction",
+    "mappedFieldChanges": [
+      {
+        "resourceFieldPath": "spec.environment.variables.TABLE_NAME_ordersTable_0",
+        "linkDataPath": "saveOrderFunction.environmentVariables.TABLE_NAME_ordersTable_0",
+        "linkDataValue": "legacy-production-orders-old-1",
+        "externalValue": "new-production-orders-old-1"
+      }
+    ]
+  },
+  "timestamp": 1733145828
+}

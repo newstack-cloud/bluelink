@@ -17,12 +17,14 @@ type internalState struct {
 	resources                map[string]*state.ResourceState
 	resourceDrift            map[string]*state.ResourceDriftState
 	links                    map[string]*state.LinkState
+	linkDrift                map[string]*state.LinkDriftState
 	events                   map[string]*manage.Event
 	partitionEvents          map[string][]*manage.Event
 	changesets               map[string]*manage.Changeset
 	blueprintValidations     map[string]*manage.BlueprintValidation
 	instanceIndex            map[string]*indexLocation
 	resourceDriftIndex       map[string]*indexLocation
+	linkDriftIndex           map[string]*indexLocation
 	eventIndex               map[string]*eventIndexLocation
 	changesetIndex           map[string]*indexLocation
 	blueprintValidationIndex map[string]*indexLocation
@@ -69,12 +71,14 @@ func loadStateFromDir(stateDir string, fs afero.Fs) (*internalState, error) {
 		resources:                map[string]*state.ResourceState{},
 		resourceDrift:            map[string]*state.ResourceDriftState{},
 		links:                    map[string]*state.LinkState{},
+		linkDrift:                map[string]*state.LinkDriftState{},
 		events:                   map[string]*manage.Event{},
 		partitionEvents:          map[string][]*manage.Event{},
 		changesets:               map[string]*manage.Changeset{},
 		blueprintValidations:     map[string]*manage.BlueprintValidation{},
-		resourceDriftIndex:       map[string]*indexLocation{},
 		instanceIndex:            map[string]*indexLocation{},
+		resourceDriftIndex:       map[string]*indexLocation{},
+		linkDriftIndex:           map[string]*indexLocation{},
 		eventIndex:               map[string]*eventIndexLocation{},
 		changesetIndex:           map[string]*indexLocation{},
 		blueprintValidationIndex: map[string]*indexLocation{},
@@ -131,6 +135,10 @@ func loadStateFromFileEntry(
 		return loadResourceDriftFromFile(fs, stateDir, entryName, targetState)
 	}
 
+	if isLinkDriftFile(entryName) {
+		return loadLinkDriftFromFile(fs, stateDir, entryName, targetState)
+	}
+
 	if isEventPartitionFile(entryName) {
 		return loadEventPartitionFromFile(fs, stateDir, entryName, targetState)
 	}
@@ -149,6 +157,10 @@ func loadStateFromFileEntry(
 
 	if isResourceDriftIndexFile(entryName) {
 		return loadResourceDriftIndexFromFile(fs, stateDir, entryName, targetState)
+	}
+
+	if isLinkDriftIndexFile(entryName) {
+		return loadLinkDriftIndexFromFile(fs, stateDir, entryName, targetState)
 	}
 
 	if isEventIndexFile(entryName) {
@@ -245,6 +257,30 @@ func loadResourceDriftFromFile(
 
 	for _, resourceDrift := range resourceDriftEntries {
 		targetState.resourceDrift[resourceDrift.ResourceID] = resourceDrift
+	}
+
+	return nil
+}
+
+func loadLinkDriftFromFile(
+	fs afero.Fs,
+	stateDir, name string,
+	targetState *internalState,
+) error {
+	filePath := path.Join(stateDir, name)
+	data, err := afero.ReadFile(fs, filePath)
+	if err != nil {
+		return err
+	}
+
+	linkDriftEntries := []*state.LinkDriftState{}
+	err = json.Unmarshal(data, &linkDriftEntries)
+	if err != nil {
+		return err
+	}
+
+	for _, linkDrift := range linkDriftEntries {
+		targetState.linkDrift[linkDrift.LinkID] = linkDrift
 	}
 
 	return nil
@@ -355,6 +391,21 @@ func loadResourceDriftIndexFromFile(
 	return nil
 }
 
+func loadLinkDriftIndexFromFile(
+	fs afero.Fs,
+	stateDir, name string,
+	targetState *internalState,
+) error {
+	linkDriftIndex, err := loadChunkIndexFromFile(fs, stateDir, name)
+	if err != nil {
+		return err
+	}
+
+	targetState.linkDriftIndex = linkDriftIndex
+
+	return nil
+}
+
 func loadChangesetIndexFromFile(
 	fs afero.Fs,
 	stateDir, name string,
@@ -429,6 +480,7 @@ func loadEventIndexFromFile(
 var (
 	instancesFilePattern            = regexp.MustCompile(`^instances_c(\d+)\.json$`)
 	resourceDriftFilePattern        = regexp.MustCompile(`^resource_drift_c(\d+)\.json$`)
+	linkDriftFilePattern            = regexp.MustCompile(`^link_drift_c(\d+)\.json$`)
 	eventPartitionFilePattern       = regexp.MustCompile(`^events__(.*?)\.json$`)
 	changesetsFilePattern           = regexp.MustCompile(`^changesets_c(\d+)\.json$`)
 	blueprintValidationsFilePattern = regexp.MustCompile(`^blueprint_validations_c(\d+)\.json$`)
@@ -460,6 +512,14 @@ func isResourceDriftFile(name string) bool {
 
 func isResourceDriftIndexFile(name string) bool {
 	return name == "resource_drift_index.json"
+}
+
+func isLinkDriftFile(name string) bool {
+	return linkDriftFilePattern.Match([]byte(name))
+}
+
+func isLinkDriftIndexFile(name string) bool {
+	return name == "link_drift_index.json"
 }
 
 func isEventIndexFile(name string) bool {

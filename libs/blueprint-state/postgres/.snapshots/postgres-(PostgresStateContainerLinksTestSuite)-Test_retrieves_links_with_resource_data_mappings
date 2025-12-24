@@ -3,12 +3,13 @@
     LinkID: (string) (len=36) "c0d6d914-21a6-4a99-afb3-f6f45eefbdd3",
     Name: (string) (len=32) "saveOrderFunction::ordersTable_0",
     InstanceID: (string) (len=36) "46324ee7-b515-4988-98b0-d5445746a997",
-    Status: (core.LinkStatus) 2,
-    PreciseStatus: (core.PreciseLinkStatus) 8,
+    Status: (core.LinkStatus) CREATED,
+    PreciseStatus: (core.PreciseLinkStatus) RESOURCE B UPDATED,
     LastStatusUpdateTimestamp: (int) 0,
     LastDeployedTimestamp: (int) 1733145428,
     LastDeployAttemptTimestamp: (int) 1733145428,
-    IntermediaryResourceStates: ([]*state.LinkIntermediaryResourceState) <nil>,
+    IntermediaryResourceStates: ([]*state.LinkIntermediaryResourceState) {
+    },
     Data: (map[string]*core.MappingNode) (len=1) {
       (string) (len=17) "saveOrderFunction": (*core.MappingNode)({
         Scalar: (*core.ScalarValue)(<nil>),
@@ -143,6 +144,8 @@
     },
     FailureReasons: ([]string) {
     },
+    Drifted: (bool) true,
+    LastDriftDetectedTimestamp: (*int)(1733145928),
     Durations: (*state.LinkCompletionDurations)(<nil>)
   }
 }

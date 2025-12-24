@@ -1,0 +1,49 @@
+(state.LinkDriftState) {
+  LinkID: (string) (len=36) "c0d6d914-21a6-4a99-afb3-f6f45eefbdd3",
+  LinkName: (string) (len=32) "saveOrderFunction::ordersTable_0",
+  ResourceADrift: (*state.LinkResourceDrift)({
+    ResourceID: (string) (len=36) "e78707ae-f21e-42e3-b3e1-ce295bf907dd",
+    ResourceName: (string) (len=17) "saveOrderFunction",
+    MappedFieldChanges: ([]*state.LinkDriftFieldChange) (len=1) {
+      (*state.LinkDriftFieldChange)({
+        ResourceFieldPath: (string) (len=53) "spec.environment.variables.TABLE_REGION_ordersTable_0",
+        LinkDataPath: (string) (len=65) "saveOrderFunction.environmentVariables.TABLE_REGION_ordersTable_0",
+        LinkDataValue: (*core.MappingNode)({
+          Scalar: (*core.ScalarValue)({
+            IntValue: (*int)(<nil>),
+            BoolValue: (*bool)(<nil>),
+            FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
+            StringValue: (*string)((len=9) "eu-west-1"),
+            NoneValue: (*bool)(<nil>),
+            SourceMeta: (*source.Meta)(<nil>)
+          }),
+          Fields: (map[string]*core.MappingNode) <nil>,
+          Items: ([]*core.MappingNode) <nil>,
+          StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+          SourceMeta: (*source.Meta)(<nil>),
+          FieldsSourceMeta: (map[string]*source.Meta) <nil>
+        }),
+        ExternalValue: (*core.MappingNode)({
+          Scalar: (*core.ScalarValue)({
+            IntValue: (*int)(<nil>),
+            BoolValue: (*bool)(<nil>),
+            FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
+            StringValue: (*string)((len=9) "eu-west-2"),
+            NoneValue: (*bool)(<nil>),
+            SourceMeta: (*source.Meta)(<nil>)
+          }),
+          Fields: (map[string]*core.MappingNode) <nil>,
+          Items: ([]*core.MappingNode) <nil>,
+          StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+          SourceMeta: (*source.Meta)(<nil>),
+          FieldsSourceMeta: (map[string]*source.Meta) <nil>
+        })
+      })
+    }
+  }),
+  ResourceBDrift: (*state.LinkResourceDrift)(<nil>),
+  IntermediaryDrift: (map[string]*state.IntermediaryDriftState) <nil>,
+  Timestamp: (*int)(1733145728)
+}

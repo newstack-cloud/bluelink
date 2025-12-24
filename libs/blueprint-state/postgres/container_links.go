@@ -267,3 +267,188 @@ func buildUpdateLinkStatusArgs(
 
 	return &namedArgs
 }
+
+func (c *linksContainerImpl) GetDrift(
+	ctx context.Context,
+	linkID string,
+) (state.LinkDriftState, error) {
+	// Ensure that the link the drift is for exists
+	// to differentiate between a link not being found
+	// and a link drift entry not being present for a given link ID.
+	_, err := c.Get(ctx, linkID)
+	if err != nil {
+		return state.LinkDriftState{}, err
+	}
+
+	var linkDrift state.LinkDriftState
+	err = c.connPool.QueryRow(
+		ctx,
+		linkDriftQuery(),
+		&pgx.NamedArgs{
+			"linkId": linkID,
+		},
+	).Scan(&linkDrift)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// An empty drift state is valid if the requested link exists.
+			return state.LinkDriftState{}, nil
+		}
+
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && isAltNotFoundPostgresErrorCode(pgErr.Code) {
+			return state.LinkDriftState{}, state.LinkNotFoundError(linkID)
+		}
+
+		return state.LinkDriftState{}, err
+	}
+
+	return linkDrift, nil
+}
+
+func (c *linksContainerImpl) SaveDrift(
+	ctx context.Context,
+	driftState state.LinkDriftState,
+) error {
+	tx, err := c.connPool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	qInfo := prepareUpsertLinkDriftQuery(&driftState)
+	_, err = tx.Exec(
+		ctx,
+		qInfo.sql,
+		qInfo.params,
+	)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && isAltNotFoundPostgresErrorCode(pgErr.Code) {
+			return state.LinkNotFoundError(driftState.LinkID)
+		}
+
+		return err
+	}
+
+	err = c.updateLinkDriftedFields(ctx, tx, driftState, true)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+func (c *linksContainerImpl) RemoveDrift(
+	ctx context.Context,
+	linkID string,
+) (state.LinkDriftState, error) {
+	driftState, err := c.GetDrift(ctx, linkID)
+	if err != nil {
+		return state.LinkDriftState{}, err
+	}
+
+	if driftState.LinkID == "" {
+		// Do nothing if the link exists but no drift entry is present.
+		return state.LinkDriftState{}, nil
+	}
+
+	tx, err := c.connPool.Begin(ctx)
+	if err != nil {
+		return state.LinkDriftState{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	err = c.removeDrift(ctx, tx, linkID)
+	if err != nil {
+		return state.LinkDriftState{}, err
+	}
+
+	err = c.updateLinkDriftedFields(ctx, tx, driftState, false)
+	if err != nil {
+		return state.LinkDriftState{}, err
+	}
+
+	return driftState, tx.Commit(ctx)
+}
+
+func (c *linksContainerImpl) removeDrift(
+	ctx context.Context,
+	tx pgx.Tx,
+	linkID string,
+) error {
+	query := removeLinkDriftQuery()
+	_, err := tx.Exec(
+		ctx,
+		query,
+		&pgx.NamedArgs{
+			"linkId": linkID,
+		},
+	)
+	return err
+}
+
+func (c *linksContainerImpl) updateLinkDriftedFields(
+	ctx context.Context,
+	tx pgx.Tx,
+	driftState state.LinkDriftState,
+	drifted bool,
+) error {
+	qInfo := prepareUpdateLinkDriftedFieldsQuery(driftState, drifted)
+	_, err := tx.Exec(
+		ctx,
+		qInfo.sql,
+		qInfo.params,
+	)
+	return err
+}
+
+func prepareUpsertLinkDriftQuery(linkDriftState *state.LinkDriftState) *queryInfo {
+	sql := upsertLinkDriftQuery()
+	params := buildLinkDriftArgs(linkDriftState)
+
+	return &queryInfo{
+		sql:    sql,
+		params: params,
+	}
+}
+
+func buildLinkDriftArgs(linkDriftState *state.LinkDriftState) *pgx.NamedArgs {
+	return &pgx.NamedArgs{
+		"linkId":            linkDriftState.LinkID,
+		"resourceADrift":    linkDriftState.ResourceADrift,
+		"resourceBDrift":    linkDriftState.ResourceBDrift,
+		"intermediaryDrift": linkDriftState.IntermediaryDrift,
+		"timestamp":         ptrToNullableTimestamp(linkDriftState.Timestamp),
+	}
+}
+
+func prepareUpdateLinkDriftedFieldsQuery(
+	driftState state.LinkDriftState,
+	drifted bool,
+) *queryInfo {
+	sql := updateLinkDriftedFieldsQuery(driftState, drifted)
+	params := buildUpdateLinkDriftedFieldsArgs(driftState, drifted)
+
+	return &queryInfo{
+		sql:    sql,
+		params: params,
+	}
+}
+
+func buildUpdateLinkDriftedFieldsArgs(
+	driftState state.LinkDriftState,
+	drifted bool,
+) *pgx.NamedArgs {
+	namedArgs := pgx.NamedArgs{
+		"linkId":  driftState.LinkID,
+		"drifted": drifted,
+	}
+
+	if drifted && driftState.Timestamp != nil {
+		namedArgs["lastDriftDetectedTimestamp"] = toNullableTimestamp(
+			*driftState.Timestamp,
+		)
+	}
+
+	return &namedArgs
+}

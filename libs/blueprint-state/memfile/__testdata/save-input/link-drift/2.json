@@ -1,0 +1,68 @@
+{
+  "linkId": "test-link-1",
+  "linkName": "saveOrderFunction::ordersTable_0",
+  "resourceADrift": {
+    "resourceId": "test-save-order-function-id",
+    "resourceName": "saveOrderFunction",
+    "mappedFieldChanges": [
+      {
+        "resourceFieldPath": "spec.environment.variables.TABLE_REGION_ordersTable_0",
+        "linkDataPath": "saveOrderFunction.environmentVariables.TABLE_REGION_ordersTable_0",
+        "linkDataValue": "eu-west-1",
+        "externalValue": "us-east-1"
+      }
+    ]
+  },
+  "resourceBDrift": {
+    "resourceId": "test-orders-table-0-id",
+    "resourceName": "ordersTable_0",
+    "mappedFieldChanges": [
+      {
+        "resourceFieldPath": "spec.tableName",
+        "linkDataPath": "ordersTable_0.tableName",
+        "linkDataValue": "legacy-production-orders-1",
+        "externalValue": "updated-production-orders-1"
+      }
+    ]
+  },
+  "intermediaryDrift": {
+    "intermediary-iam-policy-1": {
+      "resourceId": "intermediary-iam-policy-1",
+      "resourceType": "aws/iam/policy",
+      "persistedState": {
+        "policyName": "saveOrderFunction-ordersTable-policy",
+        "statements": [
+          {
+            "effect": "Allow",
+            "action": ["dynamodb:PutItem"],
+            "resource": "arn:aws:dynamodb:eu-west-1:123456789012:table/legacy-production-orders-1"
+          }
+        ]
+      },
+      "externalState": {
+        "policyName": "saveOrderFunction-ordersTable-policy",
+        "statements": [
+          {
+            "effect": "Allow",
+            "action": ["dynamodb:PutItem", "dynamodb:GetItem"],
+            "resource": "arn:aws:dynamodb:eu-west-1:123456789012:table/legacy-production-orders-1"
+          }
+        ]
+      },
+      "changes": {
+        "modifiedFields": [
+          {
+            "fieldPath": "statements[0].action",
+            "prevValue": ["dynamodb:PutItem"],
+            "newValue": ["dynamodb:PutItem", "dynamodb:GetItem"]
+          }
+        ],
+        "newFields": [],
+        "removedFields": []
+      },
+      "exists": true,
+      "timestamp": 1733145928
+    }
+  },
+  "timestamp": 1733145928
+}

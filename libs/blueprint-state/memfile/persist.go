@@ -15,6 +15,8 @@ type statePersister struct {
 	maxGuideFileSize             int64
 	resourceDriftIndex           map[string]*indexLocation
 	lastResourceDriftChunk       int
+	linkDriftIndex               map[string]*indexLocation
+	lastLinkDriftChunk           int
 	eventIndex                   map[string]*eventIndexLocation
 	maxEventPartitionSize        int64
 	changesetIndex               map[string]*indexLocation

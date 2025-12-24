@@ -1,0 +1,10 @@
+{
+  "linkId": "non-existent-link-id",
+  "linkName": "nonExistent::nonExistent",
+  "resourceADrift": {
+    "resourceId": "non-existent-resource-id",
+    "resourceName": "nonExistent",
+    "mappedFieldChanges": []
+  },
+  "timestamp": 1733146028
+}

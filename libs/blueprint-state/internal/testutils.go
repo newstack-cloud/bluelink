@@ -291,7 +291,7 @@ func CreateTestResourceStatusInfo() state.ResourceStatusInfo {
 	}
 }
 
-// IsEmptyDriftState checks if all the values in a given drift state
+// IsEmptyDriftState checks if all the values in a given resource drift state
 // are empty.
 func IsEmptyDriftState(actual state.ResourceDriftState) bool {
 	return actual.ResourceID == "" &&
@@ -299,6 +299,142 @@ func IsEmptyDriftState(actual state.ResourceDriftState) bool {
 		actual.SpecData == nil &&
 		actual.Difference == nil &&
 		actual.Timestamp == nil
+}
+
+// IsEmptyLinkDriftState checks if all the values in a given link drift state
+// are empty.
+func IsEmptyLinkDriftState(actual state.LinkDriftState) bool {
+	return actual.LinkID == "" &&
+		actual.LinkName == "" &&
+		actual.ResourceADrift == nil &&
+		actual.ResourceBDrift == nil &&
+		actual.IntermediaryDrift == nil &&
+		actual.Timestamp == nil
+}
+
+// AssertLinkDriftEqual asserts that the actual link drift state is equal to the expected link drift state.
+// This normalises nil slice and map fields to empty slices and maps as they are considered
+// equivalent in this context.
+func AssertLinkDriftEqual(expected, actual *state.LinkDriftState, s *suite.Suite) {
+	s.Assert().Equal(expected.LinkID, actual.LinkID)
+	s.Assert().Equal(expected.LinkName, actual.LinkName)
+	s.Assert().Equal(expected.Timestamp, actual.Timestamp)
+	assertLinkResourceDriftEqual(expected.ResourceADrift, actual.ResourceADrift, s)
+	assertLinkResourceDriftEqual(expected.ResourceBDrift, actual.ResourceBDrift, s)
+	assertIntermediaryDriftMapEqual(expected.IntermediaryDrift, actual.IntermediaryDrift, s)
+}
+
+func assertLinkResourceDriftEqual(expected, actual *state.LinkResourceDrift, s *suite.Suite) {
+	if expected == nil {
+		s.Assert().Nil(actual)
+		return
+	}
+
+	s.Assert().NotNil(actual)
+	s.Assert().Equal(expected.ResourceID, actual.ResourceID)
+	s.Assert().Equal(expected.ResourceName, actual.ResourceName)
+	s.Assert().Equal(
+		orderLinkDriftFieldChanges(expected.MappedFieldChanges),
+		orderLinkDriftFieldChanges(actual.MappedFieldChanges),
+	)
+}
+
+func orderLinkDriftFieldChanges(
+	fieldChanges []*state.LinkDriftFieldChange,
+) []*state.LinkDriftFieldChange {
+	orderedFieldChanges := make([]*state.LinkDriftFieldChange, len(fieldChanges))
+	copy(orderedFieldChanges, fieldChanges)
+	slices.SortFunc(orderedFieldChanges, func(a, b *state.LinkDriftFieldChange) int {
+		if a.ResourceFieldPath < b.ResourceFieldPath {
+			return -1
+		}
+
+		if a.ResourceFieldPath > b.ResourceFieldPath {
+			return 1
+		}
+
+		return 0
+	})
+	return orderedFieldChanges
+}
+
+func assertIntermediaryDriftMapEqual(
+	expected, actual map[string]*state.IntermediaryDriftState,
+	s *suite.Suite,
+) {
+	if expected == nil {
+		s.Assert().Empty(actual)
+		return
+	}
+
+	s.Assert().Len(actual, len(expected))
+	for key, expectedDrift := range expected {
+		actualDrift, ok := actual[key]
+		s.Assert().True(ok)
+		assertIntermediaryDriftStateEqual(expectedDrift, actualDrift, s)
+	}
+}
+
+func assertIntermediaryDriftStateEqual(
+	expected, actual *state.IntermediaryDriftState,
+	s *suite.Suite,
+) {
+	if expected == nil {
+		s.Assert().Nil(actual)
+		return
+	}
+
+	s.Assert().NotNil(actual)
+	s.Assert().Equal(expected.ResourceID, actual.ResourceID)
+	s.Assert().Equal(expected.ResourceType, actual.ResourceType)
+	s.Assert().Equal(expected.PersistedState, actual.PersistedState)
+	s.Assert().Equal(expected.ExternalState, actual.ExternalState)
+	s.Assert().Equal(expected.Exists, actual.Exists)
+	s.Assert().Equal(expected.Timestamp, actual.Timestamp)
+	assertIntermediaryDriftChangesEqual(expected.Changes, actual.Changes, s)
+}
+
+func assertIntermediaryDriftChangesEqual(
+	expected, actual *state.IntermediaryDriftChanges,
+	s *suite.Suite,
+) {
+	if expected == nil {
+		s.Assert().Nil(actual)
+		return
+	}
+
+	s.Assert().NotNil(actual)
+	s.Assert().Equal(
+		orderIntermediaryFieldChanges(expected.ModifiedFields),
+		orderIntermediaryFieldChanges(actual.ModifiedFields),
+	)
+	s.Assert().Equal(
+		orderIntermediaryFieldChanges(expected.NewFields),
+		orderIntermediaryFieldChanges(actual.NewFields),
+	)
+	s.Assert().Equal(
+		orderIntermediaryFieldChanges(expected.RemovedFields),
+		orderIntermediaryFieldChanges(actual.RemovedFields),
+	)
+}
+
+func orderIntermediaryFieldChanges(
+	fieldChanges []state.IntermediaryFieldChange,
+) []state.IntermediaryFieldChange {
+	orderedFieldChanges := make([]state.IntermediaryFieldChange, len(fieldChanges))
+	copy(orderedFieldChanges, fieldChanges)
+	slices.SortFunc(orderedFieldChanges, func(a, b state.IntermediaryFieldChange) int {
+		if a.FieldPath < b.FieldPath {
+			return -1
+		}
+
+		if a.FieldPath > b.FieldPath {
+			return 1
+		}
+
+		return 0
+	})
+	return orderedFieldChanges
 }
 
 // AssertLinkStatusInfo asserts that the actual link status

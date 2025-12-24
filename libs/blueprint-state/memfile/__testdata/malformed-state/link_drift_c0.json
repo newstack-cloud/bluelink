@@ -1,0 +1,19 @@
+[
+  {
+    "linkId": "test-link-1",
+    "linkName": "saveOrderFunction::ordersTable_0",
+    "resourceADrift": {
+      "resourceId": "test-save-order-function-id",
+      "resourceName": "saveOrderFunction",
+      "mappedFieldChanges": [
+        {
+          "resourceFieldPath": "spec.environment.variables.TABLE_REGION_ordersTable_0",
+          "linkDataPath": "saveOrderFunction.environmentVariables.TABLE_REGION_ordersTable_0",
+          "linkDataValue": "eu-west-1",
+          "externalValue": "eu-west-2"
+        }
+      ]
+    },
+    "timestamp": 1733145728
+  }
+]

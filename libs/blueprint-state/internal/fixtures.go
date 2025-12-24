@@ -150,6 +150,50 @@ type SaveLinkFixture struct {
 	Update    bool
 }
 
+type SaveLinkDriftFixture struct {
+	DriftState *state.LinkDriftState
+	Update     bool
+}
+
+func SetupSaveLinkDriftFixtures(dirPath string, updates []int) (map[int]SaveLinkDriftFixture, error) {
+	dirEntries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	saveLinkDriftFixtures := make(map[int]SaveLinkDriftFixture)
+	for i := 1; i <= len(dirEntries); i++ {
+		isUpdate := slices.Contains(updates, i)
+		fixture, err := loadSaveLinkDriftFixture(i, dirPath, isUpdate)
+		if err != nil {
+			return nil, err
+		}
+		saveLinkDriftFixtures[i] = fixture
+	}
+
+	return saveLinkDriftFixtures, nil
+}
+
+func loadSaveLinkDriftFixture(fixtureNumber int, dirPath string, isUpdate bool) (SaveLinkDriftFixture, error) {
+	fileName := fixtureFileName(fixtureNumber)
+	filePath := path.Join(dirPath, fileName)
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return SaveLinkDriftFixture{}, err
+	}
+
+	driftState := &state.LinkDriftState{}
+	err = json.Unmarshal(data, driftState)
+	if err != nil {
+		return SaveLinkDriftFixture{}, err
+	}
+
+	return SaveLinkDriftFixture{
+		DriftState: driftState,
+		Update:     isUpdate,
+	}, nil
+}
+
 func SetupSaveLinkFixtures(dirPath string, updates []int) (map[int]SaveLinkFixture, error) {
 	dirEntries, err := os.ReadDir(dirPath)
 	if err != nil {

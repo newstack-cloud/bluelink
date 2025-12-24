@@ -2,8 +2,8 @@
   LinkID: (string) (len=11) "test-link-1",
   Name: (string) (len=32) "saveOrderFunction::ordersTable_0",
   InstanceID: (string) (len=20) "blueprint-instance-1",
-  Status: (core.LinkStatus) 2,
-  PreciseStatus: (core.PreciseLinkStatus) 8,
+  Status: (core.LinkStatus) CREATED,
+  PreciseStatus: (core.PreciseLinkStatus) RESOURCE B UPDATED,
   LastStatusUpdateTimestamp: (int) 0,
   LastDeployedTimestamp: (int) 1733145428,
   LastDeployAttemptTimestamp: (int) 1733145428,
@@ -143,5 +143,7 @@
   },
   FailureReasons: ([]string) {
   },
+  Drifted: (bool) false,
+  LastDriftDetectedTimestamp: (*int)(<nil>),
   Durations: (*state.LinkCompletionDurations)(<nil>)
 }
