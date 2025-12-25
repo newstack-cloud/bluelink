@@ -254,10 +254,12 @@ func (c *Controller) performReconciliationCheck(
 
 	scope := parseReconciliationScope(payload.Scope)
 	input := &container.CheckReconciliationInput{
-		InstanceID:    instanceID,
-		Scope:         scope,
-		ResourceNames: payload.ResourceNames,
-		LinkNames:     payload.LinkNames,
+		InstanceID:      instanceID,
+		Scope:           scope,
+		ResourceNames:   payload.ResourceNames,
+		LinkNames:       payload.LinkNames,
+		IncludeChildren: payload.IncludeChildren,
+		ChildPath:       payload.ChildPath,
 	}
 
 	return blueprintContainer.CheckReconciliation(ctxWithTimeout, input, params)
@@ -424,6 +426,7 @@ func convertResourceActions(payloadActions []ResourceReconcileActionPayload) []c
 	for i, pa := range payloadActions {
 		actions[i] = container.ResourceReconcileAction{
 			ResourceID:    pa.ResourceID,
+			ChildPath:     pa.ChildPath,
 			Action:        parseReconciliationAction(pa.Action),
 			ExternalState: pa.ExternalState,
 			NewStatus:     parsePreciseResourceStatus(pa.NewStatus),
@@ -437,6 +440,7 @@ func convertLinkActions(payloadActions []LinkReconcileActionPayload) []container
 	for i, pa := range payloadActions {
 		actions[i] = container.LinkReconcileAction{
 			LinkID:              pa.LinkID,
+			ChildPath:           pa.ChildPath,
 			Action:              parseReconciliationAction(pa.Action),
 			NewStatus:           parsePreciseLinkStatus(pa.NewStatus),
 			LinkDataUpdates:     pa.LinkDataUpdates,

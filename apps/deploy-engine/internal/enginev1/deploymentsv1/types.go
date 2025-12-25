@@ -144,6 +144,13 @@ type CheckReconciliationRequestPayload struct {
 	// LinkNames specifies which links to check when Scope is "specific".
 	// Ignored for other scopes.
 	LinkNames []string `json:"linkNames,omitempty"`
+	// IncludeChildren controls whether to recursively check child blueprints.
+	// If nil or not provided, defaults to true.
+	IncludeChildren *bool `json:"includeChildren,omitempty"`
+	// ChildPath limits the scope to resources/links within a specific child blueprint path.
+	// Used when Scope is "specific".
+	// Format: "childA" for first level, "childA.childB" for nested.
+	ChildPath string `json:"childPath,omitempty"`
 	// Config values for the reconciliation check
 	// that will be used in plugins.
 	Config *types.BlueprintOperationConfig `json:"config" validate:"required"`
@@ -166,6 +173,10 @@ type ApplyReconciliationRequestPayload struct {
 type ResourceReconcileActionPayload struct {
 	// ResourceID is the unique identifier for the resource.
 	ResourceID string `json:"resourceId" validate:"required"`
+	// ChildPath is the path to the child blueprint containing this resource.
+	// Empty for resources in the parent blueprint.
+	// Format: "childA" for first level, "childA.childB" for nested.
+	ChildPath string `json:"childPath,omitempty"`
 	// Action is the reconciliation action to apply.
 	// Valid values: "accept_external", "update_status", "mark_failed"
 	Action string `json:"action" validate:"required"`
@@ -180,6 +191,10 @@ type ResourceReconcileActionPayload struct {
 type LinkReconcileActionPayload struct {
 	// LinkID is the unique identifier for the link.
 	LinkID string `json:"linkId" validate:"required"`
+	// ChildPath is the path to the child blueprint containing this link.
+	// Empty for links in the parent blueprint.
+	// Format: "childA" for first level, "childA.childB" for nested.
+	ChildPath string `json:"childPath,omitempty"`
 	// Action is the reconciliation action to apply.
 	// Valid values: "accept_external", "update_status", "mark_failed"
 	Action string `json:"action" validate:"required"`
