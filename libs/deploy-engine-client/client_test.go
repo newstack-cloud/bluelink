@@ -35,6 +35,7 @@ const (
 	deserialiseErrorTriggerID    = "deserialise-fail-id"
 	failingStreamTriggerID       = "failing-stream-id"
 	testFailingStreamEventID     = "test-failing-stream-event-id"
+	driftDetectedChangesetID     = "drift-detected-changeset-id"
 )
 
 var (
@@ -55,6 +56,7 @@ type ClientSuite struct {
 	testSocketPath             string
 	stubValidationEvents       []*manage.Event
 	stubChangeStagingEvents    []*manage.Event
+	stubDriftDetectedEvents    []*manage.Event
 	stubDeploymentEvents       []*manage.Event
 	suite.Suite
 }
@@ -96,9 +98,11 @@ func (s *ClientSuite) SetupSuite() {
 			NetworkErrorTriggerID:        networkErrorTriggerID,
 			DeserialiseErrorTriggerID:    deserialiseErrorTriggerID,
 			FailingStreamTriggerID:       failingStreamTriggerID,
+			DriftDetectedChangesetID:     driftDetectedChangesetID,
 		},
 		s.stubValidationEvents,
 		s.stubChangeStagingEvents,
+		s.stubDriftDetectedEvents,
 		s.stubDeploymentEvents,
 		clock,
 	)
@@ -119,11 +123,13 @@ func (s *ClientSuite) SetupSuite() {
 			NetworkErrorTriggerID:        networkErrorTriggerID,
 			DeserialiseErrorTriggerID:    deserialiseErrorTriggerID,
 			FailingStreamTriggerID:       failingStreamTriggerID,
+			DriftDetectedChangesetID:     driftDetectedChangesetID,
 			UseUnixDomainSocket:          true,
 			UnixDomainSocketPath:         s.testSocketPath,
 		},
 		s.stubValidationEvents,
 		s.stubChangeStagingEvents,
+		s.stubDriftDetectedEvents,
 		s.stubDeploymentEvents,
 		clock,
 	)
@@ -245,6 +251,7 @@ func (s *ClientSuite) prepareTestSocketDir() {
 func (s *ClientSuite) setupStreamStubEvents() {
 	s.setupValidationStreamStubEvents()
 	s.setupChangeStagingStreamStubEvents()
+	s.setupDriftDetectedStreamStubEvents()
 	s.setupDeploymentStreamStubEvents()
 }
 
@@ -359,14 +366,16 @@ func (s *ClientSuite) setupChangeStagingStreamStubEvents() {
 		serialised, err := json.Marshal(data)
 		s.Require().NoError(err)
 
+		eventType := event.GetType()
 		events[i] = &manage.Event{
 			ID:          event.ID,
-			Type:        string(event.GetType()),
+			Type:        string(eventType),
 			ChannelType: ChannelTypeChangeset,
 			ChannelID:   testChangesetID,
 			Data:        string(serialised),
 			Timestamp:   testTime.Unix(),
-			End:         event.GetType() == types.ChangeStagingEventTypeCompleteChanges,
+			End: eventType == types.ChangeStagingEventTypeCompleteChanges ||
+				eventType == types.ChangeStagingEventTypeDriftDetected,
 		}
 	}
 
@@ -487,7 +496,61 @@ func getChangeStagingEventData(
 		return completeChanges
 	}
 
+	if driftDetected, ok := event.AsDriftDetected(); ok {
+		return driftDetected
+	}
+
 	return nil
+}
+
+func (s *ClientSuite) setupDriftDetectedStreamStubEvents() {
+	events := make(
+		[]*manage.Event,
+		len(sourceStubDriftDetectedEvents),
+	)
+	for i, event := range sourceStubDriftDetectedEvents {
+		data := getChangeStagingEventData(&event)
+		serialised, err := json.Marshal(data)
+		s.Require().NoError(err)
+
+		eventType := event.GetType()
+		events[i] = &manage.Event{
+			ID:          event.ID,
+			Type:        string(eventType),
+			ChannelType: ChannelTypeChangeset,
+			ChannelID:   driftDetectedChangesetID,
+			Data:        string(serialised),
+			Timestamp:   testTime.Unix(),
+			End: eventType == types.ChangeStagingEventTypeCompleteChanges ||
+				eventType == types.ChangeStagingEventTypeDriftDetected,
+		}
+	}
+
+	s.stubDriftDetectedEvents = events
+}
+
+var sourceStubDriftDetectedEvents = []types.ChangeStagingEvent{
+	{
+		ID: "test-drift-event-1",
+		DriftDetected: &types.DriftDetectedEventData{
+			Message: "Drift detected. External changes to resources require reconciliation before staging changes.",
+			ReconciliationResult: &container.ReconciliationCheckResult{
+				InstanceID:     "test-instance-id",
+				HasDrift:       true,
+				HasInterrupted: false,
+				Resources: []container.ResourceReconcileResult{
+					{
+						ResourceID:        "resource-1-id",
+						ResourceName:      "resource-1",
+						ResourceType:      "test/resource",
+						Type:              container.ReconciliationTypeDrift,
+						RecommendedAction: container.ReconciliationActionAcceptExternal,
+					},
+				},
+			},
+			Timestamp: testTime.Unix(),
+		},
+	},
 }
 
 func (s *ClientSuite) setupDeploymentStreamStubEvents() {

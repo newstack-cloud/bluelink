@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
@@ -41,6 +42,7 @@ type TestServerConfig struct {
 	NetworkErrorTriggerID        string
 	DeserialiseErrorTriggerID    string
 	FailingStreamTriggerID       string
+	DriftDetectedChangesetID     string
 	UseUnixDomainSocket          bool
 	UnixDomainSocketPath         string
 }
@@ -49,6 +51,7 @@ func CreateDeployEngineServer(
 	serverConfig *TestServerConfig,
 	stubValidationEvents []*manage.Event,
 	stubChangeStagingEvents []*manage.Event,
+	stubDriftDetectedEvents []*manage.Event,
 	stubDeploymentEvents []*manage.Event,
 	clock core.Clock,
 ) *httptest.Server {
@@ -59,6 +62,7 @@ func CreateDeployEngineServer(
 		clock:                   clock,
 		stubValidationEvents:    stubValidationEvents,
 		stubChangeStagingEvents: stubChangeStagingEvents,
+		stubDriftDetectedEvents: stubDriftDetectedEvents,
 		stubDeploymentEvents:    stubDeploymentEvents,
 	}
 
@@ -137,6 +141,21 @@ func CreateDeployEngineServer(
 		ctrl.cleanupEventsHandler,
 	).Methods("POST")
 
+	router.HandleFunc(
+		"/v1/deployments/instances/{id}/reconciliation/check",
+		ctrl.checkReconciliationHandler,
+	).Methods("POST")
+
+	router.HandleFunc(
+		"/v1/deployments/instances/{id}/reconciliation/apply",
+		ctrl.applyReconciliationHandler,
+	).Methods("POST")
+
+	router.HandleFunc(
+		"/v1/deployments/reconciliation-results/cleanup",
+		ctrl.cleanupReconciliationResultsHandler,
+	).Methods("POST")
+
 	if serverConfig.UseUnixDomainSocket {
 		return NewUnixDomainSocketServer(
 			serverConfig.UnixDomainSocketPath,
@@ -151,12 +170,13 @@ func CreateDeployEngineServer(
 }
 
 type stubDeployEngineController struct {
-	serverConfig            *TestServerConfig
-	clock                   core.Clock
-	server                  *httptest.Server
-	stubValidationEvents    []*manage.Event
-	stubChangeStagingEvents []*manage.Event
-	stubDeploymentEvents    []*manage.Event
+	serverConfig                     *TestServerConfig
+	clock                            core.Clock
+	server                           *httptest.Server
+	stubValidationEvents             []*manage.Event
+	stubChangeStagingEvents          []*manage.Event
+	stubDriftDetectedEvents          []*manage.Event
+	stubDeploymentEvents             []*manage.Event
 }
 
 type postRequestPayload struct {
@@ -331,6 +351,13 @@ func (c *stubDeployEngineController) streamChangeStagingEventsHandler(
 	}
 
 	failStream := id == c.serverConfig.FailingStreamTriggerID
+
+	// Serve drift detected events if the changeset ID matches.
+	if id == c.serverConfig.DriftDetectedChangesetID {
+		streamEvents(w, c.stubDriftDetectedEvents, failStream)
+		return
+	}
+
 	streamEvents(w, c.stubChangeStagingEvents, failStream)
 }
 
@@ -543,6 +570,57 @@ func (c *stubDeployEngineController) cleanupEventsHandler(
 	w.Write([]byte(`{"message":"Cleanup started"}`))
 }
 
+func (c *stubDeployEngineController) cleanupReconciliationResultsHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	w.Write([]byte(`{"message":"Cleanup started"}`))
+}
+
+func (c *stubDeployEngineController) checkReconciliationHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	// For POST requests, the error trigger will be in
+	// the id path parameter.
+	vars := mux.Vars(r)
+	id := vars["id"]
+	exitEarly := c.handleIDErrorTriggers(w, id, http.StatusOK)
+	if exitEarly {
+		return
+	}
+
+	result := stubReconciliationCheckResult(id)
+	respBytes, _ := json.Marshal(result)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(respBytes)
+}
+
+func (c *stubDeployEngineController) applyReconciliationHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	// For POST requests, the error trigger will be in
+	// the id path parameter.
+	vars := mux.Vars(r)
+	id := vars["id"]
+	exitEarly := c.handleIDErrorTriggers(w, id, http.StatusOK)
+	if exitEarly {
+		return
+	}
+
+	result := stubApplyReconciliationResult(id)
+	respBytes, _ := json.Marshal(result)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(respBytes)
+}
+
 func (c *stubDeployEngineController) handleIDErrorTriggers(
 	w http.ResponseWriter,
 	id string,
@@ -729,4 +807,45 @@ var stubChanges = &changes.BlueprintChanges{
 		},
 	},
 	RemovedResources: []string{"resource-2", "resource-3"},
+}
+
+func stubReconciliationCheckResult(instanceID string) *container.ReconciliationCheckResult {
+	return &container.ReconciliationCheckResult{
+		InstanceID: instanceID,
+		Resources: []container.ResourceReconcileResult{
+			{
+				ResourceID:        "resource-1-id",
+				ResourceName:      "resource-1",
+				ResourceType:      "test/resource",
+				Type:              container.ReconciliationTypeDrift,
+				OldStatus:         core.PreciseResourceStatusCreated,
+				NewStatus:         core.PreciseResourceStatusCreated,
+				ExternalState:     core.MappingNodeFromString("external-state-value"),
+				PersistedState:    core.MappingNodeFromString("persisted-state-value"),
+				ResourceExists:    true,
+				RecommendedAction: container.ReconciliationActionAcceptExternal,
+			},
+		},
+		Links: []container.LinkReconcileResult{
+			{
+				LinkID:            "link-1-id",
+				LinkName:          "resource-1::resource-2",
+				Type:              container.ReconciliationTypeInterrupted,
+				OldStatus:         core.PreciseLinkStatusResourceBUpdateRollingBack,
+				NewStatus:         core.PreciseLinkStatusResourceBUpdated,
+				RecommendedAction: container.ReconciliationActionUpdateStatus,
+			},
+		},
+		HasInterrupted: true,
+		HasDrift:       true,
+	}
+}
+
+func stubApplyReconciliationResult(instanceID string) *container.ApplyReconciliationResult {
+	return &container.ApplyReconciliationResult{
+		InstanceID:       instanceID,
+		ResourcesUpdated: 1,
+		LinksUpdated:     1,
+		Errors:           []container.ReconciliationError{},
+	}
 }

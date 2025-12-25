@@ -1,6 +1,9 @@
 package types
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -116,6 +119,10 @@ type ChangeStagingEvent struct {
 	// CompleteChanges is populated when change staging has been completed,
 	// this contains the full set of changes.
 	CompleteChanges *CompleteChangesEventData `json:"completeChanges"`
+	// DriftDetected is populated when drift or interrupted state is detected
+	// during change staging. When this is populated, the change staging process
+	// is blocked and the changeset will have DRIFT_DETECTED status.
+	DriftDetected *DriftDetectedEventData `json:"driftDetected"`
 }
 
 // GetType is a helper method that derives the type of a change staging event
@@ -130,6 +137,8 @@ func (c *ChangeStagingEvent) GetType() ChangeStagingEventType {
 		return ChangeStagingEventTypeLinkChanges
 	case c.CompleteChanges != nil:
 		return ChangeStagingEventTypeCompleteChanges
+	case c.DriftDetected != nil:
+		return ChangeStagingEventTypeDriftDetected
 	default:
 		return ""
 	}
@@ -170,6 +179,16 @@ func (c *ChangeStagingEvent) AsLinkChanges() (*LinkChangesEventData, bool) {
 func (c *ChangeStagingEvent) AsCompleteChanges() (*CompleteChangesEventData, bool) {
 	if c.CompleteChanges != nil {
 		return c.CompleteChanges, true
+	}
+
+	return nil, false
+}
+
+// AsDriftDetected is a helper method that returns the drift detected
+// event data if the change staging event is of type drift detected.
+func (c *ChangeStagingEvent) AsDriftDetected() (*DriftDetectedEventData, bool) {
+	if c.DriftDetected != nil {
+		return c.DriftDetected, true
 	}
 
 	return nil, false
@@ -256,7 +275,13 @@ type DestroyBlueprintInstancePayload struct {
 	// This will usually be set to true when rolling back a recent first time
 	// deployment that needs to be rolled back due to failure in a parent
 	// blueprint instance.
-	Rollback bool `json:"rollback"`
+	AsRollback bool `json:"asRollback"`
+	// Force continues the destroy operation even if individual resource/link/child
+	// destruction fails, and removes the blueprint instance record from state
+	// regardless of whether all resources were successfully destroyed.
+	// This is useful for removing instances where underlying resources were manually
+	// deleted or when a provider is unavailable.
+	Force bool `json:"force"`
 	// Config values for the destroy process
 	// that will be used in plugins.
 	Config *BlueprintOperationConfig `json:"config"`
@@ -272,6 +297,67 @@ type BlueprintInstanceEvent struct {
 	// to a database or other storage.
 	ID string `json:"id"`
 	container.DeployEvent
+}
+
+func (e *BlueprintInstanceEvent) String() string {
+	sb := strings.Builder{}
+
+	sb.WriteString(fmt.Sprintf("event[%s]: id: %s", e.GetType(), e.ID))
+
+	if e.ChildUpdateEvent != nil {
+		childUpdateEvent := e.ChildUpdateEvent
+		sb.WriteString(
+			fmt.Sprintf(
+				"child: %s status: %s",
+				childUpdateEvent.ChildName,
+				childUpdateEvent.Status.String(),
+			),
+		)
+	}
+
+	if e.ResourceUpdateEvent != nil {
+		resourceUpdateEvent := e.ResourceUpdateEvent
+		sb.WriteString(
+			fmt.Sprintf(
+				" resource: %s status: %s",
+				resourceUpdateEvent.ResourceName,
+				resourceUpdateEvent.Status.String(),
+			),
+		)
+	}
+
+	if e.LinkUpdateEvent != nil {
+		linkUpdateEvent := e.LinkUpdateEvent
+		sb.WriteString(
+			fmt.Sprintf(
+				" link: %s status: %s",
+				linkUpdateEvent.LinkName,
+				linkUpdateEvent.Status.String(),
+			),
+		)
+	}
+
+	if e.DeploymentUpdateEvent != nil {
+		deploymentUpdateEvent := e.DeploymentUpdateEvent
+		sb.WriteString(
+			fmt.Sprintf(
+				" deployment status: %s",
+				deploymentUpdateEvent.Status.String(),
+			),
+		)
+	}
+
+	if e.FinishEvent != nil {
+		finishEvent := e.FinishEvent
+		sb.WriteString(
+			fmt.Sprintf(
+				" finish status: %s",
+				finishEvent.Status.String(),
+			),
+		)
+	}
+
+	return sb.String()
 }
 
 // BlueprintInstanceEventType is the type of deployment event
@@ -443,3 +529,112 @@ type StreamErrorMessageEvent struct {
 	Diagnostics []*core.Diagnostic `json:"diagnostics"`
 	Timestamp   int64              `json:"timestamp"`
 }
+
+// CheckReconciliationPayload represents the payload for checking
+// reconciliation status of a blueprint instance.
+type CheckReconciliationPayload struct {
+	BlueprintDocumentInfo
+	// Scope controls which elements to check.
+	// Valid values: "all" (default), "interrupted", "specific"
+	Scope string `json:"scope"`
+	// ResourceNames specifies which resources to check when Scope is "specific".
+	// Ignored for other scopes.
+	ResourceNames []string `json:"resourceNames,omitempty"`
+	// LinkNames specifies which links to check when Scope is "specific".
+	// Ignored for other scopes.
+	LinkNames []string `json:"linkNames,omitempty"`
+	// Config values for the reconciliation check
+	// that will be used in plugins.
+	Config *BlueprintOperationConfig `json:"config"`
+}
+
+// ApplyReconciliationPayload represents the payload for applying
+// reconciliation actions to a blueprint instance.
+type ApplyReconciliationPayload struct {
+	BlueprintDocumentInfo
+	// ResourceActions specifies the actions to take for each resource.
+	ResourceActions []ResourceReconcileActionPayload `json:"resourceActions,omitempty"`
+	// LinkActions specifies the actions to take for each link.
+	LinkActions []LinkReconcileActionPayload `json:"linkActions,omitempty"`
+	// Config values for the reconciliation apply
+	// that will be used in plugins.
+	Config *BlueprintOperationConfig `json:"config"`
+}
+
+// ResourceReconcileActionPayload specifies the action to take for a resource.
+type ResourceReconcileActionPayload struct {
+	// ResourceID is the unique identifier for the resource.
+	ResourceID string `json:"resourceId"`
+	// Action is the reconciliation action to apply.
+	// Valid values: "accept_external", "update_status", "mark_failed"
+	Action string `json:"action"`
+	// ExternalState is required when Action is "accept_external".
+	// This is the state that will be persisted.
+	ExternalState *core.MappingNode `json:"externalState,omitempty"`
+	// NewStatus is the status to set for the resource.
+	NewStatus string `json:"newStatus"`
+}
+
+// LinkReconcileActionPayload specifies the action to take for a link.
+type LinkReconcileActionPayload struct {
+	// LinkID is the unique identifier for the link.
+	LinkID string `json:"linkId"`
+	// Action is the reconciliation action to apply.
+	// Valid values: "accept_external", "update_status", "mark_failed"
+	Action string `json:"action"`
+	// NewStatus is the status to set for the link.
+	NewStatus string `json:"newStatus"`
+	// LinkDataUpdates contains updates to apply to link.Data when Action is
+	// "accept_external". This is used to sync link.Data with
+	// external resource state when drift is detected via ResourceDataMappings.
+	// Key is the linkDataPath (e.g., "resourceA.handler"), value is the new external value.
+	LinkDataUpdates map[string]*core.MappingNode `json:"linkDataUpdates,omitempty"`
+	// IntermediaryActions specifies actions for each intermediary resource.
+	// Key is the intermediary resource ID.
+	IntermediaryActions map[string]*IntermediaryReconcileActionPayload `json:"intermediaryActions,omitempty"`
+}
+
+// IntermediaryReconcileActionPayload specifies the action to take for an intermediary resource.
+type IntermediaryReconcileActionPayload struct {
+	// Action is the reconciliation action to apply.
+	// Valid values: "accept_external", "update_status", "mark_failed"
+	Action string `json:"action"`
+	// ExternalState is required when Action is "accept_external".
+	// This is the state that will be persisted.
+	ExternalState *core.MappingNode `json:"externalState,omitempty"`
+	// NewStatus is the status to set for the intermediary resource.
+	NewStatus string `json:"newStatus"`
+}
+
+// DriftBlockedResponse is returned when an operation is blocked due to drift detection.
+type DriftBlockedResponse struct {
+	// Message explains why the operation was blocked.
+	Message string `json:"message"`
+	// InstanceID is the ID of the blueprint instance.
+	InstanceID string `json:"instanceId"`
+	// ChangesetID is the ID of the changeset that detected drift (if applicable).
+	ChangesetID string `json:"changesetId,omitempty"`
+	// ReconciliationResult contains the full drift/interrupted state detection result.
+	// This allows clients to see exactly what drifted without making a separate API call.
+	ReconciliationResult *container.ReconciliationCheckResult `json:"reconciliationResult,omitempty"`
+	// Hint provides guidance on how to proceed.
+	Hint string `json:"hint"`
+}
+
+// DriftDetectedEventData holds the data for a drift detected event
+// that is sent to a change staging stream when drift or interrupted state is detected.
+type DriftDetectedEventData struct {
+	// Message explains what was detected.
+	Message string `json:"message"`
+	// ReconciliationResult contains the full reconciliation check result.
+	ReconciliationResult *container.ReconciliationCheckResult `json:"reconciliationResult"`
+	// Timestamp is the unix timestamp when drift was detected.
+	Timestamp int64 `json:"timestamp"`
+}
+
+const (
+	// ChangeStagingEventTypeDriftDetected is the type of change staging event
+	// that is sent to a change staging stream when drift or interrupted state
+	// is detected during change staging.
+	ChangeStagingEventTypeDriftDetected ChangeStagingEventType = "driftDetected"
+)

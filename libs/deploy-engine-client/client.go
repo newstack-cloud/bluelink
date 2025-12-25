@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/common/sigv1"
@@ -825,6 +826,88 @@ func (c *Client) CleanupEvents(
 	)
 }
 
+// CheckReconciliation checks for drift and interrupted state in a blueprint instance.
+// This is a synchronous operation that returns the reconciliation check result
+// containing any resources or links that need reconciliation.
+//
+// The instanceID parameter can be either the unique instance ID or
+// the user-defined instance name.
+//
+// This is the `POST {baseURL}/v1/deployments/instances/{id}/reconciliation/check` API endpoint.
+func (c *Client) CheckReconciliation(
+	ctx context.Context,
+	instanceID string,
+	payload *types.CheckReconciliationPayload,
+) (*container.ReconciliationCheckResult, error) {
+	url := fmt.Sprintf(
+		"%s/v1/deployments/instances/%s/reconciliation/check",
+		c.endpoint,
+		instanceID,
+	)
+
+	result := &container.ReconciliationCheckResult{}
+	err := c.postAndGetResource(
+		ctx,
+		url,
+		payload,
+		result,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// ApplyReconciliation applies reconciliation actions to resolve drift or interrupted state.
+// This is a synchronous operation that returns the result of applying the reconciliation actions.
+//
+// The instanceID parameter can be either the unique instance ID or
+// the user-defined instance name.
+//
+// This is the `POST {baseURL}/v1/deployments/instances/{id}/reconciliation/apply` API endpoint.
+func (c *Client) ApplyReconciliation(
+	ctx context.Context,
+	instanceID string,
+	payload *types.ApplyReconciliationPayload,
+) (*container.ApplyReconciliationResult, error) {
+	url := fmt.Sprintf(
+		"%s/v1/deployments/instances/%s/reconciliation/apply",
+		c.endpoint,
+		instanceID,
+	)
+
+	result := &container.ApplyReconciliationResult{}
+	err := c.postAndGetResource(
+		ctx,
+		url,
+		payload,
+		result,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// CleanupReconciliationResults triggers cleanup of old reconciliation results.
+// This is an asynchronous operation that returns immediately after triggering the cleanup.
+// Reconciliation results older than the configured retention period will be removed.
+//
+// This is the `POST {baseURL}/v1/deployments/reconciliation-results/cleanup` API endpoint.
+func (c *Client) CleanupReconciliationResults(
+	ctx context.Context,
+) error {
+	return c.cleanupResources(
+		ctx,
+		fmt.Sprintf(
+			"%s/v1/deployments/reconciliation-results/cleanup",
+			c.endpoint,
+		),
+	)
+}
+
 func (c *Client) cleanupResources(
 	ctx context.Context,
 	url string,
@@ -935,6 +1018,67 @@ func (c *Client) getResource(
 
 	req, err := http.NewRequestWithContext(
 		ctx, "GET", url, nil,
+	)
+	if err != nil {
+		return createRequestPrepError(
+			fmt.Sprintf(
+				"failed to prepare request: %s",
+				err.Error(),
+			),
+		)
+	}
+	attachHeaders(req, headers)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return createRequestError(
+			err,
+		)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return createClientError(resp)
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(respTarget); err != nil {
+		return createDeserialiseError(
+			fmt.Sprintf(
+				"failed to decode response: %s",
+				err.Error(),
+			),
+		)
+	}
+
+	return nil
+}
+
+// postAndGetResource is used for synchronous POST requests that return
+// a 200 OK response with a resource in the body.
+// This is different from startMutatingAction which expects a 202 Accepted response.
+func (c *Client) postAndGetResource(
+	ctx context.Context,
+	url string,
+	payload any,
+	respTarget any,
+) error {
+	headers, err := c.prepareAuthHeaders()
+	if err != nil {
+		return err
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return createSerialiseError(
+			fmt.Sprintf(
+				"failed to serialise payload: %s",
+				err.Error(),
+			),
+		)
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx, "POST", url, bytes.NewReader(payloadBytes),
 	)
 	if err != nil {
 		return createRequestPrepError(

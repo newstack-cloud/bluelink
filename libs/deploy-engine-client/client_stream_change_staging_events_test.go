@@ -59,6 +59,68 @@ func (s *ClientSuite) Test_stream_change_staging_events() {
 	)
 }
 
+func (s *ClientSuite) Test_stream_change_staging_events_with_drift_detected() {
+	// Create a new client with OAuth2.
+	client, err := NewClient(
+		WithClientEndpoint(s.deployEngineServer.URL),
+		WithClientAuthMethod(AuthMethodOAuth2),
+		WithClientOAuth2Config(&OAuth2Config{
+			TokenEndpoint: fmt.Sprintf(
+				"%s/oauth2/v1/token",
+				s.oauthServer.URL,
+			),
+			ClientID:     testClientID,
+			ClientSecret: testClientSecret,
+		}),
+	)
+	s.Require().NoError(err)
+
+	streamTo := make(chan types.ChangeStagingEvent)
+	errChan := make(chan error)
+	err = client.StreamChangeStagingEvents(
+		context.Background(),
+		driftDetectedChangesetID,
+		streamTo,
+		errChan,
+	)
+	s.Require().NoError(err)
+
+	collected := []types.ChangeStagingEvent{}
+	channelOpen := true
+	for channelOpen {
+		select {
+		case event, ok := <-streamTo:
+			channelOpen = ok
+			if channelOpen {
+				collected = append(collected, event)
+				s.Require().NotNil(event)
+			}
+		case <-time.After(5 * time.Second):
+			s.Fail("Timed out waiting for events")
+		}
+	}
+
+	// Verify drift detected events are correctly parsed
+	s.Assert().Equal(
+		sourceStubDriftDetectedEvents,
+		collected,
+	)
+
+	// Verify that the drift detected event has the expected type
+	s.Require().Len(collected, 1)
+	s.Assert().Equal(
+		types.ChangeStagingEventTypeDriftDetected,
+		collected[0].GetType(),
+	)
+
+	// Verify the drift event data is populated
+	driftData, ok := collected[0].AsDriftDetected()
+	s.Require().True(ok)
+	s.Assert().True(driftData.ReconciliationResult.HasDrift)
+	s.Assert().False(driftData.ReconciliationResult.HasInterrupted)
+	s.Assert().Len(driftData.ReconciliationResult.Resources, 1)
+}
+
 func (s *ClientSuite) Test_stream_change_staging_events_fails_due_to_stream_error() {
 	// Create a new client with OAuth2.
 	client, err := NewClient(

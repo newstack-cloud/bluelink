@@ -76,6 +76,16 @@ func sseToChangeStagingEvent(
 			ID:              string(event.ID),
 			CompleteChanges: completeChanges,
 		}
+	case types.ChangeStagingEventTypeDriftDetected:
+		driftDetected := &types.DriftDetectedEventData{}
+		err := json.Unmarshal(event.Data, driftDetected)
+		if err != nil {
+			return types.ChangeStagingEvent{}
+		}
+		return types.ChangeStagingEvent{
+			ID:            string(event.ID),
+			DriftDetected: driftDetected,
+		}
 	}
 
 	return types.ChangeStagingEvent{}
@@ -84,7 +94,9 @@ func sseToChangeStagingEvent(
 func checkIsChangeStagingStreamEnd(
 	event types.ChangeStagingEvent,
 ) bool {
-	return event.GetType() == types.ChangeStagingEventTypeCompleteChanges
+	eventType := event.GetType()
+	return eventType == types.ChangeStagingEventTypeCompleteChanges ||
+		eventType == types.ChangeStagingEventTypeDriftDetected
 }
 
 func sseToBlueprintInstanceEvent(
