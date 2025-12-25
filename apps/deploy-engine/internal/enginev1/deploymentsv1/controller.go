@@ -27,6 +27,11 @@ const (
 	// 10 minutes is a reasonable time to wait for the cleanup process
 	// to complete for instances of the deploy engine with a lot of use.
 	changesetCleanupTimeout = 10 * time.Minute
+	// An internal timeout used for the cleanup process
+	// that cleans up old reconciliation results.
+	// 10 minutes is a reasonable time to wait for the cleanup process
+	// to complete for instances of the deploy engine with a lot of use.
+	reconciliationResultsCleanupTimeout = 10 * time.Minute
 )
 
 const (
@@ -50,16 +55,17 @@ const (
 // Controller handles deployment-related HTTP requests
 // including change staging and deployment events over Server-Sent Events (SSE).
 type Controller struct {
-	changesetRetentionPeriod   time.Duration
-	deploymentTimeout          time.Duration
-	eventStore                 manage.Events
-	instances                  state.InstancesContainer
-	exports                    state.ExportsContainer
-	changesetStore             manage.Changesets
-	reconciliationResultsStore manage.ReconciliationResults
-	idGenerator                core.IDGenerator
-	eventIDGenerator           core.IDGenerator
-	blueprintLoader            container.Loader
+	changesetRetentionPeriod             time.Duration
+	reconciliationResultsRetentionPeriod time.Duration
+	deploymentTimeout                    time.Duration
+	eventStore                           manage.Events
+	instances                            state.InstancesContainer
+	exports                              state.ExportsContainer
+	changesetStore                       manage.Changesets
+	reconciliationResultsStore           manage.ReconciliationResults
+	idGenerator                          core.IDGenerator
+	eventIDGenerator                     core.IDGenerator
+	blueprintLoader                      container.Loader
 	// Behaviour used to resolve child blueprints in the blueprint container
 	// package is reused to load the "root" blueprints from multiple sources.
 	blueprintResolver    includes.ChildResolver
@@ -73,24 +79,26 @@ type Controller struct {
 // instance with the provided dependencies.
 func NewController(
 	changesetRetentionPeriod time.Duration,
+	reconciliationResultsRetentionPeriod time.Duration,
 	deploymentTimeout time.Duration,
 	deps *typesv1.Dependencies,
 ) *Controller {
 	return &Controller{
-		changesetRetentionPeriod:   changesetRetentionPeriod,
-		deploymentTimeout:          deploymentTimeout,
-		eventStore:                 deps.EventStore,
-		instances:                  deps.Instances,
-		exports:                    deps.Exports,
-		changesetStore:             deps.ChangesetStore,
-		reconciliationResultsStore: deps.ReconciliationResultsStore,
-		idGenerator:                deps.IDGenerator,
-		eventIDGenerator:           deps.EventIDGenerator,
-		blueprintLoader:            deps.DeploymentLoader,
-		blueprintResolver:          deps.BlueprintResolver,
-		paramsProvider:             deps.ParamsProvider,
-		pluginConfigPreparer:       deps.PluginConfigPreparer,
-		clock:                      deps.Clock,
-		logger:                     deps.Logger,
+		changesetRetentionPeriod:             changesetRetentionPeriod,
+		reconciliationResultsRetentionPeriod: reconciliationResultsRetentionPeriod,
+		deploymentTimeout:                    deploymentTimeout,
+		eventStore:                           deps.EventStore,
+		instances:                            deps.Instances,
+		exports:                              deps.Exports,
+		changesetStore:                       deps.ChangesetStore,
+		reconciliationResultsStore:           deps.ReconciliationResultsStore,
+		idGenerator:                          deps.IDGenerator,
+		eventIDGenerator:                     deps.EventIDGenerator,
+		blueprintLoader:                      deps.DeploymentLoader,
+		blueprintResolver:                    deps.BlueprintResolver,
+		paramsProvider:                       deps.ParamsProvider,
+		pluginConfigPreparer:                 deps.PluginConfigPreparer,
+		clock:                                deps.Clock,
+		logger:                               deps.Logger,
 	}
 }

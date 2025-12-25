@@ -99,8 +99,9 @@ func (s *ControllerTestSuite) setupReconciliationTest(
 	)
 
 	return NewController(
-		10*time.Second,
-		10*time.Second,
+		/* changesetRetentionPeriod */ 10*time.Second,
+		/* reconciliationResultsRetentionPeriod */ 10*time.Second,
+		/* deploymentTimeout */ 10*time.Second,
 		dependencies,
 	)
 }

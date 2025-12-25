@@ -88,6 +88,7 @@ func (s *ControllerTestSuite) SetupTest() {
 	}
 	s.ctrl = NewController(
 		/* changesetRetentionPeriod */ 10*time.Second,
+		/* reconciliationResultsRetentionPeriod */ 10*time.Second,
 		/* deploymentTimeout */ 10*time.Second,
 		dependencies,
 	)
@@ -98,6 +99,7 @@ func (s *ControllerTestSuite) SetupTest() {
 	depsWithFailingIDGenerators.EventIDGenerator = failingIDGenerator
 	s.ctrlFailingIDGenerators = NewController(
 		/* changesetRetentionPeriod */ 10*time.Second,
+		/* reconciliationResultsRetentionPeriod */ 10*time.Second,
 		/* deploymentTimeout */ 10*time.Second,
 		depsWithFailingIDGenerators,
 	)
@@ -119,6 +121,7 @@ func (s *ControllerTestSuite) SetupTest() {
 	depsWithStreamErrors.DeploymentLoader = streamErrorsBlueprintLoader
 	s.ctrlStreamErrors = NewController(
 		/* changesetRetentionPeriod */ 10*time.Second,
+		/* reconciliationResultsRetentionPeriod */ 10*time.Second,
 		/* deploymentTimeout */ 10*time.Second,
 		depsWithStreamErrors,
 	)

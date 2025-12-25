@@ -579,6 +579,7 @@ func (s *ControllerTestSuite) setupControllerWithLoader(
 	}
 	return NewController(
 		/* changesetRetentionPeriod */ 10*time.Second,
+		/* reconciliationResultsRetentionPeriod */ 10*time.Second,
 		/* deploymentTimeout */ 10*time.Second,
 		dependencies,
 	)

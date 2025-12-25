@@ -283,8 +283,12 @@ func setupDeploymentHandlers(
 	dependencies *typesv1.Dependencies,
 	config *core.Config,
 ) {
-	retentionPeriod := time.Duration(
+	changesetRetentionPeriod := time.Duration(
 		config.Maintenance.ChangesetRetentionPeriod,
+	) * time.Second
+
+	reconciliationResultsRetentionPeriod := time.Duration(
+		config.Maintenance.ReconciliationResultsRetentionPeriod,
 	) * time.Second
 
 	deployTimeout := time.Duration(
@@ -292,7 +296,8 @@ func setupDeploymentHandlers(
 	) * time.Second
 
 	deploymentCtrl := deploymentsv1.NewController(
-		retentionPeriod,
+		changesetRetentionPeriod,
+		reconciliationResultsRetentionPeriod,
 		deployTimeout,
 		dependencies,
 	)
@@ -315,7 +320,12 @@ func setupDeploymentHandlers(
 	router.HandleFunc(
 		"/deployments/changes/cleanup",
 		deploymentCtrl.CleanupChangesetsHandler,
-	)
+	).Methods("POST")
+
+	router.HandleFunc(
+		"/deployments/reconciliation-results/cleanup",
+		deploymentCtrl.CleanupReconciliationResultsHandler,
+	).Methods("POST")
 
 	router.HandleFunc(
 		"/deployments/instances",

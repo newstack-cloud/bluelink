@@ -379,6 +379,13 @@ type MaintenanceConfig struct {
 	//
 	// Defaults to 604,800 seconds (7 days).
 	EventsRetentionPeriod int `mapstructure:"events_retention_period"`
+	// The retention period in seconds for reconciliation results.
+	// Whenever the clean up process runs,
+	// it will delete all reconciliation results that are older
+	// than this retention period.
+	//
+	// Defaults to 604,800 seconds (7 days).
+	ReconciliationResultsRetentionPeriod int `mapstructure:"reconciliation_results_retention_period"`
 }
 
 // LoadConfig loads the deploy engine configuration
@@ -521,6 +528,7 @@ func bindEnvVars(viperInstance *viper.Viper) {
 	viperInstance.BindEnv("maintenance.blueprint_validation_retention_period")
 	viperInstance.BindEnv("maintenance.changeset_retention_period")
 	viperInstance.BindEnv("maintenance.events_retention_period")
+	viperInstance.BindEnv("maintenance.reconciliation_results_retention_period")
 }
 
 const (
@@ -575,6 +583,7 @@ func setDefaults(viperInstance *viper.Viper) {
 	viperInstance.SetDefault("maintenance.blueprint_validation_retention_period", 7*oneDaySeconds)
 	viperInstance.SetDefault("maintenance.changeset_retention_period", 7*oneDaySeconds)
 	viperInstance.SetDefault("maintenance.events_retention_period", 7*oneDaySeconds)
+	viperInstance.SetDefault("maintenance.reconciliation_results_retention_period", 7*oneDaySeconds)
 }
 
 func getOSDefaultPluginPath() string {

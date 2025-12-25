@@ -821,6 +821,22 @@ it will delete all events that are older than this period.
 
 **default value:** `604800` (7 days)
 
+#### Reconciliation Results Retention Period
+
+`BLUELINK_DEPLOY_ENGINE_MAINTENANCE_RECONCILIATION_RESULTS_RETENTION_PERIOD`
+
+_Config field:_ `maintenance.reconciliation_results_retention_period`
+
+_**optional**_
+
+The retention period in seconds for reconciliation results.
+This is used to determine how long to keep the results of drift reconciliation checks
+before deleting them.
+When the clean up process runs for reconciliation results,
+it will delete all reconciliation results that are older than this period.
+
+**default value:** `604800` (7 days)
+
 ## API Documentation
 
 The API documentation for the v1 of the Deploy Engine HTTP API is available at the following URL:

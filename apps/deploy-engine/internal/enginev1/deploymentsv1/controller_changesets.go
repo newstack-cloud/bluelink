@@ -242,6 +242,55 @@ func (c *Controller) cleanupChangesets() {
 	}
 }
 
+// CleanupReconciliationResultsHandler is the handler for the
+// POST /deployments/reconciliation-results/cleanup endpoint that cleans up
+// reconciliation results that are older than the configured
+// retention period.
+func (c *Controller) CleanupReconciliationResultsHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	// Carry out the cleanup process in a separate goroutine
+	// to avoid blocking the request,
+	// general clean up should be a task that a client can trigger
+	// but not need to wait for.
+	go c.cleanupReconciliationResults()
+
+	httputils.HTTPJSONResponse(
+		w,
+		http.StatusAccepted,
+		&helpersv1.MessageResponse{
+			Message: "Cleanup started",
+		},
+	)
+}
+
+func (c *Controller) cleanupReconciliationResults() {
+	logger := c.logger.Named("reconciliationResultsCleanup")
+
+	cleanupBefore := c.clock.Now().Add(
+		-c.reconciliationResultsRetentionPeriod,
+	)
+
+	ctxWithTimeout, cancel := context.WithTimeout(
+		context.Background(),
+		reconciliationResultsCleanupTimeout,
+	)
+	defer cancel()
+
+	err := c.reconciliationResultsStore.Cleanup(
+		ctxWithTimeout,
+		cleanupBefore,
+	)
+	if err != nil {
+		logger.Error(
+			"failed to clean up old reconciliation results",
+			core.ErrorLogField("error", err),
+		)
+		return
+	}
+}
+
 func (c *Controller) startChangeStaging(
 	changeset *manage.Changeset,
 	blueprintInfo *includes.ChildBlueprintInfo,
