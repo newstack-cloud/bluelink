@@ -59,6 +59,13 @@ type CheckReconciliationInput struct {
 	// LinkNames specifies which links to check when Scope is ReconciliationScopeSpecific.
 	// Ignored for other scopes.
 	LinkNames []string
+	// IncludeChildren controls whether to recursively check child blueprints.
+	// If nil, defaults to true.
+	IncludeChildren *bool
+	// ChildPath limits the scope to resources/links within a specific child blueprint path.
+	// Used when Scope is ReconciliationScopeSpecific.
+	// Format: "childA" for first level, "childA.childB" for nested.
+	ChildPath string
 }
 
 // ReconciliationCheckResult contains all elements needing reconciliation.
@@ -73,6 +80,8 @@ type ReconciliationCheckResult struct {
 	HasInterrupted bool `json:"hasInterrupted"`
 	// HasDrift is true if any elements have drifted from expected state.
 	HasDrift bool `json:"hasDrift"`
+	// HasChildIssues is true if any child blueprints have drift or interrupted state.
+	HasChildIssues bool `json:"hasChildIssues"`
 }
 
 // ResourceReconcileResult contains reconciliation details for a single resource.
@@ -83,6 +92,10 @@ type ResourceReconcileResult struct {
 	ResourceName string `json:"resourceName"`
 	// ResourceType is the provider resource type (e.g., "aws/s3Bucket").
 	ResourceType string `json:"resourceType"`
+	// ChildPath indicates the hierarchical path to the child blueprint containing this resource.
+	// Empty string for resources in the parent blueprint.
+	// Format: "childA" for first level, "childA.childB" for nested.
+	ChildPath string `json:"childPath,omitempty"`
 	// Type indicates why this resource needs reconciliation.
 	Type ReconciliationType `json:"type"`
 	// OldStatus is the status the resource had before reconciliation check.
@@ -122,6 +135,10 @@ type LinkReconcileResult struct {
 	LinkID string `json:"linkId"`
 	// LinkName is the logical name of the link (format: "{resourceA}::{resourceB}").
 	LinkName string `json:"linkName"`
+	// ChildPath indicates the hierarchical path to the child blueprint containing this link.
+	// Empty string for links in the parent blueprint.
+	// Format: "childA" for first level, "childA.childB" for nested.
+	ChildPath string `json:"childPath,omitempty"`
 	// Type indicates why this link needs reconciliation.
 	Type ReconciliationType `json:"type"`
 	// OldStatus is the status the link had before reconciliation check.
@@ -178,6 +195,9 @@ type ApplyReconciliationInput struct {
 type ResourceReconcileAction struct {
 	// ResourceID is the unique identifier for the resource.
 	ResourceID string
+	// ChildPath is the path to the child blueprint containing this resource.
+	// Empty for resources in the parent blueprint.
+	ChildPath string
 	// Action is the reconciliation action to apply.
 	Action ReconciliationAction
 	// ExternalState is required when Action is ReconciliationActionAcceptExternal.
@@ -191,6 +211,9 @@ type ResourceReconcileAction struct {
 type LinkReconcileAction struct {
 	// LinkID is the unique identifier for the link.
 	LinkID string
+	// ChildPath is the path to the child blueprint containing this link.
+	// Empty for links in the parent blueprint.
+	ChildPath string
 	// Action is the reconciliation action to apply.
 	Action ReconciliationAction
 	// NewStatus is the status to set for the link.
