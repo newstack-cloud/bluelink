@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/newstack-cloud/bluelink/compare/blueprint-ls/v0.1.1...blueprint-ls/v0.1.2) (2025-12-25)
+
+
+### Dependencies
+
+* **blueprint-ls:** bump the go-deps group ([3aa6335](https://github.com/newstack-cloud/bluelink/commit/3aa633506556d578ccb3ea6e2be0be6f85c10eb2))
+
 ## [0.1.1](https://github.com/newstack-cloud/bluelink/compare/blueprint-ls/v0.1.0...blueprint-ls/v0.1.1) (2025-12-03)
 
 
