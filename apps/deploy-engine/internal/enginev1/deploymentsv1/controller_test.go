@@ -28,13 +28,14 @@ var (
 
 type ControllerTestSuite struct {
 	suite.Suite
-	ctrl                    *Controller
-	ctrlFailingIDGenerators *Controller
-	ctrlStreamErrors        *Controller
-	eventStore              manage.Events
-	changesetStore          manage.Changesets
-	instances               state.InstancesContainer
-	client                  *http.Client
+	ctrl                       *Controller
+	ctrlFailingIDGenerators    *Controller
+	ctrlStreamErrors           *Controller
+	eventStore                 manage.Events
+	changesetStore             manage.Changesets
+	reconciliationResultsStore *testutils.MockReconciliationResultsStore
+	instances                  state.InstancesContainer
+	client                     *http.Client
 }
 
 func (s *ControllerTestSuite) SetupTest() {
@@ -58,20 +59,24 @@ func (s *ControllerTestSuite) SetupTest() {
 	s.changesetStore = testutils.NewMockChangesetStore(
 		map[string]*manage.Changeset{},
 	)
+	s.reconciliationResultsStore = testutils.NewMockReconciliationResultsStore(
+		map[string]*manage.ReconciliationResult{},
+	).(*testutils.MockReconciliationResultsStore)
 	s.instances = stateContainer.Instances()
 	dependencies := &typesv1.Dependencies{
 		EventStore: s.eventStore,
 		ValidationStore: testutils.NewMockBlueprintValidationStore(
 			map[string]*manage.BlueprintValidation{},
 		),
-		ChangesetStore:    s.changesetStore,
-		Instances:         s.instances,
-		Exports:           stateContainer.Exports(),
-		IDGenerator:       core.NewUUIDGenerator(),
-		EventIDGenerator:  utils.NewUUIDv7Generator(),
-		ValidationLoader:  blueprintLoader,
-		DeploymentLoader:  blueprintLoader,
-		BlueprintResolver: &testutils.MockBlueprintResolver{},
+		ChangesetStore:             s.changesetStore,
+		ReconciliationResultsStore: s.reconciliationResultsStore,
+		Instances:                  s.instances,
+		Exports:                    stateContainer.Exports(),
+		IDGenerator:                core.NewUUIDGenerator(),
+		EventIDGenerator:           utils.NewUUIDv7Generator(),
+		ValidationLoader:           blueprintLoader,
+		DeploymentLoader:           blueprintLoader,
+		BlueprintResolver:          &testutils.MockBlueprintResolver{},
 		ParamsProvider: params.NewDefaultProvider(
 			map[string]*core.ScalarValue{},
 		),

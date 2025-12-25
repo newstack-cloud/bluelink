@@ -50,15 +50,16 @@ const (
 // Controller handles deployment-related HTTP requests
 // including change staging and deployment events over Server-Sent Events (SSE).
 type Controller struct {
-	changesetRetentionPeriod time.Duration
-	deploymentTimeout        time.Duration
-	eventStore               manage.Events
-	instances                state.InstancesContainer
-	exports                  state.ExportsContainer
-	changesetStore           manage.Changesets
-	idGenerator              core.IDGenerator
-	eventIDGenerator         core.IDGenerator
-	blueprintLoader          container.Loader
+	changesetRetentionPeriod   time.Duration
+	deploymentTimeout          time.Duration
+	eventStore                 manage.Events
+	instances                  state.InstancesContainer
+	exports                    state.ExportsContainer
+	changesetStore             manage.Changesets
+	reconciliationResultsStore manage.ReconciliationResults
+	idGenerator                core.IDGenerator
+	eventIDGenerator           core.IDGenerator
+	blueprintLoader            container.Loader
 	// Behaviour used to resolve child blueprints in the blueprint container
 	// package is reused to load the "root" blueprints from multiple sources.
 	blueprintResolver    includes.ChildResolver
@@ -76,19 +77,20 @@ func NewController(
 	deps *typesv1.Dependencies,
 ) *Controller {
 	return &Controller{
-		changesetRetentionPeriod: changesetRetentionPeriod,
-		deploymentTimeout:        deploymentTimeout,
-		eventStore:               deps.EventStore,
-		instances:                deps.Instances,
-		exports:                  deps.Exports,
-		changesetStore:           deps.ChangesetStore,
-		idGenerator:              deps.IDGenerator,
-		eventIDGenerator:         deps.EventIDGenerator,
-		blueprintLoader:          deps.DeploymentLoader,
-		blueprintResolver:        deps.BlueprintResolver,
-		paramsProvider:           deps.ParamsProvider,
-		pluginConfigPreparer:     deps.PluginConfigPreparer,
-		clock:                    deps.Clock,
-		logger:                   deps.Logger,
+		changesetRetentionPeriod:   changesetRetentionPeriod,
+		deploymentTimeout:          deploymentTimeout,
+		eventStore:                 deps.EventStore,
+		instances:                  deps.Instances,
+		exports:                    deps.Exports,
+		changesetStore:             deps.ChangesetStore,
+		reconciliationResultsStore: deps.ReconciliationResultsStore,
+		idGenerator:                deps.IDGenerator,
+		eventIDGenerator:           deps.EventIDGenerator,
+		blueprintLoader:            deps.DeploymentLoader,
+		blueprintResolver:          deps.BlueprintResolver,
+		paramsProvider:             deps.ParamsProvider,
+		pluginConfigPreparer:       deps.PluginConfigPreparer,
+		clock:                      deps.Clock,
+		logger:                     deps.Logger,
 	}
 }

@@ -167,19 +167,21 @@ func Setup(
 	)
 
 	dependencies := &typesv1.Dependencies{
-		EventStore:           stateServices.events,
-		ValidationStore:      stateServices.validation,
-		ChangesetStore:       stateServices.changesets,
-		Instances:            stateServices.container.Instances(),
-		IDGenerator:          idGenerator,
-		EventIDGenerator:     utils.NewUUIDv7Generator(),
-		ValidationLoader:     validateLoader,
-		DeploymentLoader:     deployLoader,
-		BlueprintResolver:    childResolver,
-		ParamsProvider:       paramsProvider,
-		PluginConfigPreparer: pluginConfigPreparer,
-		Clock:                clock,
-		Logger:               logger,
+		EventStore:                 stateServices.events,
+		ValidationStore:            stateServices.validation,
+		ChangesetStore:             stateServices.changesets,
+		ReconciliationResultsStore: stateServices.reconciliationResults,
+		Instances:                  stateServices.container.Instances(),
+		Exports:                    stateServices.container.Exports(),
+		IDGenerator:                idGenerator,
+		EventIDGenerator:           utils.NewUUIDv7Generator(),
+		ValidationLoader:           validateLoader,
+		DeploymentLoader:           deployLoader,
+		BlueprintResolver:          childResolver,
+		ParamsProvider:             paramsProvider,
+		PluginConfigPreparer:       pluginConfigPreparer,
+		Clock:                      clock,
+		Logger:                     logger,
 	}
 
 	healthHandler := setupHealthHandler(

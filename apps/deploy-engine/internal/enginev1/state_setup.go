@@ -20,10 +20,11 @@ const (
 )
 
 type stateServices struct {
-	container  state.Container
-	events     manage.Events
-	validation manage.Validation
-	changesets manage.Changesets
+	container              state.Container
+	events                 manage.Events
+	validation             manage.Validation
+	changesets             manage.Changesets
+	reconciliationResults  manage.ReconciliationResults
 }
 
 func loadStateServices(
@@ -96,12 +97,14 @@ func loadMemfileStateServices(
 	events := stateContainer.Events()
 	validation := stateContainer.Validation()
 	changesets := stateContainer.Changesets()
+	reconciliationResults := stateContainer.ReconciliationResults()
 
 	return &stateServices{
-		container:  stateContainer,
-		validation: validation,
-		events:     events,
-		changesets: changesets,
+		container:             stateContainer,
+		validation:            validation,
+		events:                events,
+		changesets:            changesets,
+		reconciliationResults: reconciliationResults,
 	}, memfileStubClose, nil
 }
 
@@ -155,12 +158,14 @@ func loadPostgresStateServices(
 	events := stateContainer.Events()
 	validation := stateContainer.Validation()
 	changesets := stateContainer.Changesets()
+	reconciliationResults := stateContainer.ReconciliationResults()
 
 	return &stateServices{
-		container:  stateContainer,
-		validation: validation,
-		events:     events,
-		changesets: changesets,
+		container:             stateContainer,
+		validation:            validation,
+		events:                events,
+		changesets:            changesets,
+		reconciliationResults: reconciliationResults,
 	}, closePool, nil
 }
 

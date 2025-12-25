@@ -130,3 +130,110 @@ type changeStagingCompleteEvent struct {
 	Changes   *changes.BlueprintChanges `json:"changes"`
 	Timestamp int64                     `json:"timestamp"`
 }
+
+// CheckReconciliationRequestPayload represents the payload for checking
+// reconciliation status of a blueprint instance.
+type CheckReconciliationRequestPayload struct {
+	resolve.BlueprintDocumentInfo
+	// Scope controls which elements to check.
+	// Valid values: "all" (default), "interrupted", "specific"
+	Scope string `json:"scope"`
+	// ResourceNames specifies which resources to check when Scope is "specific".
+	// Ignored for other scopes.
+	ResourceNames []string `json:"resourceNames,omitempty"`
+	// LinkNames specifies which links to check when Scope is "specific".
+	// Ignored for other scopes.
+	LinkNames []string `json:"linkNames,omitempty"`
+	// Config values for the reconciliation check
+	// that will be used in plugins.
+	Config *types.BlueprintOperationConfig `json:"config" validate:"required"`
+}
+
+// ApplyReconciliationRequestPayload represents the payload for applying
+// reconciliation actions to a blueprint instance.
+type ApplyReconciliationRequestPayload struct {
+	resolve.BlueprintDocumentInfo
+	// ResourceActions specifies the actions to take for each resource.
+	ResourceActions []ResourceReconcileActionPayload `json:"resourceActions,omitempty"`
+	// LinkActions specifies the actions to take for each link.
+	LinkActions []LinkReconcileActionPayload `json:"linkActions,omitempty"`
+	// Config values for the reconciliation apply
+	// that will be used in plugins.
+	Config *types.BlueprintOperationConfig `json:"config" validate:"required"`
+}
+
+// ResourceReconcileActionPayload specifies the action to take for a resource.
+type ResourceReconcileActionPayload struct {
+	// ResourceID is the unique identifier for the resource.
+	ResourceID string `json:"resourceId" validate:"required"`
+	// Action is the reconciliation action to apply.
+	// Valid values: "accept_external", "update_status", "mark_failed"
+	Action string `json:"action" validate:"required"`
+	// ExternalState is required when Action is "accept_external".
+	// This is the state that will be persisted.
+	ExternalState *core.MappingNode `json:"externalState,omitempty"`
+	// NewStatus is the status to set for the resource.
+	NewStatus string `json:"newStatus" validate:"required"`
+}
+
+// LinkReconcileActionPayload specifies the action to take for a link.
+type LinkReconcileActionPayload struct {
+	// LinkID is the unique identifier for the link.
+	LinkID string `json:"linkId" validate:"required"`
+	// Action is the reconciliation action to apply.
+	// Valid values: "accept_external", "update_status", "mark_failed"
+	Action string `json:"action" validate:"required"`
+	// NewStatus is the status to set for the link.
+	NewStatus string `json:"newStatus" validate:"required"`
+	// LinkDataUpdates contains updates to apply to link.Data when Action is
+	// "accept_external". This is used to sync link.Data with
+	// external resource state when drift is detected via ResourceDataMappings.
+	// Key is the linkDataPath (e.g., "resourceA.handler"), value is the new external value.
+	LinkDataUpdates map[string]*core.MappingNode `json:"linkDataUpdates,omitempty"`
+	// IntermediaryActions specifies actions for each intermediary resource.
+	// Key is the intermediary resource ID.
+	IntermediaryActions map[string]*IntermediaryReconcileActionPayload `json:"intermediaryActions,omitempty"`
+}
+
+// IntermediaryReconcileActionPayload specifies the action to take for an intermediary resource.
+type IntermediaryReconcileActionPayload struct {
+	// Action is the reconciliation action to apply.
+	// Valid values: "accept_external", "update_status", "mark_failed"
+	Action string `json:"action" validate:"required"`
+	// ExternalState is required when Action is "accept_external".
+	// This is the state that will be persisted.
+	ExternalState *core.MappingNode `json:"externalState,omitempty"`
+	// NewStatus is the status to set for the intermediary resource.
+	NewStatus string `json:"newStatus" validate:"required"`
+}
+
+// DriftBlockedResponse is returned when an operation is blocked due to drift detection.
+type DriftBlockedResponse struct {
+	// Message explains why the operation was blocked.
+	Message string `json:"message"`
+	// InstanceID is the ID of the blueprint instance.
+	InstanceID string `json:"instanceId"`
+	// ChangesetID is the ID of the changeset that detected drift (if applicable).
+	ChangesetID string `json:"changesetId,omitempty"`
+	// ReconciliationResult contains the full drift/interrupted state detection result.
+	// This allows clients to see exactly what drifted without making a separate API call.
+	ReconciliationResult *container.ReconciliationCheckResult `json:"reconciliationResult,omitempty"`
+	// Hint provides guidance on how to proceed.
+	Hint string `json:"hint"`
+}
+
+// driftDetectedEvent is the event payload sent when drift or interrupted state is detected
+// during change staging.
+type driftDetectedEvent struct {
+	// Message explains what was detected.
+	Message string `json:"message"`
+	// ReconciliationResult contains the full reconciliation check result.
+	ReconciliationResult *container.ReconciliationCheckResult `json:"reconciliationResult"`
+	// Timestamp is the unix timestamp when drift was detected.
+	Timestamp int64 `json:"timestamp"`
+}
+
+const (
+	// eventTypeDriftDetected is the event type for drift/interrupted detection during change staging.
+	eventTypeDriftDetected = "driftDetected"
+)

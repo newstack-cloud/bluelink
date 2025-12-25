@@ -565,6 +565,7 @@ func (c *Controller) saveChangeset(
 	return false
 }
 
+
 func (c *Controller) deriveInstanceID(
 	ctx context.Context,
 	payload *CreateChangesetRequestPayload,
@@ -670,8 +671,9 @@ func (c *Controller) performDriftCheckForChangeStaging(
 	return true
 }
 
-// handleDriftDetectedForChangeset saves the changeset with DRIFT_DETECTED status
-// and sends a driftDetected event to the stream.
+// handleDriftDetectedForChangeset saves the changeset with DRIFT_DETECTED status,
+// saves the reconciliation result to the separate store, and sends a driftDetected
+// event to the stream.
 func (c *Controller) handleDriftDetectedForChangeset(
 	ctx context.Context,
 	changeset *manage.Changeset,
@@ -704,6 +706,30 @@ func (c *Controller) handleDriftDetectedForChangeset(
 		logger,
 	)
 
+	// Save the reconciliation result to the separate store
+	resultID, err := c.idGenerator.GenerateID()
+	if err != nil {
+		logger.Error(
+			"failed to generate reconciliation result ID",
+			core.ErrorLogField("error", err),
+		)
+	} else {
+		err = c.reconciliationResultsStore.Save(ctx, &manage.ReconciliationResult{
+			ID:          resultID,
+			ChangesetID: changeset.ID,
+			InstanceID:  changeset.InstanceID,
+			Result:      reconciliationResult,
+			Created:     c.clock.Now().Unix(),
+		})
+		if err != nil {
+			logger.Error(
+				"failed to save reconciliation result",
+				core.ErrorLogField("error", err),
+			)
+		}
+	}
+
+	// Save the changeset with DRIFT_DETECTED status
 	c.saveChangeset(
 		ctx,
 		changeset,

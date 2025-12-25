@@ -32,6 +32,16 @@ type MockBlueprintLoader struct {
 	destroyEventSequence []container.DeployEvent
 	// RollbackDeployEventSequence is the sequence of events to emit during rollback deploy operations.
 	rollbackDeployEventSequence []container.DeployEvent
+	// ReconciliationTracker tracks calls to CheckReconciliation and ApplyReconciliation.
+	ReconciliationTracker *ReconciliationTracker
+	// checkReconciliationResult is the result to return from CheckReconciliation.
+	checkReconciliationResult *container.ReconciliationCheckResult
+	// checkReconciliationError is the error to return from CheckReconciliation.
+	checkReconciliationError error
+	// applyReconciliationResult is the result to return from ApplyReconciliation.
+	applyReconciliationResult *container.ApplyReconciliationResult
+	// applyReconciliationError is the error to return from ApplyReconciliation.
+	applyReconciliationError error
 }
 
 // DestroyTracker tracks calls to the Destroy method for testing.
@@ -116,6 +126,69 @@ func (t *DeployTracker) GetRollbackDeployCalls() []*container.DeployInput {
 	return rollbackCalls
 }
 
+// ReconciliationTracker tracks calls to CheckReconciliation and ApplyReconciliation for testing.
+type ReconciliationTracker struct {
+	mu sync.Mutex
+	// CheckCalls contains all the check reconciliation inputs that were passed to CheckReconciliation.
+	CheckCalls []*container.CheckReconciliationInput
+	// ApplyCalls contains all the apply reconciliation inputs that were passed to ApplyReconciliation.
+	ApplyCalls []*container.ApplyReconciliationInput
+}
+
+// NewReconciliationTracker creates a new ReconciliationTracker.
+func NewReconciliationTracker() *ReconciliationTracker {
+	return &ReconciliationTracker{
+		CheckCalls: []*container.CheckReconciliationInput{},
+		ApplyCalls: []*container.ApplyReconciliationInput{},
+	}
+}
+
+// RecordCheckCall records a check reconciliation call.
+func (t *ReconciliationTracker) RecordCheckCall(input *container.CheckReconciliationInput) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.CheckCalls = append(t.CheckCalls, input)
+}
+
+// RecordApplyCall records an apply reconciliation call.
+func (t *ReconciliationTracker) RecordApplyCall(input *container.ApplyReconciliationInput) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.ApplyCalls = append(t.ApplyCalls, input)
+}
+
+// WasCheckCalled returns true if CheckReconciliation was called at least once.
+func (t *ReconciliationTracker) WasCheckCalled() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return len(t.CheckCalls) > 0
+}
+
+// WasApplyCalled returns true if ApplyReconciliation was called at least once.
+func (t *ReconciliationTracker) WasApplyCalled() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return len(t.ApplyCalls) > 0
+}
+
+// GetCheckCalls returns a copy of all check reconciliation calls.
+func (t *ReconciliationTracker) GetCheckCalls() []*container.CheckReconciliationInput {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	calls := make([]*container.CheckReconciliationInput, len(t.CheckCalls))
+	copy(calls, t.CheckCalls)
+	return calls
+}
+
+// GetApplyCalls returns a copy of all apply reconciliation calls.
+func (t *ReconciliationTracker) GetApplyCalls() []*container.ApplyReconciliationInput {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	calls := make([]*container.ApplyReconciliationInput, len(t.ApplyCalls))
+	copy(calls, t.ApplyCalls)
+	return calls
+}
+
 type MockBlueprintLoaderOption func(*MockBlueprintLoader)
 
 func WithMockBlueprintLoaderDeployError(err error) MockBlueprintLoaderOption {
@@ -155,6 +228,41 @@ func WithDeployTracker(tracker *DeployTracker) MockBlueprintLoaderOption {
 func WithRollbackDeployEventSequence(events []container.DeployEvent) MockBlueprintLoaderOption {
 	return func(loader *MockBlueprintLoader) {
 		loader.rollbackDeployEventSequence = events
+	}
+}
+
+// WithReconciliationTracker configures a ReconciliationTracker to track reconciliation calls.
+func WithReconciliationTracker(tracker *ReconciliationTracker) MockBlueprintLoaderOption {
+	return func(loader *MockBlueprintLoader) {
+		loader.ReconciliationTracker = tracker
+	}
+}
+
+// WithCheckReconciliationResult configures the result to return from CheckReconciliation.
+func WithCheckReconciliationResult(result *container.ReconciliationCheckResult) MockBlueprintLoaderOption {
+	return func(loader *MockBlueprintLoader) {
+		loader.checkReconciliationResult = result
+	}
+}
+
+// WithCheckReconciliationError configures an error to return from CheckReconciliation.
+func WithCheckReconciliationError(err error) MockBlueprintLoaderOption {
+	return func(loader *MockBlueprintLoader) {
+		loader.checkReconciliationError = err
+	}
+}
+
+// WithApplyReconciliationResult configures the result to return from ApplyReconciliation.
+func WithApplyReconciliationResult(result *container.ApplyReconciliationResult) MockBlueprintLoaderOption {
+	return func(loader *MockBlueprintLoader) {
+		loader.applyReconciliationResult = result
+	}
+}
+
+// WithApplyReconciliationError configures an error to return from ApplyReconciliation.
+func WithApplyReconciliationError(err error) MockBlueprintLoaderOption {
+	return func(loader *MockBlueprintLoader) {
+		loader.applyReconciliationError = err
 	}
 }
 
@@ -198,6 +306,11 @@ func (m *MockBlueprintLoader) Load(
 		deployTracker:               m.DeployTracker,
 		destroyEventSequence:        m.destroyEventSequence,
 		rollbackDeployEventSequence: m.rollbackDeployEventSequence,
+		reconciliationTracker:       m.ReconciliationTracker,
+		checkReconciliationResult:   m.checkReconciliationResult,
+		checkReconciliationError:    m.checkReconciliationError,
+		applyReconciliationResult:   m.applyReconciliationResult,
+		applyReconciliationError:    m.applyReconciliationError,
 	}, nil
 }
 
@@ -229,6 +342,11 @@ func (m *MockBlueprintLoader) LoadString(
 		deployTracker:               m.DeployTracker,
 		destroyEventSequence:        m.destroyEventSequence,
 		rollbackDeployEventSequence: m.rollbackDeployEventSequence,
+		reconciliationTracker:       m.ReconciliationTracker,
+		checkReconciliationResult:   m.checkReconciliationResult,
+		checkReconciliationError:    m.checkReconciliationError,
+		applyReconciliationResult:   m.applyReconciliationResult,
+		applyReconciliationError:    m.applyReconciliationError,
 	}, nil
 }
 
@@ -260,6 +378,11 @@ func (m *MockBlueprintLoader) LoadFromSchema(
 		deployTracker:               m.DeployTracker,
 		destroyEventSequence:        m.destroyEventSequence,
 		rollbackDeployEventSequence: m.rollbackDeployEventSequence,
+		reconciliationTracker:       m.ReconciliationTracker,
+		checkReconciliationResult:   m.checkReconciliationResult,
+		checkReconciliationError:    m.checkReconciliationError,
+		applyReconciliationResult:   m.applyReconciliationResult,
+		applyReconciliationError:    m.applyReconciliationError,
 	}, nil
 }
 
@@ -285,6 +408,11 @@ type MockBlueprintContainer struct {
 	deployTracker               *DeployTracker
 	destroyEventSequence        []container.DeployEvent
 	rollbackDeployEventSequence []container.DeployEvent
+	reconciliationTracker       *ReconciliationTracker
+	checkReconciliationResult   *container.ReconciliationCheckResult
+	checkReconciliationError    error
+	applyReconciliationResult   *container.ApplyReconciliationResult
+	applyReconciliationError    error
 }
 
 func (m *MockBlueprintContainer) StageChanges(
@@ -442,4 +570,59 @@ func (m *MockBlueprintContainer) ResourceTemplates() map[string]string {
 
 func (m *MockBlueprintContainer) Diagnostics() []*core.Diagnostic {
 	return m.stubDiagnostics
+}
+
+func (m *MockBlueprintContainer) CheckReconciliation(
+	ctx context.Context,
+	input *container.CheckReconciliationInput,
+	paramOverrides core.BlueprintParams,
+) (*container.ReconciliationCheckResult, error) {
+	// Track the check call if a tracker is configured
+	if m.reconciliationTracker != nil {
+		m.reconciliationTracker.RecordCheckCall(input)
+	}
+
+	if m.checkReconciliationError != nil {
+		return nil, m.checkReconciliationError
+	}
+
+	if m.checkReconciliationResult != nil {
+		return m.checkReconciliationResult, nil
+	}
+
+	// Return an empty result if no result was configured
+	return &container.ReconciliationCheckResult{
+		InstanceID:     input.InstanceID,
+		Resources:      []container.ResourceReconcileResult{},
+		Links:          []container.LinkReconcileResult{},
+		HasInterrupted: false,
+		HasDrift:       false,
+	}, nil
+}
+
+func (m *MockBlueprintContainer) ApplyReconciliation(
+	ctx context.Context,
+	input *container.ApplyReconciliationInput,
+	paramOverrides core.BlueprintParams,
+) (*container.ApplyReconciliationResult, error) {
+	// Track the apply call if a tracker is configured
+	if m.reconciliationTracker != nil {
+		m.reconciliationTracker.RecordApplyCall(input)
+	}
+
+	if m.applyReconciliationError != nil {
+		return nil, m.applyReconciliationError
+	}
+
+	if m.applyReconciliationResult != nil {
+		return m.applyReconciliationResult, nil
+	}
+
+	// Return a default result if no result was configured
+	return &container.ApplyReconciliationResult{
+		InstanceID:       input.InstanceID,
+		ResourcesUpdated: len(input.ResourceActions),
+		LinksUpdated:     len(input.LinkActions),
+		Errors:           []container.ReconciliationError{},
+	}, nil
 }

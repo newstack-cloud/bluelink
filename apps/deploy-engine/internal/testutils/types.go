@@ -10,7 +10,15 @@ type ChangeStagingEvent struct {
 	ChildChangesEvent     *container.ChildChangesMessage
 	LinkChangesEvent      *container.LinkChangesMessage
 	FinalBlueprintChanges *changes.BlueprintChanges
+	DriftDetectedEvent    *DriftDetectedEventData
 	Error                 error
+}
+
+// DriftDetectedEventData represents the data from a drift detected event.
+type DriftDetectedEventData struct {
+	Message              string                                `json:"message"`
+	ReconciliationResult *container.ReconciliationCheckResult `json:"reconciliationResult"`
+	Timestamp            int64                                 `json:"timestamp"`
 }
 
 type DeployEventWrapper struct {

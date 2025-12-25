@@ -29,6 +29,7 @@ func NewMemoryStateContainer() state.Container {
 	resources := map[string]*state.ResourceState{}
 	resourceDrift := map[string]*state.ResourceDriftState{}
 	links := map[string]*state.LinkState{}
+	linkDrift := map[string]*state.LinkDriftState{}
 	resourceDataMappingIDs := map[string]map[string][]string{}
 
 	mu := &sync.RWMutex{}
@@ -49,6 +50,7 @@ func NewMemoryStateContainer() state.Container {
 		linksContainer: &memoryLinksContainer{
 			instances:              instances,
 			links:                  links,
+			linkDrift:              linkDrift,
 			resourceDataMappingIDs: resourceDataMappingIDs,
 			mu:                     mu,
 		},
@@ -377,6 +379,7 @@ func (c *memoryResourcesContainer) RemoveDrift(
 type memoryLinksContainer struct {
 	instances              map[string]*state.InstanceState
 	links                  map[string]*state.LinkState
+	linkDrift              map[string]*state.LinkDriftState
 	resourceDataMappingIDs map[string]map[string][]string
 	mu                     *sync.RWMutex
 }
@@ -529,6 +532,60 @@ func (c *memoryLinksContainer) Remove(ctx context.Context, linkID string) (state
 	}
 
 	return state.LinkState{}, state.LinkNotFoundError(linkID)
+}
+
+func (c *memoryLinksContainer) GetDrift(ctx context.Context, linkID string) (state.LinkDriftState, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if driftState, ok := c.linkDrift[linkID]; ok {
+		if driftState != nil {
+			return *driftState, nil
+		}
+	}
+
+	return state.LinkDriftState{}, nil
+}
+
+func (c *memoryLinksContainer) SaveDrift(ctx context.Context, driftState state.LinkDriftState) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	link, ok := c.links[driftState.LinkID]
+	if ok {
+		link.Drifted = true
+		link.LastDriftDetectedTimestamp = driftState.Timestamp
+	} else {
+		return state.LinkNotFoundError(driftState.LinkID)
+	}
+
+	c.linkDrift[driftState.LinkID] = &driftState
+
+	return nil
+}
+
+func (c *memoryLinksContainer) RemoveDrift(ctx context.Context, linkID string) (state.LinkDriftState, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	link, ok := c.links[linkID]
+	if ok {
+		link.Drifted = false
+		link.LastDriftDetectedTimestamp = nil
+	} else {
+		return state.LinkDriftState{}, state.LinkNotFoundError(linkID)
+	}
+
+	driftState, ok := c.linkDrift[linkID]
+	if ok {
+		delete(c.linkDrift, linkID)
+		return *driftState, nil
+	}
+
+	// No drift entry for a specific link is fine,
+	// indicating drift had already been removed or was never set
+	// for the link.
+	return state.LinkDriftState{}, nil
 }
 
 type memoryMetadataContainer struct {

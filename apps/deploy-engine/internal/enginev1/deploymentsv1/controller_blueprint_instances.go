@@ -206,10 +206,11 @@ func (c *Controller) DestroyBlueprintInstanceHandler(
 	// Check if changeset has drift detected status and block the destroy unless force is set
 	if !payload.Force {
 		if changeset.Status == manage.ChangesetStatusDriftDetected {
-			respondWithDriftBlocked(
+			c.respondWithDriftBlocked(
+				r.Context(),
 				w,
 				instance.InstanceID,
-				changeset.ID,
+				changeset,
 			)
 			return
 		}
@@ -293,10 +294,11 @@ func (c *Controller) handleDeployRequest(
 	// and block the deployment unless force is set
 	if existingInstance != nil && !payload.Force {
 		if changeset.Status == manage.ChangesetStatusDriftDetected {
-			respondWithDriftBlocked(
+			c.respondWithDriftBlocked(
+				r.Context(),
 				w,
 				existingInstance.InstanceID,
-				changeset.ID,
+				changeset,
 			)
 			return
 		}
@@ -985,16 +987,25 @@ func (c *Controller) saveDeploymentEvent(
 
 // respondWithDriftBlocked sends a 409 Conflict response when an operation
 // is blocked due to drift detection on the changeset.
-func respondWithDriftBlocked(
+func (c *Controller) respondWithDriftBlocked(
+	ctx context.Context,
 	w http.ResponseWriter,
 	instanceID string,
-	changesetID string,
+	changeset *manage.Changeset,
 ) {
+	// Lookup the reconciliation result from the separate store
+	var result *container.ReconciliationCheckResult
+	reconciliationResult, err := c.reconciliationResultsStore.GetLatestByChangesetID(ctx, changeset.ID)
+	if err == nil && reconciliationResult != nil {
+		result = reconciliationResult.Result
+	}
+
 	response := &DriftBlockedResponse{
-		Message:     "Operation blocked due to drift detection. Reconciliation is required before proceeding.",
-		InstanceID:  instanceID,
-		ChangesetID: changesetID,
-		Hint:        "Use the reconciliation endpoints to review and resolve drift, or set force=true to bypass this check.",
+		Message:              "Operation blocked due to drift detection. Reconciliation is required before proceeding.",
+		InstanceID:           instanceID,
+		ChangesetID:          changeset.ID,
+		ReconciliationResult: result,
+		Hint:                 "Use the reconciliation endpoints to review and resolve drift, or set force=true to bypass this check.",
 	}
 	httputils.HTTPJSONResponse(
 		w,

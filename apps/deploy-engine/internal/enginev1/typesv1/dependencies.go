@@ -15,18 +15,19 @@ import (
 // that are required by the controllers that provide HTTP handlers
 // for v1 of the Deploy Engine API.
 type Dependencies struct {
-	EventStore           manage.Events
-	ValidationStore      manage.Validation
-	ChangesetStore       manage.Changesets
-	Instances            state.InstancesContainer
-	Exports              state.ExportsContainer
-	IDGenerator          core.IDGenerator
-	EventIDGenerator     core.IDGenerator
-	ValidationLoader     container.Loader
-	DeploymentLoader     container.Loader
-	BlueprintResolver    includes.ChildResolver
-	ParamsProvider       params.Provider
-	PluginConfigPreparer pluginconfig.Preparer
-	Clock                commoncore.Clock
-	Logger               core.Logger
+	EventStore                 manage.Events
+	ValidationStore            manage.Validation
+	ChangesetStore             manage.Changesets
+	ReconciliationResultsStore manage.ReconciliationResults
+	Instances                  state.InstancesContainer
+	Exports                    state.ExportsContainer
+	IDGenerator                core.IDGenerator
+	EventIDGenerator           core.IDGenerator
+	ValidationLoader           container.Loader
+	DeploymentLoader           container.Loader
+	BlueprintResolver          includes.ChildResolver
+	ParamsProvider             params.Provider
+	PluginConfigPreparer       pluginconfig.Preparer
+	Clock                      commoncore.Clock
+	Logger                     core.Logger
 }
