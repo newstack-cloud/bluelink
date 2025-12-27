@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.37.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.36.4...blueprint/v0.37.0) (2025-12-27)
+
+
+### Features
+
+* **blueprint:** add drift detection and reconciliation support for child blueprints ([347894f](https://github.com/newstack-cloud/bluelink/commit/347894fea55e338d924eef57886a4adf0bfda97e))
+* **blueprint:** add support for advanced reconciliation and drift checks ([b889111](https://github.com/newstack-cloud/bluelink/commit/b8891116050e5f2c5d11d48e37853cb65e6f28be))
+
+
+### Bug Fixes
+
+* **blueprint:** add missing json struct tags to reconciliation types ([053f155](https://github.com/newstack-cloud/bluelink/commit/053f155d0067bfa22732aff27afd0cd9ab19e67d))
+* **blueprint:** improve failure handling for deployment orchestration ([3bedabc](https://github.com/newstack-cloud/bluelink/commit/3bedabcc1107edb05f1a71b3b4e2e9a1f974bd98))
+
 ## [0.36.4](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.36.3...blueprint/v0.36.4) (2025-12-16)
 
 
