@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.1.4...plugin-framework/v0.2.0) (2025-12-27)
+
+
+### Features
+
+* **plugin-framework:** add support for retrieving link intermediary resource external state ([d2be290](https://github.com/newstack-cloud/bluelink/commit/d2be2904ee6ba1fae5383d34e3f56175262d3607))
+
 ## [0.1.4](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.1.3...plugin-framework/v0.1.4) (2025-12-16)
 
 
