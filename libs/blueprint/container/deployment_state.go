@@ -25,6 +25,9 @@ type DeploymentState interface {
 	// SetCreatedElement marks an element in the current
 	// deployment as created.
 	SetCreatedElement(element state.Element)
+	// SetInterruptedElement marks an element in the current
+	// deployment as interrupted (removed from in-progress tracking).
+	SetInterruptedElement(element state.Element)
 	// SetElementInProgress marks an element in the current
 	// deployment as in progress.
 	SetElementInProgress(element state.Element)
@@ -93,6 +96,12 @@ type DeploymentState interface {
 	// (started but not completed). This is used to mark elements as interrupted
 	// when drain timeout is reached.
 	GetInFlightElements() []state.Element
+	// UpdateElementID updates the ID of an element in the in-progress and
+	// deployment-started tracking maps. This is called when the element's ID
+	// becomes available (e.g., when a resource is created and assigned an ID).
+	// This ensures that markInFlightElementsAsInterrupted can properly identify
+	// elements and send INTERRUPTED messages with the correct IDs.
+	UpdateElementID(element state.Element)
 }
 
 // CollectedResourceData holds the spec state and metadata for a resource that is being deployed,
@@ -221,6 +230,17 @@ func (d *defaultDeploymentState) SetCreatedElement(element state.Element) {
 	delete(d.inProgress, getNamespacedLogicalName(element))
 	delete(d.configComplete, getNamespacedLogicalName(element))
 	d.created[getNamespacedLogicalName(element)] = element
+}
+
+func (d *defaultDeploymentState) SetInterruptedElement(element state.Element) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	// Remove from in-progress and config-complete tracking.
+	// Interrupted elements are not added to any completion map since they
+	// didn't complete successfully.
+	delete(d.inProgress, getNamespacedLogicalName(element))
+	delete(d.configComplete, getNamespacedLogicalName(element))
 }
 
 func (d *defaultDeploymentState) SetElementInProgress(element state.Element) {
@@ -458,6 +478,20 @@ func (d *defaultDeploymentState) GetInFlightElements() []state.Element {
 		inFlight = append(inFlight, elem)
 	}
 	return inFlight
+}
+
+func (d *defaultDeploymentState) UpdateElementID(element state.Element) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	key := getNamespacedLogicalName(element)
+	// Only update if the element is being tracked (in inProgress or deploymentStarted)
+	if _, exists := d.inProgress[key]; exists {
+		d.inProgress[key] = element
+	}
+	if _, exists := d.deploymentStarted[key]; exists {
+		d.deploymentStarted[key] = element
+	}
 }
 
 func copyLinkDeployResult(result *LinkDeployResult) *LinkDeployResult {

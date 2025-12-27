@@ -215,6 +215,7 @@ func (d *defaultResourceDeployer) deployResource(
 
 	// Check for context cancellation before calling the plugin.
 	// This allows us to exit early if the deployment has been interrupted.
+	// The drain mechanism will send INTERRUPTED status via markInFlightElementsAsInterrupted.
 	select {
 	case <-ctx.Done():
 		deployCtx.Logger.Debug("context cancelled before resource deployment")

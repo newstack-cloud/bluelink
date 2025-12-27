@@ -558,7 +558,7 @@ func (s *ContainerDeployTestSuite) Test_context_cancellation_drains_in_progress_
 	)
 	s.Require().NoError(err)
 
-	// Collect remaining messages - we should get a proper error message
+	// Collect remaining messages - we should get a finish message with failure status
 	// due to the draining behavior, not just hang forever
 	var finishMsg *DeploymentFinishedMessage
 	var channelErr error
@@ -576,12 +576,14 @@ func (s *ContainerDeployTestSuite) Test_context_cancellation_drains_in_progress_
 		}
 	}
 
-	// We should get a context cancelled error propagated
-	s.Assert().Error(channelErr)
-	s.Assert().ErrorIs(channelErr, context.Canceled)
+	// With drain mechanism, context cancellation results in a finish message
+	// with failure status, not an error on ErrChan
+	s.Assert().NoError(channelErr)
+	s.Assert().NotNil(finishMsg)
+	s.Assert().Equal(core.InstanceStatusDeployFailed, finishMsg.Status)
 }
 
-func (s *ContainerDeployTestSuite) Test_context_timeout_during_deployment_returns_error() {
+func (s *ContainerDeployTestSuite) Test_context_timeout_during_deployment_finishes_with_failure_status() {
 	channels := CreateDeployChannels()
 	// Stage changes before deploying to get a change set derived from the test fixture
 	// state without having to manually create a change set fixture.
@@ -609,7 +611,7 @@ func (s *ContainerDeployTestSuite) Test_context_timeout_during_deployment_return
 	)
 	s.Require().NoError(err)
 
-	// Collect messages - we should get an error due to the timeout
+	// Collect messages - we should get a finish message with failure status
 	// The draining behavior ensures we don't hang forever
 	var finishMsg *DeploymentFinishedMessage
 	var channelErr error
@@ -627,9 +629,11 @@ func (s *ContainerDeployTestSuite) Test_context_timeout_during_deployment_return
 		}
 	}
 
-	// We should get a context deadline exceeded error propagated
-	s.Assert().Error(channelErr)
-	s.Assert().ErrorIs(channelErr, context.DeadlineExceeded)
+	// With drain mechanism, context deadline exceeded results in a finish message
+	// with failure status, not an error on ErrChan
+	s.Assert().NoError(channelErr)
+	s.Assert().NotNil(finishMsg)
+	s.Assert().Equal(core.InstanceStatusDeployFailed, finishMsg.Status)
 }
 
 func (s *ContainerDeployTestSuite) stageChanges(

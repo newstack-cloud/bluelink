@@ -2,12 +2,17 @@ package deployui
 
 import (
 	"context"
+	"log"
 	"net/url"
 	"path"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/driftui"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
+	engineerrors "github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
 	"github.com/newstack-cloud/deploy-cli-sdk/consts"
 )
@@ -48,32 +53,11 @@ func startDeploymentCmd(model DeployModel) tea.Cmd {
 			return DeployErrorMsg{Err: err}
 		}
 
-		var instanceID string
-
-		if model.instanceID != "" {
-			// Update existing instance
-			instance, err := model.engine.UpdateBlueprintInstance(
-				context.TODO(),
-				model.instanceID,
-				payload,
-			)
-			if err != nil {
-				return DeployErrorMsg{Err: err}
-			}
-			instanceID = instance.InstanceID
-		} else {
-			// Create new instance
-			instance, err := model.engine.CreateBlueprintInstance(
-				context.TODO(),
-				payload,
-			)
-			if err != nil {
-				return DeployErrorMsg{Err: err}
-			}
-			instanceID = instance.InstanceID
+		instanceID, err := createOrUpdateInstance(model, payload)
+		if err != nil {
+			return handleDeployError(err, model.instanceID)
 		}
 
-		// Start streaming events
 		err = model.engine.StreamBlueprintInstanceEvents(
 			context.TODO(),
 			instanceID,
@@ -88,117 +72,132 @@ func startDeploymentCmd(model DeployModel) tea.Cmd {
 	}
 }
 
+// createOrUpdateInstance creates a new instance or updates an existing one.
+func createOrUpdateInstance(model DeployModel, payload *types.BlueprintInstancePayload) (string, error) {
+	if model.instanceID != "" {
+		instance, err := model.engine.UpdateBlueprintInstance(
+			context.TODO(),
+			model.instanceID,
+			payload,
+		)
+		if err != nil {
+			return "", err
+		}
+		return instance.InstanceID, nil
+	}
+
+	instance, err := model.engine.CreateBlueprintInstance(
+		context.TODO(),
+		payload,
+	)
+	if err != nil {
+		return "", err
+	}
+	return instance.InstanceID, nil
+}
+
+// handleDeployError converts deployment errors to appropriate messages,
+// including drift detection for 409 responses.
+func handleDeployError(err error, fallbackInstanceID string) tea.Msg {
+	clientErr, isDriftBlocked := engineerrors.IsDriftBlockedError(err)
+	if !isDriftBlocked {
+		return DeployErrorMsg{Err: err}
+	}
+
+	instanceID := clientErr.DriftBlockedResponse.InstanceID
+	if instanceID == "" {
+		instanceID = fallbackInstanceID
+	}
+
+	return driftui.DriftDetectedMsg{
+		ReconciliationResult: clientErr.DriftBlockedResponse.ReconciliationResult,
+		Message:              clientErr.Message,
+		InstanceID:           instanceID,
+		ChangesetID:          clientErr.DriftBlockedResponse.ChangesetID,
+	}
+}
+
 func createDeployPayload(model DeployModel) (*types.BlueprintInstancePayload, error) {
-	switch model.blueprintSource {
+	docInfo, err := buildDocumentInfo(model.blueprintSource, model.blueprintFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.BlueprintInstancePayload{
+		BlueprintDocumentInfo: docInfo,
+		InstanceName:          model.instanceName,
+		ChangeSetID:           model.changesetID,
+		AsRollback:            model.asRollback,
+		AutoRollback:          model.autoRollback,
+		Force:                 model.force,
+	}, nil
+}
+
+// buildDocumentInfo creates BlueprintDocumentInfo based on the source type.
+func buildDocumentInfo(source string, blueprintFile string) (types.BlueprintDocumentInfo, error) {
+	switch source {
 	case consts.BlueprintSourceHTTPS:
-		return createDeployPayloadForHTTPS(model)
+		return buildHTTPSDocumentInfo(blueprintFile)
 	case consts.BlueprintSourceS3:
-		return createDeployPayloadForS3(model)
+		return buildObjectStorageDocumentInfo(blueprintFile, "s3"), nil
 	case consts.BlueprintSourceGCS:
-		return createDeployPayloadForGCS(model)
+		return buildObjectStorageDocumentInfo(blueprintFile, "gcs"), nil
 	case consts.BlueprintSourceAzureBlob:
-		return createDeployPayloadForAzureBlob(model)
+		return buildObjectStorageDocumentInfo(blueprintFile, "azureblob"), nil
 	default:
-		return createDeployPayloadForLocalFile(model)
+		return buildLocalFileDocumentInfo(blueprintFile)
 	}
 }
 
-func createDeployPayloadForLocalFile(
-	model DeployModel,
-) (*types.BlueprintInstancePayload, error) {
-	// Convert to absolute path to ensure child blueprints can be resolved
-	// relative to the parent blueprint's directory.
-	absPath, err := filepath.Abs(model.blueprintFile)
+func buildLocalFileDocumentInfo(blueprintFile string) (types.BlueprintDocumentInfo, error) {
+	absPath, err := filepath.Abs(blueprintFile)
 	if err != nil {
-		return nil, err
+		return types.BlueprintDocumentInfo{}, err
 	}
-	directory := filepath.Dir(absPath)
-	file := filepath.Base(absPath)
-	return &types.BlueprintInstancePayload{
-		BlueprintDocumentInfo: types.BlueprintDocumentInfo{
-			FileSourceScheme: "file",
-			Directory:        directory,
-			BlueprintFile:    file,
-		},
-		InstanceName: model.instanceName,
-		ChangeSetID:  model.changesetID,
-		AsRollback:   model.asRollback,
-		AutoRollback: model.autoRollback,
-		Force:        model.force,
+	return types.BlueprintDocumentInfo{
+		FileSourceScheme: "file",
+		Directory:        filepath.Dir(absPath),
+		BlueprintFile:    filepath.Base(absPath),
 	}, nil
 }
 
-func createDeployPayloadForS3(
-	model DeployModel,
-) (*types.BlueprintInstancePayload, error) {
-	return createDeployPayloadForObjectStorage(model, "s3")
+func buildObjectStorageDocumentInfo(blueprintFile, scheme string) types.BlueprintDocumentInfo {
+	return types.BlueprintDocumentInfo{
+		FileSourceScheme: scheme,
+		Directory:        path.Dir(blueprintFile),
+		BlueprintFile:    path.Base(blueprintFile),
+	}
 }
 
-func createDeployPayloadForGCS(
-	model DeployModel,
-) (*types.BlueprintInstancePayload, error) {
-	return createDeployPayloadForObjectStorage(model, "gcs")
-}
-
-func createDeployPayloadForAzureBlob(
-	model DeployModel,
-) (*types.BlueprintInstancePayload, error) {
-	return createDeployPayloadForObjectStorage(model, "azureblob")
-}
-
-func createDeployPayloadForObjectStorage(
-	model DeployModel,
-	scheme string,
-) (*types.BlueprintInstancePayload, error) {
-	directory := path.Dir(model.blueprintFile)
-	file := path.Base(model.blueprintFile)
-	return &types.BlueprintInstancePayload{
-		BlueprintDocumentInfo: types.BlueprintDocumentInfo{
-			FileSourceScheme: scheme,
-			Directory:        directory,
-			BlueprintFile:    file,
-		},
-		InstanceName: model.instanceName,
-		ChangeSetID:  model.changesetID,
-		AsRollback:   model.asRollback,
-		AutoRollback: model.autoRollback,
-		Force:        model.force,
-	}, nil
-}
-
-func createDeployPayloadForHTTPS(
-	model DeployModel,
-) (*types.BlueprintInstancePayload, error) {
-	parsedURL, err := url.Parse(model.blueprintFile)
+func buildHTTPSDocumentInfo(blueprintFile string) (types.BlueprintDocumentInfo, error) {
+	parsedURL, err := url.Parse(blueprintFile)
 	if err != nil {
-		return nil, err
+		return types.BlueprintDocumentInfo{}, err
 	}
 
 	basePath := path.Dir(parsedURL.Path)
 	if basePath == "/" {
 		basePath = ""
 	}
-	file := path.Base(parsedURL.Path)
-	return &types.BlueprintInstancePayload{
-		BlueprintDocumentInfo: types.BlueprintDocumentInfo{
-			FileSourceScheme: "https",
-			Directory:        basePath,
-			BlueprintFile:    file,
-			BlueprintLocationMetadata: map[string]any{
-				"host": parsedURL.Host,
-			},
+
+	return types.BlueprintDocumentInfo{
+		FileSourceScheme: "https",
+		Directory:        basePath,
+		BlueprintFile:    path.Base(parsedURL.Path),
+		BlueprintLocationMetadata: map[string]any{
+			"host": parsedURL.Host,
 		},
-		InstanceName: model.instanceName,
-		ChangeSetID:  model.changesetID,
-		AsRollback:   model.asRollback,
-		AutoRollback: model.autoRollback,
-		Force:        model.force,
 	}, nil
 }
 
 func waitForNextDeployEventCmd(model DeployModel) tea.Cmd {
 	return func() tea.Msg {
-		event := <-model.eventStream
+		log.Printf("DEBUG: waiting for next deploy event...\n")
+		event, ok := <-model.eventStream
+		if !ok {
+			log.Printf("DEBUG: eventStream channel was CLOSED\n")
+		}
+		log.Printf("received deploy event: %s\n\n", event.String())
 		return DeployEventMsg(event)
 	}
 }
@@ -210,6 +209,7 @@ func checkForErrCmd(model DeployModel) tea.Cmd {
 		case <-time.After(1 * time.Second):
 			break
 		case newErr := <-model.errStream:
+			log.Printf("received deploy error: %+v\n\n", newErr)
 			err = newErr
 		}
 		return DeployErrorMsg{Err: err}
@@ -223,40 +223,161 @@ func checkForErrCmd(model DeployModel) tea.Cmd {
 // If it exists, we use the instance ID for staging against the existing instance.
 func resolveInstanceIdentifiersCmd(model MainModel) tea.Cmd {
 	return func() tea.Msg {
-		// If we already have an instance ID, use it as-is
-		if model.instanceID != "" {
-			return InstanceResolvedMsg{
-				InstanceID:   model.instanceID,
-				InstanceName: model.instanceName,
-			}
-		}
-
-		// If we have an instance name but no ID, try to look it up
-		// GetBlueprintInstance accepts an ID that can be either an ID or a name
-		if model.instanceName != "" {
-			instance, err := model.engine.GetBlueprintInstance(
-				context.TODO(),
-				model.instanceName,
-			)
-			if err == nil && instance != nil {
-				// Instance exists - use its ID
-				return InstanceResolvedMsg{
-					InstanceID:   instance.InstanceID,
-					InstanceName: model.instanceName,
-				}
-			}
-			// Instance doesn't exist - this is a new deployment
-			// Stage with no instance identifiers
-			return InstanceResolvedMsg{
-				InstanceID:   "",
-				InstanceName: "",
-			}
-		}
-
-		// No instance identifiers provided
+		instanceID, instanceName := resolveInstanceIdentifiers(model)
 		return InstanceResolvedMsg{
-			InstanceID:   "",
-			InstanceName: "",
+			InstanceID:   instanceID,
+			InstanceName: instanceName,
 		}
+	}
+}
+
+// resolveInstanceIdentifiers looks up instance identifiers, returning the resolved ID and name.
+func resolveInstanceIdentifiers(model MainModel) (instanceID, instanceName string) {
+	// If we already have an instance ID, use it as-is
+	if model.instanceID != "" {
+		return model.instanceID, model.instanceName
+	}
+
+	// No instance name provided - new deployment
+	if model.instanceName == "" {
+		return "", ""
+	}
+
+	// Try to look up the instance by name
+	// GetBlueprintInstance accepts an ID that can be either an ID or a name
+	instance, err := model.engine.GetBlueprintInstance(context.TODO(), model.instanceName)
+	if err != nil || instance == nil {
+		// Instance doesn't exist - new deployment with no identifiers
+		return "", ""
+	}
+
+	// Instance exists - use its ID
+	return instance.InstanceID, model.instanceName
+}
+
+// applyReconciliationCmd applies reconciliation to accept external changes.
+func applyReconciliationCmd(model DeployModel) tea.Cmd {
+	return func() tea.Msg {
+		if model.driftResult == nil {
+			return driftui.ReconciliationErrorMsg{Err: nil}
+		}
+
+		payload := buildAcceptExternalPayload(model.driftResult, model)
+		instanceID := getEffectiveInstanceID(model.instanceID, model.instanceName)
+
+		_, err := model.engine.ApplyReconciliation(context.TODO(), instanceID, payload)
+		if err != nil {
+			return driftui.ReconciliationErrorMsg{Err: err}
+		}
+
+		return driftui.ReconciliationCompleteMsg{
+			ResourcesUpdated: len(model.driftResult.Resources),
+			LinksUpdated:     len(model.driftResult.Links),
+		}
+	}
+}
+
+// getEffectiveInstanceID returns the instance ID, falling back to instance name if ID is empty.
+func getEffectiveInstanceID(instanceID, instanceName string) string {
+	if instanceID != "" {
+		return instanceID
+	}
+	return instanceName
+}
+
+// buildAcceptExternalPayload builds the reconciliation payload from the drift result.
+func buildAcceptExternalPayload(
+	result *container.ReconciliationCheckResult,
+	model DeployModel,
+) *types.ApplyReconciliationPayload {
+	return &types.ApplyReconciliationPayload{
+		BlueprintDocumentInfo: buildBlueprintDocumentInfo(model),
+		ResourceActions:       buildResourceActions(result.Resources),
+		LinkActions:           buildLinkActions(result.Links),
+	}
+}
+
+func buildResourceActions(resources []container.ResourceReconcileResult) []types.ResourceReconcileActionPayload {
+	actions := make([]types.ResourceReconcileActionPayload, 0, len(resources))
+	for _, r := range resources {
+		actions = append(actions, types.ResourceReconcileActionPayload{
+			ResourceID:    r.ResourceID,
+			ChildPath:     r.ChildPath,
+			Action:        string(r.RecommendedAction),
+			ExternalState: r.ExternalState,
+			NewStatus:     strconv.Itoa(int(r.NewStatus)),
+		})
+	}
+	return actions
+}
+
+func buildLinkActions(links []container.LinkReconcileResult) []types.LinkReconcileActionPayload {
+	actions := make([]types.LinkReconcileActionPayload, 0, len(links))
+	for _, l := range links {
+		actions = append(actions, types.LinkReconcileActionPayload{
+			LinkID:              l.LinkID,
+			ChildPath:           l.ChildPath,
+			Action:              string(l.RecommendedAction),
+			NewStatus:           strconv.Itoa(int(l.NewStatus)),
+			LinkDataUpdates:     l.LinkDataUpdates,
+			IntermediaryActions: buildIntermediaryActions(l.IntermediaryChanges),
+		})
+	}
+	return actions
+}
+
+func buildIntermediaryActions(
+	changes map[string]*container.IntermediaryReconcileResult,
+) map[string]*types.IntermediaryReconcileActionPayload {
+	if len(changes) == 0 {
+		return nil
+	}
+
+	actions := make(map[string]*types.IntermediaryReconcileActionPayload, len(changes))
+	for name, intResult := range changes {
+		actions[name] = &types.IntermediaryReconcileActionPayload{
+			Action:        string(container.ReconciliationActionAcceptExternal),
+			ExternalState: intResult.ExternalState,
+			NewStatus:     "created",
+		}
+	}
+	return actions
+}
+
+// buildBlueprintDocumentInfo creates BlueprintDocumentInfo from the deploy model.
+// It reuses the payload creation logic and extracts just the document info.
+func buildBlueprintDocumentInfo(model DeployModel) types.BlueprintDocumentInfo {
+	payload, err := createDeployPayload(model)
+	if err != nil {
+		return types.BlueprintDocumentInfo{}
+	}
+	return payload.BlueprintDocumentInfo
+}
+
+// continueDeploymentCmd continues deployment after reconciliation.
+// This uses the changeset ID from the 409 response to resume deployment.
+func continueDeploymentCmd(model DeployModel) tea.Cmd {
+	return func() tea.Msg {
+		payload, err := createDeployPayload(model)
+		if err != nil {
+			return DeployErrorMsg{Err: err}
+		}
+
+		instanceID, err := createOrUpdateInstance(model, payload)
+		if err != nil {
+			return DeployErrorMsg{Err: err}
+		}
+
+		err = model.engine.StreamBlueprintInstanceEvents(
+			context.TODO(),
+			instanceID,
+			model.eventStream,
+			model.errStream,
+		)
+		if err != nil {
+			return DeployErrorMsg{Err: err}
+		}
+
+		return DeployStartedMsg{InstanceID: instanceID}
 	}
 }

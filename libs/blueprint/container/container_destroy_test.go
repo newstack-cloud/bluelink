@@ -537,7 +537,7 @@ func (s *ContainerDestroyTestSuite) Test_context_cancellation_drains_in_progress
 		blueprintDestroyParams(),
 	)
 
-	// Collect remaining messages - we should get a proper error message
+	// Collect remaining messages - we should get a finish message with failure status
 	// due to the draining behavior, not just hang forever
 	var finishMsg *DeploymentFinishedMessage
 	var channelErr error
@@ -555,12 +555,14 @@ func (s *ContainerDestroyTestSuite) Test_context_cancellation_drains_in_progress
 		}
 	}
 
-	// We should get a context cancelled error propagated
-	s.Assert().Error(channelErr)
-	s.Assert().ErrorIs(channelErr, context.Canceled)
+	// With drain mechanism, context cancellation results in a finish message
+	// with failure status, not an error on ErrChan
+	s.Assert().NoError(channelErr)
+	s.Assert().NotNil(finishMsg)
+	s.Assert().Equal(core.InstanceStatusDestroyFailed, finishMsg.Status)
 }
 
-func (s *ContainerDestroyTestSuite) Test_context_timeout_during_destroy_returns_error() {
+func (s *ContainerDestroyTestSuite) Test_context_timeout_during_destroy_finishes_with_failure_status() {
 	channels := CreateDeployChannels()
 
 	// Create a context that is already timed out
@@ -578,7 +580,7 @@ func (s *ContainerDestroyTestSuite) Test_context_timeout_during_destroy_returns_
 		blueprintDestroyParams(),
 	)
 
-	// Collect messages - we should get an error due to the timeout
+	// Collect messages - we should get a finish message with failure status
 	// The draining behavior ensures we don't hang forever
 	var finishMsg *DeploymentFinishedMessage
 	var channelErr error
@@ -596,9 +598,11 @@ func (s *ContainerDestroyTestSuite) Test_context_timeout_during_destroy_returns_
 		}
 	}
 
-	// We should get a context deadline exceeded error propagated
-	s.Assert().Error(channelErr)
-	s.Assert().ErrorIs(channelErr, context.DeadlineExceeded)
+	// With drain mechanism, context deadline exceeded results in a finish message
+	// with failure status, not an error on ErrChan
+	s.Assert().NoError(channelErr)
+	s.Assert().NotNil(finishMsg)
+	s.Assert().Equal(core.InstanceStatusDestroyFailed, finishMsg.Status)
 }
 
 func blueprint1RemovalChanges() *changes.BlueprintChanges {

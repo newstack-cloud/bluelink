@@ -178,11 +178,26 @@ func (d *defaultChildBlueprintDeployer) waitForChildDeployment(
 	}
 
 	finished := false
-	var err error
-	for !finished && err == nil {
+	ctxCancelled := false
+
+	for !finished {
+		// If context was cancelled and there's no drain deadline, exit immediately.
+		// Otherwise, continue forwarding events until child finishes or drain deadline fires.
+		if ctxCancelled && deployCtx.DrainDeadline == nil {
+			return
+		}
+
 		select {
 		case <-ctx.Done():
-			err = ctx.Err()
+			// Mark context as cancelled but continue loop to check drain deadline
+			// and forward any remaining events from the child.
+			ctxCancelled = true
+
+		case <-deployCtx.DrainDeadline:
+			// Parent's drain deadline reached - exit and let the parent's
+			// markInFlightElementsAsInterrupted handle sending INTERRUPTED for this child.
+			return
+
 		case msg := <-childChannels.DeploymentUpdateChan:
 			deployCtx.Channels.ChildUpdateChan <- updateToChildUpdateMessage(
 				&msg,
@@ -204,7 +219,7 @@ func (d *defaultChildBlueprintDeployer) waitForChildDeployment(
 			deployCtx.Channels.LinkUpdateChan <- msg
 		case msg := <-childChannels.ChildUpdateChan:
 			deployCtx.Channels.ChildUpdateChan <- msg
-		case err = <-childChannels.ErrChan:
+		case err := <-childChannels.ErrChan:
 			deployCtx.Channels.ErrChan <- err
 		}
 	}

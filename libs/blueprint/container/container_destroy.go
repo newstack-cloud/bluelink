@@ -15,6 +15,30 @@ const (
 	prepareDestroyFailureMessage = "failed to load instance state while preparing to destroy"
 )
 
+// destroyEventLoopState tracks the state of the destroy event loop,
+// including error handling and drain mode.
+type destroyEventLoopState struct {
+	err           error
+	drainDeadline <-chan time.Time
+}
+
+// setError sets the first error encountered and starts the drain timeout.
+// Subsequent errors are ignored to preserve the original error.
+// The drain deadline is propagated to the deploy context for child destroyers.
+func (s *destroyEventLoopState) setError(err error, drainTimeout time.Duration, deployCtx *DeployContext) {
+	if s.err == nil {
+		s.err = err
+		deadline := time.After(drainTimeout)
+		s.drainDeadline = deadline
+		deployCtx.DrainDeadline = deadline
+	}
+}
+
+// isDraining returns true if an error has occurred and we're draining in-progress items.
+func (s *destroyEventLoopState) isDraining() bool {
+	return s.err != nil
+}
+
 func (c *defaultBlueprintContainer) Destroy(
 	ctx context.Context,
 	input *DestroyInput,
@@ -128,6 +152,9 @@ func (c *defaultBlueprintContainer) destroy(
 			core.StringLogField("instanceName", input.InstanceName),
 		),
 	}
+	// removeElements returns errors only for preparation phase issues (collecting,
+	// ordering elements). Runtime errors during element removal are handled internally
+	// via the drain mechanism.
 	sentFinishedMessage, err := c.removeElements(
 		ctx,
 		&DeployInput{
@@ -144,23 +171,16 @@ func (c *defaultBlueprintContainer) destroy(
 		/* isNewInstance */ false,
 	)
 
-	// When force=true, we continue to remove the instance from state even if
-	// removeElements failed. This allows cleaning up instances where resources
-	// were manually deleted or providers are unavailable.
-	// We track whether element removal had failures for force mode reporting.
-	elementRemovalHadFailures := err != nil || sentFinishedMessage
-
 	if !input.Force {
 		if err != nil {
 			channels.ErrChan <- wrapErrorForChildContext(err, paramOverrides)
 			return
 		}
-
 		if sentFinishedMessage {
 			return
 		}
-	} else if elementRemovalHadFailures {
-		// Log the failure but continue with force destroy
+	} else if err != nil || sentFinishedMessage {
+		// Force mode continues even after failures.
 		if err != nil {
 			deployCtx.Logger.Warn(
 				"force destroy: continuing despite error during element removal",
@@ -292,17 +312,15 @@ func (c *defaultBlueprintContainer) removeElements(
 		}
 	}
 
-	stopProcessing, err := c.removeGroupedElements(
+	// removeGroupedElements handles runtime errors internally via drain mechanism.
+	// It returns stopProcessing=true when a finish message was sent.
+	stopProcessing := c.removeGroupedElements(
 		ctx,
 		groupedElements,
 		input.InstanceID,
 		input.InstanceName,
 		deployCtx,
 	)
-	if err != nil {
-		return stopProcessing, err
-	}
-
 	return stopProcessing, nil
 }
 
@@ -312,12 +330,11 @@ func (c *defaultBlueprintContainer) removeGroupedElements(
 	instanceID string,
 	instanceName string,
 	deployCtx *DeployContext,
-) (bool, error) {
+) bool {
 	internalChannels := CreateDeployChannels()
 
 	stopProcessing := false
 	i := 0
-	var err error
 	for !stopProcessing && i < len(parallelGroups) {
 		group := parallelGroups[i]
 		c.removeGroupElements(
@@ -331,7 +348,9 @@ func (c *defaultBlueprintContainer) removeGroupedElements(
 			),
 		)
 
-		stopProcessing, err = c.listenToAndProcessGroupRemovals(
+		// listenToAndProcessGroupRemovals handles errors internally via drain
+		// and returns stopProcessing=true when a finish message was sent.
+		stopProcessing = c.listenToAndProcessGroupRemovals(
 			ctx,
 			instanceID,
 			group,
@@ -341,7 +360,7 @@ func (c *defaultBlueprintContainer) removeGroupedElements(
 		i += 1
 	}
 
-	return stopProcessing, err
+	return stopProcessing
 }
 
 func (c *defaultBlueprintContainer) listenToAndProcessGroupRemovals(
@@ -350,43 +369,113 @@ func (c *defaultBlueprintContainer) listenToAndProcessGroupRemovals(
 	group []state.Element,
 	deployCtx *DeployContext,
 	internalChannels *DeployChannels,
-) (bool, error) {
+) bool {
 	finished := map[string]*deployUpdateMessageWrapper{}
+	state := &destroyEventLoopState{}
 
-	var err error
-	for (len(finished) < len(group)) &&
-		err == nil {
+	// Keep looping until expected elements report completion.
+	// In normal mode, we wait for all elements in the group.
+	// In drain mode, we only wait for elements that have actually started
+	// since elements that haven't been started will never send completion messages.
+	for {
+		expectedCompletions := len(group)
+		if state.isDraining() {
+			expectedCompletions = deployCtx.State.GetStartedElementCount()
+		}
+
+		if len(finished) >= expectedCompletions {
+			break
+		}
+
 		select {
 		case <-ctx.Done():
-			err = ctx.Err()
+			state.setError(ctx.Err(), 30*time.Second, deployCtx)
+
+		case <-state.drainDeadline:
+			// Drain timeout - mark in-flight elements as interrupted
+			inFlightElements := deployCtx.State.GetInFlightElements()
+			c.markInFlightElementsAsInterrupted(
+				ctx,
+				instanceID,
+				inFlightElements,
+				finished,
+				deployCtx,
+			)
+
+			failed := getFailedRemovalsFromFinished(finished, deployCtx.Rollback)
+			interrupted := getInterruptedElementNames(inFlightElements, finished)
+			deployCtx.Channels.FinishChan <- c.createDeploymentFinishedMessage(
+				instanceID,
+				determineFinishedFailureStatus(deployCtx.Destroying, deployCtx.Rollback),
+				drainFailureMessagesWithInterrupted(deployCtx, failed, interrupted),
+				c.clock.Since(deployCtx.StartTime),
+				deployCtx.State.GetPrepareDuration(),
+			)
+			return true
+
 		case msg := <-internalChannels.ResourceUpdateChan:
-			err = c.handleResourceUpdateMessage(
-				ctx,
-				instanceID,
-				msg,
-				deployCtx,
-				finished,
-				internalChannels,
-			)
+			if state.isDraining() {
+				c.trackResourceRemovalCompletion(msg, deployCtx.Rollback, finished)
+				deployCtx.Channels.ResourceUpdateChan <- msg
+				continue
+			}
+			err := c.handleResourceUpdateMessage(ctx, instanceID, msg, deployCtx, finished, internalChannels)
+			if err != nil {
+				state.setError(err, 30*time.Second, deployCtx)
+			}
+
 		case msg := <-internalChannels.ChildUpdateChan:
-			err = c.handleChildUpdateMessage(
-				ctx,
-				instanceID,
-				msg,
-				deployCtx,
-				finished,
-				internalChannels,
-			)
+			if state.isDraining() {
+				c.trackChildRemovalCompletion(msg, deployCtx.Rollback, finished)
+				deployCtx.Channels.ChildUpdateChan <- msg
+				continue
+			}
+			err := c.handleChildUpdateMessage(ctx, instanceID, msg, deployCtx, finished, internalChannels)
+			if err != nil {
+				state.setError(err, 30*time.Second, deployCtx)
+			}
+
 		case msg := <-internalChannels.LinkUpdateChan:
-			err = c.handleLinkUpdateMessage(ctx, instanceID, msg, deployCtx, finished)
-		case err = <-internalChannels.ErrChan:
+			if state.isDraining() {
+				c.trackLinkRemovalCompletion(msg, deployCtx.Rollback, finished)
+				deployCtx.Channels.LinkUpdateChan <- msg
+				continue
+			}
+			err := c.handleLinkUpdateMessage(ctx, instanceID, msg, deployCtx, finished)
+			if err != nil {
+				state.setError(err, 30*time.Second, deployCtx)
+			}
+
+		case newErr := <-internalChannels.ErrChan:
+			state.setError(newErr, 5*time.Second, deployCtx)
 		}
 	}
 
-	if err != nil {
-		return true, err
+	// Handle loop exit in drain mode
+	if state.err != nil {
+		// Mark any remaining in-flight elements as interrupted
+		inFlightElements := deployCtx.State.GetInFlightElements()
+		c.markInFlightElementsAsInterrupted(
+			ctx,
+			instanceID,
+			inFlightElements,
+			finished,
+			deployCtx,
+		)
+
+		failed := getFailedRemovalsFromFinished(finished, deployCtx.Rollback)
+		interrupted := getInterruptedElementNames(inFlightElements, finished)
+		deployCtx.Channels.FinishChan <- c.createDeploymentFinishedMessage(
+			instanceID,
+			determineFinishedFailureStatus(deployCtx.Destroying, deployCtx.Rollback),
+			drainFailureMessagesWithInterrupted(deployCtx, failed, interrupted),
+			c.clock.Since(deployCtx.StartTime),
+			deployCtx.State.GetPrepareDuration(),
+		)
+		return true
 	}
 
+	// Normal completion - check for failed removals
 	failed := getFailedRemovalsAndUpdateState(finished, group, deployCtx.State, deployCtx.Rollback)
 	if len(failed) > 0 {
 		deployCtx.Channels.FinishChan <- c.createDeploymentFinishedMessage(
@@ -394,13 +483,12 @@ func (c *defaultBlueprintContainer) listenToAndProcessGroupRemovals(
 			determineFinishedFailureStatus(deployCtx.Destroying, deployCtx.Rollback),
 			finishedFailureMessages(deployCtx, failed),
 			c.clock.Since(deployCtx.StartTime),
-			/* prepareElapsedTime */
 			deployCtx.State.GetPrepareDuration(),
 		)
-		return true, nil
+		return true
 	}
 
-	return false, nil
+	return false
 }
 
 func (c *defaultBlueprintContainer) handleResourceDestroyEvent(
@@ -779,4 +867,68 @@ func (c *defaultBlueprintContainer) collectLinksToRemove(
 		}
 	}
 	return linksToRemove
+}
+
+// trackResourceRemovalCompletion tracks resource removal completion during drain mode.
+func (c *defaultBlueprintContainer) trackResourceRemovalCompletion(
+	msg ResourceDeployUpdateMessage,
+	rollback bool,
+	finished map[string]*deployUpdateMessageWrapper,
+) {
+	if finishedDestroyingResource(msg, rollback) {
+		finished[msg.ResourceName] = &deployUpdateMessageWrapper{
+			resourceUpdateMessage: &msg,
+		}
+	}
+}
+
+// trackChildRemovalCompletion tracks child blueprint removal completion during drain mode.
+func (c *defaultBlueprintContainer) trackChildRemovalCompletion(
+	msg ChildDeployUpdateMessage,
+	rollback bool,
+	finished map[string]*deployUpdateMessageWrapper,
+) {
+	if finishedDestroyingChild(msg, rollback) {
+		finished[msg.ChildName] = &deployUpdateMessageWrapper{
+			childUpdateMessage: &msg,
+		}
+	}
+}
+
+// trackLinkRemovalCompletion tracks link removal completion during drain mode.
+func (c *defaultBlueprintContainer) trackLinkRemovalCompletion(
+	msg LinkDeployUpdateMessage,
+	rollback bool,
+	finished map[string]*deployUpdateMessageWrapper,
+) {
+	if finishedDestroyingLink(msg, rollback) {
+		finished[msg.LinkName] = &deployUpdateMessageWrapper{
+			linkUpdateMessage: &msg,
+		}
+	}
+}
+
+// getFailedRemovalsFromFinished extracts failed element names from the finished map
+// during drain mode when state updates are skipped.
+func getFailedRemovalsFromFinished(
+	finished map[string]*deployUpdateMessageWrapper,
+	rollback bool,
+) []string {
+	failed := []string{}
+	for name, wrapper := range finished {
+		if wrapper.resourceUpdateMessage != nil {
+			if !wasResourceDestroyedSuccessfully(wrapper.resourceUpdateMessage.PreciseStatus, rollback) {
+				failed = append(failed, name)
+			}
+		} else if wrapper.linkUpdateMessage != nil {
+			if !wasLinkDestroyedSuccessfully(wrapper.linkUpdateMessage.Status, rollback) {
+				failed = append(failed, name)
+			}
+		} else if wrapper.childUpdateMessage != nil {
+			if !wasChildDestroyedSuccessfully(wrapper.childUpdateMessage.Status, rollback) {
+				failed = append(failed, name)
+			}
+		}
+	}
+	return failed
 }

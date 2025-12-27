@@ -2220,13 +2220,18 @@ func getFailedElementsFromFinished(
 	return failed
 }
 
-// drainFailureMessages generates failure messages for a drained deployment,
-// combining the drain error with individual element failures.
-func drainFailureMessages(
+// drainFailureMessagesWithInterrupted generates failure messages for a drained
+// deployment that includes both failed and interrupted elements.
+// Interrupted elements are shown separately from failures to provide
+// an accurate failure count while still communicating unknown state.
+func drainFailureMessagesWithInterrupted(
 	deployCtx *DeployContext,
 	failed []string,
+	interrupted []string,
 ) []string {
 	operation := determineOperation(deployCtx)
+
+	// Only count actual failures, not interruptions
 	messages := []string{
 		fmt.Sprintf(
 			"failed to %s the blueprint instance due to %d %s",
@@ -2235,58 +2240,76 @@ func drainFailureMessages(
 			pluralise("failure", "failures", len(failed)),
 		),
 	}
+
 	messageTemplate := "failed to %s %q"
 	for _, elementName := range failed {
 		messages = append(messages, fmt.Sprintf(messageTemplate, operation, elementName))
 	}
+
+	// Show interrupted elements separately if there are any
+	if len(interrupted) > 0 {
+		messages = append(messages, fmt.Sprintf(
+			"%d %s interrupted (state unknown)",
+			len(interrupted),
+			pluralise("element was", "elements were", len(interrupted)),
+		))
+	}
+
 	return messages
 }
 
-// drainFailureMessagesWithInterrupted generates failure messages for a drained
-// deployment that includes both failed and interrupted elements.
-func drainFailureMessagesWithInterrupted(
-	deployCtx *DeployContext,
-	failed []string,
-	interrupted []string,
+// getInterruptedElementNames returns the names of elements that were interrupted
+// (in-flight but not in the finished map). Elements that have already finished
+// are excluded since they have a terminal status.
+func getInterruptedElementNames(
+	inFlightElements []state.Element,
+	finished map[string]*deployUpdateMessageWrapper,
 ) []string {
-	operation := determineOperation(deployCtx)
-	totalFailures := len(failed) + len(interrupted)
-	messages := []string{
-		fmt.Sprintf(
-			"failed to %s the blueprint instance due to %d %s",
-			operation,
-			totalFailures,
-			pluralise("failure", "failures", totalFailures),
-		),
-	}
-
-	messageTemplate := "failed to %s %q"
-	for _, elementName := range failed {
-		messages = append(messages, fmt.Sprintf(messageTemplate, operation, elementName))
-	}
-
-	interruptedMessageTemplate := "%q was interrupted and its state is unknown"
-	for _, elementName := range interrupted {
-		messages = append(messages, fmt.Sprintf(interruptedMessageTemplate, elementName))
-	}
-
-	return messages
-}
-
-// getElementNames extracts the namespaced logical names from a slice of elements.
-func getElementNames(elements []state.Element) []string {
-	names := make([]string, 0, len(elements))
-	for _, elem := range elements {
-		names = append(names, getNamespacedLogicalName(elem))
+	names := make([]string, 0, len(inFlightElements))
+	for _, elem := range inFlightElements {
+		name := getNamespacedLogicalName(elem)
+		if _, alreadyFinished := finished[name]; !alreadyFinished {
+			names = append(names, name)
+		}
 	}
 	return names
 }
 
+// isNewResource checks if a resource is new based on the input changes.
+// Returns a pointer to bool (nil if unknown, true if new, false if updating).
+func isNewResource(resourceName string, inputChanges *changes.BlueprintChanges) *bool {
+	if inputChanges == nil {
+		return nil
+	}
+	if _, isNew := inputChanges.NewResources[resourceName]; isNew {
+		result := true
+		return &result
+	}
+	if _, isUpdate := inputChanges.ResourceChanges[resourceName]; isUpdate {
+		result := false
+		return &result
+	}
+	return nil
+}
+
+// isNewChild checks if a child blueprint is new based on the input changes.
+func isNewChild(childName string, inputChanges *changes.BlueprintChanges) bool {
+	if inputChanges == nil {
+		return false
+	}
+	_, isNew := inputChanges.NewChildren[childName]
+	return isNew
+}
+
 // determineResourceInterruptedStatus returns the appropriate interrupted status
-// for a resource based on whether the operation was a destroy or deploy/update.
+// for a resource based on the operation context.
+// - destroying: whether this is a destroy operation
+// - rollback: whether this is a rollback operation
+// - isNew: whether the resource is being created (pass nil if unknown)
 func determineResourceInterruptedStatus(
 	destroying bool,
 	rollback bool,
+	isNew *bool,
 ) (core.ResourceStatus, core.PreciseResourceStatus) {
 	if destroying && !rollback {
 		return core.ResourceStatusDestroyInterrupted, core.PreciseResourceStatusDestroyInterrupted
@@ -2305,17 +2328,24 @@ func determineResourceInterruptedStatus(
 	}
 
 	// Normal deploy/update operation
-	// We use UpdateInterrupted as a general case since we can't distinguish
-	// between create and update at this point without more context.
-	// The reconciliation process will determine the actual state.
+	if isNew != nil && *isNew {
+		return core.ResourceStatusCreateInterrupted, core.PreciseResourceStatusCreateInterrupted
+	}
+
+	// UpdateInterrupted is used when we don't know if it's a new resource
+	// or when updating an existing resource.
 	return core.ResourceStatusUpdateInterrupted, core.PreciseResourceStatusUpdateInterrupted
 }
 
 // determineLinkInterruptedStatus returns the appropriate interrupted status
-// for a link based on whether the operation was a destroy or deploy/update.
+// for a link based on the operation context.
+// - destroying: whether this is a destroy operation
+// - rollback: whether this is a rollback operation
+// - linkUpdateType: the type of link update (pass nil if unknown)
 func determineLinkInterruptedStatus(
 	destroying bool,
 	rollback bool,
+	linkUpdateType *provider.LinkUpdateType,
 ) (core.LinkStatus, core.PreciseLinkStatus) {
 	if destroying && !rollback {
 		return core.LinkStatusDestroyInterrupted, core.PreciseLinkStatusIntermediaryResourceUpdateInterrupted
@@ -2333,14 +2363,24 @@ func determineLinkInterruptedStatus(
 	}
 
 	// Normal deploy/update operation
+	if linkUpdateType != nil && *linkUpdateType == provider.LinkUpdateTypeCreate {
+		return core.LinkStatusCreateInterrupted, core.PreciseLinkStatusIntermediaryResourceUpdateInterrupted
+	}
+
+	// UpdateInterrupted is used when we don't know the link update type
+	// or when updating an existing link.
 	return core.LinkStatusUpdateInterrupted, core.PreciseLinkStatusIntermediaryResourceUpdateInterrupted
 }
 
 // determineChildInterruptedStatus returns the appropriate interrupted status
 // for a child blueprint based on whether the operation was a destroy or deploy/update.
+// - destroying: whether this is a destroy operation
+// - rollback: whether this is a rollback operation
+// - isNew: whether the child is being created
 func determineChildInterruptedStatus(
 	destroying bool,
 	rollback bool,
+	isNew bool,
 ) core.InstanceStatus {
 	if destroying && !rollback {
 		return core.InstanceStatusDestroyInterrupted
@@ -2358,5 +2398,8 @@ func determineChildInterruptedStatus(
 	}
 
 	// Normal deploy/update operation
+	if isNew {
+		return core.InstanceStatusDeployInterrupted
+	}
 	return core.InstanceStatusUpdateInterrupted
 }

@@ -36,6 +36,9 @@ type DeployContext struct {
 	// method call.
 	ResourceRegistry resourcehelpers.Registry
 	Logger           core.Logger
+	// DrainDeadline is set by the parent when it enters drain mode.
+	// Child deployers use this to continue forwarding events until drain completes.
+	DrainDeadline <-chan time.Time
 }
 
 func DeployContextWithChannels(
@@ -58,6 +61,7 @@ func DeployContextWithChannels(
 		PreparedContainer:     deployCtx.PreparedContainer,
 		ResourceRegistry:      deployCtx.ResourceRegistry,
 		Logger:                deployCtx.Logger,
+		DrainDeadline:         deployCtx.DrainDeadline,
 	}
 }
 
@@ -81,6 +85,7 @@ func DeployContextWithGroup(
 		PreparedContainer:     deployCtx.PreparedContainer,
 		ResourceRegistry:      deployCtx.ResourceRegistry,
 		Logger:                deployCtx.Logger,
+		DrainDeadline:         deployCtx.DrainDeadline,
 	}
 }
 
@@ -104,6 +109,7 @@ func DeployContextWithInstanceSnapshot(
 		PreparedContainer:     deployCtx.PreparedContainer,
 		ResourceRegistry:      deployCtx.ResourceRegistry,
 		Logger:                deployCtx.Logger,
+		DrainDeadline:         deployCtx.DrainDeadline,
 	}
 }
 
@@ -127,5 +133,6 @@ func DeployContextWithLogger(
 		PreparedContainer:     deployCtx.PreparedContainer,
 		ResourceRegistry:      deployCtx.ResourceRegistry,
 		Logger:                logger,
+		DrainDeadline:         deployCtx.DrainDeadline,
 	}
 }
