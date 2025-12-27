@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.4.2...blueprint-state/v0.5.0) (2025-12-27)
+
+
+### Features
+
+* **blueprint-state:** add persistence for link drift ([a778aa6](https://github.com/newstack-cloud/bluelink/commit/a778aa6dad6b4abdb953413f58ddeb2419a179d2))
+* **blueprint-state:** add persistence for reconciliation results ([9f16d59](https://github.com/newstack-cloud/bluelink/commit/9f16d59772aab7f09a3b109042684aa6d89d0015))
+
 ## [0.4.2](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.4.1...blueprint-state/v0.4.2) (2025-12-16)
 
 
