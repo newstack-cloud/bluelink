@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
 )
 
 func createAuthPrepError(message string) *errors.AuthPrepError {
@@ -46,8 +47,26 @@ func createRequestError(err error) *errors.RequestError {
 }
 
 func createClientError(resp *http.Response) *errors.ClientError {
-	errResp := &errors.Response{}
 	errRespBytes, _ := io.ReadAll(resp.Body)
+
+	// For 409 Conflict responses, try to parse as DriftBlockedResponse
+	if resp.StatusCode == http.StatusConflict {
+		driftResp := &types.DriftBlockedResponse{}
+		if err := json.Unmarshal(errRespBytes, driftResp); err == nil && driftResp.ReconciliationResult != nil {
+			message := driftResp.Message
+			if message == "" {
+				message = "operation blocked due to drift detection"
+			}
+			return &errors.ClientError{
+				StatusCode:           resp.StatusCode,
+				Message:              message,
+				DriftBlockedResponse: driftResp,
+			}
+		}
+	}
+
+	// Standard error response parsing
+	errResp := &errors.Response{}
 	json.Unmarshal(errRespBytes, errResp)
 	if errResp.Message == "" {
 		errResp.Message = fmt.Sprintf(

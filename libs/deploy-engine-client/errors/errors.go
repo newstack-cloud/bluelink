@@ -85,6 +85,10 @@ type ClientError struct {
 	// document.
 	// This will usually be populated for 422 responses.
 	ValidationDiagnostics []*core.Diagnostic
+	// DriftBlockedResponse is populated for 409 responses when an operation
+	// is blocked due to drift detection. Contains the reconciliation result
+	// and changeset ID for continuing after reconciliation.
+	DriftBlockedResponse *types.DriftBlockedResponse
 }
 
 // ValidationError is a struct that represents a validation error
@@ -159,6 +163,20 @@ func IsValidationError(err error) (*ClientError, bool) {
 	if clientErr, ok := err.(*ClientError); ok {
 		return clientErr, clientErr.StatusCode == http.StatusUnprocessableEntity ||
 			clientErr.StatusCode == http.StatusBadRequest
+	}
+	return nil, false
+}
+
+// IsDriftBlockedError checks if the error is a client error
+// with a 409 status code, indicating that the operation is blocked
+// due to drift detection. When true, the ClientError.DriftBlockedResponse
+// field will contain the reconciliation result and changeset ID.
+// This also returns the concrete client error that allows the caller
+// access to more precise information about the error.
+func IsDriftBlockedError(err error) (*ClientError, bool) {
+	if clientErr, ok := err.(*ClientError); ok {
+		return clientErr, clientErr.StatusCode == http.StatusConflict &&
+			clientErr.DriftBlockedResponse != nil
 	}
 	return nil, false
 }
