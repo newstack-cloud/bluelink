@@ -78,7 +78,23 @@ func deployLambdaFunction(
 	ctx context.Context,
 	input *provider.ResourceDeployInput,
 ) (*provider.ResourceDeployOutput, error) {
-	return ResourceLambdaDeployOutput(), nil
+	output := ResourceLambdaDeployOutput()
+
+	// Capture tagging config info in output for testing gRPC round-trip.
+	// This allows tests to verify that TaggingConfig flows correctly
+	// through the gRPC layer.
+	if input.ProviderContext != nil {
+		taggingConfig := input.ProviderContext.TaggingConfig()
+		if taggingConfig != nil {
+			output.ComputedFieldValues["__test_tagging_enabled"] = core.MappingNodeFromBool(taggingConfig.Enabled)
+			output.ComputedFieldValues["__test_tagging_prefix"] = core.MappingNodeFromString(taggingConfig.Prefix)
+			output.ComputedFieldValues["__test_tagging_deploy_engine_version"] = core.MappingNodeFromString(taggingConfig.DeployEngineVersion)
+			output.ComputedFieldValues["__test_tagging_provider_plugin_id"] = core.MappingNodeFromString(taggingConfig.ProviderPluginID)
+			output.ComputedFieldValues["__test_tagging_provider_plugin_version"] = core.MappingNodeFromString(taggingConfig.ProviderPluginVersion)
+		}
+	}
+
+	return output, nil
 }
 
 func destroyLambdaFunction(

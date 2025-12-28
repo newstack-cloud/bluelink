@@ -79,6 +79,12 @@ type ResourceDefinition struct {
 	// based on the nature of the resource and how critical it will be deemed for most use cases.
 	DestroyBeforeCreate bool
 
+	// TaggingSupport indicates how the resource type supports external tagging.
+	// Use provider.TaggingSupportFull for resources that support arbitrary key-value tags (AWS, Azure).
+	// Use provider.TaggingSupportLabels for resources that support labels with restrictions (GCP, K8s).
+	// Use provider.TaggingSupportNone (default) for resources that do not support tags.
+	TaggingSupport provider.TaggingSupport
+
 	// Specifies whether this resource is expected to have a common use-case
 	// as a terminal resource that does not link out to other resources.
 	// This is useful for providing useful warnings to users about their blueprints
@@ -186,6 +192,7 @@ func (r *ResourceDefinition) GetSpecDefinition(
 			Schema:              r.Schema,
 			IDField:             r.IDField,
 			DestroyBeforeCreate: r.DestroyBeforeCreate,
+			TaggingSupport:      r.TaggingSupport,
 		},
 	}, nil
 }

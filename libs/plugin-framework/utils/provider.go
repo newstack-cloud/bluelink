@@ -18,9 +18,24 @@ func ProviderContextFromVarMaps(
 	}
 }
 
+// ProviderContextFromVarMapsWithTagging creates a provider.Context from the given provider config,
+// context variables, and tagging configuration.
+func ProviderContextFromVarMapsWithTagging(
+	providerConfigVars map[string]*core.ScalarValue,
+	contextVars map[string]*core.ScalarValue,
+	taggingConfig *provider.TaggingConfig,
+) provider.Context {
+	return &providerContextFromVarMaps{
+		providerConfigVars: providerConfigVars,
+		contextVars:        contextVars,
+		taggingConfig:      taggingConfig,
+	}
+}
+
 type providerContextFromVarMaps struct {
 	providerConfigVars map[string]*core.ScalarValue
 	contextVars        map[string]*core.ScalarValue
+	taggingConfig      *provider.TaggingConfig
 }
 
 func (p *providerContextFromVarMaps) ProviderConfigVariable(name string) (*core.ScalarValue, bool) {
@@ -39,4 +54,8 @@ func (p *providerContextFromVarMaps) ContextVariable(name string) (*core.ScalarV
 
 func (p *providerContextFromVarMaps) ContextVariables() map[string]*core.ScalarValue {
 	return p.contextVars
+}
+
+func (p *providerContextFromVarMaps) TaggingConfig() *provider.TaggingConfig {
+	return p.taggingConfig
 }

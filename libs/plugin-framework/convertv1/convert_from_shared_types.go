@@ -885,6 +885,7 @@ func FromPBResourceSpecDefinition(
 		Schema:              resourceDefinitionSchema,
 		IDField:             pbSpecDef.IdField,
 		DestroyBeforeCreate: pbSpecDef.DestroyBeforeCreate,
+		TaggingSupport:      FromPBTaggingSupport(pbSpecDef.TaggingSupport),
 	}, nil
 }
 
@@ -1258,6 +1259,7 @@ func FromPBResourceState(
 		Drifted:                    pbResourceState.Drifted,
 		LastDriftDetectedTimestamp: lastDriftDetectedTimestamp,
 		Durations:                  durations,
+		SystemMetadata:             FromPBSystemMetadataState(pbResourceState.SystemMetadata),
 	}, nil
 }
 
@@ -1440,7 +1442,68 @@ func FromPBProviderContext(pbProviderCtx *sharedtypesv1.ProviderContext) (provid
 		return nil, err
 	}
 
-	return utils.ProviderContextFromVarMaps(providerConfigVars, contextVars), nil
+	taggingConfig := FromPBTaggingConfig(pbProviderCtx.TaggingConfig)
+
+	return utils.ProviderContextFromVarMapsWithTagging(providerConfigVars, contextVars, taggingConfig), nil
+}
+
+// FromPBTaggingConfig converts a TaggingConfig from a protobuf message to a core type
+// compatible with the blueprint framework.
+func FromPBTaggingConfig(pbTaggingConfig *sharedtypesv1.TaggingConfig) *provider.TaggingConfig {
+	if pbTaggingConfig == nil {
+		return nil
+	}
+
+	return &provider.TaggingConfig{
+		Prefix:                pbTaggingConfig.Prefix,
+		DeployEngineVersion:   pbTaggingConfig.DeployEngineVersion,
+		ProviderPluginID:      pbTaggingConfig.ProviderPluginId,
+		ProviderPluginVersion: pbTaggingConfig.ProviderPluginVersion,
+		Enabled:               pbTaggingConfig.Enabled,
+	}
+}
+
+// FromPBTaggingSupport converts a TaggingSupport from a protobuf enum to a core type
+// compatible with the blueprint framework.
+func FromPBTaggingSupport(pbTaggingSupport sharedtypesv1.TaggingSupport) provider.TaggingSupport {
+	switch pbTaggingSupport {
+	case sharedtypesv1.TaggingSupport_TAGGING_SUPPORT_FULL:
+		return provider.TaggingSupportFull
+	case sharedtypesv1.TaggingSupport_TAGGING_SUPPORT_LABELS:
+		return provider.TaggingSupportLabels
+	default:
+		return provider.TaggingSupportNone
+	}
+}
+
+// FromPBSystemMetadataState converts a SystemMetadataState from a protobuf message to a core type
+// compatible with the blueprint framework.
+func FromPBSystemMetadataState(
+	pbSystemMetadata *sharedtypesv1.SystemMetadataState,
+) *state.SystemMetadataState {
+	if pbSystemMetadata == nil {
+		return nil
+	}
+
+	return &state.SystemMetadataState{
+		Provenance: FromPBProvenanceState(pbSystemMetadata.Provenance),
+	}
+}
+
+// FromPBProvenanceState converts a ProvenanceState from a protobuf message to a core type
+// compatible with the blueprint framework.
+func FromPBProvenanceState(pbProvenance *sharedtypesv1.ProvenanceState) *state.ProvenanceState {
+	if pbProvenance == nil {
+		return nil
+	}
+
+	return &state.ProvenanceState{
+		ProvisionedBy:         pbProvenance.ProvisionedBy,
+		DeployEngineVersion:   pbProvenance.DeployEngineVersion,
+		ProviderPluginID:      pbProvenance.ProviderPluginId,
+		ProviderPluginVersion: pbProvenance.ProviderPluginVersion,
+		ProvisionedAt:         pbProvenance.ProvisionedAt,
+	}
 }
 
 // ResourceTypeToString converts a ResourceType to a string.

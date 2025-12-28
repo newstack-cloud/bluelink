@@ -62,3 +62,35 @@ func CreateEmptyConcreteParams() *core.ParamsImpl {
 		BlueprintVariables: map[string]*core.ScalarValue{},
 	}
 }
+
+// CreateTestProviderContextWithTagging creates a provider context for testing
+// with the given namespace and tagging configuration.
+func CreateTestProviderContextWithTagging(
+	namespace string,
+	taggingConfig *provider.TaggingConfig,
+) provider.Context {
+	params := core.NewDefaultParams(
+		map[string]map[string]*core.ScalarValue{},
+		map[string]map[string]*core.ScalarValue{},
+		map[string]*core.ScalarValue{},
+		map[string]*core.ScalarValue{},
+	)
+	return provider.NewProviderContextFromParamsWithOptions(
+		namespace,
+		params,
+		&provider.ProviderContextOptions{
+			TaggingConfig: taggingConfig,
+		},
+	)
+}
+
+// TestTaggingConfig returns a standard tagging configuration for testing.
+func TestTaggingConfig() *provider.TaggingConfig {
+	return &provider.TaggingConfig{
+		Prefix:                "bluelink:",
+		DeployEngineVersion:   "1.0.0-test",
+		ProviderPluginID:      "newstack-cloud/aws",
+		ProviderPluginVersion: "2.0.0-test",
+		Enabled:               true,
+	}
+}

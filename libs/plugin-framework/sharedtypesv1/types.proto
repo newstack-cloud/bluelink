@@ -987,6 +987,8 @@ message ResourceState {
     google.protobuf.Int64Value last_drift_detected_timestamp = 18;
     // Holds the duration information for the latest deployment of the resource.
     ResourceCompletionDurations durations = 19;
+    // System-generated metadata for the resource including provenance information.
+    SystemMetadataState system_metadata = 20;
 }
 
 
@@ -1046,6 +1048,28 @@ message ResourceMetadataState {
     map<string, schema.MappingNode> annotations = 2;
     map<string, string> labels = 3;
     schema.MappingNode custom = 4;
+}
+
+// SystemMetadataState holds system-generated metadata for a resource.
+// This is separate from ResourceMetadataState which holds user-defined
+// blueprint metadata.
+message SystemMetadataState {
+    // Provenance information for the resource.
+    ProvenanceState provenance = 1;
+}
+
+// ProvenanceState stores Bluelink provenance information for a resource.
+message ProvenanceState {
+    // A marker indicating the resource was provisioned by Bluelink.
+    string provisioned_by = 1;
+    // The version of the deploy engine that provisioned the resource.
+    string deploy_engine_version = 2;
+    // The identifier for the provider plugin (e.g., "newstack-cloud/aws").
+    string provider_plugin_id = 3;
+    // The version of the provider plugin that provisioned the resource.
+    string provider_plugin_version = 4;
+    // The unix timestamp when the resource was provisioned.
+    int64 provisioned_at = 5;
 }
 
 // ResourceStatus represents the current status of a resource in a blueprint instance.
@@ -1220,6 +1244,8 @@ message ResourceSpecDefinition {
     // as a part of the deployment process when a resource must be recreated
     // to apply a set of changes.
     bool destroy_before_create = 3;
+    // Indicates how the resource type supports external tagging.
+    TaggingSupport tagging_support = 4;
 }
 
 // ResourceDefinitionsSchema provides a schema that can be used to validate
@@ -1393,6 +1419,34 @@ message ProviderContext {
     map<string, schema.ScalarValue> provider_config_variables = 1;
 	// Context-wide variables for the current deploy engine run.
     map<string, schema.ScalarValue> context_variables = 2;
+    // Configuration for resource tagging behavior.
+    TaggingConfig tagging_config = 3;
+}
+
+// TaggingConfig provides configuration for resource tagging behavior.
+message TaggingConfig {
+    // The prefix to apply to all Bluelink tag keys.
+    // Default is "bluelink:".
+    string prefix = 1;
+    // The version of the deploy engine.
+    string deploy_engine_version = 2;
+    // The identifier for the provider plugin (e.g., "newstack-cloud/aws").
+    string provider_plugin_id = 3;
+    // The version of the provider plugin.
+    string provider_plugin_version = 4;
+    // Controls whether tagging is enabled.
+    bool enabled = 5;
+}
+
+// TaggingSupport indicates how a resource type supports external tagging.
+enum TaggingSupport {
+    // The resource type does not support tags.
+    // Provenance will be stored in Bluelink state only.
+    TAGGING_SUPPORT_NONE = 0;
+    // The resource supports arbitrary key-value tags (AWS, Azure).
+    TAGGING_SUPPORT_FULL = 1;
+    // The resource supports labels with restrictions (GCP, K8s).
+    TAGGING_SUPPORT_LABELS = 2;
 }
 
 // BlueprintParams holds environment and blueprint configuration

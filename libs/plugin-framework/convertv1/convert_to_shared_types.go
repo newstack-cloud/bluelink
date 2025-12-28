@@ -593,6 +593,7 @@ func ToPBResourceState(
 		Drifted:                    resourceState.Drifted,
 		LastDriftDetectedTimestamp: lastDriftDetectedTimestamp,
 		Durations:                  durations,
+		SystemMetadata:             ToPBSystemMetadataState(resourceState.SystemMetadata),
 	}, nil
 }
 
@@ -955,10 +956,71 @@ func ToPBProviderContext(providerCtx provider.Context) (*sharedtypesv1.ProviderC
 		return nil, err
 	}
 
+	taggingConfig := ToPBTaggingConfig(providerCtx.TaggingConfig())
+
 	return &sharedtypesv1.ProviderContext{
 		ProviderConfigVariables: providerConfigVars,
 		ContextVariables:        contextVars,
+		TaggingConfig:           taggingConfig,
 	}, nil
+}
+
+// ToPBTaggingConfig converts a provider.TaggingConfig to a TaggingConfig protobuf message
+// that can be sent over gRPC.
+func ToPBTaggingConfig(taggingConfig *provider.TaggingConfig) *sharedtypesv1.TaggingConfig {
+	if taggingConfig == nil {
+		return nil
+	}
+
+	return &sharedtypesv1.TaggingConfig{
+		Prefix:                taggingConfig.Prefix,
+		DeployEngineVersion:   taggingConfig.DeployEngineVersion,
+		ProviderPluginId:      taggingConfig.ProviderPluginID,
+		ProviderPluginVersion: taggingConfig.ProviderPluginVersion,
+		Enabled:               taggingConfig.Enabled,
+	}
+}
+
+// ToPBTaggingSupport converts a provider.TaggingSupport to a TaggingSupport protobuf enum.
+func ToPBTaggingSupport(taggingSupport provider.TaggingSupport) sharedtypesv1.TaggingSupport {
+	switch taggingSupport {
+	case provider.TaggingSupportFull:
+		return sharedtypesv1.TaggingSupport_TAGGING_SUPPORT_FULL
+	case provider.TaggingSupportLabels:
+		return sharedtypesv1.TaggingSupport_TAGGING_SUPPORT_LABELS
+	default:
+		return sharedtypesv1.TaggingSupport_TAGGING_SUPPORT_NONE
+	}
+}
+
+// ToPBSystemMetadataState converts a state.SystemMetadataState to a SystemMetadataState
+// protobuf message that can be sent over gRPC.
+func ToPBSystemMetadataState(
+	systemMetadata *state.SystemMetadataState,
+) *sharedtypesv1.SystemMetadataState {
+	if systemMetadata == nil {
+		return nil
+	}
+
+	return &sharedtypesv1.SystemMetadataState{
+		Provenance: ToPBProvenanceState(systemMetadata.Provenance),
+	}
+}
+
+// ToPBProvenanceState converts a state.ProvenanceState to a ProvenanceState
+// protobuf message that can be sent over gRPC.
+func ToPBProvenanceState(provenance *state.ProvenanceState) *sharedtypesv1.ProvenanceState {
+	if provenance == nil {
+		return nil
+	}
+
+	return &sharedtypesv1.ProvenanceState{
+		ProvisionedBy:         provenance.ProvisionedBy,
+		DeployEngineVersion:   provenance.DeployEngineVersion,
+		ProviderPluginId:      provenance.ProviderPluginID,
+		ProviderPluginVersion: provenance.ProviderPluginVersion,
+		ProvisionedAt:         provenance.ProvisionedAt,
+	}
 }
 
 // ToPBScalarMap converts a map of core ScalarValues to a map of protobuf ScalarValues
