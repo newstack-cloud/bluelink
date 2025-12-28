@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/includes"
@@ -194,8 +195,20 @@ func (d *defaultChildBlueprintDeployer) waitForChildDeployment(
 			ctxCancelled = true
 
 		case <-deployCtx.DrainDeadline:
-			// Parent's drain deadline reached - exit and let the parent's
-			// markInFlightElementsAsInterrupted handle sending INTERRUPTED for this child.
+			// Parent's drain deadline reached. Give child a brief grace period
+			// to send its finish message so we can capture its actual status
+			// (e.g., FAILED) rather than marking it as INTERRUPTED.
+			select {
+			case msg := <-childChannels.FinishChan:
+				deployCtx.Channels.ChildUpdateChan <- finishedToChildUpdateMessage(
+					&msg,
+					parentInstanceID,
+					childBlueprintElement,
+					deployCtx.CurrentGroupIndex,
+				)
+			case <-time.After(100 * time.Millisecond):
+				// Child didn't finish in grace period, parent will mark it as interrupted.
+			}
 			return
 
 		case msg := <-childChannels.DeploymentUpdateChan:

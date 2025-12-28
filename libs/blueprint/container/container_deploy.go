@@ -2410,7 +2410,7 @@ func (c *defaultBlueprintContainer) markResourceAsInterrupted(
 			PreciseStatus:              preciseStatus,
 			LastStatusUpdateTimestamp:  &currentTimestamp,
 			LastDeployAttemptTimestamp: &currentTimestamp,
-			FailureReasons:             []string{"deployment was interrupted due to drain timeout"},
+			FailureReasons:             []string{"operation was interrupted due to a failure elsewhere in the deployment"},
 		},
 	)
 	if err != nil {
@@ -2430,7 +2430,7 @@ func (c *defaultBlueprintContainer) markResourceAsInterrupted(
 		Status:          status,
 		PreciseStatus:   preciseStatus,
 		UpdateTimestamp: int64(currentTimestamp),
-		FailureReasons:  []string{"deployment was interrupted due to drain timeout"},
+		FailureReasons:  []string{"operation was interrupted due to a failure elsewhere in the deployment"},
 	}
 }
 
@@ -2457,7 +2457,7 @@ func (c *defaultBlueprintContainer) markLinkAsInterrupted(
 			PreciseStatus:              preciseStatus,
 			LastStatusUpdateTimestamp:  &currentTimestamp,
 			LastDeployAttemptTimestamp: &currentTimestamp,
-			FailureReasons:             []string{"deployment was interrupted due to drain timeout"},
+			FailureReasons:             []string{"operation was interrupted due to a failure elsewhere in the deployment"},
 		},
 	)
 	if err != nil {
@@ -2477,7 +2477,7 @@ func (c *defaultBlueprintContainer) markLinkAsInterrupted(
 		Status:          status,
 		PreciseStatus:   preciseStatus,
 		UpdateTimestamp: int64(currentTimestamp),
-		FailureReasons:  []string{"deployment was interrupted due to drain timeout"},
+		FailureReasons:  []string{"operation was interrupted due to a failure elsewhere in the deployment"},
 	}
 }
 
@@ -2504,7 +2504,7 @@ func (c *defaultBlueprintContainer) markChildAsInterrupted(
 			Status:                     status,
 			LastStatusUpdateTimestamp:  &currentTimestamp,
 			LastDeployAttemptTimestamp: &currentTimestamp,
-			FailureReasons:             []string{"deployment was interrupted due to drain timeout"},
+			FailureReasons:             []string{"operation was interrupted due to a failure elsewhere in the deployment"},
 		},
 	)
 	if err != nil {
@@ -2523,7 +2523,7 @@ func (c *defaultBlueprintContainer) markChildAsInterrupted(
 		ChildName:        elem.LogicalName(),
 		Status:           status,
 		UpdateTimestamp:  int64(currentTimestamp),
-		FailureReasons:   []string{"deployment was interrupted due to drain timeout"},
+		FailureReasons:   []string{"operation was interrupted due to a failure elsewhere in the deployment"},
 	}
 }
 
