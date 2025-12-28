@@ -159,6 +159,33 @@ func (s *PostgresStateContainerResourcesTestSuite) Test_updates_existing_resourc
 	internal.AssertResourceStatesEqual(fixture.ResourceState, &savedState, &s.Suite)
 }
 
+func (s *PostgresStateContainerResourcesTestSuite) Test_saves_resource_with_system_metadata() {
+	fixture := s.saveResourceFixtures[4]
+	resources := s.container.Resources()
+	err := resources.Save(
+		context.Background(),
+		*fixture.ResourceState,
+	)
+	s.Require().NoError(err)
+
+	savedState, err := resources.Get(
+		context.Background(),
+		fixture.ResourceState.ResourceID,
+	)
+	s.Require().NoError(err)
+
+	// Verify system metadata was persisted correctly
+	s.Require().NotNil(savedState.SystemMetadata)
+	s.Require().NotNil(savedState.SystemMetadata.Provenance)
+	s.Assert().Equal("bluelink", savedState.SystemMetadata.Provenance.ProvisionedBy)
+	s.Assert().Equal("1.0.0", savedState.SystemMetadata.Provenance.DeployEngineVersion)
+	s.Assert().Equal("newstack-cloud/aws", savedState.SystemMetadata.Provenance.ProviderPluginID)
+	s.Assert().Equal("2.5.0", savedState.SystemMetadata.Provenance.ProviderPluginVersion)
+	s.Assert().Equal(int64(1733145428), savedState.SystemMetadata.Provenance.ProvisionedAt)
+
+	internal.AssertResourceStatesEqual(fixture.ResourceState, &savedState, &s.Suite)
+}
+
 func (s *PostgresStateContainerResourcesTestSuite) Test_updates_blueprint_resource_deployment_status() {
 	resources := s.container.Resources()
 

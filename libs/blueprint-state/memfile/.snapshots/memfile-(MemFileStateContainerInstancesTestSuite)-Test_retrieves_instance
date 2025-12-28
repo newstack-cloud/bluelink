@@ -87,6 +87,7 @@
         Labels: (map[string]string) <nil>,
         Custom: (*core.MappingNode)(<nil>)
       }),
+      SystemMetadata: (*state.SystemMetadataState)(<nil>),
       DependsOnResources: ([]string) {
       },
       DependsOnChildren: ([]string) {
@@ -288,6 +289,7 @@
           FieldsSourceMeta: (map[string]*source.Meta) <nil>
         })
       }),
+      SystemMetadata: (*state.SystemMetadataState)(<nil>),
       DependsOnResources: ([]string) {
       },
       DependsOnChildren: ([]string) {
@@ -489,6 +491,7 @@
           FieldsSourceMeta: (map[string]*source.Meta) <nil>
         })
       }),
+      SystemMetadata: (*state.SystemMetadataState)(<nil>),
       DependsOnResources: ([]string) {
       },
       DependsOnChildren: ([]string) {
@@ -542,6 +545,7 @@
         Labels: (map[string]string) <nil>,
         Custom: (*core.MappingNode)(<nil>)
       }),
+      SystemMetadata: (*state.SystemMetadataState)(<nil>),
       DependsOnResources: ([]string) {
       },
       DependsOnChildren: ([]string) {
@@ -1134,6 +1138,7 @@
             Labels: (map[string]string) <nil>,
             Custom: (*core.MappingNode)(<nil>)
           }),
+          SystemMetadata: (*state.SystemMetadataState)(<nil>),
           DependsOnResources: ([]string) {
           },
           DependsOnChildren: ([]string) {

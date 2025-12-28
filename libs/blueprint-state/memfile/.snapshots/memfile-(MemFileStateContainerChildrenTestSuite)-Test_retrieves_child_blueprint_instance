@@ -241,6 +241,7 @@
         Labels: (map[string]string) <nil>,
         Custom: (*core.MappingNode)(<nil>)
       }),
+      SystemMetadata: (*state.SystemMetadataState)(<nil>),
       DependsOnResources: ([]string) {
       },
       DependsOnChildren: ([]string) {

@@ -50,6 +50,7 @@ func AssertResourceStatesEqual(expected, actual *state.ResourceState, s *suite.S
 	s.Assert().Equal(expected.SpecData, actual.SpecData)
 	s.Assert().Equal(expected.Description, actual.Description)
 	assertResourceMetadataEqual(expected.Metadata, actual.Metadata, s)
+	assertSystemMetadataEqual(expected.SystemMetadata, actual.SystemMetadata, s)
 	assertSlicesEqual(expected.DependsOnResources, actual.DependsOnResources, s)
 	assertSlicesEqual(expected.DependsOnChildren, actual.DependsOnChildren, s)
 	assertSlicesEqual(expected.FailureReasons, actual.FailureReasons, s)
@@ -81,6 +82,42 @@ func isEmptyResourceMetadata(actual *state.ResourceMetadataState) bool {
 		len(actual.Annotations) == 0 &&
 		len(actual.Labels) == 0 &&
 		actual.Custom == nil)
+}
+
+func assertSystemMetadataEqual(
+	expected *state.SystemMetadataState,
+	actual *state.SystemMetadataState,
+	s *suite.Suite,
+) {
+	if expected == nil {
+		s.Assert().True(isEmptySystemMetadata(actual))
+		return
+	}
+
+	s.Assert().NotNil(actual)
+	assertProvenanceEqual(expected.Provenance, actual.Provenance, s)
+}
+
+func isEmptySystemMetadata(actual *state.SystemMetadataState) bool {
+	return actual == nil || actual.Provenance == nil
+}
+
+func assertProvenanceEqual(
+	expected *state.ProvenanceState,
+	actual *state.ProvenanceState,
+	s *suite.Suite,
+) {
+	if expected == nil {
+		s.Assert().Nil(actual)
+		return
+	}
+
+	s.Assert().NotNil(actual)
+	s.Assert().Equal(expected.ProvisionedBy, actual.ProvisionedBy)
+	s.Assert().Equal(expected.DeployEngineVersion, actual.DeployEngineVersion)
+	s.Assert().Equal(expected.ProviderPluginID, actual.ProviderPluginID)
+	s.Assert().Equal(expected.ProviderPluginVersion, actual.ProviderPluginVersion)
+	s.Assert().Equal(expected.ProvisionedAt, actual.ProvisionedAt)
 }
 
 // AssertResourceDriftEqual asserts that the actual resource drift state is equal to the expected resource drift state.
@@ -518,5 +555,19 @@ func SaveMetadataInput() map[string]*core.MappingNode {
 	return map[string]*core.MappingNode{
 		"build":    core.MappingNodeFromString("esbuild"),
 		"otherKey": core.MappingNodeFromString("otherValue"),
+	}
+}
+
+// CreateTestSystemMetadata creates system metadata for testing
+// resource persistence with provenance information.
+func CreateTestSystemMetadata() *state.SystemMetadataState {
+	return &state.SystemMetadataState{
+		Provenance: &state.ProvenanceState{
+			ProvisionedBy:         "bluelink",
+			DeployEngineVersion:   "1.0.0",
+			ProviderPluginID:      "newstack-cloud/aws",
+			ProviderPluginVersion: "2.5.0",
+			ProvisionedAt:         1733145428,
+		},
 	}
 }

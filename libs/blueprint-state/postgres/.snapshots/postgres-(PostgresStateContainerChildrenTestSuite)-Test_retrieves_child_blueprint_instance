@@ -236,6 +236,7 @@
       }),
       Description: (string) (len=24) "A complex resource type.",
       Metadata: (*state.ResourceMetadataState)(<nil>),
+      SystemMetadata: (*state.SystemMetadataState)(<nil>),
       DependsOnResources: ([]string) <nil>,
       DependsOnChildren: ([]string) <nil>,
       FailureReasons: ([]string) {

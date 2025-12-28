@@ -291,6 +291,7 @@ func copyResource(resourceState *state.ResourceState) state.ResourceState {
 	}
 
 	metadataCopy := copyResourceMetadata(resourceState.Metadata)
+	systemMetadataCopy := copySystemMetadata(resourceState.SystemMetadata)
 
 	dependsOnResources := make([]string, len(resourceState.DependsOnResources))
 	copy(dependsOnResources, resourceState.DependsOnResources)
@@ -308,6 +309,7 @@ func copyResource(resourceState *state.ResourceState) state.ResourceState {
 		PreciseStatus:      resourceState.PreciseStatus,
 		Description:        resourceState.Description,
 		Metadata:           &metadataCopy,
+		SystemMetadata:     systemMetadataCopy,
 		DependsOnResources: dependsOnResources,
 		DependsOnChildren:  dependsOnChildren,
 		FailureReasons:     resourceState.FailureReasons,
@@ -334,6 +336,30 @@ func copyResourceMetadata(metadata *state.ResourceMetadataState) state.ResourceM
 		Annotations: metadata.Annotations,
 		Labels:      metadata.Labels,
 		Custom:      metadata.Custom,
+	}
+}
+
+func copySystemMetadata(systemMetadata *state.SystemMetadataState) *state.SystemMetadataState {
+	if systemMetadata == nil {
+		return nil
+	}
+
+	return &state.SystemMetadataState{
+		Provenance: copyProvenance(systemMetadata.Provenance),
+	}
+}
+
+func copyProvenance(provenance *state.ProvenanceState) *state.ProvenanceState {
+	if provenance == nil {
+		return nil
+	}
+
+	return &state.ProvenanceState{
+		ProvisionedBy:         provenance.ProvisionedBy,
+		DeployEngineVersion:   provenance.DeployEngineVersion,
+		ProviderPluginID:      provenance.ProviderPluginID,
+		ProviderPluginVersion: provenance.ProviderPluginVersion,
+		ProvisionedAt:         provenance.ProvisionedAt,
 	}
 }
 

@@ -36,6 +36,7 @@
   }),
   Description: (string) (len=45) "Function that saves an order to the database.",
   Metadata: (*state.ResourceMetadataState)(<nil>),
+  SystemMetadata: (*state.SystemMetadataState)(<nil>),
   DependsOnResources: ([]string) <nil>,
   DependsOnChildren: ([]string) <nil>,
   FailureReasons: ([]string) {

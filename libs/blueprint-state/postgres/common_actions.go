@@ -31,6 +31,7 @@ func upsertResources(
 			"specData":           mappingNodeOrNilFallback(resource.SpecData, emptyObjectMappingNode),
 			"description":        toNullableText(resource.Description),
 			"metadata":           resource.Metadata,
+			"systemMetadata":     resource.SystemMetadata,
 			"dependsOnResources": resource.DependsOnResources,
 			"dependsOnChildren":  resource.DependsOnChildren,
 			"failureReasons":     sliceOrEmpty(resource.FailureReasons),

@@ -1,0 +1,31 @@
+{
+  "id": "test-resource-with-system-metadata-id",
+  "name": "resourceWithSystemMetadata",
+  "type": "aws/lambda/function",
+  "instanceId": "blueprint-instance-1",
+  "status": 2,
+  "preciseStatus": 3,
+  "lastDeployedTimestamp": 1733145428,
+  "lastDeployAttemptTimestamp": 1733145428,
+  "specData": {
+    "handler": "src/handler.main",
+    "runtime": "nodejs18.x"
+  },
+  "description": "A resource with system metadata for testing provenance persistence.",
+  "metadata": {
+    "displayName": "Resource With System Metadata",
+    "labels": {
+      "environment": "test"
+    }
+  },
+  "systemMetadata": {
+    "provenance": {
+      "provisionedBy": "bluelink",
+      "deployEngineVersion": "1.0.0",
+      "providerPluginId": "newstack-cloud/aws",
+      "providerPluginVersion": "2.5.0",
+      "provisionedAt": 1733145428
+    }
+  },
+  "failureReasons": []
+}
