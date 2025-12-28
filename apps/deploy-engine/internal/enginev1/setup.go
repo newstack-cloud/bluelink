@@ -21,7 +21,9 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/params"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginconfig"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginhostv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginmeta"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/tagging"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/azure"
 	resolverfs "github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/fs"
@@ -166,6 +168,9 @@ func Setup(
 		params.DefaultContextVars(config),
 	)
 
+	taggingConfigProvider := tagging.NewConfigProvider(config.Version)
+	providerMetadataLookup := pluginmeta.NewLookup(pluginHostService.Manager())
+
 	dependencies := &typesv1.Dependencies{
 		EventStore:                 stateServices.events,
 		ValidationStore:            stateServices.validation,
@@ -180,6 +185,8 @@ func Setup(
 		BlueprintResolver:          childResolver,
 		ParamsProvider:             paramsProvider,
 		PluginConfigPreparer:       pluginConfigPreparer,
+		TaggingConfigProvider:      taggingConfigProvider,
+		ProviderMetadataLookup:     providerMetadataLookup,
 		Clock:                      clock,
 		Logger:                     logger,
 	}

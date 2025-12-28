@@ -13,7 +13,9 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/inputvalidation"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginmeta"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/types"
 	internalutils "github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/utils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
@@ -21,6 +23,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/includes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
@@ -218,12 +221,16 @@ func (c *Controller) DestroyBlueprintInstanceHandler(
 
 	params := c.paramsProvider.CreateFromRequestConfig(finalConfig)
 
+	// Create tagging config from the request payload, applying defaults as needed.
+	taggingConfig := c.createTaggingConfig(payload.Config)
+
 	go c.startDestroy(
 		changeset,
 		instance.InstanceID,
 		payload.AsRollback,
 		payload.Force,
 		params,
+		taggingConfig,
 	)
 
 	// The instance status will be updated by the deployment process
@@ -308,6 +315,9 @@ func (c *Controller) handleDeployRequest(
 	finalConfig = internalutils.EnsureBlueprintDirContextVar(finalConfig, payload.BlueprintDocumentInfo.Directory)
 	params := c.paramsProvider.CreateFromRequestConfig(finalConfig)
 
+	// Create tagging config from the request payload, applying defaults as needed.
+	taggingConfig := c.createTaggingConfig(payload.Config)
+
 	instanceID, err := c.startDeployment(
 		blueprintInfo,
 		changeset,
@@ -319,6 +329,7 @@ func (c *Controller) handleDeployRequest(
 		existingInstance,
 		helpersv1.GetFormat(payload.BlueprintFile),
 		params,
+		taggingConfig,
 	)
 	if err != nil {
 		handleDeployErrorForResponse(w, err, c.logger)
@@ -415,6 +426,7 @@ func (c *Controller) startDeployment(
 	previousInstanceState *state.InstanceState,
 	format schema.SpecFormat,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (string, error) {
 	ctxWithTimeout, cancel := context.WithTimeout(
 		context.Background(),
@@ -439,11 +451,13 @@ func (c *Controller) startDeployment(
 	err = blueprintContainer.Deploy(
 		ctxWithTimeout,
 		&container.DeployInput{
-			InstanceID:   deployInstanceID,
-			InstanceName: instanceName,
-			Changes:      changeset.Changes,
-			Rollback:     forRollback,
-			Force:        force,
+			InstanceID:             deployInstanceID,
+			InstanceName:           instanceName,
+			Changes:                changeset.Changes,
+			Rollback:               forRollback,
+			Force:                  force,
+			TaggingConfig:          taggingConfig,
+			ProviderMetadataLookup: pluginmeta.ToLookupFunc(c.providerMetadataLookup),
 		},
 		channels,
 		params,
@@ -522,6 +536,7 @@ func (c *Controller) startDestroy(
 	forRollback bool,
 	force bool,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) {
 	ctxWithTimeout, cancel := context.WithTimeout(
 		context.Background(),
@@ -552,10 +567,12 @@ func (c *Controller) startDestroy(
 	blueprintContainer.Destroy(
 		ctxWithTimeout,
 		&container.DestroyInput{
-			InstanceID: destroyInstanceID,
-			Changes:    changeset.Changes,
-			Rollback:   forRollback,
-			Force:      force,
+			InstanceID:             destroyInstanceID,
+			Changes:                changeset.Changes,
+			Rollback:               forRollback,
+			Force:                  force,
+			TaggingConfig:          taggingConfig,
+			ProviderMetadataLookup: pluginmeta.ToLookupFunc(c.providerMetadataLookup),
 		},
 		channels,
 		params,
@@ -797,6 +814,8 @@ func (c *Controller) executeNewDeploymentRollback(
 		false, // force - auto-rollback does not use force mode
 		// Use empty params as we don't need blueprint params for destroy
 		blueprint.CreateEmptyBlueprintParams(),
+		// Tagging is not applied during rollback operations
+		nil,
 	)
 }
 
@@ -873,6 +892,9 @@ func (c *Controller) executeUpdateRollback(
 			InstanceName: previousInstanceState.InstanceName,
 			Changes:      reverseChanges,
 			Rollback:     true, // Mark as rollback operation
+			// Tagging is not applied during rollback operations
+			TaggingConfig:          nil,
+			ProviderMetadataLookup: nil,
 		},
 		channels,
 		blueprint.CreateEmptyBlueprintParams(),
@@ -1012,4 +1034,19 @@ func (c *Controller) respondWithDriftBlocked(
 		http.StatusConflict,
 		response,
 	)
+}
+
+// createTaggingConfig creates a provider.TaggingConfig from the request's
+// BlueprintOperationConfig. Returns nil if tagging config provider is not configured.
+func (c *Controller) createTaggingConfig(config *types.BlueprintOperationConfig) *provider.TaggingConfig {
+	if c.taggingConfigProvider == nil {
+		return nil
+	}
+
+	var taggingOpConfig *types.TaggingOperationConfig
+	if config != nil {
+		taggingOpConfig = config.Tagging
+	}
+
+	return c.taggingConfigProvider.CreateConfig(taggingOpConfig)
 }

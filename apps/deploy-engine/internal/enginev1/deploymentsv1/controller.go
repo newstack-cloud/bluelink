@@ -6,6 +6,8 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/params"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginconfig"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginmeta"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/tagging"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -68,11 +70,13 @@ type Controller struct {
 	blueprintLoader                      container.Loader
 	// Behaviour used to resolve child blueprints in the blueprint container
 	// package is reused to load the "root" blueprints from multiple sources.
-	blueprintResolver    includes.ChildResolver
-	paramsProvider       params.Provider
-	pluginConfigPreparer pluginconfig.Preparer
-	clock                commoncore.Clock
-	logger               core.Logger
+	blueprintResolver      includes.ChildResolver
+	paramsProvider         params.Provider
+	pluginConfigPreparer   pluginconfig.Preparer
+	taggingConfigProvider  tagging.ConfigProvider
+	providerMetadataLookup pluginmeta.Lookup
+	clock                  commoncore.Clock
+	logger                 core.Logger
 }
 
 // NewController creates a new deployments Controller
@@ -98,6 +102,8 @@ func NewController(
 		blueprintResolver:                    deps.BlueprintResolver,
 		paramsProvider:                       deps.ParamsProvider,
 		pluginConfigPreparer:                 deps.PluginConfigPreparer,
+		taggingConfigProvider:                deps.TaggingConfigProvider,
+		providerMetadataLookup:               deps.ProviderMetadataLookup,
 		clock:                                deps.Clock,
 		logger:                               deps.Logger,
 	}

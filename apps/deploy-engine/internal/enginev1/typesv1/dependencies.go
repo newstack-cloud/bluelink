@@ -3,6 +3,8 @@ package typesv1
 import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/params"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginconfig"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginmeta"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/tagging"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -28,6 +30,8 @@ type Dependencies struct {
 	BlueprintResolver          includes.ChildResolver
 	ParamsProvider             params.Provider
 	PluginConfigPreparer       pluginconfig.Preparer
+	TaggingConfigProvider      tagging.ConfigProvider
+	ProviderMetadataLookup     pluginmeta.Lookup
 	Clock                      commoncore.Clock
 	Logger                     core.Logger
 }

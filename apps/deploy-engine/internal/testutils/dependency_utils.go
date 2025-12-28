@@ -17,6 +17,8 @@ func CopyDependencies(deps *typesv1.Dependencies) *typesv1.Dependencies {
 		BlueprintResolver:          deps.BlueprintResolver,
 		ParamsProvider:             deps.ParamsProvider,
 		PluginConfigPreparer:       deps.PluginConfigPreparer,
+		TaggingConfigProvider:      deps.TaggingConfigProvider,
+		ProviderMetadataLookup:     deps.ProviderMetadataLookup,
 		Clock:                      deps.Clock,
 		Logger:                     deps.Logger,
 	}
