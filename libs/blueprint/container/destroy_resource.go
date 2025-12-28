@@ -130,9 +130,16 @@ func (d *defaultResourceDestroyer) destroyResource(
 		InstanceName:  instanceName,
 		ResourceID:    resourceInfo.element.ID(),
 		ResourceState: resourceState,
-		ProviderContext: provider.NewProviderContextFromParams(
+		ProviderContext: provider.NewProviderContextFromParamsWithOptions(
 			providerNamespace,
 			deployCtx.ParamOverrides,
+			&provider.ProviderContextOptions{
+				TaggingConfig: createResourceTaggingConfig(
+					deployCtx.TaggingConfig,
+					providerNamespace,
+					deployCtx.ProviderMetadataLookup,
+				),
+			},
 		),
 	})
 	if err != nil {

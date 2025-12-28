@@ -250,6 +250,9 @@ type ResourceState struct {
 	// blueprint framework along with the storage of labels, annotations and a human-friendly
 	// display name for the resource.
 	Metadata *ResourceMetadataState `json:"metadata,omitempty"`
+	// SystemMetadata holds system-generated metadata for the resource.
+	// This includes provenance information and is separate from user-defined blueprint metadata.
+	SystemMetadata *SystemMetadataState `json:"systemMetadata,omitempty"`
 	// DependsOnResources holds a list of resource names that the resource depends on,
 	// this dependency is derived from "hard" links, references and the use of the dependsOn
 	// property in the source blueprint.
@@ -288,6 +291,29 @@ type ResourceMetadataState struct {
 	Annotations map[string]*core.MappingNode `json:"annotations,omitempty"`
 	Labels      map[string]string            `json:"labels,omitempty"`
 	Custom      *core.MappingNode            `json:"custom,omitempty"`
+}
+
+// SystemMetadataState holds system-generated metadata for a resource.
+// This is separate from ResourceMetadataState which holds user-defined
+// blueprint metadata.
+type SystemMetadataState struct {
+	// Provenance stores provenance information for resources,
+	// particularly useful for resources that do not support external tagging.
+	Provenance *ProvenanceState `json:"provenance,omitempty"`
+}
+
+// ProvenanceState stores Bluelink provenance information for a resource.
+type ProvenanceState struct {
+	// ProvisionedBy is a marker indicating the resource was provisioned by Bluelink.
+	ProvisionedBy string `json:"provisionedBy"`
+	// DeployEngineVersion is the version of the deploy engine used.
+	DeployEngineVersion string `json:"deployEngineVersion"`
+	// ProviderPluginID is the identifier for the provider plugin (e.g., "newstack-cloud/aws").
+	ProviderPluginID string `json:"providerPluginId"`
+	// ProviderPluginVersion is the version of the provider plugin.
+	ProviderPluginVersion string `json:"providerPluginVersion"`
+	// ProvisionedAt is the unix timestamp when the resource was provisioned.
+	ProvisionedAt int64 `json:"provisionedAt"`
 }
 
 // ResourceDriftState holds information about how a resource has drifted

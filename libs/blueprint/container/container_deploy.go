@@ -242,12 +242,14 @@ func (c *defaultBlueprintContainer) deploy(
 			&currentInstanceState,
 			c.providers,
 		),
-		DeploymentGroups:  prepareResult.ParallelGroups,
-		PreparedContainer: prepareResult.BlueprintContainer,
-		InputChanges:      input.Changes,
-		ResourceTemplates: prepareResult.BlueprintContainer.ResourceTemplates(),
-		ResourceRegistry:  deployDeps.resourceRegistry,
-		Logger:            deployLogger,
+		DeploymentGroups:       prepareResult.ParallelGroups,
+		PreparedContainer:      prepareResult.BlueprintContainer,
+		InputChanges:           input.Changes,
+		ResourceTemplates:      prepareResult.BlueprintContainer.ResourceTemplates(),
+		ResourceRegistry:       deployDeps.resourceRegistry,
+		Logger:                 deployLogger,
+		TaggingConfig:          input.TaggingConfig,
+		ProviderMetadataLookup: input.ProviderMetadataLookup,
 	}
 
 	flattenedNodes := core.Flatten(prepareResult.ParallelGroups)

@@ -94,6 +94,13 @@ func RetryContextWithNextAttempt(
 type providerCtxFromParams struct {
 	providerNamespace string
 	blueprintParams   core.BlueprintParams
+	taggingConfig     *TaggingConfig
+}
+
+// ProviderContextOptions provides optional configuration for creating a provider context.
+type ProviderContextOptions struct {
+	// TaggingConfig is the configuration for resource tagging.
+	TaggingConfig *TaggingConfig
 }
 
 // NewProviderContextFromParams creates a new provider context
@@ -108,6 +115,23 @@ func NewProviderContextFromParams(
 		providerNamespace: providerNamespace,
 		blueprintParams:   blueprintParams,
 	}
+}
+
+// NewProviderContextFromParamsWithOptions creates a new provider context
+// from a set of blueprint parameters and options for the current environment.
+func NewProviderContextFromParamsWithOptions(
+	providerNamespace string,
+	blueprintParams core.BlueprintParams,
+	options *ProviderContextOptions,
+) Context {
+	ctx := &providerCtxFromParams{
+		providerNamespace: providerNamespace,
+		blueprintParams:   blueprintParams,
+	}
+	if options != nil {
+		ctx.taggingConfig = options.TaggingConfig
+	}
+	return ctx
 }
 
 func (p *providerCtxFromParams) ProviderConfigVariable(name string) (*core.ScalarValue, bool) {
@@ -134,6 +158,10 @@ func (p *providerCtxFromParams) ContextVariable(name string) (*core.ScalarValue,
 
 func (p *providerCtxFromParams) ContextVariables() map[string]*core.ScalarValue {
 	return p.blueprintParams.AllContextVariables()
+}
+
+func (p *providerCtxFromParams) TaggingConfig() *TaggingConfig {
+	return p.taggingConfig
 }
 
 type linkCtxFromParams struct {
@@ -197,9 +225,27 @@ func NewProviderContextFromLinkContext(
 	}
 }
 
+// NewProviderContextFromLinkContextWithOptions creates a new provider context
+// from a link context and options for the current environment.
+func NewProviderContextFromLinkContextWithOptions(
+	linkCtx LinkContext,
+	providerNamespace string,
+	options *ProviderContextOptions,
+) Context {
+	ctx := &providerCtxFromLinkCtx{
+		linkCtx:           linkCtx,
+		providerNamespace: providerNamespace,
+	}
+	if options != nil {
+		ctx.taggingConfig = options.TaggingConfig
+	}
+	return ctx
+}
+
 type providerCtxFromLinkCtx struct {
 	linkCtx           LinkContext
 	providerNamespace string
+	taggingConfig     *TaggingConfig
 }
 
 func (p *providerCtxFromLinkCtx) ProviderConfigVariable(name string) (*core.ScalarValue, bool) {
@@ -216,4 +262,8 @@ func (p *providerCtxFromLinkCtx) ContextVariable(name string) (*core.ScalarValue
 
 func (p *providerCtxFromLinkCtx) ContextVariables() map[string]*core.ScalarValue {
 	return p.linkCtx.ContextVariables()
+}
+
+func (p *providerCtxFromLinkCtx) TaggingConfig() *TaggingConfig {
+	return p.taggingConfig
 }

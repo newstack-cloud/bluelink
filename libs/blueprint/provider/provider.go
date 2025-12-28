@@ -102,6 +102,10 @@ type Context interface {
 	// This is useful to export all the context-wide variables to be sent to plugins
 	// that are running in a different process.
 	ContextVariables() map[string]*core.ScalarValue
+	// TaggingConfig retrieves the tagging configuration for the current provider.
+	// This controls how Bluelink tags are applied to resources.
+	// Returns nil if tagging is not configured.
+	TaggingConfig() *TaggingConfig
 }
 
 // RetryPolicy defines the retry policy that should be used for the provider

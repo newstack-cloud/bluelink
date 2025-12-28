@@ -464,6 +464,7 @@
           FieldsSourceMeta: (map[string]*source.Meta) <nil>
         })
       }),
+      SystemMetadata: (*state.SystemMetadataState)(<nil>),
       DependsOnResources: ([]string) <nil>,
       DependsOnChildren: ([]string) <nil>,
       FailureReasons: ([]string) <nil>,

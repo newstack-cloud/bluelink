@@ -39,6 +39,14 @@ type DeployContext struct {
 	// DrainDeadline is set by the parent when it enters drain mode.
 	// Child deployers use this to continue forwarding events until drain completes.
 	DrainDeadline <-chan time.Time
+	// TaggingConfig holds the base tagging configuration for the deployment.
+	// ProviderPluginID and ProviderPluginVersion will be set per-resource
+	// using ProviderMetadataLookup.
+	TaggingConfig *provider.TaggingConfig
+	// ProviderMetadataLookup returns provider plugin metadata for a provider namespace.
+	// This is used to populate ProviderPluginID and ProviderPluginVersion
+	// in the TaggingConfig for each resource.
+	ProviderMetadataLookup func(providerNamespace string) (pluginID, pluginVersion string)
 }
 
 func DeployContextWithChannels(
@@ -46,22 +54,24 @@ func DeployContextWithChannels(
 	channels *DeployChannels,
 ) *DeployContext {
 	return &DeployContext{
-		StartTime:             deployCtx.StartTime,
-		State:                 deployCtx.State,
-		Channels:              channels,
-		Rollback:              deployCtx.Rollback,
-		Destroying:            deployCtx.Destroying,
-		InstanceStateSnapshot: deployCtx.InstanceStateSnapshot,
-		ParamOverrides:        deployCtx.ParamOverrides,
-		ResourceProviders:     deployCtx.ResourceProviders,
-		CurrentGroupIndex:     deployCtx.CurrentGroupIndex,
-		DeploymentGroups:      deployCtx.DeploymentGroups,
-		InputChanges:          deployCtx.InputChanges,
-		ResourceTemplates:     deployCtx.ResourceTemplates,
-		PreparedContainer:     deployCtx.PreparedContainer,
-		ResourceRegistry:      deployCtx.ResourceRegistry,
-		Logger:                deployCtx.Logger,
-		DrainDeadline:         deployCtx.DrainDeadline,
+		StartTime:              deployCtx.StartTime,
+		State:                  deployCtx.State,
+		Channels:               channels,
+		Rollback:               deployCtx.Rollback,
+		Destroying:             deployCtx.Destroying,
+		InstanceStateSnapshot:  deployCtx.InstanceStateSnapshot,
+		ParamOverrides:         deployCtx.ParamOverrides,
+		ResourceProviders:      deployCtx.ResourceProviders,
+		CurrentGroupIndex:      deployCtx.CurrentGroupIndex,
+		DeploymentGroups:       deployCtx.DeploymentGroups,
+		InputChanges:           deployCtx.InputChanges,
+		ResourceTemplates:      deployCtx.ResourceTemplates,
+		PreparedContainer:      deployCtx.PreparedContainer,
+		ResourceRegistry:       deployCtx.ResourceRegistry,
+		Logger:                 deployCtx.Logger,
+		DrainDeadline:          deployCtx.DrainDeadline,
+		TaggingConfig:          deployCtx.TaggingConfig,
+		ProviderMetadataLookup: deployCtx.ProviderMetadataLookup,
 	}
 }
 
@@ -70,22 +80,24 @@ func DeployContextWithGroup(
 	groupIndex int,
 ) *DeployContext {
 	return &DeployContext{
-		StartTime:             deployCtx.StartTime,
-		State:                 deployCtx.State,
-		Channels:              deployCtx.Channels,
-		Rollback:              deployCtx.Rollback,
-		Destroying:            deployCtx.Destroying,
-		InstanceStateSnapshot: deployCtx.InstanceStateSnapshot,
-		ParamOverrides:        deployCtx.ParamOverrides,
-		ResourceProviders:     deployCtx.ResourceProviders,
-		CurrentGroupIndex:     groupIndex,
-		DeploymentGroups:      deployCtx.DeploymentGroups,
-		InputChanges:          deployCtx.InputChanges,
-		ResourceTemplates:     deployCtx.ResourceTemplates,
-		PreparedContainer:     deployCtx.PreparedContainer,
-		ResourceRegistry:      deployCtx.ResourceRegistry,
-		Logger:                deployCtx.Logger,
-		DrainDeadline:         deployCtx.DrainDeadline,
+		StartTime:              deployCtx.StartTime,
+		State:                  deployCtx.State,
+		Channels:               deployCtx.Channels,
+		Rollback:               deployCtx.Rollback,
+		Destroying:             deployCtx.Destroying,
+		InstanceStateSnapshot:  deployCtx.InstanceStateSnapshot,
+		ParamOverrides:         deployCtx.ParamOverrides,
+		ResourceProviders:      deployCtx.ResourceProviders,
+		CurrentGroupIndex:      groupIndex,
+		DeploymentGroups:       deployCtx.DeploymentGroups,
+		InputChanges:           deployCtx.InputChanges,
+		ResourceTemplates:      deployCtx.ResourceTemplates,
+		PreparedContainer:      deployCtx.PreparedContainer,
+		ResourceRegistry:       deployCtx.ResourceRegistry,
+		Logger:                 deployCtx.Logger,
+		DrainDeadline:          deployCtx.DrainDeadline,
+		TaggingConfig:          deployCtx.TaggingConfig,
+		ProviderMetadataLookup: deployCtx.ProviderMetadataLookup,
 	}
 }
 
@@ -94,22 +106,24 @@ func DeployContextWithInstanceSnapshot(
 	instanceSnapshot *state.InstanceState,
 ) *DeployContext {
 	return &DeployContext{
-		StartTime:             deployCtx.StartTime,
-		State:                 deployCtx.State,
-		Channels:              deployCtx.Channels,
-		Rollback:              deployCtx.Rollback,
-		Destroying:            deployCtx.Destroying,
-		InstanceStateSnapshot: instanceSnapshot,
-		ParamOverrides:        deployCtx.ParamOverrides,
-		ResourceProviders:     deployCtx.ResourceProviders,
-		CurrentGroupIndex:     deployCtx.CurrentGroupIndex,
-		DeploymentGroups:      deployCtx.DeploymentGroups,
-		InputChanges:          deployCtx.InputChanges,
-		ResourceTemplates:     deployCtx.ResourceTemplates,
-		PreparedContainer:     deployCtx.PreparedContainer,
-		ResourceRegistry:      deployCtx.ResourceRegistry,
-		Logger:                deployCtx.Logger,
-		DrainDeadline:         deployCtx.DrainDeadline,
+		StartTime:              deployCtx.StartTime,
+		State:                  deployCtx.State,
+		Channels:               deployCtx.Channels,
+		Rollback:               deployCtx.Rollback,
+		Destroying:             deployCtx.Destroying,
+		InstanceStateSnapshot:  instanceSnapshot,
+		ParamOverrides:         deployCtx.ParamOverrides,
+		ResourceProviders:      deployCtx.ResourceProviders,
+		CurrentGroupIndex:      deployCtx.CurrentGroupIndex,
+		DeploymentGroups:       deployCtx.DeploymentGroups,
+		InputChanges:           deployCtx.InputChanges,
+		ResourceTemplates:      deployCtx.ResourceTemplates,
+		PreparedContainer:      deployCtx.PreparedContainer,
+		ResourceRegistry:       deployCtx.ResourceRegistry,
+		Logger:                 deployCtx.Logger,
+		DrainDeadline:          deployCtx.DrainDeadline,
+		TaggingConfig:          deployCtx.TaggingConfig,
+		ProviderMetadataLookup: deployCtx.ProviderMetadataLookup,
 	}
 }
 
@@ -118,21 +132,23 @@ func DeployContextWithLogger(
 	logger core.Logger,
 ) *DeployContext {
 	return &DeployContext{
-		StartTime:             deployCtx.StartTime,
-		State:                 deployCtx.State,
-		Channels:              deployCtx.Channels,
-		Rollback:              deployCtx.Rollback,
-		Destroying:            deployCtx.Destroying,
-		InstanceStateSnapshot: deployCtx.InstanceStateSnapshot,
-		ParamOverrides:        deployCtx.ParamOverrides,
-		ResourceProviders:     deployCtx.ResourceProviders,
-		CurrentGroupIndex:     deployCtx.CurrentGroupIndex,
-		DeploymentGroups:      deployCtx.DeploymentGroups,
-		InputChanges:          deployCtx.InputChanges,
-		ResourceTemplates:     deployCtx.ResourceTemplates,
-		PreparedContainer:     deployCtx.PreparedContainer,
-		ResourceRegistry:      deployCtx.ResourceRegistry,
-		Logger:                logger,
-		DrainDeadline:         deployCtx.DrainDeadline,
+		StartTime:              deployCtx.StartTime,
+		State:                  deployCtx.State,
+		Channels:               deployCtx.Channels,
+		Rollback:               deployCtx.Rollback,
+		Destroying:             deployCtx.Destroying,
+		InstanceStateSnapshot:  deployCtx.InstanceStateSnapshot,
+		ParamOverrides:         deployCtx.ParamOverrides,
+		ResourceProviders:      deployCtx.ResourceProviders,
+		CurrentGroupIndex:      deployCtx.CurrentGroupIndex,
+		DeploymentGroups:       deployCtx.DeploymentGroups,
+		InputChanges:           deployCtx.InputChanges,
+		ResourceTemplates:      deployCtx.ResourceTemplates,
+		PreparedContainer:      deployCtx.PreparedContainer,
+		ResourceRegistry:       deployCtx.ResourceRegistry,
+		Logger:                 logger,
+		DrainDeadline:          deployCtx.DrainDeadline,
+		TaggingConfig:          deployCtx.TaggingConfig,
+		ProviderMetadataLookup: deployCtx.ProviderMetadataLookup,
 	}
 }

@@ -457,6 +457,10 @@ type ResourceSpecDefinition struct {
 	// and is a hint for tools and SDKs built on top of the framework (such as the plugin framework SDK)
 	// on how they should handle resource deployments.
 	DestroyBeforeCreate bool
+	// TaggingSupport indicates how the resource type supports external tagging.
+	// This is used by the deploy engine to determine how to apply Bluelink tags
+	// to resources.
+	TaggingSupport TaggingSupport
 }
 
 // ResourceDefinitionsSchema provides a schema that can be used to validate

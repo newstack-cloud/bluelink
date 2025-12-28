@@ -627,6 +627,7 @@
               FieldsSourceMeta: (map[string]*source.Meta) <nil>
             })
           }),
+          SystemMetadata: (*state.SystemMetadataState)(<nil>),
           DependsOnResources: ([]string) <nil>,
           DependsOnChildren: ([]string) <nil>,
           FailureReasons: ([]string) {
@@ -1468,6 +1469,7 @@
               FieldsSourceMeta: (map[string]*source.Meta) <nil>
             })
           }),
+          SystemMetadata: (*state.SystemMetadataState)(<nil>),
           DependsOnResources: ([]string) <nil>,
           DependsOnChildren: ([]string) <nil>,
           FailureReasons: ([]string) {
@@ -2156,6 +2158,7 @@
           }),
           Description: (string) (len=45) "Function that saves an order to the database.",
           Metadata: (*state.ResourceMetadataState)(<nil>),
+          SystemMetadata: (*state.SystemMetadataState)(<nil>),
           DependsOnResources: ([]string) <nil>,
           DependsOnChildren: ([]string) <nil>,
           FailureReasons: ([]string) {
@@ -2701,6 +2704,7 @@
               }),
               Description: (string) (len=24) "A complex resource type.",
               Metadata: (*state.ResourceMetadataState)(<nil>),
+              SystemMetadata: (*state.SystemMetadataState)(<nil>),
               DependsOnResources: ([]string) <nil>,
               DependsOnChildren: ([]string) <nil>,
               FailureReasons: ([]string) {

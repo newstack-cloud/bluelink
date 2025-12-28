@@ -29,6 +29,7 @@
         Labels: (map[string]string) <nil>,
         Custom: (*core.MappingNode)(<nil>)
       }),
+      SystemMetadata: (*state.SystemMetadataState)(<nil>),
       DependsOnResources: ([]string) <nil>,
       DependsOnChildren: ([]string) <nil>,
       FailureReasons: ([]string) <nil>,

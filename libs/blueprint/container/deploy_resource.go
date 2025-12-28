@@ -236,9 +236,16 @@ func (d *defaultResourceDeployer) deployResource(
 			InstanceName: resourceInfo.instanceName,
 			ResourceID:   resourceInfo.resourceID,
 			Changes:      resourceInfo.changes,
-			ProviderContext: provider.NewProviderContextFromParams(
+			ProviderContext: provider.NewProviderContextFromParamsWithOptions(
 				providerNamespace,
 				deployCtx.ParamOverrides,
+				&provider.ProviderContextOptions{
+					TaggingConfig: createResourceTaggingConfig(
+						deployCtx.TaggingConfig,
+						providerNamespace,
+						deployCtx.ProviderMetadataLookup,
+					),
+				},
 			),
 		},
 	)
@@ -402,9 +409,16 @@ func (d *defaultResourceDeployer) pollForResourceStability(
 					ResourceID:       resourceInfo.resourceID,
 					ResourceSpec:     resourceData.Spec,
 					ResourceMetadata: resourceData.Metadata,
-					ProviderContext: provider.NewProviderContextFromParams(
+					ProviderContext: provider.NewProviderContextFromParamsWithOptions(
 						providerNamespace,
 						deployCtx.ParamOverrides,
+						&provider.ProviderContextOptions{
+							TaggingConfig: createResourceTaggingConfig(
+								deployCtx.TaggingConfig,
+								providerNamespace,
+								deployCtx.ProviderMetadataLookup,
+							),
+						},
 					),
 				},
 				hasStabilisedRetryCtx,
@@ -722,4 +736,37 @@ func (d *defaultResourceDeployer) getResourceID(changes *provider.Changes) (stri
 	}
 
 	return changes.AppliedResourceInfo.ResourceID, nil
+}
+
+// createResourceTaggingConfig creates a TaggingConfig for a specific resource
+// by combining the base tagging config with provider-specific metadata.
+func createResourceTaggingConfig(
+	baseConfig *provider.TaggingConfig,
+	providerNamespace string,
+	metadataLookup func(string) (string, string),
+) *provider.TaggingConfig {
+	if baseConfig == nil {
+		return nil
+	}
+
+	pluginID, pluginVersion := lookupProviderMetadata(providerNamespace, metadataLookup)
+
+	return &provider.TaggingConfig{
+		Enabled:               baseConfig.Enabled,
+		Prefix:                baseConfig.Prefix,
+		DeployEngineVersion:   baseConfig.DeployEngineVersion,
+		ProviderPluginID:      pluginID,
+		ProviderPluginVersion: pluginVersion,
+	}
+}
+
+// lookupProviderMetadata retrieves the plugin ID and version for a provider namespace.
+func lookupProviderMetadata(
+	providerNamespace string,
+	metadataLookup func(string) (string, string),
+) (pluginID, pluginVersion string) {
+	if metadataLookup == nil {
+		return "", ""
+	}
+	return metadataLookup(providerNamespace)
 }

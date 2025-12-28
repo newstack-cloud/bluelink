@@ -175,6 +175,13 @@ type DeployInput struct {
 	// This is an escape hatch for recovering from stuck states where the instance
 	// is in an inconsistent state due to a crash or unexpected termination.
 	Force bool
+	// TaggingConfig holds the configuration for Bluelink resource tagging.
+	// If nil, tagging will not be applied to resources.
+	TaggingConfig *provider.TaggingConfig
+	// ProviderMetadataLookup returns provider plugin metadata for a provider namespace.
+	// This is used to populate ProviderPluginID and ProviderPluginVersion
+	// in the TaggingConfig for each resource.
+	ProviderMetadataLookup func(providerNamespace string) (pluginID, pluginVersion string)
 }
 
 // DestroyInput contains the primary input needed to destroy a blueprint instance.
@@ -200,6 +207,13 @@ type DestroyInput struct {
 	// This is useful for removing instances where underlying resources were manually
 	// deleted or when a provider is unavailable.
 	Force bool
+	// TaggingConfig holds the configuration for Bluelink resource tagging.
+	// If nil, tagging will not be applied to resources.
+	TaggingConfig *provider.TaggingConfig
+	// ProviderMetadataLookup returns provider plugin metadata for a provider namespace.
+	// This is used to populate ProviderPluginID and ProviderPluginVersion
+	// in the TaggingConfig for each resource.
+	ProviderMetadataLookup func(providerNamespace string) (pluginID, pluginVersion string)
 }
 
 type defaultBlueprintContainer struct {
