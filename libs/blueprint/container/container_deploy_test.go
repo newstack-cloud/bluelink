@@ -406,6 +406,10 @@ func (s *ContainerDeployTestSuite) Test_fails_to_deploy_blueprint_with_cycle() {
 			InstanceID: "blueprint-instance-3",
 			Changes:    changes,
 			Rollback:   false,
+			// Use a short drain timeout for faster test execution.
+			// The cycle error cascades through parent-child containers,
+			// and each uses getErrorChannelDrainTimeout (25% of DrainTimeout).
+			DrainTimeout: 100 * time.Millisecond,
 		},
 		channels,
 		s.fixture3Params,
@@ -549,9 +553,10 @@ func (s *ContainerDeployTestSuite) Test_context_cancellation_drains_in_progress_
 	err := s.blueprint1Fixture.blueprintContainer.Deploy(
 		ctx,
 		&DeployInput{
-			InstanceID: "blueprint-instance-1",
-			Changes:    changes,
-			Rollback:   false,
+			InstanceID:   "blueprint-instance-1",
+			Changes:      changes,
+			Rollback:     false,
+			DrainTimeout: 100 * time.Millisecond, // Short timeout for fast tests
 		},
 		channels,
 		s.fixture1Params,
@@ -602,9 +607,10 @@ func (s *ContainerDeployTestSuite) Test_context_timeout_during_deployment_finish
 	err := s.blueprint1Fixture.blueprintContainer.Deploy(
 		ctx,
 		&DeployInput{
-			InstanceID: "blueprint-instance-1",
-			Changes:    changes,
-			Rollback:   false,
+			InstanceID:   "blueprint-instance-1",
+			Changes:      changes,
+			Rollback:     false,
+			DrainTimeout: 100 * time.Millisecond, // Short timeout for fast tests
 		},
 		channels,
 		s.fixture1Params,

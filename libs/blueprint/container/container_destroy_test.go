@@ -529,9 +529,10 @@ func (s *ContainerDestroyTestSuite) Test_context_cancellation_drains_in_progress
 	s.blueprint1Fixture.blueprintContainer.Destroy(
 		ctx,
 		&DestroyInput{
-			InstanceID: "blueprint-instance-1",
-			Changes:    blueprint1RemovalChanges(),
-			Rollback:   false,
+			InstanceID:   "blueprint-instance-1",
+			Changes:      blueprint1RemovalChanges(),
+			Rollback:     false,
+			DrainTimeout: 100 * time.Millisecond, // Short timeout for fast tests
 		},
 		channels,
 		blueprintDestroyParams(),
@@ -572,9 +573,10 @@ func (s *ContainerDestroyTestSuite) Test_context_timeout_during_destroy_finishes
 	s.blueprint1Fixture.blueprintContainer.Destroy(
 		ctx,
 		&DestroyInput{
-			InstanceID: "blueprint-instance-1",
-			Changes:    blueprint1RemovalChanges(),
-			Rollback:   false,
+			InstanceID:   "blueprint-instance-1",
+			Changes:      blueprint1RemovalChanges(),
+			Rollback:     false,
+			DrainTimeout: 100 * time.Millisecond, // Short timeout for fast tests
 		},
 		channels,
 		blueprintDestroyParams(),

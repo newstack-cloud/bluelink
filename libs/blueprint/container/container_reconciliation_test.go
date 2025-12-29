@@ -7,6 +7,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/drift"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/memstate"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/stretchr/testify/suite"
 )
@@ -430,7 +431,7 @@ func (s *ContainerReconciliationTestSuite) Test_apply_reconciliation_marks_resou
 			ResourceActions: []ResourceReconcileAction{
 				{
 					ResourceID: "resource-1",
-					Action:     ReconciliationActionMarkFailed,
+					Action:     ReconciliationActionManualCleanupRequired,
 					NewStatus:  core.PreciseResourceStatusCreateFailed,
 				},
 			},
@@ -721,7 +722,7 @@ func (s *ContainerReconciliationTestSuite) Test_apply_reconciliation_marks_inter
 					IntermediaryActions: map[string]*IntermediaryReconcileAction{
 						"intermediary-1": {
 							IntermediaryID: "intermediary-1",
-							Action:         ReconciliationActionMarkFailed,
+							Action:         ReconciliationActionManualCleanupRequired,
 							NewStatus:      core.PreciseResourceStatusCreateFailed,
 						},
 					},
@@ -1636,7 +1637,7 @@ func (s *ContainerReconciliationTestSuite) Test_apply_link_reconciliation_update
 	s.NotNil(linkState.LastDriftDetectedTimestamp, "LastDriftDetectedTimestamp should be preserved")
 }
 
-func (s *ContainerReconciliationTestSuite) Test_apply_link_reconciliation_mark_failed_preserves_drift_state() {
+func (s *ContainerReconciliationTestSuite) Test_apply_link_reconciliation_manual_cleanup_preserves_drift_state() {
 	oldValue := "old-handler"
 	driftTimestamp := 1234567890
 
@@ -1710,7 +1711,7 @@ func (s *ContainerReconciliationTestSuite) Test_apply_link_reconciliation_mark_f
 	})
 	s.Require().NoError(err)
 
-	// Apply MarkFailed action
+	// Apply ManualCleanupRequired action
 	result, err := s.container.ApplyReconciliation(
 		context.Background(),
 		&ApplyReconciliationInput{
@@ -1718,13 +1719,13 @@ func (s *ContainerReconciliationTestSuite) Test_apply_link_reconciliation_mark_f
 			LinkActions: []LinkReconcileAction{
 				{
 					LinkID:    "link-1",
-					Action:    ReconciliationActionMarkFailed,
+					Action:    ReconciliationActionManualCleanupRequired,
 					NewStatus: core.PreciseLinkStatusResourceAUpdateFailed,
 					// Needs IntermediaryActions to trigger full save path
 					IntermediaryActions: map[string]*IntermediaryReconcileAction{
 						"intermediary-1": {
 							IntermediaryID: "intermediary-1",
-							Action:         ReconciliationActionMarkFailed,
+							Action:         ReconciliationActionManualCleanupRequired,
 							NewStatus:      core.PreciseResourceStatusCreateFailed,
 						},
 					},
@@ -1741,16 +1742,16 @@ func (s *ContainerReconciliationTestSuite) Test_apply_link_reconciliation_mark_f
 	// Verify link drift state was NOT removed
 	linkDriftState, err := s.stateContainer.Links().GetDrift(context.Background(), "link-1")
 	s.Require().NoError(err)
-	s.Equal("link-1", linkDriftState.LinkID, "drift state should be preserved for MarkFailed action")
+	s.Equal("link-1", linkDriftState.LinkID, "drift state should be preserved for ManualCleanupRequired action")
 
 	// Verify link Drifted flag was NOT cleared
 	linkState, err := s.stateContainer.Links().Get(context.Background(), "link-1")
 	s.Require().NoError(err)
-	s.True(linkState.Drifted, "Drifted flag should be preserved for MarkFailed action")
+	s.True(linkState.Drifted, "Drifted flag should be preserved for ManualCleanupRequired action")
 	s.NotNil(linkState.LastDriftDetectedTimestamp, "LastDriftDetectedTimestamp should be preserved")
 
 	// Verify failure reasons were added
-	s.NotEmpty(linkState.FailureReasons, "failure reasons should be added for MarkFailed action")
+	s.NotEmpty(linkState.FailureReasons, "failure reasons should be added for ManualCleanupRequired action")
 }
 
 func (s *ContainerReconciliationTestSuite) Test_apply_reconciliation_populates_element_name_in_error() {
@@ -1940,6 +1941,7 @@ func (m *mockDriftChecker) CheckDrift(
 	ctx context.Context,
 	instanceID string,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (map[string]*state.ResourceDriftState, error) {
 	return m.checkDriftResults, m.checkDriftError
 }
@@ -1950,6 +1952,7 @@ func (m *mockDriftChecker) CheckResourceDrift(
 	instanceName string,
 	resourceID string,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (*state.ResourceDriftState, error) {
 	return m.checkResourceDriftState, m.checkResourceDriftError
 }
@@ -1958,6 +1961,7 @@ func (m *mockDriftChecker) CheckInterruptedResources(
 	ctx context.Context,
 	instanceID string,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) ([]drift.ReconcileResult, error) {
 	return m.checkInterruptedResults, m.checkInterruptedError
 }
@@ -1974,6 +1978,7 @@ func (m *mockDriftChecker) CheckLinkDrift(
 	instanceID string,
 	linkID string,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (*state.LinkDriftState, error) {
 	return m.checkLinkDriftState, m.checkLinkDriftError
 }
@@ -1982,6 +1987,7 @@ func (m *mockDriftChecker) CheckAllLinkDrift(
 	ctx context.Context,
 	instanceID string,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (map[string]*state.LinkDriftState, error) {
 	return m.checkAllLinkDriftResults, m.checkAllLinkDriftError
 }
@@ -1990,6 +1996,7 @@ func (m *mockDriftChecker) CheckDriftWithState(
 	ctx context.Context,
 	instanceState *state.InstanceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (map[string]*state.ResourceDriftState, error) {
 	return m.checkDriftResults, m.checkDriftError
 }
@@ -1998,6 +2005,7 @@ func (m *mockDriftChecker) CheckInterruptedResourcesWithState(
 	ctx context.Context,
 	instanceState *state.InstanceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) ([]drift.ReconcileResult, error) {
 	return m.checkInterruptedResults, m.checkInterruptedError
 }
@@ -2006,6 +2014,7 @@ func (m *mockDriftChecker) CheckAllLinkDriftWithState(
 	ctx context.Context,
 	instanceState *state.InstanceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (map[string]*state.LinkDriftState, error) {
 	return m.checkAllLinkDriftResults, m.checkAllLinkDriftError
 }

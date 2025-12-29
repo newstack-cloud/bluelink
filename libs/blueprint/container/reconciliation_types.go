@@ -42,9 +42,12 @@ const (
 	// ReconciliationActionUpdateStatus only updates the element's status without
 	// modifying the persisted state data.
 	ReconciliationActionUpdateStatus ReconciliationAction = "update_status"
-	// ReconciliationActionMarkFailed marks the element as failed when the external
-	// state indicates the operation did not complete successfully.
-	ReconciliationActionMarkFailed ReconciliationAction = "mark_failed"
+	// ReconciliationActionManualCleanupRequired indicates the resource needs manual
+	// cleanup before proceeding. The instance should be destroyed, orphaned resources
+	// cleaned up manually in the provider console, and deployment retried.
+	// This is used when external state cannot be retrieved for an interrupted resource
+	// (e.g., tag-based lookup is not supported for the resource type).
+	ReconciliationActionManualCleanupRequired ReconciliationAction = "manual_cleanup_required"
 )
 
 // CheckReconciliationInput specifies what to check for reconciliation.
@@ -66,6 +69,10 @@ type CheckReconciliationInput struct {
 	// Used when Scope is ReconciliationScopeSpecific.
 	// Format: "childA" for first level, "childA.childB" for nested.
 	ChildPath string
+	// TaggingConfig provides tagging configuration for the reconciliation check.
+	// When set, enables providers to perform tag-based resource lookups during
+	// drift checking and reconciliation. If nil, tagging-based lookups will not be available.
+	TaggingConfig *provider.TaggingConfig
 }
 
 // ReconciliationCheckResult contains all elements needing reconciliation.

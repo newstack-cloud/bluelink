@@ -84,11 +84,14 @@ func (c *defaultBlueprintContainer) Deploy(
 	go c.deploy(
 		ctxWithInstanceID,
 		&DeployInput{
-			InstanceID:   instanceID,
-			InstanceName: input.InstanceName,
-			Changes:      input.Changes,
-			Rollback:     input.Rollback,
-			Force:        input.Force,
+			InstanceID:             instanceID,
+			InstanceName:           input.InstanceName,
+			Changes:                input.Changes,
+			Rollback:               input.Rollback,
+			Force:                  input.Force,
+			TaggingConfig:          input.TaggingConfig,
+			ProviderMetadataLookup: input.ProviderMetadataLookup,
+			DrainTimeout:           input.DrainTimeout,
 		},
 		rewiredChannels,
 		state,
@@ -229,6 +232,11 @@ func (c *defaultBlueprintContainer) deploy(
 		return
 	}
 
+	drainTimeout := input.DrainTimeout
+	if drainTimeout == 0 {
+		drainTimeout = DefaultDrainTimeout
+	}
+
 	deployCtx := &DeployContext{
 		StartTime:             startTime,
 		State:                 deployState,
@@ -250,6 +258,7 @@ func (c *defaultBlueprintContainer) deploy(
 		Logger:                 deployLogger,
 		TaggingConfig:          input.TaggingConfig,
 		ProviderMetadataLookup: input.ProviderMetadataLookup,
+		DrainTimeout:           drainTimeout,
 	}
 
 	flattenedNodes := core.Flatten(prepareResult.ParallelGroups)
@@ -720,7 +729,12 @@ func (c *defaultBlueprintContainer) processResourceUpdate(
 	state *deploymentEventLoopState,
 ) {
 	if state.isDraining() {
-		c.trackResourceCompletion(msg, deployCtx.Rollback, finished)
+		// Only track completion for resources belonging to this instance.
+		// Descendant resources (msg.InstanceID != instanceID) are forwarded
+		// for visibility but shouldn't affect this instance's drain loop exit.
+		if msg.InstanceID == instanceID {
+			c.trackResourceCompletion(msg, deployCtx.Rollback, finished)
+		}
 		// Forward the message to the caller so they can track status changes
 		// for in-flight resources during drain.
 		deployCtx.Channels.ResourceUpdateChan <- msg
@@ -740,16 +754,20 @@ func (c *defaultBlueprintContainer) processResourceUpdate(
 		internalChannels,
 	)
 	if err != nil {
-		state.setError(err, 30*time.Second, deployCtx)
+		state.setError(err, deployCtx.DrainTimeout, deployCtx)
 		return
 	}
 
 	// Trigger drain mode on terminal failure to stop new deployments
 	// and wait for in-flight operations to complete.
-	if isTerminalResourceFailure(msg, deployCtx.Rollback) {
+	// Only trigger for resources belonging to this instance (msg.InstanceID == instanceID),
+	// not for descendant resources being forwarded through the hierarchy.
+	// Descendant failures will trigger drain at the appropriate ancestor level
+	// when that ancestor's direct child finishes with a failure status.
+	if msg.InstanceID == instanceID && isTerminalResourceFailure(msg, deployCtx.Rollback) {
 		state.setTerminalFailure(
 			fmt.Errorf("resource %q failed to deploy", msg.ResourceName),
-			30*time.Second,
+			deployCtx.DrainTimeout,
 			deployCtx,
 		)
 	}
@@ -765,7 +783,12 @@ func (c *defaultBlueprintContainer) processChildUpdate(
 	state *deploymentEventLoopState,
 ) {
 	if state.isDraining() {
-		c.trackChildCompletion(msg, deployCtx.Rollback, finished)
+		// Only track completion for direct children (msg.ParentInstanceID == instanceID).
+		// Grandchildren are forwarded for visibility but shouldn't affect
+		// this instance's drain loop exit.
+		if msg.ParentInstanceID == instanceID {
+			c.trackChildCompletion(msg, deployCtx.Rollback, finished)
+		}
 		// Forward the message to the caller so they can track status changes
 		// for in-flight child blueprints during drain.
 		deployCtx.Channels.ChildUpdateChan <- msg
@@ -781,16 +804,20 @@ func (c *defaultBlueprintContainer) processChildUpdate(
 		internalChannels,
 	)
 	if err != nil {
-		state.setError(err, 30*time.Second, deployCtx)
+		state.setError(err, deployCtx.DrainTimeout, deployCtx)
 		return
 	}
 
 	// Trigger drain mode on terminal failure to stop new deployments
 	// and wait for in-flight operations to complete.
-	if isTerminalChildFailure(msg, deployCtx.Rollback) {
+	// Only trigger for direct children (msg.ParentInstanceID == instanceID),
+	// not for descendants being forwarded through the hierarchy.
+	// Grandchild failures will trigger drain at the appropriate ancestor level
+	// when that ancestor's direct child (the grandchild's parent) fails.
+	if msg.ParentInstanceID == instanceID && isTerminalChildFailure(msg, deployCtx.Rollback) {
 		state.setTerminalFailure(
 			fmt.Errorf("child blueprint %q failed to deploy", msg.ChildName),
-			30*time.Second,
+			deployCtx.DrainTimeout,
 			deployCtx,
 		)
 	}
@@ -805,7 +832,12 @@ func (c *defaultBlueprintContainer) processLinkUpdate(
 	state *deploymentEventLoopState,
 ) {
 	if state.isDraining() {
-		c.trackLinkCompletion(msg, deployCtx.Rollback, finished)
+		// Only track completion for links belonging to this instance.
+		// Descendant links (msg.InstanceID != instanceID) are forwarded
+		// for visibility but shouldn't affect this instance's drain loop exit.
+		if msg.InstanceID == instanceID {
+			c.trackLinkCompletion(msg, deployCtx.Rollback, finished)
+		}
 		// Forward the message to the caller so they can track status changes
 		// for in-flight links during drain.
 		deployCtx.Channels.LinkUpdateChan <- msg
@@ -816,16 +848,20 @@ func (c *defaultBlueprintContainer) processLinkUpdate(
 	// does not need to be enhanced like it is for resource and child messages.
 	err := c.handleLinkUpdateMessage(ctx, instanceID, msg, deployCtx, finished)
 	if err != nil {
-		state.setError(err, 30*time.Second, deployCtx)
+		state.setError(err, deployCtx.DrainTimeout, deployCtx)
 		return
 	}
 
 	// Trigger drain mode on terminal failure to stop new deployments
 	// and wait for in-flight operations to complete.
-	if isTerminalLinkFailure(msg, deployCtx.Rollback) {
+	// Only trigger for links belonging to this instance (msg.InstanceID == instanceID),
+	// not for descendant links being forwarded through the hierarchy.
+	// Descendant failures will trigger drain at the appropriate ancestor level
+	// when that ancestor's direct child finishes with a failure status.
+	if msg.InstanceID == instanceID && isTerminalLinkFailure(msg, deployCtx.Rollback) {
 		state.setTerminalFailure(
 			fmt.Errorf("link %q failed to deploy", msg.LinkName),
-			30*time.Second,
+			deployCtx.DrainTimeout,
 			deployCtx,
 		)
 	}
@@ -852,6 +888,12 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 	// In drain mode (after a terminal failure), we only wait for elements that
 	// have actually started deploying since unstarted elements will never send
 	// completion messages.
+	//
+	// IMPORTANT: In drain mode, we only count elements with definitive completion
+	// statuses (success or failure). Elements with INTERRUPTED status are excluded
+	// because they may have descendants still completing in-flight operations.
+	// The drain loop should wait for the DrainDeadline when children are INTERRUPTED,
+	// giving their descendants time to complete stabilization polling.
 	for {
 		expectedCompletions := elementsToDeploy
 		if state.isDraining() {
@@ -864,7 +906,7 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 
 		select {
 		case <-ctx.Done():
-			state.setError(ctx.Err(), 30*time.Second, deployCtx)
+			state.setError(ctx.Err(), deployCtx.DrainTimeout, deployCtx)
 
 		case <-state.drainDeadline:
 			if state.terminalFailure {
@@ -908,7 +950,7 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 			// Use a shorter drain timeout for errors from ErrChan since
 			// the erroring goroutine may have already terminated without
 			// sending a completion message.
-			state.setError(newErr, 5*time.Second, deployCtx)
+			state.setError(newErr, getErrorChannelDrainTimeout(deployCtx.DrainTimeout), deployCtx)
 		}
 	}
 

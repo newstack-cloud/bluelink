@@ -898,7 +898,8 @@ func finishedUpdatingChild(
 	}
 
 	return status == core.InstanceStatusUpdated ||
-		status == core.InstanceStatusUpdateFailed
+		status == core.InstanceStatusUpdateFailed ||
+		status == core.InstanceStatusUpdateInterrupted
 }
 
 func finishedDeployingChild(
@@ -911,7 +912,8 @@ func finishedDeployingChild(
 	}
 
 	return status == core.InstanceStatusDeployed ||
-		status == core.InstanceStatusDeployFailed
+		status == core.InstanceStatusDeployFailed ||
+		status == core.InstanceStatusDeployInterrupted
 }
 
 func startedDestroyingChild(

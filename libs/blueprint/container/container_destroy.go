@@ -135,6 +135,11 @@ func (c *defaultBlueprintContainer) destroy(
 
 	resourceProviderMap := c.resourceProviderMapFromState(&currentInstanceState)
 
+	drainTimeout := input.DrainTimeout
+	if drainTimeout == 0 {
+		drainTimeout = DefaultDrainTimeout
+	}
+
 	deployCtx := &DeployContext{
 		StartTime:              startTime,
 		State:                  state,
@@ -149,6 +154,7 @@ func (c *defaultBlueprintContainer) destroy(
 		ResourceRegistry:       c.resourceRegistry.WithParams(paramOverrides),
 		TaggingConfig:          input.TaggingConfig,
 		ProviderMetadataLookup: input.ProviderMetadataLookup,
+		DrainTimeout:           drainTimeout,
 		Logger: c.logger.Named("destroy").WithFields(
 			core.StringLogField("instanceId", resolvedInstanceID),
 			core.StringLogField("instanceName", input.InstanceName),
@@ -379,6 +385,12 @@ func (c *defaultBlueprintContainer) listenToAndProcessGroupRemovals(
 	// In normal mode, we wait for all elements in the group.
 	// In drain mode, we only wait for elements that have actually started
 	// since elements that haven't been started will never send completion messages.
+	//
+	// IMPORTANT: In drain mode, we only count elements with definitive completion
+	// statuses (success or failure). Elements with INTERRUPTED status are excluded
+	// because they may have descendants still completing in-flight operations.
+	// The drain loop should wait for the DrainDeadline when children are INTERRUPTED,
+	// giving their descendants time to complete stabilization polling.
 	for {
 		expectedCompletions := len(group)
 		if state.isDraining() {
@@ -391,7 +403,7 @@ func (c *defaultBlueprintContainer) listenToAndProcessGroupRemovals(
 
 		select {
 		case <-ctx.Done():
-			state.setError(ctx.Err(), 30*time.Second, deployCtx)
+			state.setError(ctx.Err(), deployCtx.DrainTimeout, deployCtx)
 
 		case <-state.drainDeadline:
 			// Drain timeout - mark in-flight elements as interrupted
@@ -417,39 +429,54 @@ func (c *defaultBlueprintContainer) listenToAndProcessGroupRemovals(
 
 		case msg := <-internalChannels.ResourceUpdateChan:
 			if state.isDraining() {
-				c.trackResourceRemovalCompletion(msg, deployCtx.Rollback, finished)
+				// Only track completion for resources belonging to this instance.
+				// Descendant resources are forwarded for visibility but shouldn't
+				// affect this instance's drain loop exit.
+				if msg.InstanceID == instanceID {
+					c.trackResourceRemovalCompletion(msg, deployCtx.Rollback, finished)
+				}
 				deployCtx.Channels.ResourceUpdateChan <- msg
 				continue
 			}
 			err := c.handleResourceUpdateMessage(ctx, instanceID, msg, deployCtx, finished, internalChannels)
 			if err != nil {
-				state.setError(err, 30*time.Second, deployCtx)
+				state.setError(err, deployCtx.DrainTimeout, deployCtx)
 			}
 
 		case msg := <-internalChannels.ChildUpdateChan:
 			if state.isDraining() {
-				c.trackChildRemovalCompletion(msg, deployCtx.Rollback, finished)
+				// Only track completion for direct children.
+				// Grandchildren are forwarded for visibility but shouldn't
+				// affect this instance's drain loop exit.
+				if msg.ParentInstanceID == instanceID {
+					c.trackChildRemovalCompletion(msg, deployCtx.Rollback, finished)
+				}
 				deployCtx.Channels.ChildUpdateChan <- msg
 				continue
 			}
 			err := c.handleChildUpdateMessage(ctx, instanceID, msg, deployCtx, finished, internalChannels)
 			if err != nil {
-				state.setError(err, 30*time.Second, deployCtx)
+				state.setError(err, deployCtx.DrainTimeout, deployCtx)
 			}
 
 		case msg := <-internalChannels.LinkUpdateChan:
 			if state.isDraining() {
-				c.trackLinkRemovalCompletion(msg, deployCtx.Rollback, finished)
+				// Only track completion for links belonging to this instance.
+				// Descendant links are forwarded for visibility but shouldn't
+				// affect this instance's drain loop exit.
+				if msg.InstanceID == instanceID {
+					c.trackLinkRemovalCompletion(msg, deployCtx.Rollback, finished)
+				}
 				deployCtx.Channels.LinkUpdateChan <- msg
 				continue
 			}
 			err := c.handleLinkUpdateMessage(ctx, instanceID, msg, deployCtx, finished)
 			if err != nil {
-				state.setError(err, 30*time.Second, deployCtx)
+				state.setError(err, deployCtx.DrainTimeout, deployCtx)
 			}
 
 		case newErr := <-internalChannels.ErrChan:
-			state.setError(newErr, 5*time.Second, deployCtx)
+			state.setError(newErr, getErrorChannelDrainTimeout(deployCtx.DrainTimeout), deployCtx)
 		}
 	}
 

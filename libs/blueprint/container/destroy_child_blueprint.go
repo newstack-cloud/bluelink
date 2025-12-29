@@ -88,9 +88,12 @@ func (d *defaultChildBlueprintDestroyer) Destroy(
 	blueprintDestroyer.Destroy(
 		ctx,
 		&DestroyInput{
-			InstanceID: childBlueprintElement.ID(),
-			Changes:    destroyChildChanges,
-			Rollback:   deployCtx.Rollback,
+			InstanceID:             childBlueprintElement.ID(),
+			Changes:                destroyChildChanges,
+			Rollback:               deployCtx.Rollback,
+			TaggingConfig:          deployCtx.TaggingConfig,
+			ProviderMetadataLookup: deployCtx.ProviderMetadataLookup,
+			DrainTimeout:           deployCtx.DrainTimeout,
 		},
 		childChannels,
 		childParams,

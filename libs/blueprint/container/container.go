@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -126,7 +127,7 @@ type BlueprintContainer interface {
 	// Actions include:
 	// - AcceptExternal: Update persisted state to match external cloud state
 	// - UpdateStatus: Only update the element's status
-	// - MarkFailed: Mark the element as failed
+	// - ManualCleanupRequired: Mark the element as requiring manual cleanup
 	//
 	// Parameter overrides can be provided for any substitutions needed during
 	// the reconciliation process.
@@ -182,6 +183,12 @@ type DeployInput struct {
 	// This is used to populate ProviderPluginID and ProviderPluginVersion
 	// in the TaggingConfig for each resource.
 	ProviderMetadataLookup func(providerNamespace string) (pluginID, pluginVersion string)
+	// DrainTimeout is the maximum time to wait for in-flight operations
+	// to complete after a terminal failure before marking them as interrupted.
+	// If zero, defaults to DefaultDrainTimeout (2 minutes).
+	// Resources in CONFIG_COMPLETE (stabilization polling) benefit from
+	// longer drain times to reach finalized states.
+	DrainTimeout time.Duration
 }
 
 // DestroyInput contains the primary input needed to destroy a blueprint instance.
@@ -214,6 +221,36 @@ type DestroyInput struct {
 	// This is used to populate ProviderPluginID and ProviderPluginVersion
 	// in the TaggingConfig for each resource.
 	ProviderMetadataLookup func(providerNamespace string) (pluginID, pluginVersion string)
+	// DrainTimeout is the maximum time to wait for in-flight operations
+	// to complete after a terminal failure before marking them as interrupted.
+	// If zero, defaults to DefaultDrainTimeout (2 minutes).
+	// Resources in CONFIG_COMPLETE (stabilization polling) benefit from
+	// longer drain times to reach finalized states.
+	DrainTimeout time.Duration
+}
+
+const (
+	// DefaultDrainTimeout is the default time to wait for in-flight operations
+	// to complete after a terminal failure before marking them as interrupted.
+	// This applies to both deploy and destroy operations.
+	DefaultDrainTimeout = 2 * time.Minute
+)
+
+// getErrorChannelDrainTimeout returns a shorter timeout for errors from ErrChan
+// since the erroring goroutine may have already terminated without
+// sending a completion message. This is derived from the configured drain timeout
+// to ensure it scales appropriately for both tests (short) and production (longer).
+func getErrorChannelDrainTimeout(configuredDrainTimeout time.Duration) time.Duration {
+	// Use 25% of the configured timeout, with a minimum of 100ms for tests
+	// and a maximum of 30 seconds for production.
+	timeout := configuredDrainTimeout / 4
+	if timeout < 100*time.Millisecond {
+		return 100 * time.Millisecond
+	}
+	if timeout > 30*time.Second {
+		return 30 * time.Second
+	}
+	return timeout
 }
 
 type defaultBlueprintContainer struct {

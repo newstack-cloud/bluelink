@@ -91,17 +91,17 @@ func (c *defaultBlueprintContainer) checkResourceReconciliation(
 	switch input.Scope {
 	case ReconciliationScopeInterrupted:
 		return c.checkInterruptedResourceReconciliationWithChildren(
-			ctx, instanceState, params, includeChildren, input.ChildPath,
+			ctx, instanceState, params, input.TaggingConfig, includeChildren, input.ChildPath,
 		)
 	case ReconciliationScopeSpecific:
 		return c.checkSpecificResourceReconciliation(ctx, input, instanceState, params)
 	case ReconciliationScopeAll:
 		return c.checkAllResourceReconciliationWithChildren(
-			ctx, instanceState, params, includeChildren, input.ChildPath,
+			ctx, instanceState, params, input.TaggingConfig, includeChildren, input.ChildPath,
 		)
 	default:
 		return c.checkInterruptedResourceReconciliationWithChildren(
-			ctx, instanceState, params, includeChildren, input.ChildPath,
+			ctx, instanceState, params, input.TaggingConfig, includeChildren, input.ChildPath,
 		)
 	}
 }
@@ -110,8 +110,9 @@ func (c *defaultBlueprintContainer) checkInterruptedResourceReconciliation(
 	ctx context.Context,
 	instanceState *state.InstanceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) ([]ResourceReconcileResult, error) {
-	driftResults, err := c.driftChecker.CheckInterruptedResourcesWithState(ctx, instanceState, params)
+	driftResults, err := c.driftChecker.CheckInterruptedResourcesWithState(ctx, instanceState, params, taggingConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -128,6 +129,7 @@ func (c *defaultBlueprintContainer) checkInterruptedResourceReconciliationWithCh
 	ctx context.Context,
 	instanceState *state.InstanceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 	includeChildren bool,
 	childPathFilter string,
 ) ([]ResourceReconcileResult, error) {
@@ -140,7 +142,7 @@ func (c *defaultBlueprintContainer) checkInterruptedResourceReconciliationWithCh
 				return []ResourceReconcileResult{}, nil
 			}
 		}
-		return c.checkInterruptedResourceReconciliation(ctx, instanceState, params)
+		return c.checkInterruptedResourceReconciliation(ctx, instanceState, params, taggingConfig)
 	}
 
 	// Flatten all resources from instance hierarchy
@@ -164,7 +166,7 @@ func (c *defaultBlueprintContainer) checkInterruptedResourceReconciliationWithCh
 
 		// Check the interrupted resource using the drift checker
 		driftResults, err := c.driftChecker.CheckInterruptedResourcesWithState(
-			ctx, fr.InstanceState, params,
+			ctx, fr.InstanceState, params, taggingConfig,
 		)
 		if err != nil {
 			return nil, err
@@ -190,6 +192,7 @@ func (c *defaultBlueprintContainer) checkAllResourceReconciliationWithChildren(
 	ctx context.Context,
 	instanceState *state.InstanceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 	includeChildren bool,
 	childPathFilter string,
 ) ([]ResourceReconcileResult, error) {
@@ -201,7 +204,7 @@ func (c *defaultBlueprintContainer) checkAllResourceReconciliationWithChildren(
 				return []ResourceReconcileResult{}, nil
 			}
 		}
-		return c.checkAllResourceReconciliation(ctx, instanceState, params)
+		return c.checkAllResourceReconciliation(ctx, instanceState, params, taggingConfig)
 	}
 
 	// Flatten all resources from instance hierarchy
@@ -226,7 +229,7 @@ func (c *defaultBlueprintContainer) checkAllResourceReconciliationWithChildren(
 
 			// Get interrupted results for this instance
 			interruptedResults, err := c.checkInterruptedResourceReconciliation(
-				ctx, fr.InstanceState, params,
+				ctx, fr.InstanceState, params, taggingConfig,
 			)
 			if err != nil {
 				return nil, err
@@ -239,7 +242,7 @@ func (c *defaultBlueprintContainer) checkAllResourceReconciliationWithChildren(
 			results = append(results, interruptedResults...)
 
 			// Get drift results for this instance
-			driftResults, err := c.driftChecker.CheckDriftWithState(ctx, fr.InstanceState, params)
+			driftResults, err := c.driftChecker.CheckDriftWithState(ctx, fr.InstanceState, params, taggingConfig)
 			if err != nil {
 				return nil, err
 			}
@@ -282,14 +285,14 @@ func (c *defaultBlueprintContainer) checkSpecificResourceReconciliation(
 			return []ResourceReconcileResult{}, nil
 		}
 		return c.checkSpecificResourcesInInstance(
-			ctx, input.ResourceNames, targetInstance, params, input.ChildPath,
+			ctx, input.ResourceNames, targetInstance, params, input.TaggingConfig, input.ChildPath,
 		)
 	}
 
 	// If not including children, just check the parent instance
 	if !includeChildren {
 		return c.checkSpecificResourcesInInstance(
-			ctx, input.ResourceNames, instanceState, params, "",
+			ctx, input.ResourceNames, instanceState, params, input.TaggingConfig, "",
 		)
 	}
 
@@ -311,7 +314,7 @@ func (c *defaultBlueprintContainer) checkSpecificResourceReconciliation(
 		}
 
 		result, err := c.checkSingleResourceReconciliation(
-			ctx, fr.InstanceState, fr.Resource, params,
+			ctx, fr.InstanceState, fr.Resource, params, input.TaggingConfig,
 		)
 		if err != nil {
 			return nil, err
@@ -331,6 +334,7 @@ func (c *defaultBlueprintContainer) checkSpecificResourcesInInstance(
 	resourceNames []string,
 	instanceState *state.InstanceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 	childPath string,
 ) ([]ResourceReconcileResult, error) {
 	results := []ResourceReconcileResult{}
@@ -341,7 +345,7 @@ func (c *defaultBlueprintContainer) checkSpecificResourcesInInstance(
 		}
 
 		result, err := c.checkSingleResourceReconciliation(
-			ctx, instanceState, targetResource, params,
+			ctx, instanceState, targetResource, params, taggingConfig,
 		)
 		if err != nil {
 			return nil, err
@@ -360,11 +364,12 @@ func (c *defaultBlueprintContainer) checkSingleResourceReconciliation(
 	instanceState *state.InstanceState,
 	resource *state.ResourceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (*ResourceReconcileResult, error) {
 	if isInterruptedPreciseResourceStatus(resource.PreciseStatus) {
-		return c.checkInterruptedResourceByName(ctx, instanceState, resource.Name, params)
+		return c.checkInterruptedResourceByName(ctx, instanceState, resource.Name, params, taggingConfig)
 	}
-	return c.checkResourceDriftReconciliation(ctx, instanceState, resource, params)
+	return c.checkResourceDriftReconciliation(ctx, instanceState, resource, params, taggingConfig)
 }
 
 func (c *defaultBlueprintContainer) checkInterruptedResourceByName(
@@ -372,8 +377,9 @@ func (c *defaultBlueprintContainer) checkInterruptedResourceByName(
 	instanceState *state.InstanceState,
 	resourceName string,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (*ResourceReconcileResult, error) {
-	driftResults, err := c.driftChecker.CheckInterruptedResourcesWithState(ctx, instanceState, params)
+	driftResults, err := c.driftChecker.CheckInterruptedResourcesWithState(ctx, instanceState, params, taggingConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -392,9 +398,10 @@ func (c *defaultBlueprintContainer) checkResourceDriftReconciliation(
 	instanceState *state.InstanceState,
 	resource *state.ResourceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (*ResourceReconcileResult, error) {
 	driftState, err := c.driftChecker.CheckResourceDrift(
-		ctx, instanceState.InstanceID, instanceState.InstanceName, resource.ResourceID, params,
+		ctx, instanceState.InstanceID, instanceState.InstanceName, resource.ResourceID, params, taggingConfig,
 	)
 	if err != nil {
 		return nil, err
@@ -432,13 +439,14 @@ func (c *defaultBlueprintContainer) checkAllResourceReconciliation(
 	ctx context.Context,
 	instanceState *state.InstanceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) ([]ResourceReconcileResult, error) {
-	interruptedResults, err := c.checkInterruptedResourceReconciliation(ctx, instanceState, params)
+	interruptedResults, err := c.checkInterruptedResourceReconciliation(ctx, instanceState, params, taggingConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	driftResults, err := c.driftChecker.CheckDriftWithState(ctx, instanceState, params)
+	driftResults, err := c.driftChecker.CheckDriftWithState(ctx, instanceState, params, taggingConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -666,7 +674,7 @@ func (c *defaultBlueprintContainer) checkLinkAndIntermediaryReconciliationWithCh
 			continue
 		}
 
-		result, err := c.checkSingleLinkReconciliation(ctx, fl.InstanceState, fl.Link, params)
+		result, err := c.checkSingleLinkReconciliation(ctx, fl.InstanceState, fl.Link, params, input.TaggingConfig)
 		if err != nil {
 			c.logger.Debug(
 				"failed to check link drift",
@@ -698,7 +706,7 @@ func (c *defaultBlueprintContainer) checkLinkAndIntermediaryReconciliation(
 			continue
 		}
 
-		result, err := c.checkSingleLinkReconciliation(ctx, instanceState, link, params)
+		result, err := c.checkSingleLinkReconciliation(ctx, instanceState, link, params, input.TaggingConfig)
 		if err != nil {
 			c.logger.Debug(
 				"failed to check link drift",
@@ -728,11 +736,12 @@ func (c *defaultBlueprintContainer) checkSingleLinkReconciliation(
 	instanceState *state.InstanceState,
 	link *state.LinkState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (*LinkReconcileResult, error) {
 	if isInterruptedLinkStatus(link.PreciseStatus) {
 		return c.createInterruptedLinkResult(link, instanceState), nil
 	}
-	return c.checkLinkDriftReconciliation(ctx, instanceState.InstanceID, link, params)
+	return c.checkLinkDriftReconciliation(ctx, instanceState.InstanceID, link, params, taggingConfig)
 }
 
 func (c *defaultBlueprintContainer) createInterruptedLinkResult(
@@ -755,8 +764,9 @@ func (c *defaultBlueprintContainer) checkLinkDriftReconciliation(
 	instanceID string,
 	link *state.LinkState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (*LinkReconcileResult, error) {
-	linkDriftState, err := c.driftChecker.CheckLinkDrift(ctx, instanceID, link.LinkID, params)
+	linkDriftState, err := c.driftChecker.CheckLinkDrift(ctx, instanceID, link.LinkID, params, taggingConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -1104,7 +1114,10 @@ func (c *defaultBlueprintContainer) applyResourceReconciliation(
 			LastStatusUpdateTimestamp: &currentTime,
 		})
 
-	case ReconciliationActionMarkFailed:
+	case ReconciliationActionManualCleanupRequired:
+		// ManualCleanupRequired sets the resource to a failed state and signals
+		// the user needs to manually clean up any orphaned resources in the provider
+		// (e.g., when external state cannot be retrieved via tag-based lookup).
 		return resources.UpdateStatus(ctx, action.ResourceID, state.ResourceStatusInfo{
 			Status:                    reconcilePreciseToResourceStatus(action.NewStatus),
 			PreciseStatus:             action.NewStatus,
@@ -1162,7 +1175,7 @@ func (c *defaultBlueprintContainer) applyLinkReconciliation(
 	linkState.LastStatusUpdateTimestamp = currentTime
 
 	// Only clear drift state when accepting external state
-	// For UpdateStatus and MarkFailed, the drift still exists
+	// For UpdateStatus and ManualCleanupRequired, the drift still exists
 	switch action.Action {
 	case ReconciliationActionAcceptExternal:
 		linkState.Drifted = false
@@ -1185,9 +1198,10 @@ func (c *defaultBlueprintContainer) applyLinkReconciliation(
 				logFields...,
 			)
 		}
-	case ReconciliationActionMarkFailed:
-		// MarkFailed adds failure reasons but doesn't clear drift
-		linkState.FailureReasons = []string{"marked as failed during reconciliation"}
+	case ReconciliationActionManualCleanupRequired:
+		// ManualCleanupRequired adds failure reasons but doesn't clear drift.
+		// Signals the user needs to manually clean up orphaned resources in the provider.
+		linkState.FailureReasons = []string{"manual cleanup required during reconciliation"}
 	}
 
 	return links.Save(ctx, linkState)
@@ -1278,10 +1292,10 @@ func applyIntermediaryAction(
 		intermediary.Status = reconcilePreciseToResourceStatus(action.NewStatus)
 		intermediary.PreciseStatus = action.NewStatus
 
-	case ReconciliationActionMarkFailed:
+	case ReconciliationActionManualCleanupRequired:
 		intermediary.Status = reconcilePreciseToResourceStatus(action.NewStatus)
 		intermediary.PreciseStatus = action.NewStatus
-		intermediary.FailureReasons = []string{"marked as failed during reconciliation"}
+		intermediary.FailureReasons = []string{"manual cleanup required during reconciliation"}
 
 	default:
 		return fmt.Errorf("unknown reconciliation action: %s", action.Action)
@@ -1324,7 +1338,10 @@ func determineResourceRecommendedAction(dr drift.ReconcileResult) Reconciliation
 	if dr.ResourceExists() {
 		return ReconciliationActionAcceptExternal
 	}
-	return ReconciliationActionMarkFailed
+	// Resource doesn't exist externally - manual cleanup is required.
+	// The user should destroy the instance, manually clean up any orphaned
+	// resources in the provider console, and retry the deployment.
+	return ReconciliationActionManualCleanupRequired
 }
 
 func determineLinkReconciliationAction(newStatus core.PreciseLinkStatus) ReconciliationAction {
@@ -1332,7 +1349,7 @@ func determineLinkReconciliationAction(newStatus core.PreciseLinkStatus) Reconci
 	case core.PreciseLinkStatusResourceAUpdateFailed,
 		core.PreciseLinkStatusResourceBUpdateFailed,
 		core.PreciseLinkStatusIntermediaryResourceUpdateFailed:
-		return ReconciliationActionMarkFailed
+		return ReconciliationActionManualCleanupRequired
 	default:
 		return ReconciliationActionUpdateStatus
 	}

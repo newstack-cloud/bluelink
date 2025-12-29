@@ -115,10 +115,13 @@ func (d *defaultChildBlueprintDeployer) Deploy(
 	err = loadResult.childContainer.Deploy(
 		ctx,
 		&DeployInput{
-			InstanceID:   loadResult.childState.InstanceID,
-			InstanceName: childInstanceName,
-			Changes:      changes,
-			Rollback:     deployCtx.Rollback,
+			InstanceID:             loadResult.childState.InstanceID,
+			InstanceName:           childInstanceName,
+			Changes:                changes,
+			Rollback:               deployCtx.Rollback,
+			TaggingConfig:          deployCtx.TaggingConfig,
+			ProviderMetadataLookup: deployCtx.ProviderMetadataLookup,
+			DrainTimeout:           deployCtx.DrainTimeout,
 		},
 		childChannels,
 		loadResult.childParams,

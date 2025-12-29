@@ -47,6 +47,10 @@ type DeployContext struct {
 	// This is used to populate ProviderPluginID and ProviderPluginVersion
 	// in the TaggingConfig for each resource.
 	ProviderMetadataLookup func(providerNamespace string) (pluginID, pluginVersion string)
+	// DrainTimeout is the configured timeout for draining in-flight operations
+	// after a terminal failure. This should be set from configuration when creating
+	// the context, and defaults to DefaultDrainTimeout if not set.
+	DrainTimeout time.Duration
 }
 
 func DeployContextWithChannels(
@@ -72,6 +76,7 @@ func DeployContextWithChannels(
 		DrainDeadline:          deployCtx.DrainDeadline,
 		TaggingConfig:          deployCtx.TaggingConfig,
 		ProviderMetadataLookup: deployCtx.ProviderMetadataLookup,
+		DrainTimeout:           deployCtx.DrainTimeout,
 	}
 }
 
@@ -98,6 +103,7 @@ func DeployContextWithGroup(
 		DrainDeadline:          deployCtx.DrainDeadline,
 		TaggingConfig:          deployCtx.TaggingConfig,
 		ProviderMetadataLookup: deployCtx.ProviderMetadataLookup,
+		DrainTimeout:           deployCtx.DrainTimeout,
 	}
 }
 
@@ -124,6 +130,7 @@ func DeployContextWithInstanceSnapshot(
 		DrainDeadline:          deployCtx.DrainDeadline,
 		TaggingConfig:          deployCtx.TaggingConfig,
 		ProviderMetadataLookup: deployCtx.ProviderMetadataLookup,
+		DrainTimeout:           deployCtx.DrainTimeout,
 	}
 }
 
@@ -150,5 +157,6 @@ func DeployContextWithLogger(
 		DrainDeadline:          deployCtx.DrainDeadline,
 		TaggingConfig:          deployCtx.TaggingConfig,
 		ProviderMetadataLookup: deployCtx.ProviderMetadataLookup,
+		DrainTimeout:           deployCtx.DrainTimeout,
 	}
 }
