@@ -592,7 +592,7 @@ type ResourceReconcileActionPayload struct {
 	// Format: "childA" for first level, "childA.childB" for nested.
 	ChildPath string `json:"childPath,omitempty"`
 	// Action is the reconciliation action to apply.
-	// Valid values: "accept_external", "update_status", "mark_failed"
+	// Valid values: "accept_external", "update_status", "manual_cleanup_required"
 	Action string `json:"action"`
 	// ExternalState is required when Action is "accept_external".
 	// This is the state that will be persisted.
@@ -610,7 +610,7 @@ type LinkReconcileActionPayload struct {
 	// Format: "childA" for first level, "childA.childB" for nested.
 	ChildPath string `json:"childPath,omitempty"`
 	// Action is the reconciliation action to apply.
-	// Valid values: "accept_external", "update_status", "mark_failed"
+	// Valid values: "accept_external", "update_status", "manual_cleanup_required"
 	Action string `json:"action"`
 	// NewStatus is the status to set for the link.
 	NewStatus string `json:"newStatus"`
@@ -627,7 +627,7 @@ type LinkReconcileActionPayload struct {
 // IntermediaryReconcileActionPayload specifies the action to take for an intermediary resource.
 type IntermediaryReconcileActionPayload struct {
 	// Action is the reconciliation action to apply.
-	// Valid values: "accept_external", "update_status", "mark_failed"
+	// Valid values: "accept_external", "update_status", "manual_cleanup_required"
 	Action string `json:"action"`
 	// ExternalState is required when Action is "accept_external".
 	// This is the state that will be persisted.
