@@ -358,8 +358,12 @@ type ResourceGetExternalStateInput struct {
 	InstanceID string
 	// Additional user-defined blueprint instance name
 	// that can be used in ID/unique name generation and for debugging.
-	InstanceName            string
-	ResourceID              string
+	InstanceName string
+	ResourceID   string
+	// ResourceName is the logical name of the resource in the blueprint.
+	// This can be used along with InstanceID/InstanceName for tag-based
+	// resource lookups when the external ID (e.g., ARN) is not available.
+	ResourceName            string
 	CurrentResourceSpec     *core.MappingNode
 	CurrentResourceMetadata *state.ResourceMetadataState
 	ProviderContext         Context
