@@ -483,6 +483,10 @@ message GetResourceExternalStateRequest {
     schema.MappingNode current_resource_spec = 6;
     sharedtypesv1.ResourceMetadataState current_resource_metadata = 7;
     sharedtypesv1.ProviderContext context = 8;
+    // The logical name of the resource in the blueprint.
+    // This can be used along with instance_id/instance_name for tag-based
+    // resource lookups when the external ID (e.g., ARN) is not available.
+    string resource_name = 9;
 }
 
 // GetResourceExternalStateResponse is the response

@@ -361,3 +361,55 @@ func isCurrentResourceStatePopulated(
 		input.Changes != nil &&
 		input.Changes.AppliedResourceInfo.CurrentResourceState != nil
 }
+
+// HasExternalID checks if the resource's external ID field is populated in the spec.
+// Plugin developers can use this to decide whether to use ID-based or tag-based lookup.
+// Returns true if the IDField is not configured (nothing to check) or if the ID value exists
+// and is non-empty.
+func (r *ResourceDefinition) HasExternalID(spec *core.MappingNode) bool {
+	if r.IDField == "" {
+		// No ID field configured means we can't check
+		return false
+	}
+	if spec == nil || spec.Fields == nil {
+		return false
+	}
+	idValue, exists := spec.Fields[r.IDField]
+	return exists && idValue != nil && core.StringValue(idValue) != ""
+}
+
+// GetExternalID extracts the external ID value from the resource spec.
+// Returns empty string if not found or if IDField is not configured.
+func (r *ResourceDefinition) GetExternalID(spec *core.MappingNode) string {
+	if r.IDField == "" || spec == nil || spec.Fields == nil {
+		return ""
+	}
+	idValue, exists := spec.Fields[r.IDField]
+	if !exists || idValue == nil {
+		return ""
+	}
+	return core.StringValue(idValue)
+}
+
+// BuildBluelinkTagsForLookup creates BluelinkTags from the GetExternalState input.
+// Plugin developers can use this to construct tag-based queries when no external ID exists.
+// This is useful for recovering state of interrupted resources that were tagged but
+// never received their external ID (e.g., ARN) before the deployment was interrupted.
+func (r *ResourceDefinition) BuildBluelinkTagsForLookup(
+	input *provider.ResourceGetExternalStateInput,
+) *provider.BluelinkTags {
+	prefix := "bluelink:"
+	if input.ProviderContext != nil {
+		if tc := input.ProviderContext.TaggingConfig(); tc != nil && tc.Prefix != "" {
+			prefix = tc.Prefix
+		}
+	}
+	return &provider.BluelinkTags{
+		InstanceID:    input.InstanceID,
+		InstanceName:  input.InstanceName,
+		ResourceName:  input.ResourceName,
+		ResourceType:  r.Type,
+		ProvisionedBy: "bluelink",
+		Prefix:        prefix,
+	}
+}

@@ -55,6 +55,7 @@ func fromPBGetResourceExternalStateRequest(
 		InstanceID:              req.InstanceId,
 		InstanceName:            req.InstanceName,
 		ResourceID:              req.ResourceId,
+		ResourceName:            req.ResourceName,
 		CurrentResourceSpec:     currentResourceSpec,
 		CurrentResourceMetadata: currentResourceMetadata,
 		ProviderContext:         providerCtx,
