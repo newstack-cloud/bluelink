@@ -302,10 +302,13 @@ func setupDeploymentHandlers(
 		config.Blueprints.DeploymentTimeout,
 	) * time.Second
 
+	drainTimeout := config.GetDrainTimeout()
+
 	deploymentCtrl := deploymentsv1.NewController(
 		changesetRetentionPeriod,
 		reconciliationResultsRetentionPeriod,
 		deployTimeout,
+		drainTimeout,
 		dependencies,
 	)
 

@@ -522,6 +522,25 @@ This timeout is for the background process that runs the deployment when the dep
 
 **default value:** `10800` (3 hours)
 
+#### Drain Timeout in Seconds
+
+`BLUELINK_DEPLOY_ENGINE_BLUEPRINTS_DRAIN_TIMEOUT`
+
+_Config field:_ `blueprints.drain_timeout`
+
+_**optional**_
+
+The time in seconds to wait for in-flight operations to complete after a terminal failure
+before marking them as interrupted. When a resource fails during deployment, other resources
+that are currently deploying are given this amount of time to complete before being marked
+as interrupted. Resources in the CONFIG_COMPLETE stage (stabilization polling) benefit from
+longer drain times as they have a higher chance of reaching the final CREATED status.
+
+Increasing this value reduces the number of interrupted resources after a failure, making
+subsequent re-deploy or destroy operations easier to manage.
+
+**default value:** `120` (2 minutes)
+
 ### State
 
 Configuration for the state management/persistence layer used by the deploy engine.

@@ -90,6 +90,7 @@ func (s *ControllerTestSuite) SetupTest() {
 		/* changesetRetentionPeriod */ 10*time.Second,
 		/* reconciliationResultsRetentionPeriod */ 10*time.Second,
 		/* deploymentTimeout */ 10*time.Second,
+		/* drainTimeout */ 100*time.Millisecond,
 		dependencies,
 	)
 
@@ -101,6 +102,7 @@ func (s *ControllerTestSuite) SetupTest() {
 		/* changesetRetentionPeriod */ 10*time.Second,
 		/* reconciliationResultsRetentionPeriod */ 10*time.Second,
 		/* deploymentTimeout */ 10*time.Second,
+		/* drainTimeout */ 100*time.Millisecond,
 		depsWithFailingIDGenerators,
 	)
 
@@ -123,6 +125,7 @@ func (s *ControllerTestSuite) SetupTest() {
 		/* changesetRetentionPeriod */ 10*time.Second,
 		/* reconciliationResultsRetentionPeriod */ 10*time.Second,
 		/* deploymentTimeout */ 10*time.Second,
+		/* drainTimeout */ 100*time.Millisecond,
 		depsWithStreamErrors,
 	)
 

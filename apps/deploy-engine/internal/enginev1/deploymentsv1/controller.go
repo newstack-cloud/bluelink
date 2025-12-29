@@ -60,6 +60,7 @@ type Controller struct {
 	changesetRetentionPeriod             time.Duration
 	reconciliationResultsRetentionPeriod time.Duration
 	deploymentTimeout                    time.Duration
+	drainTimeout                         time.Duration
 	eventStore                           manage.Events
 	instances                            state.InstancesContainer
 	exports                              state.ExportsContainer
@@ -85,12 +86,14 @@ func NewController(
 	changesetRetentionPeriod time.Duration,
 	reconciliationResultsRetentionPeriod time.Duration,
 	deploymentTimeout time.Duration,
+	drainTimeout time.Duration,
 	deps *typesv1.Dependencies,
 ) *Controller {
 	return &Controller{
 		changesetRetentionPeriod:             changesetRetentionPeriod,
 		reconciliationResultsRetentionPeriod: reconciliationResultsRetentionPeriod,
 		deploymentTimeout:                    deploymentTimeout,
+		drainTimeout:                         drainTimeout,
 		eventStore:                           deps.EventStore,
 		instances:                            deps.Instances,
 		exports:                              deps.Exports,

@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
@@ -122,6 +123,10 @@ func (p *Config) GetPluginToPluginCallTimeoutMS() int {
 	return p.PluginsV1.PluginToPluginCallTimeoutMS
 }
 
+func (p *Config) GetDrainTimeout() time.Duration {
+	return time.Duration(p.Blueprints.DrainTimeout) * time.Second
+}
+
 // PluginsV1Config provides configuration for the v1 plugin system
 // implemented by the deploy engine.
 type PluginsV1Config struct {
@@ -203,6 +208,12 @@ type BlueprintConfig struct {
 	// when the deployment endpoints are called.
 	// Defaults to 10,800 seconds (3 hours).
 	DeploymentTimeout int `mapstructure:"deployment_timeout"`
+	// DrainTimeout is the time in seconds to wait for in-flight operations
+	// to complete after a terminal failure before marking them as interrupted.
+	// Resources in CONFIG_COMPLETE (stabilization polling) benefit from
+	// longer drain times to reach finalized states.
+	// Defaults to 120 seconds (2 minutes).
+	DrainTimeout int `mapstructure:"drain_timeout"`
 }
 
 // StateConfig provides configuration for the state management/persistence
@@ -505,6 +516,7 @@ func bindEnvVars(viperInstance *viper.Viper) {
 	viperInstance.BindEnv("blueprints.resource_stabilisation_polling_interval_ms")
 	viperInstance.BindEnv("blueprints.default_retry_policy")
 	viperInstance.BindEnv("blueprints.deployment_timeout")
+	viperInstance.BindEnv("blueprints.drain_timeout")
 
 	viperInstance.BindEnv("state.storage_engine")
 	viperInstance.BindEnv("state.recently_queued_events_threshold")
@@ -566,6 +578,7 @@ func setDefaults(viperInstance *viper.Viper) {
 	viperInstance.SetDefault("blueprints.enable_drift_check", true)
 	viperInstance.SetDefault("blueprints.resource_stabilisation_polling_interval_ms", 5*oneSecondMillis)
 	viperInstance.SetDefault("blueprints.deployment_timeout", 3*oneHourSeconds)
+	viperInstance.SetDefault("blueprints.drain_timeout", 2*oneMinuteSeconds)
 
 	viperInstance.SetDefault("state.storage_engine", "memfile")
 	viperInstance.SetDefault("state.recently_queued_events_threshold", 5*oneMinuteSeconds)

@@ -102,6 +102,7 @@ func (s *ControllerTestSuite) setupReconciliationTest(
 		/* changesetRetentionPeriod */ 10*time.Second,
 		/* reconciliationResultsRetentionPeriod */ 10*time.Second,
 		/* deploymentTimeout */ 10*time.Second,
+		/* drainTimeout */ 100*time.Millisecond,
 		dependencies,
 	)
 }

@@ -458,6 +458,7 @@ func (c *Controller) startDeployment(
 			Force:                  force,
 			TaggingConfig:          taggingConfig,
 			ProviderMetadataLookup: pluginmeta.ToLookupFunc(c.providerMetadataLookup),
+			DrainTimeout:           c.drainTimeout,
 		},
 		channels,
 		params,
@@ -573,6 +574,7 @@ func (c *Controller) startDestroy(
 			Force:                  force,
 			TaggingConfig:          taggingConfig,
 			ProviderMetadataLookup: pluginmeta.ToLookupFunc(c.providerMetadataLookup),
+			DrainTimeout:           c.drainTimeout,
 		},
 		channels,
 		params,
@@ -895,6 +897,7 @@ func (c *Controller) executeUpdateRollback(
 			// Tagging is not applied during rollback operations
 			TaggingConfig:          nil,
 			ProviderMetadataLookup: nil,
+			DrainTimeout:           c.drainTimeout,
 		},
 		channels,
 		blueprint.CreateEmptyBlueprintParams(),
