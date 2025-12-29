@@ -23,29 +23,29 @@ import (
 )
 
 const (
-	blueprint1InstanceID            = "blueprint-instance-1"
-	blueprint1InstanceName          = "BlueprintInstance1"
-	blueprint2InstanceID            = "blueprint-instance-2"
-	blueprint3InstanceID            = "blueprint-instance-3"
-	blueprint3ChildInstanceID       = "blueprint-instance-3-child-core-infra"
-	blueprint4InstanceID            = "blueprint-instance-4"
-	blueprint5InstanceID            = "blueprint-instance-5"
-	blueprint6InstanceID            = "blueprint-instance-6"
-	blueprint7InstanceID            = "blueprint-instance-7"
-	blueprint8NoMetadataInstanceID  = "blueprint-instance-8-no-metadata"
+	blueprint1InstanceID           = "blueprint-instance-1"
+	blueprint1InstanceName         = "BlueprintInstance1"
+	blueprint2InstanceID           = "blueprint-instance-2"
+	blueprint3InstanceID           = "blueprint-instance-3"
+	blueprint3ChildInstanceID      = "blueprint-instance-3-child-core-infra"
+	blueprint4InstanceID           = "blueprint-instance-4"
+	blueprint5InstanceID           = "blueprint-instance-5"
+	blueprint6InstanceID           = "blueprint-instance-6"
+	blueprint7InstanceID           = "blueprint-instance-7"
+	blueprint8NoMetadataInstanceID = "blueprint-instance-8-no-metadata"
 )
 
 const timeoutMessage = "timed out waiting for changes to be staged"
 
 type ContainerChangeStagingTestSuite struct {
-	blueprint1Container            BlueprintContainer
-	blueprint2Container            BlueprintContainer
-	blueprint3Container            BlueprintContainer
-	blueprint4Container            BlueprintContainer
-	blueprint5Container            BlueprintContainer
-	blueprint6Container            BlueprintContainer
-	blueprint7Container            BlueprintContainer
-	blueprint8NoMetadataContainer  BlueprintContainer
+	blueprint1Container           BlueprintContainer
+	blueprint2Container           BlueprintContainer
+	blueprint3Container           BlueprintContainer
+	blueprint4Container           BlueprintContainer
+	blueprint5Container           BlueprintContainer
+	blueprint6Container           BlueprintContainer
+	blueprint7Container           BlueprintContainer
+	blueprint8NoMetadataContainer BlueprintContainer
 	suite.Suite
 }
 
@@ -180,7 +180,10 @@ func (s *ContainerChangeStagingTestSuite) Test_stage_changes_to_existing_bluepri
 		case changeSet := <-channels.CompleteChan:
 			fullChangeSet = &changeSet
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+			// Increased timeout to allow for
+			// more time in constrained environments as this test
+			// has often timed out in CI environments.
+		case <-time.After(120 * time.Second):
 			err = errors.New(timeoutMessage)
 		}
 	}

@@ -39,11 +39,11 @@ func (s *ResourceDeployerTestSuite) SetupTest() {
 			ID: "test-resource-id",
 		},
 		provider.DefaultRetryPolicy,
-		// Use a very short stabilisation
-		// polling interval and timeout to speed up tests.
+		// Use a short stabilisation polling interval and timeout to speed up tests,
+		// but keep the timeout long enough to handle slow/resource-constrained CI environments.
 		&ResourceStabilityPollingConfig{
 			PollingInterval: 1 * time.Millisecond,
-			PollingTimeout:  20 * time.Millisecond,
+			PollingTimeout:  5 * time.Second,
 		},
 		&staticResourceSubstitutionResolver{
 			resolvedResource: s.createResolvedResource(),
