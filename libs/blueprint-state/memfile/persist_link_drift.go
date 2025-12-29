@@ -2,6 +2,7 @@ package memfile
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path"
 	"slices"
@@ -39,7 +40,10 @@ func (s *statePersister) createLinkDrift(linkDrift *state.LinkDriftState) error 
 
 	existingData, err := afero.ReadFile(s.fs, chunkFilePath)
 	if err != nil {
-		return err
+		if !errors.Is(err, afero.ErrFileNotFound) {
+			return err
+		}
+		existingData = []byte("[]")
 	}
 
 	chunkLinkDriftEntries := []*state.LinkDriftState{}
