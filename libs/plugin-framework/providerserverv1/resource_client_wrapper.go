@@ -619,6 +619,7 @@ func (r *resourceProviderClientWrapper) GetExternalState(
 			InstanceId:              input.InstanceID,
 			InstanceName:            input.InstanceName,
 			ResourceId:              input.ResourceID,
+			ResourceName:            input.ResourceName,
 			CurrentResourceSpec:     pbCurrentResourceSpec,
 			CurrentResourceMetadata: pbCurrentResourceMetadata,
 			Context:                 providerCtx,
