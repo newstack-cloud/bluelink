@@ -41,6 +41,7 @@ type Checker interface {
 		ctx context.Context,
 		instanceID string,
 		params core.BlueprintParams,
+		taggingConfig *provider.TaggingConfig,
 	) (map[string]*state.ResourceDriftState, error)
 	// CheckResourceDrift checks the drift of a single resource
 	// with the given instance ID and resource ID.
@@ -57,6 +58,7 @@ type Checker interface {
 		instanceName string,
 		resourceID string,
 		params core.BlueprintParams,
+		taggingConfig *provider.TaggingConfig,
 	) (*state.ResourceDriftState, error)
 	// CheckInterruptedResources detects interrupted resources and determines
 	// their actual state from the cloud, but does NOT update persisted state.
@@ -68,6 +70,7 @@ type Checker interface {
 		ctx context.Context,
 		instanceID string,
 		params core.BlueprintParams,
+		taggingConfig *provider.TaggingConfig,
 	) ([]ReconcileResult, error)
 	// ApplyReconciliation updates persisted state based on reconcile results.
 	// This should be called after the user approves the reconciliation.
@@ -85,6 +88,7 @@ type Checker interface {
 		instanceID string,
 		linkID string,
 		params core.BlueprintParams,
+		taggingConfig *provider.TaggingConfig,
 	) (*state.LinkDriftState, error)
 	// CheckAllLinkDrift checks drift for all links in an instance.
 	// Uses ResourceDataMappings to compare link.Data against resource external state.
@@ -95,6 +99,7 @@ type Checker interface {
 		ctx context.Context,
 		instanceID string,
 		params core.BlueprintParams,
+		taggingConfig *provider.TaggingConfig,
 	) (map[string]*state.LinkDriftState, error)
 
 	// CheckDriftWithState is like CheckDrift but accepts pre-fetched instance state.
@@ -103,6 +108,7 @@ type Checker interface {
 		ctx context.Context,
 		instanceState *state.InstanceState,
 		params core.BlueprintParams,
+		taggingConfig *provider.TaggingConfig,
 	) (map[string]*state.ResourceDriftState, error)
 	// CheckInterruptedResourcesWithState is like CheckInterruptedResources but accepts
 	// pre-fetched instance state.
@@ -110,6 +116,7 @@ type Checker interface {
 		ctx context.Context,
 		instanceState *state.InstanceState,
 		params core.BlueprintParams,
+		taggingConfig *provider.TaggingConfig,
 	) ([]ReconcileResult, error)
 	// CheckAllLinkDriftWithState is like CheckAllLinkDrift but accepts pre-fetched
 	// instance state.
@@ -117,6 +124,7 @@ type Checker interface {
 		ctx context.Context,
 		instanceState *state.InstanceState,
 		params core.BlueprintParams,
+		taggingConfig *provider.TaggingConfig,
 	) (map[string]*state.LinkDriftState, error)
 }
 
@@ -138,11 +146,11 @@ func NewDefaultChecker(
 	logger core.Logger,
 ) Checker {
 	return &defaultChecker{
-		stateContainer,
-		providers,
-		changeGenerator,
-		clock,
-		logger,
+		stateContainer:  stateContainer,
+		providers:       providers,
+		changeGenerator: changeGenerator,
+		clock:           clock,
+		logger:          logger,
 	}
 }
 
@@ -150,6 +158,7 @@ func (c *defaultChecker) CheckDrift(
 	ctx context.Context,
 	instanceID string,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (map[string]*state.ResourceDriftState, error) {
 	instanceLogger := c.logger.WithFields(
 		core.StringLogField("instanceId", instanceID),
@@ -167,24 +176,26 @@ func (c *defaultChecker) CheckDrift(
 		return nil, err
 	}
 
-	return c.checkDriftWithState(ctx, &instanceState, params, instanceLogger)
+	return c.checkDriftWithState(ctx, &instanceState, params, taggingConfig, instanceLogger)
 }
 
 func (c *defaultChecker) CheckDriftWithState(
 	ctx context.Context,
 	instanceState *state.InstanceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (map[string]*state.ResourceDriftState, error) {
 	instanceLogger := c.logger.WithFields(
 		core.StringLogField("instanceId", instanceState.InstanceID),
 	)
-	return c.checkDriftWithState(ctx, instanceState, params, instanceLogger)
+	return c.checkDriftWithState(ctx, instanceState, params, taggingConfig, instanceLogger)
 }
 
 func (c *defaultChecker) checkDriftWithState(
 	ctx context.Context,
 	instanceState *state.InstanceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 	instanceLogger core.Logger,
 ) (map[string]*state.ResourceDriftState, error) {
 	driftResults := map[string]*state.ResourceDriftState{}
@@ -200,6 +211,7 @@ func (c *defaultChecker) checkDriftWithState(
 			resource,
 			instanceState.InstanceName,
 			params,
+			taggingConfig,
 			resourceLogger,
 		)
 		if err != nil {
@@ -225,6 +237,7 @@ func (c *defaultChecker) CheckResourceDrift(
 	instanceName string,
 	resourceID string,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (*state.ResourceDriftState, error) {
 	resourceLogger := c.logger.WithFields(
 		core.StringLogField("instanceId", instanceID),
@@ -269,7 +282,7 @@ func (c *defaultChecker) CheckResourceDrift(
 		return nil, err
 	}
 
-	return c.checkResourceDrift(ctx, &finalResourceState, instanceName, params, resourceLogger)
+	return c.checkResourceDrift(ctx, &finalResourceState, instanceName, params, taggingConfig, resourceLogger)
 }
 
 func (c *defaultChecker) checkResourceDrift(
@@ -277,6 +290,7 @@ func (c *defaultChecker) checkResourceDrift(
 	resource *state.ResourceState,
 	instanceName string,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 	resourceLogger core.Logger,
 ) (*state.ResourceDriftState, error) {
 	resourceLogger.Debug(
@@ -314,9 +328,12 @@ func (c *defaultChecker) checkResourceDrift(
 		"Retrieving external state for the resource from the provider",
 	)
 	retryCtx := provider.CreateRetryContext(policy)
-	providerCtx := provider.NewProviderContextFromParams(
+	providerCtx := provider.NewProviderContextFromParamsWithOptions(
 		providerNamespace,
 		params,
+		&provider.ProviderContextOptions{
+			TaggingConfig: taggingConfig,
+		},
 	)
 	externalStateOutput, err := c.getResourceExternalState(
 		ctx,
@@ -894,6 +911,7 @@ func (c *defaultChecker) CheckInterruptedResources(
 	ctx context.Context,
 	instanceID string,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) ([]ReconcileResult, error) {
 	instanceLogger := c.logger.WithFields(
 		core.StringLogField("instanceId", instanceID),
@@ -910,24 +928,26 @@ func (c *defaultChecker) CheckInterruptedResources(
 		return nil, err
 	}
 
-	return c.checkInterruptedResourcesWithState(ctx, &instanceState, params, instanceLogger)
+	return c.checkInterruptedResourcesWithState(ctx, &instanceState, params, taggingConfig, instanceLogger)
 }
 
 func (c *defaultChecker) CheckInterruptedResourcesWithState(
 	ctx context.Context,
 	instanceState *state.InstanceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) ([]ReconcileResult, error) {
 	instanceLogger := c.logger.WithFields(
 		core.StringLogField("instanceId", instanceState.InstanceID),
 	)
-	return c.checkInterruptedResourcesWithState(ctx, instanceState, params, instanceLogger)
+	return c.checkInterruptedResourcesWithState(ctx, instanceState, params, taggingConfig, instanceLogger)
 }
 
 func (c *defaultChecker) checkInterruptedResourcesWithState(
 	ctx context.Context,
 	instanceState *state.InstanceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 	instanceLogger core.Logger,
 ) ([]ReconcileResult, error) {
 	results := []ReconcileResult{}
@@ -947,6 +967,7 @@ func (c *defaultChecker) checkInterruptedResourcesWithState(
 			resource,
 			instanceState.InstanceName,
 			params,
+			taggingConfig,
 			resourceLogger,
 		)
 		if err != nil {
@@ -968,6 +989,7 @@ func (c *defaultChecker) checkInterruptedResource(
 	resource *state.ResourceState,
 	instanceName string,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 	resourceLogger core.Logger,
 ) (*ReconcileResult, error) {
 	providerNamespace := provider.ExtractProviderFromItemType(resource.Type)
@@ -982,7 +1004,13 @@ func (c *defaultChecker) checkInterruptedResource(
 	}
 
 	retryCtx := provider.CreateRetryContext(policy)
-	providerCtx := provider.NewProviderContextFromParams(providerNamespace, params)
+	providerCtx := provider.NewProviderContextFromParamsWithOptions(
+		providerNamespace,
+		params,
+		&provider.ProviderContextOptions{
+			TaggingConfig: taggingConfig,
+		},
+	)
 
 	externalStateOutput, err := c.getResourceExternalState(
 		ctx,
@@ -1196,6 +1224,7 @@ func (c *defaultChecker) CheckLinkDrift(
 	instanceID string,
 	linkID string,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (*state.LinkDriftState, error) {
 	linkLogger := c.logger.WithFields(
 		core.StringLogField("instanceId", instanceID),
@@ -1223,13 +1252,14 @@ func (c *defaultChecker) CheckLinkDrift(
 		return nil, err
 	}
 
-	return c.checkLinkDrift(ctx, &linkState, &instanceState, params, linkLogger)
+	return c.checkLinkDrift(ctx, &linkState, &instanceState, params, taggingConfig, linkLogger)
 }
 
 func (c *defaultChecker) CheckAllLinkDrift(
 	ctx context.Context,
 	instanceID string,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (map[string]*state.LinkDriftState, error) {
 	instanceLogger := c.logger.WithFields(
 		core.StringLogField("instanceId", instanceID),
@@ -1246,24 +1276,26 @@ func (c *defaultChecker) CheckAllLinkDrift(
 		return nil, err
 	}
 
-	return c.checkAllLinkDriftWithState(ctx, &instanceState, params, instanceLogger)
+	return c.checkAllLinkDriftWithState(ctx, &instanceState, params, taggingConfig, instanceLogger)
 }
 
 func (c *defaultChecker) CheckAllLinkDriftWithState(
 	ctx context.Context,
 	instanceState *state.InstanceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 ) (map[string]*state.LinkDriftState, error) {
 	instanceLogger := c.logger.WithFields(
 		core.StringLogField("instanceId", instanceState.InstanceID),
 	)
-	return c.checkAllLinkDriftWithState(ctx, instanceState, params, instanceLogger)
+	return c.checkAllLinkDriftWithState(ctx, instanceState, params, taggingConfig, instanceLogger)
 }
 
 func (c *defaultChecker) checkAllLinkDriftWithState(
 	ctx context.Context,
 	instanceState *state.InstanceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 	instanceLogger core.Logger,
 ) (map[string]*state.LinkDriftState, error) {
 	driftResults := map[string]*state.LinkDriftState{}
@@ -1274,7 +1306,7 @@ func (c *defaultChecker) checkAllLinkDriftWithState(
 		)
 		linkLogger.Debug("checking drift for link")
 
-		linkDrift, err := c.checkLinkDrift(ctx, link, instanceState, params, linkLogger)
+		linkDrift, err := c.checkLinkDrift(ctx, link, instanceState, params, taggingConfig, linkLogger)
 		if err != nil {
 			linkLogger.Debug(
 				"failed to check drift for link",
@@ -1296,6 +1328,7 @@ func (c *defaultChecker) checkLinkDrift(
 	link *state.LinkState,
 	instanceState *state.InstanceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 	linkLogger core.Logger,
 ) (*state.LinkDriftState, error) {
 	var resourceADrift *state.LinkResourceDrift
@@ -1309,6 +1342,7 @@ func (c *defaultChecker) checkLinkDrift(
 			link,
 			instanceState,
 			params,
+			taggingConfig,
 			linkLogger,
 		)
 		if err != nil {
@@ -1366,6 +1400,7 @@ func (c *defaultChecker) checkLinkDriftViaResourceDataMappings(
 	link *state.LinkState,
 	instanceState *state.InstanceState,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 	linkLogger core.Logger,
 ) (*state.LinkResourceDrift, *state.LinkResourceDrift, error) {
 	// Parse link name to get resource names (format: "resourceA::resourceB")
@@ -1404,6 +1439,7 @@ func (c *defaultChecker) checkLinkDriftViaResourceDataMappings(
 				link.Data,
 				instanceState.InstanceName,
 				params,
+				taggingConfig,
 				linkLogger,
 			)
 			if err != nil {
@@ -1424,6 +1460,7 @@ func (c *defaultChecker) checkLinkDriftViaResourceDataMappings(
 				link.Data,
 				instanceState.InstanceName,
 				params,
+				taggingConfig,
 				linkLogger,
 			)
 			if err != nil {
@@ -1444,6 +1481,7 @@ func (c *defaultChecker) checkResourceFieldsForLinkDrift(
 	linkData map[string]*core.MappingNode,
 	instanceName string,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 	linkLogger core.Logger,
 ) (*state.LinkResourceDrift, error) {
 	providerNamespace := provider.ExtractProviderFromItemType(resource.Type)
@@ -1458,7 +1496,13 @@ func (c *defaultChecker) checkResourceFieldsForLinkDrift(
 	}
 
 	retryCtx := provider.CreateRetryContext(policy)
-	providerCtx := provider.NewProviderContextFromParams(providerNamespace, params)
+	providerCtx := provider.NewProviderContextFromParamsWithOptions(
+		providerNamespace,
+		params,
+		&provider.ProviderContextOptions{
+			TaggingConfig: taggingConfig,
+		},
+	)
 
 	externalStateOutput, err := c.getResourceExternalState(
 		ctx,

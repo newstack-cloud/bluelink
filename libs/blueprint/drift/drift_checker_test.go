@@ -58,6 +58,7 @@ func (s *DriftCheckerTestSuite) Test_checks_drift_for_resources_in_blueprint() {
 		context.Background(),
 		instance1ID,
 		createParams(),
+		nil, // taggingConfig
 	)
 	s.Require().NoError(err)
 	err = testhelpers.Snapshot(normaliseResourceDriftStateMap(driftStateMap))
@@ -93,6 +94,7 @@ func (s *DriftCheckerTestSuite) Test_checks_drift_for_a_single_resource() {
 		instance1ID,
 		saveOrderFunctionID,
 		createParams(),
+		nil, // taggingConfig
 	)
 	s.Require().NoError(err)
 	err = testhelpers.Snapshot(normaliseResourceDriftState(driftState))
@@ -134,6 +136,7 @@ func (s *DriftCheckerTestSuite) Test_checks_drift_for_a_single_resource_where_li
 		instance1ID,
 		saveOrderFunctionID,
 		createParams(),
+		nil, // taggingConfig
 	)
 	s.Require().NoError(err)
 	s.Assert().Nil(driftState)
@@ -456,6 +459,7 @@ func (s *DriftCheckerTestSuite) Test_checks_link_drift_via_resource_data_mapping
 		instance1ID,
 		"test-link-drift-1",
 		createParams(),
+		nil, // taggingConfig
 	)
 	s.Require().NoError(err)
 	s.Require().NotNil(linkDriftState)
@@ -501,6 +505,7 @@ func (s *DriftCheckerTestSuite) Test_checks_all_link_drift_in_instance() {
 		context.Background(),
 		instance1ID,
 		createParams(),
+		nil, // taggingConfig
 	)
 	s.Require().NoError(err)
 
@@ -540,6 +545,7 @@ func (s *DriftCheckerTestSuite) Test_no_link_drift_when_data_matches_external_st
 		instance1ID,
 		"test-link-no-drift-1",
 		createParams(),
+		nil, // taggingConfig
 	)
 	s.Require().NoError(err)
 	s.Assert().Nil(linkDriftState)
