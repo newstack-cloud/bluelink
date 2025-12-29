@@ -253,6 +253,7 @@ func (c *Controller) performReconciliationCheck(
 	}
 
 	scope := parseReconciliationScope(payload.Scope)
+	taggingConfig := c.createTaggingConfig(payload.Config)
 	input := &container.CheckReconciliationInput{
 		InstanceID:      instanceID,
 		Scope:           scope,
@@ -260,6 +261,7 @@ func (c *Controller) performReconciliationCheck(
 		LinkNames:       payload.LinkNames,
 		IncludeChildren: payload.IncludeChildren,
 		ChildPath:       payload.ChildPath,
+		TaggingConfig:   taggingConfig,
 	}
 
 	return blueprintContainer.CheckReconciliation(ctxWithTimeout, input, params)
@@ -342,8 +344,8 @@ func parseReconciliationAction(action string) container.ReconciliationAction {
 		return container.ReconciliationActionAcceptExternal
 	case "update_status":
 		return container.ReconciliationActionUpdateStatus
-	case "mark_failed":
-		return container.ReconciliationActionMarkFailed
+	case "manual_cleanup_required":
+		return container.ReconciliationActionManualCleanupRequired
 	default:
 		return container.ReconciliationActionUpdateStatus
 	}

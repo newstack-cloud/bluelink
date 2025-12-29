@@ -10,11 +10,13 @@ import (
 // mockPluginManager is a test double for pluginservicev1.Manager
 type mockPluginManager struct {
 	metadata map[pluginservicev1.PluginType]map[string]*pluginservicev1.PluginExtendedMetadata
+	plugins  map[pluginservicev1.PluginType][]*pluginservicev1.PluginInstance
 }
 
 func newMockPluginManager() *mockPluginManager {
 	return &mockPluginManager{
 		metadata: make(map[pluginservicev1.PluginType]map[string]*pluginservicev1.PluginExtendedMetadata),
+		plugins:  make(map[pluginservicev1.PluginType][]*pluginservicev1.PluginInstance),
 	}
 }
 
@@ -47,16 +49,24 @@ func (m *mockPluginManager) GetPluginMetadata(
 func (m *mockPluginManager) GetPlugins(
 	pluginType pluginservicev1.PluginType,
 ) []*pluginservicev1.PluginInstance {
-	return nil
+	return m.plugins[pluginType]
 }
 
 func (m *mockPluginManager) addProviderMetadata(id string, metadata *pluginservicev1.PluginExtendedMetadata) {
-	if m.metadata[pluginservicev1.PluginType_PLUGIN_TYPE_PROVIDER] == nil {
-		m.metadata[pluginservicev1.PluginType_PLUGIN_TYPE_PROVIDER] = make(
-			map[string]*pluginservicev1.PluginExtendedMetadata,
-		)
+	pluginType := pluginservicev1.PluginType_PLUGIN_TYPE_PROVIDER
+
+	// Add to metadata map
+	if m.metadata[pluginType] == nil {
+		m.metadata[pluginType] = make(map[string]*pluginservicev1.PluginExtendedMetadata)
 	}
-	m.metadata[pluginservicev1.PluginType_PLUGIN_TYPE_PROVIDER][id] = metadata
+	m.metadata[pluginType][id] = metadata
+
+	// Add to plugins list so GetPlugins and findPluginIDByNamespace work
+	m.plugins[pluginType] = append(m.plugins[pluginType], &pluginservicev1.PluginInstance{
+		Info: &pluginservicev1.PluginInstanceInfo{
+			ID: id,
+		},
+	})
 }
 
 type LookupTestSuite struct {

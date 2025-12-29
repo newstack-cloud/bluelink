@@ -35,13 +35,15 @@ func (p *configProviderImpl) CreateConfig(
 ) *provider.TaggingConfig {
 	enabled, prefix := extractTaggingSettings(requestConfig)
 
-	return &provider.TaggingConfig{
+	taggingConfig := &provider.TaggingConfig{
 		Enabled:             enabled,
 		Prefix:              prefix,
 		DeployEngineVersion: p.deployEngineVersion,
 		// ProviderPluginID and ProviderPluginVersion are set per-resource
 		// during deployment based on the resource type's provider.
 	}
+
+	return taggingConfig
 }
 
 // extractTaggingSettings extracts enabled and prefix from the request config,

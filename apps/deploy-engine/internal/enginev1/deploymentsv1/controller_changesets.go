@@ -20,6 +20,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/includes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
@@ -109,12 +110,14 @@ func (c *Controller) CreateChangesetHandler(
 	// Add blueprint directory to context variables for resolving relative child blueprint paths.
 	finalConfig = internalutils.EnsureBlueprintDirContextVar(finalConfig, payload.BlueprintDocumentInfo.Directory)
 	params := c.paramsProvider.CreateFromRequestConfig(finalConfig)
+	taggingConfig := c.createTaggingConfig(finalConfig)
 
 	go c.startChangeStaging(
 		changeset,
 		blueprintInfo,
 		helpersv1.GetFormat(payload.BlueprintFile),
 		params,
+		taggingConfig,
 		payload.SkipDriftCheck,
 		c.logger.Named("changeStagingProcess").WithFields(
 			core.StringLogField("changesetId", changesetID),
@@ -296,6 +299,7 @@ func (c *Controller) startChangeStaging(
 	blueprintInfo *includes.ChildBlueprintInfo,
 	format schema.SpecFormat,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 	skipDriftCheck bool,
 	logger core.Logger,
 ) {
@@ -340,6 +344,7 @@ func (c *Controller) startChangeStaging(
 			blueprintContainer,
 			changeset,
 			params,
+			taggingConfig,
 			logger,
 		)
 		if driftDetected {
@@ -680,6 +685,7 @@ func (c *Controller) performDriftCheckForChangeStaging(
 	blueprintContainer container.BlueprintContainer,
 	changeset *manage.Changeset,
 	params core.BlueprintParams,
+	taggingConfig *provider.TaggingConfig,
 	logger core.Logger,
 ) bool {
 	logger.Debug("performing drift check before change staging")
@@ -687,8 +693,9 @@ func (c *Controller) performDriftCheckForChangeStaging(
 	result, err := blueprintContainer.CheckReconciliation(
 		ctx,
 		&container.CheckReconciliationInput{
-			InstanceID: changeset.InstanceID,
-			Scope:      container.ReconciliationScopeAll,
+			InstanceID:    changeset.InstanceID,
+			Scope:         container.ReconciliationScopeAll,
+			TaggingConfig: taggingConfig,
 		},
 		params,
 	)
