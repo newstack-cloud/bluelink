@@ -1310,6 +1310,15 @@ message ResourceDefinitionsSchema {
 	// this value has no effect on user-defined values.
 	// Computed values are excluded from the drift checking process by default.
     bool track_drift = 17;
+    // Specifies a field name to sort array items by before comparison.
+    // This is only applicable for schemas with Type set to "array" where items are objects.
+    // When set, array elements will be sorted by the specified field's string value
+    // before change detection, ensuring order-independent comparison.
+    // This is useful for arrays like tags where the logical identity is a key field
+    // but the order may vary between the blueprint spec and external state.
+    // Example: For tags like [{key: "env", value: "prod"}, {key: "name", value: "foo"}],
+    // setting sort_array_by_field to "key" ensures consistent comparison regardless of order.
+    string sort_array_by_field = 18;
 }
 
 // CanLinkTo holds a list of resource types that a given resource type

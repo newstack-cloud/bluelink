@@ -70,6 +70,7 @@ func ToPBResourceDefinitionsSchema(
 		Sensitive:            schema.Sensitive,
 		IgnoreDrift:          schema.IgnoreDrift,
 		TrackDrift:           schema.TrackDrift,
+		SortArrayByField:     schema.SortArrayByField,
 	}, nil
 }
 

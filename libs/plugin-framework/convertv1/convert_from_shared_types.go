@@ -947,6 +947,7 @@ func fromPBResourceDefinitionsSchema(
 		Sensitive:            pbSchema.Sensitive,
 		IgnoreDrift:          pbSchema.IgnoreDrift,
 		TrackDrift:           pbSchema.TrackDrift,
+		SortArrayByField:     pbSchema.SortArrayByField,
 	}, nil
 }
 
