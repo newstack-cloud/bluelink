@@ -735,6 +735,16 @@ func (c *defaultBlueprintContainer) processResourceUpdate(
 		if msg.InstanceID == instanceID {
 			c.trackResourceCompletion(msg, deployCtx.Rollback, finished)
 		}
+
+		// Persist state for resources that successfully complete during drain
+		if err := c.persistCompletedResourceDuringDrain(ctx, msg, deployCtx); err != nil {
+			c.logger.Warn(
+				"failed to persist resource state during drain",
+				core.StringLogField("resourceName", msg.ResourceName),
+				core.ErrorLogField("error", err),
+			)
+		}
+
 		// Forward the message to the caller so they can track status changes
 		// for in-flight resources during drain.
 		deployCtx.Channels.ResourceUpdateChan <- msg
@@ -773,6 +783,63 @@ func (c *defaultBlueprintContainer) processResourceUpdate(
 	}
 }
 
+// persistCompletedResourceDuringDrain persists state for resources that have
+// successfully completed during drain mode. This ensures resources that finish
+// deploying/updating after a terminal failure elsewhere have their state properly saved.
+func (c *defaultBlueprintContainer) persistCompletedResourceDuringDrain(
+	ctx context.Context,
+	msg ResourceDeployUpdateMessage,
+	deployCtx *DeployContext,
+) error {
+	// Only process messages for this instance's direct resources
+	if msg.InstanceID != deployCtx.InstanceStateSnapshot.InstanceID {
+		return nil
+	}
+
+	// Only persist state for successfully completed resources
+	msgWrapper := &deployUpdateMessageWrapper{resourceUpdateMessage: &msg}
+	if !updateWasSuccessful(msgWrapper, deployCtx.Rollback) &&
+		!creationWasSuccessful(msgWrapper, deployCtx.Rollback) {
+		return nil
+	}
+
+	element := &ResourceIDInfo{ResourceID: msg.ResourceID, ResourceName: msg.ResourceName}
+	resourceDeps := deployCtx.State.GetElementDependencies(element)
+	return c.stateContainer.Resources().Save(ctx, c.buildResourceState(msg, resourceDeps, deployCtx))
+}
+
+// attachFinishedChildDuringDrain attaches a finished child blueprint to its parent
+// during drain mode. This ensures the parent-child relationship is established
+// even when deployment is interrupted by a terminal failure elsewhere.
+// We attach ALL finished children (success or failure) to give users a complete
+// hierarchical view of the deployment state.
+func (c *defaultBlueprintContainer) attachFinishedChildDuringDrain(
+	ctx context.Context,
+	instanceID string,
+	msg ChildDeployUpdateMessage,
+	deployCtx *DeployContext,
+) error {
+	// Only process messages for this instance's direct children
+	if msg.ParentInstanceID != instanceID {
+		return nil
+	}
+
+	// Check if the child has finished (success or failure)
+	if !finishedDeployingChild(msg.Status, deployCtx.Rollback) &&
+		!finishedUpdatingChild(msg.Status, deployCtx.Rollback) {
+		return nil
+	}
+
+	children := c.stateContainer.Children()
+	if err := children.Attach(ctx, msg.ParentInstanceID, msg.ChildInstanceID, msg.ChildName); err != nil {
+		return err
+	}
+
+	element := &ChildBlueprintIDInfo{ChildInstanceID: msg.ChildInstanceID, ChildName: msg.ChildName}
+	dependencies := deployCtx.State.GetElementDependencies(element)
+	return children.SaveDependencies(ctx, msg.ParentInstanceID, msg.ChildName, dependencies)
+}
+
 func (c *defaultBlueprintContainer) processChildUpdate(
 	ctx context.Context,
 	instanceID string,
@@ -789,6 +856,17 @@ func (c *defaultBlueprintContainer) processChildUpdate(
 		if msg.ParentInstanceID == instanceID {
 			c.trackChildCompletion(msg, deployCtx.Rollback, finished)
 		}
+
+		// Attach finished children (success or failure) during drain.
+		// This ensures users get a complete hierarchical view of the deployment state.
+		if err := c.attachFinishedChildDuringDrain(ctx, instanceID, msg, deployCtx); err != nil {
+			c.logger.Warn(
+				"failed to attach child during drain",
+				core.StringLogField("childName", msg.ChildName),
+				core.ErrorLogField("error", err),
+			)
+		}
+
 		// Forward the message to the caller so they can track status changes
 		// for in-flight child blueprints during drain.
 		deployCtx.Channels.ChildUpdateChan <- msg
@@ -1273,11 +1351,17 @@ func (c *defaultBlueprintContainer) buildResourceState(
 		wrappedMsg,
 		deployCtx.Rollback,
 	)
-	if successfulUpdate || successfulCreation {
+	// Persist specData if resource reached CONFIG_COMPLETE (exists in cloud with valid spec).
+	// This ensures we have accurate state data for drift detection and reconciliation
+	// even if deployment is interrupted before the resource reaches a stable state.
+	if reachedConfigCompleteOrLater(msg.PreciseStatus, deployCtx.Rollback) {
 		if resourceData != nil {
 			resourceState.SpecData = resourceData.Spec
 		}
+	}
 
+	// Only set LastDeployedTimestamp for fully successful deployments
+	if successfulUpdate || successfulCreation {
 		resourceState.LastDeployedTimestamp = int(c.clock.Now().Unix())
 	}
 

@@ -868,6 +868,26 @@ func resourceCreationConfigComplete(
 	return preciseStatus == core.PreciseResourceStatusConfigComplete
 }
 
+// reachedConfigCompleteOrLater returns true if the resource has reached at least
+// CONFIG_COMPLETE stage (resource exists in cloud with valid spec data).
+// This covers both creation and update paths, in both normal and rollback scenarios.
+func reachedConfigCompleteOrLater(preciseStatus core.PreciseResourceStatus, rollingBack bool) bool {
+	// Check if we've reached config complete for creation or update
+	creationConfigComplete := resourceCreationConfigComplete(preciseStatus, rollingBack)
+	updateConfigComplete := resourceUpdateConfigComplete(preciseStatus, rollingBack)
+
+	// Also check for fully successful states (which are "later" than config complete)
+	if rollingBack {
+		return creationConfigComplete || updateConfigComplete ||
+			preciseStatus == core.PreciseResourceStatusDestroyRollbackComplete ||
+			preciseStatus == core.PreciseResourceStatusUpdateRollbackComplete
+	}
+
+	return creationConfigComplete || updateConfigComplete ||
+		preciseStatus == core.PreciseResourceStatusCreated ||
+		preciseStatus == core.PreciseResourceStatusUpdated
+}
+
 // This function should be used when the caller needs to know if resource
 // creation has finished, regardless of success or failure.
 // This will report false if the current message represents a failure that can be retried.
