@@ -1190,3 +1190,126 @@ func (r *IAMRoleResource) Destroy(
 ) error {
 	return nil
 }
+
+// ExampleTaggableResource is a test resource implementation that demonstrates
+// the use of SortArrayByField for order-independent tag comparison.
+type ExampleTaggableResource struct{}
+
+func (r *ExampleTaggableResource) CustomValidate(
+	ctx context.Context,
+	input *provider.ResourceValidateInput,
+) (*provider.ResourceValidateOutput, error) {
+	return &provider.ResourceValidateOutput{}, nil
+}
+
+func (r *ExampleTaggableResource) GetSpecDefinition(
+	ctx context.Context,
+	input *provider.ResourceGetSpecDefinitionInput,
+) (*provider.ResourceGetSpecDefinitionOutput, error) {
+	return &provider.ResourceGetSpecDefinitionOutput{
+		SpecDefinition: &provider.ResourceSpecDefinition{
+			Schema: &provider.ResourceDefinitionsSchema{
+				Type: provider.ResourceDefinitionsSchemaTypeObject,
+				Attributes: map[string]*provider.ResourceDefinitionsSchema{
+					"id": {
+						Type:     provider.ResourceDefinitionsSchemaTypeString,
+						Computed: true,
+					},
+					"tags": {
+						Type: provider.ResourceDefinitionsSchemaTypeArray,
+						// SortArrayByField ensures tags are sorted by "key" before comparison,
+						// enabling order-independent comparison of tag arrays.
+						SortArrayByField: "key",
+						Items: &provider.ResourceDefinitionsSchema{
+							Type: provider.ResourceDefinitionsSchemaTypeObject,
+							Attributes: map[string]*provider.ResourceDefinitionsSchema{
+								"key": {
+									Type: provider.ResourceDefinitionsSchemaTypeString,
+								},
+								"value": {
+									Type: provider.ResourceDefinitionsSchemaTypeString,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}, nil
+}
+
+func (r *ExampleTaggableResource) CanLinkTo(
+	ctx context.Context,
+	input *provider.ResourceCanLinkToInput,
+) (*provider.ResourceCanLinkToOutput, error) {
+	return &provider.ResourceCanLinkToOutput{}, nil
+}
+
+func (r *ExampleTaggableResource) GetStabilisedDependencies(
+	ctx context.Context,
+	input *provider.ResourceStabilisedDependenciesInput,
+) (*provider.ResourceStabilisedDependenciesOutput, error) {
+	return &provider.ResourceStabilisedDependenciesOutput{}, nil
+}
+
+func (r *ExampleTaggableResource) IsCommonTerminal(
+	ctx context.Context,
+	input *provider.ResourceIsCommonTerminalInput,
+) (*provider.ResourceIsCommonTerminalOutput, error) {
+	return &provider.ResourceIsCommonTerminalOutput{}, nil
+}
+
+func (r *ExampleTaggableResource) GetType(
+	ctx context.Context,
+	input *provider.ResourceGetTypeInput,
+) (*provider.ResourceGetTypeOutput, error) {
+	return &provider.ResourceGetTypeOutput{
+		Type:  "example/taggable",
+		Label: "Taggable Resource",
+	}, nil
+}
+
+func (r *ExampleTaggableResource) GetTypeDescription(
+	ctx context.Context,
+	input *provider.ResourceGetTypeDescriptionInput,
+) (*provider.ResourceGetTypeDescriptionOutput, error) {
+	return &provider.ResourceGetTypeDescriptionOutput{
+		MarkdownDescription:  "A test resource with tags that use SortArrayByField.",
+		PlainTextDescription: "A test resource with tags that use SortArrayByField.",
+	}, nil
+}
+
+func (r *ExampleTaggableResource) GetExamples(
+	ctx context.Context,
+	input *provider.ResourceGetExamplesInput,
+) (*provider.ResourceGetExamplesOutput, error) {
+	return &provider.ResourceGetExamplesOutput{}, nil
+}
+
+func (r *ExampleTaggableResource) Deploy(
+	ctx context.Context,
+	input *provider.ResourceDeployInput,
+) (*provider.ResourceDeployOutput, error) {
+	return &provider.ResourceDeployOutput{}, nil
+}
+
+func (r *ExampleTaggableResource) HasStabilised(
+	ctx context.Context,
+	input *provider.ResourceHasStabilisedInput,
+) (*provider.ResourceHasStabilisedOutput, error) {
+	return &provider.ResourceHasStabilisedOutput{Stabilised: true}, nil
+}
+
+func (r *ExampleTaggableResource) GetExternalState(
+	ctx context.Context,
+	input *provider.ResourceGetExternalStateInput,
+) (*provider.ResourceGetExternalStateOutput, error) {
+	return &provider.ResourceGetExternalStateOutput{}, nil
+}
+
+func (r *ExampleTaggableResource) Destroy(
+	ctx context.Context,
+	input *provider.ResourceDestroyInput,
+) error {
+	return nil
+}

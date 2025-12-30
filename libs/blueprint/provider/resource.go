@@ -622,6 +622,15 @@ type ResourceDefinitionsSchema struct {
 	// this value has no effect on user-defined values.
 	// Compted values are excluded from the drift checking process by default.
 	TrackDrift bool
+	// SortArrayByField specifies a field name to sort array items by before comparison.
+	// This is only applicable for schemas with Type set to "array" where items are objects.
+	// When set, array elements will be sorted by the specified field's string value
+	// before change detection, ensuring order-independent comparison.
+	// This is useful for arrays like tags where the logical identity is a key field
+	// but the order may vary between the blueprint spec and external state.
+	// Example: For tags like [{key: "env", value: "prod"}, {key: "name", value: "foo"}],
+	// setting SortArrayByField to "key" ensures consistent comparison regardless of order.
+	SortArrayByField string
 }
 
 // ResourceDefinitionsSchemaType holds the type of a resource schema.

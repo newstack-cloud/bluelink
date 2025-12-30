@@ -311,6 +311,14 @@ func collectArrayFieldChanges(
 	newSpecItems := getItems(arrayInNewSpec)
 	currentStateItems := getItems(arrayInCurrentState)
 
+	// Sort arrays by the specified field if configured for order-independent comparison.
+	// This is useful for arrays like tags where the logical identity is a key field
+	// but the order may vary between the blueprint spec and external state.
+	if schema.SortArrayByField != "" {
+		newSpecItems = sortArrayItemsByField(newSpecItems, schema.SortArrayByField)
+		currentStateItems = sortArrayItemsByField(currentStateItems, schema.SortArrayByField)
+	}
+
 	for i, newValue := range newSpecItems {
 		currentValue := getArrayItem(currentStateItems, i)
 		collectSpecFieldChanges(
@@ -725,6 +733,44 @@ func getArrayItem(node []*bpcore.MappingNode, index int) *bpcore.MappingNode {
 	}
 
 	return node[index]
+}
+
+// sortArrayItemsByField returns a sorted copy of the array items based on the
+// string value of the specified field. Items without the field or with non-string
+// values for the field are sorted to the end.
+// This is used for order-independent comparison of arrays like tags.
+func sortArrayItemsByField(items []*bpcore.MappingNode, fieldName string) []*bpcore.MappingNode {
+	if len(items) == 0 || fieldName == "" {
+		return items
+	}
+
+	// Create a copy to avoid mutating the original
+	sorted := make([]*bpcore.MappingNode, len(items))
+	copy(sorted, items)
+
+	slices.SortFunc(sorted, func(a, b *bpcore.MappingNode) int {
+		aKey := getFieldStringValue(a, fieldName)
+		bKey := getFieldStringValue(b, fieldName)
+		return strings.Compare(aKey, bKey)
+	})
+
+	return sorted
+}
+
+// getFieldStringValue extracts the string value of a field from a mapping node.
+// Returns empty string if the node is nil, doesn't have the field, or the field
+// is not a string scalar.
+func getFieldStringValue(node *bpcore.MappingNode, fieldName string) string {
+	if node == nil || node.Fields == nil {
+		return ""
+	}
+
+	field := node.Fields[fieldName]
+	if field == nil || field.Scalar == nil || field.Scalar.StringValue == nil {
+		return ""
+	}
+
+	return *field.Scalar.StringValue
 }
 
 func isMapOrNil(node *bpcore.MappingNode) bool {
