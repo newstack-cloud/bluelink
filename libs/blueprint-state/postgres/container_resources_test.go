@@ -186,6 +186,30 @@ func (s *PostgresStateContainerResourcesTestSuite) Test_saves_resource_with_syst
 	internal.AssertResourceStatesEqual(fixture.ResourceState, &savedState, &s.Suite)
 }
 
+func (s *PostgresStateContainerResourcesTestSuite) Test_saves_resource_with_computed_fields() {
+	fixture := s.saveResourceFixtures[5]
+	resources := s.container.Resources()
+	err := resources.Save(
+		context.Background(),
+		*fixture.ResourceState,
+	)
+	s.Require().NoError(err)
+
+	savedState, err := resources.Get(
+		context.Background(),
+		fixture.ResourceState.ResourceID,
+	)
+	s.Require().NoError(err)
+
+	// Verify computed fields were persisted correctly
+	s.Require().NotNil(savedState.ComputedFields)
+	s.Assert().Len(savedState.ComputedFields, 2)
+	s.Assert().Contains(savedState.ComputedFields, "spec.arn")
+	s.Assert().Contains(savedState.ComputedFields, "spec.functionUrl")
+
+	internal.AssertResourceStatesEqual(fixture.ResourceState, &savedState, &s.Suite)
+}
+
 func (s *PostgresStateContainerResourcesTestSuite) Test_updates_blueprint_resource_deployment_status() {
 	resources := s.container.Resources()
 

@@ -32,6 +32,7 @@ func upsertResources(
 			"description":        toNullableText(resource.Description),
 			"metadata":           resource.Metadata,
 			"systemMetadata":     resource.SystemMetadata,
+			"computedFields":     sliceOrEmpty(resource.ComputedFields),
 			"dependsOnResources": resource.DependsOnResources,
 			"dependsOnChildren":  resource.DependsOnChildren,
 			"failureReasons":     sliceOrEmpty(resource.FailureReasons),

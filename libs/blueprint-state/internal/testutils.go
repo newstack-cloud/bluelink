@@ -51,6 +51,7 @@ func AssertResourceStatesEqual(expected, actual *state.ResourceState, s *suite.S
 	s.Assert().Equal(expected.Description, actual.Description)
 	assertResourceMetadataEqual(expected.Metadata, actual.Metadata, s)
 	assertSystemMetadataEqual(expected.SystemMetadata, actual.SystemMetadata, s)
+	assertSlicesEqual(expected.ComputedFields, actual.ComputedFields, s)
 	assertSlicesEqual(expected.DependsOnResources, actual.DependsOnResources, s)
 	assertSlicesEqual(expected.DependsOnChildren, actual.DependsOnChildren, s)
 	assertSlicesEqual(expected.FailureReasons, actual.FailureReasons, s)

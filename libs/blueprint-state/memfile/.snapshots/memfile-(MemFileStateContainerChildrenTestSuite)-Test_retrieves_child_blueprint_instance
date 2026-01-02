@@ -234,6 +234,8 @@
         SourceMeta: (*source.Meta)(<nil>),
         FieldsSourceMeta: (map[string]*source.Meta) <nil>
       }),
+      ComputedFields: ([]string) {
+      },
       Description: (string) (len=24) "A complex resource type.",
       Metadata: (*state.ResourceMetadataState)({
         DisplayName: (string) "",

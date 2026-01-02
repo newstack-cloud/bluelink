@@ -299,6 +299,9 @@ func copyResource(resourceState *state.ResourceState) state.ResourceState {
 	dependsOnChildren := make([]string, len(resourceState.DependsOnChildren))
 	copy(dependsOnChildren, resourceState.DependsOnChildren)
 
+	computedFields := make([]string, len(resourceState.ComputedFields))
+	copy(computedFields, resourceState.ComputedFields)
+
 	return state.ResourceState{
 		ResourceID:         resourceState.ResourceID,
 		Name:               resourceState.Name,
@@ -310,6 +313,7 @@ func copyResource(resourceState *state.ResourceState) state.ResourceState {
 		Description:        resourceState.Description,
 		Metadata:           &metadataCopy,
 		SystemMetadata:     systemMetadataCopy,
+		ComputedFields:     computedFields,
 		DependsOnResources: dependsOnResources,
 		DependsOnChildren:  dependsOnChildren,
 		FailureReasons:     resourceState.FailureReasons,
