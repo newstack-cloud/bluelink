@@ -9,7 +9,7 @@ require (
 	github.com/charmbracelet/huh v0.8.0
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
 	github.com/charmbracelet/x/exp/teatest v0.0.0-20251201173703-9f73bfd934ff
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.3
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.4
 	github.com/newstack-cloud/bluelink/libs/deploy-engine-client v0.1.2
 	github.com/newstack-cloud/deploy-cli-sdk v0.1.2
 	github.com/rogpeppe/go-internal v1.14.1
@@ -57,7 +57,7 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
-	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.4.0 // indirect
+	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.4.2 // indirect
 	github.com/newstack-cloud/bluelink/libs/common v0.3.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/r3labs/sse/v2 v2.10.0 // indirect
@@ -81,3 +81,5 @@ require (
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/newstack-cloud/deploy-cli-sdk => /Users/andresutherland/projects2025/newstack/deploy-cli-sdk

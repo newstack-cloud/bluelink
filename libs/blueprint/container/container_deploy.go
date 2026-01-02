@@ -604,17 +604,22 @@ func (c *defaultBlueprintContainer) startDeploymentFromFirstGroup(
 	instanceTreePath := getInstanceTreePath(deployCtx.ParamOverrides, instanceID)
 
 	for _, node := range deployCtx.DeploymentGroups[0] {
-		c.deployNode(
-			ctx,
-			node,
-			instanceID,
-			instanceTreePath,
-			changes,
-			DeployContextWithGroup(
-				DeployContextWithChannels(deployCtx, internalChannels),
-				0,
-			),
-		)
+		// Only deploy nodes that have changes.
+		// This is essential for retry scenarios where some resources may have already
+		// been deployed successfully and have no pending changes.
+		if nodeHasChanges(node, changes) {
+			c.deployNode(
+				ctx,
+				node,
+				instanceID,
+				instanceTreePath,
+				changes,
+				DeployContextWithGroup(
+					DeployContextWithChannels(deployCtx, internalChannels),
+					0,
+				),
+			)
+		}
 	}
 }
 
@@ -1001,6 +1006,7 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 
 				failed := getFailedElementsFromFinished(finished, deployCtx.Rollback)
 				interrupted := getInterruptedElementNames(inFlightElements, finished)
+
 				deployCtx.Channels.FinishChan <- c.createDeploymentFinishedMessage(
 					instanceID,
 					determineFinishedFailureStatus(
@@ -1050,6 +1056,7 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 
 			failed := getFailedElementsFromFinished(finished, deployCtx.Rollback)
 			interrupted := getInterruptedElementNames(inFlightElements, finished)
+
 			deployCtx.Channels.FinishChan <- c.createDeploymentFinishedMessage(
 				instanceID,
 				determineFinishedFailureStatus(
@@ -1069,6 +1076,7 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 	failed := getFailedElementDeploymentsAndUpdateState(finished, changes, deployCtx)
 	if len(failed) > 0 {
 		c.logger.Info("deployment failed, sending finished message", core.StringLogField("instanceID", instanceID))
+
 		deployCtx.Channels.FinishChan <- c.createDeploymentFinishedMessage(
 			instanceID,
 			determineFinishedFailureStatus(
@@ -1351,12 +1359,14 @@ func (c *defaultBlueprintContainer) buildResourceState(
 		wrappedMsg,
 		deployCtx.Rollback,
 	)
-	// Persist specData if resource reached CONFIG_COMPLETE (exists in cloud with valid spec).
+	// Persist specData and computedFields if resource reached CONFIG_COMPLETE
+	// (exists in cloud with valid spec).
 	// This ensures we have accurate state data for drift detection and reconciliation
 	// even if deployment is interrupted before the resource reaches a stable state.
 	if reachedConfigCompleteOrLater(msg.PreciseStatus, deployCtx.Rollback) {
 		if resourceData != nil {
 			resourceState.SpecData = resourceData.Spec
+			resourceState.ComputedFields = resourceData.ComputedFields
 		}
 	}
 
@@ -1565,7 +1575,10 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterResource(
 			dependenciesComplete || len(node.DirectDependencies) == 0,
 		)
 
-		if canDeploy {
+		// Only deploy nodes that have changes.
+		// This is essential for retry scenarios where some resources may have already
+		// been deployed successfully and have no pending changes.
+		if canDeploy && nodeHasChanges(node, deployCtx.InputChanges) {
 			instanceTreePath := getInstanceTreePath(deployCtx.ParamOverrides, instanceID)
 			c.deployNode(
 				ctx,
@@ -2125,7 +2138,10 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterChild(
 			dependenciesComplete || len(node.DirectDependencies) == 0,
 		)
 
-		if canDeploy {
+		// Only deploy nodes that have changes.
+		// This is essential for retry scenarios where some resources may have already
+		// been deployed successfully and have no pending changes.
+		if canDeploy && nodeHasChanges(node, deployCtx.InputChanges) {
 			instanceTreePath := getInstanceTreePath(deployCtx.ParamOverrides, instanceID)
 			c.deployNode(
 				ctx,

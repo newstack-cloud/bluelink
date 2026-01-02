@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -45,7 +46,7 @@ func (s *VersionCommandSuite) Test_prints_version() {
 	s.NoError(err)
 	s.Contains(buf.String(), "Bluelink CLI")
 	// Version is "dev" by default, or set via ldflags at build time
-	s.Contains(buf.String(), Version)
+	s.Contains(buf.String(), utils.Version)
 }
 
 func TestVersionCommandSuite(t *testing.T) {

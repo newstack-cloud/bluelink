@@ -2,13 +2,11 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"runtime"
 
 	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
 	"github.com/newstack-cloud/deploy-cli-sdk/config"
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 )
 
 func NewRootCmd() *cobra.Command {
@@ -17,6 +15,7 @@ func NewRootCmd() *cobra.Command {
 	confProvider := config.NewProvider()
 
 	cobra.AddTemplateFunc("wrappedFlagUsages", utils.WrappedFlagUsages)
+	cobra.AddTemplateFunc("versionInfo", utils.VersionInfo)
 	rootCmd := &cobra.Command{
 		Use:   "bluelink",
 		Short: "CLI for managing blueprint deployments and plugins",
@@ -128,22 +127,7 @@ func validateConnectProtocol(protocol string) error {
 }
 
 func OnInitialise() {
-	asciiArt := `
-  _     _            _ _       _    
- | |   | |          | (_)     | |   
- | |__ | |_   _  ___| |_ _ __ | | __
- | '_ \| | | | |/ _ \ | | '_ \| |/ /
- | |_) | | |_| |  __/ | | | | |   < 
- |_.__/|_|\__,_|\___|_|_|_| |_|_|\_\
-                                             
-	`
-
-	inTerminal := term.IsTerminal(int(os.Stdout.Fd()))
-	if inTerminal {
-		// Only print the ASCII art if we're in an interactive terminal,
-		// it can be a nuisance when in environments like CI/CD
-		// workflows or where the only expected output is formatted JSON
-		// or similar.
-		fmt.Println(asciiArt)
-	}
+	// No-op: Logo is now only shown in help/usage output via the template.
+	// This avoids printing extraneous text when commands run with --json
+	// or when output is being piped/processed programmatically.
 }

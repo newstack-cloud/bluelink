@@ -46,6 +46,7 @@
           }
         }
       },
+      "computedFields": ["spec.id"],
       "failureReasons": null,
       "durations": {
         "configCompleteDuration": -1,
@@ -72,6 +73,7 @@
           "app": "invoices"
         }
       },
+      "computedFields": ["spec.id"],
       "dependsOnResources": ["processInvoiceFunction"],
       "dependsOnChildren": ["coreInfra"],
       "failureReasons": null,
@@ -99,6 +101,7 @@
           "app": "invoices"
         }
       },
+      "computedFields": ["spec.id"],
       "failureReasons": null,
       "durations": {
         "configCompleteDuration": -1,
@@ -139,6 +142,7 @@
           }
         }
       },
+      "computedFields": ["spec.id"],
       "failureReasons": null,
       "durations": {
         "configCompleteDuration": -1,
@@ -179,6 +183,7 @@
           }
         }
       },
+      "computedFields": ["spec.id"],
       "failureReasons": null,
       "durations": {
         "configCompleteDuration": -1,
@@ -200,6 +205,7 @@
         "id": "arn:aws:lambda:us-east-1:123456789012:function:saveOrderFunction"
       },
       "metadata": {},
+      "computedFields": ["spec.id"],
       "dependsOnResources": ["ordersTable_0", "ordersTable_1", "ordersTable_2"],
       "failureReasons": null,
       "durations": {
@@ -411,6 +417,7 @@
             ]
           },
           "metadata": {},
+          "computedFields": ["spec.computedFieldTrackDrift", "spec.id"],
           "failureReasons": null,
           "durations": {
             "configCompleteDuration": -1,

@@ -2963,7 +2963,7 @@
       },
       NewExports: (map[string]provider.FieldChange) (len=2) {
         (string) (len=11) "environment": (provider.FieldChange) {
-          FieldPath: (string) (len=19) "exports.environment",
+          FieldPath: (string) (len=21) "variables.environment",
           PrevValue: (*core.MappingNode)(<nil>),
           NewValue: (*core.MappingNode)({
             Scalar: (*core.ScalarValue)({
@@ -2985,7 +2985,7 @@
           Sensitive: (bool) false
         },
         (string) (len=6) "region": (provider.FieldChange) {
-          FieldPath: (string) (len=14) "exports.region",
+          FieldPath: (string) (len=13) "values.region",
           PrevValue: (*core.MappingNode)(<nil>),
           NewValue: (*core.MappingNode)({
             Scalar: (*core.ScalarValue)({
@@ -3006,7 +3006,8 @@
           MustRecreate: (bool) false,
           Sensitive: (bool) false
         }
-      }
+      },
+      ResolveOnDeploy: ([]string) <nil>
     }
   },
   ChildChanges: (map[string]changes.BlueprintChanges) {
@@ -3017,7 +3018,7 @@
   },
   NewExports: (map[string]provider.FieldChange) (len=1) {
     (string) (len=11) "environment": (provider.FieldChange) {
-      FieldPath: (string) (len=19) "exports.environment",
+      FieldPath: (string) (len=21) "variables.environment",
       PrevValue: (*core.MappingNode)(<nil>),
       NewValue: (*core.MappingNode)({
         Scalar: (*core.ScalarValue)({

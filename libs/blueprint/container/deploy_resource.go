@@ -322,6 +322,7 @@ func (d *defaultResourceDeployer) deployResource(
 			Metadata: resolvedMetadataToState(
 				extractResolvedMetadataFromResourceInfo(resourceInfo),
 			),
+			ComputedFields: resourceInfo.changes.ComputedFields,
 		},
 	)
 	// At this point, we mark the resource as "config complete", a separate coroutine
@@ -686,6 +687,10 @@ func (d *defaultResourceDeployer) resolveResourceForDeployment(
 	resolveOnDeploy []string,
 ) (*provider.ResolvedResource, error) {
 	if !resourceHasFieldsToResolve(node.ResourceName, resolveOnDeploy) {
+		// Even when no fields need to be resolved, cache the partially resolved
+		// resource so it can be used when resolving exports and other elements
+		// that reference this resource.
+		d.resourceCache.Set(node.ResourceName, partiallyResolvedResource)
 		return partiallyResolvedResource, nil
 	}
 

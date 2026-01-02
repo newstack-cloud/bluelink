@@ -1,12 +1,20 @@
 package utils
 
 import (
+	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/term"
+)
+
+// Version info set by the commands package at init time.
+var (
+	Version   = "dev"
+	BuildTime = "unknown"
 )
 
 // WrappedFlagUsages wraps long descriptions for flags,
@@ -25,9 +33,26 @@ func WrappedFlagUsages(cmd *pflag.FlagSet) string {
 	return cmd.FlagUsagesWrapped(width - 1)
 }
 
+// Logo is the ASCII art logo displayed in help output.
+const Logo = `
+  _     _            _ _       _
+ | |   | |          | (_)     | |
+ | |__ | |_   _  ___| |_ _ __ | | __
+ | '_ \| | | | |/ _ \ | | '_ \| |/ /
+ | |_) | | |_| |  __/ | | | | |   <
+ |_.__/|_|\__,_|\___|_|_|_| |_|_|\_\
+`
+
+// VersionInfo returns a formatted string with version information.
+func VersionInfo() string {
+	return fmt.Sprintf("\nBluelink CLI %s (%s/%s, built %s)", Version, runtime.GOOS, runtime.GOARCH, BuildTime)
+}
+
 // UsageTemplate is identical to the default cobra usage template,
 // but utilises WrappedFlagUsages to ensure flag usages don't wrap around.
-var UsageTemplate = `
+// The logo and version info are prepended to the usage output.
+var UsageTemplate = Logo + `{{versionInfo}}
+
 Usage:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
   {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
@@ -58,6 +83,7 @@ var HelpTemplate = `
 
 // SetupLogger creates a zap logger instance that writes to a file.
 // Due to the CLI heavily using bubbletea to provide interactive experiences,
+// we log to a file by default.
 func SetupLogger() (*zap.Logger, *os.File, error) {
 	logFileHandle, err := os.OpenFile("bluelink.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {

@@ -42,6 +42,16 @@ func (c *defaultBlueprintContainer) StageChanges(
 	}
 
 	if input.Destroy {
+		// For destroy operations, we must have a valid instance to destroy.
+		// If no instance was resolved, return an error with the identifier
+		// the user provided for a more helpful error message.
+		if resolvedInstanceID == "" {
+			identifier := input.InstanceID
+			if identifier == "" {
+				identifier = input.InstanceName
+			}
+			return state.InstanceNotFoundError(identifier)
+		}
 		changeStagingLogger.Info("staging changes for destroying blueprint instance")
 		go c.stageInstanceRemoval(ctxWithInstanceID, resolvedInstanceID, channels)
 		return nil
@@ -442,7 +452,7 @@ func (c *defaultBlueprintContainer) resolveAndCollectExportChanges(
 		UnchangedExports: []string{},
 		ResolveOnDeploy:  []string{},
 	}
-	collectExportChanges(collectedExportChanges, resolvedExports, blueprintExportsState)
+	collectExportChanges(collectedExportChanges, blueprint.Exports.Values, resolvedExports, blueprintExportsState)
 	stagingState.UpdateExportChanges(collectedExportChanges)
 
 	return nil

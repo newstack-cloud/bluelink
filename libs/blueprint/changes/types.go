@@ -95,7 +95,8 @@ type IntermediaryBlueprintChanges struct {
 // NewBlueprintDefinition provides a definition for a new child blueprint
 // that will be created when deploying a blueprint instance.
 type NewBlueprintDefinition struct {
-	NewResources map[string]provider.Changes       `json:"newResources"`
-	NewChildren  map[string]NewBlueprintDefinition `json:"newChildren"`
-	NewExports   map[string]provider.FieldChange   `json:"newExports"`
+	NewResources    map[string]provider.Changes       `json:"newResources"`
+	NewChildren     map[string]NewBlueprintDefinition `json:"newChildren"`
+	NewExports      map[string]provider.FieldChange   `json:"newExports"`
+	ResolveOnDeploy []string                          `json:"resolveOnDeploy,omitempty"`
 }

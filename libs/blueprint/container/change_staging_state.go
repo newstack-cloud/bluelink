@@ -130,6 +130,9 @@ func (c *defaultChangeStagingState) ApplyResourceChanges(changes ResourceChanges
 			changes.ResourceName,
 		)
 	} else {
+		// Store all existing resource changes (even those with no field modifications)
+		// so they're available for link staging via GetResourceChanges().
+		// Filtering of no-change resources happens in ExtractBlueprintChanges().
 		if c.outputChanges.ResourceChanges == nil {
 			c.outputChanges.ResourceChanges = map[string]*provider.Changes{}
 		}
@@ -221,7 +224,10 @@ func (c *defaultChangeStagingState) ApplyLinkChanges(changes LinkChangesMessage)
 				resourceChanges.NewOutboundLinks = map[string]provider.LinkChanges{}
 			}
 			resourceChanges.NewOutboundLinks[changes.ResourceBName] = changes.Changes
-		} else {
+		} else if provider.LinkChangesHasFieldChanges(&changes.Changes) {
+			// Only include links in OutboundLinkChanges if they have actual field modifications.
+			// Links with no changes (no modified, new, or removed fields) are excluded
+			// to avoid presenting them as needing updates when nothing has changed.
 			if resourceChanges.OutboundLinkChanges == nil {
 				resourceChanges.OutboundLinkChanges = map[string]provider.LinkChanges{}
 			}
@@ -246,10 +252,22 @@ func (c *defaultChangeStagingState) ApplyChildChanges(changesMsg ChildChangesMes
 			c.outputChanges.NewChildren = map[string]*changes.NewBlueprintDefinition{}
 		}
 
+		// For a new child, we need to combine NewExports and ExportChanges.
+		// Exports with a value that needs to be resolved at deploy time end up in
+		// ExportChanges even for new children (since both prevValue and newValue are nil).
+		combinedNewExports := make(map[string]provider.FieldChange)
+		for name, change := range changesMsg.Changes.NewExports {
+			combinedNewExports[name] = change
+		}
+		for name, change := range changesMsg.Changes.ExportChanges {
+			combinedNewExports[name] = change
+		}
+
 		c.outputChanges.NewChildren[changesMsg.ChildBlueprintName] = &changes.NewBlueprintDefinition{
-			NewResources: changesMsg.Changes.NewResources,
-			NewChildren:  changesMsg.Changes.NewChildren,
-			NewExports:   changesMsg.Changes.NewExports,
+			NewResources:    changesMsg.Changes.NewResources,
+			NewChildren:     changesMsg.Changes.NewChildren,
+			NewExports:      combinedNewExports,
+			ResolveOnDeploy: changesMsg.Changes.ResolveOnDeploy,
 		}
 	} else if changesMsg.Removed {
 		c.outputChanges.RemovedChildren = append(
@@ -320,9 +338,14 @@ func (c *defaultChangeStagingState) ExtractBlueprintChanges() changes.BlueprintC
 	// from child changes if present in child changes map.
 	recreateChildren := c.collectChildrenToRecreate()
 
+	// Filter out resources with no changes from the output.
+	// Resources with no changes at all (no field or link changes) are excluded
+	// to avoid presenting them as needing updates when nothing has changed.
+	filteredResourceChanges := filterResourceChangesWithAnyChanges(c.outputChanges.ResourceChanges)
+
 	return changes.BlueprintChanges{
 		NewResources:     copyPointerMap(c.outputChanges.NewResources),
-		ResourceChanges:  copyPointerMap(c.outputChanges.ResourceChanges),
+		ResourceChanges:  filteredResourceChanges,
 		RemovedResources: c.outputChanges.RemovedResources,
 		RemovedLinks:     c.outputChanges.RemovedLinks,
 		NewChildren:      copyPointerMap(c.outputChanges.NewChildren),
@@ -335,6 +358,20 @@ func (c *defaultChangeStagingState) ExtractBlueprintChanges() changes.BlueprintC
 		RemovedExports:   c.outputChanges.RemovedExports,
 		ResolveOnDeploy:  c.outputChanges.ResolveOnDeploy,
 	}
+}
+
+// filterResourceChangesWithAnyChanges returns a copy of the input map
+// containing only resources that have actual changes (field or link changes).
+// Resources with no changes at all are excluded to avoid presenting them
+// as needing updates when nothing has changed.
+func filterResourceChangesWithAnyChanges(input map[string]*provider.Changes) map[string]provider.Changes {
+	output := map[string]provider.Changes{}
+	for key, value := range input {
+		if provider.HasAnyChanges(value) {
+			output[key] = *value
+		}
+	}
+	return output
 }
 
 // A lock must be held on the staging state when calling this function.

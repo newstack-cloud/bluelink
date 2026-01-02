@@ -21,8 +21,8 @@ builds:
         goarch: arm64
     ldflags:
       - -s -w
-      - -X github.com/newstack-cloud/bluelink/apps/cli/cmd/commands.Version={{ .Version }}
-      - -X github.com/newstack-cloud/bluelink/apps/cli/cmd/commands.BuildTime={{ .Date }}
+      - -X github.com/newstack-cloud/bluelink/apps/cli/cmd/utils.Version={{ .Version }}
+      - -X github.com/newstack-cloud/bluelink/apps/cli/cmd/utils.BuildTime={{ .Date }}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
 archives:

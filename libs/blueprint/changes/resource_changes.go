@@ -286,6 +286,16 @@ func collectScalarFieldChanges(
 
 	if bpcore.IsNilMappingNode(scalarInCurrentState) &&
 		!bpcore.ScalarMappingNodeEqual(scalarInNewSpec, scalarInCurrentState) {
+		// For nullable fields with defaults: if the current state is nil (user didn't provide a value)
+		// and the new value equals the schema default, treat it as unchanged.
+		// This prevents false drift detection when GetExternalState returns the provider's default
+		// value for fields that the user intentionally left unspecified.
+		if schema.Nullable && schema.Default != nil &&
+			bpcore.ScalarMappingNodeEqual(scalarInNewSpec, schema.Default) {
+			changes.UnchangedFields = append(changes.UnchangedFields, fieldChangeCtx.currentPath)
+			return
+		}
+
 		changes.NewFields = append(changes.NewFields, provider.FieldChange{
 			FieldPath:    fieldChangeCtx.currentPath,
 			PrevValue:    nil,

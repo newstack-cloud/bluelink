@@ -11,6 +11,7 @@ import (
 	sharedui "github.com/newstack-cloud/deploy-cli-sdk/ui"
 	"go.uber.org/zap"
 
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/driftui"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/stageui"
 )
 
@@ -73,7 +74,11 @@ func (m MainModel) Init() tea.Cmd {
 	bpCmd := m.selectBlueprint.Init()
 	configFormCmd := m.deployConfigForm.Init()
 	deployCmd := m.deploy.Init()
-	return tea.Batch(bpCmd, configFormCmd, deployCmd)
+	var stagingCmd tea.Cmd
+	if m.staging != nil {
+		stagingCmd = m.staging.Init()
+	}
+	return tea.Batch(bpCmd, configFormCmd, deployCmd, stagingCmd)
 }
 
 // Update handles messages for the main model.
@@ -84,6 +89,16 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case sharedui.SelectBlueprintMsg:
 		m.blueprintFile = sharedui.ToFullBlueprintPath(msg.BlueprintFile, msg.Source)
 		m.blueprintSource = msg.Source
+
+		// If we're already in deployExecute state, just pass the message to the deploy model
+		// without recalculating state. This prevents switching back to staging when
+		// SelectBlueprintMsg is received during deployment.
+		if m.sessionState == deployExecute {
+			var cmd tea.Cmd
+			m.deploy, cmd = m.deploy.Update(msg)
+			cmds = append(cmds, cmd)
+			return m, tea.Batch(cmds...)
+		}
 
 		// Determine next state based on whether we need instance name
 		nextState := m.determineNextStateAfterBlueprintSelect()
@@ -136,6 +151,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.sessionState = deployStaging
 			m.staging.SetBlueprintFile(m.blueprintFile)
 			m.staging.SetBlueprintSource(m.blueprintSource)
+			// Start the staging spinner animation
+			cmds = append(cmds, m.staging.Init())
 			// Resolve instance identifiers before starting staging
 			// This handles the case where instance name is provided but instance doesn't exist yet
 			cmds = append(cmds, resolveInstanceIdentifiersCmd(m))
@@ -157,13 +174,21 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, m.staging.StartStaging())
 
 	case stageui.StageCompleteMsg:
+		// Guard: If we're already in deployExecute, ignore this message.
+		// This can happen if a stale StageCompleteMsg arrives after deployment has started.
+		if m.sessionState == deployExecute {
+			return m, tea.Batch(cmds...)
+		}
+
 		m.changesetID = msg.ChangesetID
-		// Update deploy model with changeset ID and changes
+		// Update deploy model with changeset ID, changes, and instance state
 		deployModel, ok := m.deploy.(DeployModel)
 		if ok {
 			deployModel.changesetID = msg.ChangesetID
 			deployModel.footerRenderer.ChangesetID = msg.ChangesetID
-			// Set changeset changes to build proper item hierarchy
+			// Set instance state first so it's available when building items
+			deployModel.SetPreDeployInstanceState(msg.InstanceState)
+			// Set changeset changes to build proper item hierarchy (uses instance state)
 			deployModel.SetChangesetChanges(msg.Changes)
 			m.deploy = deployModel
 		}
@@ -184,6 +209,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					Delete:   del,
 					Recreate: recreate,
 				},
+				HasExportChanges: stageui.HasAnyExportChanges(msg.Changes),
 			})
 		}
 
@@ -204,6 +230,11 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 
 	case sharedui.ClearSelectedBlueprintMsg:
+		// Guard: Don't reset state if we're in deployStaging or deployExecute.
+		// This prevents unexpected state resets during active operations.
+		if m.sessionState == deployStaging || m.sessionState == deployExecute {
+			return m, tea.Batch(cmds...)
+		}
 		m.sessionState = deployBlueprintSelect
 		m.blueprintFile = ""
 		m.blueprintSource = ""
@@ -280,10 +311,29 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case stageui.StageStartedMsg, stageui.StageEventMsg, stageui.StageErrorMsg:
-		// Route staging messages to staging model regardless of current session state,
-		// since these messages may arrive asynchronously.
-		// The session state switch below will NOT re-process these specific message types.
+		// Route staging-specific messages to staging model.
 		if m.staging != nil {
+			var stagingModel tea.Model
+			var stagingCmd tea.Cmd
+			stagingModel, stagingCmd = m.staging.Update(msg)
+			if sm, ok := stagingModel.(stageui.StageModel); ok {
+				m.staging = &sm
+			}
+			cmds = append(cmds, stagingCmd)
+			if m.staging.GetError() != nil {
+				m.Error = m.staging.GetError()
+			}
+		}
+
+	case driftui.DriftDetectedMsg, driftui.ReconciliationCompleteMsg, driftui.ReconciliationErrorMsg:
+		// Route drift messages based on current session state.
+		// During deployment (deployExecute), drift is handled by the deploy model.
+		// During staging (deployStaging), drift is handled by the staging model.
+		if m.sessionState == deployExecute {
+			var cmd tea.Cmd
+			m.deploy, cmd = m.deploy.Update(msg)
+			cmds = append(cmds, cmd)
+		} else if m.staging != nil {
 			var stagingModel tea.Model
 			var stagingCmd tea.Cmd
 			stagingModel, stagingCmd = m.staging.Update(msg)
@@ -309,10 +359,12 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case deployStaging:
 		// Route non-staging-specific messages (like KeyMsg, MouseMsg) to staging model.
-		// Staging-specific messages and spinner ticks are already handled in the type switch above,
-		// so skip them here to avoid duplicate processing.
+		// Staging-specific messages, drift messages, and spinner ticks are already handled
+		// in the type switch above, so skip them here to avoid duplicate processing.
 		switch msg.(type) {
-		case stageui.StageStartedMsg, stageui.StageEventMsg, stageui.StageErrorMsg, stageui.StageCompleteMsg, spinner.TickMsg:
+		case stageui.StageStartedMsg, stageui.StageEventMsg, stageui.StageErrorMsg, stageui.StageCompleteMsg,
+			driftui.DriftDetectedMsg, driftui.ReconciliationCompleteMsg, driftui.ReconciliationErrorMsg,
+			spinner.TickMsg:
 			// Already handled above
 		default:
 			if m.staging != nil {
@@ -336,15 +388,21 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, configFormCmd)
 
 	case deployExecute:
-		newDeploy, newCmd := m.deploy.Update(msg)
-		deployModel, ok := newDeploy.(DeployModel)
-		if !ok {
-			panic("failed to perform assertion on deploy model")
-		}
-		m.deploy = deployModel
-		cmds = append(cmds, newCmd)
-		if deployModel.err != nil {
-			m.Error = deployModel.err
+		// Skip drift messages since they're already handled in the type switch above.
+		switch msg.(type) {
+		case driftui.DriftDetectedMsg, driftui.ReconciliationCompleteMsg, driftui.ReconciliationErrorMsg:
+			// Already handled above
+		default:
+			newDeploy, newCmd := m.deploy.Update(msg)
+			deployModel, ok := newDeploy.(DeployModel)
+			if !ok {
+				panic("failed to perform assertion on deploy model")
+			}
+			m.deploy = deployModel
+			cmds = append(cmds, newCmd)
+			if deployModel.err != nil {
+				m.Error = deployModel.err
+			}
 		}
 	}
 
@@ -352,7 +410,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // triggerDeploymentWithChangeset starts deployment with the given changeset.
-func (m *MainModel) triggerDeploymentWithChangeset(changesetID string, _ *changes.BlueprintChanges) tea.Cmd {
+func (m *MainModel) triggerDeploymentWithChangeset(_ string, _ *changes.BlueprintChanges) tea.Cmd {
 	return func() tea.Msg {
 		return StartDeployMsg{}
 	}
@@ -487,6 +545,7 @@ func NewDeployApp(
 		bluelinkStyles,
 		headless,
 		headlessWriter,
+		false, // jsonMode - not applicable for deploy staging
 	)
 	staging := &stagingModel
 	// Pre-populate blueprint info if available

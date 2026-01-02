@@ -417,15 +417,45 @@ type Changes struct {
 	// NewOutboundLinks holds a mapping of the linked to resource name
 	// to the link changes representing the new links that will be created.
 	NewOutboundLinks map[string]LinkChanges `json:"newOutboundLinks"`
-	// OutboundLinkChanges holds a mapping
-	// of the linked to resource name to any changes
-	// that will be made to existing links.
-	// The key is of the form `{resourceA}::{resoureB}`
+	// OutboundLinkChanges holds a mapping of the linked-to resource name
+	// to any changes that will be made to existing links.
+	// The key is the name of the linked-to resource (resourceB),
+	// since the linked-from resource (resourceA) is implied by the
+	// parent Changes struct.
 	OutboundLinkChanges map[string]LinkChanges `json:"outboundLinkChanges"`
-	// RemovedOutboundLinks holds a list of link identifiers
-	// that will be removed.
-	// The form of the link identifier is `{resourceA}::{resoureB}`
+	// RemovedOutboundLinks holds a list of resource names
+	// for outbound links that will be removed.
+	// Each entry is the name of the linked-to resource (resourceB),
+	// since the linked-from resource (resourceA) is implied by the
+	// parent Changes struct.
 	RemovedOutboundLinks []string `json:"removedOutboundLinks"`
+}
+
+// ChangesHasFieldChanges returns true if the provided Changes has any field-level changes
+// (modified, new, or removed fields). This is useful for determining
+// whether a resource actually needs to be updated during deployment.
+func ChangesHasFieldChanges(changes *Changes) bool {
+	if changes == nil {
+		return false
+	}
+	return len(changes.ModifiedFields) > 0 ||
+		len(changes.NewFields) > 0 ||
+		len(changes.RemovedFields) > 0
+}
+
+// HasAnyChanges returns true if the provided Changes has any changes at all,
+// including field-level changes (modified, new, or removed fields) or link changes
+// (new, modified, or removed outbound links).
+// This is useful for determining whether a resource should be included in the
+// resource changes set for deployment.
+func HasAnyChanges(changes *Changes) bool {
+	if changes == nil {
+		return false
+	}
+	return ChangesHasFieldChanges(changes) ||
+		len(changes.NewOutboundLinks) > 0 ||
+		len(changes.OutboundLinkChanges) > 0 ||
+		len(changes.RemovedOutboundLinks) > 0
 }
 
 // ResourceSpecDefinition provides a definition for a resource spec

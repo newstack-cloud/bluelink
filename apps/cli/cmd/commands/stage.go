@@ -58,6 +58,7 @@ Examples:
 			instanceName, _ := confProvider.GetString("stageInstanceName")
 			destroy, _ := confProvider.GetBool("stageDestroy")
 			skipDriftCheck, _ := confProvider.GetBool("stageSkipDriftCheck")
+			jsonMode, _ := confProvider.GetBool("stageJson")
 
 			if _, err := tea.LogToFile("bluelink-output.log", "simple"); err != nil {
 				log.Fatal(err)
@@ -73,6 +74,8 @@ Examples:
 				stylespkg.NewBluelinkPalette(),
 			)
 			inTerminal := term.IsTerminal(int(os.Stdout.Fd()))
+			// JSON mode implies headless mode
+			headless := !inTerminal || jsonMode
 			app, err := stageui.NewStageApp(
 				deployEngine,
 				logger,
@@ -83,15 +86,16 @@ Examples:
 				destroy,
 				skipDriftCheck,
 				styles,
-				!inTerminal,
+				headless,
 				os.Stdout,
+				jsonMode,
 			)
 			if err != nil {
 				return err
 			}
 
 			options := []tea.ProgramOption{}
-			if inTerminal {
+			if !headless {
 				options = append(options, tea.WithAltScreen(), tea.WithMouseCellMotion())
 			} else {
 				options = append(options, tea.WithInput(nil), tea.WithoutRenderer())
@@ -162,6 +166,15 @@ Examples:
 	)
 	confProvider.BindPFlag("stageSkipDriftCheck", stageCmd.PersistentFlags().Lookup("skip-drift-check"))
 	confProvider.BindEnvVar("stageSkipDriftCheck", "BLUELINK_CLI_STAGE_SKIP_DRIFT_CHECK")
+
+	stageCmd.PersistentFlags().Bool(
+		"json",
+		false,
+		"Output result as a single JSON object when the operation completes. "+
+			"Implies non-interactive mode (no TUI, no streaming text output).",
+	)
+	confProvider.BindPFlag("stageJson", stageCmd.PersistentFlags().Lookup("json"))
+	confProvider.BindEnvVar("stageJson", "BLUELINK_CLI_STAGE_JSON")
 
 	rootCmd.AddCommand(stageCmd)
 }

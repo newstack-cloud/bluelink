@@ -504,6 +504,7 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
+          ComputedFields: ([]string) <nil>,
           Description: (string) (len=44) "Table that stores orders for an application.",
           Metadata: (*state.ResourceMetadataState)({
             DisplayName: (string) (len=34) "legacy-production-env Orders Table",
@@ -1346,6 +1347,7 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
+          ComputedFields: ([]string) <nil>,
           Description: (string) (len=44) "Table that stores orders for an application.",
           Metadata: (*state.ResourceMetadataState)({
             DisplayName: (string) (len=34) "legacy-production-env Orders Table",
@@ -2156,6 +2158,7 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
+          ComputedFields: ([]string) <nil>,
           Description: (string) (len=45) "Function that saves an order to the database.",
           Metadata: (*state.ResourceMetadataState)(<nil>),
           SystemMetadata: (*state.SystemMetadataState)(<nil>),
@@ -2702,6 +2705,7 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
+              ComputedFields: ([]string) <nil>,
               Description: (string) (len=24) "A complex resource type.",
               Metadata: (*state.ResourceMetadataState)(<nil>),
               SystemMetadata: (*state.SystemMetadataState)(<nil>),
@@ -3537,7 +3541,7 @@
       },
       NewExports: (map[string]provider.FieldChange) (len=1) {
         (string) (len=6) "region": (provider.FieldChange) {
-          FieldPath: (string) (len=14) "exports.region",
+          FieldPath: (string) (len=13) "values.region",
           PrevValue: (*core.MappingNode)(<nil>),
           NewValue: (*core.MappingNode)({
             Scalar: (*core.ScalarValue)({
@@ -3561,7 +3565,7 @@
       },
       ExportChanges: (map[string]provider.FieldChange) (len=1) {
         (string) (len=11) "environment": (provider.FieldChange) {
-          FieldPath: (string) (len=19) "exports.environment",
+          FieldPath: (string) (len=21) "variables.environment",
           PrevValue: (*core.MappingNode)({
             Scalar: (*core.ScalarValue)({
               IntValue: (*int)(<nil>),
@@ -3676,7 +3680,7 @@
   },
   ExportChanges: (map[string]provider.FieldChange) (len=1) {
     (string) (len=11) "environment": (provider.FieldChange) {
-      FieldPath: (string) (len=19) "exports.environment",
+      FieldPath: (string) (len=21) "variables.environment",
       PrevValue: (*core.MappingNode)({
         Scalar: (*core.ScalarValue)({
           IntValue: (*int)(<nil>),

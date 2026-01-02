@@ -394,6 +394,18 @@ type LinkChanges struct {
 	FieldChangesKnownOnDeploy []string `json:"fieldChangesKnownOnDeploy"`
 }
 
+// LinkChangesHasFieldChanges returns true if the provided LinkChanges has any field-level changes
+// (modified, new, or removed fields). This is useful for determining
+// whether a link actually needs to be updated during deployment.
+func LinkChangesHasFieldChanges(changes *LinkChanges) bool {
+	if changes == nil {
+		return false
+	}
+	return len(changes.ModifiedFields) > 0 ||
+		len(changes.NewFields) > 0 ||
+		len(changes.RemovedFields) > 0
+}
+
 // LinkContext provides access to information about providers
 // and configuration in the current environment.
 // Links can live in intermediary provider plugins that can represent a link

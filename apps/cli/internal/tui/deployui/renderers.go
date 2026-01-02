@@ -6,8 +6,10 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/outpututil"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+	sdkstrings "github.com/newstack-cloud/deploy-cli-sdk/strings"
 	"github.com/newstack-cloud/deploy-cli-sdk/styles"
 	"github.com/newstack-cloud/deploy-cli-sdk/ui"
 	"github.com/newstack-cloud/deploy-cli-sdk/ui/splitpane"
@@ -23,8 +25,11 @@ type ChangeSummary struct {
 
 // DeployDetailsRenderer implements splitpane.DetailsRenderer for deploy UI.
 type DeployDetailsRenderer struct {
-	MaxExpandDepth       int
-	NavigationStackDepth int
+	MaxExpandDepth          int
+	NavigationStackDepth    int
+	PreDeployInstanceState  *state.InstanceState // Instance state fetched before deployment for unchanged items
+	PostDeployInstanceState *state.InstanceState // Instance state fetched after deployment completes
+	Finished                bool                 // True when deployment has finished (enables spec view shortcut)
 }
 
 // Ensure DeployDetailsRenderer implements splitpane.DetailsRenderer.
@@ -39,20 +44,22 @@ func (r *DeployDetailsRenderer) RenderDetails(item splitpane.Item, width int, s 
 
 	switch deployItem.Type {
 	case ItemTypeResource:
-		return r.renderResourceDetails(deployItem.Resource, width, s)
+		return r.renderResourceDetails(deployItem, width, s)
 	case ItemTypeChild:
-		return r.renderChildDetails(deployItem.Child, width, s)
+		return r.renderChildDetails(deployItem, width, s)
 	case ItemTypeLink:
-		return r.renderLinkDetails(deployItem.Link, width, s)
+		return r.renderLinkDetails(deployItem, width, s)
 	default:
 		return s.Muted.Render("Unknown item type")
 	}
 }
 
-func (r *DeployDetailsRenderer) renderResourceDetails(res *ResourceDeployItem, width int, s *styles.Styles) string {
+func (r *DeployDetailsRenderer) renderResourceDetails(item *DeployItem, width int, s *styles.Styles) string {
+	res := item.Resource
 	if res == nil {
 		return s.Muted.Render("No resource data")
 	}
+	parentChild := item.ParentChild
 
 	sb := strings.Builder{}
 
@@ -66,37 +73,52 @@ func (r *DeployDetailsRenderer) renderResourceDetails(res *ResourceDeployItem, w
 	sb.WriteString(s.Muted.Render(strings.Repeat("─", ui.SafeWidth(width-4))))
 	sb.WriteString("\n\n")
 
-	// Metadata
+	// Get resource state which may have updated resource ID and type after deployment
+	resourceState := r.getResourceState(res, item.Path)
+
+	// Metadata - Resource ID first (top section)
+	// Try item's ResourceID first, then fall back to state
+	resourceID := res.ResourceID
+	if resourceID == "" && resourceState != nil {
+		resourceID = resourceState.ResourceID
+	}
+	if resourceID != "" {
+		sb.WriteString(s.Muted.Render("Resource ID: "))
+		sb.WriteString(resourceID)
+		sb.WriteString("\n")
+	}
 	if res.DisplayName != "" {
 		sb.WriteString(s.Muted.Render("Name: "))
 		sb.WriteString(res.Name)
 		sb.WriteString("\n")
 	}
-	if res.ResourceType != "" {
-		sb.WriteString(s.Muted.Render("Type: "))
-		sb.WriteString(res.ResourceType)
-		sb.WriteString("\n")
+	// Resource type - try item first, then fall back to state
+	resourceType := res.ResourceType
+	if resourceType == "" && resourceState != nil {
+		resourceType = resourceState.Type
 	}
-	if res.ResourceID != "" {
-		sb.WriteString(s.Muted.Render("ID: "))
-		sb.WriteString(res.ResourceID)
+	if resourceType != "" {
+		sb.WriteString(s.Muted.Render("Type: "))
+		sb.WriteString(resourceType)
 		sb.WriteString("\n")
 	}
 
-	// Status
-	sb.WriteString(s.Muted.Render("Status: "))
-	if res.Skipped {
-		sb.WriteString(s.Warning.Render("Skipped"))
+	// Status - only show for items that will be/were deployed
+	if res.Action != ActionNoChange {
+		sb.WriteString(s.Muted.Render("Status: "))
+		if res.Skipped {
+			sb.WriteString(s.Warning.Render("Skipped"))
+			sb.WriteString("\n")
+			sb.WriteString(s.Muted.Render("Details: "))
+			sb.WriteString("Not attempted due to deployment failure")
+		} else {
+			sb.WriteString(renderResourceStatus(res.Status, s))
+			sb.WriteString("\n")
+			sb.WriteString(s.Muted.Render("Details: "))
+			sb.WriteString(renderPreciseResourceStatus(res.PreciseStatus))
+		}
 		sb.WriteString("\n")
-		sb.WriteString(s.Muted.Render("Details: "))
-		sb.WriteString("Not attempted due to deployment failure")
-	} else {
-		sb.WriteString(renderResourceStatus(res.Status, s))
-		sb.WriteString("\n")
-		sb.WriteString(s.Muted.Render("Details: "))
-		sb.WriteString(renderPreciseResourceStatus(res.PreciseStatus))
 	}
-	sb.WriteString("\n")
 
 	// Action (from changeset)
 	if res.Action != "" {
@@ -134,14 +156,303 @@ func (r *DeployDetailsRenderer) renderResourceDetails(res *ResourceDeployItem, w
 		sb.WriteString("\n")
 	}
 
-	// Duration info
-	if res.Durations != nil {
+	// Duration info (only show if there's actual duration data)
+	if durationContent := renderResourceDurations(res.Durations, s); durationContent != "" {
 		sb.WriteString("\n")
 		sb.WriteString(s.Category.Render("Timing:\n"))
-		sb.WriteString(renderResourceDurations(res.Durations, s))
+		sb.WriteString(durationContent)
+	}
+
+	// Outputs section - use resource state fetched earlier
+	if resourceState != nil {
+		outputsContent := r.renderOutputsSection(resourceState, width, s)
+		if outputsContent != "" {
+			sb.WriteString("\n")
+			sb.WriteString(outputsContent)
+		}
+
+		// Spec hint - show field count and shortcut (only when deployment finished)
+		if r.Finished {
+			specHint := r.renderSpecHint(resourceState, s)
+			if specHint != "" {
+				sb.WriteString("\n")
+				sb.WriteString(specHint)
+				sb.WriteString("\n")
+			}
+		}
+	}
+
+	// Outbound links section
+	outboundLinks := r.renderOutboundLinksSection(res.Name, parentChild, s)
+	if outboundLinks != "" {
+		sb.WriteString("\n")
+		sb.WriteString(outboundLinks)
 	}
 
 	return sb.String()
+}
+
+// getResourceState returns the resource state for a resource item.
+// It checks multiple sources in order of freshness:
+// 1. Post-deploy instance state (freshest data after deployment completes)
+// 2. Pre-deploy instance state (for no-change items)
+// 3. ResourceState field on the item (populated from instance state)
+// 4. Changeset's CurrentResourceState (pre-deploy data)
+// The path parameter contains the full path to the resource (e.g., "childA/childB/resourceName")
+// which is used to traverse nested child blueprints in the instance state.
+func (r *DeployDetailsRenderer) getResourceState(res *ResourceDeployItem, path string) *state.ResourceState {
+	// First try post-deploy state (most up-to-date after deployment completes)
+	if r.PostDeployInstanceState != nil {
+		if resourceState := findResourceStateByPath(r.PostDeployInstanceState, path, res.Name); resourceState != nil {
+			return resourceState
+		}
+	}
+
+	// Try pre-deploy state for items with no changes
+	if r.PreDeployInstanceState != nil {
+		if resourceState := findResourceStateByPath(r.PreDeployInstanceState, path, res.Name); resourceState != nil {
+			return resourceState
+		}
+	}
+
+	// Try the resource state field directly (populated when building items)
+	if res.ResourceState != nil {
+		return res.ResourceState
+	}
+
+	// Fall back to pre-deploy state from changeset
+	if res.Changes != nil && res.Changes.AppliedResourceInfo.CurrentResourceState != nil {
+		return res.Changes.AppliedResourceInfo.CurrentResourceState
+	}
+
+	return nil
+}
+
+// findResourceStateByPath finds a resource state by traversing the instance state hierarchy
+// using the path. The path format is "childA/childB/resourceName" where the last segment
+// is the resource name and the preceding segments are child blueprint names.
+func findResourceStateByPath(instanceState *state.InstanceState, path string, resourceName string) *state.ResourceState {
+	if instanceState == nil {
+		return nil
+	}
+
+	// Parse the path to extract child blueprint names
+	// Path format: "childA/childB/resourceName" or just "resourceName" for top-level
+	segments := strings.Split(path, "/")
+
+	// Navigate to the correct child blueprint
+	currentState := instanceState
+	for i := 0; i < len(segments)-1; i++ {
+		childName := segments[i]
+		if currentState.ChildBlueprints == nil {
+			return nil
+		}
+		childState, ok := currentState.ChildBlueprints[childName]
+		if !ok || childState == nil {
+			return nil
+		}
+		currentState = childState
+	}
+
+	// Now look up the resource in the target instance state
+	return findResourceStateByName(currentState, resourceName)
+}
+
+// findResourceStateByName finds a resource state by name using the instance state's
+// ResourceIDs map to look up the resource ID, then retrieves the state from Resources.
+func findResourceStateByName(instanceState *state.InstanceState, name string) *state.ResourceState {
+	if instanceState == nil || instanceState.ResourceIDs == nil || instanceState.Resources == nil {
+		return nil
+	}
+	resourceID, ok := instanceState.ResourceIDs[name]
+	if !ok {
+		return nil
+	}
+	return instanceState.Resources[resourceID]
+}
+
+// getChildInstanceID returns the instance ID for a child blueprint by traversing
+// the instance state hierarchy using the path.
+func (r *DeployDetailsRenderer) getChildInstanceID(path string, childName string) string {
+	// Try post-deploy state first
+	if r.PostDeployInstanceState != nil {
+		if instanceID := findChildInstanceIDByPath(r.PostDeployInstanceState, path); instanceID != "" {
+			return instanceID
+		}
+	}
+
+	// Try pre-deploy state
+	if r.PreDeployInstanceState != nil {
+		if instanceID := findChildInstanceIDByPath(r.PreDeployInstanceState, path); instanceID != "" {
+			return instanceID
+		}
+	}
+
+	return ""
+}
+
+// findChildInstanceIDByPath finds a child blueprint's instance ID by traversing the instance state hierarchy.
+// The path format is "childA/childB" where each segment is a child blueprint name.
+func findChildInstanceIDByPath(instanceState *state.InstanceState, path string) string {
+	if instanceState == nil || path == "" {
+		return ""
+	}
+
+	// Parse the path to navigate to the child blueprint
+	segments := strings.Split(path, "/")
+
+	// Navigate to the target child blueprint
+	currentState := instanceState
+	for _, childName := range segments {
+		if currentState.ChildBlueprints == nil {
+			return ""
+		}
+		childState, ok := currentState.ChildBlueprints[childName]
+		if !ok || childState == nil {
+			return ""
+		}
+		currentState = childState
+	}
+
+	// Return the instance ID of the target child
+	return currentState.InstanceID
+}
+
+// getLinkID returns the link ID for a link by traversing the instance state hierarchy using the path.
+func (r *DeployDetailsRenderer) getLinkID(path string, linkName string) string {
+	// Try post-deploy state first
+	if r.PostDeployInstanceState != nil {
+		if linkID := findLinkIDByPath(r.PostDeployInstanceState, path, linkName); linkID != "" {
+			return linkID
+		}
+	}
+
+	// Try pre-deploy state
+	if r.PreDeployInstanceState != nil {
+		if linkID := findLinkIDByPath(r.PreDeployInstanceState, path, linkName); linkID != "" {
+			return linkID
+		}
+	}
+
+	return ""
+}
+
+// findLinkIDByPath finds a link's ID by traversing the instance state hierarchy.
+// The path format is "childA/childB/linkName" where the last segment is the link name
+// and the preceding segments are child blueprint names.
+func findLinkIDByPath(instanceState *state.InstanceState, path string, linkName string) string {
+	if instanceState == nil {
+		return ""
+	}
+
+	// Parse the path to extract child blueprint names
+	// Path format: "childA/childB/linkName" or just "linkName" for top-level
+	segments := strings.Split(path, "/")
+
+	// Navigate to the correct child blueprint
+	currentState := instanceState
+	for i := 0; i < len(segments)-1; i++ {
+		childName := segments[i]
+		if currentState.ChildBlueprints == nil {
+			return ""
+		}
+		childState, ok := currentState.ChildBlueprints[childName]
+		if !ok || childState == nil {
+			return ""
+		}
+		currentState = childState
+	}
+
+	// Now look up the link in the target instance state
+	if currentState.Links == nil {
+		return ""
+	}
+	linkState, ok := currentState.Links[linkName]
+	if !ok || linkState == nil {
+		return ""
+	}
+	return linkState.LinkID
+}
+
+// renderOutputsSection renders the outputs (computed fields) section.
+func (r *DeployDetailsRenderer) renderOutputsSection(resourceState *state.ResourceState, width int, s *styles.Styles) string {
+	if resourceState == nil || resourceState.SpecData == nil {
+		return ""
+	}
+
+	fields := outpututil.CollectOutputFields(resourceState.SpecData, resourceState.ComputedFields)
+	if len(fields) == 0 {
+		return ""
+	}
+
+	return outpututil.RenderOutputFieldsWithLabel(fields, "Outputs:", width, s)
+}
+
+// renderSpecHint renders the spec hint line showing field count and shortcut.
+func (r *DeployDetailsRenderer) renderSpecHint(resourceState *state.ResourceState, s *styles.Styles) string {
+	if resourceState == nil || resourceState.SpecData == nil {
+		return ""
+	}
+
+	return outpututil.RenderSpecHint(resourceState.SpecData, resourceState.ComputedFields, s)
+}
+
+// renderOutboundLinksSection renders the outbound links from this resource.
+func (r *DeployDetailsRenderer) renderOutboundLinksSection(resourceName, parentChild string, s *styles.Styles) string {
+	if r.PostDeployInstanceState == nil || len(r.PostDeployInstanceState.Links) == 0 {
+		return ""
+	}
+
+	// Find links that originate from this resource (linkName starts with "resourceName::")
+	prefix := resourceName + "::"
+	var outboundLinks []string
+	for linkName, linkState := range r.PostDeployInstanceState.Links {
+		if strings.HasPrefix(linkName, prefix) {
+			// Extract target resource name
+			targetResource := strings.TrimPrefix(linkName, prefix)
+			statusStr := formatLinkStatus(linkState.Status)
+			outboundLinks = append(outboundLinks, fmt.Sprintf("→ %s (%s)", targetResource, statusStr))
+		}
+	}
+
+	if len(outboundLinks) == 0 {
+		return ""
+	}
+
+	// Sort for consistent display
+	sort.Strings(outboundLinks)
+
+	sb := strings.Builder{}
+	sb.WriteString(s.Category.Render("Outbound Links:"))
+	sb.WriteString("\n")
+	for _, link := range outboundLinks {
+		sb.WriteString(s.Muted.Render("  " + link))
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
+}
+
+// formatLinkStatus returns a human-readable status string for a link.
+func formatLinkStatus(status core.LinkStatus) string {
+	switch status {
+	case core.LinkStatusCreated:
+		return "created"
+	case core.LinkStatusUpdated:
+		return "updated"
+	case core.LinkStatusDestroyed:
+		return "destroyed"
+	case core.LinkStatusCreating:
+		return "creating"
+	case core.LinkStatusUpdating:
+		return "updating"
+	case core.LinkStatusDestroying:
+		return "destroying"
+	case core.LinkStatusCreateFailed, core.LinkStatusUpdateFailed, core.LinkStatusDestroyFailed:
+		return "failed"
+	default:
+		return status.String()
+	}
 }
 
 func renderResourceStatus(status core.ResourceStatus, s *styles.Styles) string {
@@ -172,6 +483,10 @@ func renderResourceStatus(status core.ResourceStatus, s *styles.Styles) string {
 		return s.Error.Render("Rollback Failed")
 	case core.ResourceStatusRollbackComplete:
 		return s.Muted.Render("Rolled Back")
+	case core.ResourceStatusCreateInterrupted,
+		core.ResourceStatusUpdateInterrupted,
+		core.ResourceStatusDestroyInterrupted:
+		return s.Warning.Render("Interrupted")
 	default:
 		return s.Muted.Render("Pending")
 	}
@@ -223,6 +538,12 @@ func renderPreciseResourceStatus(status core.PreciseResourceStatus) string {
 		return "Destruction rollback applied, waiting for stability"
 	case core.PreciseResourceStatusDestroyRollbackComplete:
 		return "Resource destruction rolled back"
+	case core.PreciseResourceStatusCreateInterrupted:
+		return "Resource creation was interrupted (actual state unknown)"
+	case core.PreciseResourceStatusUpdateInterrupted:
+		return "Resource update was interrupted (actual state unknown)"
+	case core.PreciseResourceStatusDestroyInterrupted:
+		return "Resource destruction was interrupted (actual state unknown)"
 	default:
 		return "Pending"
 	}
@@ -234,7 +555,7 @@ func renderResourceDurations(durations *state.ResourceCompletionDurations, s *st
 	}
 	sb := strings.Builder{}
 	if durations.TotalDuration != nil && *durations.TotalDuration > 0 {
-		sb.WriteString(s.Muted.Render(fmt.Sprintf("  Total: %.2f milliseconds\n", *durations.TotalDuration)))
+		sb.WriteString(s.Muted.Render(fmt.Sprintf("  Total: %s\n", outpututil.FormatDuration(*durations.TotalDuration))))
 	}
 	return sb.String()
 }
@@ -250,12 +571,15 @@ func renderAction(action ActionType, s *styles.Styles) string {
 		return s.Error.Render("DELETE")
 	case ActionRecreate:
 		return s.Info.Render("RECREATE")
+	case ActionNoChange:
+		return s.Muted.Render("NO CHANGE")
 	default:
 		return s.Muted.Render(string(action))
 	}
 }
 
-func (r *DeployDetailsRenderer) renderChildDetails(child *ChildDeployItem, width int, s *styles.Styles) string {
+func (r *DeployDetailsRenderer) renderChildDetails(item *DeployItem, width int, s *styles.Styles) string {
+	child := item.Child
 	if child == nil {
 		return s.Muted.Render("No child data")
 	}
@@ -268,10 +592,15 @@ func (r *DeployDetailsRenderer) renderChildDetails(child *ChildDeployItem, width
 	sb.WriteString(s.Muted.Render(strings.Repeat("─", ui.SafeWidth(width-4))))
 	sb.WriteString("\n\n")
 
-	// Instance IDs
-	if child.ChildInstanceID != "" {
+	// Instance IDs - try from child item first, then fall back to instance state
+	childInstanceID := child.ChildInstanceID
+	if childInstanceID == "" {
+		// Try to get from post-deploy or pre-deploy instance state
+		childInstanceID = r.getChildInstanceID(item.Path, child.Name)
+	}
+	if childInstanceID != "" {
 		sb.WriteString(s.Muted.Render("Instance ID: "))
-		sb.WriteString(child.ChildInstanceID)
+		sb.WriteString(childInstanceID)
 		sb.WriteString("\n")
 	}
 	if child.ParentInstanceID != "" {
@@ -297,6 +626,14 @@ func (r *DeployDetailsRenderer) renderChildDetails(child *ChildDeployItem, width
 	if child.Action != "" {
 		sb.WriteString(s.Muted.Render("Action: "))
 		sb.WriteString(renderAction(child.Action, s))
+		sb.WriteString("\n")
+	}
+
+	// Show inspect hint for children at max expand depth with nested content
+	effectiveDepth := item.Depth + r.NavigationStackDepth
+	if effectiveDepth >= r.MaxExpandDepth && item.Changes != nil {
+		sb.WriteString("\n")
+		sb.WriteString(s.Hint.Render("Press enter to inspect this child blueprint"))
 		sb.WriteString("\n")
 	}
 
@@ -366,12 +703,17 @@ func renderInstanceStatus(status core.InstanceStatus, s *styles.Styles) string {
 		return s.Muted.Render("Destroy Rolled Back")
 	case core.InstanceStatusNotDeployed:
 		return s.Muted.Render("Not Deployed")
+	case core.InstanceStatusDeployInterrupted,
+		core.InstanceStatusUpdateInterrupted,
+		core.InstanceStatusDestroyInterrupted:
+		return s.Warning.Render("Interrupted")
 	default:
 		return s.Muted.Render("Unknown")
 	}
 }
 
-func (r *DeployDetailsRenderer) renderLinkDetails(link *LinkDeployItem, width int, s *styles.Styles) string {
+func (r *DeployDetailsRenderer) renderLinkDetails(item *DeployItem, width int, s *styles.Styles) string {
+	link := item.Link
 	if link == nil {
 		return s.Muted.Render("No link data")
 	}
@@ -392,10 +734,14 @@ func (r *DeployDetailsRenderer) renderLinkDetails(link *LinkDeployItem, width in
 	sb.WriteString(link.ResourceBName)
 	sb.WriteString("\n")
 
-	// Link ID
-	if link.LinkID != "" {
+	// Link ID - try item first, then fall back to post-deploy state
+	linkID := link.LinkID
+	if linkID == "" {
+		linkID = r.getLinkID(item.Path, link.LinkName)
+	}
+	if linkID != "" {
 		sb.WriteString(s.Muted.Render("Link ID: "))
-		sb.WriteString(link.LinkID)
+		sb.WriteString(linkID)
 		sb.WriteString("\n")
 	}
 
@@ -494,6 +840,10 @@ func renderLinkStatus(status core.LinkStatus, s *styles.Styles) string {
 		return s.Error.Render("Destroy Rollback Failed")
 	case core.LinkStatusDestroyRollbackComplete:
 		return s.Muted.Render("Destroy Rolled Back")
+	case core.LinkStatusCreateInterrupted,
+		core.LinkStatusUpdateInterrupted,
+		core.LinkStatusDestroyInterrupted:
+		return s.Warning.Render("Interrupted")
 	default:
 		return s.Muted.Render("Pending")
 	}
@@ -537,6 +887,12 @@ func renderPreciseLinkStatus(status core.PreciseLinkStatus) string {
 		return "Failed to roll back intermediary resources"
 	case core.PreciseLinkStatusIntermediaryResourceUpdateRollbackComplete:
 		return "Intermediary resources rolled back"
+	case core.PreciseLinkStatusResourceAUpdateInterrupted:
+		return "Resource A update was interrupted (actual state unknown)"
+	case core.PreciseLinkStatusResourceBUpdateInterrupted:
+		return "Resource B update was interrupted (actual state unknown)"
+	case core.PreciseLinkStatusIntermediaryResourceUpdateInterrupted:
+		return "Intermediary resource update was interrupted (actual state unknown)"
 	default:
 		return "Pending"
 	}
@@ -649,13 +1005,18 @@ func sortDeployItems(items []splitpane.Item) {
 
 // DeployFooterRenderer implements splitpane.FooterRenderer for deploy UI.
 type DeployFooterRenderer struct {
-	InstanceID     string
-	InstanceName   string
-	ChangesetID    string
-	CurrentStatus  core.InstanceStatus
-	FinalStatus    core.InstanceStatus
-	FailureReasons []string
-	Finished       bool
+	InstanceID          string
+	InstanceName        string
+	ChangesetID         string
+	CurrentStatus       core.InstanceStatus
+	FinalStatus         core.InstanceStatus
+	FailureReasons      []string             // Legacy: kept for backwards compatibility
+	ElementFailures     []ElementFailure     // Structured failures with root cause details
+	InterruptedElements []InterruptedElement // Elements that were interrupted
+	SuccessfulElements  []SuccessfulElement  // Elements that completed successfully
+	Finished            bool
+	SpinnerView         string // Current spinner frame for animated "Deploying" state
+	HasInstanceState    bool   // Whether instance state is available (enables exports view)
 }
 
 // Ensure DeployFooterRenderer implements splitpane.FooterRenderer.
@@ -695,40 +1056,73 @@ func (r *DeployFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.St
 	}
 
 	if r.Finished {
-		// Deployment complete
+		// Deployment complete - compact format to fit within footer budget
 		sb.WriteString(s.Muted.Render("  Deployment "))
 		sb.WriteString(renderFinalStatus(r.FinalStatus, s))
-		sb.WriteString("\n")
-
-		sb.WriteString(s.Muted.Render("  Instance ID: "))
-		sb.WriteString(s.Selected.Render(r.InstanceID))
-		sb.WriteString("\n")
-
 		if r.InstanceName != "" {
-			sb.WriteString(s.Muted.Render("  Instance Name: "))
+			sb.WriteString(s.Muted.Render(" • "))
 			sb.WriteString(s.Selected.Render(r.InstanceName))
-			sb.WriteString("\n")
 		}
+		sb.WriteString(s.Muted.Render(" - press "))
+		sb.WriteString(s.Key.Render("o"))
+		sb.WriteString(s.Muted.Render(" for overview"))
+		if r.HasInstanceState {
+			sb.WriteString(s.Muted.Render(", "))
+			sb.WriteString(s.Key.Render("e"))
+			sb.WriteString(s.Muted.Render(" for exports"))
+		}
+		sb.WriteString("\n")
 
-		// Show failure reasons if present
-		if len(r.FailureReasons) > 0 {
-			sb.WriteString("\n")
-			sb.WriteString(s.Error.Render("  Failure Reasons:"))
-			sb.WriteString("\n")
-			for _, reason := range r.FailureReasons {
-				sb.WriteString(s.Error.Render("  • "))
-				sb.WriteString(s.Error.Render(reason))
-				sb.WriteString("\n")
+		// Show summary of successful, failed, and interrupted elements
+		hasSummary := len(r.SuccessfulElements) > 0 || len(r.ElementFailures) > 0 || len(r.InterruptedElements) > 0
+		if hasSummary {
+			sb.WriteString("  ")
+			needsComma := false
+			if len(r.SuccessfulElements) > 0 {
+				successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
+				sb.WriteString(successStyle.Render(fmt.Sprintf("%d successful", len(r.SuccessfulElements))))
+				needsComma = true
 			}
+			if len(r.ElementFailures) > 0 {
+				if needsComma {
+					sb.WriteString(s.Muted.Render(", "))
+				}
+				sb.WriteString(s.Error.Render(fmt.Sprintf("%d %s", len(r.ElementFailures), sdkstrings.Pluralize(len(r.ElementFailures), "failure", "failures"))))
+				needsComma = true
+			}
+			if len(r.InterruptedElements) > 0 {
+				if needsComma {
+					sb.WriteString(s.Muted.Render(", "))
+				}
+				sb.WriteString(s.Warning.Render(fmt.Sprintf("%d interrupted", len(r.InterruptedElements))))
+			}
+			sb.WriteString("\n")
 		}
 	} else {
-		// Deployment in progress
-		sb.WriteString(s.Info.Render("  Deploying..."))
+		// Deployment in progress with animated spinner
+		sb.WriteString("  ")
+		if r.SpinnerView != "" {
+			sb.WriteString(r.SpinnerView)
+			sb.WriteString(" ")
+		}
+		sb.WriteString(s.Info.Render("Deploying "))
+		if r.InstanceName != "" {
+			italicStyle := lipgloss.NewStyle().Italic(true)
+			sb.WriteString(italicStyle.Render(r.InstanceName))
+		}
 		sb.WriteString("\n")
 
 		if r.ChangesetID != "" {
 			sb.WriteString(s.Muted.Render("  Changeset: "))
 			sb.WriteString(s.Selected.Render(r.ChangesetID))
+			sb.WriteString("\n")
+		}
+
+		// Show exports hint when in progress
+		if r.HasInstanceState {
+			sb.WriteString(s.Muted.Render("  press "))
+			sb.WriteString(s.Key.Render("e"))
+			sb.WriteString(s.Muted.Render(" for exports"))
 			sb.WriteString("\n")
 		}
 	}
@@ -771,8 +1165,9 @@ func renderFinalStatus(status core.InstanceStatus, s *styles.Styles) string {
 // view when used in the deploy command flow. It shows a confirmation prompt instead
 // of the standalone staging footer.
 type DeployStagingFooterRenderer struct {
-	ChangesetID string
-	Summary     ChangeSummary
+	ChangesetID      string
+	Summary          ChangeSummary
+	HasExportChanges bool
 }
 
 // Ensure DeployStagingFooterRenderer implements splitpane.FooterRenderer.
@@ -813,10 +1208,13 @@ func (r *DeployStagingFooterRenderer) RenderFooter(model *splitpane.Model, s *st
 		return sb.String()
 	}
 
-	// Line 1: Staging summary with changeset ID
+	// Line 1: Staging summary with changeset ID and overview hint
 	sb.WriteString(s.Muted.Render("  Staging complete. Changeset: "))
 	sb.WriteString(s.Selected.Render(r.ChangesetID))
-	sb.WriteString("\n\n")
+	sb.WriteString(s.Muted.Render(" - press "))
+	sb.WriteString(s.Key.Render("o"))
+	sb.WriteString(s.Muted.Render(" for overview"))
+	sb.WriteString("\n")
 
 	// Line 2-3: Change summary and confirmation prompt (matches "To apply these changes" section)
 	sb.WriteString("  ")
@@ -856,6 +1254,10 @@ func (r *DeployStagingFooterRenderer) RenderFooter(model *splitpane.Model, s *st
 	sb.WriteString(s.Muted.Render(" expand/collapse  "))
 	sb.WriteString(s.Key.Render("tab"))
 	sb.WriteString(s.Muted.Render(" switch pane  "))
+	if r.HasExportChanges {
+		sb.WriteString(s.Key.Render("e"))
+		sb.WriteString(s.Muted.Render(" exports  "))
+	}
 	sb.WriteString(s.Key.Render("q"))
 	sb.WriteString(s.Muted.Render(" quit"))
 	sb.WriteString("\n")

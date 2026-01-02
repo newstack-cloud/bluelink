@@ -108,10 +108,11 @@ type DeploymentState interface {
 // this structure is primarily used to temporarily store the result of resolving substitutions
 // and deploying the resource to be persisted shortly after.
 type CollectedResourceData struct {
-	Spec         *core.MappingNode
-	Metadata     *state.ResourceMetadataState
-	TemplateName string
-	Description  string
+	Spec           *core.MappingNode
+	Metadata       *state.ResourceMetadataState
+	TemplateName   string
+	Description    string
+	ComputedFields []string
 }
 
 // NewDefaultDeploymentState creates a new instance of the default
@@ -384,10 +385,15 @@ func (d *defaultDeploymentState) GetResourceData(resourceName string) *Collected
 
 	// Copy the resource data so that modifications to the returned value
 	// do not affect the value in the deployment state.
+	computedFieldsCopy := make([]string, len(data.ComputedFields))
+	copy(computedFieldsCopy, data.ComputedFields)
+
 	return &CollectedResourceData{
-		Spec:         core.CopyMappingNode(data.Spec),
-		Metadata:     copyResourceMetadataState(data.Metadata),
-		TemplateName: data.TemplateName,
+		Spec:           core.CopyMappingNode(data.Spec),
+		Metadata:       copyResourceMetadataState(data.Metadata),
+		TemplateName:   data.TemplateName,
+		Description:    data.Description,
+		ComputedFields: computedFieldsCopy,
 	}
 }
 

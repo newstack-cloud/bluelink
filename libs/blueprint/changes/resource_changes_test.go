@@ -149,6 +149,96 @@ func (s *ResourceChangeGeneratorTestSuite) Test_detects_tag_value_change_despite
 	s.True(foundEnvChange, "expected to find the env tag value change at spec.tags[0].value")
 }
 
+// Test_no_changes_when_nullable_field_has_default_value_in_external_state verifies
+// that when a nullable field with a schema default is nil in the persisted spec,
+// and GetExternalState returns the default value, no changes are detected.
+func (s *ResourceChangeGeneratorTestSuite) Test_no_changes_when_nullable_field_has_default_value_in_external_state() {
+	changes, err := s.resourceChangeGenerator.GenerateChanges(
+		context.Background(),
+		s.resourceInfoFixture7(),
+		&internal.ExampleNullableFieldResource{},
+		[]string{},
+		nil,
+	)
+	s.Require().NoError(err)
+
+	// Verify no new fields were detected for the nullable fields with defaults
+	// (delaySeconds and maximumMessageSize should not appear as new fields)
+	for _, newField := range changes.NewFields {
+		s.NotEqual("spec.delaySeconds", newField.FieldPath,
+			"delaySeconds should not be detected as a new field when it equals the default")
+		s.NotEqual("spec.maximumMessageSize", newField.FieldPath,
+			"maximumMessageSize should not be detected as a new field when it equals the default")
+	}
+
+	// The nullable fields with default values should be in unchanged fields
+	hasDelaySeconds := false
+	hasMaxMessageSize := false
+	for _, field := range changes.UnchangedFields {
+		if field == "spec.delaySeconds" {
+			hasDelaySeconds = true
+		}
+		if field == "spec.maximumMessageSize" {
+			hasMaxMessageSize = true
+		}
+	}
+	s.True(hasDelaySeconds, "delaySeconds should be in unchanged fields")
+	s.True(hasMaxMessageSize, "maximumMessageSize should be in unchanged fields")
+}
+
+// Test_detects_changes_when_nullable_field_has_non_default_value_in_external_state verifies
+// that when a nullable field is nil in the persisted spec but GetExternalState returns
+// a NON-default value, the drift is correctly detected.
+func (s *ResourceChangeGeneratorTestSuite) Test_detects_changes_when_nullable_field_has_non_default_value_in_external_state() {
+	changes, err := s.resourceChangeGenerator.GenerateChanges(
+		context.Background(),
+		s.resourceInfoFixture8(),
+		&internal.ExampleNullableFieldResource{},
+		[]string{},
+		nil,
+	)
+	s.Require().NoError(err)
+
+	// Should detect the drifted value (delaySeconds = 30 instead of default 0)
+	foundDelaySecondsChange := false
+	for _, newField := range changes.NewFields {
+		if newField.FieldPath == "spec.delaySeconds" {
+			foundDelaySecondsChange = true
+			s.Nil(newField.PrevValue, "expected previous value to be nil")
+			s.NotNil(newField.NewValue, "expected new value to be set")
+			s.Equal(30, *newField.NewValue.Scalar.IntValue, "expected new value to be 30")
+		}
+	}
+	s.True(foundDelaySecondsChange, "expected to detect delaySeconds drift when value differs from default")
+}
+
+// Test_detects_changes_when_explicit_value_differs_from_external_state verifies
+// that when a nullable field has an explicit value in the persisted spec that
+// differs from the external state, the change is correctly detected.
+func (s *ResourceChangeGeneratorTestSuite) Test_detects_changes_when_explicit_value_differs_from_external_state() {
+	changes, err := s.resourceChangeGenerator.GenerateChanges(
+		context.Background(),
+		s.resourceInfoFixture9(),
+		&internal.ExampleNullableFieldResource{},
+		[]string{},
+		nil,
+	)
+	s.Require().NoError(err)
+
+	// Should detect the modified value (delaySeconds: 10 -> 30)
+	foundDelaySecondsChange := false
+	for _, modifiedField := range changes.ModifiedFields {
+		if modifiedField.FieldPath == "spec.delaySeconds" {
+			foundDelaySecondsChange = true
+			s.NotNil(modifiedField.PrevValue, "expected previous value to be set")
+			s.Equal(10, *modifiedField.PrevValue.Scalar.IntValue, "expected previous value to be 10")
+			s.NotNil(modifiedField.NewValue, "expected new value to be set")
+			s.Equal(30, *modifiedField.NewValue.Scalar.IntValue, "expected new value to be 30")
+		}
+	}
+	s.True(foundDelaySecondsChange, "expected to detect delaySeconds change when explicit value differs from external state")
+}
+
 func TestResourceChangeGeneratorTestSuite(t *testing.T) {
 	suite.Run(t, new(ResourceChangeGeneratorTestSuite))
 }

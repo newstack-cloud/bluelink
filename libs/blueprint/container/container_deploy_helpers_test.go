@@ -593,6 +593,7 @@ func assertResourceStateEquals(
 	testSuite.Assert().Equal(expected.SpecData, actual.SpecData)
 	testSuite.Assert().Equal(expected.Description, actual.Description)
 	assertResourceMetadataEquals(expected.Metadata, actual.Metadata, testSuite)
+	assertSlicesEqual(expected.ComputedFields, actual.ComputedFields, testSuite)
 	assertSlicesEqual(expected.DependsOnResources, actual.DependsOnResources, testSuite)
 	assertSlicesEqual(expected.DependsOnChildren, actual.DependsOnChildren, testSuite)
 	assertSlicesEqual(expected.FailureReasons, actual.FailureReasons, testSuite)

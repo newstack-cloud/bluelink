@@ -163,7 +163,7 @@ func (s *defaultResourceChangeStager) stageChanges(
 		ResourceName:    stageResourceInfo.node.ResourceName,
 		Changes:         *changes,
 		Removed:         false,
-		New:             resourceInfo.CurrentResourceState == nil,
+		New:             isResourceNewForStaging(resourceInfo.CurrentResourceState),
 		ResolveOnDeploy: resolveResourceResult.ResolveOnDeploy,
 		ConditionKnownOnDeploy: isConditionKnownOnDeploy(
 			stageResourceInfo.node.ResourceName,
@@ -200,6 +200,18 @@ func (s *defaultResourceChangeStager) stageChanges(
 	}
 
 	return nil
+}
+
+// isResourceNewForStaging determines if a resource should be treated as "new"
+// (requiring creation) during change staging. A resource is considered new if:
+// - No persisted state exists, OR
+// - The persisted state indicates the resource was never successfully created
+//   (e.g., previous creation attempt failed or was interrupted)
+func isResourceNewForStaging(currentState *state.ResourceState) bool {
+	if currentState == nil {
+		return true
+	}
+	return core.ResourceStatusIsUnsuccessfulCreate(currentState.Status)
 }
 
 func (s *defaultResourceChangeStager) prepareAndStageLinkChanges(

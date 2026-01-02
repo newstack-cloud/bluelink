@@ -5,10 +5,14 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/driftui"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/outpututil"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	engineerrors "github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 	sdkstrings "github.com/newstack-cloud/deploy-cli-sdk/strings"
+	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 )
 
 // Headless rendering methods
@@ -469,4 +473,374 @@ func (m DeployModel) renderErrorFooter() string {
 	sb.WriteString(m.styles.Muted.Render(" to quit"))
 	sb.WriteString("\n")
 	return sb.String()
+}
+
+// overviewFooterHeight returns the height of the fixed footer in overview view.
+func overviewFooterHeight() int {
+	// Footer consists of: separator line + empty line + key hints line + empty line
+	return 4
+}
+
+// renderOverviewView renders a full-screen deployment summary view.
+// This is shown when the user presses 'o' after deployment completes.
+// Uses a scrollable viewport for the content with a fixed footer.
+func (m DeployModel) renderOverviewView() string {
+	sb := strings.Builder{}
+
+	// Scrollable viewport content
+	sb.WriteString(m.overviewViewport.View())
+	sb.WriteString("\n")
+
+	// Fixed footer with navigation help
+	sb.WriteString(m.styles.Muted.Render("  " + strings.Repeat("─", 60)))
+	sb.WriteString("\n")
+	keyStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Primary()).Bold(true)
+	sb.WriteString(m.styles.Muted.Render("  Press "))
+	sb.WriteString(keyStyle.Render("↑/↓"))
+	sb.WriteString(m.styles.Muted.Render(" to scroll  "))
+	sb.WriteString(keyStyle.Render("esc"))
+	sb.WriteString(m.styles.Muted.Render("/"))
+	sb.WriteString(keyStyle.Render("o"))
+	sb.WriteString(m.styles.Muted.Render(" to return  "))
+	sb.WriteString(keyStyle.Render("q"))
+	sb.WriteString(m.styles.Muted.Render(" to quit"))
+	sb.WriteString("\n")
+
+	return sb.String()
+}
+
+// specViewFooterHeight returns the height of the fixed footer in spec view.
+func specViewFooterHeight() int {
+	// Footer consists of: separator line + empty line + key hints line + empty line
+	return 4
+}
+
+// renderSpecView renders a full-screen spec view for the currently selected resource.
+// This is shown when the user presses 's' while a resource is selected.
+func (m DeployModel) renderSpecView() string {
+	sb := strings.Builder{}
+
+	// Scrollable viewport content
+	sb.WriteString(m.specViewport.View())
+	sb.WriteString("\n")
+
+	// Fixed footer with navigation help
+	sb.WriteString(m.styles.Muted.Render("  " + strings.Repeat("─", 60)))
+	sb.WriteString("\n")
+	keyStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Primary()).Bold(true)
+	sb.WriteString(m.styles.Muted.Render("  Press "))
+	sb.WriteString(keyStyle.Render("↑/↓"))
+	sb.WriteString(m.styles.Muted.Render(" to scroll  "))
+	sb.WriteString(keyStyle.Render("esc"))
+	sb.WriteString(m.styles.Muted.Render("/"))
+	sb.WriteString(keyStyle.Render("s"))
+	sb.WriteString(m.styles.Muted.Render(" to return  "))
+	sb.WriteString(keyStyle.Render("q"))
+	sb.WriteString(m.styles.Muted.Render(" to quit"))
+	sb.WriteString("\n")
+
+	return sb.String()
+}
+
+// renderSpecContent renders the full spec for a resource (excluding computed fields).
+func (m DeployModel) renderSpecContent(resourceState *state.ResourceState, resourceName string) string {
+	sb := strings.Builder{}
+	contentWidth := m.width - 4 // Leave margin for padding
+
+	// Header
+	sb.WriteString("\n")
+	sb.WriteString(m.styles.Header.Render("  Resource Spec: " + resourceName))
+	sb.WriteString("\n")
+	sb.WriteString(m.styles.Muted.Render("  " + strings.Repeat("─", 60)))
+	sb.WriteString("\n\n")
+
+	if resourceState == nil || resourceState.SpecData == nil {
+		sb.WriteString(m.styles.Muted.Render("  No spec data available"))
+		sb.WriteString("\n")
+		return sb.String()
+	}
+
+	// Collect and render non-computed fields with pretty-printed JSON
+	fields := outpututil.CollectNonComputedFieldsPretty(resourceState.SpecData, resourceState.ComputedFields)
+	if len(fields) == 0 {
+		sb.WriteString(m.styles.Muted.Render("  No spec fields available"))
+		sb.WriteString("\n")
+		return sb.String()
+	}
+
+	// Render each field with formatted values
+	for _, field := range fields {
+		sb.WriteString(m.styles.Category.Render("  " + field.Name + ":"))
+		sb.WriteString("\n")
+
+		// Format the value with indentation
+		formattedValue := formatSpecValue(field.Value, contentWidth-4)
+		sb.WriteString(formattedValue)
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
+}
+
+// formatSpecValue formats a spec field value with proper indentation.
+func formatSpecValue(value string, width int) string {
+	// Use headless FormatMappingNode style - just add indentation
+	lines := strings.Split(value, "\n")
+	sb := strings.Builder{}
+	for i, line := range lines {
+		sb.WriteString("    " + line)
+		if i < len(lines)-1 {
+			sb.WriteString("\n")
+		}
+	}
+	return sb.String()
+}
+
+// getSelectedResourceState returns the resource state for the currently selected resource.
+// It uses the same lookup logic as the renderer to find state from multiple sources.
+func (m DeployModel) getSelectedResourceState() (*state.ResourceState, string) {
+	selectedItem := m.splitPane.SelectedItem()
+	if selectedItem == nil {
+		return nil, ""
+	}
+
+	deployItem, ok := selectedItem.(*DeployItem)
+	if !ok || deployItem.Type != ItemTypeResource || deployItem.Resource == nil {
+		return nil, ""
+	}
+
+	resourceName := deployItem.Resource.Name
+	path := deployItem.Path
+
+	// Try post-deploy state first (uses path to traverse child blueprints)
+	if m.postDeployInstanceState != nil {
+		if resourceState := findResourceStateByPath(m.postDeployInstanceState, path, resourceName); resourceState != nil {
+			return resourceState, resourceName
+		}
+	}
+
+	// Try pre-deploy state for items with no changes
+	if m.preDeployInstanceState != nil {
+		if resourceState := findResourceStateByPath(m.preDeployInstanceState, path, resourceName); resourceState != nil {
+			return resourceState, resourceName
+		}
+	}
+
+	// Try the resource state field directly (populated when building items)
+	if deployItem.Resource.ResourceState != nil {
+		return deployItem.Resource.ResourceState, resourceName
+	}
+
+	// Fall back to changeset state
+	if deployItem.Resource.Changes != nil &&
+		deployItem.Resource.Changes.AppliedResourceInfo.CurrentResourceState != nil {
+		return deployItem.Resource.Changes.AppliedResourceInfo.CurrentResourceState, resourceName
+	}
+
+	return nil, resourceName
+}
+
+// renderOverviewContent renders the scrollable content for the deployment overview viewport.
+// This includes the header, instance info, successful operations, failures, and interruptions.
+func (m DeployModel) renderOverviewContent() string {
+	sb := strings.Builder{}
+	contentWidth := m.width - 4 // Leave margin for padding
+
+	// Header
+	sb.WriteString("\n")
+	sb.WriteString(m.styles.Header.Render("  Deployment Summary"))
+	sb.WriteString("\n")
+	sb.WriteString(m.styles.Muted.Render("  " + strings.Repeat("─", 60)))
+	sb.WriteString("\n\n")
+
+	// Instance info
+	sb.WriteString(m.styles.Muted.Render("  Instance ID: "))
+	sb.WriteString(m.styles.Selected.Render(m.instanceID))
+	sb.WriteString("\n")
+	if m.instanceName != "" {
+		sb.WriteString(m.styles.Muted.Render("  Instance Name: "))
+		sb.WriteString(m.styles.Selected.Render(m.instanceName))
+		sb.WriteString("\n")
+	}
+	sb.WriteString(m.styles.Muted.Render("  Status: "))
+	sb.WriteString(m.renderFinalStatusBadge())
+	sb.WriteString("\n")
+
+	// Durations (from post-deploy instance state)
+	m.renderOverviewDurations(&sb)
+
+	sb.WriteString("\n")
+
+	// Render successful operations first
+	m.renderSuccessfulElements(&sb)
+
+	// Render structured element failures with root cause details
+	m.renderElementFailuresWithWrapping(&sb, contentWidth)
+
+	// Render interrupted elements in a separate section
+	m.renderInterruptedElementsWithPath(&sb)
+
+	return sb.String()
+}
+
+// renderOverviewDurations renders the deployment duration information.
+func (m DeployModel) renderOverviewDurations(sb *strings.Builder) {
+	if m.postDeployInstanceState == nil {
+		return
+	}
+
+	durations := m.postDeployInstanceState.Durations
+	if durations == nil {
+		return
+	}
+
+	hasDurations := false
+
+	if durations.PrepareDuration != nil && *durations.PrepareDuration > 0 {
+		if !hasDurations {
+			sb.WriteString("\n")
+			hasDurations = true
+		}
+		sb.WriteString(m.styles.Muted.Render("  Prepare Duration: "))
+		sb.WriteString(outpututil.FormatDuration(*durations.PrepareDuration))
+		sb.WriteString("\n")
+	}
+
+	if durations.TotalDuration != nil && *durations.TotalDuration > 0 {
+		if !hasDurations {
+			sb.WriteString("\n")
+		}
+		sb.WriteString(m.styles.Muted.Render("  Total Duration: "))
+		sb.WriteString(outpututil.FormatDuration(*durations.TotalDuration))
+		sb.WriteString("\n")
+	}
+}
+
+// renderFinalStatusBadge returns a styled badge for the final deployment status.
+func (m DeployModel) renderFinalStatusBadge() string {
+	switch m.finalStatus {
+	case core.InstanceStatusDeployed, core.InstanceStatusUpdated, core.InstanceStatusDestroyed:
+		successStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Success())
+		return successStyle.Render(m.finalStatus.String())
+	case core.InstanceStatusDeployFailed, core.InstanceStatusUpdateFailed, core.InstanceStatusDestroyFailed:
+		return m.styles.Error.Render(m.finalStatus.String())
+	case core.InstanceStatusDeployRollbackComplete, core.InstanceStatusUpdateRollbackComplete, core.InstanceStatusDestroyRollbackComplete:
+		return m.styles.Warning.Render(m.finalStatus.String())
+	default:
+		return m.styles.Muted.Render(m.finalStatus.String())
+	}
+}
+
+// renderSuccessfulElements renders the successful operations section.
+func (m DeployModel) renderSuccessfulElements(sb *strings.Builder) {
+	if len(m.successfulElements) == 0 {
+		return
+	}
+
+	successStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Success())
+	elementLabel := sdkstrings.Pluralize(len(m.successfulElements), "Operation", "Operations")
+	sb.WriteString(successStyle.Render(fmt.Sprintf("  %d Successful %s:", len(m.successfulElements), elementLabel)))
+	sb.WriteString("\n\n")
+
+	for _, elem := range m.successfulElements {
+		sb.WriteString(successStyle.Render("  ✓ "))
+		sb.WriteString(m.styles.Selected.Render(elem.ElementPath))
+		if elem.Action != "" {
+			sb.WriteString(m.styles.Muted.Render(" (" + elem.Action + ")"))
+		}
+		sb.WriteString("\n")
+	}
+	sb.WriteString("\n")
+}
+
+// renderElementFailuresWithWrapping renders element failures with text wrapping
+// and full element paths for the scrollable error details view.
+func (m DeployModel) renderElementFailuresWithWrapping(sb *strings.Builder, contentWidth int) {
+	if len(m.elementFailures) == 0 {
+		return
+	}
+
+	failureLabel := sdkstrings.Pluralize(len(m.elementFailures), "Failure", "Failures")
+	sb.WriteString(m.styles.Error.Render(fmt.Sprintf("  %d %s:", len(m.elementFailures), failureLabel)))
+	sb.WriteString("\n\n")
+
+	// Calculate available width for failure reasons (after indent)
+	reasonWidth := contentWidth - 8 // 6 chars indent + 2 chars bullet
+
+	for _, failure := range m.elementFailures {
+		sb.WriteString(m.styles.Error.Render("  ✗ "))
+		sb.WriteString(m.styles.Selected.Render(failure.ElementPath))
+		sb.WriteString("\n")
+		renderFailureReasons(sb, failure.FailureReasons, reasonWidth, m.styles)
+		sb.WriteString("\n")
+	}
+}
+
+func renderFailureReasons(sb *strings.Builder, reasons []string, width int, styles *stylespkg.Styles) {
+	for _, reason := range reasons {
+		wrappedLines := wrapText(reason, width)
+		for i, line := range wrappedLines {
+			sb.WriteString("      ")
+			if i == 0 {
+				sb.WriteString(styles.Error.Render("• "))
+			} else {
+				sb.WriteString("  ")
+			}
+			sb.WriteString(styles.Error.Render(line))
+			sb.WriteString("\n")
+		}
+	}
+}
+
+// renderInterruptedElementsWithPath renders interrupted elements with full paths.
+func (m DeployModel) renderInterruptedElementsWithPath(sb *strings.Builder) {
+	if len(m.interruptedElements) == 0 {
+		return
+	}
+
+	elementLabel := sdkstrings.Pluralize(len(m.interruptedElements), "Element", "Elements")
+	sb.WriteString(m.styles.Warning.Render(fmt.Sprintf("  %d %s Interrupted:", len(m.interruptedElements), elementLabel)))
+	sb.WriteString("\n\n")
+
+	for _, elem := range m.interruptedElements {
+		sb.WriteString(m.styles.Warning.Render("  ⏹ "))
+		sb.WriteString(m.styles.Selected.Render(elem.ElementPath))
+		sb.WriteString("\n")
+	}
+	sb.WriteString("\n")
+	sb.WriteString(m.styles.Muted.Render("    These elements were interrupted and their state is unknown."))
+	sb.WriteString("\n")
+}
+
+// wrapText wraps a string to fit within the specified width.
+func wrapText(text string, width int) []string {
+	if width <= 0 {
+		return []string{text}
+	}
+
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return []string{text}
+	}
+
+	var lines []string
+	currentLine := words[0]
+
+	for _, word := range words[1:] {
+		if len(currentLine)+1+len(word) <= width {
+			currentLine += " " + word
+		} else {
+			lines = append(lines, currentLine)
+			currentLine = word
+		}
+	}
+	lines = append(lines, currentLine)
+
+	return lines
+}
+
+// printHeadlessDriftDetected prints drift information in headless mode.
+func (m *DeployModel) printHeadlessDriftDetected() {
+	printer := driftui.NewHeadlessDriftPrinter(m.printer, m.driftContext)
+	printer.PrintDriftDetected(m.driftResult)
 }

@@ -11,7 +11,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/driftui"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/stateutil"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	engineerrors "github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
 	"github.com/newstack-cloud/deploy-cli-sdk/consts"
@@ -19,6 +21,10 @@ import (
 
 // DeployEventMsg is a message containing a deployment event.
 type DeployEventMsg types.BlueprintInstanceEvent
+
+// DeployStreamClosedMsg is sent when the deploy event stream is closed.
+// This typically happens due to a stream timeout or the connection being dropped.
+type DeployStreamClosedMsg struct{}
 
 // DeployErrorMsg is a message containing an error from the deployment process.
 type DeployErrorMsg struct {
@@ -196,6 +202,7 @@ func waitForNextDeployEventCmd(model DeployModel) tea.Cmd {
 		event, ok := <-model.eventStream
 		if !ok {
 			log.Printf("DEBUG: eventStream channel was CLOSED\n")
+			return DeployStreamClosedMsg{}
 		}
 		log.Printf("received deploy event: %s\n\n", event.String())
 		return DeployEventMsg(event)
@@ -379,5 +386,38 @@ func continueDeploymentCmd(model DeployModel) tea.Cmd {
 		}
 
 		return DeployStartedMsg{InstanceID: instanceID}
+	}
+}
+
+// PostDeployInstanceStateFetchedMsg is sent when instance state has been fetched after deployment.
+type PostDeployInstanceStateFetchedMsg struct {
+	InstanceState *state.InstanceState
+}
+
+// fetchPostDeployInstanceStateCmd fetches the instance state after deployment completes.
+// This is used to get updated computed fields (outputs) for display in the UI.
+func fetchPostDeployInstanceStateCmd(model DeployModel) tea.Cmd {
+	return func() tea.Msg {
+		instanceState := stateutil.FetchInstanceState(model.engine, model.instanceID, model.instanceName)
+		return PostDeployInstanceStateFetchedMsg{
+			InstanceState: instanceState,
+		}
+	}
+}
+
+// PreDeployInstanceStateFetchedMsg is sent when instance state has been fetched before deployment.
+// This is used for direct deployments (without staging) to populate unchanged items.
+type PreDeployInstanceStateFetchedMsg struct {
+	InstanceState *state.InstanceState
+}
+
+// fetchPreDeployInstanceStateCmd fetches the instance state before deployment starts.
+// This is used when deploying directly without going through the staging flow.
+func fetchPreDeployInstanceStateCmd(model DeployModel) tea.Cmd {
+	return func() tea.Msg {
+		instanceState := stateutil.FetchInstanceState(model.engine, model.instanceID, model.instanceName)
+		return PreDeployInstanceStateFetchedMsg{
+			InstanceState: instanceState,
+		}
 	}
 }

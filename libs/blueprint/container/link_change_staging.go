@@ -125,11 +125,23 @@ func (d *defaultLinkChangeStager) StageChanges(
 		ResourceAName: resourceAInfo.ResourceName,
 		ResourceBName: resourceBInfo.ResourceName,
 		Changes:       getChangesFromStageLinkChangesOutput(output),
-		New:           currentLinkStatePtr == nil,
+		New:           isLinkNewForStaging(currentLinkStatePtr),
 		Removed:       false,
 	}
 
 	return nil
+}
+
+// isLinkNewForStaging determines if a link should be treated as "new"
+// (requiring creation) during change staging. A link is considered new if:
+// - No persisted state exists, OR
+// - The persisted state indicates the link was never successfully created
+//   (e.g., previous creation attempt failed or was interrupted)
+func isLinkNewForStaging(currentState *state.LinkState) bool {
+	if currentState == nil {
+		return true
+	}
+	return core.LinkStatusIsUnsuccessfulCreate(currentState.Status)
 }
 
 func (d *defaultLinkChangeStager) getResourceInfoForLink(

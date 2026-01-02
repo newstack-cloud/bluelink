@@ -2014,6 +2014,34 @@ func getChildChanges(parentChanges *changes.BlueprintChanges, childName string) 
 	return nil
 }
 
+// nodeHasChanges returns true if the deployment node has a corresponding
+// entry in the changes object. Resources/children with no changes should
+// be skipped during deployment.
+// This is essential for retry scenarios where some resources may have already
+// been deployed successfully and have no pending changes.
+func nodeHasChanges(node *DeploymentNode, blueprintChanges *changes.BlueprintChanges) bool {
+	if blueprintChanges == nil {
+		return false
+	}
+
+	if node.Type() == DeploymentNodeTypeResource {
+		resourceName := node.ChainLinkNode.ResourceName
+		_, inNew := blueprintChanges.NewResources[resourceName]
+		_, inChanges := blueprintChanges.ResourceChanges[resourceName]
+		return inNew || inChanges
+	}
+
+	if node.Type() == DeploymentNodeTypeChild {
+		childName := core.ToLogicalChildName(node.Name())
+		_, inNew := blueprintChanges.NewChildren[childName]
+		_, inChanges := blueprintChanges.ChildChanges[childName]
+		inRecreate := slices.Contains(blueprintChanges.RecreateChildren, childName)
+		return inNew || inChanges || inRecreate
+	}
+
+	return false
+}
+
 func getLinkUpdateTypeFromState(linkState state.LinkState) provider.LinkUpdateType {
 	if linkState.LinkID == "" {
 		return provider.LinkUpdateTypeCreate
