@@ -1,0 +1,98 @@
+package jsonout
+
+import (
+	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
+)
+
+// StageOutput represents a successful staging result.
+type StageOutput struct {
+	Success      bool                      `json:"success"`
+	ChangesetID  string                    `json:"changesetId"`
+	InstanceID   string                    `json:"instanceId,omitempty"`
+	InstanceName string                    `json:"instanceName,omitempty"`
+	Changes      *changes.BlueprintChanges `json:"changes"`
+	Summary      ChangeSummary             `json:"summary"`
+}
+
+// StageDriftOutput represents drift detected during staging.
+type StageDriftOutput struct {
+	Success        bool                                `json:"success"`
+	DriftDetected  bool                                `json:"driftDetected"`
+	InstanceID     string                              `json:"instanceId"`
+	InstanceName   string                              `json:"instanceName,omitempty"`
+	Message        string                              `json:"message"`
+	Reconciliation *container.ReconciliationCheckResult `json:"reconciliation"`
+}
+
+// ErrorOutput represents a structured error output.
+type ErrorOutput struct {
+	Success bool        `json:"success"`
+	Error   ErrorDetail `json:"error"`
+}
+
+// ErrorDetail provides detailed error information.
+type ErrorDetail struct {
+	Type        string            `json:"type"` // "validation", "stream", "client", "internal"
+	Message     string            `json:"message"`
+	StatusCode  int               `json:"statusCode,omitempty"`
+	Diagnostics []Diagnostic      `json:"diagnostics,omitempty"`
+	Validation  []ValidationError `json:"validation,omitempty"`
+}
+
+// ChangeSummary contains summary counts organized by element type.
+type ChangeSummary struct {
+	Resources ResourceSummary `json:"resources"`
+	Children  ChildSummary    `json:"children"`
+	Links     LinkSummary     `json:"links"`
+	Exports   ExportSummary   `json:"exports"`
+}
+
+// ResourceSummary contains action counts for resources.
+type ResourceSummary struct {
+	Total    int `json:"total"`
+	Create   int `json:"create"`
+	Update   int `json:"update"`
+	Delete   int `json:"delete"`
+	Recreate int `json:"recreate"`
+}
+
+// ChildSummary contains action counts for child blueprints.
+type ChildSummary struct {
+	Total  int `json:"total"`
+	Create int `json:"create"`
+	Update int `json:"update"`
+	Delete int `json:"delete"`
+}
+
+// LinkSummary contains action counts for links.
+type LinkSummary struct {
+	Total  int `json:"total"`
+	Create int `json:"create"`
+	Update int `json:"update"`
+	Delete int `json:"delete"`
+}
+
+// ExportSummary contains action counts for exports.
+type ExportSummary struct {
+	Total     int `json:"total"`
+	New       int `json:"new"`
+	Modified  int `json:"modified"`
+	Removed   int `json:"removed"`
+	Unchanged int `json:"unchanged"`
+}
+
+// Diagnostic represents a single diagnostic message.
+type Diagnostic struct {
+	Level   string `json:"level"`
+	Message string `json:"message"`
+	Line    int    `json:"line,omitempty"`
+	Column  int    `json:"column,omitempty"`
+}
+
+// ValidationError represents a single validation error.
+type ValidationError struct {
+	Location string `json:"location"`
+	Message  string `json:"message"`
+	Type     string `json:"type,omitempty"`
+}

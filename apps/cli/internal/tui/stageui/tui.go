@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/newstack-cloud/deploy-cli-sdk/consts"
 	"github.com/newstack-cloud/deploy-cli-sdk/engine"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 	sharedui "github.com/newstack-cloud/deploy-cli-sdk/ui"
@@ -21,35 +22,62 @@ type stageSessionState uint32
 
 const (
 	stageBlueprintSelect stageSessionState = iota
+	stageInstanceNameInput
 	stageView
 )
 
 // MainModel is the top-level model for the stage command TUI.
 // It manages the session state and delegates to sub-models.
 type MainModel struct {
-	sessionState    stageSessionState
-	blueprintFile   string
-	quitting        bool
-	selectBlueprint tea.Model
-	stage           tea.Model
-	styles          *stylespkg.Styles
-	Error           error
+	sessionState     stageSessionState
+	blueprintFile    string
+	quitting         bool
+	selectBlueprint  tea.Model
+	instanceNameForm *InstanceNameFormModel
+	stage            tea.Model
+	styles           *stylespkg.Styles
+	Error            error
+	// needsInstanceName tracks whether we should prompt for instance name
+	needsInstanceName bool
 }
 
 func (m MainModel) Init() tea.Cmd {
 	bpCmd := m.selectBlueprint.Init()
 	stageCmd := m.stage.Init()
-	return tea.Batch(bpCmd, stageCmd)
+	var instanceNameCmd tea.Cmd
+	if m.instanceNameForm != nil {
+		instanceNameCmd = m.instanceNameForm.Init()
+	}
+	return tea.Batch(bpCmd, stageCmd, instanceNameCmd)
 }
 
 func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds := []tea.Cmd{}
 	switch msg := msg.(type) {
 	case sharedui.SelectBlueprintMsg:
-		m.sessionState = stageView
 		m.blueprintFile = sharedui.ToFullBlueprintPath(msg.BlueprintFile, msg.Source)
+		// If we need instance name, go to that state first
+		if m.needsInstanceName {
+			m.sessionState = stageInstanceNameInput
+		} else {
+			m.sessionState = stageView
+			var cmd tea.Cmd
+			m.stage, cmd = m.stage.Update(msg)
+			cmds = append(cmds, cmd)
+		}
+	case InstanceNameSelectedMsg:
+		// Instance name provided, now proceed to staging
+		m.sessionState = stageView
+		// Update the stage model with the instance name
+		stageModel := m.stage.(StageModel)
+		stageModel.SetInstanceName(msg.InstanceName)
+		m.stage = stageModel
+		// Send the blueprint selection to the stage model to start staging
 		var cmd tea.Cmd
-		m.stage, cmd = m.stage.Update(msg)
+		m.stage, cmd = m.stage.Update(sharedui.SelectBlueprintMsg{
+			BlueprintFile: m.blueprintFile,
+			Source:        consts.BlueprintSourceFile,
+		})
 		cmds = append(cmds, cmd)
 	case sharedui.ClearSelectedBlueprintMsg:
 		m.sessionState = stageBlueprintSelect
@@ -90,6 +118,12 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.selectBlueprint = selectBlueprintModel
 		cmds = append(cmds, newCmd)
+	case stageInstanceNameInput:
+		if m.instanceNameForm != nil {
+			var cmd tea.Cmd
+			m.instanceNameForm, cmd = m.instanceNameForm.Update(msg)
+			cmds = append(cmds, cmd)
+		}
 	case stageView:
 		newStage, newCmd := m.stage.Update(msg)
 		stageModel, ok := newStage.(StageModel)
@@ -112,10 +146,18 @@ func (m MainModel) View() string {
 	if m.sessionState == stageBlueprintSelect {
 		return m.selectBlueprint.View()
 	}
+	if m.sessionState == stageInstanceNameInput {
+		selected := "\n  You selected blueprint: " + m.styles.Selected.Render(m.blueprintFile) + "\n\n"
+		if m.instanceNameForm != nil {
+			return selected + m.instanceNameForm.View()
+		}
+		return selected
+	}
 
-	// Only show "You selected blueprint" during streaming, not in the finished split-pane view
+	// Only show "You selected blueprint" during streaming, not in split-pane views
+	// (finished staging view, drift review mode, exports view, overview)
 	stageModel, ok := m.stage.(StageModel)
-	if ok && stageModel.finished {
+	if ok && (stageModel.finished || stageModel.driftReviewMode || stageModel.showingExportsView || stageModel.showingOverview) {
 		return m.stage.View()
 	}
 
@@ -136,11 +178,15 @@ func NewStageApp(
 	bluelinkStyles *stylespkg.Styles,
 	headless bool,
 	headlessWriter io.Writer,
+	jsonMode bool,
 ) (*MainModel, error) {
 	sessionState := stageBlueprintSelect
-	// In headless mode, use the default blueprint file
-	// if no explicit file is provided.
-	autoStage := (blueprintFile != "" && !isDefaultBlueprintFile) || headless
+	// Auto-stage when:
+	// 1. A non-default blueprint file is provided, OR
+	// 2. An instance identifier is provided (staging for existing instance), OR
+	// 3. Running in headless mode
+	hasInstanceIdentifier := instanceID != "" || instanceName != ""
+	autoStage := (blueprintFile != "" && !isDefaultBlueprintFile) || hasInstanceIdentifier || headless
 
 	if autoStage {
 		sessionState = stageView
@@ -172,13 +218,28 @@ func NewStageApp(
 		bluelinkStyles,
 		headless,
 		headlessWriter,
+		jsonMode,
 	)
 
+	// Determine if we need to prompt for instance name
+	// We need instance name if:
+	// 1. Not headless mode (interactive)
+	// 2. No instance ID or instance name provided
+	// 3. Not a destroy operation (destroy requires an existing instance)
+	needsInstanceName := !headless && instanceID == "" && instanceName == "" && !destroy
+
+	var instanceNameForm *InstanceNameFormModel
+	if needsInstanceName {
+		instanceNameForm = NewInstanceNameFormModel(bluelinkStyles)
+	}
+
 	return &MainModel{
-		sessionState:    sessionState,
-		blueprintFile:   blueprintFile,
-		selectBlueprint: selectBlueprint,
-		stage:           stage,
-		styles:          bluelinkStyles,
+		sessionState:      sessionState,
+		blueprintFile:     blueprintFile,
+		selectBlueprint:   selectBlueprint,
+		instanceNameForm:  instanceNameForm,
+		stage:             stage,
+		styles:            bluelinkStyles,
+		needsInstanceName: needsInstanceName,
 	}, nil
 }

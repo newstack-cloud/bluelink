@@ -2,13 +2,10 @@ package stageui
 
 import (
 	"fmt"
+	"strings"
 
-	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
-	engineerrors "github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
-	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
-	"github.com/newstack-cloud/deploy-cli-sdk/headless"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	sdkstrings "github.com/newstack-cloud/deploy-cli-sdk/strings"
 )
 
@@ -17,270 +14,237 @@ import (
 // Their details are still viewable in the right pane when selected.
 const MaxExpandDepth = 2
 
-// Headless rendering methods
-
-func (m *StageModel) printHeadlessHeader() {
-	w := m.printer.Writer()
-	w.Println("Starting change staging...")
-	w.Printf("Changeset: %s\n", m.changesetID)
-	w.DoubleSeparator(72)
-	w.PrintlnEmpty()
+func stageOverviewFooterHeight() int {
+	return 3
 }
 
-func (m *StageModel) printHeadlessResourceEvent(data *types.ResourceChangesEventData) {
-	action := m.determineResourceAction(data)
-	suffix := ""
-	if data.New {
-		suffix = "(new)"
-	}
-	m.printer.ProgressItem("✓", "resource", data.ResourceName, string(action), suffix)
+// OverviewItem holds a stage item with its full element path for overview display.
+type OverviewItem struct {
+	Item        StageItem
+	ElementPath string
 }
 
-func (m *StageModel) printHeadlessChildEvent(data *types.ChildChangesEventData) {
-	action := m.determineChildAction(data)
-	resourceCount := len(data.Changes.NewResources) + len(data.Changes.ResourceChanges)
-	suffix := ""
-	if data.New {
-		suffix = fmt.Sprintf("(new, %d %s)", resourceCount, sdkstrings.Pluralize(resourceCount, "resource", "resources"))
-	} else {
-		suffix = fmt.Sprintf("(%d %s)", resourceCount, sdkstrings.Pluralize(resourceCount, "resource", "resources"))
+func buildElementPath(parentPath, elementType, elementName string) string {
+	segment := elementType + "." + elementName
+	if parentPath == "" {
+		return segment
 	}
-	m.printer.ProgressItem("✓", "child", data.ChildBlueprintName, string(action), suffix)
+	return parentPath + "::" + segment
 }
 
-func (m *StageModel) printHeadlessLinkEvent(data *types.LinkChangesEventData) {
-	action := m.determineLinkAction(data)
-	linkName := fmt.Sprintf("%s::%s", data.ResourceAName, data.ResourceBName)
-	suffix := ""
-	if data.New {
-		suffix = "(new)"
+func (m StageModel) handleOverviewKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc", "o", "O":
+		m.showingOverview = false
+		return m, nil
+	case "q", "ctrl+c":
+		return m, tea.Quit
+	default:
+		var cmd tea.Cmd
+		m.overviewViewport, cmd = m.overviewViewport.Update(msg)
+		return m, cmd
 	}
-	m.printer.ProgressItem("✓", "link", linkName, string(action), suffix)
 }
 
-func (m *StageModel) printHeadlessSummary() {
-	w := m.printer.Writer()
-	w.PrintlnEmpty()
-	w.DoubleSeparator(72)
-	w.Println("Change staging complete")
-	w.DoubleSeparator(72)
-	w.PrintlnEmpty()
+func (m StageModel) renderOverviewView() string {
+	sb := strings.Builder{}
 
-	// Print detailed changes for each item
-	for _, item := range m.items {
-		m.printHeadlessItemDetails(item)
+	sb.WriteString(m.overviewViewport.View())
+	sb.WriteString("\n")
+
+	sb.WriteString(m.styles.Muted.Render("  " + strings.Repeat("─", 60)))
+	sb.WriteString("\n")
+	keyStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Primary()).Bold(true)
+	sb.WriteString(m.styles.Muted.Render("  Press "))
+	sb.WriteString(keyStyle.Render("↑/↓"))
+	sb.WriteString(m.styles.Muted.Render(" to scroll  "))
+	sb.WriteString(keyStyle.Render("esc"))
+	sb.WriteString(m.styles.Muted.Render("/"))
+	sb.WriteString(keyStyle.Render("o"))
+	sb.WriteString(m.styles.Muted.Render(" to return  "))
+	sb.WriteString(keyStyle.Render("q"))
+	sb.WriteString(m.styles.Muted.Render(" to quit"))
+	sb.WriteString("\n")
+
+	return sb.String()
+}
+
+func (m StageModel) renderOverviewContent() string {
+	sb := strings.Builder{}
+
+	sb.WriteString("\n")
+	sb.WriteString(m.styles.Header.Render("  Change Staging Summary"))
+	sb.WriteString("\n")
+	sb.WriteString(m.styles.Muted.Render("  " + strings.Repeat("─", 60)))
+	sb.WriteString("\n\n")
+
+	sb.WriteString(m.styles.Muted.Render("  Changeset ID: "))
+	sb.WriteString(m.styles.Selected.Render(m.changesetID))
+	sb.WriteString("\n")
+	if m.instanceID != "" {
+		sb.WriteString(m.styles.Muted.Render("  Instance ID: "))
+		sb.WriteString(m.styles.Selected.Render(m.instanceID))
+		sb.WriteString("\n")
 	}
-
-	// Summary
-	resources, children, links := m.countByType()
-	create, update, delete, recreate := m.countChangeSummary()
-
-	w.DoubleSeparator(72)
-	w.Printf("Complete: %d %s, %d %s, %d %s\n",
-		resources, sdkstrings.Pluralize(resources, "resource", "resources"),
-		children, sdkstrings.Pluralize(children, "child", "children"),
-		links, sdkstrings.Pluralize(links, "link", "links"))
-	w.Printf("Actions: %d create, %d update, %d delete, %d recreate\n", create, update, delete, recreate)
-	w.PrintlnEmpty()
-	w.Printf("Changeset ID: %s\n", m.changesetID)
-	w.PrintlnEmpty()
-
-	// Build deploy command
-	deployCmd := fmt.Sprintf("bluelink deploy --changeset-id %s", m.changesetID)
 	if m.instanceName != "" {
-		deployCmd += fmt.Sprintf(" --instance-name %s", m.instanceName)
-	} else if m.instanceID != "" {
-		deployCmd += fmt.Sprintf(" --instance-id %s", m.instanceID)
-	} else {
-		deployCmd += " --instance-name <name>"
+		sb.WriteString(m.styles.Muted.Render("  Instance Name: "))
+		sb.WriteString(m.styles.Selected.Render(m.instanceName))
+		sb.WriteString("\n")
 	}
-	m.printer.NextStep("To apply these changes, run:", deployCmd)
+	sb.WriteString("\n")
+
+	creates, updates, recreates, deletes, noChanges := m.categorizeItems()
+
+	m.renderCategoryItems(&sb, "To Be Created", creates, ActionCreate)
+	m.renderCategoryItems(&sb, "To Be Updated", updates, ActionUpdate)
+	m.renderCategoryItems(&sb, "To Be Recreated", recreates, ActionRecreate)
+	m.renderCategoryItems(&sb, "To Be Removed", deletes, ActionDelete)
+	m.renderCategoryItems(&sb, "With No Changes", noChanges, ActionNoChange)
+
+	return sb.String()
 }
 
-func (m *StageModel) printHeadlessItemDetails(item StageItem) {
-	w := m.printer.Writer()
+func (m *StageModel) categorizeItems() (creates, updates, recreates, deletes, noChanges []OverviewItem) {
+	allItems := m.collectAllItemsWithPaths()
 
-	// Item header with action
-	m.printer.ItemHeader(string(item.Type), item.Name, string(item.Action))
-	w.SingleSeparator(72)
+	for _, item := range allItems {
+		switch item.Item.Action {
+		case ActionCreate:
+			creates = append(creates, item)
+		case ActionUpdate:
+			updates = append(updates, item)
+		case ActionRecreate:
+			recreates = append(recreates, item)
+		case ActionDelete:
+			deletes = append(deletes, item)
+		case ActionNoChange:
+			noChanges = append(noChanges, item)
+		}
+	}
+	return
+}
 
+func (m *StageModel) collectAllItemsWithPaths() []OverviewItem {
+	var items []OverviewItem
+
+	for _, item := range m.items {
+		parentPath := convertParentChildToElementPath(item.ParentChild)
+		path := buildItemPath(parentPath, &item)
+		items = append(items, OverviewItem{
+			Item:        item,
+			ElementPath: path,
+		})
+
+		if item.Type == ItemTypeChild && item.Changes != nil {
+			items = m.collectChildItemsWithPaths(items, &item, path)
+		}
+	}
+
+	return items
+}
+
+func convertParentChildToElementPath(parentChild string) string {
+	if parentChild == "" {
+		return ""
+	}
+
+	parts := strings.Split(parentChild, "::")
+	var pathParts []string
+	for _, part := range parts {
+		pathParts = append(pathParts, "children."+part)
+	}
+	return strings.Join(pathParts, "::")
+}
+
+func (m *StageModel) collectChildItemsWithPaths(
+	items []OverviewItem,
+	parent *StageItem,
+	parentPath string,
+) []OverviewItem {
+	children := parent.GetChildren()
+	for _, child := range children {
+		stageItem, ok := child.(*StageItem)
+		if !ok {
+			continue
+		}
+
+		path := buildItemPath(parentPath, stageItem)
+		items = append(items, OverviewItem{
+			Item:        *stageItem,
+			ElementPath: path,
+		})
+
+		if stageItem.Type == ItemTypeChild {
+			items = m.collectChildItemsWithPaths(items, stageItem, path)
+		}
+	}
+
+	return items
+}
+
+func buildItemPath(parentPath string, item *StageItem) string {
 	switch item.Type {
 	case ItemTypeResource:
-		if resourceChanges, ok := item.Changes.(*provider.Changes); ok {
-			m.printHeadlessResourceChanges(resourceChanges)
-		}
+		return buildElementPath(parentPath, "resources", item.Name)
 	case ItemTypeChild:
-		if childChanges, ok := item.Changes.(*changes.BlueprintChanges); ok {
-			m.printHeadlessChildChanges(childChanges)
-		}
+		return buildElementPath(parentPath, "children", item.Name)
 	case ItemTypeLink:
-		if linkChanges, ok := item.Changes.(*provider.LinkChanges); ok {
-			m.printHeadlessLinkChanges(linkChanges)
-		}
+		return buildElementPath(parentPath, "links", item.Name)
+	default:
+		return buildElementPath(parentPath, "unknown", item.Name)
 	}
-
-	w.PrintlnEmpty()
 }
 
-func (m *StageModel) printHeadlessResourceChanges(resourceChanges *provider.Changes) {
-	hasChanges := len(resourceChanges.NewFields) > 0 || len(resourceChanges.ModifiedFields) > 0 || len(resourceChanges.RemovedFields) > 0
-
-	if !hasChanges {
-		m.printer.NoChanges()
+func (m *StageModel) renderCategoryItems(
+	sb *strings.Builder,
+	title string,
+	items []OverviewItem,
+	action ActionType,
+) {
+	if len(items) == 0 {
 		return
 	}
 
-	// New fields
-	for _, field := range resourceChanges.NewFields {
-		m.printer.FieldAdd(field.FieldPath, headless.FormatMappingNode(field.NewValue))
+	successStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Success())
+
+	var titleStyle, iconStyle lipgloss.Style
+	var icon string
+	switch action {
+	case ActionCreate:
+		titleStyle = successStyle
+		iconStyle = successStyle
+		icon = "✓"
+	case ActionUpdate:
+		titleStyle = m.styles.Warning
+		iconStyle = m.styles.Warning
+		icon = "±"
+	case ActionRecreate:
+		titleStyle = m.styles.Info
+		iconStyle = m.styles.Info
+		icon = "↻"
+	case ActionDelete:
+		titleStyle = m.styles.Error
+		iconStyle = m.styles.Error
+		icon = "-"
+	default:
+		titleStyle = m.styles.Muted
+		iconStyle = m.styles.Muted
+		icon = "○"
 	}
 
-	// Modified fields
-	for _, field := range resourceChanges.ModifiedFields {
-		m.printer.FieldModify(
-			field.FieldPath,
-			headless.FormatMappingNode(field.PrevValue),
-			headless.FormatMappingNode(field.NewValue),
-		)
-	}
+	elementLabel := sdkstrings.Pluralize(len(items), "Element", "Elements")
+	sb.WriteString(titleStyle.Render(fmt.Sprintf("  %d %s %s:", len(items), elementLabel, title)))
+	sb.WriteString("\n\n")
 
-	// Removed fields
-	for _, fieldPath := range resourceChanges.RemovedFields {
-		m.printer.FieldRemove(fieldPath)
-	}
-}
-
-func (m *StageModel) printHeadlessChildChanges(childChanges *changes.BlueprintChanges) {
-	newCount := len(childChanges.NewResources)
-	updateCount := len(childChanges.ResourceChanges)
-	removeCount := len(childChanges.RemovedResources)
-
-	m.printer.CountSummary(newCount, "resource", "resources", "to be created")
-	m.printer.CountSummary(updateCount, "resource", "resources", "to be updated")
-	m.printer.CountSummary(removeCount, "resource", "resources", "to be removed")
-
-	if newCount == 0 && updateCount == 0 && removeCount == 0 {
-		m.printer.NoChanges()
-	}
-}
-
-func (m *StageModel) printHeadlessLinkChanges(linkChanges *provider.LinkChanges) {
-	hasChanges := len(linkChanges.NewFields) > 0 || len(linkChanges.ModifiedFields) > 0 || len(linkChanges.RemovedFields) > 0
-
-	if !hasChanges {
-		m.printer.NoChanges()
-		return
-	}
-
-	// New fields
-	for _, field := range linkChanges.NewFields {
-		m.printer.FieldAdd(field.FieldPath, headless.FormatMappingNode(field.NewValue))
-	}
-
-	// Modified fields
-	for _, field := range linkChanges.ModifiedFields {
-		m.printer.FieldModify(
-			field.FieldPath,
-			headless.FormatMappingNode(field.PrevValue),
-			headless.FormatMappingNode(field.NewValue),
-		)
-	}
-
-	// Removed fields
-	for _, fieldPath := range linkChanges.RemovedFields {
-		m.printer.FieldRemove(fieldPath)
-	}
-}
-
-func (m *StageModel) printHeadlessError(err error) {
-	w := m.printer.Writer()
-	w.PrintlnEmpty()
-
-	// Check for validation errors (ClientError with ValidationErrors or ValidationDiagnostics)
-	if clientErr, isValidation := engineerrors.IsValidationError(err); isValidation {
-		m.printHeadlessValidationError(clientErr)
-		return
-	}
-
-	// Check for stream errors with diagnostics
-	if streamErr, ok := err.(*engineerrors.StreamError); ok {
-		m.printHeadlessStreamError(streamErr)
-		return
-	}
-
-	// Generic error display
-	w.Println("✗ Error during change staging")
-	w.PrintlnEmpty()
-	w.Printf("  Error: %s\n", err.Error())
-}
-
-func (m *StageModel) printHeadlessValidationError(clientErr *engineerrors.ClientError) {
-	w := m.printer.Writer()
-	w.Println("✗ Failed to create changeset")
-	w.PrintlnEmpty()
-	w.Println("The following issues must be resolved in the blueprint before changes can be staged:")
-	w.PrintlnEmpty()
-
-	// Render validation errors (input validation)
-	if len(clientErr.ValidationErrors) > 0 {
-		w.Println("Validation Errors:")
-		w.SingleSeparator(72)
-		for _, valErr := range clientErr.ValidationErrors {
-			location := valErr.Location
-			if location == "" {
-				location = "unknown"
-			}
-			w.Printf("  • %s: %s\n", location, valErr.Message)
+	for _, overviewItem := range items {
+		item := overviewItem.Item
+		sb.WriteString("  ")
+		sb.WriteString(iconStyle.Render(icon + " "))
+		sb.WriteString(m.styles.Selected.Render(overviewItem.ElementPath))
+		if item.ResourceType != "" {
+			sb.WriteString(m.styles.Muted.Render(" (" + item.ResourceType + ")"))
 		}
-		w.PrintlnEmpty()
+		sb.WriteString("\n")
 	}
-
-	// Render validation diagnostics (blueprint issues)
-	if len(clientErr.ValidationDiagnostics) > 0 {
-		w.Println("Blueprint Diagnostics:")
-		w.SingleSeparator(72)
-		for _, diag := range clientErr.ValidationDiagnostics {
-			m.printHeadlessDiagnostic(diag)
-		}
-		w.PrintlnEmpty()
-	}
-
-	// If no specific errors, show the general message
-	if len(clientErr.ValidationErrors) == 0 && len(clientErr.ValidationDiagnostics) == 0 {
-		w.Printf("  %s\n", clientErr.Message)
-	}
+	sb.WriteString("\n")
 }
-
-func (m *StageModel) printHeadlessStreamError(streamErr *engineerrors.StreamError) {
-	w := m.printer.Writer()
-	w.Println("✗ Error during change staging")
-	w.PrintlnEmpty()
-	w.Println("The following issues occurred during change staging:")
-	w.PrintlnEmpty()
-	w.Printf("  %s\n", streamErr.Event.Message)
-	w.PrintlnEmpty()
-
-	// Render diagnostics if present
-	if len(streamErr.Event.Diagnostics) > 0 {
-		w.Println("Diagnostics:")
-		w.SingleSeparator(72)
-		for _, diag := range streamErr.Event.Diagnostics {
-			m.printHeadlessDiagnostic(diag)
-		}
-		w.PrintlnEmpty()
-	}
-}
-
-func (m *StageModel) printHeadlessDiagnostic(diag *core.Diagnostic) {
-	level := headless.DiagnosticLevelFromCore(diag.Level)
-	levelName := headless.DiagnosticLevelName(level)
-
-	line, col := 0, 0
-	if diag.Range != nil {
-		line = diag.Range.Start.Line
-		col = diag.Range.Start.Column
-	}
-
-	m.printer.Diagnostic(levelName, diag.Message, line, col)
-}
-

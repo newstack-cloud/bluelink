@@ -6,11 +6,16 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/driftui"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	engineerrors "github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
 	"github.com/newstack-cloud/deploy-cli-sdk/engine"
@@ -22,24 +27,23 @@ import (
 	"go.uber.org/zap"
 )
 
-// ItemType represents the type of item in the stage list.
-type ItemType string
-
-const (
-	ItemTypeResource ItemType = "resource"
-	ItemTypeChild    ItemType = "child"
-	ItemTypeLink     ItemType = "link"
+// Type aliases for backwards compatibility with shared types.
+type (
+	ItemType   = shared.ItemType
+	ActionType = shared.ActionType
 )
 
-// ActionType represents the action to be taken on an item.
-type ActionType string
-
+// Re-export constants for backwards compatibility.
 const (
-	ActionCreate   ActionType = "CREATE"
-	ActionUpdate   ActionType = "UPDATE"
-	ActionDelete   ActionType = "DELETE"
-	ActionRecreate ActionType = "RECREATE"
-	ActionNoChange ActionType = "NO CHANGE"
+	ItemTypeResource = shared.ItemTypeResource
+	ItemTypeChild    = shared.ItemTypeChild
+	ItemTypeLink     = shared.ItemTypeLink
+
+	ActionCreate   = shared.ActionCreate
+	ActionUpdate   = shared.ActionUpdate
+	ActionDelete   = shared.ActionDelete
+	ActionRecreate = shared.ActionRecreate
+	ActionNoChange = shared.ActionNoChange
 )
 
 // StageItem represents an item in the staging list.
@@ -57,6 +61,16 @@ type StageItem struct {
 	ParentChild string
 	// For child blueprints: indicates nesting depth for indentation
 	Depth int
+	// For child blueprints: the instance state for this child (if it exists)
+	// This is used to show resources with NO CHANGE status that aren't in the changeset.
+	InstanceState *state.InstanceState
+	// For resources: the resource state (if it exists)
+	// This is used to show Resource ID and Outputs in the details pane
+	// when the resource has state but Changes doesn't include CurrentResourceState.
+	ResourceState *state.ResourceState
+	// For links: the link state (if it exists)
+	// This is used to show the Link ID in the details pane.
+	LinkState *state.LinkState
 }
 
 // StageModel is the model for the stage view.
@@ -66,6 +80,12 @@ type StageModel struct {
 	detailsRenderer *StageDetailsRenderer
 	sectionGrouper  *StageSectionGrouper
 	footerRenderer  *StageFooterRenderer
+
+	// Split pane for drift review mode
+	driftSplitPane       splitpane.Model
+	driftDetailsRenderer *DriftDetailsRenderer
+	driftSectionGrouper  *DriftSectionGrouper
+	driftFooterRenderer  *DriftFooterRenderer
 
 	// Layout - only used during streaming
 	width  int
@@ -86,6 +106,10 @@ type StageModel struct {
 	linkChanges     map[string]*LinkChangeState
 	completeChanges *changes.BlueprintChanges
 
+	// Instance state (fetched at start for existing deployments)
+	// This is nil for new deployments.
+	instanceState *state.InstanceState
+
 	// Streaming
 	engine      engine.DeployEngine
 	eventStream chan types.ChangeStagingEvent
@@ -104,7 +128,24 @@ type StageModel struct {
 	headlessWriter io.Writer
 	printer        *headless.Printer
 
-	styles  *stylespkg.Styles
+	// JSON output mode
+	jsonMode bool
+
+	// Drift review state
+	driftReviewMode bool
+	driftResult     *container.ReconciliationCheckResult
+	driftMessage    string
+	driftContext    driftui.DriftContext
+
+	// Overview state
+	showingOverview  bool           // When true, show full-screen staging overview
+	overviewViewport viewport.Model // Scrollable viewport for staging overview
+
+	// Exports view state
+	showingExportsView bool              // When true, show exports overlay
+	exportsModel       StageExportsModel // Exports view model
+
+	styles *stylespkg.Styles
 	logger  *zap.Logger
 	spinner spinner.Model
 }
@@ -146,77 +187,42 @@ func (m StageModel) Init() tea.Cmd {
 }
 
 func (m StageModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	cmds := []tea.Cmd{}
+	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		// Pass to splitpane for layout
-		var cmd tea.Cmd
-		m.splitPane, cmd = m.splitPane.Update(msg)
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
+		var windowCmds []tea.Cmd
+		m, windowCmds = m.handleWindowSizeMsg(msg)
+		cmds = append(cmds, windowCmds...)
 
 	case sharedui.SelectBlueprintMsg:
-		m.blueprintFile = msg.BlueprintFile
-		m.blueprintSource = msg.Source
-		// SelectBlueprintMsg can be sent multiple times, we need to make sure we aren't collecting
-		// duplicate results from the stream by not dispatching commands that will create multiple
-		// consumers.
-		if !m.streaming {
-			cmds = append(cmds, startStagingCmd(m), waitForNextEventCmd(m), checkForErrCmd(m))
-		}
-		m.streaming = true
+		var selectCmds []tea.Cmd
+		m, selectCmds = m.handleSelectBlueprintMsg(msg)
+		cmds = append(cmds, selectCmds...)
 
 	case StageStartedMsg:
-		m.changesetID = msg.ChangesetID
-		// Update footer renderer with changeset ID
-		m.footerRenderer.ChangesetID = msg.ChangesetID
-		if m.headlessMode {
-			m.printHeadlessHeader()
-		}
+		m = m.handleStageStartedMsg(msg)
+
+	case StageStartedWithStateMsg:
+		m = m.handleStageStartedWithStateMsg(msg)
 
 	case StageEventMsg:
-		event := types.ChangeStagingEvent(msg)
-		m.processEvent(&event)
-		cmds = append(cmds, checkForErrCmd(m))
-
-		if eventData, ok := event.AsCompleteChanges(); ok {
-			m.finished = true
-			m.completeChanges = eventData.Changes
-			// Transfer items to splitpane
-			m.splitPane.SetItems(ToSplitPaneItems(m.items))
-			// Emit completion message for parent models to react
-			changesetID := m.changesetID
-			completeChanges := m.completeChanges
-			items := m.items
-			cmds = append(cmds, func() tea.Msg {
-				return StageCompleteMsg{
-					ChangesetID: changesetID,
-					Changes:     completeChanges,
-					Items:       items,
-				}
-			})
-			if m.headlessMode {
-				m.printHeadlessSummary()
-				cmds = append(cmds, tea.Quit)
-			}
-		} else {
-			cmds = append(cmds, waitForNextEventCmd(m))
-		}
+		var eventCmds []tea.Cmd
+		m, eventCmds = m.handleStageEventMsg(msg)
+		cmds = append(cmds, eventCmds...)
 
 	case StageErrorMsg:
-		if msg.Err != nil {
-			m.err = msg.Err
-			if m.headlessMode {
-				m.printHeadlessError(msg.Err)
-				return m, tea.Quit
-			}
-			// In interactive mode, don't quit immediately.
-			// Let the user read the error and press 'q' to quit.
-			return m, nil
+		var cmd tea.Cmd
+		m, cmd = m.handleStageErrorMsg(msg)
+		if cmd != nil {
+			return m, cmd
+		}
+
+	case StageStreamClosedMsg:
+		var cmd tea.Cmd
+		m, cmd = m.handleStageStreamClosedMsg()
+		if cmd != nil {
+			return m, cmd
 		}
 
 	case spinner.TickMsg:
@@ -225,49 +231,35 @@ func (m StageModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case tea.KeyMsg:
-		// Allow quit when there's an error
-		if m.err != nil {
-			if msg.String() == "q" || msg.String() == "ctrl+c" {
-				return m, tea.Quit
-			}
-			return m, nil
-		}
+		return m.handleKeyMsg(msg)
 
-		// Ignore keys while streaming (not finished)
-		if !m.finished {
-			return m, nil
-		}
+	case driftui.ReconciliationCompleteMsg:
+		var reconcileCmds []tea.Cmd
+		m, reconcileCmds = m.handleReconciliationCompleteMsg()
+		cmds = append(cmds, reconcileCmds...)
 
-		// Delegate key handling to splitpane when finished
+	case driftui.ReconciliationErrorMsg:
 		var cmd tea.Cmd
-		m.splitPane, cmd = m.splitPane.Update(msg)
+		m, cmd = m.handleReconciliationErrorMsg(msg)
+		if cmd != nil {
+			return m, cmd
+		}
+
+	case splitpane.QuitMsg, splitpane.BackMsg, splitpane.ItemExpandedMsg:
+		var cmd tea.Cmd
+		m, cmd = m.handleSplitpaneMsg(msg)
+		if cmd != nil {
+			return m, cmd
+		}
+
+	case tea.MouseMsg:
+		var cmd tea.Cmd
+		m, cmd = m.handleMouseMsg(msg)
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}
-
-	case splitpane.QuitMsg:
-		return m, tea.Quit
-
-	case splitpane.BackMsg:
-		// At root level - ignore (or could quit)
-		return m, nil
-
-	case splitpane.ItemExpandedMsg:
-		// The splitpane now handles expansion state internally and passes
-		// the isExpanded callback to the section grouper, so no sync needed here.
-		// This case is kept for potential future use (e.g., analytics, logging).
-
-	case tea.MouseMsg:
-		if m.finished && m.err == nil {
-			var cmd tea.Cmd
-			m.splitPane, cmd = m.splitPane.Update(msg)
-			if cmd != nil {
-				cmds = append(cmds, cmd)
-			}
-		}
 	}
 
-	// Update details renderer with current navigation depth for hint display
 	m.detailsRenderer.NavigationStackDepth = len(m.splitPane.NavigationStack())
 
 	return m, tea.Batch(cmds...)
@@ -276,25 +268,33 @@ func (m StageModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *StageModel) processEvent(event *types.ChangeStagingEvent) {
 	if resourceData, ok := event.AsResourceChanges(); ok {
 		m.processResourceChanges(resourceData)
-		if m.headlessMode {
+		if m.headlessMode && !m.jsonMode {
 			m.printHeadlessResourceEvent(resourceData)
 		}
 	} else if childData, ok := event.AsChildChanges(); ok {
 		m.processChildChanges(childData)
-		if m.headlessMode {
+		if m.headlessMode && !m.jsonMode {
 			m.printHeadlessChildEvent(childData)
 		}
 	} else if linkData, ok := event.AsLinkChanges(); ok {
 		m.processLinkChanges(linkData)
-		if m.headlessMode {
+		if m.headlessMode && !m.jsonMode {
 			m.printHeadlessLinkEvent(linkData)
 		}
+	} else if driftData, ok := event.AsDriftDetected(); ok {
+		m.processDriftDetected(driftData)
 	}
+}
+
+func (m *StageModel) processDriftDetected(data *types.DriftDetectedEventData) {
+	m.driftResult = data.ReconciliationResult
+	m.driftMessage = data.Message
+	m.driftContext = driftui.DriftContextStage
 }
 
 func (m *StageModel) processResourceChanges(data *types.ResourceChangesEventData) {
 	action := m.determineResourceAction(data)
-	state := &ResourceChangeState{
+	changeState := &ResourceChangeState{
 		Name:      data.ResourceName,
 		Action:    action,
 		Changes:   &data.Changes,
@@ -303,22 +303,29 @@ func (m *StageModel) processResourceChanges(data *types.ResourceChangesEventData
 		Recreate:  data.Changes.MustRecreate,
 		Timestamp: data.Timestamp,
 	}
-	m.resourceChanges[data.ResourceName] = state
+	m.resourceChanges[data.ResourceName] = changeState
 
 	// Extract resource type and display name from the applied resource info
 	resourceType, displayName := extractResourceTypeAndDisplayName(&data.Changes)
 
+	// Look up resource state from instance state if available
+	var resourceState *state.ResourceState
+	if m.instanceState != nil {
+		resourceState = findResourceState(m.instanceState, data.ResourceName)
+	}
+
 	// Add to items list
 	m.items = append(m.items, StageItem{
-		Type:         ItemTypeResource,
-		Name:         data.ResourceName,
-		ResourceType: resourceType,
-		DisplayName:  displayName,
-		Action:       action,
-		Changes:      &data.Changes,
-		New:          data.New,
-		Removed:      data.Removed,
-		Recreate:     data.Changes.MustRecreate,
+		Type:          ItemTypeResource,
+		Name:          data.ResourceName,
+		ResourceType:  resourceType,
+		DisplayName:   displayName,
+		Action:        action,
+		Changes:       &data.Changes,
+		New:           data.New,
+		Removed:       data.Removed,
+		Recreate:      data.Changes.MustRecreate,
+		ResourceState: resourceState,
 	})
 }
 
@@ -352,7 +359,7 @@ func extractResourceTypeAndDisplayName(changes *provider.Changes) (resourceType,
 
 func (m *StageModel) processChildChanges(data *types.ChildChangesEventData) {
 	action := m.determineChildAction(data)
-	state := &ChildChangeState{
+	changeState := &ChildChangeState{
 		Name:      data.ChildBlueprintName,
 		Action:    action,
 		Changes:   &data.Changes,
@@ -360,23 +367,30 @@ func (m *StageModel) processChildChanges(data *types.ChildChangesEventData) {
 		Removed:   data.Removed,
 		Timestamp: data.Timestamp,
 	}
-	m.childChanges[data.ChildBlueprintName] = state
+	m.childChanges[data.ChildBlueprintName] = changeState
+
+	// Get the child's instance state if available (for existing deployments)
+	var childInstanceState *state.InstanceState
+	if m.instanceState != nil && m.instanceState.ChildBlueprints != nil {
+		childInstanceState = m.instanceState.ChildBlueprints[data.ChildBlueprintName]
+	}
 
 	// Add to items list
 	m.items = append(m.items, StageItem{
-		Type:    ItemTypeChild,
-		Name:    data.ChildBlueprintName,
-		Action:  action,
-		Changes: &data.Changes,
-		New:     data.New,
-		Removed: data.Removed,
+		Type:          ItemTypeChild,
+		Name:          data.ChildBlueprintName,
+		Action:        action,
+		Changes:       &data.Changes,
+		New:           data.New,
+		Removed:       data.Removed,
+		InstanceState: childInstanceState,
 	})
 }
 
 func (m *StageModel) processLinkChanges(data *types.LinkChangesEventData) {
 	linkName := fmt.Sprintf("%s::%s", data.ResourceAName, data.ResourceBName)
 	action := m.determineLinkAction(data)
-	state := &LinkChangeState{
+	linkChangeState := &LinkChangeState{
 		ResourceAName: data.ResourceAName,
 		ResourceBName: data.ResourceBName,
 		Action:        action,
@@ -385,17 +399,226 @@ func (m *StageModel) processLinkChanges(data *types.LinkChangesEventData) {
 		Removed:       data.Removed,
 		Timestamp:     data.Timestamp,
 	}
-	m.linkChanges[linkName] = state
+	m.linkChanges[linkName] = linkChangeState
+
+	// Get the link state from instance state if available (for existing deployments)
+	var linkState *state.LinkState
+	if m.instanceState != nil && m.instanceState.Links != nil {
+		linkState = m.instanceState.Links[linkName]
+	}
 
 	// Add to items list
 	m.items = append(m.items, StageItem{
-		Type:    ItemTypeLink,
-		Name:    linkName,
-		Action:  action,
-		Changes: &data.Changes,
-		New:     data.New,
-		Removed: data.Removed,
+		Type:      ItemTypeLink,
+		Name:      linkName,
+		Action:    action,
+		Changes:   &data.Changes,
+		New:       data.New,
+		Removed:   data.Removed,
+		LinkState: linkState,
 	})
+
+	// Update the source resource's outbound link changes and re-evaluate its action
+	m.updateResourceWithLinkChanges(data)
+}
+
+// updateResourceWithLinkChanges updates the source resource (ResourceAName) to include
+// the outbound link changes information, which allows the resource to show as UPDATE
+// when it has link changes but no field changes.
+func (m *StageModel) updateResourceWithLinkChanges(data *types.LinkChangesEventData) {
+	resourceState, exists := m.resourceChanges[data.ResourceAName]
+	if !exists {
+		return
+	}
+
+	// Update the resource's Changes struct with the outbound link information
+	if resourceState.Changes == nil {
+		return
+	}
+
+	if data.New {
+		if resourceState.Changes.NewOutboundLinks == nil {
+			resourceState.Changes.NewOutboundLinks = make(map[string]provider.LinkChanges)
+		}
+		resourceState.Changes.NewOutboundLinks[data.ResourceBName] = data.Changes
+	} else if data.Removed {
+		resourceState.Changes.RemovedOutboundLinks = append(
+			resourceState.Changes.RemovedOutboundLinks,
+			data.ResourceBName,
+		)
+	} else if provider.LinkChangesHasFieldChanges(&data.Changes) {
+		if resourceState.Changes.OutboundLinkChanges == nil {
+			resourceState.Changes.OutboundLinkChanges = make(map[string]provider.LinkChanges)
+		}
+		resourceState.Changes.OutboundLinkChanges[data.ResourceBName] = data.Changes
+	}
+
+	// Re-evaluate the resource action now that it has link changes
+	newAction := m.determineResourceActionFromState(resourceState)
+	if newAction != resourceState.Action {
+		resourceState.Action = newAction
+		// Update the corresponding item in the items list
+		for i := range m.items {
+			if m.items[i].Type == ItemTypeResource && m.items[i].Name == data.ResourceAName {
+				m.items[i].Action = newAction
+				break
+			}
+		}
+	}
+}
+
+// determineResourceActionFromState determines the action for a resource from its state.
+func (m *StageModel) determineResourceActionFromState(state *ResourceChangeState) ActionType {
+	if state.New {
+		return ActionCreate
+	}
+	if state.Removed {
+		return ActionDelete
+	}
+	if state.Recreate {
+		return ActionRecreate
+	}
+	if provider.HasAnyChanges(state.Changes) {
+		return ActionUpdate
+	}
+	return ActionNoChange
+}
+
+// populateItemsFromCompleteChanges populates m.items from the complete changes.
+// This is used for destroy operations where individual resource/child/link events
+// are not streamed - only the complete changes are sent.
+func (m *StageModel) populateItemsFromCompleteChanges(
+	bc *changes.BlueprintChanges,
+	instanceState *state.InstanceState,
+) {
+	if bc == nil {
+		return
+	}
+
+	// Add removed resources
+	// Note: Use findResourceState to look up by name, as instanceState.Resources is keyed by resource ID
+	for _, resourceName := range bc.RemovedResources {
+		resourceState := findResourceState(instanceState, resourceName)
+		var resourceType string
+		if resourceState != nil {
+			resourceType = resourceState.Type
+		}
+		m.items = append(m.items, StageItem{
+			Type:          ItemTypeResource,
+			Name:          resourceName,
+			ResourceType:  resourceType,
+			Action:        ActionDelete,
+			Removed:       true,
+			ResourceState: resourceState,
+		})
+	}
+
+	// Add removed children (recursively handle nested children)
+	m.populateRemovedChildren(bc.RemovedChildren, instanceState, "", 0)
+
+	// Add removed links
+	for _, linkName := range bc.RemovedLinks {
+		var linkState *state.LinkState
+		if instanceState != nil && instanceState.Links != nil {
+			linkState = instanceState.Links[linkName]
+		}
+		m.items = append(m.items, StageItem{
+			Type:      ItemTypeLink,
+			Name:      linkName,
+			Action:    ActionDelete,
+			Removed:   true,
+			LinkState: linkState,
+		})
+	}
+}
+
+// populateRemovedChildren adds removed child blueprints and their contents to items.
+// The childPath parameter is the full path to this level (e.g., "parent::child" for nested children).
+func (m *StageModel) populateRemovedChildren(
+	removedChildren []string,
+	instanceState *state.InstanceState,
+	childPath string,
+	depth int,
+) {
+	for _, childName := range removedChildren {
+		var childInstanceState *state.InstanceState
+		if instanceState != nil && instanceState.ChildBlueprints != nil {
+			childInstanceState = instanceState.ChildBlueprints[childName]
+		}
+
+		// Build the full path for this child
+		fullChildPath := buildChildPath(childPath, childName)
+
+		m.items = append(m.items, StageItem{
+			Type:          ItemTypeChild,
+			Name:          childName,
+			Action:        ActionDelete,
+			Removed:       true,
+			ParentChild:   childPath,
+			Depth:         depth,
+			InstanceState: childInstanceState,
+		})
+
+		// Recursively add resources, links, and nested children from the child instance
+		if childInstanceState != nil {
+			m.populateChildContents(childInstanceState, fullChildPath, depth+1)
+		}
+	}
+}
+
+// populateChildContents adds resources, links, and nested children from a child instance.
+func (m *StageModel) populateChildContents(
+	childInstanceState *state.InstanceState,
+	childPath string,
+	depth int,
+) {
+	// Add child's resources
+	// Note: The map key is resource ID, but we want the logical name from ResourceState.Name
+	for _, resourceState := range childInstanceState.Resources {
+		m.items = append(m.items, StageItem{
+			Type:          ItemTypeResource,
+			Name:          resourceState.Name,
+			ResourceType:  resourceState.Type,
+			Action:        ActionDelete,
+			Removed:       true,
+			ParentChild:   childPath,
+			Depth:         depth,
+			ResourceState: resourceState,
+		})
+	}
+
+	// Add child's links
+	// Note: The map key is link ID, but we want the logical name from LinkState.Name
+	for _, linkState := range childInstanceState.Links {
+		m.items = append(m.items, StageItem{
+			Type:        ItemTypeLink,
+			Name:        linkState.Name,
+			Action:      ActionDelete,
+			Removed:     true,
+			ParentChild: childPath,
+			Depth:       depth,
+			LinkState:   linkState,
+		})
+	}
+
+	// Recursively add nested children
+	if len(childInstanceState.ChildBlueprints) > 0 {
+		nestedChildNames := make([]string, 0, len(childInstanceState.ChildBlueprints))
+		for nestedName := range childInstanceState.ChildBlueprints {
+			nestedChildNames = append(nestedChildNames, nestedName)
+		}
+		m.populateRemovedChildren(nestedChildNames, childInstanceState, childPath, depth)
+	}
+}
+
+// buildChildPath builds a child path by appending a child name to an existing path.
+// If the current path is empty, the child name is returned.
+// Otherwise, the path is built as "parent::child".
+func buildChildPath(currentPath, childName string) string {
+	if currentPath == "" {
+		return childName
+	}
+	return currentPath + "::" + childName
 }
 
 func (m *StageModel) determineResourceAction(data *types.ResourceChangesEventData) ActionType {
@@ -408,7 +631,8 @@ func (m *StageModel) determineResourceAction(data *types.ResourceChangesEventDat
 	if data.Changes.MustRecreate {
 		return ActionRecreate
 	}
-	if len(data.Changes.ModifiedFields) > 0 || len(data.Changes.NewFields) > 0 || len(data.Changes.RemovedFields) > 0 {
+	// Check for both field changes and outbound link changes
+	if provider.HasAnyChanges(&data.Changes) {
 		return ActionUpdate
 	}
 	return ActionNoChange
@@ -421,7 +645,100 @@ func (m *StageModel) determineChildAction(data *types.ChildChangesEventData) Act
 	if data.Removed {
 		return ActionDelete
 	}
-	return ActionUpdate
+	if blueprintChangesHasAnyChanges(&data.Changes) {
+		return ActionUpdate
+	}
+	return ActionNoChange
+}
+
+// blueprintChangesHasAnyChanges checks if a BlueprintChanges has any actual changes.
+// This includes new/modified/removed resources, children, links, exports, and metadata.
+// Export changes where the value will be resolved on deploy (newValue is nil and path is in ResolveOnDeploy)
+// are not considered actual changes.
+func blueprintChangesHasAnyChanges(bc *changes.BlueprintChanges) bool {
+	if bc == nil {
+		return false
+	}
+
+	// Check for resource changes
+	if len(bc.NewResources) > 0 || len(bc.RemovedResources) > 0 {
+		return true
+	}
+
+	// Check if any ResourceChanges have actual field changes
+	for _, resourceChanges := range bc.ResourceChanges {
+		if provider.HasAnyChanges(&resourceChanges) {
+			return true
+		}
+	}
+
+	// Check for child blueprint changes
+	if len(bc.NewChildren) > 0 || len(bc.RemovedChildren) > 0 || len(bc.RecreateChildren) > 0 {
+		return true
+	}
+
+	// Recursively check child blueprint changes
+	for _, childChanges := range bc.ChildChanges {
+		if blueprintChangesHasAnyChanges(&childChanges) {
+			return true
+		}
+	}
+
+	// Check for link changes
+	if len(bc.RemovedLinks) > 0 {
+		return true
+	}
+
+	// Check for export changes
+	// New exports and removed exports are always real changes
+	if len(bc.NewExports) > 0 || len(bc.RemovedExports) > 0 {
+		return true
+	}
+
+	// For ExportChanges, check if any have actual value changes
+	// (not just "resolve on deploy" placeholders where newValue is nil)
+	if hasRealExportChanges(bc) {
+		return true
+	}
+
+	// Check for metadata changes
+	mc := &bc.MetadataChanges
+	if len(mc.NewFields) > 0 || len(mc.ModifiedFields) > 0 || len(mc.RemovedFields) > 0 {
+		return true
+	}
+
+	return false
+}
+
+// hasRealExportChanges checks if any export changes represent actual value changes,
+// rather than just placeholders for values that will be resolved on deploy.
+// An export change is considered "not real" if:
+// - newValue is nil AND
+// - the export path is in ResolveOnDeploy
+func hasRealExportChanges(bc *changes.BlueprintChanges) bool {
+	for exportName, change := range bc.ExportChanges {
+		// Build the path as stored in ResolveOnDeploy (e.g., "exports.exportName")
+		exportPath := "exports." + exportName
+
+		// If newValue is nil and this is a resolve-on-deploy field, it's not a real change
+		if change.NewValue == nil && isInResolveOnDeploy(exportPath, bc.ResolveOnDeploy) {
+			continue
+		}
+
+		// This is a real export change
+		return true
+	}
+	return false
+}
+
+// isInResolveOnDeploy checks if a path is in the ResolveOnDeploy list.
+func isInResolveOnDeploy(path string, resolveOnDeploy []string) bool {
+	for _, rod := range resolveOnDeploy {
+		if rod == path {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *StageModel) determineLinkAction(data *types.LinkChangesEventData) ActionType {
@@ -445,6 +762,21 @@ func (m StageModel) View() string {
 
 	if m.err != nil {
 		return m.renderError(m.err)
+	}
+
+	// Show staging overview view
+	if m.showingOverview {
+		return m.renderOverviewView()
+	}
+
+	// Show exports view
+	if m.showingExportsView {
+		return m.exportsModel.View()
+	}
+
+	// Show drift review mode
+	if m.driftReviewMode {
+		return m.driftSplitPane.View()
 	}
 
 	if !m.finished {
@@ -488,7 +820,7 @@ func (m StageModel) getStatusIcon(action ActionType) string {
 		icon = "✓"
 		style = successStyle
 	case ActionUpdate:
-		icon = "~"
+		icon = "±"
 		style = m.styles.Warning
 	case ActionDelete:
 		icon = "-"
@@ -524,7 +856,8 @@ func (m StageModel) renderErrorFooter() string {
 	sb := strings.Builder{}
 	sb.WriteString("\n")
 	keyStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Primary()).Bold(true)
-	sb.WriteString(m.styles.Muted.Render("  Press "))
+	sb.WriteString("  ")
+	sb.WriteString(m.styles.Muted.Render("Press "))
 	sb.WriteString(keyStyle.Render("q"))
 	sb.WriteString(m.styles.Muted.Render(" to quit"))
 	sb.WriteString("\n")
@@ -545,9 +878,15 @@ func (m StageModel) renderError(err error) string {
 		return m.renderStreamError(streamErr)
 	}
 
-	// Generic error display
-	sb.WriteString(m.styles.Error.Render("  ✗ Error during change staging\n\n"))
-	sb.WriteString(m.styles.Error.Render(fmt.Sprintf("    %s\n", err.Error())))
+	// Generic error display with text wrapping
+	sb.WriteString("  " + m.styles.Error.Render("✗ Error during change staging") + "\n\n")
+
+	maxWidth := m.width - 6 // Account for 2-space indent + margin
+	if maxWidth < 40 {
+		maxWidth = 40
+	}
+	messageStyle := lipgloss.NewStyle().Width(maxWidth)
+	sb.WriteString("  " + messageStyle.Render(err.Error()) + "\n")
 	sb.WriteString(m.renderErrorFooter())
 	return sb.String()
 }
@@ -555,36 +894,42 @@ func (m StageModel) renderError(err error) string {
 func (m StageModel) renderValidationError(clientErr *engineerrors.ClientError) string {
 	sb := strings.Builder{}
 	sb.WriteString("\n")
-	sb.WriteString(m.styles.Error.Render("  ✗ Failed to create changeset\n\n"))
+	sb.WriteString("  " + m.styles.Error.Render("✗ Failed to create changeset") + "\n\n")
 
-	sb.WriteString(m.styles.Muted.Render("  The following issues must be resolved in the blueprint before changes can be staged:\n\n"))
+	sb.WriteString("  " + m.styles.Muted.Render("The following issues must be resolved in the blueprint before changes can be staged:") + "\n\n")
+
+	maxWidth := m.width - 6 // Account for 2-space indent + margin
+	if maxWidth < 40 {
+		maxWidth = 40
+	}
+	messageStyle := lipgloss.NewStyle().Width(maxWidth)
 
 	// Render validation errors (input validation)
 	if len(clientErr.ValidationErrors) > 0 {
-		sb.WriteString(m.styles.Category.Render("  Validation Errors:\n"))
+		sb.WriteString("  " + m.styles.Category.Render("Validation Errors:") + "\n\n")
 		for _, valErr := range clientErr.ValidationErrors {
 			location := valErr.Location
 			if location == "" {
 				location = "unknown"
 			}
-			sb.WriteString(m.styles.Error.Render(fmt.Sprintf("    • %s: ", location)))
-			sb.WriteString(fmt.Sprintf("%s\n", valErr.Message))
+			sb.WriteString("  " + m.styles.Error.Render(fmt.Sprintf("• %s: ", location)))
+			sb.WriteString(messageStyle.Render(valErr.Message) + "\n")
 		}
 		sb.WriteString("\n")
 	}
 
 	// Render validation diagnostics (blueprint issues)
 	if len(clientErr.ValidationDiagnostics) > 0 {
-		sb.WriteString(m.styles.Category.Render("  Blueprint Diagnostics:\n"))
+		sb.WriteString("  " + m.styles.Category.Render("Blueprint Diagnostics:") + "\n\n")
 		for _, diag := range clientErr.ValidationDiagnostics {
-			sb.WriteString(m.renderDiagnostic(diag))
+			sb.WriteString("  " + m.renderDiagnostic(diag))
 		}
 		sb.WriteString("\n")
 	}
 
 	// If no specific errors, show the general message
 	if len(clientErr.ValidationErrors) == 0 && len(clientErr.ValidationDiagnostics) == 0 {
-		sb.WriteString(m.styles.Error.Render(fmt.Sprintf("    %s\n", clientErr.Message)))
+		sb.WriteString("  " + messageStyle.Render(clientErr.Message) + "\n")
 	}
 
 	sb.WriteString(m.renderErrorFooter())
@@ -594,16 +939,23 @@ func (m StageModel) renderValidationError(clientErr *engineerrors.ClientError) s
 func (m StageModel) renderStreamError(streamErr *engineerrors.StreamError) string {
 	sb := strings.Builder{}
 	sb.WriteString("\n")
-	sb.WriteString(m.styles.Error.Render("  ✗ Error during change staging\n\n"))
+	sb.WriteString("  " + m.styles.Error.Render("✗ Error during change staging") + "\n\n")
 
-	sb.WriteString(m.styles.Muted.Render("  The following issues occurred during change staging:\n\n"))
-	sb.WriteString(fmt.Sprintf("    %s\n\n", streamErr.Event.Message))
+	sb.WriteString("  " + m.styles.Muted.Render("The following issues occurred during change staging:") + "\n\n")
+
+	// Wrap the error message to fit the terminal width
+	maxWidth := m.width - 6 // Account for 2-space indent + margin
+	if maxWidth < 40 {
+		maxWidth = 40
+	}
+	messageStyle := lipgloss.NewStyle().Width(maxWidth)
+	sb.WriteString("  " + messageStyle.Render(streamErr.Event.Message) + "\n\n")
 
 	// Render diagnostics if present
 	if len(streamErr.Event.Diagnostics) > 0 {
-		sb.WriteString(m.styles.Category.Render("  Diagnostics:\n"))
+		sb.WriteString("  " + m.styles.Category.Render("Diagnostics:") + "\n\n")
 		for _, diag := range streamErr.Event.Diagnostics {
-			sb.WriteString(m.renderDiagnostic(diag))
+			sb.WriteString("  " + m.renderDiagnostic(diag))
 		}
 		sb.WriteString("\n")
 	}
@@ -632,8 +984,8 @@ func (m StageModel) renderDiagnostic(diag *core.Diagnostic) string {
 		levelStyle = m.styles.Muted
 	}
 
-	// Build the prefix (indent + level + location)
-	prefix := "    " + levelName
+	// Build the prefix (level + location)
+	prefix := levelName
 	if diag.Range != nil && diag.Range.Start.Line > 0 {
 		prefix += fmt.Sprintf(" [line %d, col %d]", diag.Range.Start.Line, diag.Range.Start.Column)
 	}
@@ -642,7 +994,7 @@ func (m StageModel) renderDiagnostic(diag *core.Diagnostic) string {
 	// Calculate available width for message wrapping
 	// Use terminal width minus prefix length and some padding
 	availableWidth := max(
-		m.width-len(prefix)-4,
+		m.width-len(prefix)-2,
 		// Minimum width for readability
 		40,
 	)
@@ -652,7 +1004,6 @@ func (m StageModel) renderDiagnostic(diag *core.Diagnostic) string {
 	messageLines := strings.Split(wrappedMessage, "\n")
 
 	// First line includes the prefix with styling
-	sb.WriteString("    ")
 	sb.WriteString(levelStyle.Render(levelName))
 	if diag.Range != nil && diag.Range.Start.Line > 0 {
 		sb.WriteString(m.styles.Muted.Render(fmt.Sprintf(" [line %d, col %d]", diag.Range.Start.Line, diag.Range.Start.Column)))
@@ -665,7 +1016,7 @@ func (m StageModel) renderDiagnostic(diag *core.Diagnostic) string {
 
 	// Continuation lines are indented to align with the message
 	indent := strings.Repeat(" ", len(prefix))
-	for i := 1; i < len(messageLines); i += 1 {
+	for i := 1; i < len(messageLines); i++ {
 		sb.WriteString(indent)
 		sb.WriteString(messageLines[i])
 		sb.WriteString("\n")
@@ -685,6 +1036,7 @@ func NewStageModel(
 	styles *stylespkg.Styles,
 	isHeadless bool,
 	headlessWriter io.Writer,
+	jsonMode bool,
 ) StageModel {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
@@ -704,17 +1056,43 @@ func NewStageModel(
 		ChangesetID:  "",
 		InstanceID:   instanceID,
 		InstanceName: instanceName,
+		Destroy:      destroy,
 	}
 
 	// Create splitpane config
 	splitPaneConfig := splitpane.Config{
 		Styles:          styles,
 		DetailsRenderer: detailsRenderer,
-		Title:           "Staging Changes",
+		Title:           "Change Staging",
 		LeftPaneRatio:   0.4,
 		MaxExpandDepth:  MaxExpandDepth,
 		SectionGrouper:  sectionGrouper,
 		FooterRenderer:  footerRenderer,
+	}
+
+	// Create drift review renderers
+	driftDetailsRenderer := &DriftDetailsRenderer{
+		MaxExpandDepth:       MaxExpandDepth,
+		NavigationStackDepth: 0,
+	}
+
+	driftSectionGrouper := &DriftSectionGrouper{
+		MaxExpandDepth: MaxExpandDepth,
+	}
+
+	driftFooterRenderer := &DriftFooterRenderer{
+		Context: driftui.DriftContextStage,
+	}
+
+	// Create drift splitpane config
+	driftSplitPaneConfig := splitpane.Config{
+		Styles:          styles,
+		DetailsRenderer: driftDetailsRenderer,
+		Title:           "⚠ Drift Detected",
+		LeftPaneRatio:   0.4,
+		MaxExpandDepth:  MaxExpandDepth,
+		SectionGrouper:  driftSectionGrouper,
+		FooterRenderer:  driftFooterRenderer,
 	}
 
 	// Create headless printer if in headless mode
@@ -725,27 +1103,32 @@ func NewStageModel(
 	}
 
 	return StageModel{
-		splitPane:       splitpane.New(splitPaneConfig),
-		detailsRenderer: detailsRenderer,
-		sectionGrouper:  sectionGrouper,
-		footerRenderer:  footerRenderer,
-		engine:          deployEngine,
-		logger:          logger,
-		instanceID:      instanceID,
-		instanceName:    instanceName,
-		destroy:         destroy,
-		skipDriftCheck:  skipDriftCheck,
-		styles:          styles,
-		headlessMode:    isHeadless,
-		headlessWriter:  headlessWriter,
-		printer:         printer,
-		spinner:         s,
-		eventStream:     make(chan types.ChangeStagingEvent),
-		errStream:       make(chan error),
-		resourceChanges: make(map[string]*ResourceChangeState),
-		childChanges:    make(map[string]*ChildChangeState),
-		linkChanges:     make(map[string]*LinkChangeState),
-		items:           []StageItem{},
+		splitPane:            splitpane.New(splitPaneConfig),
+		detailsRenderer:      detailsRenderer,
+		sectionGrouper:       sectionGrouper,
+		footerRenderer:       footerRenderer,
+		driftSplitPane:       splitpane.New(driftSplitPaneConfig),
+		driftDetailsRenderer: driftDetailsRenderer,
+		driftSectionGrouper:  driftSectionGrouper,
+		driftFooterRenderer:  driftFooterRenderer,
+		engine:               deployEngine,
+		logger:               logger,
+		instanceID:           instanceID,
+		instanceName:         instanceName,
+		destroy:              destroy,
+		skipDriftCheck:       skipDriftCheck,
+		styles:               styles,
+		headlessMode:         isHeadless,
+		headlessWriter:       headlessWriter,
+		printer:              printer,
+		jsonMode:             jsonMode,
+		spinner:              s,
+		eventStream:          make(chan types.ChangeStagingEvent),
+		errStream:            make(chan error),
+		resourceChanges:      make(map[string]*ResourceChangeState),
+		childChanges:         make(map[string]*ChildChangeState),
+		linkChanges:          make(map[string]*LinkChangeState),
+		items:                []StageItem{},
 	}
 }
 
@@ -764,6 +1147,17 @@ func (m *StageModel) countChangeSummary() (create, update, delete, recreate int)
 		}
 	}
 	return
+}
+
+// updateFooterCounts updates the footer renderer with the current change summary counts.
+func (m *StageModel) updateFooterCounts() {
+	create, update, delete, recreate := m.countChangeSummary()
+	m.footerRenderer.CreateCount = create
+	m.footerRenderer.UpdateCount = update
+	m.footerRenderer.DeleteCount = delete
+	m.footerRenderer.RecreateCount = recreate
+	// Check if there are export changes to show in the footer
+	m.footerRenderer.HasExportChanges = HasAnyExportChanges(m.completeChanges)
 }
 
 // countByType returns counts of resources, children, and links

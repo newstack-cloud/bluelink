@@ -239,6 +239,7 @@ func (s *StageTUISuite) Test_successful_staging_with_resource_create() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false, // headless
 		os.Stdout,
+		false, // jsonMode
 	)
 
 	testModel := teatest.NewTestModel(
@@ -285,6 +286,7 @@ func (s *StageTUISuite) Test_successful_staging_with_resource_update() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
+		false, // jsonMode
 	)
 
 	testModel := teatest.NewTestModel(
@@ -326,6 +328,7 @@ func (s *StageTUISuite) Test_successful_staging_with_resource_delete() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
+		false, // jsonMode
 	)
 
 	testModel := teatest.NewTestModel(
@@ -367,6 +370,7 @@ func (s *StageTUISuite) Test_successful_staging_with_resource_recreate() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
+		false, // jsonMode
 	)
 
 	testModel := teatest.NewTestModel(
@@ -408,6 +412,7 @@ func (s *StageTUISuite) Test_successful_staging_with_child_blueprint() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
+		false, // jsonMode
 	)
 
 	testModel := teatest.NewTestModel(
@@ -449,6 +454,7 @@ func (s *StageTUISuite) Test_successful_staging_with_link() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
+		false, // jsonMode
 	)
 
 	testModel := teatest.NewTestModel(
@@ -490,6 +496,7 @@ func (s *StageTUISuite) Test_successful_staging_with_mixed_items() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
+		false, // jsonMode
 	)
 
 	testModel := teatest.NewTestModel(
@@ -540,6 +547,7 @@ func (s *StageTUISuite) Test_successful_staging_headless() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		true, // headless
 		headlessOutput,
+		false, // jsonMode
 	)
 
 	testModel := teatest.NewTestModel(
@@ -581,6 +589,7 @@ func (s *StageTUISuite) Test_staging_headless_shows_progress() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		true,
 		headlessOutput,
+		false, // jsonMode
 	)
 
 	testModel := teatest.NewTestModel(
@@ -621,6 +630,7 @@ func (s *StageTUISuite) Test_staging_headless_shows_summary() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		true,
 		headlessOutput,
+		false, // jsonMode
 	)
 
 	testModel := teatest.NewTestModel(
@@ -661,6 +671,7 @@ func (s *StageTUISuite) Test_staging_headless_shows_field_changes() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		true,
 		headlessOutput,
+		false, // jsonMode
 	)
 
 	testModel := teatest.NewTestModel(
@@ -713,6 +724,7 @@ func (s *StageTUISuite) Test_staging_validation_error() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
+		false, // jsonMode
 	)
 
 	testModel := teatest.NewTestModel(
@@ -764,6 +776,7 @@ func (s *StageTUISuite) Test_staging_validation_error_headless() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		true,
 		headlessOutput,
+		false, // jsonMode
 	)
 
 	testModel := teatest.NewTestModel(
@@ -804,6 +817,7 @@ func (s *StageTUISuite) Test_staging_generic_error() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
+		false, // jsonMode
 	)
 
 	testModel := teatest.NewTestModel(
@@ -846,6 +860,7 @@ func (s *StageTUISuite) Test_quit_with_q() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		false,
 		os.Stdout,
+		false, // jsonMode
 	)
 
 	testModel := teatest.NewTestModel(
