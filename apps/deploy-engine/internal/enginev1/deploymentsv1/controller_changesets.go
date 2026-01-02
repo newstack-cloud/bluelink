@@ -84,6 +84,20 @@ func (c *Controller) CreateChangesetHandler(
 
 	finalInstanceID, err := c.deriveInstanceID(r.Context(), payload)
 	if err != nil {
+		if state.IsInstanceNotFound(err) {
+			// For destroy operations with a non-existent instance,
+			// return a 404 with the instance identifier in the message.
+			identifier := payload.InstanceID
+			if identifier == "" {
+				identifier = payload.InstanceName
+			}
+			httputils.HTTPError(
+				w,
+				http.StatusNotFound,
+				fmt.Sprintf("instance %q not found", identifier),
+			)
+			return
+		}
 		c.logger.Debug(
 			"failed to derive instance ID",
 			core.ErrorLogField("error", err),
@@ -631,9 +645,14 @@ func (c *Controller) deriveInstanceID(
 	if payload.InstanceID == "" && payload.InstanceName != "" {
 		instanceID, err := c.instances.LookupIDByName(ctx, payload.InstanceName)
 		if err != nil {
-			// If the instance is not found by name, this is a new deployment.
-			// Return empty string to indicate no existing instance.
 			if state.IsInstanceNotFound(err) {
+				// For destroy operations, the instance must exist.
+				// Return the error with the instance name for a helpful message.
+				if payload.Destroy {
+					return "", state.InstanceNotFoundError(payload.InstanceName)
+				}
+				// For non-destroy operations, this is a new deployment.
+				// Return empty string to indicate no existing instance.
 				return "", nil
 			}
 			return "", err
