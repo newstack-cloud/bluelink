@@ -265,3 +265,13 @@ func (s PreciseLinkStatus) String() string {
 	}
 	return str
 }
+
+// LinkStatusIsUnsuccessfulCreate returns true if the link status indicates
+// that a link creation was attempted but never completed successfully.
+// This is used during change staging to determine if a link should be treated
+// as "new" (requiring creation) rather than existing (requiring update).
+func LinkStatusIsUnsuccessfulCreate(status LinkStatus) bool {
+	return status == LinkStatusCreateFailed ||
+		status == LinkStatusCreateInterrupted ||
+		status == LinkStatusCreating
+}

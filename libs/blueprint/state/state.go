@@ -242,6 +242,9 @@ type ResourceState struct {
 	// for the currently deployed version of the resource along with computed
 	// fields derived from the deployed resource in the provider.
 	SpecData *core.MappingNode `json:"specData"`
+	// ComputedFields holds field paths that are computed at deploy time by the provider
+	// (e.g., ARN, URL, external ID). Used by clients to display "Outputs" for resources.
+	ComputedFields []string `json:"computedFields,omitempty"`
 	// Description holds a human-friendly description of the resource derived
 	// from a source blueprint.
 	Description string `json:"description,omitempty"`

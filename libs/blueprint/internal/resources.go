@@ -1313,3 +1313,125 @@ func (r *ExampleTaggableResource) Destroy(
 ) error {
 	return nil
 }
+
+// ExampleNullableFieldResource is a test resource implementation that demonstrates
+// nullable fields with default values, simulating resources like SQS queues
+// where fields like delaySeconds have defaults but can also be explicitly set to null.
+type ExampleNullableFieldResource struct{}
+
+func (r *ExampleNullableFieldResource) CustomValidate(
+	ctx context.Context,
+	input *provider.ResourceValidateInput,
+) (*provider.ResourceValidateOutput, error) {
+	return &provider.ResourceValidateOutput{}, nil
+}
+
+func (r *ExampleNullableFieldResource) GetSpecDefinition(
+	ctx context.Context,
+	input *provider.ResourceGetSpecDefinitionInput,
+) (*provider.ResourceGetSpecDefinitionOutput, error) {
+	delaySecondsDefault := 0
+	maxMessageSizeDefault := 262144
+	return &provider.ResourceGetSpecDefinitionOutput{
+		SpecDefinition: &provider.ResourceSpecDefinition{
+			Schema: &provider.ResourceDefinitionsSchema{
+				Type: provider.ResourceDefinitionsSchemaTypeObject,
+				Attributes: map[string]*provider.ResourceDefinitionsSchema{
+					"queueName": {
+						Type: provider.ResourceDefinitionsSchemaTypeString,
+					},
+					"delaySeconds": {
+						Type:     provider.ResourceDefinitionsSchemaTypeInteger,
+						Nullable: true,
+						Default: &core.MappingNode{
+							Scalar: &core.ScalarValue{IntValue: &delaySecondsDefault},
+						},
+					},
+					"maximumMessageSize": {
+						Type:     provider.ResourceDefinitionsSchemaTypeInteger,
+						Nullable: true,
+						Default: &core.MappingNode{
+							Scalar: &core.ScalarValue{IntValue: &maxMessageSizeDefault},
+						},
+					},
+				},
+			},
+		},
+	}, nil
+}
+
+func (r *ExampleNullableFieldResource) CanLinkTo(
+	ctx context.Context,
+	input *provider.ResourceCanLinkToInput,
+) (*provider.ResourceCanLinkToOutput, error) {
+	return &provider.ResourceCanLinkToOutput{}, nil
+}
+
+func (r *ExampleNullableFieldResource) GetStabilisedDependencies(
+	ctx context.Context,
+	input *provider.ResourceStabilisedDependenciesInput,
+) (*provider.ResourceStabilisedDependenciesOutput, error) {
+	return &provider.ResourceStabilisedDependenciesOutput{}, nil
+}
+
+func (r *ExampleNullableFieldResource) IsCommonTerminal(
+	ctx context.Context,
+	input *provider.ResourceIsCommonTerminalInput,
+) (*provider.ResourceIsCommonTerminalOutput, error) {
+	return &provider.ResourceIsCommonTerminalOutput{}, nil
+}
+
+func (r *ExampleNullableFieldResource) GetType(
+	ctx context.Context,
+	input *provider.ResourceGetTypeInput,
+) (*provider.ResourceGetTypeOutput, error) {
+	return &provider.ResourceGetTypeOutput{
+		Type:  "example/nullable",
+		Label: "Nullable Field Resource",
+	}, nil
+}
+
+func (r *ExampleNullableFieldResource) GetTypeDescription(
+	ctx context.Context,
+	input *provider.ResourceGetTypeDescriptionInput,
+) (*provider.ResourceGetTypeDescriptionOutput, error) {
+	return &provider.ResourceGetTypeDescriptionOutput{
+		MarkdownDescription:  "A test resource with nullable fields that have defaults.",
+		PlainTextDescription: "A test resource with nullable fields that have defaults.",
+	}, nil
+}
+
+func (r *ExampleNullableFieldResource) GetExamples(
+	ctx context.Context,
+	input *provider.ResourceGetExamplesInput,
+) (*provider.ResourceGetExamplesOutput, error) {
+	return &provider.ResourceGetExamplesOutput{}, nil
+}
+
+func (r *ExampleNullableFieldResource) Deploy(
+	ctx context.Context,
+	input *provider.ResourceDeployInput,
+) (*provider.ResourceDeployOutput, error) {
+	return &provider.ResourceDeployOutput{}, nil
+}
+
+func (r *ExampleNullableFieldResource) HasStabilised(
+	ctx context.Context,
+	input *provider.ResourceHasStabilisedInput,
+) (*provider.ResourceHasStabilisedOutput, error) {
+	return &provider.ResourceHasStabilisedOutput{Stabilised: true}, nil
+}
+
+func (r *ExampleNullableFieldResource) GetExternalState(
+	ctx context.Context,
+	input *provider.ResourceGetExternalStateInput,
+) (*provider.ResourceGetExternalStateOutput, error) {
+	return &provider.ResourceGetExternalStateOutput{}, nil
+}
+
+func (r *ExampleNullableFieldResource) Destroy(
+	ctx context.Context,
+	input *provider.ResourceDestroyInput,
+) error {
+	return nil
+}

@@ -261,3 +261,13 @@ func (s PreciseResourceStatus) String() string {
 	}
 	return str
 }
+
+// ResourceStatusIsUnsuccessfulCreate returns true if the resource status indicates
+// that a resource creation was attempted but never completed successfully.
+// This is used during change staging to determine if a resource should be treated
+// as "new" (requiring creation) rather than existing (requiring update).
+func ResourceStatusIsUnsuccessfulCreate(status ResourceStatus) bool {
+	return status == ResourceStatusCreateFailed ||
+		status == ResourceStatusCreateInterrupted ||
+		status == ResourceStatusCreating
+}
