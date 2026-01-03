@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.4.2...blueprint-state/v0.5.0) (2026-01-03)
+
+
+### Features
+
+* **blueprint-state:** add computed fields to resource state ([0811266](https://github.com/newstack-cloud/bluelink/commit/0811266adf3c7c81b41e37c016c3e060324c19df))
+* **blueprint-state:** add persistence for link drift ([a778aa6](https://github.com/newstack-cloud/bluelink/commit/a778aa6dad6b4abdb953413f58ddeb2419a179d2))
+* **blueprint-state:** add persistence for reconciliation results ([9f16d59](https://github.com/newstack-cloud/bluelink/commit/9f16d59772aab7f09a3b109042684aa6d89d0015))
+* **blueprint-state:** add support for saving system metadata for resources ([7b4a455](https://github.com/newstack-cloud/bluelink/commit/7b4a4554ea4db5ab6738ef334e58cf6d943065d0))
+
+
+### Bug Fixes
+
+* **blueprint-state:** add fix for memfile drift persistence when drift files are not present ([8c1519e](https://github.com/newstack-cloud/bluelink/commit/8c1519ed576a9728ac4632b8e3808d12bc5c30c5))
+
 ## [0.4.2](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.4.1...blueprint-state/v0.4.2) (2025-12-16)
 
 
