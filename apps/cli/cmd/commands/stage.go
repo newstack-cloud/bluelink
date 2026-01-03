@@ -8,9 +8,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/jsonout"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/stageui"
 	"github.com/newstack-cloud/deploy-cli-sdk/config"
 	"github.com/newstack-cloud/deploy-cli-sdk/engine"
+	"github.com/newstack-cloud/deploy-cli-sdk/headless"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -36,6 +38,9 @@ Examples:
   # Stage changes for an existing instance by name
   bluelink stage --instance-name my-app
 
+  # Stage changes with JSON output
+  bluelink stage --instance-name my-app --json
+
   # Stage changes for an existing instance by ID
   bluelink stage --instance-id abc123
 
@@ -54,11 +59,42 @@ Examples:
 			}
 
 			blueprintFile, isDefault := confProvider.GetString("stageBlueprintFile")
-			instanceID, _ := confProvider.GetString("stageInstanceID")
-			instanceName, _ := confProvider.GetString("stageInstanceName")
+			instanceID, instanceIDIsDefault := confProvider.GetString("stageInstanceID")
+			instanceName, instanceNameIsDefault := confProvider.GetString("stageInstanceName")
 			destroy, _ := confProvider.GetBool("stageDestroy")
 			skipDriftCheck, _ := confProvider.GetBool("stageSkipDriftCheck")
 			jsonMode, _ := confProvider.GetBool("stageJson")
+
+			// In JSON mode, silence all Cobra error output - the TUI handles JSON error output
+			if jsonMode {
+				cmd.SilenceUsage = true
+				cmd.SilenceErrors = true
+			}
+
+			// Validate flag combinations in headless mode
+			// When --destroy is set, an instance identifier is required
+			if destroy {
+				if err := headless.Validate(
+					headless.OneOf(
+						headless.Flag{
+							Name:      "instance-name",
+							Value:     instanceName,
+							IsDefault: instanceNameIsDefault,
+						},
+						headless.Flag{
+							Name:      "instance-id",
+							Value:     instanceID,
+							IsDefault: instanceIDIsDefault,
+						},
+					),
+				); err != nil {
+					if jsonMode {
+						jsonout.WriteJSON(os.Stdout, jsonout.NewErrorOutput(err))
+						return errStagingFailed
+					}
+					return err
+				}
+			}
 
 			if _, err := tea.LogToFile("bluelink-output.log", "simple"); err != nil {
 				log.Fatal(err)
@@ -108,7 +144,7 @@ Examples:
 			finalApp := finalModel.(stageui.MainModel)
 
 			if finalApp.Error != nil {
-				// The TUI has already displayed the detailed error.
+				// The TUI has already displayed the detailed error (or JSON output).
 				// Silence Cobra's error printing and return a sentinel error
 				// just to ensure non-zero exit code.
 				cmd.SilenceErrors = true

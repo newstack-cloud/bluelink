@@ -128,6 +128,10 @@ type StageModel struct {
 	headlessWriter io.Writer
 	printer        *headless.Printer
 
+	// Deploy flow mode - when true, don't print apply hint or quit after staging
+	// This is used when staging is part of a deploy command flow
+	deployFlowMode bool
+
 	// JSON output mode
 	jsonMode bool
 
@@ -1242,6 +1246,26 @@ func (m *StageModel) SetFooterRenderer(renderer splitpane.FooterRenderer) {
 	if m.footerRenderer != nil {
 		m.footerRenderer.Delegate = renderer
 	}
+}
+
+// SetDeployFlowMode sets the deploy flow mode.
+// When true, the staging model won't print the apply hint or quit after staging completes.
+// This should be set when staging is part of a deploy command flow.
+func (m *StageModel) SetDeployFlowMode(deployFlow bool) {
+	m.deployFlowMode = deployFlow
+}
+
+// SetDestroy sets the destroy mode.
+func (m *StageModel) SetDestroy(destroy bool) {
+	m.destroy = destroy
+	if m.footerRenderer != nil {
+		m.footerRenderer.Destroy = destroy
+	}
+}
+
+// SetSkipDriftCheck sets the skip drift check option.
+func (m *StageModel) SetSkipDriftCheck(skipDriftCheck bool) {
+	m.skipDriftCheck = skipDriftCheck
 }
 
 // StartStaging initiates the staging process.

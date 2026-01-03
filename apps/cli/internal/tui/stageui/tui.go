@@ -22,7 +22,7 @@ type stageSessionState uint32
 
 const (
 	stageBlueprintSelect stageSessionState = iota
-	stageInstanceNameInput
+	stageOptionsInput
 	stageView
 )
 
@@ -33,22 +33,22 @@ type MainModel struct {
 	blueprintFile    string
 	quitting         bool
 	selectBlueprint  tea.Model
-	instanceNameForm *InstanceNameFormModel
+	stageOptionsForm *StageOptionsFormModel
 	stage            tea.Model
 	styles           *stylespkg.Styles
 	Error            error
-	// needsInstanceName tracks whether we should prompt for instance name
-	needsInstanceName bool
+	// needsOptionsInput tracks whether we should prompt for stage options
+	needsOptionsInput bool
 }
 
 func (m MainModel) Init() tea.Cmd {
 	bpCmd := m.selectBlueprint.Init()
 	stageCmd := m.stage.Init()
-	var instanceNameCmd tea.Cmd
-	if m.instanceNameForm != nil {
-		instanceNameCmd = m.instanceNameForm.Init()
+	var optionsCmd tea.Cmd
+	if m.stageOptionsForm != nil {
+		optionsCmd = m.stageOptionsForm.Init()
 	}
-	return tea.Batch(bpCmd, stageCmd, instanceNameCmd)
+	return tea.Batch(bpCmd, stageCmd, optionsCmd)
 }
 
 func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -56,21 +56,23 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case sharedui.SelectBlueprintMsg:
 		m.blueprintFile = sharedui.ToFullBlueprintPath(msg.BlueprintFile, msg.Source)
-		// If we need instance name, go to that state first
-		if m.needsInstanceName {
-			m.sessionState = stageInstanceNameInput
+		// If we need options input, go to that state first
+		if m.needsOptionsInput {
+			m.sessionState = stageOptionsInput
 		} else {
 			m.sessionState = stageView
 			var cmd tea.Cmd
 			m.stage, cmd = m.stage.Update(msg)
 			cmds = append(cmds, cmd)
 		}
-	case InstanceNameSelectedMsg:
-		// Instance name provided, now proceed to staging
+	case StageOptionsSelectedMsg:
+		// Options provided, now proceed to staging
 		m.sessionState = stageView
-		// Update the stage model with the instance name
+		// Update the stage model with the selected options
 		stageModel := m.stage.(StageModel)
 		stageModel.SetInstanceName(msg.InstanceName)
+		stageModel.SetDestroy(msg.Destroy)
+		stageModel.SetSkipDriftCheck(msg.SkipDriftCheck)
 		m.stage = stageModel
 		// Send the blueprint selection to the stage model to start staging
 		var cmd tea.Cmd
@@ -118,10 +120,10 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.selectBlueprint = selectBlueprintModel
 		cmds = append(cmds, newCmd)
-	case stageInstanceNameInput:
-		if m.instanceNameForm != nil {
+	case stageOptionsInput:
+		if m.stageOptionsForm != nil {
 			var cmd tea.Cmd
-			m.instanceNameForm, cmd = m.instanceNameForm.Update(msg)
+			m.stageOptionsForm, cmd = m.stageOptionsForm.Update(msg)
 			cmds = append(cmds, cmd)
 		}
 	case stageView:
@@ -146,10 +148,10 @@ func (m MainModel) View() string {
 	if m.sessionState == stageBlueprintSelect {
 		return m.selectBlueprint.View()
 	}
-	if m.sessionState == stageInstanceNameInput {
+	if m.sessionState == stageOptionsInput {
 		selected := "\n  You selected blueprint: " + m.styles.Selected.Render(m.blueprintFile) + "\n\n"
-		if m.instanceNameForm != nil {
-			return selected + m.instanceNameForm.View()
+		if m.stageOptionsForm != nil {
+			return selected + m.stageOptionsForm.View()
 		}
 		return selected
 	}
@@ -221,25 +223,30 @@ func NewStageApp(
 		jsonMode,
 	)
 
-	// Determine if we need to prompt for instance name
-	// We need instance name if:
+	// Determine if we need to prompt for stage options
+	// We need options input if:
 	// 1. Not headless mode (interactive)
 	// 2. No instance ID or instance name provided
-	// 3. Not a destroy operation (destroy requires an existing instance)
-	needsInstanceName := !headless && instanceID == "" && instanceName == "" && !destroy
+	// This allows users to configure instance name, destroy mode, and skip drift check interactively.
+	needsOptionsInput := !headless && instanceID == "" && instanceName == ""
 
-	var instanceNameForm *InstanceNameFormModel
-	if needsInstanceName {
-		instanceNameForm = NewInstanceNameFormModel(bluelinkStyles)
+	var stageOptionsForm *StageOptionsFormModel
+	if needsOptionsInput {
+		stageOptionsForm = NewStageOptionsFormModel(bluelinkStyles, StageOptionsFormConfig{
+			InitialInstanceName:   instanceName,
+			InitialDestroy:        destroy,
+			InitialSkipDriftCheck: skipDriftCheck,
+			Engine:                deployEngine,
+		})
 	}
 
 	return &MainModel{
 		sessionState:      sessionState,
 		blueprintFile:     blueprintFile,
 		selectBlueprint:   selectBlueprint,
-		instanceNameForm:  instanceNameForm,
+		stageOptionsForm:  stageOptionsForm,
 		stage:             stage,
 		styles:            bluelinkStyles,
-		needsInstanceName: needsInstanceName,
+		needsOptionsInput: needsOptionsInput,
 	}, nil
 }

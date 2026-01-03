@@ -134,7 +134,9 @@ func (m StageModel) handleCompleteChangesEvent(
 		}
 	})
 
-	if m.headlessMode {
+	if m.headlessMode && !m.deployFlowMode {
+		// Only print summary and quit when not part of a deploy flow
+		// In deploy flow mode, the parent model handles the transition to deployment
 		if m.jsonMode {
 			m.outputJSON()
 		} else {

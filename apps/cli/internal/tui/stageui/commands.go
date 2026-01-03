@@ -288,3 +288,18 @@ func buildBlueprintDocumentInfoFromModel(model StageModel) types.BlueprintDocume
 	}
 	return docInfo
 }
+
+// checkInstanceExistsCmd returns a command that checks if an instance exists.
+func checkInstanceExistsCmd(model *StageOptionsFormModel) tea.Cmd {
+	return func() tea.Msg {
+		if model.engine == nil {
+			return instanceExistsMsg{exists: false}
+		}
+
+		instance, err := model.engine.GetBlueprintInstance(context.TODO(), model.instanceName)
+		if err != nil || instance == nil {
+			return instanceExistsMsg{exists: false}
+		}
+		return instanceExistsMsg{exists: true}
+	}
+}
