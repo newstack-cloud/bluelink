@@ -63,6 +63,32 @@ func (s *OutputsTestSuite) Test_WrapText_exact_width() {
 	s.Equal("hello", WrapText("hello", 5))
 }
 
+func (s *OutputsTestSuite) Test_WrapTextLines_no_wrap_needed() {
+	s.Equal([]string{"short text"}, WrapTextLines("short text", 50))
+}
+
+func (s *OutputsTestSuite) Test_WrapTextLines_wraps_at_word_boundary() {
+	result := WrapTextLines("hello world test", 12)
+	s.Equal([]string{"hello world", "test"}, result)
+}
+
+func (s *OutputsTestSuite) Test_WrapTextLines_zero_width() {
+	s.Equal([]string{"text"}, WrapTextLines("text", 0))
+}
+
+func (s *OutputsTestSuite) Test_WrapTextLines_negative_width() {
+	s.Equal([]string{"text"}, WrapTextLines("text", -10))
+}
+
+func (s *OutputsTestSuite) Test_WrapTextLines_empty_string() {
+	s.Equal([]string{""}, WrapTextLines("", 50))
+}
+
+func (s *OutputsTestSuite) Test_WrapTextLines_multiple_lines() {
+	result := WrapTextLines("one two three four five six", 10)
+	s.Equal([]string{"one two", "three four", "five six"}, result)
+}
+
 func (s *OutputsTestSuite) Test_IsValidOutputValue_returns_true_for_valid() {
 	s.True(IsValidOutputValue("valid"))
 	s.True(IsValidOutputValue("123"))

@@ -205,6 +205,34 @@ func WrapText(text string, width int) string {
 	return result.String()
 }
 
+// WrapTextLines wraps text to fit within the specified width, returning lines as a slice.
+// Uses word-boundary wrapping: breaks at spaces when possible, otherwise at width.
+func WrapTextLines(text string, width int) []string {
+	if width <= 0 {
+		return []string{text}
+	}
+
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return []string{text}
+	}
+
+	var lines []string
+	currentLine := words[0]
+
+	for _, word := range words[1:] {
+		if len(currentLine)+1+len(word) <= width {
+			currentLine += " " + word
+		} else {
+			lines = append(lines, currentLine)
+			currentLine = word
+		}
+	}
+	lines = append(lines, currentLine)
+
+	return lines
+}
+
 // CollectNonComputedFields extracts all fields from spec data excluding computed fields.
 // This is used to show the user-provided spec without the computed outputs.
 // Fields are returned sorted alphabetically by name for consistent display.

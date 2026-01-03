@@ -8,9 +8,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/jsonout"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/deployui"
 	"github.com/newstack-cloud/deploy-cli-sdk/config"
 	"github.com/newstack-cloud/deploy-cli-sdk/engine"
+	"github.com/newstack-cloud/deploy-cli-sdk/headless"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -19,6 +21,14 @@ import (
 // errDeploymentFailed is a sentinel error used to indicate deployment failed
 // after detailed error output has already been printed.
 var errDeploymentFailed = errors.New("deployment failed")
+
+// boolToString converts a boolean to a string for flag validation.
+func boolToString(b bool) string {
+	if b {
+		return "true"
+	}
+	return ""
+}
 
 func setupDeployCommand(rootCmd *cobra.Command, confProvider *config.Provider) {
 	deployCmd := &cobra.Command{
@@ -43,8 +53,8 @@ Examples:
   # Deploy from a specific blueprint file
   bluelink deploy --blueprint-file ./project.blueprint.yaml --instance-name my-app
 
-  # Deploy with rollback flag (restoring previously destroyed instance)
-  bluelink deploy --instance-name my-app --rollback`,
+  # Deploy with auto-rollback enabled
+  bluelink deploy --instance-name my-app --auto-rollback`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, handle, err := utils.SetupLogger()
 			if err != nil {
@@ -57,16 +67,67 @@ Examples:
 				return err
 			}
 
-			changesetID, _ := confProvider.GetString("deployChangeSetID")
-			instanceID, _ := confProvider.GetString("deployInstanceID")
-			instanceName, _ := confProvider.GetString("deployInstanceName")
+			changesetID, changesetIDIsDefault := confProvider.GetString("deployChangeSetID")
+			instanceID, instanceIDIsDefault := confProvider.GetString("deployInstanceID")
+			instanceName, instanceNameIsDefault := confProvider.GetString("deployInstanceName")
 			blueprintFile, isDefault := confProvider.GetString("deployBlueprintFile")
-			asRollback, _ := confProvider.GetBool("deployAsRollback")
 			stageFirst, _ := confProvider.GetBool("deployStage")
 			autoApprove, _ := confProvider.GetBool("deployAutoApprove")
 			skipPrompts, _ := confProvider.GetBool("deploySkipPrompts")
 			autoRollback, _ := confProvider.GetBool("deployAutoRollback")
 			force, _ := confProvider.GetBool("deployForce")
+			jsonMode, _ := confProvider.GetBool("deployJson")
+
+			// In JSON mode, silence all Cobra error output - the TUI handles JSON error output
+			// Also imply --auto-approve since JSON mode is non-interactive
+			if jsonMode {
+				cmd.SilenceUsage = true
+				cmd.SilenceErrors = true
+				autoApprove = true
+			}
+
+			// Validate flag combinations in headless mode
+			err = headless.Validate(
+				// Either instance-name or instance-id must be provided
+				headless.OneOf(
+					headless.Flag{
+						Name:      "instance-name",
+						Value:     instanceName,
+						IsDefault: instanceNameIsDefault,
+					},
+					headless.Flag{
+						Name:      "instance-id",
+						Value:     instanceID,
+						IsDefault: instanceIDIsDefault,
+					},
+				),
+				// Either --stage or --change-set-id must be provided
+				headless.OneOf(
+					headless.Flag{
+						Name:      "stage",
+						Value:     boolToString(stageFirst),
+						IsDefault: !stageFirst,
+					},
+					headless.Flag{
+						Name:      "change-set-id",
+						Value:     changesetID,
+						IsDefault: changesetIDIsDefault,
+					},
+				),
+				// When --stage is set, --auto-approve is required
+				headless.RequiredIfBool(
+					headless.BoolFlagTrue("stage", stageFirst),
+					"auto-approve",
+					autoApprove,
+				),
+			)
+			if err != nil {
+				if jsonMode {
+					jsonout.WriteJSON(os.Stdout, jsonout.NewErrorOutput(err))
+					return errDeploymentFailed
+				}
+				return err
+			}
 
 			if _, err := tea.LogToFile("bluelink-output.log", "simple"); err != nil {
 				log.Fatal(err)
@@ -82,6 +143,7 @@ Examples:
 				stylespkg.NewBluelinkPalette(),
 			)
 			inTerminal := term.IsTerminal(int(os.Stdout.Fd()))
+			headless := !inTerminal || jsonMode
 			app, err := deployui.NewDeployApp(
 				deployEngine,
 				logger,
@@ -90,22 +152,22 @@ Examples:
 				instanceName,
 				blueprintFile,
 				isDefault,
-				asRollback,
 				autoRollback,
 				force,
 				stageFirst,
 				autoApprove,
 				skipPrompts,
 				styles,
-				!inTerminal,
+				headless,
 				os.Stdout,
+				jsonMode,
 			)
 			if err != nil {
 				return err
 			}
 
 			options := []tea.ProgramOption{}
-			if inTerminal {
+			if !headless {
 				options = append(options, tea.WithAltScreen(), tea.WithMouseCellMotion())
 			} else {
 				options = append(options, tea.WithInput(nil), tea.WithoutRenderer())
@@ -118,7 +180,7 @@ Examples:
 			finalApp := finalModel.(deployui.MainModel)
 
 			if finalApp.Error != nil {
-				// The TUI has already displayed the detailed error.
+				// The TUI has already displayed the detailed error (or JSON output).
 				// Silence Cobra's error printing and return a sentinel error
 				// just to ensure non-zero exit code.
 				cmd.SilenceErrors = true
@@ -170,14 +232,6 @@ Examples:
 	confProvider.BindEnvVar("deployBlueprintFile", "BLUELINK_CLI_DEPLOY_BLUEPRINT_FILE")
 
 	deployCmd.PersistentFlags().Bool(
-		"as-rollback",
-		false,
-		"Mark deployment as rollback operation.",
-	)
-	confProvider.BindPFlag("deployAsRollback", deployCmd.PersistentFlags().Lookup("as-rollback"))
-	confProvider.BindEnvVar("deployAsRollback", "BLUELINK_CLI_DEPLOY_AS_ROLLBACK")
-
-	deployCmd.PersistentFlags().Bool(
 		"auto-rollback",
 		false,
 		"Automatically rollback on deployment failure.",
@@ -222,6 +276,14 @@ Examples:
 	)
 	confProvider.BindPFlag("deploySkipPrompts", deployCmd.PersistentFlags().Lookup("skip-prompts"))
 	confProvider.BindEnvVar("deploySkipPrompts", "BLUELINK_CLI_DEPLOY_SKIP_PROMPTS")
+
+	deployCmd.PersistentFlags().Bool(
+		"json",
+		false,
+		"Output result as a single JSON object when the operation completes. "+
+			"Implies non-interactive mode (no TUI, no streaming text output).",
+	)
+	confProvider.BindPFlag("deployJson", deployCmd.PersistentFlags().Lookup("json"))
 
 	rootCmd.AddCommand(deployCmd)
 }

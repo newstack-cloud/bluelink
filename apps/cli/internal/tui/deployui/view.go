@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/driftui"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/outpututil"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
@@ -15,463 +15,58 @@ import (
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 )
 
-// Headless rendering methods
-
-func (m *DeployModel) printHeadlessHeader() {
-	w := m.printer.Writer()
-	w.Println("Starting deployment...")
-	w.Printf("Instance ID: %s\n", m.instanceID)
-	if m.instanceName != "" {
-		w.Printf("Instance Name: %s\n", m.instanceName)
-	}
-	w.Printf("Changeset: %s\n", m.changesetID)
-	w.DoubleSeparator(72)
-	w.PrintlnEmpty()
-}
-
-func (m *DeployModel) printHeadlessResourceEvent(data *container.ResourceDeployUpdateMessage) {
-	statusIcon := resourceStatusHeadlessIcon(data.Status)
-	statusText := resourceStatusHeadlessText(data.Status)
-	m.printer.ProgressItem(statusIcon, "resource", data.ResourceName, statusText, "")
-}
-
-func resourceStatusHeadlessIcon(status core.ResourceStatus) string {
-	switch status {
-	case core.ResourceStatusCreating, core.ResourceStatusUpdating, core.ResourceStatusDestroying:
-		return "..."
-	case core.ResourceStatusCreated, core.ResourceStatusUpdated, core.ResourceStatusDestroyed:
-		return "OK"
-	case core.ResourceStatusCreateFailed, core.ResourceStatusUpdateFailed, core.ResourceStatusDestroyFailed:
-		return "ERR"
-	case core.ResourceStatusRollingBack:
-		return "<-"
-	case core.ResourceStatusRollbackFailed:
-		return "!!"
-	case core.ResourceStatusRollbackComplete:
-		return "<>"
-	default:
-		return "  "
-	}
-}
-
-func resourceStatusHeadlessText(status core.ResourceStatus) string {
-	switch status {
-	case core.ResourceStatusCreating:
-		return "creating"
-	case core.ResourceStatusCreated:
-		return "created"
-	case core.ResourceStatusCreateFailed:
-		return "create failed"
-	case core.ResourceStatusUpdating:
-		return "updating"
-	case core.ResourceStatusUpdated:
-		return "updated"
-	case core.ResourceStatusUpdateFailed:
-		return "update failed"
-	case core.ResourceStatusDestroying:
-		return "destroying"
-	case core.ResourceStatusDestroyed:
-		return "destroyed"
-	case core.ResourceStatusDestroyFailed:
-		return "destroy failed"
-	case core.ResourceStatusRollingBack:
-		return "rolling back"
-	case core.ResourceStatusRollbackFailed:
-		return "rollback failed"
-	case core.ResourceStatusRollbackComplete:
-		return "rolled back"
-	default:
-		return "pending"
-	}
-}
-
-func (m *DeployModel) printHeadlessChildEvent(data *container.ChildDeployUpdateMessage) {
-	statusIcon := instanceStatusHeadlessIcon(data.Status)
-	statusText := instanceStatusHeadlessText(data.Status)
-	m.printer.ProgressItem(statusIcon, "child", data.ChildName, statusText, "")
-}
-
-func instanceStatusHeadlessIcon(status core.InstanceStatus) string {
-	switch status {
-	case core.InstanceStatusPreparing:
-		return "  "
-	case core.InstanceStatusDeploying, core.InstanceStatusUpdating, core.InstanceStatusDestroying:
-		return "..."
-	case core.InstanceStatusDeployed, core.InstanceStatusUpdated, core.InstanceStatusDestroyed:
-		return "OK"
-	case core.InstanceStatusDeployFailed, core.InstanceStatusUpdateFailed, core.InstanceStatusDestroyFailed:
-		return "ERR"
-	case core.InstanceStatusDeployRollingBack, core.InstanceStatusUpdateRollingBack, core.InstanceStatusDestroyRollingBack:
-		return "<-"
-	case core.InstanceStatusDeployRollbackFailed, core.InstanceStatusUpdateRollbackFailed, core.InstanceStatusDestroyRollbackFailed:
-		return "!!"
-	case core.InstanceStatusDeployRollbackComplete, core.InstanceStatusUpdateRollbackComplete, core.InstanceStatusDestroyRollbackComplete:
-		return "<>"
-	default:
-		return "  "
-	}
-}
-
-func instanceStatusHeadlessText(status core.InstanceStatus) string {
-	switch status {
-	case core.InstanceStatusPreparing:
-		return "preparing"
-	case core.InstanceStatusDeploying:
-		return "deploying"
-	case core.InstanceStatusDeployed:
-		return "deployed"
-	case core.InstanceStatusDeployFailed:
-		return "deploy failed"
-	case core.InstanceStatusUpdating:
-		return "updating"
-	case core.InstanceStatusUpdated:
-		return "updated"
-	case core.InstanceStatusUpdateFailed:
-		return "update failed"
-	case core.InstanceStatusDestroying:
-		return "destroying"
-	case core.InstanceStatusDestroyed:
-		return "destroyed"
-	case core.InstanceStatusDestroyFailed:
-		return "destroy failed"
-	case core.InstanceStatusDeployRollingBack:
-		return "rolling back deploy"
-	case core.InstanceStatusDeployRollbackFailed:
-		return "deploy rollback failed"
-	case core.InstanceStatusDeployRollbackComplete:
-		return "deploy rolled back"
-	case core.InstanceStatusUpdateRollingBack:
-		return "rolling back update"
-	case core.InstanceStatusUpdateRollbackFailed:
-		return "update rollback failed"
-	case core.InstanceStatusUpdateRollbackComplete:
-		return "update rolled back"
-	case core.InstanceStatusDestroyRollingBack:
-		return "rolling back destroy"
-	case core.InstanceStatusDestroyRollbackFailed:
-		return "destroy rollback failed"
-	case core.InstanceStatusDestroyRollbackComplete:
-		return "destroy rolled back"
-	case core.InstanceStatusNotDeployed:
-		return "not deployed"
-	default:
-		return "unknown"
-	}
-}
-
-func (m *DeployModel) printHeadlessLinkEvent(data *container.LinkDeployUpdateMessage) {
-	statusIcon := linkStatusHeadlessIcon(data.Status)
-	statusText := linkStatusHeadlessText(data.Status)
-	m.printer.ProgressItem(statusIcon, "link", data.LinkName, statusText, "")
-}
-
-func linkStatusHeadlessIcon(status core.LinkStatus) string {
-	switch status {
-	case core.LinkStatusCreating, core.LinkStatusUpdating, core.LinkStatusDestroying:
-		return "..."
-	case core.LinkStatusCreated, core.LinkStatusUpdated, core.LinkStatusDestroyed:
-		return "OK"
-	case core.LinkStatusCreateFailed, core.LinkStatusUpdateFailed, core.LinkStatusDestroyFailed:
-		return "ERR"
-	case core.LinkStatusCreateRollingBack, core.LinkStatusUpdateRollingBack, core.LinkStatusDestroyRollingBack:
-		return "<-"
-	case core.LinkStatusCreateRollbackFailed, core.LinkStatusUpdateRollbackFailed, core.LinkStatusDestroyRollbackFailed:
-		return "!!"
-	case core.LinkStatusCreateRollbackComplete, core.LinkStatusUpdateRollbackComplete, core.LinkStatusDestroyRollbackComplete:
-		return "<>"
-	default:
-		return "  "
-	}
-}
-
-func linkStatusHeadlessText(status core.LinkStatus) string {
-	switch status {
-	case core.LinkStatusCreating:
-		return "creating"
-	case core.LinkStatusCreated:
-		return "created"
-	case core.LinkStatusCreateFailed:
-		return "create failed"
-	case core.LinkStatusUpdating:
-		return "updating"
-	case core.LinkStatusUpdated:
-		return "updated"
-	case core.LinkStatusUpdateFailed:
-		return "update failed"
-	case core.LinkStatusDestroying:
-		return "destroying"
-	case core.LinkStatusDestroyed:
-		return "destroyed"
-	case core.LinkStatusDestroyFailed:
-		return "destroy failed"
-	case core.LinkStatusCreateRollingBack:
-		return "rolling back create"
-	case core.LinkStatusCreateRollbackFailed:
-		return "create rollback failed"
-	case core.LinkStatusCreateRollbackComplete:
-		return "create rolled back"
-	case core.LinkStatusUpdateRollingBack:
-		return "rolling back update"
-	case core.LinkStatusUpdateRollbackFailed:
-		return "update rollback failed"
-	case core.LinkStatusUpdateRollbackComplete:
-		return "update rolled back"
-	case core.LinkStatusDestroyRollingBack:
-		return "rolling back destroy"
-	case core.LinkStatusDestroyRollbackFailed:
-		return "destroy rollback failed"
-	case core.LinkStatusDestroyRollbackComplete:
-		return "destroy rolled back"
-	default:
-		return "pending"
-	}
-}
-
-func (m *DeployModel) printHeadlessSummary() {
-	w := m.printer.Writer()
-	w.PrintlnEmpty()
-	w.DoubleSeparator(72)
-
-	statusText := instanceStatusHeadlessText(m.finalStatus)
-	w.Printf("Deployment %s\n", statusText)
-	w.DoubleSeparator(72)
-	w.PrintlnEmpty()
-
-	// Count completed items
-	resourceCount := len(m.resourcesByName)
-	childCount := len(m.childrenByName)
-	linkCount := len(m.linksByName)
-
-	w.Printf("Complete: %d %s, %d %s, %d %s\n",
-		resourceCount, sdkstrings.Pluralize(resourceCount, "resource", "resources"),
-		childCount, sdkstrings.Pluralize(childCount, "child", "children"),
-		linkCount, sdkstrings.Pluralize(linkCount, "link", "links"))
-	w.PrintlnEmpty()
-
-	w.Printf("Instance ID: %s\n", m.instanceID)
-	if m.instanceName != "" {
-		w.Printf("Instance Name: %s\n", m.instanceName)
-	}
-	w.PrintlnEmpty()
-}
-
-func (m *DeployModel) printHeadlessError(err error) {
-	w := m.printer.Writer()
-	w.PrintlnEmpty()
-
-	// Check for validation errors
-	if clientErr, isValidation := engineerrors.IsValidationError(err); isValidation {
-		m.printHeadlessValidationError(clientErr)
-		return
-	}
-
-	// Check for stream errors
-	if streamErr, ok := err.(*engineerrors.StreamError); ok {
-		m.printHeadlessStreamError(streamErr)
-		return
-	}
-
-	// Generic error
-	w.Println("ERR Deployment failed")
-	w.PrintlnEmpty()
-	w.Printf("  Error: %s\n", err.Error())
-}
-
-func (m *DeployModel) printHeadlessValidationError(clientErr *engineerrors.ClientError) {
-	w := m.printer.Writer()
-	w.Println("ERR Failed to start deployment")
-	w.PrintlnEmpty()
-	w.Println("The following issues must be resolved before deployment can proceed:")
-	w.PrintlnEmpty()
-
-	if len(clientErr.ValidationErrors) > 0 {
-		w.Println("Validation Errors:")
-		w.SingleSeparator(72)
-		for _, valErr := range clientErr.ValidationErrors {
-			location := valErr.Location
-			if location == "" {
-				location = "unknown"
-			}
-			w.Printf("  - %s: %s\n", location, valErr.Message)
-		}
-		w.PrintlnEmpty()
-	}
-
-	if len(clientErr.ValidationDiagnostics) > 0 {
-		w.Println("Blueprint Diagnostics:")
-		w.SingleSeparator(72)
-		for _, diag := range clientErr.ValidationDiagnostics {
-			m.printHeadlessDiagnostic(diag)
-		}
-		w.PrintlnEmpty()
-	}
-
-	if len(clientErr.ValidationErrors) == 0 && len(clientErr.ValidationDiagnostics) == 0 {
-		w.Printf("  %s\n", clientErr.Message)
-	}
-}
-
-func (m *DeployModel) printHeadlessStreamError(streamErr *engineerrors.StreamError) {
-	w := m.printer.Writer()
-	w.Println("ERR Error during deployment")
-	w.PrintlnEmpty()
-	w.Println("The following issues occurred during deployment:")
-	w.PrintlnEmpty()
-	w.Printf("  %s\n", streamErr.Event.Message)
-	w.PrintlnEmpty()
-
-	if len(streamErr.Event.Diagnostics) > 0 {
-		w.Println("Diagnostics:")
-		w.SingleSeparator(72)
-		for _, diag := range streamErr.Event.Diagnostics {
-			m.printHeadlessDiagnostic(diag)
-		}
-		w.PrintlnEmpty()
-	}
-}
-
-func (m *DeployModel) printHeadlessDiagnostic(diag *core.Diagnostic) {
-	w := m.printer.Writer()
-
-	levelName := "INFO"
-	switch diag.Level {
-	case core.DiagnosticLevelError:
-		levelName = "ERROR"
-	case core.DiagnosticLevelWarning:
-		levelName = "WARNING"
-	}
-
-	line, col := 0, 0
-	if diag.Range != nil {
-		line = diag.Range.Start.Line
-		col = diag.Range.Start.Column
-	}
-
-	if line > 0 {
-		w.Printf("  [%s] line %d, col %d: %s\n", levelName, line, col, diag.Message)
-	} else {
-		w.Printf("  [%s] %s\n", levelName, diag.Message)
-	}
-}
-
 // Interactive error rendering methods
 
 func (m DeployModel) renderError(err error) string {
-	sb := strings.Builder{}
-	sb.WriteString("\n")
+	ctx := shared.DeployErrorContext()
 
 	// Check for validation errors
 	if clientErr, isValidation := engineerrors.IsValidationError(err); isValidation {
-		return m.renderValidationError(clientErr)
+		return shared.RenderValidationError(clientErr, ctx, m.styles)
 	}
 
 	// Check for stream errors
 	if streamErr, ok := err.(*engineerrors.StreamError); ok {
-		return m.renderStreamError(streamErr)
+		return shared.RenderStreamError(streamErr, ctx, m.styles)
 	}
 
 	// Generic error display
-	sb.WriteString(m.styles.Error.Render("  ✗ Deployment failed\n\n"))
-	sb.WriteString(m.styles.Error.Render(fmt.Sprintf("    %s\n", err.Error())))
-	sb.WriteString(m.renderErrorFooter())
-	return sb.String()
-}
-
-func (m DeployModel) renderValidationError(clientErr *engineerrors.ClientError) string {
-	sb := strings.Builder{}
-	sb.WriteString("\n")
-	sb.WriteString(m.styles.Error.Render("  ✗ Failed to start deployment\n\n"))
-
-	sb.WriteString(m.styles.Muted.Render("  The following issues must be resolved before deployment can proceed:\n\n"))
-
-	if len(clientErr.ValidationErrors) > 0 {
-		sb.WriteString(m.styles.Category.Render("  Validation Errors:\n"))
-		for _, valErr := range clientErr.ValidationErrors {
-			location := valErr.Location
-			if location == "" {
-				location = "unknown"
-			}
-			sb.WriteString(m.styles.Error.Render(fmt.Sprintf("    • %s: ", location)))
-			sb.WriteString(fmt.Sprintf("%s\n", valErr.Message))
-		}
-		sb.WriteString("\n")
-	}
-
-	if len(clientErr.ValidationDiagnostics) > 0 {
-		sb.WriteString(m.styles.Category.Render("  Blueprint Diagnostics:\n"))
-		for _, diag := range clientErr.ValidationDiagnostics {
-			sb.WriteString(m.renderDiagnostic(diag))
-		}
-		sb.WriteString("\n")
-	}
-
-	if len(clientErr.ValidationErrors) == 0 && len(clientErr.ValidationDiagnostics) == 0 {
-		sb.WriteString(m.styles.Error.Render(fmt.Sprintf("    %s\n", clientErr.Message)))
-	}
-
-	sb.WriteString(m.renderErrorFooter())
-	return sb.String()
-}
-
-func (m DeployModel) renderStreamError(streamErr *engineerrors.StreamError) string {
-	sb := strings.Builder{}
-	sb.WriteString("\n")
-	sb.WriteString(m.styles.Error.Render("  ✗ Error during deployment\n\n"))
-
-	sb.WriteString(m.styles.Muted.Render("  The following issues occurred during deployment:\n\n"))
-	sb.WriteString(fmt.Sprintf("    %s\n\n", streamErr.Event.Message))
-
-	if len(streamErr.Event.Diagnostics) > 0 {
-		sb.WriteString(m.styles.Category.Render("  Diagnostics:\n"))
-		for _, diag := range streamErr.Event.Diagnostics {
-			sb.WriteString(m.renderDiagnostic(diag))
-		}
-		sb.WriteString("\n")
-	}
-
-	sb.WriteString(m.renderErrorFooter())
-	return sb.String()
-}
-
-func (m DeployModel) renderDiagnostic(diag *core.Diagnostic) string {
-	sb := strings.Builder{}
-
-	var levelStyle lipgloss.Style
-	levelName := "unknown"
-	switch diag.Level {
-	case core.DiagnosticLevelError:
-		levelStyle = m.styles.Error
-		levelName = "ERROR"
-	case core.DiagnosticLevelWarning:
-		levelStyle = m.styles.Warning
-		levelName = "WARNING"
-	case core.DiagnosticLevelInfo:
-		levelStyle = m.styles.Info
-		levelName = "INFO"
-	default:
-		levelStyle = m.styles.Muted
-	}
-
-	sb.WriteString("    ")
-	sb.WriteString(levelStyle.Render(levelName))
-	if diag.Range != nil && diag.Range.Start.Line > 0 {
-		sb.WriteString(m.styles.Muted.Render(fmt.Sprintf(" [line %d, col %d]", diag.Range.Start.Line, diag.Range.Start.Column)))
-	}
-	sb.WriteString(": ")
-	sb.WriteString(diag.Message)
-	sb.WriteString("\n")
-
-	return sb.String()
+	return shared.RenderGenericError(err, "Deployment failed", m.styles)
 }
 
 func (m DeployModel) renderErrorFooter() string {
+	return shared.RenderErrorFooter(m.styles)
+}
+
+func (m DeployModel) renderDestroyChangesetError() string {
 	sb := strings.Builder{}
 	sb.WriteString("\n")
-	keyStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Primary()).Bold(true)
-	sb.WriteString(m.styles.Muted.Render("  Press "))
-	sb.WriteString(keyStyle.Render("q"))
-	sb.WriteString(m.styles.Muted.Render(" to quit"))
+	sb.WriteString("  ")
+	sb.WriteString(m.styles.Error.Render("✗ Cannot deploy using a destroy changeset"))
+	sb.WriteString("\n\n")
+
+	sb.WriteString("  ")
+	sb.WriteString(m.styles.Muted.Render("The changeset you specified was created for a destroy operation and cannot"))
 	sb.WriteString("\n")
+	sb.WriteString("  ")
+	sb.WriteString(m.styles.Muted.Render("be used with the deploy command."))
+	sb.WriteString("\n\n")
+
+	sb.WriteString("  ")
+	sb.WriteString(m.styles.Muted.Render("To resolve this issue, you can either:"))
+	sb.WriteString("\n\n")
+
+	sb.WriteString("    ")
+	sb.WriteString(m.styles.Muted.Render("1. Use the 'destroy' command to apply this changeset:"))
+	sb.WriteString("\n")
+	sb.WriteString(fmt.Sprintf("       bluelink destroy --instance-name %s --change-set-id %s\n\n", m.instanceName, m.changesetID))
+
+	sb.WriteString("    ")
+	sb.WriteString(m.styles.Muted.Render("2. Create a new changeset for deployment (without --destroy):"))
+	sb.WriteString("\n")
+	sb.WriteString(fmt.Sprintf("       bluelink stage --instance-name %s\n", m.instanceName))
+
+	sb.WriteString(m.renderErrorFooter())
 	return sb.String()
 }
 
@@ -545,7 +140,6 @@ func (m DeployModel) renderSpecView() string {
 // renderSpecContent renders the full spec for a resource (excluding computed fields).
 func (m DeployModel) renderSpecContent(resourceState *state.ResourceState, resourceName string) string {
 	sb := strings.Builder{}
-	contentWidth := m.width - 4 // Leave margin for padding
 
 	// Header
 	sb.WriteString("\n")
@@ -574,7 +168,7 @@ func (m DeployModel) renderSpecContent(resourceState *state.ResourceState, resou
 		sb.WriteString("\n")
 
 		// Format the value with indentation
-		formattedValue := formatSpecValue(field.Value, contentWidth-4)
+		formattedValue := formatSpecValue(field.Value)
 		sb.WriteString(formattedValue)
 		sb.WriteString("\n")
 	}
@@ -583,7 +177,7 @@ func (m DeployModel) renderSpecContent(resourceState *state.ResourceState, resou
 }
 
 // formatSpecValue formats a spec field value with proper indentation.
-func formatSpecValue(value string, width int) string {
+func formatSpecValue(value string) string {
 	// Use headless FormatMappingNode style - just add indentation
 	lines := strings.Split(value, "\n")
 	sb := strings.Builder{}
@@ -679,6 +273,9 @@ func (m DeployModel) renderOverviewContent() string {
 
 	// Render interrupted elements in a separate section
 	m.renderInterruptedElementsWithPath(&sb)
+
+	// Render skipped rollback items if any
+	m.renderSkippedRollbackItems(&sb, contentWidth)
 
 	return sb.String()
 }
@@ -778,7 +375,7 @@ func (m DeployModel) renderElementFailuresWithWrapping(sb *strings.Builder, cont
 
 func renderFailureReasons(sb *strings.Builder, reasons []string, width int, styles *stylespkg.Styles) {
 	for _, reason := range reasons {
-		wrappedLines := wrapText(reason, width)
+		wrappedLines := outpututil.WrapTextLines(reason, width)
 		for i, line := range wrappedLines {
 			sb.WriteString("      ")
 			if i == 0 {
@@ -812,35 +409,341 @@ func (m DeployModel) renderInterruptedElementsWithPath(sb *strings.Builder) {
 	sb.WriteString("\n")
 }
 
-// wrapText wraps a string to fit within the specified width.
-func wrapText(text string, width int) []string {
-	if width <= 0 {
-		return []string{text}
+// renderSkippedRollbackItems renders items that were skipped during rollback.
+func (m DeployModel) renderSkippedRollbackItems(sb *strings.Builder, contentWidth int) {
+	if len(m.skippedRollbackItems) == 0 {
+		return
 	}
 
-	words := strings.Fields(text)
-	if len(words) == 0 {
-		return []string{text}
-	}
+	itemLabel := sdkstrings.Pluralize(len(m.skippedRollbackItems), "Item", "Items")
+	sb.WriteString(m.styles.Warning.Render(fmt.Sprintf("  %d %s Skipped During Rollback:", len(m.skippedRollbackItems), itemLabel)))
+	sb.WriteString("\n\n")
 
-	var lines []string
-	currentLine := words[0]
+	reasonWidth := contentWidth - 8
 
-	for _, word := range words[1:] {
-		if len(currentLine)+1+len(word) <= width {
-			currentLine += " " + word
-		} else {
-			lines = append(lines, currentLine)
-			currentLine = word
+	for _, item := range m.skippedRollbackItems {
+		itemPath := item.Name
+		if item.ChildPath != "" {
+			itemPath = item.ChildPath + "." + item.Name
+		}
+		sb.WriteString(m.styles.Warning.Render("  ⚠ "))
+		sb.WriteString(m.styles.Selected.Render(itemPath))
+		sb.WriteString(m.styles.Muted.Render(fmt.Sprintf(" (%s)", item.Type)))
+		sb.WriteString("\n")
+		sb.WriteString(m.styles.Muted.Render(fmt.Sprintf("      Status: %s\n", item.Status)))
+
+		wrappedLines := outpututil.WrapTextLines(item.Reason, reasonWidth)
+		for i, line := range wrappedLines {
+			if i == 0 {
+				sb.WriteString(m.styles.Muted.Render("      Reason: "))
+			} else {
+				sb.WriteString("              ")
+			}
+			sb.WriteString(m.styles.Muted.Render(line))
+			sb.WriteString("\n")
 		}
 	}
-	lines = append(lines, currentLine)
-
-	return lines
+	sb.WriteString("\n")
+	sb.WriteString(m.styles.Muted.Render("    These items were not in a safe state to rollback and were excluded."))
+	sb.WriteString("\n")
 }
 
-// printHeadlessDriftDetected prints drift information in headless mode.
-func (m *DeployModel) printHeadlessDriftDetected() {
-	printer := driftui.NewHeadlessDriftPrinter(m.printer, m.driftContext)
-	printer.PrintDriftDetected(m.driftResult)
+// preRollbackStateFooterHeight returns the height of the fixed footer in pre-rollback state view.
+func preRollbackStateFooterHeight() int {
+	return 4
+}
+
+// renderPreRollbackStateView renders a full-screen pre-rollback state view.
+func (m DeployModel) renderPreRollbackStateView() string {
+	sb := strings.Builder{}
+
+	// Scrollable viewport content
+	sb.WriteString(m.preRollbackStateViewport.View())
+	sb.WriteString("\n")
+
+	// Fixed footer with navigation help
+	sb.WriteString(m.styles.Muted.Render("  " + strings.Repeat("─", 60)))
+	sb.WriteString("\n")
+	keyStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Primary()).Bold(true)
+	sb.WriteString(m.styles.Muted.Render("  Press "))
+	sb.WriteString(keyStyle.Render("↑/↓"))
+	sb.WriteString(m.styles.Muted.Render(" to scroll  "))
+	sb.WriteString(keyStyle.Render("esc"))
+	sb.WriteString(m.styles.Muted.Render("/"))
+	sb.WriteString(keyStyle.Render("r"))
+	sb.WriteString(m.styles.Muted.Render(" to return  "))
+	sb.WriteString(keyStyle.Render("q"))
+	sb.WriteString(m.styles.Muted.Render(" to quit"))
+	sb.WriteString("\n")
+
+	return sb.String()
+}
+
+// renderPreRollbackStateContent renders the scrollable content for the pre-rollback state viewport.
+func (m DeployModel) renderPreRollbackStateContent() string {
+	if m.preRollbackState == nil {
+		return m.styles.Muted.Render("  No pre-rollback state available")
+	}
+
+	sb := strings.Builder{}
+	data := m.preRollbackState
+
+	m.renderPreRollbackHeader(&sb, data)
+	m.renderPreRollbackFailures(&sb, data)
+	m.renderPreRollbackSections(&sb, data)
+
+	return sb.String()
+}
+
+func (m DeployModel) renderPreRollbackHeader(sb *strings.Builder, data *container.PreRollbackStateMessage) {
+	sb.WriteString("\n")
+	sb.WriteString(m.styles.Header.Render("  Pre-Rollback State"))
+	sb.WriteString("\n")
+	sb.WriteString(m.styles.Muted.Render("  " + strings.Repeat("─", 60)))
+	sb.WriteString("\n\n")
+
+	sb.WriteString(m.styles.Muted.Render("  Instance ID: "))
+	sb.WriteString(m.styles.Selected.Render(data.InstanceID))
+	sb.WriteString("\n")
+	sb.WriteString(m.styles.Muted.Render("  Instance Name: "))
+	sb.WriteString(m.styles.Selected.Render(data.InstanceName))
+	sb.WriteString("\n")
+	sb.WriteString(m.styles.Muted.Render("  Status: "))
+	sb.WriteString(m.styles.Error.Render(data.Status.String()))
+	sb.WriteString("\n\n")
+}
+
+func (m DeployModel) renderPreRollbackFailures(sb *strings.Builder, data *container.PreRollbackStateMessage) {
+	if len(data.FailureReasons) == 0 {
+		return
+	}
+
+	sb.WriteString(m.styles.Error.Render("  Failure Reasons:"))
+	sb.WriteString("\n")
+
+	wrapWidth := m.preRollbackStateViewport.Width - 8
+	if wrapWidth < 20 {
+		wrapWidth = 20
+	}
+
+	for _, reason := range data.FailureReasons {
+		wrappedLines := outpututil.WrapTextLines(reason, wrapWidth)
+		for i, line := range wrappedLines {
+			if i == 0 {
+				sb.WriteString(m.styles.Error.Render("    • " + line))
+			} else {
+				sb.WriteString(m.styles.Error.Render("      " + line))
+			}
+			sb.WriteString("\n")
+		}
+	}
+	sb.WriteString("\n")
+}
+
+func (m DeployModel) renderPreRollbackSections(sb *strings.Builder, data *container.PreRollbackStateMessage) {
+	if len(data.Resources) > 0 {
+		sb.WriteString(m.styles.Category.Render(fmt.Sprintf("  Resources (%d):", len(data.Resources))))
+		sb.WriteString("\n\n")
+		for _, r := range data.Resources {
+			m.renderResourceSnapshot(sb, &r, "    ")
+		}
+	}
+
+	if len(data.Links) > 0 {
+		sb.WriteString(m.styles.Category.Render(fmt.Sprintf("  Links (%d):", len(data.Links))))
+		sb.WriteString("\n\n")
+		for _, l := range data.Links {
+			m.renderLinkSnapshot(sb, &l, "    ")
+		}
+	}
+
+	if len(data.Children) > 0 {
+		sb.WriteString(m.styles.Category.Render(fmt.Sprintf("  Children (%d):", len(data.Children))))
+		sb.WriteString("\n\n")
+		for _, c := range data.Children {
+			m.renderChildSnapshot(sb, &c, "    ")
+		}
+	}
+}
+
+// renderResourceSnapshot renders a resource snapshot in the pre-rollback state view.
+func (m DeployModel) renderResourceSnapshot(sb *strings.Builder, r *container.ResourceSnapshot, indent string) {
+	statusStyle := m.getResourceStatusStyle(r.Status)
+
+	sb.WriteString(indent)
+	sb.WriteString(m.styles.Selected.Render(r.ResourceName))
+	sb.WriteString("\n")
+
+	sb.WriteString(indent)
+	sb.WriteString(m.styles.Muted.Render("  Type: "))
+	sb.WriteString(r.ResourceType)
+	sb.WriteString("\n")
+
+	sb.WriteString(indent)
+	sb.WriteString(m.styles.Muted.Render("  Status: "))
+	sb.WriteString(statusStyle.Render(r.Status.String()))
+	sb.WriteString("\n")
+
+	if len(r.FailureReasons) > 0 {
+		wrapWidth := max(m.preRollbackStateViewport.Width-len(indent)-6, 20)
+		for _, reason := range r.FailureReasons {
+			wrappedLines := outpututil.WrapTextLines(reason, wrapWidth)
+			for i, line := range wrappedLines {
+				sb.WriteString(indent)
+				if i == 0 {
+					sb.WriteString(m.styles.Error.Render("  • " + line))
+				} else {
+					sb.WriteString(m.styles.Error.Render("    " + line))
+				}
+				sb.WriteString("\n")
+			}
+		}
+	}
+
+	// Render outputs section if spec data is available
+	if r.SpecData != nil {
+		fields := outpututil.CollectOutputFields(r.SpecData, r.ComputedFields)
+		if len(fields) > 0 {
+			sb.WriteString(indent)
+			sb.WriteString(m.styles.Category.Render("  Outputs:"))
+			sb.WriteString("\n")
+			for _, field := range fields {
+				sb.WriteString(indent)
+				sb.WriteString(m.styles.Muted.Render(fmt.Sprintf("    %s: %s", field.Name, field.Value)))
+				sb.WriteString("\n")
+			}
+		}
+	}
+
+	sb.WriteString("\n")
+}
+
+// renderLinkSnapshot renders a link snapshot in the pre-rollback state view.
+func (m DeployModel) renderLinkSnapshot(sb *strings.Builder, l *container.LinkSnapshot, indent string) {
+	statusStyle := m.getLinkStatusStyle(l.Status)
+
+	sb.WriteString(indent)
+	sb.WriteString(m.styles.Selected.Render(l.LinkName))
+	sb.WriteString("\n")
+
+	sb.WriteString(indent)
+	sb.WriteString(m.styles.Muted.Render("  Status: "))
+	sb.WriteString(statusStyle.Render(l.Status.String()))
+	sb.WriteString("\n")
+
+	if len(l.FailureReasons) > 0 {
+		wrapWidth := m.preRollbackStateViewport.Width - len(indent) - 6
+		if wrapWidth < 20 {
+			wrapWidth = 20
+		}
+		for _, reason := range l.FailureReasons {
+			wrappedLines := outpututil.WrapTextLines(reason, wrapWidth)
+			for i, line := range wrappedLines {
+				sb.WriteString(indent)
+				if i == 0 {
+					sb.WriteString(m.styles.Error.Render("  • " + line))
+				} else {
+					sb.WriteString(m.styles.Error.Render("    " + line))
+				}
+				sb.WriteString("\n")
+			}
+		}
+	}
+	sb.WriteString("\n")
+}
+
+// renderChildSnapshot renders a child blueprint snapshot in the pre-rollback state view.
+func (m DeployModel) renderChildSnapshot(sb *strings.Builder, c *container.ChildSnapshot, indent string) {
+	statusStyle := m.getInstanceStatusStyle(c.Status)
+
+	sb.WriteString(indent)
+	sb.WriteString(m.styles.Selected.Render(c.ChildName))
+	sb.WriteString("\n")
+
+	sb.WriteString(indent)
+	sb.WriteString(m.styles.Muted.Render("  Status: "))
+	sb.WriteString(statusStyle.Render(c.Status.String()))
+	sb.WriteString("\n")
+
+	if len(c.FailureReasons) > 0 {
+		for _, reason := range c.FailureReasons {
+			sb.WriteString(indent)
+			sb.WriteString(m.styles.Error.Render("  • " + reason))
+			sb.WriteString("\n")
+		}
+	}
+
+	// Nested resources
+	if len(c.Resources) > 0 {
+		sb.WriteString(indent)
+		sb.WriteString(m.styles.Muted.Render(fmt.Sprintf("  Resources (%d):", len(c.Resources))))
+		sb.WriteString("\n")
+		for _, r := range c.Resources {
+			m.renderResourceSnapshot(sb, &r, indent+"    ")
+		}
+	}
+
+	// Nested links
+	if len(c.Links) > 0 {
+		sb.WriteString(indent)
+		sb.WriteString(m.styles.Muted.Render(fmt.Sprintf("  Links (%d):", len(c.Links))))
+		sb.WriteString("\n")
+		for _, l := range c.Links {
+			m.renderLinkSnapshot(sb, &l, indent+"    ")
+		}
+	}
+
+	// Nested children (recursive)
+	if len(c.Children) > 0 {
+		sb.WriteString(indent)
+		sb.WriteString(m.styles.Muted.Render(fmt.Sprintf("  Children (%d):", len(c.Children))))
+		sb.WriteString("\n")
+		for _, nested := range c.Children {
+			m.renderChildSnapshot(sb, &nested, indent+"    ")
+		}
+	}
+
+	sb.WriteString("\n")
+}
+
+// getResourceStatusStyle returns the appropriate style for a resource status.
+func (m DeployModel) getResourceStatusStyle(status core.ResourceStatus) lipgloss.Style {
+	switch {
+	case IsFailedResourceStatus(status):
+		return m.styles.Error
+	case IsInterruptedResourceStatus(status):
+		return m.styles.Warning
+	case IsSuccessResourceStatus(status):
+		return lipgloss.NewStyle().Foreground(m.styles.Palette.Success())
+	default:
+		return m.styles.Muted
+	}
+}
+
+// getLinkStatusStyle returns the appropriate style for a link status.
+func (m DeployModel) getLinkStatusStyle(status core.LinkStatus) lipgloss.Style {
+	switch {
+	case IsFailedLinkStatus(status):
+		return m.styles.Error
+	case IsInterruptedLinkStatus(status):
+		return m.styles.Warning
+	case IsSuccessLinkStatus(status):
+		return lipgloss.NewStyle().Foreground(m.styles.Palette.Success())
+	default:
+		return m.styles.Muted
+	}
+}
+
+// getInstanceStatusStyle returns the appropriate style for an instance status.
+func (m DeployModel) getInstanceStatusStyle(status core.InstanceStatus) lipgloss.Style {
+	switch {
+	case IsFailedInstanceStatus(status):
+		return m.styles.Error
+	case IsInterruptedInstanceStatus(status):
+		return m.styles.Warning
+	case IsSuccessInstanceStatus(status):
+		return lipgloss.NewStyle().Foreground(m.styles.Palette.Success())
+	default:
+		return m.styles.Muted
+	}
 }

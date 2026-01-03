@@ -1,6 +1,7 @@
 package deployui
 
 import (
+	"errors"
 	"io"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -53,7 +54,6 @@ type MainModel struct {
 	blueprintFile      string
 	blueprintSource    string
 	isDefaultBlueprint bool
-	asRollback         bool
 	autoRollback       bool
 	force              bool
 	stageFirst         bool
@@ -62,6 +62,7 @@ type MainModel struct {
 
 	// Runtime state
 	headless bool
+	jsonMode bool
 	engine   engine.DeployEngine
 	logger   *zap.Logger
 
@@ -123,9 +124,9 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.instanceName = msg.InstanceName
 		m.instanceID = msg.InstanceID
 		m.changesetID = msg.ChangesetID
-		m.asRollback = msg.AsRollback
 		m.stageFirst = msg.StageFirst
 		m.autoApprove = msg.AutoApprove
+		m.autoRollback = msg.AutoRollback
 
 		// Update deploy model with the new values
 		deployModel, ok := m.deploy.(DeployModel)
@@ -133,7 +134,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			deployModel.instanceName = msg.InstanceName
 			deployModel.instanceID = msg.InstanceID
 			deployModel.changesetID = msg.ChangesetID
-			deployModel.asRollback = msg.AsRollback
+			deployModel.autoRollback = msg.AutoRollback
 			deployModel.footerRenderer.InstanceName = msg.InstanceName
 			deployModel.footerRenderer.InstanceID = msg.InstanceID
 			deployModel.footerRenderer.ChangesetID = msg.ChangesetID
@@ -402,6 +403,9 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, newCmd)
 			if deployModel.err != nil {
 				m.Error = deployModel.err
+			} else if deployModel.finished && IsFailedStatus(deployModel.finalStatus) {
+				// Deployment completed with a failed status - set error for non-zero exit code
+				m.Error = errors.New("deployment failed with status: " + deployModel.finalStatus.String())
 			}
 		}
 	}
@@ -472,7 +476,6 @@ func NewDeployApp(
 	instanceName string,
 	blueprintFile string,
 	isDefaultBlueprintFile bool,
-	asRollback bool,
 	autoRollback bool,
 	force bool,
 	stageFirst bool,
@@ -481,6 +484,7 @@ func NewDeployApp(
 	bluelinkStyles *stylespkg.Styles,
 	headless bool,
 	headlessWriter io.Writer,
+	jsonMode bool,
 ) (*MainModel, error) {
 	sessionState := deployBlueprintSelect
 	// In headless mode or with --skip-prompts, use the default blueprint file if no explicit file is provided.
@@ -492,6 +496,9 @@ func NewDeployApp(
 		instanceIdentified := instanceID != "" || instanceName != ""
 		hasDeployPath := stageFirst || changesetID != ""
 		canSkipForm := skipPrompts && instanceIdentified && hasDeployPath
+
+		// Flag validation for headless mode is now done at the command level
+		// using headless.Validate() in deploy.go
 
 		if headless || canSkipForm {
 			// Skip config form - go straight to staging or deploy
@@ -527,9 +534,9 @@ func NewDeployApp(
 			InstanceName: instanceName,
 			InstanceID:   instanceID,
 			ChangesetID:  changesetID,
-			AsRollback:   asRollback,
 			StageFirst:   stageFirst,
 			AutoApprove:  autoApprove,
+			AutoRollback: autoRollback,
 		},
 		bluelinkStyles,
 	)
@@ -545,11 +552,13 @@ func NewDeployApp(
 		bluelinkStyles,
 		headless,
 		headlessWriter,
-		false, // jsonMode - not applicable for deploy staging
+		jsonMode,
 	)
 	staging := &stagingModel
 	// Pre-populate blueprint info if available
 	staging.SetBlueprintFile(blueprintFile)
+	// Mark as deploy flow mode so staging doesn't print apply hint or quit
+	staging.SetDeployFlowMode(true)
 
 	deploy := NewDeployModel(
 		deployEngine,
@@ -558,13 +567,13 @@ func NewDeployApp(
 		instanceID,
 		instanceName,
 		blueprintFile,
-		asRollback,
 		autoRollback,
 		force,
 		bluelinkStyles,
 		headless,
 		headlessWriter,
 		nil, // changesetChanges - will be set when staging completes
+		jsonMode,
 	)
 
 	return &MainModel{
@@ -578,13 +587,13 @@ func NewDeployApp(
 		instanceName:       instanceName,
 		blueprintFile:      blueprintFile,
 		isDefaultBlueprint: isDefaultBlueprintFile,
-		asRollback:         asRollback,
 		autoRollback:       autoRollback,
 		force:              force,
 		stageFirst:         stageFirst,
 		autoApprove:        autoApprove,
 		skipPrompts:        skipPrompts,
 		headless:           headless,
+		jsonMode:           jsonMode,
 		engine:             deployEngine,
 		logger:             logger,
 		styles:             bluelinkStyles,

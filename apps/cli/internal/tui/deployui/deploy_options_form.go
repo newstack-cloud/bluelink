@@ -15,9 +15,9 @@ type DeployConfigMsg struct {
 	InstanceName string
 	InstanceID   string
 	ChangesetID  string
-	AsRollback   bool
 	StageFirst   bool
 	AutoApprove  bool
+	AutoRollback bool
 }
 
 // DeployConfigFormInitialValues holds the initial values for the deploy config form.
@@ -25,9 +25,9 @@ type DeployConfigFormInitialValues struct {
 	InstanceName string
 	InstanceID   string
 	ChangesetID  string
-	AsRollback   bool
 	StageFirst   bool
 	AutoApprove  bool
+	AutoRollback bool
 }
 
 // DeployConfigFormModel provides a combined form for deploy configuration.
@@ -40,9 +40,9 @@ type DeployConfigFormModel struct {
 	instanceName string
 	instanceID   string
 	changesetID  string
-	asRollback   bool
 	stageFirst   bool
 	autoApprove  bool
+	autoRollback bool
 
 	// Read-only instance ID (shown but not editable)
 	hasInstanceID bool
@@ -58,9 +58,9 @@ func NewDeployConfigFormModel(
 		instanceName:  initialValues.InstanceName,
 		instanceID:    initialValues.InstanceID,
 		changesetID:   initialValues.ChangesetID,
-		asRollback:    initialValues.AsRollback,
 		stageFirst:    initialValues.StageFirst,
 		autoApprove:   initialValues.AutoApprove,
+		autoRollback:  initialValues.AutoRollback,
 		hasInstanceID: initialValues.InstanceID != "",
 	}
 
@@ -106,17 +106,6 @@ func NewDeployConfigFormModel(
 		)
 	}
 
-	// As-Rollback toggle
-	fields = append(fields,
-		huh.NewConfirm().
-			Key("asRollback").
-			Title("As Rollback?").
-			Description("Mark deployment as rollback operation.").
-			Affirmative("Yes, as rollback").
-			Negative("No, normal deploy").
-			Value(&model.asRollback),
-	)
-
 	// Stage first toggle
 	fields = append(fields,
 		huh.NewConfirm().
@@ -160,10 +149,22 @@ func NewDeployConfigFormModel(
 		return !model.stageFirst
 	})
 
+	// Auto-rollback toggle
+	autoRollbackGroup := huh.NewGroup(
+		huh.NewConfirm().
+			Key("autoRollback").
+			Title("Enable auto-rollback?").
+			Description("Automatically rollback on deployment failure.").
+			Affirmative("Yes, auto-rollback").
+			Negative("No, keep failed state").
+			Value(&model.autoRollback),
+	)
+
 	model.form = huh.NewForm(
 		huh.NewGroup(fields...),
 		changesetIDGroup,
 		autoApproveGroup,
+		autoRollbackGroup,
 	).WithTheme(stylespkg.NewHuhTheme(styles.Palette))
 
 	return model
@@ -176,9 +177,9 @@ func (m DeployConfigFormModel) Init() tea.Cmd {
 			m.instanceName,
 			m.instanceID,
 			m.changesetID,
-			m.asRollback,
 			m.stageFirst,
 			m.autoApprove,
+			m.autoRollback,
 		)
 	}
 	return m.form.Init()
@@ -212,9 +213,9 @@ func (m DeployConfigFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			instanceName,
 			m.instanceID,
 			changesetID,
-			m.form.GetBool("asRollback"),
 			m.form.GetBool("stageFirst"),
 			m.form.GetBool("autoApprove"),
+			m.form.GetBool("autoRollback"),
 		))
 	}
 
@@ -248,18 +249,18 @@ func deployConfigCompleteCmd(
 	instanceName string,
 	instanceID string,
 	changesetID string,
-	asRollback bool,
 	stageFirst bool,
 	autoApprove bool,
+	autoRollback bool,
 ) tea.Cmd {
 	return func() tea.Msg {
 		return DeployConfigMsg{
 			InstanceName: instanceName,
 			InstanceID:   instanceID,
 			ChangesetID:  changesetID,
-			AsRollback:   asRollback,
 			StageFirst:   stageFirst,
 			AutoApprove:  autoApprove,
+			AutoRollback: autoRollback,
 		}
 	}
 }

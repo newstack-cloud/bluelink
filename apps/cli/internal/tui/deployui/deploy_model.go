@@ -1,10 +1,9 @@
 package deployui
 
 import (
+	"errors"
 	"fmt"
 	"io"
-	"log"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -194,26 +193,31 @@ type DeployModel struct {
 	childNameToInstancePath map[string]string // Maps child name to its full path (e.g., "childA/childB")
 
 	// State
-	instanceID              string
-	instanceName            string
-	changesetID             string
-	streaming               bool
-	fetchingPreDeployState  bool // True while fetching pre-deploy instance state
-	finished                bool
-	finalStatus          core.InstanceStatus
-	failureReasons       []string             // Legacy: generic failure messages from backend
-	elementFailures      []ElementFailure     // Structured failures with root cause details
-	interruptedElements  []InterruptedElement // Elements that were interrupted
-	successfulElements   []SuccessfulElement  // Elements that completed successfully
-	err                  error
-	showingOverview      bool           // When true, show full-screen deployment overview
-	overviewViewport     viewport.Model // Scrollable viewport for deployment overview
-	showingSpecView      bool           // When true, show full-screen spec view for selected resource
-	specViewport         viewport.Model // Scrollable viewport for spec view
-	showingExportsView   bool           // When true, show full-screen exports view
-	exportsModel         ExportsModel   // Exports view model with split pane
-	preDeployInstanceState  *state.InstanceState // Instance state fetched before deployment for unchanged items
-	postDeployInstanceState *state.InstanceState // Instance state fetched after deployment completes
+	instanceID               string
+	instanceName             string
+	changesetID              string
+	streaming                bool
+	fetchingPreDeployState   bool // True while fetching pre-deploy instance state
+	finished                 bool
+	finalStatus              core.InstanceStatus
+	failureReasons           []string             // generic failure messages from backend
+	elementFailures          []ElementFailure     // Structured failures with root cause details
+	interruptedElements      []InterruptedElement // Elements that were interrupted
+	successfulElements       []SuccessfulElement  // Elements that completed successfully
+	err                      error
+	destroyChangesetError    bool                               // True when deployment failed due to destroy changeset
+	showingOverview          bool                               // When true, show full-screen deployment overview
+	overviewViewport         viewport.Model                     // Scrollable viewport for deployment overview
+	showingSpecView          bool                               // When true, show full-screen spec view for selected resource
+	specViewport             viewport.Model                     // Scrollable viewport for spec view
+	showingExportsView       bool                               // When true, show full-screen exports view
+	exportsModel             ExportsModel                       // Exports view model with split pane
+	preDeployInstanceState   *state.InstanceState               // Instance state fetched before deployment for unchanged items
+	postDeployInstanceState  *state.InstanceState               // Instance state fetched after deployment completes
+	preRollbackState         *container.PreRollbackStateMessage // Captured state before auto-rollback
+	showingPreRollbackState  bool                               // When true, show full-screen pre-rollback state view
+	preRollbackStateViewport viewport.Model                     // Scrollable viewport for pre-rollback state view
+	skippedRollbackItems     []container.SkippedRollbackItem    // Items skipped during rollback due to unsafe state
 
 	// Streaming channels
 	engine      engine.DeployEngine
@@ -223,7 +227,6 @@ type DeployModel struct {
 	// Config
 	blueprintFile   string
 	blueprintSource string
-	asRollback      bool
 	autoRollback    bool
 	force           bool
 
@@ -234,6 +237,7 @@ type DeployModel struct {
 	headlessMode   bool
 	headlessWriter io.Writer
 	printer        *headless.Printer
+	jsonMode       bool
 
 	styles  *stylespkg.Styles
 	logger  *zap.Logger
@@ -260,6 +264,8 @@ func (m DeployModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleDeployEvent(msg)
 	case DeployErrorMsg:
 		return m.handleDeployError(msg)
+	case DestroyChangesetErrorMsg:
+		return m.handleDestroyChangesetError()
 	case DeployStreamClosedMsg:
 		return m.handleDeployStreamClosed()
 	case PreDeployInstanceStateFetchedMsg:
@@ -316,6 +322,9 @@ func (m DeployModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd
 
 	m.specViewport.Width = msg.Width
 	m.specViewport.Height = msg.Height - specViewFooterHeight()
+
+	m.preRollbackStateViewport.Width = msg.Width
+	m.preRollbackStateViewport.Height = msg.Height - preRollbackStateFooterHeight()
 
 	// Update exports model if showing
 	if m.showingExportsView {
@@ -397,7 +406,7 @@ func (m DeployModel) handleDeployStarted(msg DeployStartedMsg) (tea.Model, tea.C
 	m.streaming = true
 	m.footerRenderer.InstanceID = msg.InstanceID
 
-	if m.headlessMode {
+	if m.headlessMode && !m.jsonMode {
 		m.printHeadlessHeader()
 	}
 
@@ -419,29 +428,23 @@ func (m DeployModel) handleDeployEvent(msg DeployEventMsg) (tea.Model, tea.Cmd) 
 		return m, tea.Batch(cmds...)
 	}
 
-	m.handleDeployFinish(finishData)
-
-	if m.headlessMode {
-		m.printHeadlessSummary()
-		cmds = append(cmds, tea.Quit)
-	} else {
-		// Fetch updated instance state for outputs display (only in interactive mode)
-		cmds = append(cmds, fetchPostDeployInstanceStateCmd(m))
+	// Check if more events will follow (e.g., auto-rollback after failure)
+	if !finishData.EndOfStream {
+		cmds = append(cmds, waitForNextDeployEventCmd(m))
+		m.detailsRenderer.NavigationStackDepth = len(m.splitPane.NavigationStack())
+		return m, tea.Batch(cmds...)
 	}
 
-	m.detailsRenderer.NavigationStackDepth = len(m.splitPane.NavigationStack())
-	return m, tea.Batch(cmds...)
-}
-
-func (m *DeployModel) handleDeployFinish(finishData *container.DeploymentFinishedMessage) {
+	// Inline finish handling to ensure state is preserved in the returned model
 	m.finished = true
 	m.finalStatus = finishData.Status
 	m.failureReasons = finishData.FailureReasons
+	m.skippedRollbackItems = finishData.SkippedRollbackItems
 	m.footerRenderer.FinalStatus = finishData.Status
 	m.footerRenderer.Finished = true
 	m.detailsRenderer.Finished = true
 
-	if isFailedStatus(finishData.Status) {
+	if IsFailedStatus(finishData.Status) {
 		m.markPendingItemsAsSkipped()
 		m.markInProgressItemsAsInterrupted()
 		m.splitPane.SetItems(ToSplitPaneItems(m.items))
@@ -451,6 +454,13 @@ func (m *DeployModel) handleDeployFinish(finishData *container.DeploymentFinishe
 	m.footerRenderer.SuccessfulElements = m.successfulElements
 	m.footerRenderer.ElementFailures = m.elementFailures
 	m.footerRenderer.InterruptedElements = m.interruptedElements
+
+	// Fetch updated instance state for outputs display
+	// In headless mode, the state fetch handler will print the summary and quit
+	cmds = append(cmds, fetchPostDeployInstanceStateCmd(m))
+
+	m.detailsRenderer.NavigationStackDepth = len(m.splitPane.NavigationStack())
+	return m, tea.Batch(cmds...)
 }
 
 func (m DeployModel) handleDeployError(msg DeployErrorMsg) (tea.Model, tea.Cmd) {
@@ -460,7 +470,24 @@ func (m DeployModel) handleDeployError(msg DeployErrorMsg) (tea.Model, tea.Cmd) 
 
 	m.err = msg.Err
 	if m.headlessMode {
-		m.printHeadlessError(msg.Err)
+		if m.jsonMode {
+			m.outputJSONError(msg.Err)
+		} else {
+			m.printHeadlessError(msg.Err)
+		}
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func (m DeployModel) handleDestroyChangesetError() (tea.Model, tea.Cmd) {
+	m.destroyChangesetError = true
+	if m.headlessMode {
+		if m.jsonMode {
+			m.outputJSONError(errors.New("cannot deploy using a destroy changeset"))
+		} else {
+			m.printHeadlessDestroyChangesetError()
+		}
 		return m, tea.Quit
 	}
 	return m, nil
@@ -474,7 +501,11 @@ func (m DeployModel) handleDeployStreamClosed() (tea.Model, tea.Cmd) {
 		m.streaming = false
 		m.err = fmt.Errorf("deployment event stream closed unexpectedly (connection timeout or dropped)")
 		if m.headlessMode {
-			m.printHeadlessError(m.err)
+			if m.jsonMode {
+				m.outputJSONError(m.err)
+			} else {
+				m.printHeadlessError(m.err)
+			}
 			return m, tea.Quit
 		}
 	}
@@ -486,14 +517,25 @@ func (m DeployModel) handlePostDeployInstanceStateFetched(msg PostDeployInstance
 	m.postDeployInstanceState = msg.InstanceState
 	// Pass state to details renderer for output display
 	m.detailsRenderer.PostDeployInstanceState = msg.InstanceState
-	// Update footer to show exports hint when instance state is available
+
 	if msg.InstanceState != nil {
 		m.footerRenderer.HasInstanceState = true
 	}
-	// Update exports view if it's currently showing
+
 	if m.showingExportsView {
 		m.exportsModel.UpdateInstanceState(msg.InstanceState)
 	}
+
+	// In headless mode, now that we have the state, print summary and quit
+	if m.headlessMode {
+		if m.jsonMode {
+			m.outputJSON()
+		} else {
+			m.printHeadlessSummary()
+		}
+		return m, tea.Quit
+	}
+
 	return m, nil
 }
 
@@ -512,7 +554,11 @@ func (m DeployModel) handleDriftDetected(msg driftui.DriftDetectedMsg) (tea.Mode
 	}
 
 	if m.headlessMode {
-		m.printHeadlessDriftDetected()
+		if m.jsonMode {
+			m.outputJSONDrift()
+		} else {
+			m.printHeadlessDriftDetected()
+		}
 		return m, tea.Quit
 	}
 
@@ -545,7 +591,11 @@ func (m DeployModel) handleReconciliationError(msg driftui.ReconciliationErrorMs
 	m.driftReviewMode = false
 
 	if m.headlessMode {
-		m.printHeadlessError(msg.Err)
+		if m.jsonMode {
+			m.outputJSONError(msg.Err)
+		} else {
+			m.printHeadlessError(msg.Err)
+		}
 		return m, tea.Quit
 	}
 	return m, nil
@@ -575,6 +625,11 @@ func (m DeployModel) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleExportsViewKeyMsg(msg)
 	}
 
+	// Handle pre-rollback state view
+	if m.showingPreRollbackState {
+		return m.handlePreRollbackStateViewKeyMsg(msg)
+	}
+
 	// Toggle exports view - available when instance state is available
 	if msg.String() == "e" || msg.String() == "E" {
 		instanceState := m.postDeployInstanceState
@@ -594,6 +649,16 @@ func (m DeployModel) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				Width:  m.width,
 				Height: m.height,
 			})
+			return m, nil
+		}
+	}
+
+	// Toggle pre-rollback state view - available when pre-rollback state was captured
+	if msg.String() == "r" || msg.String() == "R" {
+		if m.preRollbackState != nil {
+			m.showingPreRollbackState = true
+			m.preRollbackStateViewport.SetContent(m.renderPreRollbackStateContent())
+			m.preRollbackStateViewport.GotoTop()
 			return m, nil
 		}
 	}
@@ -628,10 +693,6 @@ func (m DeployModel) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	m.splitPane, cmd = m.splitPane.Update(msg)
 	m.detailsRenderer.NavigationStackDepth = len(m.splitPane.NavigationStack())
 	return m, cmd
-}
-
-func (m *DeployModel) hasFailuresOrInterruptions() bool {
-	return len(m.failureReasons) > 0 || len(m.elementFailures) > 0 || len(m.interruptedElements) > 0
 }
 
 func (m DeployModel) handleOverviewKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -676,6 +737,20 @@ func (m DeployModel) handleExportsViewKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd
 	}
 }
 
+func (m DeployModel) handlePreRollbackStateViewKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc", "r", "R":
+		m.showingPreRollbackState = false
+		return m, nil
+	case "q", "ctrl+c":
+		return m, tea.Quit
+	default:
+		var cmd tea.Cmd
+		m.preRollbackStateViewport, cmd = m.preRollbackStateViewport.Update(msg)
+		return m, cmd
+	}
+}
+
 func (m DeployModel) handleDriftReviewKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "a", "A":
@@ -706,294 +781,37 @@ func (m DeployModel) handleMouseMsg(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 func (m *DeployModel) processEvent(event *types.BlueprintInstanceEvent) {
 	if resourceData, ok := event.AsResourceUpdate(); ok {
 		m.processResourceUpdate(resourceData)
-		if m.headlessMode {
+		if m.headlessMode && !m.jsonMode {
 			m.printHeadlessResourceEvent(resourceData)
 		}
 	} else if childData, ok := event.AsChildUpdate(); ok {
 		m.processChildUpdate(childData)
-		if m.headlessMode {
+		if m.headlessMode && !m.jsonMode {
 			m.printHeadlessChildEvent(childData)
 		}
 	} else if linkData, ok := event.AsLinkUpdate(); ok {
 		m.processLinkUpdate(linkData)
-		if m.headlessMode {
+		if m.headlessMode && !m.jsonMode {
 			m.printHeadlessLinkEvent(linkData)
 		}
 	} else if instanceData, ok := event.AsInstanceUpdate(); ok {
 		m.processInstanceUpdate(instanceData)
-	}
-}
-
-func (m *DeployModel) processResourceUpdate(data *container.ResourceDeployUpdateMessage) {
-	// Check if this resource belongs to a child instance (not root)
-	isRootResource := data.InstanceID == "" || data.InstanceID == m.instanceID
-
-	// Build path-based key for unique identification
-	resourcePath := m.buildResourcePath(data.InstanceID, data.ResourceName)
-
-	log.Printf("DEBUG processResourceUpdate: resource=%s path=%s instanceID=%s isRoot=%v status=%v\n",
-		data.ResourceName, resourcePath, data.InstanceID, isRootResource, data.Status)
-
-	item, exists := m.resourcesByName[resourcePath]
-	if !exists {
-		// Also try simple name lookup for backwards compatibility with pre-populated items
-		item, exists = m.resourcesByName[data.ResourceName]
-		if exists {
-			// Migrate the item to use the path-based key
-			delete(m.resourcesByName, data.ResourceName)
-			m.resourcesByName[resourcePath] = item
-			log.Printf("DEBUG processResourceUpdate: migrated resource=%s to path=%s\n", data.ResourceName, resourcePath)
+	} else if preRollbackData, ok := event.AsPreRollbackState(); ok {
+		m.processPreRollbackState(preRollbackData)
+		if m.headlessMode && !m.jsonMode {
+			m.printHeadlessPreRollbackState(preRollbackData)
 		}
 	}
-
-	if !exists {
-		log.Printf("DEBUG processResourceUpdate: creating new item for resource=%s path=%s\n", data.ResourceName, resourcePath)
-		// First time seeing this resource - create it
-		item = &ResourceDeployItem{
-			Name:       data.ResourceName,
-			ResourceID: data.ResourceID,
-			Group:      data.Group,
-		}
-		m.resourcesByName[resourcePath] = item
-		// Only add to top-level items if this belongs to the root instance
-		if isRootResource {
-			m.items = append(m.items, DeployItem{
-				Type:     ItemTypeResource,
-				Resource: item,
-			})
-		}
-	} else {
-		log.Printf("DEBUG processResourceUpdate: updating existing item for resource=%s path=%s oldStatus=%v newStatus=%v\n",
-			data.ResourceName, resourcePath, item.Status, data.Status)
-	}
-
-	// Update with exact types from the event, but correct interrupted statuses
-	// based on the action type since the backend may not have that context
-	status, preciseStatus := data.Status, data.PreciseStatus
-	if isInterruptedResourceStatus(data.Status) {
-		status, preciseStatus = determineResourceInterruptedStatusFromAction(item.Action, data.Status)
-	}
-	item.Status = status
-	item.PreciseStatus = preciseStatus
-	item.FailureReasons = data.FailureReasons
-	item.Attempt = data.Attempt
-	item.CanRetry = data.CanRetry
-	item.Timestamp = data.UpdateTimestamp
-	if data.Durations != nil {
-		item.Durations = data.Durations
-	}
-}
-
-func (m *DeployModel) processChildUpdate(data *container.ChildDeployUpdateMessage) {
-	// Track the child instance ID -> child name and parent ID mappings
-	if data.ChildInstanceID != "" && data.ChildName != "" {
-		m.instanceIDToChildName[data.ChildInstanceID] = data.ChildName
-		m.instanceIDToParentID[data.ChildInstanceID] = data.ParentInstanceID
-	}
-
-	// Build the full path for this child (e.g., "parentChild/thisChild")
-	childPath := m.buildInstancePath(data.ParentInstanceID, data.ChildName)
-
-	log.Printf("DEBUG processChildUpdate: child=%s path=%s parentInstanceID=%s childInstanceID=%s status=%v\n",
-		data.ChildName, childPath, data.ParentInstanceID, data.ChildInstanceID, data.Status)
-
-	// Use path-based key for unique identification
-	item, exists := m.childrenByName[childPath]
-	if !exists {
-		// Also try simple name lookup for backwards compatibility with pre-populated items
-		item, exists = m.childrenByName[data.ChildName]
-		if exists {
-			// Migrate the item to use the path-based key
-			delete(m.childrenByName, data.ChildName)
-			m.childrenByName[childPath] = item
-			log.Printf("DEBUG processChildUpdate: migrated child=%s to path=%s\n", data.ChildName, childPath)
-		}
-	}
-
-	if !exists {
-		log.Printf("DEBUG processChildUpdate: creating new item for child=%s path=%s\n", data.ChildName, childPath)
-		// Only add to top-level items if the parent is the root instance
-		// (i.e., this is a direct child of the root blueprint)
-		isDirectChildOfRoot := data.ParentInstanceID == "" || data.ParentInstanceID == m.instanceID
-
-		// Try to get Changes from changeset data for this child
-		var childChanges *changes.BlueprintChanges
-		if m.changesetChanges != nil {
-			if nc, ok := m.changesetChanges.NewChildren[data.ChildName]; ok {
-				childChanges = &changes.BlueprintChanges{
-					NewResources: nc.NewResources,
-					NewChildren:  nc.NewChildren,
-				}
-			} else if cc, ok := m.changesetChanges.ChildChanges[data.ChildName]; ok {
-				ccCopy := cc
-				childChanges = &ccCopy
-			}
-		}
-
-		item = &ChildDeployItem{
-			Name:             data.ChildName,
-			ParentInstanceID: data.ParentInstanceID,
-			ChildInstanceID:  data.ChildInstanceID,
-			Group:            data.Group,
-			Changes:          childChanges,
-		}
-		m.childrenByName[childPath] = item
-		if isDirectChildOfRoot {
-			m.items = append(m.items, DeployItem{
-				Type:            ItemTypeChild,
-				Child:           item,
-				Changes:         childChanges,
-				childrenByName:  m.childrenByName,
-				resourcesByName: m.resourcesByName,
-				linksByName:     m.linksByName,
-			})
-		}
-	} else {
-		log.Printf("DEBUG processChildUpdate: updating existing item for child=%s path=%s oldStatus=%v newStatus=%v\n",
-			data.ChildName, childPath, item.Status, data.Status)
-	}
-
-	// Track the path for this child name (used by resource/link lookups)
-	m.childNameToInstancePath[data.ChildName] = childPath
-
-	// Correct interrupted statuses based on the action type since the backend
-	// may not have context for nested child blueprint elements
-	status := data.Status
-	if isInterruptedInstanceStatus(data.Status) {
-		status = determineChildInterruptedStatusFromAction(item.Action, data.Status)
-	}
-	item.Status = status
-	item.FailureReasons = data.FailureReasons
-	item.Timestamp = data.UpdateTimestamp
-	if data.Durations != nil {
-		item.Durations = data.Durations
-	}
-}
-
-func (m *DeployModel) processLinkUpdate(data *container.LinkDeployUpdateMessage) {
-	// Check if this link belongs to a child instance (not root)
-	isRootLink := data.InstanceID == "" || data.InstanceID == m.instanceID
-
-	// Build path-based key for unique identification
-	linkPath := m.buildResourcePath(data.InstanceID, data.LinkName)
-
-	item, exists := m.linksByName[linkPath]
-	if !exists {
-		// Also try simple name lookup for backwards compatibility with pre-populated items
-		item, exists = m.linksByName[data.LinkName]
-		if exists {
-			// Migrate the item to use the path-based key
-			delete(m.linksByName, data.LinkName)
-			m.linksByName[linkPath] = item
-		}
-	}
-
-	if !exists {
-		item = &LinkDeployItem{
-			LinkID:        data.LinkID,
-			LinkName:      data.LinkName,
-			ResourceAName: extractResourceAFromLinkName(data.LinkName),
-			ResourceBName: extractResourceBFromLinkName(data.LinkName),
-		}
-		m.linksByName[linkPath] = item
-		// Only add to top-level items if this belongs to the root instance
-		if isRootLink {
-			m.items = append(m.items, DeployItem{
-				Type: ItemTypeLink,
-				Link: item,
-			})
-		}
-	}
-
-	item.Status = data.Status
-	item.PreciseStatus = data.PreciseStatus
-	item.FailureReasons = data.FailureReasons
-	item.CurrentStageAttempt = data.CurrentStageAttempt
-	item.CanRetryCurrentStage = data.CanRetryCurrentStage
-	item.Timestamp = data.UpdateTimestamp
-	if data.Durations != nil {
-		item.Durations = data.Durations
-	}
-}
-
-func (m *DeployModel) processInstanceUpdate(data *container.DeploymentUpdateMessage) {
-	// Update overall deployment status in footer
-	m.footerRenderer.CurrentStatus = data.Status
-
-	// If the deployment is rolling back or has failed, mark pending and in-progress items immediately
-	// This provides real-time feedback rather than waiting for the finish event
-	if isRollingBackOrFailedStatus(data.Status) && !m.finished {
-		m.markPendingItemsAsSkipped()
-		m.markInProgressItemsAsInterrupted()
-	}
-}
-
-// buildInstancePath builds a path from instance ID to the child name.
-// For root instance resources, returns just the name.
-// For nested children, returns a path like "parentChild/childName".
-func (m *DeployModel) buildInstancePath(parentInstanceID, childName string) string {
-	// If parent is root or empty, this is a direct child
-	if parentInstanceID == "" || parentInstanceID == m.instanceID {
-		return childName
-	}
-
-	// Build path by traversing parent chain
-	var pathParts []string
-	currentID := parentInstanceID
-	for currentID != "" && currentID != m.instanceID {
-		if name, ok := m.instanceIDToChildName[currentID]; ok {
-			pathParts = append([]string{name}, pathParts...)
-			currentID = m.instanceIDToParentID[currentID]
-		} else {
-			break
-		}
-	}
-
-	pathParts = append(pathParts, childName)
-	return joinPath(pathParts)
-}
-
-// buildResourcePath builds a path for a resource based on its instance ID.
-// For root instance resources, returns just the resource name.
-// For nested resources, returns a path like "parentChild/childName/resourceName".
-func (m *DeployModel) buildResourcePath(instanceID, resourceName string) string {
-	// If this is a root resource, just use the name
-	if instanceID == "" || instanceID == m.instanceID {
-		return resourceName
-	}
-
-	// Build path by traversing parent chain from the instance
-	var pathParts []string
-	currentID := instanceID
-	for currentID != "" && currentID != m.instanceID {
-		if name, ok := m.instanceIDToChildName[currentID]; ok {
-			pathParts = append([]string{name}, pathParts...)
-			currentID = m.instanceIDToParentID[currentID]
-		} else {
-			break
-		}
-	}
-
-	pathParts = append(pathParts, resourceName)
-	return joinPath(pathParts)
-}
-
-// joinPath joins path parts with a separator.
-func joinPath(parts []string) string {
-	if len(parts) == 0 {
-		return ""
-	}
-	result := parts[0]
-	for i := 1; i < len(parts); i++ {
-		result += "/" + parts[i]
-	}
-	return result
 }
 
 // View renders the deploy model.
 func (m DeployModel) View() string {
 	if m.headlessMode {
 		return ""
+	}
+
+	if m.destroyChangesetError {
+		return m.renderDestroyChangesetError()
 	}
 
 	if m.err != nil {
@@ -1013,6 +831,11 @@ func (m DeployModel) View() string {
 	// Show full-screen exports view
 	if m.showingExportsView {
 		return m.exportsModel.View()
+	}
+
+	// Show full-screen pre-rollback state view
+	if m.showingPreRollbackState {
+		return m.renderPreRollbackStateView()
 	}
 
 	// Show drift review mode
@@ -1055,34 +878,92 @@ func NewDeployModel(
 	instanceID string,
 	instanceName string,
 	blueprintFile string,
-	asRollback bool,
 	autoRollback bool,
 	force bool,
 	styles *stylespkg.Styles,
 	isHeadless bool,
 	headlessWriter io.Writer,
 	changesetChanges *changes.BlueprintChanges,
+	jsonMode bool,
 ) DeployModel {
-	s := spinner.New()
-	s.Spinner = spinner.Dot
-	s.Style = styles.Spinner
+	detailsRenderer, sectionGrouper, footerRenderer := createDeployRenderers(instanceID, instanceName, changesetID)
+	splitPaneConfig := createDeploySplitPaneConfig(styles, detailsRenderer, sectionGrouper, footerRenderer)
 
+	driftDetailsRenderer, driftSectionGrouper, driftFooterRenderer := createDriftRenderers()
+	driftSplitPaneConfig := createDriftSplitPaneConfig(styles, driftDetailsRenderer, driftSectionGrouper, driftFooterRenderer)
+
+	printer := createHeadlessPrinter(isHeadless, headlessWriter)
+
+	resourcesByName := make(map[string]*ResourceDeployItem)
+	childrenByName := make(map[string]*ChildDeployItem)
+	linksByName := make(map[string]*LinkDeployItem)
+	items := buildItemsFromChangeset(changesetChanges, resourcesByName, childrenByName, linksByName, nil)
+
+	model := DeployModel{
+		splitPane:               splitpane.New(splitPaneConfig),
+		detailsRenderer:         detailsRenderer,
+		sectionGrouper:          sectionGrouper,
+		footerRenderer:          footerRenderer,
+		driftSplitPane:          splitpane.New(driftSplitPaneConfig),
+		driftDetailsRenderer:    driftDetailsRenderer,
+		driftSectionGrouper:     driftSectionGrouper,
+		driftFooterRenderer:     driftFooterRenderer,
+		engine:                  deployEngine,
+		logger:                  logger,
+		changesetID:             changesetID,
+		instanceID:              instanceID,
+		instanceName:            instanceName,
+		blueprintFile:           blueprintFile,
+		autoRollback:            autoRollback,
+		force:                   force,
+		changesetChanges:        changesetChanges,
+		styles:                  styles,
+		headlessMode:            isHeadless,
+		headlessWriter:          headlessWriter,
+		printer:                 printer,
+		jsonMode:                jsonMode,
+		spinner:                 createDeploySpinner(styles),
+		eventStream:             make(chan types.BlueprintInstanceEvent),
+		errStream:               make(chan error),
+		resourcesByName:         resourcesByName,
+		childrenByName:          childrenByName,
+		linksByName:             linksByName,
+		instanceIDToChildName:   make(map[string]string),
+		instanceIDToParentID:    make(map[string]string),
+		childNameToInstancePath: make(map[string]string),
+		items:                   items,
+	}
+
+	if len(items) > 0 {
+		model.splitPane.SetItems(ToSplitPaneItems(items))
+	}
+
+	return model
+}
+
+func createDeployRenderers(instanceID, instanceName, changesetID string) (*DeployDetailsRenderer, *DeploySectionGrouper, *DeployFooterRenderer) {
 	detailsRenderer := &DeployDetailsRenderer{
 		MaxExpandDepth:       MaxExpandDepth,
 		NavigationStackDepth: 0,
 	}
-
 	sectionGrouper := &DeploySectionGrouper{
 		MaxExpandDepth: MaxExpandDepth,
 	}
-
 	footerRenderer := &DeployFooterRenderer{
 		InstanceID:   instanceID,
 		InstanceName: instanceName,
 		ChangesetID:  changesetID,
 	}
+	return detailsRenderer, sectionGrouper, footerRenderer
+}
 
-	splitPaneConfig := splitpane.Config{
+func createDeploySplitPaneConfig(
+	styles *stylespkg.Styles,
+	detailsRenderer *DeployDetailsRenderer,
+	sectionGrouper *DeploySectionGrouper,
+	footerRenderer *DeployFooterRenderer,
+) splitpane.Config {
+	return splitpane.Config{
 		Styles:          styles,
 		Title:           "Deployment",
 		DetailsRenderer: detailsRenderer,
@@ -1091,137 +972,55 @@ func NewDeployModel(
 		SectionGrouper:  sectionGrouper,
 		FooterRenderer:  footerRenderer,
 	}
+}
 
-	// Create drift review renderers
+func createDriftRenderers() (*DriftDetailsRenderer, *DriftSectionGrouper, *DriftFooterRenderer) {
 	driftDetailsRenderer := &DriftDetailsRenderer{
 		MaxExpandDepth:       MaxExpandDepth,
 		NavigationStackDepth: 0,
 	}
-
 	driftSectionGrouper := &DriftSectionGrouper{
 		MaxExpandDepth: MaxExpandDepth,
 	}
-
 	driftFooterRenderer := &DriftFooterRenderer{
 		Context: driftui.DriftContextDeploy,
 	}
+	return driftDetailsRenderer, driftSectionGrouper, driftFooterRenderer
+}
 
-	// Create drift splitpane config
-	driftSplitPaneConfig := splitpane.Config{
+func createDriftSplitPaneConfig(
+	styles *stylespkg.Styles,
+	detailsRenderer *DriftDetailsRenderer,
+	sectionGrouper *DriftSectionGrouper,
+	footerRenderer *DriftFooterRenderer,
+) splitpane.Config {
+	return splitpane.Config{
 		Styles:          styles,
-		DetailsRenderer: driftDetailsRenderer,
+		DetailsRenderer: detailsRenderer,
 		Title:           "⚠ Drift Detected",
 		LeftPaneRatio:   0.4,
 		MaxExpandDepth:  MaxExpandDepth,
-		SectionGrouper:  driftSectionGrouper,
-		FooterRenderer:  driftFooterRenderer,
+		SectionGrouper:  sectionGrouper,
+		FooterRenderer:  footerRenderer,
 	}
+}
 
-	var printer *headless.Printer
-	if isHeadless && headlessWriter != nil {
-		prefixedWriter := headless.NewPrefixedWriter(headlessWriter, "[deploy] ")
-		printer = headless.NewPrinter(prefixedWriter, 80)
+func createHeadlessPrinter(isHeadless bool, headlessWriter io.Writer) *headless.Printer {
+	if !isHeadless || headlessWriter == nil {
+		return nil
 	}
-
-	// Pre-populate items from changeset if available
-	// Note: At NewDeployModel time, we don't have instance state yet.
-	// It will be set via SetPreDeployInstanceState when staging completes.
-	resourcesByName := make(map[string]*ResourceDeployItem)
-	childrenByName := make(map[string]*ChildDeployItem)
-	linksByName := make(map[string]*LinkDeployItem)
-	items := buildItemsFromChangeset(changesetChanges, resourcesByName, childrenByName, linksByName, nil)
-
-	model := DeployModel{
-		splitPane:       splitpane.New(splitPaneConfig),
-		detailsRenderer: detailsRenderer,
-		sectionGrouper:  sectionGrouper,
-		footerRenderer:  footerRenderer,
-		driftSplitPane:        splitpane.New(driftSplitPaneConfig),
-		driftDetailsRenderer:  driftDetailsRenderer,
-		driftSectionGrouper:   driftSectionGrouper,
-		driftFooterRenderer:   driftFooterRenderer,
-		engine:                deployEngine,
-		logger:                logger,
-		changesetID:           changesetID,
-		instanceID:            instanceID,
-		instanceName:          instanceName,
-		blueprintFile:         blueprintFile,
-		asRollback:            asRollback,
-		autoRollback:          autoRollback,
-		force:                 force,
-		changesetChanges:      changesetChanges,
-		styles:                styles,
-		headlessMode:          isHeadless,
-		headlessWriter:        headlessWriter,
-		printer:               printer,
-		spinner:               s,
-		eventStream:            make(chan types.BlueprintInstanceEvent),
-		errStream:              make(chan error),
-		resourcesByName:        resourcesByName,
-		childrenByName:         childrenByName,
-		linksByName:            linksByName,
-		instanceIDToChildName:  make(map[string]string),
-		instanceIDToParentID:   make(map[string]string),
-		childNameToInstancePath: make(map[string]string),
-		items:                  items,
-	}
-
-	// Initialize split pane with pre-populated items
-	if len(items) > 0 {
-		model.splitPane.SetItems(ToSplitPaneItems(items))
-	}
-
-	return model
+	prefixedWriter := headless.NewPrefixedWriter(headlessWriter, "[deploy] ")
+	return headless.NewPrinter(prefixedWriter, 80)
 }
 
-// rollingBackOrFailedStatuses contains instance statuses that indicate
-// a rollback is in progress or has completed/failed.
-var rollingBackOrFailedStatuses = map[core.InstanceStatus]bool{
-	core.InstanceStatusDeployFailed:            true,
-	core.InstanceStatusUpdateFailed:            true,
-	core.InstanceStatusDestroyFailed:           true,
-	core.InstanceStatusDeployRollingBack:       true,
-	core.InstanceStatusUpdateRollingBack:       true,
-	core.InstanceStatusDestroyRollingBack:      true,
-	core.InstanceStatusDeployRollbackFailed:    true,
-	core.InstanceStatusUpdateRollbackFailed:    true,
-	core.InstanceStatusDestroyRollbackFailed:   true,
-	core.InstanceStatusDeployRollbackComplete:  true,
-	core.InstanceStatusUpdateRollbackComplete:  true,
-	core.InstanceStatusDestroyRollbackComplete: true,
+func createDeploySpinner(styles *stylespkg.Styles) spinner.Model {
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = styles.Spinner
+	return s
 }
 
-// isRollingBackOrFailedStatus returns true if the instance status indicates
-// a rollback is in progress or has completed/failed.
-// This is used to mark pending items as skipped in real-time.
-func isRollingBackOrFailedStatus(status core.InstanceStatus) bool {
-	return rollingBackOrFailedStatuses[status]
-}
-
-// failedStatuses contains instance statuses that indicate a failure
-// or a rollback complete (which means the original operation failed).
-var failedStatuses = map[core.InstanceStatus]bool{
-	core.InstanceStatusDeployFailed:  true,
-	core.InstanceStatusUpdateFailed:  true,
-	core.InstanceStatusDestroyFailed: true,
-	// Rollback failed states
-	core.InstanceStatusDeployRollbackFailed:  true,
-	core.InstanceStatusUpdateRollbackFailed:  true,
-	core.InstanceStatusDestroyRollbackFailed: true,
-	// Rollback complete states also indicate the original operation failed
-	core.InstanceStatusDeployRollbackComplete:  true,
-	core.InstanceStatusUpdateRollbackComplete:  true,
-	core.InstanceStatusDestroyRollbackComplete: true,
-}
-
-// isFailedStatus returns true if the instance status indicates a failure
-// or a rollback complete (which means the original operation failed).
-// Used to determine final deployment outcome.
-func isFailedStatus(status core.InstanceStatus) bool {
-	return failedStatuses[status]
-}
-
-// markPendingItemsAsSkipped updates items that were never attempted (still in unknown/pending state)
+// Updates items that were never attempted (still in unknown/pending state)
 // to indicate they were skipped due to deployment failure.
 // Items with ActionNoChange are excluded since they were never meant to be deployed.
 func (m *DeployModel) markPendingItemsAsSkipped() {
@@ -1260,7 +1059,7 @@ func (m *DeployModel) markPendingItemsAsSkipped() {
 	}
 }
 
-// markInProgressItemsAsInterrupted updates items that are stuck in an in-progress state
+// Updates items that are stuck in an in-progress state
 // (e.g., CREATING, DEPLOYING, UPDATING) to indicate they were interrupted.
 // This handles the case where nested child blueprint resources never receive a terminal
 // status because the drain logic only operates on the root blueprint's deployment state.
@@ -1272,7 +1071,7 @@ func (m *DeployModel) markInProgressItemsAsInterrupted() {
 		if item.Action == ActionNoChange {
 			continue
 		}
-		if isInProgressResourceStatus(item.Status) {
+		if IsInProgressResourceStatus(item.Status) {
 			status, preciseStatus := determineResourceInterruptedStatusFromAction(item.Action, item.Status)
 			item.Status = status
 			item.PreciseStatus = preciseStatus
@@ -1284,7 +1083,7 @@ func (m *DeployModel) markInProgressItemsAsInterrupted() {
 		if item.Action == ActionNoChange {
 			continue
 		}
-		if isInProgressInstanceStatus(item.Status) {
+		if IsInProgressInstanceStatus(item.Status) {
 			item.Status = determineChildInterruptedStatusFromAction(item.Action, item.Status)
 		}
 	}
@@ -1294,7 +1093,7 @@ func (m *DeployModel) markInProgressItemsAsInterrupted() {
 		if item.Action == ActionNoChange {
 			continue
 		}
-		if isInProgressLinkStatus(item.Status) {
+		if IsInProgressLinkStatus(item.Status) {
 			status, preciseStatus := determineLinkInterruptedStatusFromAction(item.Action, item.Status)
 			item.Status = status
 			item.PreciseStatus = preciseStatus
@@ -1302,7 +1101,7 @@ func (m *DeployModel) markInProgressItemsAsInterrupted() {
 	}
 }
 
-// determineResourceInterruptedStatusFromAction returns the appropriate interrupted status
+// Returns the appropriate interrupted status
 // based on the action type and current in-progress status.
 func determineResourceInterruptedStatusFromAction(
 	action ActionType,
@@ -1327,7 +1126,7 @@ func determineResourceInterruptedStatusFromAction(
 	return core.ResourceStatusUpdateInterrupted, core.PreciseResourceStatusUpdateInterrupted
 }
 
-// determineChildInterruptedStatusFromAction returns the appropriate interrupted status
+// Returns the appropriate interrupted status
 // for a child blueprint based on the action type and current status.
 func determineChildInterruptedStatusFromAction(
 	action ActionType,
@@ -1353,7 +1152,7 @@ func determineChildInterruptedStatusFromAction(
 	return core.InstanceStatusUpdateInterrupted
 }
 
-// determineLinkInterruptedStatusFromAction returns the appropriate interrupted status
+// Returns the appropriate interrupted status
 // for a link based on the action type and current status.
 func determineLinkInterruptedStatusFromAction(
 	action ActionType,
@@ -1376,1027 +1175,4 @@ func determineLinkInterruptedStatusFromAction(
 
 	// For UPDATE, RECREATE (update phase), or unknown actions, use UpdateInterrupted
 	return core.LinkStatusUpdateInterrupted, core.PreciseLinkStatusResourceAUpdateInterrupted
-}
-
-// isInProgressResourceStatus returns true if the resource status indicates
-// the resource is still being processed (not in a terminal state).
-func isInProgressResourceStatus(status core.ResourceStatus) bool {
-	switch status {
-	case core.ResourceStatusCreating,
-		core.ResourceStatusUpdating,
-		core.ResourceStatusDestroying,
-		core.ResourceStatusRollingBack:
-		return true
-	}
-	return false
-}
-
-// isInProgressInstanceStatus returns true if the instance status indicates
-// the child blueprint is still being processed (not in a terminal state).
-func isInProgressInstanceStatus(status core.InstanceStatus) bool {
-	switch status {
-	case core.InstanceStatusDeploying,
-		core.InstanceStatusUpdating,
-		core.InstanceStatusDestroying,
-		core.InstanceStatusDeployRollingBack,
-		core.InstanceStatusUpdateRollingBack,
-		core.InstanceStatusDestroyRollingBack:
-		return true
-	}
-	return false
-}
-
-// isInProgressLinkStatus returns true if the link status indicates
-// the link is still being processed (not in a terminal state).
-func isInProgressLinkStatus(status core.LinkStatus) bool {
-	switch status {
-	case core.LinkStatusCreating,
-		core.LinkStatusUpdating,
-		core.LinkStatusDestroying,
-		core.LinkStatusCreateRollingBack,
-		core.LinkStatusUpdateRollingBack,
-		core.LinkStatusDestroyRollingBack:
-		return true
-	}
-	return false
-}
-
-// collectDeploymentResults scans all items to collect successful operations,
-// failures, and interrupted elements. This provides the data for the deployment overview.
-// It traverses the hierarchy to build full element paths.
-func (m *DeployModel) collectDeploymentResults() {
-	var successful []SuccessfulElement
-	var failures []ElementFailure
-	var interrupted []InterruptedElement
-
-	// Traverse the hierarchy starting from top-level items
-	collectFromItems(m.items, "", m.resourcesByName, m.childrenByName, m.linksByName, &successful, &failures, &interrupted)
-
-	m.successfulElements = successful
-	m.elementFailures = failures
-	m.interruptedElements = interrupted
-}
-
-// collectFromItems recursively collects successful operations, failures, and interruptions from items,
-// building full paths as it traverses the hierarchy.
-func collectFromItems(
-	items []DeployItem,
-	parentPath string,
-	resourcesByName map[string]*ResourceDeployItem,
-	childrenByName map[string]*ChildDeployItem,
-	linksByName map[string]*LinkDeployItem,
-	successful *[]SuccessfulElement,
-	failures *[]ElementFailure,
-	interrupted *[]InterruptedElement,
-) {
-	for _, item := range items {
-		switch item.Type {
-		case ItemTypeResource:
-			if item.Resource != nil {
-				path := buildElementPath(parentPath, "resources", item.Resource.Name)
-				collectResourceResult(item.Resource, path, successful, failures, interrupted)
-			}
-		case ItemTypeChild:
-			if item.Child != nil {
-				path := buildElementPath(parentPath, "children", item.Child.Name)
-				collectChildResult(item.Child, path, successful, failures, interrupted)
-
-				// Recursively collect from nested items in this child
-				// Use the child name as the path prefix for map lookups
-				if item.Changes != nil {
-					collectFromChanges(item.Changes, path, item.Child.Name, resourcesByName, childrenByName, linksByName, successful, failures, interrupted)
-				}
-			}
-		case ItemTypeLink:
-			if item.Link != nil {
-				path := buildElementPath(parentPath, "links", item.Link.LinkName)
-				collectLinkResult(item.Link, path, successful, failures, interrupted)
-			}
-		}
-	}
-}
-
-// collectFromChanges recursively collects results from nested blueprint changes.
-// The pathPrefix is used for map key lookups (e.g., "parentChild/childName"),
-// while parentPath is used for display (e.g., "children.parentChild::children.childName").
-func collectFromChanges(
-	blueprintChanges *changes.BlueprintChanges,
-	parentPath string,
-	pathPrefix string,
-	resourcesByName map[string]*ResourceDeployItem,
-	childrenByName map[string]*ChildDeployItem,
-	linksByName map[string]*LinkDeployItem,
-	successful *[]SuccessfulElement,
-	failures *[]ElementFailure,
-	interrupted *[]InterruptedElement,
-) {
-	if blueprintChanges == nil {
-		return
-	}
-
-	// Collect nested resources
-	for resourceName := range blueprintChanges.NewResources {
-		resourceKey := buildMapKey(pathPrefix, resourceName)
-		resource := lookupResource(resourcesByName, resourceKey, resourceName)
-		if resource != nil {
-			path := buildElementPath(parentPath, "resources", resourceName)
-			collectResourceResult(resource, path, successful, failures, interrupted)
-		}
-	}
-	for resourceName := range blueprintChanges.ResourceChanges {
-		resourceKey := buildMapKey(pathPrefix, resourceName)
-		resource := lookupResource(resourcesByName, resourceKey, resourceName)
-		if resource != nil {
-			path := buildElementPath(parentPath, "resources", resourceName)
-			collectResourceResult(resource, path, successful, failures, interrupted)
-		}
-	}
-
-	// Collect nested children and recurse
-	for childName, nc := range blueprintChanges.NewChildren {
-		childKey := buildMapKey(pathPrefix, childName)
-		child := lookupChild(childrenByName, childKey, childName)
-		if child != nil {
-			path := buildElementPath(parentPath, "children", childName)
-			collectChildResult(child, path, successful, failures, interrupted)
-
-			// Recurse into nested children with updated path prefix
-			childChanges := &changes.BlueprintChanges{
-				NewResources: nc.NewResources,
-				NewChildren:  nc.NewChildren,
-			}
-			collectFromChanges(childChanges, path, childKey, resourcesByName, childrenByName, linksByName, successful, failures, interrupted)
-		}
-	}
-	for childName, cc := range blueprintChanges.ChildChanges {
-		childKey := buildMapKey(pathPrefix, childName)
-		child := lookupChild(childrenByName, childKey, childName)
-		if child != nil {
-			path := buildElementPath(parentPath, "children", childName)
-			collectChildResult(child, path, successful, failures, interrupted)
-
-			// Recurse into changed children with updated path prefix
-			ccCopy := cc
-			collectFromChanges(&ccCopy, path, childKey, resourcesByName, childrenByName, linksByName, successful, failures, interrupted)
-		}
-	}
-}
-
-// buildMapKey builds a path-based key for map lookups.
-func buildMapKey(prefix, name string) string {
-	if prefix == "" {
-		return name
-	}
-	return prefix + "/" + name
-}
-
-// lookupResource looks up a resource by path-based key, falling back to simple name.
-func lookupResource(m map[string]*ResourceDeployItem, pathKey, name string) *ResourceDeployItem {
-	if r, ok := m[pathKey]; ok {
-		return r
-	}
-	if r, ok := m[name]; ok {
-		return r
-	}
-	return nil
-}
-
-// lookupChild looks up a child by path-based key, falling back to simple name.
-func lookupChild(m map[string]*ChildDeployItem, pathKey, name string) *ChildDeployItem {
-	if c, ok := m[pathKey]; ok {
-		return c
-	}
-	if c, ok := m[name]; ok {
-		return c
-	}
-	return nil
-}
-
-// buildElementPath constructs a full path like "children.notifications::resources.queue".
-func buildElementPath(parentPath, elementType, elementName string) string {
-	segment := elementType + "." + elementName
-	if parentPath == "" {
-		return segment
-	}
-	return parentPath + "::" + segment
-}
-
-func collectResourceResult(
-	item *ResourceDeployItem,
-	path string,
-	successful *[]SuccessfulElement,
-	failures *[]ElementFailure,
-	interrupted *[]InterruptedElement,
-) {
-	if isFailedResourceStatus(item.Status) && len(item.FailureReasons) > 0 {
-		*failures = append(*failures, ElementFailure{
-			ElementName:    item.Name,
-			ElementPath:    path,
-			ElementType:    "resource",
-			FailureReasons: item.FailureReasons,
-		})
-		return
-	}
-	if isInterruptedResourceStatus(item.Status) {
-		*interrupted = append(*interrupted, InterruptedElement{
-			ElementName: item.Name,
-			ElementPath: path,
-			ElementType: "resource",
-		})
-		return
-	}
-	if isSuccessResourceStatus(item.Status) {
-		*successful = append(*successful, SuccessfulElement{
-			ElementName: item.Name,
-			ElementPath: path,
-			ElementType: "resource",
-			Action:      resourceStatusToAction(item.Status),
-		})
-	}
-}
-
-func collectChildResult(
-	item *ChildDeployItem,
-	path string,
-	successful *[]SuccessfulElement,
-	failures *[]ElementFailure,
-	interrupted *[]InterruptedElement,
-) {
-	if isFailedInstanceStatus(item.Status) && len(item.FailureReasons) > 0 {
-		*failures = append(*failures, ElementFailure{
-			ElementName:    item.Name,
-			ElementPath:    path,
-			ElementType:    "child",
-			FailureReasons: item.FailureReasons,
-		})
-		return
-	}
-	if isInterruptedInstanceStatus(item.Status) {
-		*interrupted = append(*interrupted, InterruptedElement{
-			ElementName: item.Name,
-			ElementPath: path,
-			ElementType: "child",
-		})
-		return
-	}
-	if isSuccessInstanceStatus(item.Status) {
-		*successful = append(*successful, SuccessfulElement{
-			ElementName: item.Name,
-			ElementPath: path,
-			ElementType: "child",
-			Action:      instanceStatusToAction(item.Status),
-		})
-	}
-}
-
-func collectLinkResult(
-	item *LinkDeployItem,
-	path string,
-	successful *[]SuccessfulElement,
-	failures *[]ElementFailure,
-	interrupted *[]InterruptedElement,
-) {
-	if isFailedLinkStatus(item.Status) && len(item.FailureReasons) > 0 {
-		*failures = append(*failures, ElementFailure{
-			ElementName:    item.LinkName,
-			ElementPath:    path,
-			ElementType:    "link",
-			FailureReasons: item.FailureReasons,
-		})
-		return
-	}
-	if isInterruptedLinkStatus(item.Status) {
-		*interrupted = append(*interrupted, InterruptedElement{
-			ElementName: item.LinkName,
-			ElementPath: path,
-			ElementType: "link",
-		})
-		return
-	}
-	if isSuccessLinkStatus(item.Status) {
-		*successful = append(*successful, SuccessfulElement{
-			ElementName: item.LinkName,
-			ElementPath: path,
-			ElementType: "link",
-			Action:      linkStatusToAction(item.Status),
-		})
-	}
-}
-
-// Status check helpers using map lookups for cleaner code
-
-var failedResourceStatuses = map[core.ResourceStatus]bool{
-	core.ResourceStatusCreateFailed:   true,
-	core.ResourceStatusUpdateFailed:   true,
-	core.ResourceStatusDestroyFailed:  true,
-	core.ResourceStatusRollbackFailed: true,
-}
-
-func isFailedResourceStatus(status core.ResourceStatus) bool {
-	return failedResourceStatuses[status]
-}
-
-var failedInstanceStatuses = map[core.InstanceStatus]bool{
-	core.InstanceStatusDeployFailed:          true,
-	core.InstanceStatusUpdateFailed:          true,
-	core.InstanceStatusDestroyFailed:         true,
-	core.InstanceStatusDeployRollbackFailed:  true,
-	core.InstanceStatusUpdateRollbackFailed:  true,
-	core.InstanceStatusDestroyRollbackFailed: true,
-}
-
-func isFailedInstanceStatus(status core.InstanceStatus) bool {
-	return failedInstanceStatuses[status]
-}
-
-var failedLinkStatuses = map[core.LinkStatus]bool{
-	core.LinkStatusCreateFailed:          true,
-	core.LinkStatusUpdateFailed:          true,
-	core.LinkStatusDestroyFailed:         true,
-	core.LinkStatusCreateRollbackFailed:  true,
-	core.LinkStatusUpdateRollbackFailed:  true,
-	core.LinkStatusDestroyRollbackFailed: true,
-}
-
-func isFailedLinkStatus(status core.LinkStatus) bool {
-	return failedLinkStatuses[status]
-}
-
-var interruptedResourceStatuses = map[core.ResourceStatus]bool{
-	core.ResourceStatusCreateInterrupted:  true,
-	core.ResourceStatusUpdateInterrupted:  true,
-	core.ResourceStatusDestroyInterrupted: true,
-}
-
-func isInterruptedResourceStatus(status core.ResourceStatus) bool {
-	return interruptedResourceStatuses[status]
-}
-
-var interruptedInstanceStatuses = map[core.InstanceStatus]bool{
-	core.InstanceStatusDeployInterrupted:  true,
-	core.InstanceStatusUpdateInterrupted:  true,
-	core.InstanceStatusDestroyInterrupted: true,
-}
-
-func isInterruptedInstanceStatus(status core.InstanceStatus) bool {
-	return interruptedInstanceStatuses[status]
-}
-
-var interruptedLinkStatuses = map[core.LinkStatus]bool{
-	core.LinkStatusCreateInterrupted:  true,
-	core.LinkStatusUpdateInterrupted:  true,
-	core.LinkStatusDestroyInterrupted: true,
-}
-
-func isInterruptedLinkStatus(status core.LinkStatus) bool {
-	return interruptedLinkStatuses[status]
-}
-
-// Success status helpers
-
-var successResourceStatuses = map[core.ResourceStatus]bool{
-	core.ResourceStatusCreated:          true,
-	core.ResourceStatusUpdated:          true,
-	core.ResourceStatusDestroyed:        true,
-	core.ResourceStatusRollbackComplete: true,
-}
-
-func isSuccessResourceStatus(status core.ResourceStatus) bool {
-	return successResourceStatuses[status]
-}
-
-var successInstanceStatuses = map[core.InstanceStatus]bool{
-	core.InstanceStatusDeployed:  true,
-	core.InstanceStatusUpdated:   true,
-	core.InstanceStatusDestroyed: true,
-}
-
-func isSuccessInstanceStatus(status core.InstanceStatus) bool {
-	return successInstanceStatuses[status]
-}
-
-var successLinkStatuses = map[core.LinkStatus]bool{
-	core.LinkStatusCreated:   true,
-	core.LinkStatusUpdated:   true,
-	core.LinkStatusDestroyed: true,
-}
-
-func isSuccessLinkStatus(status core.LinkStatus) bool {
-	return successLinkStatuses[status]
-}
-
-// Status to action converters
-
-func resourceStatusToAction(status core.ResourceStatus) string {
-	switch status {
-	case core.ResourceStatusCreated:
-		return "created"
-	case core.ResourceStatusUpdated:
-		return "updated"
-	case core.ResourceStatusDestroyed:
-		return "destroyed"
-	case core.ResourceStatusRollbackComplete:
-		return "rolled back"
-	default:
-		return status.String()
-	}
-}
-
-func instanceStatusToAction(status core.InstanceStatus) string {
-	switch status {
-	case core.InstanceStatusDeployed:
-		return "deployed"
-	case core.InstanceStatusUpdated:
-		return "updated"
-	case core.InstanceStatusDestroyed:
-		return "destroyed"
-	default:
-		return status.String()
-	}
-}
-
-func linkStatusToAction(status core.LinkStatus) string {
-	switch status {
-	case core.LinkStatusCreated:
-		return "created"
-	case core.LinkStatusUpdated:
-		return "updated"
-	case core.LinkStatusDestroyed:
-		return "destroyed"
-	default:
-		return status.String()
-	}
-}
-
-// Helper functions for link name parsing.
-func extractResourceAFromLinkName(linkName string) string {
-	parts := strings.Split(linkName, "::")
-	if len(parts) >= 1 {
-		return parts[0]
-	}
-	return ""
-}
-
-func extractResourceBFromLinkName(linkName string) string {
-	parts := strings.Split(linkName, "::")
-	if len(parts) >= 2 {
-		return parts[1]
-	}
-	return ""
-}
-
-// buildItemsFromChangeset creates the initial item list from changeset data.
-// This provides the proper hierarchy (resources, children, links) from the start.
-// It also includes items with no changes from the instance state.
-func buildItemsFromChangeset(
-	changesetChanges *changes.BlueprintChanges,
-	resourcesByName map[string]*ResourceDeployItem,
-	childrenByName map[string]*ChildDeployItem,
-	linksByName map[string]*LinkDeployItem,
-	instanceState *state.InstanceState,
-) []DeployItem {
-	// Track which items have been added from changes
-	addedResources := make(map[string]bool)
-	addedChildren := make(map[string]bool)
-	addedLinks := make(map[string]bool)
-
-	var items []DeployItem
-
-	if changesetChanges != nil {
-		// First, build the top-level items - this populates the maps with the authoritative instances
-		items = appendResourceItemsWithTracking(items, changesetChanges, resourcesByName, instanceState, addedResources)
-		items = appendChildItemsWithTracking(items, changesetChanges, childrenByName, resourcesByName, linksByName, instanceState, addedChildren)
-		items = appendLinkItemsWithTracking(items, changesetChanges, linksByName, addedLinks)
-
-		// Then, pre-populate NESTED items (children of children, resources in children) into the maps.
-		// This ensures events for nested items can find the shared instances.
-		// We only process the nested content of children that were just added above.
-		for _, nc := range changesetChanges.NewChildren {
-			childChanges := &changes.BlueprintChanges{
-				NewResources: nc.NewResources,
-				NewChildren:  nc.NewChildren,
-			}
-			populateNestedItemsFromChangeset(childChanges, resourcesByName, childrenByName, linksByName)
-		}
-		for _, cc := range changesetChanges.ChildChanges {
-			ccCopy := cc
-			populateNestedItemsFromChangeset(&ccCopy, resourcesByName, childrenByName, linksByName)
-		}
-	}
-
-	// Add items from instance state that have no changes
-	items = appendNoChangeItemsFromState(items, instanceState, resourcesByName, childrenByName, linksByName, addedResources, addedChildren, addedLinks)
-
-	return items
-}
-
-// appendNoChangeItemsFromState adds items from instance state that have no changes.
-// This ensures all resources and children are visible in the navigation.
-func appendNoChangeItemsFromState(
-	items []DeployItem,
-	instanceState *state.InstanceState,
-	resourcesByName map[string]*ResourceDeployItem,
-	childrenByName map[string]*ChildDeployItem,
-	linksByName map[string]*LinkDeployItem,
-	addedResources map[string]bool,
-	addedChildren map[string]bool,
-	addedLinks map[string]bool,
-) []DeployItem {
-	if instanceState == nil {
-		return items
-	}
-
-	// Add resources from instance state that have no changes
-	for _, resourceState := range instanceState.Resources {
-		if addedResources[resourceState.Name] {
-			continue
-		}
-		item := &ResourceDeployItem{
-			Name:          resourceState.Name,
-			ResourceID:    resourceState.ResourceID,
-			ResourceType:  resourceState.Type,
-			Action:        ActionNoChange,
-			ResourceState: resourceState,
-		}
-		resourcesByName[resourceState.Name] = item
-		items = append(items, DeployItem{
-			Type:          ItemTypeResource,
-			Resource:      item,
-			InstanceState: instanceState,
-		})
-	}
-
-	// Add child blueprints from instance state that have no changes
-	for name, childState := range instanceState.ChildBlueprints {
-		if addedChildren[name] {
-			continue
-		}
-		item := &ChildDeployItem{
-			Name:   name,
-			Action: ActionNoChange,
-			// Provide empty changes so the child can still be expanded
-			Changes: &changes.BlueprintChanges{},
-		}
-		childrenByName[name] = item
-		items = append(items, DeployItem{
-			Type:            ItemTypeChild,
-			Child:           item,
-			Changes:         &changes.BlueprintChanges{},
-			InstanceState:   childState,
-			childrenByName:  childrenByName,
-			resourcesByName: resourcesByName,
-			linksByName:     linksByName,
-		})
-	}
-
-	// Add links from instance state that have no changes
-	for linkName, linkState := range instanceState.Links {
-		if addedLinks[linkName] {
-			continue
-		}
-		item := &LinkDeployItem{
-			LinkID:        linkState.LinkID,
-			LinkName:      linkName,
-			ResourceAName: extractResourceAFromLinkName(linkName),
-			ResourceBName: extractResourceBFromLinkName(linkName),
-			Action:        ActionNoChange,
-			Status:        linkState.Status,
-		}
-		linksByName[linkName] = item
-		items = append(items, DeployItem{
-			Type:          ItemTypeLink,
-			Link:          item,
-			InstanceState: instanceState,
-		})
-	}
-
-	return items
-}
-
-// findResourceState finds a resource state by name using the instance state's
-// ResourceIDs map to look up the resource ID, then retrieves the state from Resources.
-func findResourceState(instanceState *state.InstanceState, name string) *state.ResourceState {
-	if instanceState == nil || instanceState.ResourceIDs == nil || instanceState.Resources == nil {
-		return nil
-	}
-	resourceID, ok := instanceState.ResourceIDs[name]
-	if !ok {
-		return nil
-	}
-	return instanceState.Resources[resourceID]
-}
-
-// appendResourceItemsWithTracking adds resource items from changeset and tracks which were added.
-func appendResourceItemsWithTracking(
-	items []DeployItem,
-	changesetChanges *changes.BlueprintChanges,
-	resourcesByName map[string]*ResourceDeployItem,
-	instanceState *state.InstanceState,
-	added map[string]bool,
-) []DeployItem {
-	// New resources
-	for name, rc := range changesetChanges.NewResources {
-		rcCopy := rc
-		item := &ResourceDeployItem{
-			Name:    name,
-			Action:  ActionCreate,
-			Changes: &rcCopy,
-		}
-		resourcesByName[name] = item
-		items = append(items, DeployItem{
-			Type:          ItemTypeResource,
-			Resource:      item,
-			InstanceState: instanceState,
-		})
-		added[name] = true
-	}
-
-	// Changed resources - look up resource state from instance state if available
-	for name, rc := range changesetChanges.ResourceChanges {
-		rcCopy := rc
-
-		// Determine action based on changes
-		action := ActionUpdate
-		if rc.MustRecreate {
-			action = ActionRecreate
-		} else if !provider.ChangesHasFieldChanges(&rcCopy) {
-			// If only link changes (no field changes), treat as no change for the resource itself
-			action = ActionNoChange
-		}
-
-		// Look up resource state from instance state if available
-		var resourceState *state.ResourceState
-		if instanceState != nil {
-			resourceState = findResourceState(instanceState, name)
-		}
-
-		// Also get resource info from Changes.AppliedResourceInfo if available
-		var resourceID string
-		var resourceType string
-		if rc.AppliedResourceInfo.ResourceID != "" {
-			resourceID = rc.AppliedResourceInfo.ResourceID
-		}
-		if rc.AppliedResourceInfo.CurrentResourceState != nil {
-			if resourceState == nil {
-				resourceState = rc.AppliedResourceInfo.CurrentResourceState
-			}
-			if resourceType == "" && rc.AppliedResourceInfo.CurrentResourceState.Type != "" {
-				resourceType = rc.AppliedResourceInfo.CurrentResourceState.Type
-			}
-		}
-
-		item := &ResourceDeployItem{
-			Name:          name,
-			Action:        action,
-			Changes:       &rcCopy,
-			ResourceID:    resourceID,
-			ResourceType:  resourceType,
-			ResourceState: resourceState,
-		}
-		resourcesByName[name] = item
-		items = append(items, DeployItem{
-			Type:          ItemTypeResource,
-			Resource:      item,
-			InstanceState: instanceState,
-		})
-		added[name] = true
-	}
-
-	// Removed resources - look up resource state for showing ID
-	for _, name := range changesetChanges.RemovedResources {
-		var resourceState *state.ResourceState
-		if instanceState != nil {
-			resourceState = findResourceState(instanceState, name)
-		}
-
-		item := &ResourceDeployItem{
-			Name:          name,
-			Action:        ActionDelete,
-			ResourceState: resourceState,
-		}
-		resourcesByName[name] = item
-		items = append(items, DeployItem{
-			Type:          ItemTypeResource,
-			Resource:      item,
-			InstanceState: instanceState,
-		})
-		added[name] = true
-	}
-
-	return items
-}
-
-// appendChildItemsWithTracking adds child blueprint items from changeset and tracks which were added.
-func appendChildItemsWithTracking(
-	items []DeployItem,
-	changesetChanges *changes.BlueprintChanges,
-	childrenByName map[string]*ChildDeployItem,
-	resourcesByName map[string]*ResourceDeployItem,
-	linksByName map[string]*LinkDeployItem,
-	instanceState *state.InstanceState,
-	added map[string]bool,
-) []DeployItem {
-	// New children - convert NewBlueprintDefinition to BlueprintChanges for hierarchy
-	for name, nc := range changesetChanges.NewChildren {
-		childChanges := &changes.BlueprintChanges{
-			NewResources: nc.NewResources,
-			NewChildren:  nc.NewChildren,
-		}
-		item := &ChildDeployItem{
-			Name:    name,
-			Action:  ActionCreate,
-			Changes: childChanges,
-		}
-		childrenByName[name] = item
-		items = append(items, DeployItem{
-			Type:            ItemTypeChild,
-			Child:           item,
-			Changes:         childChanges,
-			childrenByName:  childrenByName,
-			resourcesByName: resourcesByName,
-			linksByName:     linksByName,
-		})
-		added[name] = true
-	}
-
-	// Changed children - get nested instance state if available
-	for name, cc := range changesetChanges.ChildChanges {
-		ccCopy := cc
-		var nestedInstanceState *state.InstanceState
-		if instanceState != nil && instanceState.ChildBlueprints != nil {
-			nestedInstanceState = instanceState.ChildBlueprints[name]
-		}
-		item := &ChildDeployItem{
-			Name:    name,
-			Action:  ActionUpdate,
-			Changes: &ccCopy,
-		}
-		childrenByName[name] = item
-		items = append(items, DeployItem{
-			Type:            ItemTypeChild,
-			Child:           item,
-			Changes:         &ccCopy,
-			InstanceState:   nestedInstanceState,
-			childrenByName:  childrenByName,
-			resourcesByName: resourcesByName,
-			linksByName:     linksByName,
-		})
-		added[name] = true
-	}
-
-	// Recreate children
-	for _, name := range changesetChanges.RecreateChildren {
-		item := &ChildDeployItem{
-			Name:   name,
-			Action: ActionRecreate,
-		}
-		childrenByName[name] = item
-		items = append(items, DeployItem{
-			Type:            ItemTypeChild,
-			Child:           item,
-			childrenByName:  childrenByName,
-			resourcesByName: resourcesByName,
-			linksByName:     linksByName,
-		})
-		added[name] = true
-	}
-
-	// Removed children
-	for _, name := range changesetChanges.RemovedChildren {
-		item := &ChildDeployItem{
-			Name:   name,
-			Action: ActionDelete,
-		}
-		childrenByName[name] = item
-		items = append(items, DeployItem{
-			Type:            ItemTypeChild,
-			Child:           item,
-			childrenByName:  childrenByName,
-			resourcesByName: resourcesByName,
-			linksByName:     linksByName,
-		})
-		added[name] = true
-	}
-
-	return items
-}
-
-// appendLinkItemsWithTracking adds link items from changeset and tracks which were added.
-func appendLinkItemsWithTracking(
-	items []DeployItem,
-	changesetChanges *changes.BlueprintChanges,
-	linksByName map[string]*LinkDeployItem,
-	added map[string]bool,
-) []DeployItem {
-	// Extract links from new resources
-	for resourceAName, resourceChanges := range changesetChanges.NewResources {
-		for resourceBName := range resourceChanges.NewOutboundLinks {
-			linkName := resourceAName + "::" + resourceBName
-			item := &LinkDeployItem{
-				LinkName:      linkName,
-				ResourceAName: resourceAName,
-				ResourceBName: resourceBName,
-				Action:        ActionCreate,
-			}
-			linksByName[linkName] = item
-			items = append(items, DeployItem{
-				Type: ItemTypeLink,
-				Link: item,
-			})
-			added[linkName] = true
-		}
-	}
-
-	// Extract links from changed resources
-	for resourceAName, resourceChanges := range changesetChanges.ResourceChanges {
-		// New outbound links from changed resources
-		for resourceBName := range resourceChanges.NewOutboundLinks {
-			linkName := resourceAName + "::" + resourceBName
-			item := &LinkDeployItem{
-				LinkName:      linkName,
-				ResourceAName: resourceAName,
-				ResourceBName: resourceBName,
-				Action:        ActionCreate,
-			}
-			linksByName[linkName] = item
-			items = append(items, DeployItem{
-				Type: ItemTypeLink,
-				Link: item,
-			})
-			added[linkName] = true
-		}
-
-		// Changed outbound links
-		for resourceBName := range resourceChanges.OutboundLinkChanges {
-			linkName := resourceAName + "::" + resourceBName
-			item := &LinkDeployItem{
-				LinkName:      linkName,
-				ResourceAName: resourceAName,
-				ResourceBName: resourceBName,
-				Action:        ActionUpdate,
-			}
-			linksByName[linkName] = item
-			items = append(items, DeployItem{
-				Type: ItemTypeLink,
-				Link: item,
-			})
-			added[linkName] = true
-		}
-
-		// Removed outbound links
-		for _, linkName := range resourceChanges.RemovedOutboundLinks {
-			item := &LinkDeployItem{
-				LinkName:      linkName,
-				ResourceAName: extractResourceAFromLinkName(linkName),
-				ResourceBName: extractResourceBFromLinkName(linkName),
-				Action:        ActionDelete,
-			}
-			linksByName[linkName] = item
-			items = append(items, DeployItem{
-				Type: ItemTypeLink,
-				Link: item,
-			})
-			added[linkName] = true
-		}
-	}
-
-	// Also check top-level RemovedLinks
-	for _, linkName := range changesetChanges.RemovedLinks {
-		if _, exists := linksByName[linkName]; !exists {
-			item := &LinkDeployItem{
-				LinkName:      linkName,
-				ResourceAName: extractResourceAFromLinkName(linkName),
-				ResourceBName: extractResourceBFromLinkName(linkName),
-				Action:        ActionDelete,
-			}
-			linksByName[linkName] = item
-			items = append(items, DeployItem{
-				Type: ItemTypeLink,
-				Link: item,
-			})
-			added[linkName] = true
-		}
-	}
-
-	return items
-}
-
-// populateNestedItemsFromChangeset recursively walks the changeset hierarchy and adds all
-// nested children and resources to the shared lookup maps. This ensures that when events
-// arrive for nested items, they can find and update the shared instances.
-func populateNestedItemsFromChangeset(
-	blueprintChanges *changes.BlueprintChanges,
-	resourcesByName map[string]*ResourceDeployItem,
-	childrenByName map[string]*ChildDeployItem,
-	linksByName map[string]*LinkDeployItem,
-) {
-	if blueprintChanges == nil {
-		return
-	}
-
-	// Process new children and their nested content
-	for name, nc := range blueprintChanges.NewChildren {
-		childChanges := &changes.BlueprintChanges{
-			NewResources: nc.NewResources,
-			NewChildren:  nc.NewChildren,
-		}
-
-		// Add child to map if not already there
-		if _, exists := childrenByName[name]; !exists {
-			childrenByName[name] = &ChildDeployItem{
-				Name:    name,
-				Action:  ActionCreate,
-				Changes: childChanges,
-			}
-		}
-
-		// Add nested resources to the resource map
-		for resourceName, rc := range nc.NewResources {
-			if _, exists := resourcesByName[resourceName]; !exists {
-				rcCopy := rc
-				resourcesByName[resourceName] = &ResourceDeployItem{
-					Name:    resourceName,
-					Action:  ActionCreate,
-					Changes: &rcCopy,
-				}
-			}
-		}
-
-		// Recursively process nested children
-		populateNestedItemsFromChangeset(childChanges, resourcesByName, childrenByName, linksByName)
-	}
-
-	// Process changed children and their nested content
-	for name, cc := range blueprintChanges.ChildChanges {
-		ccCopy := cc
-
-		// Add child to map if not already there
-		if _, exists := childrenByName[name]; !exists {
-			childrenByName[name] = &ChildDeployItem{
-				Name:    name,
-				Action:  ActionUpdate,
-				Changes: &ccCopy,
-			}
-		}
-
-		// Add nested resources (new, changed, removed) to the resource map
-		for resourceName, rc := range cc.NewResources {
-			if _, exists := resourcesByName[resourceName]; !exists {
-				rcCopy := rc
-				resourcesByName[resourceName] = &ResourceDeployItem{
-					Name:    resourceName,
-					Action:  ActionCreate,
-					Changes: &rcCopy,
-				}
-			}
-		}
-		for resourceName, rc := range cc.ResourceChanges {
-			if _, exists := resourcesByName[resourceName]; !exists {
-				rcCopy := rc
-				// Determine action based on changes
-				action := ActionUpdate
-				if rc.MustRecreate {
-					action = ActionRecreate
-				} else if !provider.ChangesHasFieldChanges(&rcCopy) {
-					// If only link changes (no field changes), treat as no change
-					action = ActionNoChange
-				}
-
-				// Extract resource info from AppliedResourceInfo
-				var resourceID string
-				var resourceType string
-				var resourceState *state.ResourceState
-				if rc.AppliedResourceInfo.ResourceID != "" {
-					resourceID = rc.AppliedResourceInfo.ResourceID
-				}
-				if rc.AppliedResourceInfo.CurrentResourceState != nil {
-					resourceState = rc.AppliedResourceInfo.CurrentResourceState
-					if resourceType == "" && rc.AppliedResourceInfo.CurrentResourceState.Type != "" {
-						resourceType = rc.AppliedResourceInfo.CurrentResourceState.Type
-					}
-				}
-
-				resourcesByName[resourceName] = &ResourceDeployItem{
-					Name:          resourceName,
-					Action:        action,
-					Changes:       &rcCopy,
-					ResourceID:    resourceID,
-					ResourceType:  resourceType,
-					ResourceState: resourceState,
-				}
-			}
-		}
-		for _, resourceName := range cc.RemovedResources {
-			if _, exists := resourcesByName[resourceName]; !exists {
-				resourcesByName[resourceName] = &ResourceDeployItem{
-					Name:   resourceName,
-					Action: ActionDelete,
-					// Note: Removed resources don't have Changes since they're being deleted
-				}
-			}
-		}
-
-		// Recursively process nested children
-		populateNestedItemsFromChangeset(&ccCopy, resourcesByName, childrenByName, linksByName)
-	}
 }

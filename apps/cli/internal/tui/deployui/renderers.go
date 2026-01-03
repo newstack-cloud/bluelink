@@ -554,8 +554,26 @@ func renderResourceDurations(durations *state.ResourceCompletionDurations, s *st
 		return ""
 	}
 	sb := strings.Builder{}
+	if durations.ConfigCompleteDuration != nil &&
+		*durations.ConfigCompleteDuration > 0 {
+		sb.WriteString(
+			s.Muted.Render(
+				fmt.Sprintf(
+					"  Config Complete: %s\n",
+					outpututil.FormatDuration(*durations.ConfigCompleteDuration),
+				),
+			),
+		)
+	}
 	if durations.TotalDuration != nil && *durations.TotalDuration > 0 {
-		sb.WriteString(s.Muted.Render(fmt.Sprintf("  Total: %s\n", outpututil.FormatDuration(*durations.TotalDuration))))
+		sb.WriteString(
+			s.Muted.Render(
+				fmt.Sprintf(
+					"  Total: %s\n",
+					outpututil.FormatDuration(*durations.TotalDuration),
+				),
+			),
+		)
 	}
 	return sb.String()
 }
@@ -596,7 +614,12 @@ func (r *DeployDetailsRenderer) renderChildDetails(item *DeployItem, width int, 
 	childInstanceID := child.ChildInstanceID
 	if childInstanceID == "" {
 		// Try to get from post-deploy or pre-deploy instance state
-		childInstanceID = r.getChildInstanceID(item.Path, child.Name)
+		// For top-level children, item.Path is empty, so use the child name as the path
+		childPath := item.Path
+		if childPath == "" {
+			childPath = child.Name
+		}
+		childInstanceID = r.getChildInstanceID(childPath, child.Name)
 	}
 	if childInstanceID != "" {
 		sb.WriteString(s.Muted.Render("Instance ID: "))
@@ -1017,6 +1040,7 @@ type DeployFooterRenderer struct {
 	Finished            bool
 	SpinnerView         string // Current spinner frame for animated "Deploying" state
 	HasInstanceState    bool   // Whether instance state is available (enables exports view)
+	HasPreRollbackState bool   // Whether pre-rollback state is available (enables pre-rollback view)
 }
 
 // Ensure DeployFooterRenderer implements splitpane.FooterRenderer.
@@ -1070,6 +1094,11 @@ func (r *DeployFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.St
 			sb.WriteString(s.Muted.Render(", "))
 			sb.WriteString(s.Key.Render("e"))
 			sb.WriteString(s.Muted.Render(" for exports"))
+		}
+		if r.HasPreRollbackState {
+			sb.WriteString(s.Muted.Render(", "))
+			sb.WriteString(s.Key.Render("r"))
+			sb.WriteString(s.Muted.Render(" for pre-rollback state"))
 		}
 		sb.WriteString("\n")
 

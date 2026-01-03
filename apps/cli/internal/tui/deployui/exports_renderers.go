@@ -97,18 +97,35 @@ func (r *ExportsDetailsRenderer) renderExportField(sb *strings.Builder, field ou
 	sb.WriteString(formattedValue)
 }
 
-// formatExportValue formats an export value with proper indentation.
+// formatExportValue formats an export value with proper indentation and text wrapping.
 func formatExportValue(value string, maxWidth int) string {
 	if value == "" || value == "null" {
 		return "      null\n"
 	}
 
+	// Account for the 6-space indentation prefix
+	wrapWidth := maxWidth - 6
+	if wrapWidth < 20 {
+		wrapWidth = 20 // Minimum wrap width
+	}
+
 	lines := strings.Split(value, "\n")
 	sb := strings.Builder{}
 	for _, line := range lines {
-		sb.WriteString("      ")
-		sb.WriteString(line)
-		sb.WriteString("\n")
+		// Wrap long lines
+		if len(line) > wrapWidth {
+			wrappedLine := outpututil.WrapText(line, wrapWidth)
+			wrappedLines := strings.Split(wrappedLine, "\n")
+			for _, wl := range wrappedLines {
+				sb.WriteString("      ")
+				sb.WriteString(wl)
+				sb.WriteString("\n")
+			}
+		} else {
+			sb.WriteString("      ")
+			sb.WriteString(line)
+			sb.WriteString("\n")
+		}
 	}
 	return sb.String()
 }

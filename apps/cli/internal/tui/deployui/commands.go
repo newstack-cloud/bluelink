@@ -31,6 +31,10 @@ type DeployErrorMsg struct {
 	Err error
 }
 
+// DestroyChangesetErrorMsg is sent when deployment fails because the changeset
+// was created for a destroy operation.
+type DestroyChangesetErrorMsg struct{}
+
 // DeployStartedMsg is a message indicating that deployment has started.
 type DeployStartedMsg struct {
 	InstanceID string
@@ -103,8 +107,14 @@ func createOrUpdateInstance(model DeployModel, payload *types.BlueprintInstanceP
 }
 
 // handleDeployError converts deployment errors to appropriate messages,
-// including drift detection for 409 responses.
+// including drift detection for 409 responses and destroy changeset errors.
 func handleDeployError(err error, fallbackInstanceID string) tea.Msg {
+	// Check for destroy changeset error
+	if _, isDestroyChangeset := engineerrors.IsDestroyChangesetError(err); isDestroyChangeset {
+		return DestroyChangesetErrorMsg{}
+	}
+
+	// Check for drift blocked error
 	clientErr, isDriftBlocked := engineerrors.IsDriftBlockedError(err)
 	if !isDriftBlocked {
 		return DeployErrorMsg{Err: err}
@@ -133,7 +143,6 @@ func createDeployPayload(model DeployModel) (*types.BlueprintInstancePayload, er
 		BlueprintDocumentInfo: docInfo,
 		InstanceName:          model.instanceName,
 		ChangeSetID:           model.changesetID,
-		AsRollback:            model.asRollback,
 		AutoRollback:          model.autoRollback,
 		Force:                 model.force,
 	}, nil

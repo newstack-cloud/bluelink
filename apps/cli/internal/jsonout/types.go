@@ -3,6 +3,7 @@ package jsonout
 import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
 // StageOutput represents a successful staging result.
@@ -95,4 +96,46 @@ type ValidationError struct {
 	Location string `json:"location"`
 	Message  string `json:"message"`
 	Type     string `json:"type,omitempty"`
+}
+
+// DeployOutput represents a successful deployment result.
+type DeployOutput struct {
+	Success          bool                              `json:"success"`
+	InstanceID       string                            `json:"instanceId"`
+	InstanceName     string                            `json:"instanceName,omitempty"`
+	ChangesetID      string                            `json:"changesetId"`
+	Status           string                            `json:"status"`
+	InstanceState    *state.InstanceState              `json:"instanceState,omitempty"`
+	PreRollbackState *container.PreRollbackStateMessage `json:"preRollbackState,omitempty"`
+	Summary          DeploySummary                     `json:"summary"`
+}
+
+// DeploySummary contains deployment result summary.
+type DeploySummary struct {
+	Successful           int                             `json:"successful"`
+	Failed               int                             `json:"failed"`
+	Interrupted          int                             `json:"interrupted"`
+	SkippedRollbackItems []container.SkippedRollbackItem `json:"skippedRollbackItems,omitempty"`
+	Elements             []DeployedElement               `json:"elements"`
+}
+
+// DeployedElement represents an element in the deployment.
+type DeployedElement struct {
+	Name           string   `json:"name"`
+	Path           string   `json:"path"`
+	Type           string   `json:"type"`                     // "resource", "child", "link"
+	Status         string   `json:"status"`
+	Action         string   `json:"action,omitempty"`         // "created", "updated", "destroyed", etc.
+	FailureReasons []string `json:"failureReasons,omitempty"`
+}
+
+// DeployDriftOutput represents drift detected during deployment.
+type DeployDriftOutput struct {
+	Success        bool                                 `json:"success"`
+	DriftDetected  bool                                 `json:"driftDetected"`
+	InstanceID     string                               `json:"instanceId"`
+	InstanceName   string                               `json:"instanceName,omitempty"`
+	ChangesetID    string                               `json:"changesetId,omitempty"`
+	Message        string                               `json:"message"`
+	Reconciliation *container.ReconciliationCheckResult `json:"reconciliation"`
 }
