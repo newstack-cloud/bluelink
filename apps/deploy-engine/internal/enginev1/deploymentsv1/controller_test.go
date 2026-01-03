@@ -186,6 +186,7 @@ func deployEventSequence(instanceID string) []container.DeployEvent {
 				InstanceID:      instanceID,
 				Status:          core.InstanceStatusDeployed,
 				UpdateTimestamp: testTime.Unix(),
+				EndOfStream:     true,
 			},
 		},
 	}

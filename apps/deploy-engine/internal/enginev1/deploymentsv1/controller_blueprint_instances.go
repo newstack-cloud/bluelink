@@ -297,6 +297,18 @@ func (c *Controller) handleDeployRequest(
 		return
 	}
 
+	if changeset.Destroy {
+		httputils.HTTPErrorWithFields(
+			w,
+			http.StatusBadRequest,
+			"cannot deploy using a destroy changeset",
+			map[string]any{
+				"code": "DESTROY_CHANGESET",
+			},
+		)
+		return
+	}
+
 	// For updates (existing instances), check if changeset has drift detected status
 	// and block the deployment unless force is set
 	if existingInstance != nil && !payload.Force {
@@ -562,6 +574,7 @@ func (c *Controller) startDestroy(
 			"destroying blueprint instance",
 			c.logger,
 		)
+		return
 	}
 
 	channels := container.CreateDeployChannels()
@@ -595,6 +608,13 @@ func (c *Controller) startDestroy(
 	)
 }
 
+// listenForDeploymentUpdatesParams holds optional parameters for listenForDeploymentUpdates.
+type listenForDeploymentUpdatesParams struct {
+	// SkippedRollbackItems contains items that were skipped during rollback filtering.
+	// These will be attached to the finish message when the deployment completes.
+	SkippedRollbackItems []changes.SkippedRollbackItem
+}
+
 func (c *Controller) listenForDeploymentUpdates(
 	ctx context.Context,
 	cancelCtx func(),
@@ -605,6 +625,24 @@ func (c *Controller) listenForDeploymentUpdates(
 	autoRollback bool,
 	previousInstanceState *state.InstanceState,
 	logger core.Logger,
+) {
+	c.listenForDeploymentUpdatesWithParams(
+		ctx, cancelCtx, instanceID, action, channels, changeset,
+		autoRollback, previousInstanceState, logger, nil,
+	)
+}
+
+func (c *Controller) listenForDeploymentUpdatesWithParams(
+	ctx context.Context,
+	cancelCtx func(),
+	instanceID string,
+	action string,
+	channels *container.DeployChannels,
+	changeset *manage.Changeset,
+	autoRollback bool,
+	previousInstanceState *state.InstanceState,
+	logger core.Logger,
+	params *listenForDeploymentUpdatesParams,
 ) {
 	defer cancelCtx()
 
@@ -621,6 +659,10 @@ func (c *Controller) listenForDeploymentUpdates(
 		case msg := <-channels.DeploymentUpdateChan:
 			c.handleDeploymentUpdateMessage(ctx, msg, instanceID, action, logger)
 		case msg := <-channels.FinishChan:
+			// Attach skipped rollback items if this is a rollback completion
+			if params != nil && len(params.SkippedRollbackItems) > 0 {
+				msg.SkippedRollbackItems = convertSkippedItemsToContainerType(params.SkippedRollbackItems)
+			}
 			shouldRollback, _ := shouldTriggerAutoRollback(msg.Status)
 			willAutoRollback := autoRollback && shouldRollback
 			// If auto-rollback will trigger, don't mark this as end of stream
@@ -657,9 +699,9 @@ func (c *Controller) listenForDeploymentUpdates(
 			)
 			switch rollbackType {
 			case AutoRollbackTypeDestroy:
-				c.executeNewDeploymentRollback(instanceID, changeset)
+				c.executeNewDeploymentRollback(ctx, instanceID, changeset, finishMsg.FailureReasons, logger)
 			case AutoRollbackTypeRevert:
-				c.executeUpdateRollback(instanceID, changeset, previousInstanceState, logger)
+				c.executeUpdateRollback(ctx, instanceID, changeset, previousInstanceState, finishMsg.FailureReasons, logger)
 			}
 		}
 	}
@@ -749,6 +791,8 @@ func (c *Controller) handleDeploymentFinishUpdateMessageWithEndOfStream(
 	endOfStream bool,
 	logger core.Logger,
 ) {
+	// Set EndOfStream in the message so clients can determine whether to keep listening
+	msg.EndOfStream = endOfStream
 	c.saveDeploymentEvent(
 		ctx,
 		eventTypeDeployFinished,
@@ -802,32 +846,116 @@ func shouldTriggerAutoRollback(status core.InstanceStatus) (bool, AutoRollbackTy
 // Initiates an automatic rollback after a deployment failure.
 // For new instances, this destroys the partially created resources.
 func (c *Controller) executeNewDeploymentRollback(
+	ctx context.Context,
 	instanceID string,
 	changeset *manage.Changeset,
+	failureReasons []string,
+	logger core.Logger,
 ) {
-	// Use startDestroy with forRollback=true to destroy the failed instance.
-	// This will create a new context and event stream for the rollback operation.
-	// The rollback events will be sent to the same channel as the original deployment,
-	// keeping the stream open until rollback completes.
-	c.startDestroy(
-		changeset,
+	// Capture the pre-rollback state before destroying resources.
+	// This allows users to see what state the deployment was in before rollback.
+	c.capturePreRollbackState(ctx, instanceID, failureReasons, logger)
+
+	// Create removal changes from the current instance state.
+	// The original changeset has creation changes (NewResources, etc.) but
+	// the destroy operation needs removal changes (RemovedResources, etc.).
+	// Resources/links in failed or in-progress states are skipped.
+	removalChanges, skippedItems, err := c.createRemovalChangesFromInstanceState(ctx, instanceID)
+	if err != nil {
+		logger.Error(
+			"failed to create removal changes for auto-rollback",
+			core.ErrorLogField("error", err),
+		)
+		return
+	}
+
+	if len(skippedItems) > 0 {
+		c.logSkippedRollbackItems(skippedItems, instanceID, logger)
+	}
+
+	// Create a changeset with removal changes for the destroy operation.
+	rollbackChangeset := &manage.Changeset{
+		ID:      changeset.ID,
+		Changes: removalChanges,
+	}
+
+	c.startDestroyRollback(rollbackChangeset, instanceID, skippedItems, logger)
+}
+
+// startDestroyRollback initiates a destroy operation for rollback with skipped items tracking.
+func (c *Controller) startDestroyRollback(
+	changeset *manage.Changeset,
+	instanceID string,
+	skippedItems []changes.SkippedRollbackItem,
+	logger core.Logger,
+) {
+	ctxWithTimeout, cancel := context.WithTimeout(
+		context.Background(),
+		c.deploymentTimeout,
+	)
+
+	params := blueprint.CreateEmptyBlueprintParams()
+	blueprintContainer, err := c.blueprintLoader.LoadString(
+		ctxWithTimeout,
+		placeholderBlueprint,
+		schema.YAMLSpecFormat,
+		params,
+	)
+	if err != nil {
+		cancel()
+		c.handleDeploymentErrorAsEvent(
+			ctxWithTimeout,
+			instanceID,
+			err,
+			"rolling back deployment",
+			logger,
+		)
+		return
+	}
+
+	channels := container.CreateDeployChannels()
+	blueprintContainer.Destroy(
+		ctxWithTimeout,
+		&container.DestroyInput{
+			InstanceID:             instanceID,
+			Changes:                changeset.Changes,
+			Rollback:               true,
+			Force:                  false,
+			TaggingConfig:          nil,
+			ProviderMetadataLookup: pluginmeta.ToLookupFunc(c.providerMetadataLookup),
+			DrainTimeout:           c.drainTimeout,
+		},
+		channels,
+		params,
+	)
+
+	c.listenForDeploymentUpdatesWithParams(
+		ctxWithTimeout,
+		cancel,
 		instanceID,
-		true,  // forRollback - marks this as a rollback operation
-		false, // force - auto-rollback does not use force mode
-		// Use empty params as we don't need blueprint params for destroy
-		blueprint.CreateEmptyBlueprintParams(),
-		// Tagging is not applied during rollback operations
+		"rolling back deployment",
+		channels,
+		changeset,
+		false,
 		nil,
+		logger.Named("deployRollback"),
+		&listenForDeploymentUpdatesParams{
+			SkippedRollbackItems: skippedItems,
+		},
 	)
 }
 
 // Initiates an automatic rollback after an update or destroy failure.
 // This generates a reverse changeset from the original changes and previous state,
 // then deploys the reverse changes to restore the instance to its previous state.
+// Resources and links that failed to complete their operations are skipped from
+// rollback to avoid unpredictable behavior.
 func (c *Controller) executeUpdateRollback(
+	ctx context.Context,
 	instanceID string,
 	changeset *manage.Changeset,
 	previousInstanceState *state.InstanceState,
+	failureReasons []string,
 	logger core.Logger,
 ) {
 	if changeset == nil || changeset.Changes == nil {
@@ -846,6 +974,10 @@ func (c *Controller) executeUpdateRollback(
 		return
 	}
 
+	// Capture the pre-rollback state before reverting changes.
+	// This allows users to see what state the deployment was in before rollback.
+	c.capturePreRollbackState(ctx, instanceID, failureReasons, logger)
+
 	// Generate the reverse changeset to undo the original changes
 	reverseChanges, err := changes.ReverseChangeset(changeset.Changes, previousInstanceState)
 	if err != nil {
@@ -862,6 +994,26 @@ func (c *Controller) executeUpdateRollback(
 			core.StringLogField("instanceId", instanceID),
 		)
 		return
+	}
+
+	// Fetch the current state (after failed deployment) to filter the reverse changeset.
+	// Only resources/links in a completed state (Created, Updated, Destroyed, ConfigComplete)
+	// will be included in the rollback to avoid unpredictable behavior.
+	var skippedItems []changes.SkippedRollbackItem
+	currentState, err := c.instances.Get(ctx, instanceID)
+	if err != nil {
+		logger.Warn(
+			"failed to fetch current state for rollback filtering, proceeding with unfiltered rollback",
+			core.ErrorLogField("error", err),
+			core.StringLogField("instanceId", instanceID),
+		)
+	} else {
+		filterResult := changes.FilterReverseChangesetByCurrentState(reverseChanges, &currentState)
+		reverseChanges = filterResult.FilteredChanges
+		skippedItems = filterResult.SkippedItems
+		if filterResult.HasSkippedItems {
+			c.logSkippedRollbackItems(skippedItems, instanceID, logger)
+		}
 	}
 
 	ctxWithTimeout, cancel := context.WithTimeout(
@@ -913,7 +1065,7 @@ func (c *Controller) executeUpdateRollback(
 	}
 
 	// Listen for rollback deployment updates without triggering further auto-rollback
-	c.listenForDeploymentUpdates(
+	c.listenForDeploymentUpdatesWithParams(
 		ctxWithTimeout,
 		cancel,
 		instanceID,
@@ -923,6 +1075,9 @@ func (c *Controller) executeUpdateRollback(
 		false, // autoRollback=false to prevent infinite rollback loops
 		nil,   // no previous state needed for rollback of rollback
 		logger.Named("updateRollback"),
+		&listenForDeploymentUpdatesParams{
+			SkippedRollbackItems: skippedItems,
+		},
 	)
 }
 

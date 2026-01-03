@@ -47,11 +47,12 @@ const (
 	eventTypeChangeStagingComplete = "changeStagingComplete"
 
 	// Event types for deployment.
-	eventTypeResourceUpdate = "resource"
-	eventTypeChildUpdate    = "child"
-	eventTypeLinkUpdate     = "link"
-	eventTypeInstanceUpdate = "instanceUpdate"
-	eventTypeDeployFinished = "finish"
+	eventTypeResourceUpdate   = "resource"
+	eventTypeChildUpdate      = "child"
+	eventTypeLinkUpdate       = "link"
+	eventTypeInstanceUpdate   = "instanceUpdate"
+	eventTypeDeployFinished   = "finish"
+	eventTypePreRollbackState = "preRollbackState"
 )
 
 // Controller handles deployment-related HTTP requests

@@ -137,7 +137,7 @@ func resolveInstanceID(
 // a source blueprint document as the blueprint container doesn't utilise
 // the source blueprint document in the destroy process.
 const placeholderBlueprint = `
-version: 2025-02-01
+version: 2025-11-02
 resources:
   stubResource:
     type: core/stub

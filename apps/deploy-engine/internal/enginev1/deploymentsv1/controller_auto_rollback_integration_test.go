@@ -601,3 +601,123 @@ func deployEventSequenceWithStatus(instanceID string, finishStatus core.Instance
 		},
 	}
 }
+
+// Test_pre_rollback_state_emitted_before_auto_rollback tests that the preRollbackState event
+// is emitted before auto-rollback begins, capturing the instance state for debugging.
+func (s *ControllerTestSuite) Test_pre_rollback_state_emitted_before_auto_rollback() {
+	destroyTracker := testutils.NewDestroyTracker()
+	ctrl := s.createAutoRollbackTestController(
+		core.InstanceStatusDeployFailed,
+		destroyTracker,
+	)
+
+	err := s.saveTestChangeset()
+	s.Require().NoError(err)
+
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/deployments/instances",
+		ctrl.CreateBlueprintInstanceHandler,
+	).Methods("POST")
+	router.HandleFunc(
+		"/deployments/instances/{id}/stream",
+		ctrl.StreamDeploymentEventsHandler,
+	).Methods("GET")
+
+	// Create the instance with auto-rollback enabled
+	reqPayload := &BlueprintInstanceRequestPayload{
+		BlueprintDocumentInfo: resolve.BlueprintDocumentInfo{
+			FileSourceScheme: "file",
+			Directory:        "/test/dir",
+			BlueprintFile:    "test.blueprint.yaml",
+		},
+		ChangeSetID:  testChangesetID,
+		AutoRollback: true,
+	}
+
+	reqBytes, err := json.Marshal(reqPayload)
+	s.Require().NoError(err)
+
+	req := httptest.NewRequest("POST", "/deployments/instances", bytes.NewReader(reqBytes))
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	result := w.Result()
+	defer result.Body.Close()
+	respData, err := io.ReadAll(result.Body)
+	s.Require().NoError(err)
+
+	instance := &state.InstanceState{}
+	err = json.Unmarshal(respData, instance)
+	s.Require().NoError(err)
+
+	// Wait for deployment to fail and auto-rollback to trigger
+	time.Sleep(300 * time.Millisecond)
+
+	// Create SSE server to stream events
+	streamServer := httptest.NewServer(router)
+	defer streamServer.Close()
+
+	url := fmt.Sprintf(
+		"%s/deployments/instances/%s/stream",
+		streamServer.URL,
+		instance.InstanceID,
+	)
+
+	client := sse.NewClient(url)
+
+	eventChan := make(chan *sse.Event)
+	client.SubscribeChan("messages", eventChan)
+	defer client.Unsubscribe(eventChan)
+
+	// Collect events including pre-rollback state
+	collected := collectEventsUntilEnd(eventChan, 5*time.Second)
+
+	// Verify pre-rollback state event was emitted
+	foundPreRollbackState := false
+	var preRollbackIndex, rollbackStartIndex int
+	for i, event := range collected {
+		if event.Type == eventTypePreRollbackState {
+			foundPreRollbackState = true
+			preRollbackIndex = i
+		}
+		if event.Type == eventTypeInstanceUpdate {
+			var updateMsg container.DeploymentUpdateMessage
+			if err := json.Unmarshal([]byte(event.Data), &updateMsg); err == nil {
+				if updateMsg.Status == core.InstanceStatusDeployRollingBack {
+					rollbackStartIndex = i
+				}
+			}
+		}
+	}
+
+	s.Assert().True(foundPreRollbackState, "Should have received preRollbackState event")
+
+	// Verify pre-rollback state event comes before rollback start event
+	if foundPreRollbackState && rollbackStartIndex > 0 {
+		s.Assert().Less(
+			preRollbackIndex,
+			rollbackStartIndex,
+			"Pre-rollback state event should come before rollback start event",
+		)
+	}
+}
+
+// collectEventsUntilEnd collects events until an event with End=true is received or timeout.
+func collectEventsUntilEnd(eventChan chan *sse.Event, timeout time.Duration) []*manage.Event {
+	var collected []*manage.Event
+	timer := time.After(timeout)
+
+	for {
+		select {
+		case event := <-eventChan:
+			manageEvent := testutils.SSEToManageEvent(event)
+			collected = append(collected, manageEvent)
+			if manageEvent.End {
+				return collected
+			}
+		case <-timer:
+			return collected
+		}
+	}
+}

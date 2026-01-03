@@ -355,6 +355,52 @@ func (s *ControllerTestSuite) Test_create_blueprint_instance_handler_fails_due_t
 	)
 }
 
+func (s *ControllerTestSuite) Test_create_blueprint_instance_handler_fails_for_destroy_changeset() {
+	err := s.saveDestroyChangeset()
+	s.Require().NoError(err)
+
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/deployments/instances",
+		s.ctrl.CreateBlueprintInstanceHandler,
+	).Methods("POST")
+
+	reqPayload := &BlueprintInstanceRequestPayload{
+		BlueprintDocumentInfo: resolve.BlueprintDocumentInfo{
+			FileSourceScheme: "file",
+			Directory:        "/test/dir",
+			BlueprintFile:    "test.blueprint.yaml",
+		},
+		ChangeSetID: testDestroyChangesetID,
+	}
+
+	reqBytes, err := json.Marshal(reqPayload)
+	s.Require().NoError(err)
+
+	req := httptest.NewRequest("POST", "/deployments/instances", bytes.NewReader(reqBytes))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+	result := w.Result()
+	defer result.Body.Close()
+	respData, err := io.ReadAll(result.Body)
+	s.Require().NoError(err)
+
+	responseError := map[string]string{}
+	err = json.Unmarshal(respData, &responseError)
+	s.Require().NoError(err)
+
+	s.Assert().Equal(http.StatusBadRequest, result.StatusCode)
+	s.Assert().Equal(
+		"cannot deploy using a destroy changeset",
+		responseError["message"],
+	)
+	s.Assert().Equal(
+		"DESTROY_CHANGESET",
+		responseError["code"],
+	)
+}
+
 func (s *ControllerTestSuite) assertDeployEventsEqual(
 	expected []container.DeployEvent,
 	actual []testutils.DeployEventWrapper,
