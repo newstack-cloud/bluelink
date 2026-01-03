@@ -271,3 +271,27 @@ func ResourceStatusIsUnsuccessfulCreate(status ResourceStatus) bool {
 		status == ResourceStatusCreateInterrupted ||
 		status == ResourceStatusCreating
 }
+
+// ResourceStatusIsSafeToRollback returns true if the resource is in a state where
+// rolling back changes is safe and expected to succeed.
+// Safe states are those where the resource operation completed successfully:
+// - Created: resource was successfully created (can be destroyed in rollback)
+// - Updated: resource was successfully updated (can be reverted in rollback)
+// - Destroyed: resource was successfully destroyed (can be recreated in rollback)
+func ResourceStatusIsSafeToRollback(status ResourceStatus) bool {
+	return status == ResourceStatusCreated ||
+		status == ResourceStatusUpdated ||
+		status == ResourceStatusDestroyed
+}
+
+// PreciseResourceStatusIsSafeToRollback returns true if the resource is in a precise
+// state where rolling back changes is safe and expected to succeed.
+// This includes both fully complete and config-complete states, as config-complete
+// indicates the resource was successfully configured even if not yet stable.
+func PreciseResourceStatusIsSafeToRollback(preciseStatus PreciseResourceStatus) bool {
+	return preciseStatus == PreciseResourceStatusCreated ||
+		preciseStatus == PreciseResourceStatusConfigComplete ||
+		preciseStatus == PreciseResourceStatusUpdated ||
+		preciseStatus == PreciseResourceStatusUpdateConfigComplete ||
+		preciseStatus == PreciseResourceStatusDestroyed
+}
