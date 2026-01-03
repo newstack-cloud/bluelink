@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
@@ -60,7 +61,11 @@ func (d *defaultChildBlueprintDestroyer) Destroy(
 		)
 		return
 	}
-	destroyChildChanges := createDestroyChangesFromChildState(childState)
+	destroyChildChanges := getOrCreateChildDestroyChanges(
+		deployCtx.InputChanges,
+		childBlueprintElement.LogicalName(),
+		childState,
+	)
 
 	childParams := deployCtx.ParamOverrides.
 		WithContextVariables(
@@ -145,4 +150,21 @@ func (d *defaultChildBlueprintDestroyer) Destroy(
 			deployCtx.Channels.ErrChan <- err
 		}
 	}
+}
+
+// getOrCreateChildDestroyChanges returns the child's changes from InputChanges if available,
+// otherwise creates destroy changes from the child's state.
+// This ensures that during rollback, filtered child changes (which exclude resources/links
+// in failed states) are used instead of recreating changes that would include all items.
+func getOrCreateChildDestroyChanges(
+	inputChanges *changes.BlueprintChanges,
+	childName string,
+	childState *state.InstanceState,
+) *changes.BlueprintChanges {
+	if inputChanges != nil && inputChanges.ChildChanges != nil {
+		if childChanges, ok := inputChanges.ChildChanges[childName]; ok {
+			return &childChanges
+		}
+	}
+	return createDestroyChangesFromChildState(childState)
 }

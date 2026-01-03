@@ -197,6 +197,106 @@ type DeploymentFinishedMessage struct {
 	// - InstanceStatusUpdateRollbackFailed
 	// - InstanceStatusUpdateRollbackComplete
 	Durations *state.InstanceCompletionDuration `json:"durations,omitempty"`
+	// EndOfStream indicates whether this finish event marks the end of the event stream.
+	// When false, more events will follow (e.g., auto-rollback events after a failed deployment).
+	// When true, no more events will be sent and clients should close their event stream connection.
+	EndOfStream bool `json:"endOfStream"`
+	// SkippedRollbackItems contains resources and links that were skipped during
+	// auto-rollback because they were not in a safe state to rollback.
+	// This is only populated for rollback completion events.
+	SkippedRollbackItems []SkippedRollbackItem `json:"skippedRollbackItems,omitempty"`
+}
+
+// SkippedRollbackItem represents a resource or link that was skipped during
+// rollback because it was not in a safe state to roll back.
+type SkippedRollbackItem struct {
+	// Name is the resource or link name.
+	Name string `json:"name"`
+	// Type indicates whether this is a "resource" or "link".
+	Type string `json:"type"`
+	// ChildPath is the path to the child blueprint containing this item,
+	// empty string for root-level items.
+	ChildPath string `json:"childPath,omitempty"`
+	// Status is the current status that prevented rollback.
+	Status string `json:"status"`
+	// Reason explains why the item was skipped.
+	Reason string `json:"reason"`
+}
+
+// PreRollbackStateMessage provides a snapshot of instance state before auto-rollback begins.
+// This captures the failed deployment state for debugging/auditing before resources are destroyed.
+type PreRollbackStateMessage struct {
+	// InstanceID is the ID of the blueprint instance.
+	InstanceID string `json:"instanceId"`
+	// InstanceName is the user-provided name of the blueprint instance.
+	InstanceName string `json:"instanceName"`
+	// Status is the failed status that triggered rollback (e.g., DeployFailed).
+	Status core.InstanceStatus `json:"status"`
+	// Resources contains snapshots of all resource states before rollback.
+	Resources []ResourceSnapshot `json:"resources"`
+	// Links contains snapshots of all link states before rollback.
+	Links []LinkSnapshot `json:"links"`
+	// Children contains snapshots of all child blueprint states before rollback.
+	// Each child snapshot recursively includes its own resources, links, and children.
+	Children []ChildSnapshot `json:"children"`
+	// FailureReasons contains the reasons for the deployment failure.
+	FailureReasons []string `json:"failureReasons"`
+	// CapturedAt is the unix timestamp in seconds when the state was captured.
+	CapturedAt int64 `json:"capturedAt"`
+}
+
+// ResourceSnapshot provides a snapshot of a resource's state before rollback.
+type ResourceSnapshot struct {
+	// ResourceID is the globally unique ID of the resource.
+	ResourceID string `json:"resourceId"`
+	// ResourceName is the logical name of the resource in the blueprint.
+	ResourceName string `json:"resourceName"`
+	// ResourceType is the type of the resource (e.g., "aws/ec2/instance").
+	ResourceType string `json:"resourceType"`
+	// Status is the high-level status of the resource.
+	Status core.ResourceStatus `json:"status"`
+	// PreciseStatus is the detailed status of the resource.
+	PreciseStatus core.PreciseResourceStatus `json:"preciseStatus"`
+	// FailureReasons contains reasons for failure if the resource failed.
+	FailureReasons []string `json:"failureReasons,omitempty"`
+	// SpecData holds the resolved resource spec including computed fields.
+	// This contains the resource outputs/attributes from the provider.
+	SpecData *core.MappingNode `json:"specData,omitempty"`
+	// ComputedFields lists field paths that are computed at deploy time by the provider.
+	ComputedFields []string `json:"computedFields,omitempty"`
+}
+
+// LinkSnapshot provides a snapshot of a link's state before rollback.
+type LinkSnapshot struct {
+	// LinkID is the globally unique ID of the link.
+	LinkID string `json:"linkId"`
+	// LinkName is the logical name of the link (e.g., "vpc::subnet").
+	LinkName string `json:"linkName"`
+	// Status is the high-level status of the link.
+	Status core.LinkStatus `json:"status"`
+	// PreciseStatus is the detailed status of the link.
+	PreciseStatus core.PreciseLinkStatus `json:"preciseStatus"`
+	// FailureReasons contains reasons for failure if the link failed.
+	FailureReasons []string `json:"failureReasons,omitempty"`
+}
+
+// ChildSnapshot provides a snapshot of a child blueprint's state before rollback.
+// This is recursive - each child includes its own resources, links, and nested children.
+type ChildSnapshot struct {
+	// ChildInstanceID is the ID of the child blueprint instance.
+	ChildInstanceID string `json:"childInstanceId"`
+	// ChildName is the logical name of the child blueprint in the parent blueprint.
+	ChildName string `json:"childName"`
+	// Status is the status of the child blueprint instance.
+	Status core.InstanceStatus `json:"status"`
+	// Resources contains snapshots of resources in this child blueprint.
+	Resources []ResourceSnapshot `json:"resources"`
+	// Links contains snapshots of links in this child blueprint.
+	Links []LinkSnapshot `json:"links"`
+	// Children contains snapshots of nested child blueprints.
+	Children []ChildSnapshot `json:"children"`
+	// FailureReasons contains reasons for failure if the child blueprint failed.
+	FailureReasons []string `json:"failureReasons,omitempty"`
 }
 
 // DeployEvent contains an event that is emitted during the deployment process.
@@ -214,6 +314,9 @@ type DeployEvent struct {
 	// FinishEvent is an event that is emitted when the deployment
 	// of the blueprint instance has finished.
 	FinishEvent *DeploymentFinishedMessage
+	// PreRollbackStateEvent is an event emitted before auto-rollback begins,
+	// capturing the instance state for debugging/auditing purposes.
+	PreRollbackStateEvent *PreRollbackStateMessage
 }
 
 type intermediaryDeployEvent struct {
@@ -238,6 +341,9 @@ const (
 	// EventTypeFinish is an event type that represents a
 	// blueprint instance deployment finish event.
 	EventTypeFinish EventType = "finish"
+	// EventTypePreRollbackState is an event type that represents a
+	// pre-rollback state capture event, emitted before auto-rollback begins.
+	EventTypePreRollbackState EventType = "preRollbackState"
 )
 
 func (e *DeployEvent) MarshalJSON() ([]byte, error) {
@@ -273,6 +379,13 @@ func (e *DeployEvent) MarshalJSON() ([]byte, error) {
 		return e.marshalEventMessage(
 			EventTypeFinish,
 			e.FinishEvent,
+		)
+	}
+
+	if e.PreRollbackStateEvent != nil {
+		return e.marshalEventMessage(
+			EventTypePreRollbackState,
+			e.PreRollbackStateEvent,
 		)
 	}
 
@@ -317,6 +430,9 @@ func (e *DeployEvent) UnmarshalJSON(data []byte) error {
 	case EventTypeFinish:
 		e.FinishEvent = &DeploymentFinishedMessage{}
 		return json.Unmarshal(intermediaryEvent.Message, e.FinishEvent)
+	case EventTypePreRollbackState:
+		e.PreRollbackStateEvent = &PreRollbackStateMessage{}
+		return json.Unmarshal(intermediaryEvent.Message, e.PreRollbackStateEvent)
 	}
 
 	return errors.New("no valid event type set")
