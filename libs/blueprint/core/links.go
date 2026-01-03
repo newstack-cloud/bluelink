@@ -275,3 +275,15 @@ func LinkStatusIsUnsuccessfulCreate(status LinkStatus) bool {
 		status == LinkStatusCreateInterrupted ||
 		status == LinkStatusCreating
 }
+
+// LinkStatusIsSafeToRollback returns true if the link is in a state where
+// rolling back changes is safe and expected to succeed.
+// Safe states are those where the link operation completed successfully:
+// - Created: link was successfully created (can be destroyed in rollback)
+// - Updated: link was successfully updated (can be reverted in rollback)
+// - Destroyed: link was successfully destroyed (can be recreated in rollback)
+func LinkStatusIsSafeToRollback(status LinkStatus) bool {
+	return status == LinkStatusCreated ||
+		status == LinkStatusUpdated ||
+		status == LinkStatusDestroyed
+}
