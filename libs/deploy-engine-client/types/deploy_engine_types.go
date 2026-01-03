@@ -357,6 +357,20 @@ func (e *BlueprintInstanceEvent) String() string {
 		)
 	}
 
+	if e.PreRollbackStateEvent != nil {
+		preRollbackEvent := e.PreRollbackStateEvent
+		sb.WriteString(
+			fmt.Sprintf(
+				" pre-rollback state: instance=%s status=%s resources=%d links=%d children=%d",
+				preRollbackEvent.InstanceName,
+				preRollbackEvent.Status.String(),
+				len(preRollbackEvent.Resources),
+				len(preRollbackEvent.Links),
+				len(preRollbackEvent.Children),
+			),
+		)
+	}
+
 	return sb.String()
 }
 
@@ -386,6 +400,10 @@ const (
 	// that is sent to a blueprint instance stream
 	// when the deployment process has been completed either successfully or with errors.
 	BlueprintInstanceEventTypeDeployFinished BlueprintInstanceEventType = "finish"
+	// BlueprintInstanceEventTypePreRollbackState is the type of deployment event
+	// that is sent to a blueprint instance stream before auto-rollback begins,
+	// containing the instance state snapshot for debugging/auditing.
+	BlueprintInstanceEventTypePreRollbackState BlueprintInstanceEventType = "preRollbackState"
 )
 
 // GetType is a helper method that derives the type of a blueprint instance event
@@ -402,6 +420,8 @@ func (c *BlueprintInstanceEvent) GetType() BlueprintInstanceEventType {
 		return BlueprintInstanceEventTypeInstanceUpdate
 	case c.FinishEvent != nil:
 		return BlueprintInstanceEventTypeDeployFinished
+	case c.PreRollbackStateEvent != nil:
+		return BlueprintInstanceEventTypePreRollbackState
 	default:
 		return ""
 	}
@@ -455,6 +475,16 @@ func (c *BlueprintInstanceEvent) AsInstanceUpdate() (*container.DeploymentUpdate
 func (c *BlueprintInstanceEvent) AsFinish() (*container.DeploymentFinishedMessage, bool) {
 	if c.FinishEvent != nil {
 		return c.FinishEvent, true
+	}
+
+	return nil, false
+}
+
+// AsPreRollbackState is a helper method that returns the pre-rollback state
+// event data if the blueprint instance event is a pre-rollback state capture.
+func (c *BlueprintInstanceEvent) AsPreRollbackState() (*container.PreRollbackStateMessage, bool) {
+	if c.PreRollbackStateEvent != nil {
+		return c.PreRollbackStateEvent, true
 	}
 
 	return nil, false

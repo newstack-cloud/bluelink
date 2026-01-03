@@ -77,6 +77,10 @@ func (e *RequestError) Error() string {
 type ClientError struct {
 	StatusCode int
 	Message    string
+	// Code is an optional error code that provides more specific information
+	// about the error type. This allows clients to handle specific errors
+	// programmatically without relying on message string matching.
+	Code string
 	// An optional list of validation errors that will usually
 	// be populated for 422 responses for input validation errors.
 	ValidationErrors []*ValidationError
@@ -103,6 +107,7 @@ type ValidationError struct {
 // from the Deploy Engine API.
 type Response struct {
 	Message     string             `json:"message"`
+	Code        string             `json:"code,omitempty"`
 	Errors      []*ValidationError `json:"errors,omitempty"`
 	Diagnostics []*core.Diagnostic `json:"validationDiagnostics,omitempty"`
 }
@@ -177,6 +182,19 @@ func IsDriftBlockedError(err error) (*ClientError, bool) {
 	if clientErr, ok := err.(*ClientError); ok {
 		return clientErr, clientErr.StatusCode == http.StatusConflict &&
 			clientErr.DriftBlockedResponse != nil
+	}
+	return nil, false
+}
+
+// ErrorCodeDestroyChangeset is the error code returned when attempting
+// to deploy using a changeset that was created for a destroy operation.
+const ErrorCodeDestroyChangeset = "DESTROY_CHANGESET"
+
+// IsDestroyChangesetError checks if the error is a client error
+// indicating that a destroy changeset was used with a deploy operation.
+func IsDestroyChangesetError(err error) (*ClientError, bool) {
+	if clientErr, ok := err.(*ClientError); ok {
+		return clientErr, clientErr.Code == ErrorCodeDestroyChangeset
 	}
 	return nil, false
 }

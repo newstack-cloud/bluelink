@@ -634,6 +634,7 @@ var sourceStubDeploymentEvents = []types.BlueprintInstanceEvent{
 				Status:          core.InstanceStatusDeployed,
 				FinishTimestamp: testTime.Unix(),
 				UpdateTimestamp: testTime.Unix(),
+				EndOfStream:     true,
 			},
 		},
 	},

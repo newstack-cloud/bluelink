@@ -78,6 +78,7 @@ func createClientError(resp *http.Response) *errors.ClientError {
 	return &errors.ClientError{
 		StatusCode:            resp.StatusCode,
 		Message:               errResp.Message,
+		Code:                  errResp.Code,
 		ValidationErrors:      errResp.Errors,
 		ValidationDiagnostics: errResp.Diagnostics,
 	}

@@ -163,6 +163,18 @@ func sseToBlueprintInstanceEvent(
 				FinishEvent: finishedMessage,
 			},
 		}
+	case types.BlueprintInstanceEventTypePreRollbackState:
+		preRollbackMessage := &container.PreRollbackStateMessage{}
+		err := json.Unmarshal(event.Data, preRollbackMessage)
+		if err != nil {
+			return types.BlueprintInstanceEvent{}
+		}
+		return types.BlueprintInstanceEvent{
+			ID: string(event.ID),
+			DeployEvent: container.DeployEvent{
+				PreRollbackStateEvent: preRollbackMessage,
+			},
+		}
 	}
 
 	return types.BlueprintInstanceEvent{}
@@ -171,5 +183,10 @@ func sseToBlueprintInstanceEvent(
 func checkIsBlueprintInstanceStreamEnd(
 	event types.BlueprintInstanceEvent,
 ) bool {
-	return event.GetType() == types.BlueprintInstanceEventTypeDeployFinished
+	// A finish event only terminates the stream if EndOfStream is true.
+	// When EndOfStream is false, more events will follow (e.g., auto-rollback).
+	if finishEvent, ok := event.AsFinish(); ok {
+		return finishEvent.EndOfStream
+	}
+	return false
 }
