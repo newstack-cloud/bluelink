@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/inputvalidation"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
@@ -57,10 +58,11 @@ func (s *ControllerTestSuite) Test_create_blueprint_instance_handler() {
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	instance := &state.InstanceState{}
-	err = json.Unmarshal(respData, instance)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[state.InstanceState]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
 
+	instance := wrappedResponse.Data
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
 	_, err = uuid.Parse(instance.InstanceID)
 	s.Assert().NoError(err, "ID should be a valid UUID (as per the configured generator)")
@@ -118,10 +120,11 @@ func (s *ControllerTestSuite) Test_create_blueprint_instance_handler_with_instan
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	instance := &state.InstanceState{}
-	err = json.Unmarshal(respData, instance)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[state.InstanceState]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
 
+	instance := wrappedResponse.Data
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
 	_, err = uuid.Parse(instance.InstanceID)
 	s.Assert().NoError(err, "ID should be a valid UUID (as per the configured generator)")
@@ -168,10 +171,11 @@ func (s *ControllerTestSuite) Test_create_blueprint_instance_handler_with_stream
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	instance := &state.InstanceState{}
-	err = json.Unmarshal(respData, instance)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[state.InstanceState]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
 
+	instance := wrappedResponse.Data
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
 	_, err = uuid.Parse(instance.InstanceID)
 	s.Assert().NoError(err, "ID should be a valid UUID (as per the configured generator)")

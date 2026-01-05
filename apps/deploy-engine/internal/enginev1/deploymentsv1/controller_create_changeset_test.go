@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/inputvalidation"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/params"
@@ -53,10 +54,11 @@ func (s *ControllerTestSuite) Test_create_changeset_handler() {
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	changeset := &manage.Changeset{}
-	err = json.Unmarshal(respData, changeset)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[*manage.Changeset]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
 
+	changeset := wrappedResponse.Data
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
 	_, err = uuid.Parse(changeset.ID)
 	s.Assert().NoError(err, "ID should be a valid UUID (as per the configured generator)")
@@ -111,10 +113,11 @@ func (s *ControllerTestSuite) Test_create_changeset_handler_with_stream_error() 
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	changeset := &manage.Changeset{}
-	err = json.Unmarshal(respData, changeset)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[*manage.Changeset]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
 
+	changeset := wrappedResponse.Data
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
 	_, err = uuid.Parse(changeset.ID)
 	s.Assert().NoError(err, "ID should be a valid UUID (as per the configured generator)")
@@ -359,10 +362,11 @@ func (s *ControllerTestSuite) Test_create_changeset_drift_detected_blocks_stagin
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	changeset := &manage.Changeset{}
-	err = json.Unmarshal(respData, changeset)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[*manage.Changeset]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
 
+	changeset := wrappedResponse.Data
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
 
 	// Stream events and verify drift detected event is received
@@ -480,8 +484,8 @@ func (s *ControllerTestSuite) Test_create_changeset_skip_drift_check_bypasses_de
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	changeset := &manage.Changeset{}
-	err = json.Unmarshal(respData, changeset)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[*manage.Changeset]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
 
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/types"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
@@ -54,9 +55,11 @@ func (s *ControllerTestSuite) Test_destroy_blueprint_instance() {
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	instance := &state.InstanceState{}
-	err = json.Unmarshal(respData, instance)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[state.InstanceState]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
+
+	instance := wrappedResponse.Data
 
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
 	_, err = uuid.Parse(instance.InstanceID)
@@ -107,9 +110,11 @@ func (s *ControllerTestSuite) Test_destroy_blueprint_instance_by_name() {
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	instance := &state.InstanceState{}
-	err = json.Unmarshal(respData, instance)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[state.InstanceState]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
+
+	instance := wrappedResponse.Data
 
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
 	s.Assert().Equal(
@@ -397,9 +402,11 @@ func (s *ControllerTestSuite) Test_destroy_blueprint_instance_force_bypasses_dri
 	// Should return 202 Accepted (proceeds with destroy)
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
 
-	instance := &state.InstanceState{}
-	err = json.Unmarshal(respData, instance)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[state.InstanceState]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
+
+	instance := wrappedResponse.Data
 
 	s.Assert().Equal(testInstanceID, instance.InstanceID)
 	s.Assert().Equal(core.InstanceStatusDestroying, instance.Status)

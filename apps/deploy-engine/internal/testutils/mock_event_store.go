@@ -125,6 +125,22 @@ func (s *MockEventStore) Cleanup(ctx context.Context, thresholdDate time.Time) e
 	return nil
 }
 
+func (s *MockEventStore) GetLastEventID(
+	ctx context.Context,
+	channelType, channelID string,
+) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	partitionKey := createPartitionKey(channelType, channelID)
+	partition, exists := s.EventPartitions[partitionKey]
+	if !exists || len(partition) == 0 {
+		return "", nil
+	}
+
+	return partition[len(partition)-1].ID, nil
+}
+
 func partitionEvents(
 	events map[string]*manage.Event,
 ) map[string][]*manage.Event {

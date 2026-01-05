@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/gorilla/mux"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/types"
@@ -60,9 +61,11 @@ func (s *ControllerTestSuite) Test_update_blueprint_instance() {
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	instance := &state.InstanceState{}
-	err = json.Unmarshal(respData, instance)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[state.InstanceState]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
+
+	instance := wrappedResponse.Data
 
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
 	s.Assert().Equal(
@@ -121,9 +124,11 @@ func (s *ControllerTestSuite) Test_update_blueprint_instance_by_name() {
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	instance := &state.InstanceState{}
-	err = json.Unmarshal(respData, instance)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[state.InstanceState]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
+
+	instance := wrappedResponse.Data
 
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
 	s.Assert().Equal(
@@ -399,9 +404,11 @@ func (s *ControllerTestSuite) Test_update_blueprint_instance_force_bypasses_drif
 	// Should return 202 Accepted (proceeds with deployment)
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
 
-	instance := &state.InstanceState{}
-	err = json.Unmarshal(respData, instance)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[state.InstanceState]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
+
+	instance := wrappedResponse.Data
 
 	s.Assert().Equal(testInstanceID, instance.InstanceID)
 }

@@ -504,9 +504,11 @@ func (s *ControllerTestSuite) Test_force_bypasses_drift_no_reconciliation() {
 
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
-	instance := &state.InstanceState{}
-	err = json.Unmarshal(respData, instance)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[state.InstanceState]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
+
+	instance := wrappedResponse.Data
 	s.Assert().Equal(integrationTestInstanceID, instance.InstanceID)
 	// Note: The response returns the existing instance state before async deployment starts.
 	// The status will transition to DEPLOYING asynchronously via SSE events.

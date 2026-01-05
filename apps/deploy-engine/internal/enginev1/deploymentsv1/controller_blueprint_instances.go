@@ -224,6 +224,26 @@ func (c *Controller) DestroyBlueprintInstanceHandler(
 	// Create tagging config from the request payload, applying defaults as needed.
 	taggingConfig := c.createTaggingConfig(payload.Config)
 
+	// Get the last event ID for the deployment channel before starting the async operation.
+	// This allows clients to use it as a starting offset when streaming events.
+	lastEventID, err := c.eventStore.GetLastEventID(
+		r.Context(),
+		helpersv1.ChannelTypeDeployment,
+		instance.InstanceID,
+	)
+	if err != nil {
+		c.logger.Debug(
+			"failed to get last event ID for deployment channel",
+			core.ErrorLogField("error", err),
+		)
+		httputils.HTTPError(
+			w,
+			http.StatusInternalServerError,
+			utils.UnexpectedErrorMessage,
+		)
+		return
+	}
+
 	go c.startDestroy(
 		changeset,
 		instance.InstanceID,
@@ -241,7 +261,10 @@ func (c *Controller) DestroyBlueprintInstanceHandler(
 	httputils.HTTPJSONResponse(
 		w,
 		http.StatusAccepted,
-		instance,
+		&helpersv1.AsyncOperationResponse[state.InstanceState]{
+			LastEventID: lastEventID,
+			Data:        instance,
+		},
 	)
 }
 
@@ -367,10 +390,33 @@ func (c *Controller) handleDeployRequest(
 		instance = &newInstance
 	}
 
+	// Get the last event ID for the deployment channel.
+	// This allows clients to use it as a starting offset when streaming events.
+	lastEventID, err := c.eventStore.GetLastEventID(
+		r.Context(),
+		helpersv1.ChannelTypeDeployment,
+		instanceID,
+	)
+	if err != nil {
+		c.logger.Debug(
+			"failed to get last event ID for deployment channel",
+			core.ErrorLogField("error", err),
+		)
+		httputils.HTTPError(
+			w,
+			http.StatusInternalServerError,
+			utils.UnexpectedErrorMessage,
+		)
+		return
+	}
+
 	httputils.HTTPJSONResponse(
 		w,
 		http.StatusAccepted,
-		instance,
+		&helpersv1.AsyncOperationResponse[state.InstanceState]{
+			LastEventID: lastEventID,
+			Data:        *instance,
+		},
 	)
 }
 

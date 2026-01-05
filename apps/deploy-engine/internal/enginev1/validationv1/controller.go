@@ -164,6 +164,26 @@ func (c *Controller) CreateBlueprintValidationHandler(
 		finalConfig,
 	)
 
+	// Get the last event ID for the validation channel before starting the async operation.
+	// This allows clients to use it as a starting offset when streaming events.
+	lastEventID, err := c.eventStore.GetLastEventID(
+		r.Context(),
+		helpersv1.ChannelTypeValidation,
+		blueprintValidationID,
+	)
+	if err != nil {
+		c.logger.Debug(
+			"failed to get last event ID for validation channel",
+			core.ErrorLogField("error", err),
+		)
+		httputils.HTTPError(
+			w,
+			http.StatusInternalServerError,
+			utils.UnexpectedErrorMessage,
+		)
+		return
+	}
+
 	checkBlueprintVars := isTruthy(r.URL.Query().Get("checkBlueprintVars"))
 	go c.startValidationStream(
 		blueprintValidation,
@@ -181,7 +201,10 @@ func (c *Controller) CreateBlueprintValidationHandler(
 	httputils.HTTPJSONResponse(
 		w,
 		http.StatusAccepted,
-		blueprintValidation,
+		&helpersv1.AsyncOperationResponse[*manage.BlueprintValidation]{
+			LastEventID: lastEventID,
+			Data:        blueprintValidation,
+		},
 	)
 }
 

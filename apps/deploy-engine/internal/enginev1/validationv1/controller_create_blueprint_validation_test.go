@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/inputvalidation"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
@@ -49,10 +50,11 @@ func (s *ControllerTestSuite) Test_create_blueprint_validation_handler() {
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	blueprintValidation := &manage.BlueprintValidation{}
-	err = json.Unmarshal(respData, blueprintValidation)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[*manage.BlueprintValidation]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
 
+	blueprintValidation := wrappedResponse.Data
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
 	_, err = uuid.Parse(blueprintValidation.ID)
 	s.Assert().NoError(err, "ID should be a valid UUID (as per the configured generator)")
@@ -205,10 +207,11 @@ func (s *ControllerTestSuite) Test_create_blueprint_validation_handler_streams_p
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	blueprintValidation := &manage.BlueprintValidation{}
-	err = json.Unmarshal(respData, blueprintValidation)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[*manage.BlueprintValidation]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
 
+	blueprintValidation := wrappedResponse.Data
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
 	_, err = uuid.Parse(blueprintValidation.ID)
 	s.Assert().NoError(err, "ID should be a valid UUID (as per the configured generator)")

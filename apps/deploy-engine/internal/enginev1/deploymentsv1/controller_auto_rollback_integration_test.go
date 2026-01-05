@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/params"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
@@ -66,9 +67,11 @@ func (s *ControllerTestSuite) Test_auto_rollback_triggered_on_deploy_failed() {
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	instance := &state.InstanceState{}
-	err = json.Unmarshal(respData, instance)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[state.InstanceState]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
+
+	instance := wrappedResponse.Data
 
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
 	_, err = uuid.Parse(instance.InstanceID)
@@ -385,9 +388,11 @@ func (s *ControllerTestSuite) Test_auto_rollback_stream_remains_open() {
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	instance := &state.InstanceState{}
-	err = json.Unmarshal(respData, instance)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[state.InstanceState]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
+
+	instance := wrappedResponse.Data
 
 	// Wait a bit for events to be generated
 	time.Sleep(100 * time.Millisecond)
@@ -647,9 +652,11 @@ func (s *ControllerTestSuite) Test_pre_rollback_state_emitted_before_auto_rollba
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	instance := &state.InstanceState{}
-	err = json.Unmarshal(respData, instance)
+	wrappedResponse := &helpersv1.AsyncOperationResponse[state.InstanceState]{}
+	err = json.Unmarshal(respData, wrappedResponse)
 	s.Require().NoError(err)
+
+	instance := wrappedResponse.Data
 
 	// Wait for deployment to fail and auto-rollback to trigger
 	time.Sleep(300 * time.Millisecond)

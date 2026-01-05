@@ -15,6 +15,7 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/auth"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/validationv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
@@ -83,13 +84,14 @@ func (s *ServerV1WithMemfileStorageEngineTestSuite) Test_server_endpoint_request
 	defer response.Body.Close()
 	s.Assert().Equal(http.StatusAccepted, response.StatusCode, "unexpected status code")
 
-	blueprintValidation := &manage.BlueprintValidation{}
+	wrappedResponse := &helpersv1.AsyncOperationResponse[*manage.BlueprintValidation]{}
 	respBytes, err := io.ReadAll(response.Body)
 	s.Require().NoError(err, "error reading response body")
 
-	err = json.Unmarshal(respBytes, blueprintValidation)
+	err = json.Unmarshal(respBytes, wrappedResponse)
 	s.Require().NoError(err, "error unmarshalling response body")
 
+	blueprintValidation := wrappedResponse.Data
 	s.Assert().Equal(
 		fmt.Sprintf(
 			"file://%s/test-blueprint.yml",

@@ -126,6 +126,26 @@ func (c *Controller) CreateChangesetHandler(
 	params := c.paramsProvider.CreateFromRequestConfig(finalConfig)
 	taggingConfig := c.createTaggingConfig(finalConfig)
 
+	// Get the last event ID for the changeset channel before starting the async operation.
+	// This allows clients to use it as a starting offset when streaming events.
+	lastEventID, err := c.eventStore.GetLastEventID(
+		r.Context(),
+		helpersv1.ChannelTypeChangeset,
+		changesetID,
+	)
+	if err != nil {
+		c.logger.Debug(
+			"failed to get last event ID for changeset channel",
+			core.ErrorLogField("error", err),
+		)
+		httputils.HTTPError(
+			w,
+			http.StatusInternalServerError,
+			utils.UnexpectedErrorMessage,
+		)
+		return
+	}
+
 	go c.startChangeStaging(
 		changeset,
 		blueprintInfo,
@@ -142,7 +162,10 @@ func (c *Controller) CreateChangesetHandler(
 	httputils.HTTPJSONResponse(
 		w,
 		http.StatusAccepted,
-		changeset,
+		&helpersv1.AsyncOperationResponse[*manage.Changeset]{
+			LastEventID: lastEventID,
+			Data:        changeset,
+		},
 	)
 }
 
