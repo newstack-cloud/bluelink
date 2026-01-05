@@ -4,10 +4,34 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
+
+// staleEndEventThreshold defines how old an end event can be before it's
+// considered stale when starting a fresh stream (no StartingEventID).
+// End events older than this threshold will not close fresh streams,
+// allowing new operations on the same channel to proceed without
+// interference from old end events from previous operations.
+const staleEndEventThreshold = 10 * time.Second
+
+// shouldCloseOnEndEvent determines if an end event should close the stream.
+// When a client provides a StartingEventID (resuming a stream), we always
+// honor end events since the client explicitly requested events from that point.
+// When starting fresh (no StartingEventID), we ignore stale end events to
+// prevent race conditions where a new operation starts but old end events
+// from previous operations would prematurely close the stream.
+func shouldCloseOnEndEvent(eventTimestamp int64, hasStartingEventID bool) bool {
+	if hasStartingEventID {
+		// Client is resuming from a specific point - always honor end events
+		return true
+	}
+	// Fresh stream - only close on recent end events
+	eventTime := time.Unix(eventTimestamp, 0)
+	return time.Since(eventTime) <= staleEndEventThreshold
+}
 
 // StreamInfo holds information about the stream channel type and ID
 // to be used for streaming events to clients over SSE.
@@ -35,16 +59,18 @@ func SSEStreamEvents(
 	eventChan := make(chan manage.Event)
 	errChan := make(chan error)
 
+	startingEventID := r.Header.Get(LastEventIDHeader)
 	endChan, err := eventStore.Stream(
 		r.Context(),
 		&manage.EventStreamParams{
 			ChannelType:     info.ChannelType,
 			ChannelID:       info.ChannelID,
-			StartingEventID: r.Header.Get(LastEventIDHeader),
+			StartingEventID: startingEventID,
 		},
 		eventChan,
 		errChan,
 	)
+	hasStartingEventID := startingEventID != ""
 	if err != nil {
 		logger.Error(
 			"Failed to start event stream",
@@ -76,7 +102,10 @@ L:
 
 			// An event at the end of a stream is marked with a special
 			// "End" field. This is used to indicate that the stream has ended.
-			if evt.End {
+			// We check shouldCloseOnEndEvent to handle the case where a client
+			// starts a fresh stream (no StartingEventID) and receives a stale
+			// end event from a previous operation before new events arrive.
+			if evt.End && shouldCloseOnEndEvent(evt.Timestamp, hasStartingEventID) {
 				select {
 				case endChan <- struct{}{}:
 					logger.Debug("End of stream")

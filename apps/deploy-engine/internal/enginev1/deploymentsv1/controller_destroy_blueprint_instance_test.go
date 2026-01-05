@@ -24,9 +24,9 @@ func (s *ControllerTestSuite) Test_destroy_blueprint_instance() {
 	// Create the blueprint instance to be destroyed.
 	_, err := s.saveTestBlueprintInstance()
 	s.Require().NoError(err)
-	// Create the test change set to be used to start the destroy
+	// Create the test destroy change set to be used to start the destroy
 	// process for the blueprint instance.
-	err = s.saveTestChangeset()
+	err = s.saveDestroyChangeset()
 	s.Require().NoError(err)
 
 	router := mux.NewRouter()
@@ -36,7 +36,7 @@ func (s *ControllerTestSuite) Test_destroy_blueprint_instance() {
 	).Methods("POST")
 
 	reqPayload := &BlueprintInstanceDestroyRequestPayload{
-		ChangeSetID: testChangesetID,
+		ChangeSetID: testDestroyChangesetID,
 	}
 
 	reqBytes, err := json.Marshal(reqPayload)
@@ -78,9 +78,9 @@ func (s *ControllerTestSuite) Test_destroy_blueprint_instance_by_name() {
 	// Create the blueprint instance to be destroyed.
 	_, err := s.saveTestBlueprintInstance()
 	s.Require().NoError(err)
-	// Create the test change set to be used to start the destroy
+	// Create the test destroy change set to be used to start the destroy
 	// process for the blueprint instance.
-	err = s.saveTestChangeset()
+	err = s.saveDestroyChangeset()
 	s.Require().NoError(err)
 
 	router := mux.NewRouter()
@@ -90,7 +90,7 @@ func (s *ControllerTestSuite) Test_destroy_blueprint_instance_by_name() {
 	).Methods("POST")
 
 	reqPayload := &BlueprintInstanceDestroyRequestPayload{
-		ChangeSetID: testChangesetID,
+		ChangeSetID: testDestroyChangesetID,
 	}
 
 	reqBytes, err := json.Marshal(reqPayload)
@@ -172,6 +172,8 @@ func (s *ControllerTestSuite) Test_destroy_blueprint_instance_handler_returns_40
 func (s *ControllerTestSuite) Test_destroy_blueprint_instance_handler_fails_for_invalid_plugin_config() {
 	_, err := s.saveTestBlueprintInstance()
 	s.Require().NoError(err)
+	err = s.saveDestroyChangeset()
+	s.Require().NoError(err)
 
 	router := mux.NewRouter()
 	router.HandleFunc(
@@ -180,7 +182,7 @@ func (s *ControllerTestSuite) Test_destroy_blueprint_instance_handler_fails_for_
 	).Methods("POST")
 
 	reqPayload := &BlueprintInstanceDestroyRequestPayload{
-		ChangeSetID: testChangesetID,
+		ChangeSetID: testDestroyChangesetID,
 		Config: &types.BlueprintOperationConfig{
 			Providers: map[string]map[string]*core.ScalarValue{
 				"aws": {
@@ -292,6 +294,7 @@ func (s *ControllerTestSuite) Test_destroy_blueprint_instance_drift_detected_ret
 			Status:            manage.ChangesetStatusDriftDetected,
 			BlueprintLocation: "file:///test/dir/test.blueprint.yaml",
 			Created:           testTime.Unix(),
+			Destroy:           true,
 		},
 	)
 	s.Require().NoError(err)
@@ -370,6 +373,7 @@ func (s *ControllerTestSuite) Test_destroy_blueprint_instance_force_bypasses_dri
 			InstanceID:        testInstanceID,
 			Status:            manage.ChangesetStatusDriftDetected,
 			BlueprintLocation: "file:///test/dir/test.blueprint.yaml",
+			Destroy:           true,
 			Created:           testTime.Unix(),
 		},
 	)
@@ -410,4 +414,50 @@ func (s *ControllerTestSuite) Test_destroy_blueprint_instance_force_bypasses_dri
 
 	s.Assert().Equal(testInstanceID, instance.InstanceID)
 	s.Assert().Equal(core.InstanceStatusDestroying, instance.Status)
+}
+
+func (s *ControllerTestSuite) Test_destroy_blueprint_instance_handler_fails_for_deploy_changeset() {
+	// Create the blueprint instance to be destroyed.
+	_, err := s.saveTestBlueprintInstance()
+	s.Require().NoError(err)
+	// Save a deploy changeset (not a destroy changeset)
+	err = s.saveTestChangeset()
+	s.Require().NoError(err)
+
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/deployments/instances/{id}/destroy",
+		s.ctrl.DestroyBlueprintInstanceHandler,
+	).Methods("POST")
+
+	reqPayload := &BlueprintInstanceDestroyRequestPayload{
+		ChangeSetID: testChangesetID,
+	}
+
+	reqBytes, err := json.Marshal(reqPayload)
+	s.Require().NoError(err)
+
+	path := fmt.Sprintf("/deployments/instances/%s/destroy", testInstanceID)
+	req := httptest.NewRequest("POST", path, bytes.NewReader(reqBytes))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+	result := w.Result()
+	defer result.Body.Close()
+	respData, err := io.ReadAll(result.Body)
+	s.Require().NoError(err)
+
+	responseError := map[string]string{}
+	err = json.Unmarshal(respData, &responseError)
+	s.Require().NoError(err)
+
+	s.Assert().Equal(http.StatusBadRequest, result.StatusCode)
+	s.Assert().Equal(
+		"cannot destroy using a deploy changeset",
+		responseError["message"],
+	)
+	s.Assert().Equal(
+		"DEPLOY_CHANGESET",
+		responseError["code"],
+	)
 }

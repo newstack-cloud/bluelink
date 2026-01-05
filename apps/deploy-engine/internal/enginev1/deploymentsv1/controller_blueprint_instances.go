@@ -206,6 +206,18 @@ func (c *Controller) DestroyBlueprintInstanceHandler(
 		return
 	}
 
+	if !changeset.Destroy {
+		httputils.HTTPErrorWithFields(
+			w,
+			http.StatusBadRequest,
+			"cannot destroy using a deploy changeset",
+			map[string]any{
+				"code": "DEPLOY_CHANGESET",
+			},
+		)
+		return
+	}
+
 	// Check if changeset has drift detected status and block the destroy unless force is set
 	if !payload.Force {
 		if changeset.Status == manage.ChangesetStatusDriftDetected {

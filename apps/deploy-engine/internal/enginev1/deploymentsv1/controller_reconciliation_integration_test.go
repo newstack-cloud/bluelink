@@ -349,6 +349,7 @@ func (s *ControllerTestSuite) Test_drift_workflow_destroy() {
 			Status:            manage.ChangesetStatusDriftDetected,
 			BlueprintLocation: "file:///test/dir/test.blueprint.yaml",
 			Created:           testTime.Unix(),
+			Destroy:           true,
 		},
 	)
 	s.Require().NoError(err)
