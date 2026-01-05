@@ -198,3 +198,16 @@ func IsDestroyChangesetError(err error) (*ClientError, bool) {
 	}
 	return nil, false
 }
+
+// ErrorCodeDeployChangeset is the error code returned when attempting
+// to destroy using a changeset that was created for a deploy operation.
+const ErrorCodeDeployChangeset = "DEPLOY_CHANGESET"
+
+// IsDeployChangesetError checks if the error is a client error
+// indicating that a deploy changeset was used with a destroy operation.
+func IsDeployChangesetError(err error) (*ClientError, bool) {
+	if clientErr, ok := err.(*ClientError); ok {
+		return clientErr, clientErr.Code == ErrorCodeDeployChangeset
+	}
+	return nil, false
+}
