@@ -5,8 +5,8 @@ go 1.24.0
 require (
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/google/uuid v1.6.0
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.0
-	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.0.0-20250624111215-07bed274d714
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.4
+	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.1.4
 	github.com/spf13/afero v1.15.0
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.1
