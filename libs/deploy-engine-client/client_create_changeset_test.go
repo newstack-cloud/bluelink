@@ -43,12 +43,13 @@ func (s *ClientSuite) Test_create_changeset() {
 		},
 	}
 
-	changeset, err := client.CreateChangeset(
+	response, err := client.CreateChangeset(
 		context.Background(),
 		payload,
 	)
 	s.Require().NoError(err)
 
+	s.Assert().Equal("test-last-event-id", response.LastEventID)
 	s.Assert().Equal(
 		&manage.Changeset{
 			ID:                testChangesetID,
@@ -72,7 +73,7 @@ func (s *ClientSuite) Test_create_changeset() {
 			},
 			Created: testTime.Unix(),
 		},
-		changeset,
+		response.Data,
 	)
 }
 

@@ -256,34 +256,34 @@ func NewClient(
 
 // CreateBlueprintValidation creates a new blueprint validation
 // for the provided blueprint document and starts the validation process.
-// This will return an ID that can be used to stream the validation events
-// as they occur.
+// This will return a response containing the validation resource and a lastEventId
+// that can be used as a starting offset when streaming validation events.
 // This is the `POST {baseURL}/v1/validations` API endpoint.
 func (c *Client) CreateBlueprintValidation(
 	ctx context.Context,
 	payload *types.CreateBlueprintValidationPayload,
 	query *types.CreateBlueprintValidationQuery,
-) (*manage.BlueprintValidation, error) {
+) (*types.BlueprintValidationResponse, error) {
 	url := fmt.Sprintf(
 		"%s/v1/validations",
 		c.endpoint,
 	)
 	queryParams := createBlueprintValidationQueryToQueryParams(query)
 
-	blueprintValidation := &manage.BlueprintValidation{}
+	response := &types.BlueprintValidationResponse{}
 	err := c.startMutatingAction(
 		ctx,
 		url,
 		"POST",
 		payload,
-		blueprintValidation,
+		response,
 		queryParams,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return blueprintValidation, nil
+	return response, nil
 }
 
 // GetBlueprintValidation retrieves metadata and status information
@@ -318,6 +318,11 @@ func (c *Client) GetBlueprintValidation(
 // validation process.
 // This will produce a stream of events as they occur or that have
 // recently occurred.
+//
+// The lastEventID parameter can be used to start streaming from a specific event ID.
+// Pass the lastEventId from the CreateBlueprintValidation response to avoid missing events.
+// Pass an empty string to start from recently queued events.
+//
 // Any HTTP errors that occur when estabilishing a connection will be sent
 // to the provided error channel.
 // This comes with built-in re-connect logic that makes use of the
@@ -327,12 +332,17 @@ func (c *Client) GetBlueprintValidation(
 func (c *Client) StreamBlueprintValidationEvents(
 	ctx context.Context,
 	validationID string,
+	lastEventID string,
 	streamTo chan<- types.BlueprintValidationEvent,
 	errChan chan<- error,
 ) error {
 	headers, err := c.prepareAuthHeaders()
 	if err != nil {
 		return err
+	}
+
+	if lastEventID != "" {
+		headers[LastEventIDHeaderName] = lastEventID
 	}
 
 	url := fmt.Sprintf(
@@ -405,8 +415,8 @@ func (c *Client) CleanupBlueprintValidations(
 
 // CreateChangeset creates a change set for a blueprint deployment.
 // This will start a change staging process for the provided blueprint
-// document and return an ID that can be used to retrieve the change set
-// or stream change staging events.
+// document and return a response containing the change set resource and a lastEventId
+// that can be used as a starting offset when streaming change staging events.
 //
 // If a valid instance ID or name is provided, a change set will be created
 // by comparing the provided blueprint document with the current state of the
@@ -419,26 +429,26 @@ func (c *Client) CleanupBlueprintValidations(
 func (c *Client) CreateChangeset(
 	ctx context.Context,
 	payload *types.CreateChangesetPayload,
-) (*manage.Changeset, error) {
+) (*types.ChangesetResponse, error) {
 	url := fmt.Sprintf(
 		"%s/v1/deployments/changes",
 		c.endpoint,
 	)
 
-	changeset := &manage.Changeset{}
+	response := &types.ChangesetResponse{}
 	err := c.startMutatingAction(
 		ctx,
 		url,
 		"POST",
 		payload,
-		changeset,
+		response,
 		/* queryParams */ map[string]string{},
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return changeset, nil
+	return response, nil
 }
 
 // GetChangeset retrieves a change set for a blueprint deployment.
@@ -472,6 +482,11 @@ func (c *Client) GetChangeset(
 // StreamChangeStagingEvents streams events from the change staging process
 // for the given change set ID.
 // This will produce a stream of events as they occur or that have recently occurred.
+//
+// The lastEventID parameter can be used to start streaming from a specific event ID.
+// Pass the lastEventId from the CreateChangeset response to avoid missing events.
+// Pass an empty string to start from recently queued events.
+//
 // Any HTTP errors that occur when estabilishing a connection will be sent
 // to the provided error channel.
 // This comes with built-in re-connect logic that makes use of the
@@ -481,12 +496,17 @@ func (c *Client) GetChangeset(
 func (c *Client) StreamChangeStagingEvents(
 	ctx context.Context,
 	changesetID string,
+	lastEventID string,
 	streamTo chan<- types.ChangeStagingEvent,
 	errChan chan<- error,
 ) error {
 	headers, err := c.prepareAuthHeaders()
 	if err != nil {
 		return err
+	}
+
+	if lastEventID != "" {
+		headers[LastEventIDHeaderName] = lastEventID
 	}
 
 	url := fmt.Sprintf(
@@ -560,40 +580,40 @@ func (c *Client) CleanupChangesets(
 // CreateBlueprintInstance (Deploy New) creates a new blueprint deployment instance.
 // This will start the deployment process for the provided blueprint
 // document and change set.
-// It will return a blueprint instance resource containing an ID that
-// can be used to stream deployment events as they occur.
+// It will return a response containing the blueprint instance resource and a lastEventId
+// that can be used as a starting offset when streaming deployment events.
 // This is the `POST {baseURL}/v1/deployments/instances` API endpoint.
 func (c *Client) CreateBlueprintInstance(
 	ctx context.Context,
 	payload *types.BlueprintInstancePayload,
-) (*state.InstanceState, error) {
+) (*types.BlueprintInstanceResponse, error) {
 	url := fmt.Sprintf(
 		"%s/v1/deployments/instances",
 		c.endpoint,
 	)
 
-	instance := &state.InstanceState{}
+	response := &types.BlueprintInstanceResponse{}
 	err := c.startMutatingAction(
 		ctx,
 		url,
 		"POST",
 		payload,
-		instance,
+		response,
 		/* queryParams */ map[string]string{},
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return instance, nil
+	return response, nil
 }
 
 // UpdateBlueprintInstance (Deploy Existing) updates an existing blueprint
 // deployment instance.
 // This will start the deployment process for the provided blueprint
 // document and change set.
-// It will return the current state of the blueprint instance,
-// the same ID provided should be used to stream deployment events as they occur.
+// It will return a response containing the current state of the blueprint instance
+// and a lastEventId that can be used as a starting offset when streaming deployment events.
 // This is the `PATCH {baseURL}/v1/deployments/instances/{id}` API endpoint.
 //
 // The instanceID parameter can be either the unique instance ID or
@@ -602,27 +622,27 @@ func (c *Client) UpdateBlueprintInstance(
 	ctx context.Context,
 	instanceID string,
 	payload *types.BlueprintInstancePayload,
-) (*state.InstanceState, error) {
+) (*types.BlueprintInstanceResponse, error) {
 	url := fmt.Sprintf(
 		"%s/v1/deployments/instances/%s",
 		c.endpoint,
 		instanceID,
 	)
 
-	instance := &state.InstanceState{}
+	response := &types.BlueprintInstanceResponse{}
 	err := c.startMutatingAction(
 		ctx,
 		url,
 		"PATCH",
 		payload,
-		instance,
+		response,
 		/* queryParams */ map[string]string{},
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return instance, nil
+	return response, nil
 }
 
 // GetBlueprintInstance retrieves a blueprint deployment instance.
@@ -687,8 +707,8 @@ func (c *Client) GetBlueprintInstanceExports(
 
 // DestroyBlueprintInstance destroys a blueprint deployment instance.
 // This will start the destroy process for the provided change set.
-// It will return the current state of the blueprint instance,
-// the same ID provided should be used to stream destroy events as they occur.
+// It will return a response containing the current state of the blueprint instance
+// and a lastEventId that can be used as a starting offset when streaming destroy events.
 // This is the `POST {baseURL}/v1/deployments/instances/{id}/destroy` API endpoint.
 //
 // The instanceID parameter can be either the unique instance ID or
@@ -697,27 +717,27 @@ func (c *Client) DestroyBlueprintInstance(
 	ctx context.Context,
 	instanceID string,
 	payload *types.DestroyBlueprintInstancePayload,
-) (*state.InstanceState, error) {
+) (*types.BlueprintInstanceResponse, error) {
 	url := fmt.Sprintf(
 		"%s/v1/deployments/instances/%s/destroy",
 		c.endpoint,
 		instanceID,
 	)
 
-	instance := &state.InstanceState{}
+	response := &types.BlueprintInstanceResponse{}
 	err := c.startMutatingAction(
 		ctx,
 		url,
 		"POST",
 		payload,
-		instance,
+		response,
 		/* queryParams */ map[string]string{},
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return instance, nil
+	return response, nil
 }
 
 // StreamBlueprintInstanceEvents streams events from the current deployment
@@ -727,6 +747,10 @@ func (c *Client) DestroyBlueprintInstance(
 // a blueprint instance.
 //
 // This will produce a stream of events as they occur or that have recently occurred.
+//
+// The lastEventID parameter can be used to start streaming from a specific event ID.
+// Pass the lastEventId from the Create/Update/Destroy response to avoid missing events.
+// Pass an empty string to start from recently queued events.
 //
 // For a blueprint instance that has been destroyed, this stream will no longer be available
 // to new connections once the destroy process has been successfully completed.
@@ -745,12 +769,17 @@ func (c *Client) DestroyBlueprintInstance(
 func (c *Client) StreamBlueprintInstanceEvents(
 	ctx context.Context,
 	instanceID string,
+	lastEventID string,
 	streamTo chan<- types.BlueprintInstanceEvent,
 	errChan chan<- error,
 ) error {
 	headers, err := c.prepareAuthHeaders()
 	if err != nil {
 		return err
+	}
+
+	if lastEventID != "" {
+		headers[LastEventIDHeaderName] = lastEventID
 	}
 
 	url := fmt.Sprintf(

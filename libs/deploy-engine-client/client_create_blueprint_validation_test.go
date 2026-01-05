@@ -48,13 +48,14 @@ func (s *ClientSuite) Test_create_blueprint_validation_oauth2_preconfigured_toke
 		},
 	}
 
-	blueprintValidation, err := client.CreateBlueprintValidation(
+	response, err := client.CreateBlueprintValidation(
 		context.Background(),
 		payload,
 		&types.CreateBlueprintValidationQuery{},
 	)
 	s.Require().NoError(err)
 
+	s.Assert().Equal("test-last-event-id", response.LastEventID)
 	s.Assert().Equal(
 		&manage.BlueprintValidation{
 			ID:                testValidationID,
@@ -62,7 +63,7 @@ func (s *ClientSuite) Test_create_blueprint_validation_oauth2_preconfigured_toke
 			Status:            manage.BlueprintValidationStatusStarting,
 			Created:           testTime.Unix(),
 		},
-		blueprintValidation,
+		response.Data,
 	)
 }
 
@@ -86,13 +87,14 @@ func (s *ClientSuite) Test_create_blueprint_validation_oauth2_derive_token_endpo
 		},
 	}
 
-	blueprintValidation, err := client.CreateBlueprintValidation(
+	response, err := client.CreateBlueprintValidation(
 		context.Background(),
 		payload,
 		&types.CreateBlueprintValidationQuery{},
 	)
 	s.Require().NoError(err)
 
+	s.Assert().Equal("test-last-event-id", response.LastEventID)
 	s.Assert().Equal(
 		&manage.BlueprintValidation{
 			ID:                testValidationID,
@@ -100,7 +102,7 @@ func (s *ClientSuite) Test_create_blueprint_validation_oauth2_derive_token_endpo
 			Status:            manage.BlueprintValidationStatusStarting,
 			Created:           testTime.Unix(),
 		},
-		blueprintValidation,
+		response.Data,
 	)
 }
 
@@ -120,13 +122,14 @@ func (s *ClientSuite) Test_create_blueprint_validation_api_key() {
 		},
 	}
 
-	blueprintValidation, err := client.CreateBlueprintValidation(
+	response, err := client.CreateBlueprintValidation(
 		context.Background(),
 		payload,
 		&types.CreateBlueprintValidationQuery{},
 	)
 	s.Require().NoError(err)
 
+	s.Assert().Equal("test-last-event-id", response.LastEventID)
 	s.Assert().Equal(
 		&manage.BlueprintValidation{
 			ID:                testValidationID,
@@ -134,7 +137,7 @@ func (s *ClientSuite) Test_create_blueprint_validation_api_key() {
 			Status:            manage.BlueprintValidationStatusStarting,
 			Created:           testTime.Unix(),
 		},
-		blueprintValidation,
+		response.Data,
 	)
 }
 
@@ -155,13 +158,14 @@ func (s *ClientSuite) Test_create_blueprint_validation_bluelink_sigv1() {
 		},
 	}
 
-	blueprintValidation, err := client.CreateBlueprintValidation(
+	response, err := client.CreateBlueprintValidation(
 		context.Background(),
 		payload,
 		&types.CreateBlueprintValidationQuery{},
 	)
 	s.Require().NoError(err)
 
+	s.Assert().Equal("test-last-event-id", response.LastEventID)
 	s.Assert().Equal(
 		&manage.BlueprintValidation{
 			ID:                testValidationID,
@@ -169,7 +173,7 @@ func (s *ClientSuite) Test_create_blueprint_validation_bluelink_sigv1() {
 			Status:            manage.BlueprintValidationStatusStarting,
 			Created:           testTime.Unix(),
 		},
-		blueprintValidation,
+		response.Data,
 	)
 }
 

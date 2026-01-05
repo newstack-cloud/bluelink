@@ -33,6 +33,7 @@ func (s *ClientSuite) Test_stream_blueprint_instance_events() {
 	err = client.StreamBlueprintInstanceEvents(
 		context.Background(),
 		testInstanceID,
+		"", // No lastEventID - start from recently queued events
 		streamTo,
 		errChan,
 	)
@@ -80,6 +81,7 @@ func (s *ClientSuite) Test_stream_blueprint_instance_events_fails_due_to_stream_
 	err = client.StreamBlueprintInstanceEvents(
 		context.Background(),
 		failingStreamTriggerID,
+		"", // No lastEventID - start from recently queued events
 		streamTo,
 		errChan,
 	)
@@ -118,6 +120,7 @@ func (s *ClientSuite) Test_stream_blueprint_instance_events_fails_for_unauthoris
 	err = client.StreamBlueprintInstanceEvents(
 		context.Background(),
 		testInstanceID,
+		"", // No lastEventID - start from recently queued events
 		streamTo,
 		errChan,
 	)
@@ -165,6 +168,7 @@ func (s *ClientSuite) Test_stream_blueprint_instance_events_fails_due_to_interna
 	err = client.StreamBlueprintInstanceEvents(
 		context.Background(),
 		internalServerErrorTriggerID,
+		"", // No lastEventID - start from recently queued events
 		streamTo,
 		errChan,
 	)

@@ -36,19 +36,20 @@ func (s *ClientSuite) Test_create_blueprint_instance() {
 		},
 	}
 
-	blueprintInstance, err := client.CreateBlueprintInstance(
+	response, err := client.CreateBlueprintInstance(
 		context.Background(),
 		payload,
 	)
 	s.Require().NoError(err)
 
+	s.Assert().Equal("test-last-event-id", response.LastEventID)
 	s.Assert().Equal(
-		&state.InstanceState{
+		state.InstanceState{
 			InstanceID:   "test-instance-id",
 			InstanceName: "test-instance-name",
 			Status:       core.InstanceStatusDeploying,
 		},
-		blueprintInstance,
+		response.Data,
 	)
 }
 
@@ -76,19 +77,20 @@ func (s *ClientSuite) Test_create_blueprint_instance_with_instance_name() {
 		InstanceName: "my-custom-instance",
 	}
 
-	blueprintInstance, err := client.CreateBlueprintInstance(
+	response, err := client.CreateBlueprintInstance(
 		context.Background(),
 		payload,
 	)
 	s.Require().NoError(err)
 
+	s.Assert().Equal("test-last-event-id", response.LastEventID)
 	s.Assert().Equal(
-		&state.InstanceState{
+		state.InstanceState{
 			InstanceID:   "test-instance-id",
 			InstanceName: "my-custom-instance",
 			Status:       core.InstanceStatusDeploying,
 		},
-		blueprintInstance,
+		response.Data,
 	)
 }
 

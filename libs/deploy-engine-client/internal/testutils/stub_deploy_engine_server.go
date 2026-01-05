@@ -213,7 +213,13 @@ func (c *stubDeployEngineController) createBlueprintValidationHandler(
 		Created:           c.clock.Now().Unix(),
 	}
 
-	respBytes, _ := json.Marshal(blueprintValidation)
+	// Wrap response with lastEventId
+	response := map[string]any{
+		"lastEventId": "test-last-event-id",
+		"data":        blueprintValidation,
+	}
+
+	respBytes, _ := json.Marshal(response)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -300,7 +306,13 @@ func (c *stubDeployEngineController) createChangesetHandler(
 		Created:           c.clock.Now().Unix(),
 	}
 
-	respBytes, _ := json.Marshal(changeset)
+	// Wrap response with lastEventId
+	response := map[string]any{
+		"lastEventId": "test-last-event-id",
+		"data":        changeset,
+	}
+
+	respBytes, _ := json.Marshal(response)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -391,7 +403,13 @@ func (c *stubDeployEngineController) createBlueprintInstanceHandler(
 		Status:       core.InstanceStatusDeploying,
 	}
 
-	respBytes, _ := json.Marshal(blueprintInstance)
+	// Wrap response with lastEventId
+	response := map[string]any{
+		"lastEventId": "test-last-event-id",
+		"data":        blueprintInstance,
+	}
+
+	respBytes, _ := json.Marshal(response)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -417,7 +435,13 @@ func (c *stubDeployEngineController) updateBlueprintInstanceHandler(
 		Status:       core.InstanceStatusDeploying,
 	}
 
-	respBytes, _ := json.Marshal(blueprintInstance)
+	// Wrap response with lastEventId
+	response := map[string]any{
+		"lastEventId": "test-last-event-id",
+		"data":        blueprintInstance,
+	}
+
+	respBytes, _ := json.Marshal(response)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -497,7 +521,13 @@ func (c *stubDeployEngineController) destroyBlueprintInstanceHandler(
 		Status:       core.InstanceStatusDestroying,
 	}
 
-	respBytes, _ := json.Marshal(blueprintInstance)
+	// Wrap response with lastEventId
+	response := map[string]any{
+		"lastEventId": "test-last-event-id",
+		"data":        blueprintInstance,
+	}
+
+	respBytes, _ := json.Marshal(response)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)

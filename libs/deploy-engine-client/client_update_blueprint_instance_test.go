@@ -36,20 +36,21 @@ func (s *ClientSuite) Test_update_blueprint_instance() {
 		},
 	}
 
-	blueprintInstance, err := client.UpdateBlueprintInstance(
+	response, err := client.UpdateBlueprintInstance(
 		context.Background(),
 		"test-instance-100",
 		payload,
 	)
 	s.Require().NoError(err)
 
+	s.Assert().Equal("test-last-event-id", response.LastEventID)
 	s.Assert().Equal(
-		&state.InstanceState{
+		state.InstanceState{
 			InstanceID:   "test-instance-100",
 			InstanceName: "test-instance-name",
 			Status:       core.InstanceStatusDeploying,
 		},
-		blueprintInstance,
+		response.Data,
 	)
 }
 

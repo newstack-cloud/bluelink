@@ -9,6 +9,9 @@ const (
 	// AuthorisationHeaderName is the name of the header
 	// used to send a bearer token issued by an OAuth2 or OIDC provider.
 	AuthorisationHeaderName = "Authorization"
+	// LastEventIDHeaderName is the name of the header used to specify
+	// the starting event ID for SSE streaming.
+	LastEventIDHeaderName = "Last-Event-ID"
 	// ChannelTypeValidation is the channel type identifier
 	// for validation events.
 	ChannelTypeValidation = "validation"

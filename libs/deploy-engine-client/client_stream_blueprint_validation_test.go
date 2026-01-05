@@ -33,6 +33,7 @@ func (s *ClientSuite) Test_stream_blueprint_validation() {
 	err = client.StreamBlueprintValidationEvents(
 		context.Background(),
 		testValidationID,
+		"", // No lastEventID - start from recently queued events
 		streamTo,
 		errChan,
 	)
@@ -73,6 +74,7 @@ func (s *ClientSuite) Test_stream_blueprint_validation_fails_for_unauthorised_cl
 	err = client.StreamBlueprintValidationEvents(
 		context.Background(),
 		testValidationID,
+		"",
 		streamTo,
 		errChan,
 	)
@@ -123,6 +125,7 @@ func (s *ClientSuite) Test_stream_blueprint_validation_fails_due_to_internal_ser
 	err = client.StreamBlueprintValidationEvents(
 		context.Background(),
 		internalServerErrorTriggerID,
+		"",
 		streamTo,
 		errChan,
 	)

@@ -33,6 +33,7 @@ func (s *ClientSuite) Test_stream_change_staging_events() {
 	err = client.StreamChangeStagingEvents(
 		context.Background(),
 		testChangesetID,
+		"", // No lastEventID - start from recently queued events
 		streamTo,
 		errChan,
 	)
@@ -80,6 +81,7 @@ func (s *ClientSuite) Test_stream_change_staging_events_with_drift_detected() {
 	err = client.StreamChangeStagingEvents(
 		context.Background(),
 		driftDetectedChangesetID,
+		"",
 		streamTo,
 		errChan,
 	)
@@ -142,6 +144,7 @@ func (s *ClientSuite) Test_stream_change_staging_events_fails_due_to_stream_erro
 	err = client.StreamChangeStagingEvents(
 		context.Background(),
 		failingStreamTriggerID,
+		"",
 		streamTo,
 		errChan,
 	)
@@ -180,6 +183,7 @@ func (s *ClientSuite) Test_stream_change_staging_events_fails_for_unauthorised_c
 	err = client.StreamChangeStagingEvents(
 		context.Background(),
 		testChangesetID,
+		"",
 		streamTo,
 		errChan,
 	)
@@ -230,6 +234,7 @@ func (s *ClientSuite) Test_stream_change_staging_events_fails_due_to_internal_se
 	err = client.StreamChangeStagingEvents(
 		context.Background(),
 		internalServerErrorTriggerID,
+		"", // No lastEventID - start from recently queued events
 		streamTo,
 		errChan,
 	)
