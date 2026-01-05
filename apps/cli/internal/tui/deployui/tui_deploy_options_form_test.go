@@ -666,17 +666,21 @@ func newMockDeployEngineWithFullFlow(
 func (m *mockDeployEngineWithFullFlow) CreateChangeset(
 	ctx context.Context,
 	payload *types.CreateChangesetPayload,
-) (*manage.Changeset, error) {
-	return &manage.Changeset{
-		ID:                m.changesetID,
-		Status:            manage.ChangesetStatusStagingChanges,
-		BlueprintLocation: payload.BlueprintFile,
+) (*types.ChangesetResponse, error) {
+	return &types.ChangesetResponse{
+		Data: &manage.Changeset{
+			ID:                m.changesetID,
+			Status:            manage.ChangesetStatusStagingChanges,
+			BlueprintLocation: payload.BlueprintFile,
+		},
+		LastEventID: "",
 	}, nil
 }
 
 func (m *mockDeployEngineWithFullFlow) StreamChangeStagingEvents(
 	ctx context.Context,
 	changesetID string,
+	lastEventID string,
 	streamTo chan<- types.ChangeStagingEvent,
 	errChan chan<- error,
 ) error {
@@ -704,10 +708,13 @@ func (m *mockDeployEngineWithFullFlow) GetBlueprintInstance(
 func (m *mockDeployEngineWithFullFlow) CreateBlueprintInstance(
 	ctx context.Context,
 	payload *types.BlueprintInstancePayload,
-) (*state.InstanceState, error) {
-	return &state.InstanceState{
-		InstanceID: m.instanceID,
-		Status:     core.InstanceStatusDeploying,
+) (*types.BlueprintInstanceResponse, error) {
+	return &types.BlueprintInstanceResponse{
+		Data: state.InstanceState{
+			InstanceID: m.instanceID,
+			Status:     core.InstanceStatusDeploying,
+		},
+		LastEventID: "",
 	}, nil
 }
 
@@ -715,16 +722,20 @@ func (m *mockDeployEngineWithFullFlow) UpdateBlueprintInstance(
 	ctx context.Context,
 	instanceID string,
 	payload *types.BlueprintInstancePayload,
-) (*state.InstanceState, error) {
-	return &state.InstanceState{
-		InstanceID: instanceID,
-		Status:     core.InstanceStatusUpdating,
+) (*types.BlueprintInstanceResponse, error) {
+	return &types.BlueprintInstanceResponse{
+		Data: state.InstanceState{
+			InstanceID: instanceID,
+			Status:     core.InstanceStatusUpdating,
+		},
+		LastEventID: "",
 	}, nil
 }
 
 func (m *mockDeployEngineWithFullFlow) StreamBlueprintInstanceEvents(
 	ctx context.Context,
 	instanceID string,
+	lastEventID string,
 	streamTo chan<- types.BlueprintInstanceEvent,
 	errChan chan<- error,
 ) error {

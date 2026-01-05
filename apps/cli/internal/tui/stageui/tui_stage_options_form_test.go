@@ -9,7 +9,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/exp/teatest"
-	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
@@ -448,17 +447,18 @@ func (m *mockEngineWithInstances) GetBlueprintInstance(
 func (m *mockEngineWithInstances) CreateChangeset(
 	ctx context.Context,
 	payload *types.CreateChangesetPayload,
-) (*manage.Changeset, error) {
+) (*types.ChangesetResponse, error) {
 	return m.DeployEngine.CreateChangeset(ctx, payload)
 }
 
 func (m *mockEngineWithInstances) StreamChangeStagingEvents(
 	ctx context.Context,
 	changesetID string,
+	lastEventID string,
 	streamTo chan<- types.ChangeStagingEvent,
 	errChan chan<- error,
 ) error {
-	return m.DeployEngine.StreamChangeStagingEvents(ctx, changesetID, streamTo, errChan)
+	return m.DeployEngine.StreamChangeStagingEvents(ctx, changesetID, lastEventID, streamTo, errChan)
 }
 
 func (m *mockEngineWithInstances) ApplyReconciliation(

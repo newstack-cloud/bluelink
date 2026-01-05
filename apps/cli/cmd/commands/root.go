@@ -99,6 +99,7 @@ This CLI validates, stages changes for, and deploys blueprints.`,
 	setupValidateCommand(rootCmd, confProvider)
 	setupStageCommand(rootCmd, confProvider)
 	setupDeployCommand(rootCmd, confProvider)
+	setupDestroyCommand(rootCmd, confProvider)
 
 	return rootCmd
 }

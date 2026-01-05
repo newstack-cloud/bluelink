@@ -50,6 +50,9 @@ const (
 	// DriftContextDeploy is used when drift is detected during deployment (409 response).
 	// Hint: "Use --force to override drift check"
 	DriftContextDeploy DriftContext = "deploy"
+	// DriftContextDestroy is used when drift is detected during destroy (409 response).
+	// Hint: "Use --force to override drift check"
+	DriftContextDestroy DriftContext = "destroy"
 )
 
 // HintForContext returns the appropriate hint text for the given drift context.
@@ -59,6 +62,8 @@ func HintForContext(ctx DriftContext) string {
 		return "Run bluelink stage --skip-drift-check to skip drift detection"
 	case DriftContextDeploy:
 		return "Run bluelink deploy --force to override drift check"
+	case DriftContextDestroy:
+		return "Run bluelink destroy --force to override drift check"
 	default:
 		return ""
 	}

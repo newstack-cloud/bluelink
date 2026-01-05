@@ -69,7 +69,7 @@ For example:
 go run ./cmd/main.go validate --blueprint-file app.blueprint.yml 2>&1 | tee debug.log
 ```
 
-This will output the output to the console and also to the `debug.log` file.
+This will write the output to the console and also to the `debug.log` file.
 
 ## Releasing
 

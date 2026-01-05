@@ -20,7 +20,7 @@ func startValidateStreamCmd(model ValidateModel, logger *zap.Logger) tea.Cmd {
 			return ValidateErrMsg{err}
 		}
 
-		blueprintValidation, err := model.engine.CreateBlueprintValidation(
+		response, err := model.engine.CreateBlueprintValidation(
 			context.TODO(),
 			payload,
 			&types.CreateBlueprintValidationQuery{},
@@ -32,7 +32,8 @@ func startValidateStreamCmd(model ValidateModel, logger *zap.Logger) tea.Cmd {
 
 		err = model.engine.StreamBlueprintValidationEvents(
 			context.TODO(),
-			blueprintValidation.ID,
+			response.Data.ID,
+			response.LastEventID,
 			model.resultStream,
 			model.errStream,
 		)

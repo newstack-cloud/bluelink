@@ -430,7 +430,8 @@ func (m DeployModel) renderSkippedRollbackItems(sb *strings.Builder, contentWidt
 		sb.WriteString(m.styles.Selected.Render(itemPath))
 		sb.WriteString(m.styles.Muted.Render(fmt.Sprintf(" (%s)", item.Type)))
 		sb.WriteString("\n")
-		sb.WriteString(m.styles.Muted.Render(fmt.Sprintf("      Status: %s\n", item.Status)))
+		sb.WriteString(m.styles.Muted.Render(fmt.Sprintf("      Status: %s", item.Status)))
+		sb.WriteString("\n")
 
 		wrappedLines := outpututil.WrapTextLines(item.Reason, reasonWidth)
 		for i, line := range wrappedLines {

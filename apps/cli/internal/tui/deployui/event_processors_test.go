@@ -3,6 +3,7 @@ package deployui
 import (
 	"testing"
 
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -32,20 +33,20 @@ func (s *EventProcessorsTestSuite) newTestModel() *DeployModel {
 	}
 }
 
-// joinPath tests
+// shared.JoinPath tests (delegating to shared package)
 
-func (s *EventProcessorsTestSuite) Test_joinPath_empty_slice_returns_empty_string() {
-	result := joinPath([]string{})
+func (s *EventProcessorsTestSuite) Test_JoinPath_empty_slice_returns_empty_string() {
+	result := shared.JoinPath([]string{})
 	s.Equal("", result)
 }
 
-func (s *EventProcessorsTestSuite) Test_joinPath_single_element() {
-	result := joinPath([]string{"resource1"})
+func (s *EventProcessorsTestSuite) Test_JoinPath_single_element() {
+	result := shared.JoinPath([]string{"resource1"})
 	s.Equal("resource1", result)
 }
 
-func (s *EventProcessorsTestSuite) Test_joinPath_multiple_elements() {
-	result := joinPath([]string{"parent", "child", "resource"})
+func (s *EventProcessorsTestSuite) Test_JoinPath_multiple_elements() {
+	result := shared.JoinPath([]string{"parent", "child", "resource"})
 	s.Equal("parent/child/resource", result)
 }
 

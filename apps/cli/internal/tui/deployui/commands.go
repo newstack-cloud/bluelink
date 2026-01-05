@@ -2,7 +2,6 @@ package deployui
 
 import (
 	"context"
-	"log"
 	"net/url"
 	"path"
 	"path/filepath"
@@ -63,14 +62,15 @@ func startDeploymentCmd(model DeployModel) tea.Cmd {
 			return DeployErrorMsg{Err: err}
 		}
 
-		instanceID, err := createOrUpdateInstance(model, payload)
+		response, err := createOrUpdateInstance(model, payload)
 		if err != nil {
 			return handleDeployError(err, model.instanceID)
 		}
 
 		err = model.engine.StreamBlueprintInstanceEvents(
 			context.TODO(),
-			instanceID,
+			response.Data.InstanceID,
+			response.LastEventID,
 			model.eventStream,
 			model.errStream,
 		)
@@ -78,32 +78,23 @@ func startDeploymentCmd(model DeployModel) tea.Cmd {
 			return DeployErrorMsg{Err: err}
 		}
 
-		return DeployStartedMsg{InstanceID: instanceID}
+		return DeployStartedMsg{InstanceID: response.Data.InstanceID}
 	}
 }
 
 // createOrUpdateInstance creates a new instance or updates an existing one.
-func createOrUpdateInstance(model DeployModel, payload *types.BlueprintInstancePayload) (string, error) {
+func createOrUpdateInstance(
+	model DeployModel,
+	payload *types.BlueprintInstancePayload,
+) (*types.BlueprintInstanceResponse, error) {
 	if model.instanceID != "" {
-		instance, err := model.engine.UpdateBlueprintInstance(
+		return model.engine.UpdateBlueprintInstance(
 			context.TODO(),
 			model.instanceID,
 			payload,
 		)
-		if err != nil {
-			return "", err
-		}
-		return instance.InstanceID, nil
 	}
-
-	instance, err := model.engine.CreateBlueprintInstance(
-		context.TODO(),
-		payload,
-	)
-	if err != nil {
-		return "", err
-	}
-	return instance.InstanceID, nil
+	return model.engine.CreateBlueprintInstance(context.TODO(), payload)
 }
 
 // handleDeployError converts deployment errors to appropriate messages,
@@ -207,13 +198,10 @@ func buildHTTPSDocumentInfo(blueprintFile string) (types.BlueprintDocumentInfo, 
 
 func waitForNextDeployEventCmd(model DeployModel) tea.Cmd {
 	return func() tea.Msg {
-		log.Printf("DEBUG: waiting for next deploy event...\n")
 		event, ok := <-model.eventStream
 		if !ok {
-			log.Printf("DEBUG: eventStream channel was CLOSED\n")
 			return DeployStreamClosedMsg{}
 		}
-		log.Printf("received deploy event: %s\n\n", event.String())
 		return DeployEventMsg(event)
 	}
 }
@@ -225,7 +213,6 @@ func checkForErrCmd(model DeployModel) tea.Cmd {
 		case <-time.After(1 * time.Second):
 			break
 		case newErr := <-model.errStream:
-			log.Printf("received deploy error: %+v\n\n", newErr)
 			err = newErr
 		}
 		return DeployErrorMsg{Err: err}
@@ -379,14 +366,15 @@ func continueDeploymentCmd(model DeployModel) tea.Cmd {
 			return DeployErrorMsg{Err: err}
 		}
 
-		instanceID, err := createOrUpdateInstance(model, payload)
+		response, err := createOrUpdateInstance(model, payload)
 		if err != nil {
 			return DeployErrorMsg{Err: err}
 		}
 
 		err = model.engine.StreamBlueprintInstanceEvents(
 			context.TODO(),
-			instanceID,
+			response.Data.InstanceID,
+			response.LastEventID,
 			model.eventStream,
 			model.errStream,
 		)
@@ -394,7 +382,7 @@ func continueDeploymentCmd(model DeployModel) tea.Cmd {
 			return DeployErrorMsg{Err: err}
 		}
 
-		return DeployStartedMsg{InstanceID: instanceID}
+		return DeployStartedMsg{InstanceID: response.Data.InstanceID}
 	}
 }
 

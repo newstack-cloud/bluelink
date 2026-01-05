@@ -159,7 +159,8 @@ func (r *DeployDetailsRenderer) renderResourceDetails(item *DeployItem, width in
 	// Duration info (only show if there's actual duration data)
 	if durationContent := renderResourceDurations(res.Durations, s); durationContent != "" {
 		sb.WriteString("\n")
-		sb.WriteString(s.Category.Render("Timing:\n"))
+		sb.WriteString(s.Category.Render("Timing:"))
+		sb.WriteString("\n")
 		sb.WriteString(durationContent)
 	}
 
@@ -556,24 +557,18 @@ func renderResourceDurations(durations *state.ResourceCompletionDurations, s *st
 	sb := strings.Builder{}
 	if durations.ConfigCompleteDuration != nil &&
 		*durations.ConfigCompleteDuration > 0 {
-		sb.WriteString(
-			s.Muted.Render(
-				fmt.Sprintf(
-					"  Config Complete: %s\n",
-					outpututil.FormatDuration(*durations.ConfigCompleteDuration),
-				),
-			),
-		)
+		sb.WriteString(s.Muted.Render(fmt.Sprintf(
+			"  Config Complete: %s",
+			outpututil.FormatDuration(*durations.ConfigCompleteDuration),
+		)))
+		sb.WriteString("\n")
 	}
 	if durations.TotalDuration != nil && *durations.TotalDuration > 0 {
-		sb.WriteString(
-			s.Muted.Render(
-				fmt.Sprintf(
-					"  Total: %s\n",
-					outpututil.FormatDuration(*durations.TotalDuration),
-				),
-			),
-		)
+		sb.WriteString(s.Muted.Render(fmt.Sprintf(
+			"  Total: %s",
+			outpututil.FormatDuration(*durations.TotalDuration),
+		)))
+		sb.WriteString("\n")
 	}
 	return sb.String()
 }

@@ -60,7 +60,7 @@ func startStagingCmd(model StageModel) tea.Cmd {
 			return StageErrorMsg{Err: err}
 		}
 
-		changeset, err := model.engine.CreateChangeset(
+		response, err := model.engine.CreateChangeset(
 			context.TODO(),
 			payload,
 		)
@@ -73,7 +73,8 @@ func startStagingCmd(model StageModel) tea.Cmd {
 		// Start streaming events
 		err = model.engine.StreamChangeStagingEvents(
 			context.TODO(),
-			changeset.ID,
+			response.Data.ID,
+			response.LastEventID,
 			model.eventStream,
 			model.errStream,
 		)
@@ -83,7 +84,7 @@ func startStagingCmd(model StageModel) tea.Cmd {
 
 		// Return both the changeset ID and instance state
 		return StageStartedWithStateMsg{
-			ChangesetID:   changeset.ID,
+			ChangesetID:   response.Data.ID,
 			InstanceState: instanceState,
 		}
 	}

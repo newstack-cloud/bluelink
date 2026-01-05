@@ -38,6 +38,16 @@ func StageErrorContext() ErrorContext {
 	}
 }
 
+// DestroyErrorContext returns the error context for destroy operations.
+func DestroyErrorContext() ErrorContext {
+	return ErrorContext{
+		OperationName:      "destroy",
+		FailedHeader:       "Failed to start destroy",
+		ErrorDuringHeader:  "Error during destroy",
+		IssuesPreamble:     "The following issues must be resolved before destroy can proceed:",
+	}
+}
+
 // RenderErrorFooter renders a standard "Press q to quit" footer.
 func RenderErrorFooter(s *styles.Styles) string {
 	sb := strings.Builder{}
@@ -91,7 +101,8 @@ func RenderValidationError(clientErr *engineerrors.ClientError, ctx ErrorContext
 	sb.WriteString(s.Muted.Render("  " + ctx.IssuesPreamble + "\n\n"))
 
 	if len(clientErr.ValidationErrors) > 0 {
-		sb.WriteString(s.Category.Render("  Validation Errors:\n"))
+		sb.WriteString(s.Category.Render("  Validation Errors:"))
+		sb.WriteString("\n")
 		for _, valErr := range clientErr.ValidationErrors {
 			location := valErr.Location
 			if location == "" {
@@ -104,7 +115,8 @@ func RenderValidationError(clientErr *engineerrors.ClientError, ctx ErrorContext
 	}
 
 	if len(clientErr.ValidationDiagnostics) > 0 {
-		sb.WriteString(s.Category.Render("  Blueprint Diagnostics:\n"))
+		sb.WriteString(s.Category.Render("  Blueprint Diagnostics:"))
+		sb.WriteString("\n")
 		for _, diag := range clientErr.ValidationDiagnostics {
 			sb.WriteString(RenderDiagnostic(diag, s))
 		}
@@ -129,7 +141,8 @@ func RenderStreamError(streamErr *engineerrors.StreamError, ctx ErrorContext, s 
 	sb.WriteString(fmt.Sprintf("    %s\n\n", streamErr.Event.Message))
 
 	if len(streamErr.Event.Diagnostics) > 0 {
-		sb.WriteString(s.Category.Render("  Diagnostics:\n"))
+		sb.WriteString(s.Category.Render("  Diagnostics:"))
+		sb.WriteString("\n")
 		for _, diag := range streamErr.Event.Diagnostics {
 			sb.WriteString(RenderDiagnostic(diag, s))
 		}

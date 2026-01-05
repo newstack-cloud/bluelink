@@ -139,3 +139,42 @@ type DeployDriftOutput struct {
 	Message        string                               `json:"message"`
 	Reconciliation *container.ReconciliationCheckResult `json:"reconciliation"`
 }
+
+// DestroyOutput represents a successful destroy result.
+type DestroyOutput struct {
+	Success         bool                 `json:"success"`
+	InstanceID      string               `json:"instanceId"`
+	InstanceName    string               `json:"instanceName,omitempty"`
+	ChangesetID     string               `json:"changesetId"`
+	Status          string               `json:"status"`
+	InstanceState   *state.InstanceState `json:"instanceState,omitempty"`
+	PreDestroyState *state.InstanceState `json:"preDestroyState,omitempty"`
+	Summary         DestroySummary       `json:"summary"`
+}
+
+// DestroySummary contains destroy operation summary.
+type DestroySummary struct {
+	Destroyed   int                `json:"destroyed"`
+	Failed      int                `json:"failed"`
+	Interrupted int                `json:"interrupted"`
+	Elements    []DestroyedElement `json:"elements"`
+}
+
+// DestroyedElement represents an element in the destroy result.
+type DestroyedElement struct {
+	Name           string   `json:"name"`
+	Path           string   `json:"path"`
+	Type           string   `json:"type"` // "resource", "child", "link"
+	Status         string   `json:"status"`
+	FailureReasons []string `json:"failureReasons,omitempty"`
+}
+
+// DestroyDriftOutput represents drift detected during destroy.
+type DestroyDriftOutput struct {
+	Success        bool                                 `json:"success"`
+	DriftDetected  bool                                 `json:"driftDetected"`
+	InstanceID     string                               `json:"instanceId"`
+	InstanceName   string                               `json:"instanceName,omitempty"`
+	Message        string                               `json:"message"`
+	Reconciliation *container.ReconciliationCheckResult `json:"reconciliation"`
+}

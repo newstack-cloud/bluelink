@@ -1,29 +1,57 @@
-package deployui
+package destroyui
 
 import (
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
 )
 
-// Event processing methods for DeployModel.
-// These methods handle incoming deployment events and update the model state.
+// Event processing methods for DestroyModel.
 
-func (m *DeployModel) processResourceUpdate(data *container.ResourceDeployUpdateMessage) {
+func (m *DestroyModel) processEvent(event *types.BlueprintInstanceEvent) {
+	if resourceData, ok := event.AsResourceUpdate(); ok {
+		m.processResourceUpdate(resourceData)
+		if m.headlessMode && !m.jsonMode {
+			m.printHeadlessResourceEvent(resourceData)
+		}
+	} else if childData, ok := event.AsChildUpdate(); ok {
+		m.processChildUpdate(childData)
+		if m.headlessMode && !m.jsonMode {
+			m.printHeadlessChildEvent(childData)
+		}
+	} else if linkData, ok := event.AsLinkUpdate(); ok {
+		m.processLinkUpdate(linkData)
+		if m.headlessMode && !m.jsonMode {
+			m.printHeadlessLinkEvent(linkData)
+		}
+	} else if instanceData, ok := event.AsInstanceUpdate(); ok {
+		m.processInstanceUpdate(instanceData)
+	}
+}
+
+func (m *DestroyModel) processResourceUpdate(data *container.ResourceDeployUpdateMessage) {
 	isRootResource := data.InstanceID == "" || data.InstanceID == m.instanceID
-	resourcePath := m.buildResourcePath(data.InstanceID, data.ResourceName)
+	resourcePath := m.buildItemPath(data.InstanceID, data.ResourceName)
 
 	item := m.lookupOrMigrateResource(resourcePath, data.ResourceName)
 
 	if item == nil {
-		item = &ResourceDeployItem{
+		item = &ResourceDestroyItem{
 			Name:       data.ResourceName,
 			ResourceID: data.ResourceID,
 			Group:      data.Group,
 		}
+		// Try to get resource type from pre-destroy instance state
+		if m.preDestroyInstanceState != nil {
+			if resourceType := m.lookupResourceTypeFromState(data.InstanceID, data.ResourceName); resourceType != "" {
+				item.ResourceType = resourceType
+			}
+		}
 		m.resourcesByName[resourcePath] = item
 		if isRootResource {
-			m.items = append(m.items, DeployItem{
+			m.items = append(m.items, DestroyItem{
 				Type:     ItemTypeResource,
 				Resource: item,
 			})
@@ -33,7 +61,7 @@ func (m *DeployModel) processResourceUpdate(data *container.ResourceDeployUpdate
 	m.updateResourceItemFromEvent(item, data)
 }
 
-func (m *DeployModel) processChildUpdate(data *container.ChildDeployUpdateMessage) {
+func (m *DestroyModel) processChildUpdate(data *container.ChildDeployUpdateMessage) {
 	m.trackChildInstanceMapping(data)
 	childPath := m.buildInstancePath(data.ParentInstanceID, data.ChildName)
 
@@ -47,14 +75,14 @@ func (m *DeployModel) processChildUpdate(data *container.ChildDeployUpdateMessag
 	m.updateChildItemFromEvent(item, data)
 }
 
-func (m *DeployModel) processLinkUpdate(data *container.LinkDeployUpdateMessage) {
+func (m *DestroyModel) processLinkUpdate(data *container.LinkDeployUpdateMessage) {
 	isRootLink := data.InstanceID == "" || data.InstanceID == m.instanceID
-	linkPath := m.buildResourcePath(data.InstanceID, data.LinkName)
+	linkPath := m.buildItemPath(data.InstanceID, data.LinkName)
 
 	item := m.lookupOrMigrateLink(linkPath, data.LinkName)
 
 	if item == nil {
-		item = &LinkDeployItem{
+		item = &LinkDestroyItem{
 			LinkID:        data.LinkID,
 			LinkName:      data.LinkName,
 			ResourceAName: extractResourceAFromLinkName(data.LinkName),
@@ -62,7 +90,7 @@ func (m *DeployModel) processLinkUpdate(data *container.LinkDeployUpdateMessage)
 		}
 		m.linksByName[linkPath] = item
 		if isRootLink {
-			m.items = append(m.items, DeployItem{
+			m.items = append(m.items, DestroyItem{
 				Type: ItemTypeLink,
 				Link: item,
 			})
@@ -72,7 +100,7 @@ func (m *DeployModel) processLinkUpdate(data *container.LinkDeployUpdateMessage)
 	m.updateLinkItemFromEvent(item, data)
 }
 
-func (m *DeployModel) processInstanceUpdate(data *container.DeploymentUpdateMessage) {
+func (m *DestroyModel) processInstanceUpdate(data *container.DeploymentUpdateMessage) {
 	m.footerRenderer.CurrentStatus = data.Status
 
 	if IsRollingBackOrFailedStatus(data.Status) && !m.finished {
@@ -81,14 +109,9 @@ func (m *DeployModel) processInstanceUpdate(data *container.DeploymentUpdateMess
 	}
 }
 
-func (m *DeployModel) processPreRollbackState(data *container.PreRollbackStateMessage) {
-	m.preRollbackState = data
-	m.footerRenderer.HasPreRollbackState = true
-}
-
 // Lookup helpers with migration support
 
-func (m *DeployModel) lookupOrMigrateResource(path, name string) *ResourceDeployItem {
+func (m *DestroyModel) lookupOrMigrateResource(path, name string) *ResourceDestroyItem {
 	if item, exists := m.resourcesByName[path]; exists {
 		return item
 	}
@@ -100,7 +123,7 @@ func (m *DeployModel) lookupOrMigrateResource(path, name string) *ResourceDeploy
 	return nil
 }
 
-func (m *DeployModel) lookupOrMigrateChild(path, name string) *ChildDeployItem {
+func (m *DestroyModel) lookupOrMigrateChild(path, name string) *ChildDestroyItem {
 	if item, exists := m.childrenByName[path]; exists {
 		return item
 	}
@@ -112,7 +135,7 @@ func (m *DeployModel) lookupOrMigrateChild(path, name string) *ChildDeployItem {
 	return nil
 }
 
-func (m *DeployModel) lookupOrMigrateLink(path, name string) *LinkDeployItem {
+func (m *DestroyModel) lookupOrMigrateLink(path, name string) *LinkDestroyItem {
 	if item, exists := m.linksByName[path]; exists {
 		return item
 	}
@@ -126,13 +149,9 @@ func (m *DeployModel) lookupOrMigrateLink(path, name string) *LinkDeployItem {
 
 // Update helpers
 
-func (m *DeployModel) updateResourceItemFromEvent(item *ResourceDeployItem, data *container.ResourceDeployUpdateMessage) {
-	status, preciseStatus := data.Status, data.PreciseStatus
-	if IsInterruptedResourceStatus(data.Status) {
-		status, preciseStatus = determineResourceInterruptedStatusFromAction(item.Action, data.Status)
-	}
-	item.Status = status
-	item.PreciseStatus = preciseStatus
+func (m *DestroyModel) updateResourceItemFromEvent(item *ResourceDestroyItem, data *container.ResourceDeployUpdateMessage) {
+	item.Status = data.Status
+	item.PreciseStatus = data.PreciseStatus
 	item.FailureReasons = data.FailureReasons
 	item.Attempt = data.Attempt
 	item.CanRetry = data.CanRetry
@@ -142,12 +161,8 @@ func (m *DeployModel) updateResourceItemFromEvent(item *ResourceDeployItem, data
 	}
 }
 
-func (m *DeployModel) updateChildItemFromEvent(item *ChildDeployItem, data *container.ChildDeployUpdateMessage) {
-	status := data.Status
-	if IsInterruptedInstanceStatus(data.Status) {
-		status = determineChildInterruptedStatusFromAction(item.Action, data.Status)
-	}
-	item.Status = status
+func (m *DestroyModel) updateChildItemFromEvent(item *ChildDestroyItem, data *container.ChildDeployUpdateMessage) {
+	item.Status = data.Status
 	item.FailureReasons = data.FailureReasons
 	item.Timestamp = data.UpdateTimestamp
 	if data.Durations != nil {
@@ -155,7 +170,7 @@ func (m *DeployModel) updateChildItemFromEvent(item *ChildDeployItem, data *cont
 	}
 }
 
-func (m *DeployModel) updateLinkItemFromEvent(item *LinkDeployItem, data *container.LinkDeployUpdateMessage) {
+func (m *DestroyModel) updateLinkItemFromEvent(item *LinkDestroyItem, data *container.LinkDeployUpdateMessage) {
 	item.Status = data.Status
 	item.PreciseStatus = data.PreciseStatus
 	item.FailureReasons = data.FailureReasons
@@ -169,19 +184,19 @@ func (m *DeployModel) updateLinkItemFromEvent(item *LinkDeployItem, data *contai
 
 // Child item creation helper
 
-func (m *DeployModel) trackChildInstanceMapping(data *container.ChildDeployUpdateMessage) {
+func (m *DestroyModel) trackChildInstanceMapping(data *container.ChildDeployUpdateMessage) {
 	if data.ChildInstanceID != "" && data.ChildName != "" {
 		m.instanceIDToChildName[data.ChildInstanceID] = data.ChildName
 		m.instanceIDToParentID[data.ChildInstanceID] = data.ParentInstanceID
 	}
 }
 
-func (m *DeployModel) createChildItem(data *container.ChildDeployUpdateMessage, childPath string) *ChildDeployItem {
+func (m *DestroyModel) createChildItem(data *container.ChildDeployUpdateMessage, childPath string) *ChildDestroyItem {
 	isDirectChildOfRoot := data.ParentInstanceID == "" || data.ParentInstanceID == m.instanceID
 
 	childChanges := m.getChildChanges(data.ChildName)
 
-	item := &ChildDeployItem{
+	item := &ChildDestroyItem{
 		Name:             data.ChildName,
 		ParentInstanceID: data.ParentInstanceID,
 		ChildInstanceID:  data.ChildInstanceID,
@@ -191,7 +206,7 @@ func (m *DeployModel) createChildItem(data *container.ChildDeployUpdateMessage, 
 	m.childrenByName[childPath] = item
 
 	if isDirectChildOfRoot {
-		m.items = append(m.items, DeployItem{
+		m.items = append(m.items, DestroyItem{
 			Type:            ItemTypeChild,
 			Child:           item,
 			Changes:         childChanges,
@@ -204,7 +219,7 @@ func (m *DeployModel) createChildItem(data *container.ChildDeployUpdateMessage, 
 	return item
 }
 
-func (m *DeployModel) getChildChanges(childName string) *changes.BlueprintChanges {
+func (m *DestroyModel) getChildChanges(childName string) *changes.BlueprintChanges {
 	if m.changesetChanges == nil {
 		return nil
 	}
@@ -226,10 +241,7 @@ func (m *DeployModel) getChildChanges(childName string) *changes.BlueprintChange
 
 // Path building helpers
 
-// buildInstancePath builds a path from instance ID to the child name.
-// For root instance resources, returns just the name.
-// For nested children, returns a path like "parentChild/childName".
-func (m *DeployModel) buildInstancePath(parentInstanceID, childName string) string {
+func (m *DestroyModel) buildInstancePath(parentInstanceID, childName string) string {
 	if parentInstanceID == "" || parentInstanceID == m.instanceID {
 		return childName
 	}
@@ -239,20 +251,17 @@ func (m *DeployModel) buildInstancePath(parentInstanceID, childName string) stri
 	return shared.JoinPath(pathParts)
 }
 
-// buildResourcePath builds a path for a resource based on its instance ID.
-// For root instance resources, returns just the resource name.
-// For nested resources, returns a path like "parentChild/childName/resourceName".
-func (m *DeployModel) buildResourcePath(instanceID, resourceName string) string {
+func (m *DestroyModel) buildItemPath(instanceID, itemName string) string {
 	if instanceID == "" || instanceID == m.instanceID {
-		return resourceName
+		return itemName
 	}
 
 	pathParts := m.buildParentChain(instanceID)
-	pathParts = append(pathParts, resourceName)
+	pathParts = append(pathParts, itemName)
 	return shared.JoinPath(pathParts)
 }
 
-func (m *DeployModel) buildParentChain(startInstanceID string) []string {
+func (m *DestroyModel) buildParentChain(startInstanceID string) []string {
 	var pathParts []string
 	currentID := startInstanceID
 	for currentID != "" && currentID != m.instanceID {
@@ -266,3 +275,55 @@ func (m *DeployModel) buildParentChain(startInstanceID string) []string {
 	return pathParts
 }
 
+// lookupResourceTypeFromState finds the resource type by traversing the pre-destroy instance state.
+func (m *DestroyModel) lookupResourceTypeFromState(instanceID, resourceName string) string {
+	if m.preDestroyInstanceState == nil {
+		return ""
+	}
+
+	// Find the correct instance state based on instanceID
+	var targetState = m.preDestroyInstanceState
+	if instanceID != "" && instanceID != m.instanceID {
+		// Need to traverse to find the child instance
+		targetState = m.findInstanceStateByID(m.preDestroyInstanceState, instanceID)
+		if targetState == nil {
+			return ""
+		}
+	}
+
+	// Look up the resource in the target instance state
+	if targetState.ResourceIDs == nil || targetState.Resources == nil {
+		return ""
+	}
+
+	resourceID, ok := targetState.ResourceIDs[resourceName]
+	if !ok {
+		return ""
+	}
+
+	resourceState, ok := targetState.Resources[resourceID]
+	if !ok || resourceState == nil {
+		return ""
+	}
+
+	return resourceState.Type
+}
+
+// findInstanceStateByID recursively searches for an instance state by its ID.
+func (m *DestroyModel) findInstanceStateByID(currentState *state.InstanceState, targetID string) *state.InstanceState {
+	if currentState == nil {
+		return nil
+	}
+
+	if currentState.InstanceID == targetID {
+		return currentState
+	}
+
+	for _, childState := range currentState.ChildBlueprints {
+		if found := m.findInstanceStateByID(childState, targetID); found != nil {
+			return found
+		}
+	}
+
+	return nil
+}
