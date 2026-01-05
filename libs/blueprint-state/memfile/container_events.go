@@ -287,7 +287,12 @@ func (c *eventsContainerImpl) collectInitialEventsToStream(
 	// Events are sorted in ascending order by the raw bytes of their IDs.
 	// Any events after the starting event ID that have been saved need
 	// to be streamed.
-	return partition[startingEventIndex:], nil
+	// StartingEventID is exclusive, so we start from the next index.
+	exclusiveStartIndex := startingEventIndex + 1
+	if exclusiveStartIndex >= len(partition) {
+		return []*manage.Event{}, nil
+	}
+	return partition[exclusiveStartIndex:], nil
 }
 
 func (c *eventsContainerImpl) extractRecentlyQueuedEvents(
