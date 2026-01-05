@@ -259,6 +259,29 @@ func (s *MemFileStateContainerEventsTestSuite) Test_cleans_up_old_events() {
 	s.assertEventCleanupPersisted()
 }
 
+func (s *MemFileStateContainerEventsTestSuite) Test_get_last_event_id_returns_last_event_in_partition() {
+	events := s.container.Events()
+	lastEventID, err := events.GetLastEventID(
+		context.Background(),
+		"changesets",
+		"db58eda8-36c6-4180-a9cb-557f3392361c",
+	)
+	s.Require().NoError(err)
+	// The last event ID in the seed data for this channel
+	s.Assert().Equal("0196643c-69b2-7900-bcf7-2ff34d80565e", lastEventID)
+}
+
+func (s *MemFileStateContainerEventsTestSuite) Test_get_last_event_id_returns_empty_for_non_existent_channel() {
+	events := s.container.Events()
+	lastEventID, err := events.GetLastEventID(
+		context.Background(),
+		"changesets",
+		"non-existent-channel-id",
+	)
+	s.Require().NoError(err)
+	s.Assert().Equal("", lastEventID)
+}
+
 func (s *MemFileStateContainerEventsTestSuite) assertPersistedEvent(expected *manage.Event) {
 	// Check that the event state was saved to "disk" correctly by
 	// loading a new state container from persistence and retrieving the event.

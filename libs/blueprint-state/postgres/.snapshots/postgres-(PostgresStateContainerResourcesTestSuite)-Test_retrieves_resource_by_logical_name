@@ -34,6 +34,7 @@
     SourceMeta: (*source.Meta)(<nil>),
     FieldsSourceMeta: (map[string]*source.Meta) <nil>
   }),
+  ComputedFields: ([]string) <nil>,
   Description: (string) (len=45) "Function that saves an order to the database.",
   Metadata: (*state.ResourceMetadataState)(<nil>),
   SystemMetadata: (*state.SystemMetadataState)(<nil>),

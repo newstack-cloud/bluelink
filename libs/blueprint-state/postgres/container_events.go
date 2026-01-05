@@ -324,7 +324,9 @@ func (e *eventsContainerImpl) getLastChannelEvent(
 		&event.End,
 	)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		var pgErr *pgconn.PgError
+		if errors.Is(err, pgx.ErrNoRows) ||
+			(errors.As(err, &pgErr) && isAltNotFoundPostgresErrorCode(pgErr.Code)) {
 			// An empty result should indicate to the caller that
 			// there are no saved events for the given channel type and ID.
 			return manage.Event{}, nil
@@ -440,6 +442,17 @@ func (e *eventsContainerImpl) Cleanup(
 		},
 	)
 	return err
+}
+
+func (e *eventsContainerImpl) GetLastEventID(
+	ctx context.Context,
+	channelType, channelID string,
+) (string, error) {
+	event, err := e.getLastChannelEvent(ctx, channelType, channelID)
+	if err != nil {
+		return "", err
+	}
+	return event.ID, nil
 }
 
 func prepareChannelEventsQuery(

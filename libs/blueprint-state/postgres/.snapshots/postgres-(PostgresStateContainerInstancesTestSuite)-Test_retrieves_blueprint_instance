@@ -80,6 +80,7 @@
         SourceMeta: (*source.Meta)(<nil>),
         FieldsSourceMeta: (map[string]*source.Meta) <nil>
       }),
+      ComputedFields: ([]string) <nil>,
       Description: (string) (len=44) "Table that stores orders for an application.",
       Metadata: (*state.ResourceMetadataState)({
         DisplayName: (string) (len=34) "legacy-production-env Orders Table",
@@ -280,6 +281,7 @@
         SourceMeta: (*source.Meta)(<nil>),
         FieldsSourceMeta: (map[string]*source.Meta) <nil>
       }),
+      ComputedFields: ([]string) <nil>,
       Description: (string) (len=46) "Table that stores invoices for an application.",
       Metadata: (*state.ResourceMetadataState)(<nil>),
       SystemMetadata: (*state.SystemMetadataState)(<nil>),
@@ -327,6 +329,7 @@
         SourceMeta: (*source.Meta)(<nil>),
         FieldsSourceMeta: (map[string]*source.Meta) <nil>
       }),
+      ComputedFields: ([]string) <nil>,
       Description: (string) (len=45) "Function that saves an order to the database.",
       Metadata: (*state.ResourceMetadataState)(<nil>),
       SystemMetadata: (*state.SystemMetadataState)(<nil>),
@@ -406,6 +409,7 @@
         SourceMeta: (*source.Meta)(<nil>),
         FieldsSourceMeta: (map[string]*source.Meta) <nil>
       }),
+      ComputedFields: ([]string) <nil>,
       Description: (string) (len=44) "Table that stores orders for an application.",
       Metadata: (*state.ResourceMetadataState)({
         DisplayName: (string) (len=34) "legacy-production-env Orders Table",
@@ -1113,6 +1117,7 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
+          ComputedFields: ([]string) <nil>,
           Description: (string) (len=24) "A complex resource type.",
           Metadata: (*state.ResourceMetadataState)(<nil>),
           SystemMetadata: (*state.SystemMetadataState)(<nil>),
@@ -1430,6 +1435,7 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
+              ComputedFields: ([]string) <nil>,
               Description: (string) (len=24) "A complex resource type.",
               Metadata: (*state.ResourceMetadataState)(<nil>),
               SystemMetadata: (*state.SystemMetadataState)(<nil>),

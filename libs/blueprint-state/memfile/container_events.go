@@ -306,6 +306,22 @@ func (c *eventsContainerImpl) extractRecentlyQueuedEvents(
 	return partition[excludeUpToIndex+1:]
 }
 
+func (c *eventsContainerImpl) GetLastEventID(
+	ctx context.Context,
+	channelType, channelID string,
+) (string, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	partitionName := partitionNameForChannel(channelType, channelID)
+	partition, hasPartition := c.partitionEvents[partitionName]
+	if !hasPartition || len(partition) == 0 {
+		return "", nil
+	}
+
+	return partition[len(partition)-1].ID, nil
+}
+
 func (c *eventsContainerImpl) Cleanup(
 	ctx context.Context,
 	thresholdDate time.Time,

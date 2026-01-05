@@ -31,6 +31,10 @@ type Events interface {
 	// Cleanup removes all events that are older
 	// than the given threshold date.
 	Cleanup(ctx context.Context, thresholdDate time.Time) error
+
+	// GetLastEventID returns the ID of the last event for a given channel.
+	// Returns empty string if no events exist for the channel.
+	GetLastEventID(ctx context.Context, channelType, channelID string) (string, error)
 }
 
 // Event represents an event during blueprint validation,
