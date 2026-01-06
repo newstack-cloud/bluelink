@@ -130,6 +130,87 @@ func TestScriptsStage(t *testing.T) {
 	})
 }
 
+// TestScriptsDeploy runs deploy command test scripts.
+// These tests require the deploy engine to be running.
+func TestScriptsDeploy(t *testing.T) {
+	engineEndpoint := os.Getenv("DEPLOY_ENGINE_ENDPOINT")
+	if engineEndpoint == "" {
+		engineEndpoint = "http://localhost:18325"
+	}
+
+	testscript.Run(t, testscript.Params{
+		Dir: "testdata/scripts/deploy",
+		Setup: func(env *testscript.Env) error {
+			env.Setenv("PATH", filepath.Dir(binaryPath)+":"+env.Getenv("PATH"))
+			env.Setenv("BLUELINK_ENGINE_ENDPOINT", engineEndpoint)
+			env.Setenv("BLUELINK_CONNECT_PROTOCOL", "tcp")
+
+			if coverDir != "" {
+				env.Setenv("GOCOVERDIR", coverDir)
+			}
+
+			return nil
+		},
+		Cmds: map[string]func(ts *testscript.TestScript, neg bool, args []string){
+			"wait_engine": waitForEngine,
+		},
+	})
+}
+
+// TestScriptsDestroy runs destroy command test scripts.
+// These tests require the deploy engine to be running.
+func TestScriptsDestroy(t *testing.T) {
+	engineEndpoint := os.Getenv("DEPLOY_ENGINE_ENDPOINT")
+	if engineEndpoint == "" {
+		engineEndpoint = "http://localhost:18325"
+	}
+
+	testscript.Run(t, testscript.Params{
+		Dir: "testdata/scripts/destroy",
+		Setup: func(env *testscript.Env) error {
+			env.Setenv("PATH", filepath.Dir(binaryPath)+":"+env.Getenv("PATH"))
+			env.Setenv("BLUELINK_ENGINE_ENDPOINT", engineEndpoint)
+			env.Setenv("BLUELINK_CONNECT_PROTOCOL", "tcp")
+
+			if coverDir != "" {
+				env.Setenv("GOCOVERDIR", coverDir)
+			}
+
+			return nil
+		},
+		Cmds: map[string]func(ts *testscript.TestScript, neg bool, args []string){
+			"wait_engine": waitForEngine,
+		},
+	})
+}
+
+// TestScriptsInstances runs instances inspect and list command test scripts.
+// These tests require the deploy engine to be running.
+func TestScriptsInstances(t *testing.T) {
+	engineEndpoint := os.Getenv("DEPLOY_ENGINE_ENDPOINT")
+	if engineEndpoint == "" {
+		engineEndpoint = "http://localhost:18325"
+	}
+
+	testscript.Run(t, testscript.Params{
+		Dir: "testdata/scripts/instances",
+		Setup: func(env *testscript.Env) error {
+			env.Setenv("PATH", filepath.Dir(binaryPath)+":"+env.Getenv("PATH"))
+			env.Setenv("BLUELINK_ENGINE_ENDPOINT", engineEndpoint)
+			env.Setenv("BLUELINK_CONNECT_PROTOCOL", "tcp")
+
+			if coverDir != "" {
+				env.Setenv("GOCOVERDIR", coverDir)
+			}
+
+			return nil
+		},
+		Cmds: map[string]func(ts *testscript.TestScript, neg bool, args []string){
+			"wait_engine": waitForEngine,
+		},
+	})
+}
+
 // waitForEngine waits for the deploy-engine to be ready by polling its health endpoint.
 // Usage in .txtar: wait_engine [timeout_seconds]
 // Default timeout is 30 seconds.

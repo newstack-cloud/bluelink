@@ -1,0 +1,14 @@
+# Test inspect fails when instance not found
+
+wait_engine
+
+! exec bluelink instances inspect --instance-name=nonexistent-instance --connect-protocol=tcp --engine-endpoint=$BLUELINK_ENGINE_ENDPOINT --engine-auth-config-file=engine.auth.json
+stdout 'not found'
+
+-- bluelink.config.toml --
+
+-- engine.auth.json --
+{
+  "method": "apiKey",
+  "apiKey": "test-api-key"
+}

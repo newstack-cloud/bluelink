@@ -1,0 +1,15 @@
+# Test inspect fails without instance identifier in JSON mode
+
+wait_engine
+
+! exec bluelink instances inspect --json --connect-protocol=tcp --engine-endpoint=$BLUELINK_ENGINE_ENDPOINT --engine-auth-config-file=engine.auth.json
+stdout '"success": false'
+stdout 'instance'
+
+-- bluelink.config.toml --
+
+-- engine.auth.json --
+{
+  "method": "apiKey",
+  "apiKey": "test-api-key"
+}

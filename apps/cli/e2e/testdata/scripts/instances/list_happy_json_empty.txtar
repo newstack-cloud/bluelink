@@ -1,0 +1,16 @@
+# Test list with JSON output
+
+wait_engine
+
+exec bluelink instances list --json --connect-protocol=tcp --engine-endpoint=$BLUELINK_ENGINE_ENDPOINT --engine-auth-config-file=engine.auth.json
+stdout '"success": true'
+stdout '"instances":'
+stdout '"totalCount":'
+
+-- bluelink.config.toml --
+
+-- engine.auth.json --
+{
+  "method": "apiKey",
+  "apiKey": "test-api-key"
+}

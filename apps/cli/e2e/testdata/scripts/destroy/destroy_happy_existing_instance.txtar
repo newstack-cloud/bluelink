@@ -1,0 +1,19 @@
+# Test destroying a deployed instance
+
+wait_engine
+
+# First deploy an instance
+exec bluelink deploy --blueprint-file=s3://test-blueprints/lambda-function.blueprint.yaml --instance-name=test-destroy-target --stage --auto-approve --skip-prompts --connect-protocol=tcp --engine-endpoint=$BLUELINK_ENGINE_ENDPOINT --engine-auth-config-file=engine.auth.json
+stdout 'Deployment completed'
+
+# Then destroy it (use --force to skip drift check since test provider always simulates drift)
+exec bluelink destroy --instance-name=test-destroy-target --stage --auto-approve --skip-prompts --force --blueprint-file=s3://test-blueprints/lambda-function.blueprint.yaml --connect-protocol=tcp --engine-endpoint=$BLUELINK_ENGINE_ENDPOINT --engine-auth-config-file=engine.auth.json
+stdout 'Destroy completed'
+
+-- bluelink.config.toml --
+
+-- engine.auth.json --
+{
+  "method": "apiKey",
+  "apiKey": "test-api-key"
+}

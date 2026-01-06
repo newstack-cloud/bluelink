@@ -1,0 +1,15 @@
+# Test deploying a new blueprint instance
+
+wait_engine
+
+exec bluelink deploy --blueprint-file=s3://test-blueprints/lambda-function.blueprint.yaml --instance-name=test-lambda-deploy --stage --auto-approve --skip-prompts --connect-protocol=tcp --engine-endpoint=$BLUELINK_ENGINE_ENDPOINT --engine-auth-config-file=engine.auth.json
+stdout 'Deployment completed'
+stdout 'processOrder'
+
+-- bluelink.config.toml --
+
+-- engine.auth.json --
+{
+  "method": "apiKey",
+  "apiKey": "test-api-key"
+}

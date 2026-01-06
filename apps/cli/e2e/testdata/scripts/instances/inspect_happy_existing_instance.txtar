@@ -1,0 +1,20 @@
+# Test inspecting an existing instance
+
+wait_engine
+
+# First deploy an instance
+exec bluelink deploy --blueprint-file=s3://test-blueprints/lambda-function.blueprint.yaml --instance-name=test-inspect-target --stage --auto-approve --skip-prompts --connect-protocol=tcp --engine-endpoint=$BLUELINK_ENGINE_ENDPOINT --engine-auth-config-file=engine.auth.json
+stdout 'Deployment completed'
+
+# Then inspect it
+exec bluelink instances inspect --instance-name=test-inspect-target --connect-protocol=tcp --engine-endpoint=$BLUELINK_ENGINE_ENDPOINT --engine-auth-config-file=engine.auth.json
+stdout 'test-inspect-target'
+stdout 'processOrder'
+
+-- bluelink.config.toml --
+
+-- engine.auth.json --
+{
+  "method": "apiKey",
+  "apiKey": "test-api-key"
+}

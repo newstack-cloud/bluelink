@@ -1,0 +1,14 @@
+# Test listing instances when there may or may not be any
+
+wait_engine
+
+exec bluelink instances list --connect-protocol=tcp --engine-endpoint=$BLUELINK_ENGINE_ENDPOINT --engine-auth-config-file=engine.auth.json
+stdout 'Blueprint Instances'
+
+-- bluelink.config.toml --
+
+-- engine.auth.json --
+{
+  "method": "apiKey",
+  "apiKey": "test-api-key"
+}

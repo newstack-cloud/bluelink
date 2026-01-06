@@ -1,0 +1,14 @@
+# Test destroy fails without instance identifier
+
+wait_engine
+
+! exec bluelink destroy --stage --auto-approve --skip-prompts --blueprint-file=s3://test-blueprints/lambda-function.blueprint.yaml --connect-protocol=tcp --engine-endpoint=$BLUELINK_ENGINE_ENDPOINT --engine-auth-config-file=engine.auth.json
+stderr 'instance-name'
+
+-- bluelink.config.toml --
+
+-- engine.auth.json --
+{
+  "method": "apiKey",
+  "apiKey": "test-api-key"
+}
