@@ -14,8 +14,10 @@ import (
 )
 
 const (
-	existingBlueprintInstanceID = "blueprint-instance-1"
-	nonExistentInstanceID       = "non-existent-instance"
+	existingBlueprintInstanceID   = "blueprint-instance-1"
+	existingBlueprintInstanceName = "BlueprintInstance1"
+	nonExistentInstanceID         = "non-existent-instance"
+	nonExistentInstanceName       = "NonExistentInstance"
 )
 
 type MemFileStateContainerInstancesTestSuite struct {
@@ -70,6 +72,73 @@ func (s *MemFileStateContainerInstancesTestSuite) Test_reports_instance_not_foun
 	stateErr, isStateErr := err.(*state.Error)
 	s.Assert().True(isStateErr)
 	s.Assert().Equal(state.ErrInstanceNotFound, stateErr.Code)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_looks_up_instance_id_by_name() {
+	instances := s.container.Instances()
+	instanceID, err := instances.LookupIDByName(
+		context.Background(),
+		existingBlueprintInstanceName,
+	)
+	s.Require().NoError(err)
+	s.Assert().Equal(existingBlueprintInstanceID, instanceID)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_reports_instance_not_found_for_lookup_by_name() {
+	instances := s.container.Instances()
+	_, err := instances.LookupIDByName(
+		context.Background(),
+		nonExistentInstanceName,
+	)
+	s.Require().Error(err)
+	stateErr, isStateErr := err.(*state.Error)
+	s.Assert().True(isStateErr)
+	s.Assert().Equal(state.ErrInstanceNotFound, stateErr.Code)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_looks_up_newly_saved_instance_by_name() {
+	fixture := s.saveBlueprintFixtures[1]
+	instances := s.container.Instances()
+
+	// Save a new instance
+	err := instances.Save(
+		context.Background(),
+		*fixture.InstanceState,
+	)
+	s.Require().NoError(err)
+
+	// Lookup by name should work immediately after save
+	instanceID, err := instances.LookupIDByName(
+		context.Background(),
+		fixture.InstanceState.InstanceName,
+	)
+	s.Require().NoError(err)
+	s.Assert().Equal(fixture.InstanceState.InstanceID, instanceID)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_lookup_by_name_works_after_reloading_state() {
+	fixture := s.saveBlueprintFixtures[1]
+	instances := s.container.Instances()
+
+	// Save a new instance
+	err := instances.Save(
+		context.Background(),
+		*fixture.InstanceState,
+	)
+	s.Require().NoError(err)
+
+	// Load a fresh state container from disk
+	freshContainer, err := LoadStateContainer(s.stateDir, s.fs, core.NewNopLogger())
+	s.Require().NoError(err)
+
+	// Lookup by name should work after reload
+	freshInstances := freshContainer.Instances()
+	instanceID, err := freshInstances.LookupIDByName(
+		context.Background(),
+		fixture.InstanceState.InstanceName,
+	)
+	s.Require().NoError(err)
+	s.Assert().Equal(fixture.InstanceState.InstanceID, instanceID)
 }
 
 func (s *MemFileStateContainerInstancesTestSuite) Test_saves_new_instance_with_child_blueprint() {
