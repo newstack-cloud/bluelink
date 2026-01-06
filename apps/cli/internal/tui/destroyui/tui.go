@@ -3,10 +3,12 @@ package destroyui
 import (
 	"errors"
 	"io"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
+	"github.com/newstack-cloud/deploy-cli-sdk/consts"
 	"github.com/newstack-cloud/deploy-cli-sdk/engine"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 	sharedui "github.com/newstack-cloud/deploy-cli-sdk/ui"
@@ -562,8 +564,8 @@ func NewDestroyApp(
 		logger,
 		instanceID,
 		instanceName,
-		true, // destroy = true for staging destroy changes
-		false,
+		true,  // destroy = true for staging destroy changes
+		force, // skipDriftCheck - use force flag to skip drift detection during staging
 		bluelinkStyles,
 		headless,
 		headlessWriter,
@@ -571,6 +573,8 @@ func NewDestroyApp(
 	)
 	staging := &stagingModel
 	staging.SetBlueprintFile(blueprintFile)
+	blueprintSource := blueprintSourceFromPath(blueprintFile)
+	staging.SetBlueprintSource(blueprintSource)
 	staging.SetDeployFlowMode(true)
 
 	destroy := NewDestroyModel(
@@ -597,6 +601,7 @@ func NewDestroyApp(
 		instanceID:         instanceID,
 		instanceName:       instanceName,
 		blueprintFile:      blueprintFile,
+		blueprintSource:    blueprintSource,
 		isDefaultBlueprint: isDefaultBlueprintFile,
 		force:              force,
 		stageFirst:         stageFirst,
@@ -649,4 +654,20 @@ func shouldAutoSelect(
 		return true // Skip blueprint selection when not staging
 	}
 	return (blueprintFile != "" && !isDefaultBlueprintFile) || headless || skipPrompts
+}
+
+func blueprintSourceFromPath(blueprintFile string) string {
+	if strings.HasPrefix(blueprintFile, "https://") {
+		return consts.BlueprintSourceHTTPS
+	}
+	if strings.HasPrefix(blueprintFile, "s3://") {
+		return consts.BlueprintSourceS3
+	}
+	if strings.HasPrefix(blueprintFile, "gcs://") {
+		return consts.BlueprintSourceGCS
+	}
+	if strings.HasPrefix(blueprintFile, "azureblob://") {
+		return consts.BlueprintSourceAzureBlob
+	}
+	return consts.BlueprintSourceFile
 }

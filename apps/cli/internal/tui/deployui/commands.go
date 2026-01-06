@@ -6,6 +6,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -168,11 +169,21 @@ func buildLocalFileDocumentInfo(blueprintFile string) (types.BlueprintDocumentIn
 }
 
 func buildObjectStorageDocumentInfo(blueprintFile, scheme string) types.BlueprintDocumentInfo {
+	// Strip scheme prefix if present (e.g., "s3://bucket/file.yaml" -> "bucket/file.yaml")
+	pathWithoutScheme := stripObjectStorageScheme(blueprintFile, scheme)
 	return types.BlueprintDocumentInfo{
 		FileSourceScheme: scheme,
-		Directory:        path.Dir(blueprintFile),
-		BlueprintFile:    path.Base(blueprintFile),
+		Directory:        path.Dir(pathWithoutScheme),
+		BlueprintFile:    path.Base(pathWithoutScheme),
 	}
+}
+
+func stripObjectStorageScheme(blueprintFile, scheme string) string {
+	prefix := scheme + "://"
+	if strings.HasPrefix(blueprintFile, prefix) {
+		return strings.TrimPrefix(blueprintFile, prefix)
+	}
+	return blueprintFile
 }
 
 func buildHTTPSDocumentInfo(blueprintFile string) (types.BlueprintDocumentInfo, error) {

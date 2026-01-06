@@ -3,10 +3,12 @@ package deployui
 import (
 	"errors"
 	"io"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
+	"github.com/newstack-cloud/deploy-cli-sdk/consts"
 	"github.com/newstack-cloud/deploy-cli-sdk/engine"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 	sharedui "github.com/newstack-cloud/deploy-cli-sdk/ui"
@@ -182,11 +184,14 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		m.changesetID = msg.ChangesetID
-		// Update deploy model with changeset ID, changes, and instance state
+		// Update deploy model with changeset ID, changes, instance state, and blueprint info
 		deployModel, ok := m.deploy.(DeployModel)
 		if ok {
 			deployModel.changesetID = msg.ChangesetID
 			deployModel.footerRenderer.ChangesetID = msg.ChangesetID
+			// Propagate blueprint file and source from main model to ensure remote sources work
+			deployModel.blueprintFile = m.blueprintFile
+			deployModel.blueprintSource = m.blueprintSource
 			// Set instance state first so it's available when building items
 			deployModel.SetPreDeployInstanceState(msg.InstanceState)
 			// Set changeset changes to build proper item hierarchy (uses instance state)
@@ -548,7 +553,7 @@ func NewDeployApp(
 		instanceID,
 		instanceName,
 		false, // destroy - not applicable for deploy staging
-		false, // skipDriftCheck - not exposed through deploy command
+		force, // skipDriftCheck - use force flag to skip drift detection during staging
 		bluelinkStyles,
 		headless,
 		headlessWriter,
@@ -560,6 +565,7 @@ func NewDeployApp(
 	// Mark as deploy flow mode so staging doesn't print apply hint or quit
 	staging.SetDeployFlowMode(true)
 
+	blueprintSource := blueprintSourceFromPath(blueprintFile)
 	deploy := NewDeployModel(
 		deployEngine,
 		logger,
@@ -567,6 +573,7 @@ func NewDeployApp(
 		instanceID,
 		instanceName,
 		blueprintFile,
+		blueprintSource,
 		autoRollback,
 		force,
 		bluelinkStyles,
@@ -586,6 +593,7 @@ func NewDeployApp(
 		instanceID:         instanceID,
 		instanceName:       instanceName,
 		blueprintFile:      blueprintFile,
+		blueprintSource:    blueprintSource,
 		isDefaultBlueprint: isDefaultBlueprintFile,
 		autoRollback:       autoRollback,
 		force:              force,
@@ -598,4 +606,23 @@ func NewDeployApp(
 		logger:             logger,
 		styles:             bluelinkStyles,
 	}, nil
+}
+
+// blueprintSourceFromPath determines the blueprint source type from a file path.
+// This mirrors the logic in deploy-cli-sdk/ui/select_blueprint.go's
+// initialFileAndSourceFromBlueprintFile function.
+func blueprintSourceFromPath(blueprintFile string) string {
+	if strings.HasPrefix(blueprintFile, "https://") {
+		return consts.BlueprintSourceHTTPS
+	}
+	if strings.HasPrefix(blueprintFile, "s3://") {
+		return consts.BlueprintSourceS3
+	}
+	if strings.HasPrefix(blueprintFile, "gcs://") {
+		return consts.BlueprintSourceGCS
+	}
+	if strings.HasPrefix(blueprintFile, "azureblob://") {
+		return consts.BlueprintSourceAzureBlob
+	}
+	return consts.BlueprintSourceFile
 }
