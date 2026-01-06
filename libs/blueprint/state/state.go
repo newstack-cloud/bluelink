@@ -52,6 +52,10 @@ type InstancesContainer interface {
 	// while allowing the user to provide their own name to carry out an
 	// action on an instance.
 	LookupIDByName(ctx context.Context, instanceName string) (string, error)
+	// List retrieves blueprint instances with pagination and optional filtering.
+	// The search parameter filters instances whose names contain the search term (case-insensitive).
+	// Returns a paginated result with total count for UI pagination controls.
+	List(ctx context.Context, params ListInstancesParams) (ListInstancesResult, error)
 	// Save deals with persisting a blueprint instance.
 	Save(ctx context.Context, instanceState InstanceState) error
 	// UpdateStatus deals with updating the status of the latest blueprint
@@ -64,6 +68,32 @@ type InstancesContainer interface {
 	// Remove deals with removing the state for a given blueprint instance.
 	// This is not for destroying the actual deployed resources, just removing the state.
 	Remove(ctx context.Context, instanceID string) (InstanceState, error)
+}
+
+// ListInstancesParams holds parameters for listing blueprint instances.
+type ListInstancesParams struct {
+	// Search filters instances by name (case-insensitive substring match).
+	Search string
+	// Offset is the number of items to skip for pagination.
+	Offset int
+	// Limit is the maximum number of items to return (0 = no limit).
+	Limit int
+}
+
+// ListInstancesResult holds the result of listing blueprint instances.
+type ListInstancesResult struct {
+	// Instances contains the list of instance summaries for the current page.
+	Instances []InstanceSummary `json:"instances"`
+	// TotalCount is the total number of matching instances before pagination.
+	TotalCount int `json:"totalCount"`
+}
+
+// InstanceSummary provides a lightweight summary of a blueprint instance for listing.
+type InstanceSummary struct {
+	InstanceID            string              `json:"id"`
+	InstanceName          string              `json:"name"`
+	Status                core.InstanceStatus `json:"status"`
+	LastDeployedTimestamp int64               `json:"lastDeployedTimestamp"`
 }
 
 // ResourcesContainer provides an interface for functionality related
