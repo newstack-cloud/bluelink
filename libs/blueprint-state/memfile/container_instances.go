@@ -3,6 +3,7 @@ package memfile
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 
@@ -67,6 +68,58 @@ func (c *instancesContainerImpl) LookupIDByName(
 	}
 
 	return "", state.InstanceNotFoundError(instanceName)
+}
+
+func (c *instancesContainerImpl) List(
+	ctx context.Context,
+	params state.ListInstancesParams,
+) (state.ListInstancesResult, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	filtered := c.filterInstances(params.Search)
+	totalCount := len(filtered)
+	filtered = applyPagination(filtered, params.Offset, params.Limit)
+
+	return state.ListInstancesResult{
+		Instances:  filtered,
+		TotalCount: totalCount,
+	}, nil
+}
+
+func (c *instancesContainerImpl) filterInstances(search string) []state.InstanceSummary {
+	var filtered []state.InstanceSummary
+	searchLower := strings.ToLower(search)
+
+	for _, inst := range c.instances {
+		if search == "" || strings.Contains(strings.ToLower(inst.InstanceName), searchLower) {
+			filtered = append(filtered, state.InstanceSummary{
+				InstanceID:            inst.InstanceID,
+				InstanceName:          inst.InstanceName,
+				Status:                inst.Status,
+				LastDeployedTimestamp: int64(inst.LastDeployedTimestamp),
+			})
+		}
+	}
+
+	sort.Slice(filtered, func(i, j int) bool {
+		return filtered[i].InstanceName < filtered[j].InstanceName
+	})
+
+	return filtered
+}
+
+func applyPagination(items []state.InstanceSummary, offset, limit int) []state.InstanceSummary {
+	if offset > 0 {
+		if offset >= len(items) {
+			return nil
+		}
+		items = items[offset:]
+	}
+	if limit > 0 && len(items) > limit {
+		items = items[:limit]
+	}
+	return items
 }
 
 func (c *instancesContainerImpl) Save(

@@ -237,6 +237,130 @@ func (s *PostgresStateContainerInstancesTestSuite) Test_reports_instance_not_fou
 	s.Assert().Equal(state.ErrInstanceNotFound, stateErr.Code)
 }
 
+func (s *PostgresStateContainerInstancesTestSuite) Test_lists_all_instances() {
+	instances := s.container.Instances()
+
+	result, err := instances.List(context.Background(), state.ListInstancesParams{})
+	s.Require().NoError(err)
+	s.Assert().GreaterOrEqual(result.TotalCount, 18)
+	s.Assert().Equal(result.TotalCount, len(result.Instances))
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_lists_instances_with_search_filter() {
+	instances := s.container.Instances()
+
+	result, err := instances.List(context.Background(), state.ListInstancesParams{
+		Search: "Instance1",
+	})
+	s.Require().NoError(err)
+	// Should match Instance1, Instance10-19
+	s.Assert().GreaterOrEqual(result.TotalCount, 10)
+	for _, inst := range result.Instances {
+		s.Assert().Contains(inst.InstanceName, "Instance1")
+	}
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_lists_instances_search_is_case_insensitive() {
+	instances := s.container.Instances()
+
+	upperResult, err := instances.List(context.Background(), state.ListInstancesParams{
+		Search: "SEEDBLUEPRINT",
+	})
+	s.Require().NoError(err)
+
+	lowerResult, err := instances.List(context.Background(), state.ListInstancesParams{
+		Search: "seedblueprint",
+	})
+	s.Require().NoError(err)
+
+	s.Assert().Equal(upperResult.TotalCount, lowerResult.TotalCount)
+	s.Assert().GreaterOrEqual(upperResult.TotalCount, 18)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_lists_instances_returns_empty_when_no_matches() {
+	instances := s.container.Instances()
+
+	result, err := instances.List(context.Background(), state.ListInstancesParams{
+		Search: "NonExistentSearchTerm12345",
+	})
+	s.Require().NoError(err)
+	s.Assert().Equal(0, result.TotalCount)
+	s.Assert().Empty(result.Instances)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_lists_instances_sorted_by_name() {
+	instances := s.container.Instances()
+
+	result, err := instances.List(context.Background(), state.ListInstancesParams{})
+	s.Require().NoError(err)
+	s.Require().GreaterOrEqual(len(result.Instances), 2)
+
+	for i := 1; i < len(result.Instances); i++ {
+		s.Assert().LessOrEqual(
+			result.Instances[i-1].InstanceName,
+			result.Instances[i].InstanceName,
+			"instances should be sorted by name",
+		)
+	}
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_lists_instances_with_pagination() {
+	instances := s.container.Instances()
+
+	// Get first page
+	firstPage, err := instances.List(context.Background(), state.ListInstancesParams{
+		Limit:  5,
+		Offset: 0,
+	})
+	s.Require().NoError(err)
+	s.Assert().Len(firstPage.Instances, 5)
+
+	// Get second page
+	secondPage, err := instances.List(context.Background(), state.ListInstancesParams{
+		Limit:  5,
+		Offset: 5,
+	})
+	s.Require().NoError(err)
+	s.Assert().Len(secondPage.Instances, 5)
+
+	// First and second pages should have different items
+	for _, inst := range firstPage.Instances {
+		for _, inst2 := range secondPage.Instances {
+			s.Assert().NotEqual(inst.InstanceID, inst2.InstanceID)
+		}
+	}
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_lists_instances_returns_total_count_before_pagination() {
+	instances := s.container.Instances()
+
+	// Get all to find total
+	allResult, err := instances.List(context.Background(), state.ListInstancesParams{})
+	s.Require().NoError(err)
+
+	// Get paginated result
+	paginatedResult, err := instances.List(context.Background(), state.ListInstancesParams{
+		Limit:  3,
+		Offset: 0,
+	})
+	s.Require().NoError(err)
+
+	// TotalCount should match full count, not paginated count
+	s.Assert().Equal(allResult.TotalCount, paginatedResult.TotalCount)
+	s.Assert().Len(paginatedResult.Instances, 3)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_lists_instances_handles_offset_beyond_results() {
+	instances := s.container.Instances()
+
+	result, err := instances.List(context.Background(), state.ListInstancesParams{
+		Offset: 1000,
+	})
+	s.Require().NoError(err)
+	s.Assert().Empty(result.Instances)
+	s.Assert().GreaterOrEqual(result.TotalCount, 18)
+}
+
 func TestPostgresStateContainerInstancesTestSuite(t *testing.T) {
 	suite.Run(t, new(PostgresStateContainerInstancesTestSuite))
 }

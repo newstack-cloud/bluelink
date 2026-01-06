@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
 )
@@ -62,6 +64,91 @@ func (c *instancesContainerImpl) LookupIDByName(
 	}
 
 	return instanceID, nil
+}
+
+func (c *instancesContainerImpl) List(
+	ctx context.Context,
+	params state.ListInstancesParams,
+) (state.ListInstancesResult, error) {
+	totalCount, err := c.getInstanceCount(ctx, params.Search)
+	if err != nil {
+		return state.ListInstancesResult{}, err
+	}
+
+	instances, err := c.getInstanceList(ctx, params)
+	if err != nil {
+		return state.ListInstancesResult{}, err
+	}
+
+	return state.ListInstancesResult{
+		Instances:  instances,
+		TotalCount: totalCount,
+	}, nil
+}
+
+func (c *instancesContainerImpl) getInstanceCount(ctx context.Context, search string) (int, error) {
+	args := buildListQueryArgs(search)
+	var totalCount int
+	err := c.connPool.QueryRow(ctx, listInstancesCountQuery(search), args).Scan(&totalCount)
+	if err != nil {
+		return 0, err
+	}
+	return totalCount, nil
+}
+
+func (c *instancesContainerImpl) getInstanceList(
+	ctx context.Context,
+	params state.ListInstancesParams,
+) ([]state.InstanceSummary, error) {
+	args := buildListQueryArgs(params.Search)
+	query := listInstancesQuery(params.Search, params.Limit, params.Offset)
+
+	rows, err := c.connPool.Query(ctx, query, args)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var instances []state.InstanceSummary
+	for rows.Next() {
+		inst, err := scanInstanceSummary(rows)
+		if err != nil {
+			return nil, err
+		}
+		instances = append(instances, inst)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return instances, nil
+}
+
+func scanInstanceSummary(rows pgx.Rows) (state.InstanceSummary, error) {
+	var inst state.InstanceSummary
+	var status core.InstanceStatus
+	var lastDeployedTs *time.Time
+
+	err := rows.Scan(&inst.InstanceID, &inst.InstanceName, &status, &lastDeployedTs)
+	if err != nil {
+		return state.InstanceSummary{}, err
+	}
+
+	inst.Status = status
+	if lastDeployedTs != nil {
+		inst.LastDeployedTimestamp = lastDeployedTs.Unix()
+	}
+
+	return inst, nil
+}
+
+func buildListQueryArgs(search string) *pgx.NamedArgs {
+	args := pgx.NamedArgs{}
+	if search != "" {
+		args["searchPattern"] = "%" + search + "%"
+	}
+	return &args
 }
 
 func (c *instancesContainerImpl) wireDescendantInstances(

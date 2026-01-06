@@ -1,6 +1,10 @@
 package postgres
 
-import "github.com/newstack-cloud/bluelink/libs/blueprint/state"
+import (
+	"fmt"
+
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+)
 
 func upsertInstanceQuery() string {
 	return `
@@ -335,4 +339,33 @@ func removeInstanceQuery() string {
 	DELETE FROM blueprint_instances
 	WHERE id = @instanceId
 	`
+}
+
+func listInstancesCountQuery(search string) string {
+	query := `SELECT COUNT(*) FROM blueprint_instances`
+	if search != "" {
+		query += ` WHERE "name" ILIKE @searchPattern`
+	}
+	return query
+}
+
+func listInstancesQuery(search string, limit, offset int) string {
+	query := `
+	SELECT id, "name", "status", last_deployed_timestamp
+	FROM blueprint_instances`
+
+	if search != "" {
+		query += ` WHERE "name" ILIKE @searchPattern`
+	}
+
+	query += ` ORDER BY "name" ASC`
+
+	if limit > 0 {
+		query += fmt.Sprintf(" LIMIT %d", limit)
+	}
+	if offset > 0 {
+		query += fmt.Sprintf(" OFFSET %d", offset)
+	}
+
+	return query
 }

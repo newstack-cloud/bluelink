@@ -235,6 +235,153 @@ func (s *MemFileStateContainerInstancesTestSuite) Test_reports_instance_not_foun
 	s.Assert().Equal(state.ErrInstanceNotFound, stateErr.Code)
 }
 
+func (s *MemFileStateContainerInstancesTestSuite) Test_lists_all_instances() {
+	instances := s.container.Instances()
+	result, err := instances.List(context.Background(), state.ListInstancesParams{})
+	s.Require().NoError(err)
+	s.Assert().GreaterOrEqual(result.TotalCount, 1)
+	s.Assert().GreaterOrEqual(len(result.Instances), 1)
+
+	var found bool
+	for _, inst := range result.Instances {
+		if inst.InstanceID == existingBlueprintInstanceID {
+			s.Assert().Equal(existingBlueprintInstanceName, inst.InstanceName)
+			found = true
+			break
+		}
+	}
+	s.Assert().True(found, "expected to find the existing blueprint instance")
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_lists_instances_with_search_filter() {
+	s.saveTestInstances()
+	instances := s.container.Instances()
+
+	result, err := instances.List(context.Background(), state.ListInstancesParams{
+		Search: "prod",
+	})
+	s.Require().NoError(err)
+	s.Assert().Equal(1, result.TotalCount)
+	s.Assert().Len(result.Instances, 1)
+	s.Assert().Equal("my-app-production", result.Instances[0].InstanceName)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_lists_instances_search_is_case_insensitive() {
+	s.saveTestInstances()
+	instances := s.container.Instances()
+
+	result, err := instances.List(context.Background(), state.ListInstancesParams{
+		Search: "STAGING",
+	})
+	s.Require().NoError(err)
+	s.Assert().Equal(1, result.TotalCount)
+	s.Assert().Equal("my-app-staging", result.Instances[0].InstanceName)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_lists_instances_returns_empty_when_no_matches() {
+	instances := s.container.Instances()
+
+	result, err := instances.List(context.Background(), state.ListInstancesParams{
+		Search: "nonexistent-search-term",
+	})
+	s.Require().NoError(err)
+	s.Assert().Equal(0, result.TotalCount)
+	s.Assert().Empty(result.Instances)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_lists_instances_sorted_by_name() {
+	s.saveTestInstances()
+	instances := s.container.Instances()
+
+	result, err := instances.List(context.Background(), state.ListInstancesParams{})
+	s.Require().NoError(err)
+
+	names := make([]string, len(result.Instances))
+	for i, inst := range result.Instances {
+		names[i] = inst.InstanceName
+	}
+
+	sortedNames := make([]string, len(names))
+	copy(sortedNames, names)
+	s.Assert().Equal(sortedNames, names, "instances should be sorted alphabetically by name")
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_lists_instances_with_pagination() {
+	s.saveTestInstances()
+	instances := s.container.Instances()
+
+	// Get total count first so test is resilient to initial data changes
+	allResult, err := instances.List(context.Background(), state.ListInstancesParams{})
+	s.Require().NoError(err)
+	totalCount := allResult.TotalCount
+
+	result, err := instances.List(context.Background(), state.ListInstancesParams{
+		Offset: 1,
+		Limit:  2,
+	})
+	s.Require().NoError(err)
+	s.Assert().Equal(totalCount, result.TotalCount)
+	expectedLen := min(2, totalCount-1)
+	s.Assert().Len(result.Instances, expectedLen)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_lists_instances_returns_total_count_before_pagination() {
+	s.saveTestInstances()
+	instances := s.container.Instances()
+
+	// Get total count first
+	allResult, err := instances.List(context.Background(), state.ListInstancesParams{})
+	s.Require().NoError(err)
+	totalCount := allResult.TotalCount
+
+	result, err := instances.List(context.Background(), state.ListInstancesParams{
+		Limit: 1,
+	})
+	s.Require().NoError(err)
+	s.Assert().Equal(totalCount, result.TotalCount)
+	s.Assert().Len(result.Instances, 1)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_lists_instances_handles_offset_beyond_results() {
+	instances := s.container.Instances()
+
+	// Get total count first
+	allResult, err := instances.List(context.Background(), state.ListInstancesParams{})
+	s.Require().NoError(err)
+	totalCount := allResult.TotalCount
+
+	result, err := instances.List(context.Background(), state.ListInstancesParams{
+		Offset: 100,
+	})
+	s.Require().NoError(err)
+	s.Assert().Equal(totalCount, result.TotalCount)
+	s.Assert().Empty(result.Instances)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) saveTestInstances() {
+	instances := s.container.Instances()
+
+	testInstances := []state.InstanceState{
+		{
+			InstanceID:            "test-instance-prod",
+			InstanceName:          "my-app-production",
+			Status:                core.InstanceStatusDeployed,
+			LastDeployedTimestamp: 1704067200,
+		},
+		{
+			InstanceID:            "test-instance-staging",
+			InstanceName:          "my-app-staging",
+			Status:                core.InstanceStatusDeployed,
+			LastDeployedTimestamp: 1704067100,
+		},
+	}
+
+	for _, inst := range testInstances {
+		err := instances.Save(context.Background(), inst)
+		s.Require().NoError(err)
+	}
+}
+
 func (s *MemFileStateContainerInstancesTestSuite) assertPersistedInstance(expected *state.InstanceState) {
 	// Check that the instance state was saved to "disk" correctly by
 	// loading a new state container from persistence and retrieving the instance.
