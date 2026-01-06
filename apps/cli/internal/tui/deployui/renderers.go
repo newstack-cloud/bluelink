@@ -2,7 +2,6 @@ package deployui
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -77,32 +76,13 @@ func (r *DeployDetailsRenderer) renderResourceDetails(item *DeployItem, width in
 	// Get resource state which may have updated resource ID and type after deployment
 	resourceState := r.getResourceState(res, item.Path)
 
-	// Metadata - Resource ID first (top section)
-	// Try item's ResourceID first, then fall back to state
-	resourceID := res.ResourceID
-	if resourceID == "" && resourceState != nil {
-		resourceID = resourceState.ResourceID
-	}
-	if resourceID != "" {
-		sb.WriteString(s.Muted.Render("Resource ID: "))
-		sb.WriteString(resourceID)
-		sb.WriteString("\n")
-	}
-	if res.DisplayName != "" {
-		sb.WriteString(s.Muted.Render("Name: "))
-		sb.WriteString(res.Name)
-		sb.WriteString("\n")
-	}
-	// Resource type - try item first, then fall back to state
-	resourceType := res.ResourceType
-	if resourceType == "" && resourceState != nil {
-		resourceType = resourceState.Type
-	}
-	if resourceType != "" {
-		sb.WriteString(s.Muted.Render("Type: "))
-		sb.WriteString(resourceType)
-		sb.WriteString("\n")
-	}
+	// Resource metadata (ID, name, type)
+	shared.RenderResourceMetadata(&sb, shared.ResourceMetadata{
+		ResourceID:   res.ResourceID,
+		DisplayName:  res.DisplayName,
+		Name:         res.Name,
+		ResourceType: res.ResourceType,
+	}, resourceState, s)
 
 	// Status - only show for items that will be/were deployed
 	if res.Action != ActionNoChange {
@@ -116,7 +96,7 @@ func (r *DeployDetailsRenderer) renderResourceDetails(item *DeployItem, width in
 			sb.WriteString(shared.RenderResourceStatus(res.Status, s))
 			sb.WriteString("\n")
 			sb.WriteString(s.Muted.Render("Details: "))
-			sb.WriteString(renderPreciseResourceStatus(res.PreciseStatus))
+			sb.WriteString(shared.FormatPreciseResourceStatus(res.PreciseStatus))
 		}
 		sb.WriteString("\n")
 	}
@@ -124,7 +104,7 @@ func (r *DeployDetailsRenderer) renderResourceDetails(item *DeployItem, width in
 	// Action (from changeset)
 	if res.Action != "" {
 		sb.WriteString(s.Muted.Render("Action: "))
-		sb.WriteString(renderAction(res.Action, s))
+		sb.WriteString(shared.RenderActionBadge(res.Action, s))
 		sb.WriteString("\n")
 	}
 
@@ -312,118 +292,12 @@ func (r *DeployDetailsRenderer) renderSpecHint(resourceState *state.ResourceStat
 
 // renderOutboundLinksSection renders the outbound links from this resource.
 func (r *DeployDetailsRenderer) renderOutboundLinksSection(resourceName, parentChild string, s *styles.Styles) string {
-	if r.PostDeployInstanceState == nil || len(r.PostDeployInstanceState.Links) == 0 {
+	if r.PostDeployInstanceState == nil {
 		return ""
 	}
-
-	// Find links that originate from this resource (linkName starts with "resourceName::")
-	prefix := resourceName + "::"
-	var outboundLinks []string
-	for linkName, linkState := range r.PostDeployInstanceState.Links {
-		if strings.HasPrefix(linkName, prefix) {
-			// Extract target resource name
-			targetResource := strings.TrimPrefix(linkName, prefix)
-			statusStr := formatLinkStatus(linkState.Status)
-			outboundLinks = append(outboundLinks, fmt.Sprintf("→ %s (%s)", targetResource, statusStr))
-		}
-	}
-
-	if len(outboundLinks) == 0 {
-		return ""
-	}
-
-	// Sort for consistent display
-	sort.Strings(outboundLinks)
-
-	sb := strings.Builder{}
-	sb.WriteString(s.Category.Render("Outbound Links:"))
-	sb.WriteString("\n")
-	for _, link := range outboundLinks {
-		sb.WriteString(s.Muted.Render("  " + link))
-		sb.WriteString("\n")
-	}
-
-	return sb.String()
+	return shared.RenderOutboundLinksSection(resourceName, r.PostDeployInstanceState.Links, s)
 }
 
-// formatLinkStatus returns a human-readable status string for a link.
-func formatLinkStatus(status core.LinkStatus) string {
-	switch status {
-	case core.LinkStatusCreated:
-		return "created"
-	case core.LinkStatusUpdated:
-		return "updated"
-	case core.LinkStatusDestroyed:
-		return "destroyed"
-	case core.LinkStatusCreating:
-		return "creating"
-	case core.LinkStatusUpdating:
-		return "updating"
-	case core.LinkStatusDestroying:
-		return "destroying"
-	case core.LinkStatusCreateFailed, core.LinkStatusUpdateFailed, core.LinkStatusDestroyFailed:
-		return "failed"
-	default:
-		return status.String()
-	}
-}
-
-func renderPreciseResourceStatus(status core.PreciseResourceStatus) string {
-	switch status {
-	case core.PreciseResourceStatusCreating:
-		return "Creating resource..."
-	case core.PreciseResourceStatusConfigComplete:
-		return "Configuration applied, waiting for stability"
-	case core.PreciseResourceStatusCreated:
-		return "Resource created and stable"
-	case core.PreciseResourceStatusCreateFailed:
-		return "Failed to create resource"
-	case core.PreciseResourceStatusUpdating:
-		return "Updating resource..."
-	case core.PreciseResourceStatusUpdateConfigComplete:
-		return "Update applied, waiting for stability"
-	case core.PreciseResourceStatusUpdated:
-		return "Resource updated and stable"
-	case core.PreciseResourceStatusUpdateFailed:
-		return "Failed to update resource"
-	case core.PreciseResourceStatusDestroying:
-		return "Destroying resource..."
-	case core.PreciseResourceStatusDestroyed:
-		return "Resource destroyed"
-	case core.PreciseResourceStatusDestroyFailed:
-		return "Failed to destroy resource"
-	case core.PreciseResourceStatusCreateRollingBack:
-		return "Rolling back resource creation..."
-	case core.PreciseResourceStatusCreateRollbackFailed:
-		return "Failed to roll back resource creation"
-	case core.PreciseResourceStatusCreateRollbackComplete:
-		return "Resource creation rolled back"
-	case core.PreciseResourceStatusUpdateRollingBack:
-		return "Rolling back resource update..."
-	case core.PreciseResourceStatusUpdateRollbackFailed:
-		return "Failed to roll back resource update"
-	case core.PreciseResourceStatusUpdateRollbackConfigComplete:
-		return "Update rollback applied, waiting for stability"
-	case core.PreciseResourceStatusUpdateRollbackComplete:
-		return "Resource update rolled back"
-	case core.PreciseResourceStatusDestroyRollingBack:
-		return "Rolling back resource destruction..."
-	case core.PreciseResourceStatusDestroyRollbackFailed:
-		return "Failed to roll back resource destruction"
-	case core.PreciseResourceStatusDestroyRollbackConfigComplete:
-		return "Destruction rollback applied, waiting for stability"
-	case core.PreciseResourceStatusDestroyRollbackComplete:
-		return "Resource destruction rolled back"
-	case core.PreciseResourceStatusCreateInterrupted:
-		return "Resource creation was interrupted (actual state unknown)"
-	case core.PreciseResourceStatusUpdateInterrupted:
-		return "Resource update was interrupted (actual state unknown)"
-	case core.PreciseResourceStatusDestroyInterrupted:
-		return "Resource destruction was interrupted (actual state unknown)"
-	default:
-		return "Pending"
-	}
-}
 
 func renderResourceDurations(durations *state.ResourceCompletionDurations, s *styles.Styles) string {
 	if durations == nil {
@@ -446,24 +320,6 @@ func renderResourceDurations(durations *state.ResourceCompletionDurations, s *st
 		sb.WriteString("\n")
 	}
 	return sb.String()
-}
-
-func renderAction(action ActionType, s *styles.Styles) string {
-	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
-	switch action {
-	case ActionCreate:
-		return successStyle.Render("CREATE")
-	case ActionUpdate:
-		return s.Warning.Render("UPDATE")
-	case ActionDelete:
-		return s.Error.Render("DELETE")
-	case ActionRecreate:
-		return s.Info.Render("RECREATE")
-	case ActionNoChange:
-		return s.Muted.Render("NO CHANGE")
-	default:
-		return s.Muted.Render(string(action))
-	}
 }
 
 func (r *DeployDetailsRenderer) renderChildDetails(item *DeployItem, width int, s *styles.Styles) string {
@@ -518,7 +374,7 @@ func (r *DeployDetailsRenderer) renderChildDetails(item *DeployItem, width int, 
 	// Action
 	if child.Action != "" {
 		sb.WriteString(s.Muted.Render("Action: "))
-		sb.WriteString(renderAction(child.Action, s))
+		sb.WriteString(shared.RenderActionBadge(child.Action, s))
 		sb.WriteString("\n")
 	}
 
@@ -583,14 +439,14 @@ func (r *DeployDetailsRenderer) renderLinkDetails(item *DeployItem, width int, s
 		sb.WriteString(shared.RenderLinkStatus(link.Status, s))
 		sb.WriteString("\n")
 		sb.WriteString(s.Muted.Render("Details: "))
-		sb.WriteString(renderPreciseLinkStatus(link.PreciseStatus))
+		sb.WriteString(shared.FormatPreciseLinkStatus(link.PreciseStatus))
 		sb.WriteString("\n")
 	}
 
 	// Action
 	if link.Action != "" {
 		sb.WriteString(s.Muted.Render("Action: "))
-		sb.WriteString(renderAction(link.Action, s))
+		sb.WriteString(shared.RenderActionBadge(link.Action, s))
 		sb.WriteString("\n")
 	}
 
@@ -610,55 +466,6 @@ func (r *DeployDetailsRenderer) renderLinkDetails(item *DeployItem, width int, s
 	}
 
 	return sb.String()
-}
-
-func renderPreciseLinkStatus(status core.PreciseLinkStatus) string {
-	switch status {
-	case core.PreciseLinkStatusUpdatingResourceA:
-		return "Updating resource A..."
-	case core.PreciseLinkStatusResourceAUpdated:
-		return "Resource A updated"
-	case core.PreciseLinkStatusResourceAUpdateFailed:
-		return "Failed to update resource A"
-	case core.PreciseLinkStatusResourceAUpdateRollingBack:
-		return "Rolling back resource A update..."
-	case core.PreciseLinkStatusResourceAUpdateRollbackFailed:
-		return "Failed to roll back resource A update"
-	case core.PreciseLinkStatusResourceAUpdateRollbackComplete:
-		return "Resource A update rolled back"
-	case core.PreciseLinkStatusUpdatingResourceB:
-		return "Updating resource B..."
-	case core.PreciseLinkStatusResourceBUpdated:
-		return "Resource B updated"
-	case core.PreciseLinkStatusResourceBUpdateFailed:
-		return "Failed to update resource B"
-	case core.PreciseLinkStatusResourceBUpdateRollingBack:
-		return "Rolling back resource B update..."
-	case core.PreciseLinkStatusResourceBUpdateRollbackFailed:
-		return "Failed to roll back resource B update"
-	case core.PreciseLinkStatusResourceBUpdateRollbackComplete:
-		return "Resource B update rolled back"
-	case core.PreciseLinkStatusUpdatingIntermediaryResources:
-		return "Updating intermediary resources..."
-	case core.PreciseLinkStatusIntermediaryResourcesUpdated:
-		return "Intermediary resources updated"
-	case core.PreciseLinkStatusIntermediaryResourceUpdateFailed:
-		return "Failed to update intermediary resources"
-	case core.PreciseLinkStatusIntermediaryResourceUpdateRollingBack:
-		return "Rolling back intermediary resources..."
-	case core.PreciseLinkStatusIntermediaryResourceUpdateRollbackFailed:
-		return "Failed to roll back intermediary resources"
-	case core.PreciseLinkStatusIntermediaryResourceUpdateRollbackComplete:
-		return "Intermediary resources rolled back"
-	case core.PreciseLinkStatusResourceAUpdateInterrupted:
-		return "Resource A update was interrupted (actual state unknown)"
-	case core.PreciseLinkStatusResourceBUpdateInterrupted:
-		return "Resource B update was interrupted (actual state unknown)"
-	case core.PreciseLinkStatusIntermediaryResourceUpdateInterrupted:
-		return "Intermediary resource update was interrupted (actual state unknown)"
-	default:
-		return "Pending"
-	}
 }
 
 // DeploySectionGrouper implements splitpane.SectionGrouper for deploy UI.

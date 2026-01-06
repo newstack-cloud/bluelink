@@ -27,7 +27,7 @@ func (m *InspectModel) processResourceUpdate(data *container.ResourceDeployUpdat
 		// Try to find ResourceState from instance state for new items
 		var resourceState *state.ResourceState
 		if instanceState != nil {
-			resourceState = findResourceStateByName(instanceState, data.ResourceName)
+			resourceState = shared.FindResourceStateByName(instanceState, data.ResourceName)
 		}
 
 		// Determine the correct status - prefer state store if available

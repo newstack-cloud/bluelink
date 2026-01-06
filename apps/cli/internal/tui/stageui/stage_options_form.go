@@ -1,12 +1,12 @@
 package stageui
 
 import (
-	"errors"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/deploy-cli-sdk/engine"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 )
@@ -87,36 +87,21 @@ func NewStageOptionsFormModel(styles *stylespkg.Styles, config StageOptionsFormC
 		initialSkipDriftCheck: config.InitialSkipDriftCheck,
 	}
 
-	model.instanceNameForm = huh.NewForm(
+	model.instanceNameForm = shared.NewThemedForm(styles,
 		huh.NewGroup(
-			huh.NewInput().
-				Key("instanceName").
-				Title("Instance Name").
-				Description("Name of a new or existing blueprint instance.").
-				Placeholder("my-app-production").
-				Value(&model.instanceName).
-				Validate(func(value string) error {
-					trimmed := strings.TrimSpace(value)
-					if trimmed == "" {
-						return errors.New("instance name cannot be empty")
-					}
-					if len(trimmed) < 3 {
-						return errors.New("instance name must be at least 3 characters")
-					}
-					if len(trimmed) > 128 {
-						return errors.New("instance name must be at most 128 characters")
-					}
-					return nil
-				}),
+			shared.NewInstanceNameInput(
+				&model.instanceName,
+				"Name of a new or existing blueprint instance.",
+			),
 		),
-	).WithTheme(stylespkg.NewHuhTheme(styles.Palette))
+	)
 
 	return model
 }
 
 // createOptionsForm creates the form for existing instance options.
 func (m *StageOptionsFormModel) createOptionsForm() {
-	m.optionsForm = huh.NewForm(
+	m.optionsForm = shared.NewThemedForm(m.styles,
 		huh.NewGroup(
 			huh.NewConfirm().
 				Key("destroy").
@@ -135,7 +120,7 @@ func (m *StageOptionsFormModel) createOptionsForm() {
 				WithButtonAlignment(lipgloss.Left).
 				Value(&m.skipDriftCheck),
 		),
-	).WithTheme(stylespkg.NewHuhTheme(m.styles.Palette))
+	)
 }
 
 func (m *StageOptionsFormModel) Init() tea.Cmd {

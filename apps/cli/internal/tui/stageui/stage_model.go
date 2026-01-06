@@ -841,19 +841,7 @@ func (m StageModel) getStatusIcon(action ActionType) string {
 }
 
 func (m StageModel) renderActionBadge(action ActionType) string {
-	successStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Success())
-	switch action {
-	case ActionCreate:
-		return successStyle.Render(string(action))
-	case ActionUpdate:
-		return m.styles.Warning.Render(string(action))
-	case ActionDelete:
-		return m.styles.Error.Render(string(action))
-	case ActionRecreate:
-		return m.styles.Info.Render(string(action))
-	default:
-		return m.styles.Muted.Render(string(action))
-	}
+	return shared.RenderActionBadge(action, m.styles)
 }
 
 func (m StageModel) renderErrorFooter() string {

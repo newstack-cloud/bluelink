@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -155,6 +156,20 @@ func RenderFooterNavigation(sb *strings.Builder, s *styles.Styles, extraKeys ...
 	sb.WriteString("\n")
 }
 
+// RenderExportsFooterNavigation renders navigation hints for exports overlay views.
+func RenderExportsFooterNavigation(sb *strings.Builder, s *styles.Styles) {
+	sb.WriteString(s.Muted.Render("  "))
+	sb.WriteString(s.Key.Render("↑/↓"))
+	sb.WriteString(s.Muted.Render(" navigate  "))
+	sb.WriteString(s.Key.Render("tab"))
+	sb.WriteString(s.Muted.Render(" switch pane  "))
+	sb.WriteString(s.Key.Render("e"))
+	sb.WriteString(s.Muted.Render("/"))
+	sb.WriteString(s.Key.Render("esc"))
+	sb.WriteString(s.Muted.Render(" close"))
+	sb.WriteString("\n")
+}
+
 // RenderFailureReasons renders failure reasons with word wrapping.
 func RenderFailureReasons(sb *strings.Builder, reasons []string, width int, s *styles.Styles) {
 	if len(reasons) == 0 {
@@ -172,4 +187,78 @@ func RenderFailureReasons(sb *strings.Builder, reasons []string, width int, s *s
 		}
 	}
 	sb.WriteString("\n")
+}
+
+// ResourceMetadata holds basic resource information for rendering.
+type ResourceMetadata struct {
+	ResourceID   string
+	DisplayName  string
+	Name         string
+	ResourceType string
+}
+
+// RenderResourceMetadata renders the common resource metadata fields (ID, name, type).
+func RenderResourceMetadata(sb *strings.Builder, meta ResourceMetadata, resourceState *state.ResourceState, s *styles.Styles) {
+	// Resource ID - try provided ID first, then fall back to state
+	resourceID := meta.ResourceID
+	if resourceID == "" && resourceState != nil {
+		resourceID = resourceState.ResourceID
+	}
+	if resourceID != "" {
+		sb.WriteString(s.Muted.Render("Resource ID: "))
+		sb.WriteString(resourceID)
+		sb.WriteString("\n")
+	}
+
+	// Display name (only if different from logical name)
+	if meta.DisplayName != "" {
+		sb.WriteString(s.Muted.Render("Name: "))
+		sb.WriteString(meta.Name)
+		sb.WriteString("\n")
+	}
+
+	// Resource type - try provided type first, then fall back to state
+	resourceType := meta.ResourceType
+	if resourceType == "" && resourceState != nil {
+		resourceType = resourceState.Type
+	}
+	if resourceType != "" {
+		sb.WriteString(s.Muted.Render("Type: "))
+		sb.WriteString(resourceType)
+		sb.WriteString("\n")
+	}
+}
+
+// RenderOutboundLinksSection renders the outbound links from a resource.
+// It searches the provided links map for links that originate from the given resourceName.
+func RenderOutboundLinksSection(resourceName string, links map[string]*state.LinkState, s *styles.Styles) string {
+	if len(links) == 0 {
+		return ""
+	}
+
+	prefix := resourceName + "::"
+	var outboundLinks []string
+	for linkName, linkState := range links {
+		if strings.HasPrefix(linkName, prefix) {
+			targetResource := strings.TrimPrefix(linkName, prefix)
+			statusStr := FormatLinkStatus(linkState.Status)
+			outboundLinks = append(outboundLinks, "→ "+targetResource+" ("+statusStr+")")
+		}
+	}
+
+	if len(outboundLinks) == 0 {
+		return ""
+	}
+
+	sort.Strings(outboundLinks)
+
+	sb := strings.Builder{}
+	sb.WriteString(s.Category.Render("Outbound Links:"))
+	sb.WriteString("\n")
+	for _, link := range outboundLinks {
+		sb.WriteString(s.Muted.Render("  " + link))
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
 }

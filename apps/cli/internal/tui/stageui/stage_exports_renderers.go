@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/deploy-cli-sdk/headless"
@@ -273,19 +274,7 @@ var _ splitpane.FooterRenderer = (*StageExportsFooterRenderer)(nil)
 func (r *StageExportsFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.Styles) string {
 	sb := strings.Builder{}
 	sb.WriteString("\n")
-
-	// Navigation help
-	sb.WriteString(s.Muted.Render("  "))
-	sb.WriteString(s.Key.Render("↑/↓"))
-	sb.WriteString(s.Muted.Render(" navigate  "))
-	sb.WriteString(s.Key.Render("tab"))
-	sb.WriteString(s.Muted.Render(" switch pane  "))
-	sb.WriteString(s.Key.Render("e"))
-	sb.WriteString(s.Muted.Render("/"))
-	sb.WriteString(s.Key.Render("esc"))
-	sb.WriteString(s.Muted.Render(" close"))
-	sb.WriteString("\n")
-
+	shared.RenderExportsFooterNavigation(&sb, s)
 	return sb.String()
 }
 

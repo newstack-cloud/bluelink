@@ -147,3 +147,133 @@ func RenderLinkStatus(status core.LinkStatus, s *styles.Styles) string {
 		return s.Muted.Render("Unknown")
 	}
 }
+
+// FormatLinkStatus returns a lowercase human-readable status string for a link.
+func FormatLinkStatus(status core.LinkStatus) string {
+	switch status {
+	case core.LinkStatusCreated:
+		return "created"
+	case core.LinkStatusUpdated:
+		return "updated"
+	case core.LinkStatusDestroyed:
+		return "destroyed"
+	case core.LinkStatusCreating:
+		return "creating"
+	case core.LinkStatusUpdating:
+		return "updating"
+	case core.LinkStatusDestroying:
+		return "destroying"
+	case core.LinkStatusCreateFailed, core.LinkStatusUpdateFailed, core.LinkStatusDestroyFailed:
+		return "failed"
+	default:
+		return status.String()
+	}
+}
+
+// FormatPreciseResourceStatus returns a human-readable string for a precise resource status.
+func FormatPreciseResourceStatus(status core.PreciseResourceStatus) string {
+	switch status {
+	case core.PreciseResourceStatusCreating:
+		return "Creating resource..."
+	case core.PreciseResourceStatusConfigComplete:
+		return "Configuration applied, waiting for stability"
+	case core.PreciseResourceStatusCreated:
+		return "Resource created and stable"
+	case core.PreciseResourceStatusCreateFailed:
+		return "Failed to create resource"
+	case core.PreciseResourceStatusUpdating:
+		return "Updating resource..."
+	case core.PreciseResourceStatusUpdateConfigComplete:
+		return "Update applied, waiting for stability"
+	case core.PreciseResourceStatusUpdated:
+		return "Resource updated and stable"
+	case core.PreciseResourceStatusUpdateFailed:
+		return "Failed to update resource"
+	case core.PreciseResourceStatusDestroying:
+		return "Destroying resource..."
+	case core.PreciseResourceStatusDestroyed:
+		return "Resource destroyed"
+	case core.PreciseResourceStatusDestroyFailed:
+		return "Failed to destroy resource"
+	case core.PreciseResourceStatusCreateRollingBack:
+		return "Rolling back resource creation..."
+	case core.PreciseResourceStatusCreateRollbackFailed:
+		return "Failed to roll back resource creation"
+	case core.PreciseResourceStatusCreateRollbackComplete:
+		return "Resource creation rolled back"
+	case core.PreciseResourceStatusUpdateRollingBack:
+		return "Rolling back resource update..."
+	case core.PreciseResourceStatusUpdateRollbackFailed:
+		return "Failed to roll back resource update"
+	case core.PreciseResourceStatusUpdateRollbackConfigComplete:
+		return "Update rollback applied, waiting for stability"
+	case core.PreciseResourceStatusUpdateRollbackComplete:
+		return "Resource update rolled back"
+	case core.PreciseResourceStatusDestroyRollingBack:
+		return "Rolling back resource destruction..."
+	case core.PreciseResourceStatusDestroyRollbackFailed:
+		return "Failed to roll back resource destruction"
+	case core.PreciseResourceStatusDestroyRollbackConfigComplete:
+		return "Destruction rollback applied, waiting for stability"
+	case core.PreciseResourceStatusDestroyRollbackComplete:
+		return "Resource destruction rolled back"
+	case core.PreciseResourceStatusCreateInterrupted:
+		return "Resource creation was interrupted (actual state unknown)"
+	case core.PreciseResourceStatusUpdateInterrupted:
+		return "Resource update was interrupted (actual state unknown)"
+	case core.PreciseResourceStatusDestroyInterrupted:
+		return "Resource destruction was interrupted (actual state unknown)"
+	default:
+		return "Pending"
+	}
+}
+
+// FormatPreciseLinkStatus returns a human-readable string for a precise link status.
+func FormatPreciseLinkStatus(status core.PreciseLinkStatus) string {
+	switch status {
+	case core.PreciseLinkStatusUpdatingResourceA:
+		return "Updating resource A..."
+	case core.PreciseLinkStatusResourceAUpdated:
+		return "Resource A updated"
+	case core.PreciseLinkStatusResourceAUpdateFailed:
+		return "Failed to update resource A"
+	case core.PreciseLinkStatusResourceAUpdateRollingBack:
+		return "Rolling back resource A update..."
+	case core.PreciseLinkStatusResourceAUpdateRollbackFailed:
+		return "Failed to roll back resource A update"
+	case core.PreciseLinkStatusResourceAUpdateRollbackComplete:
+		return "Resource A update rolled back"
+	case core.PreciseLinkStatusUpdatingResourceB:
+		return "Updating resource B..."
+	case core.PreciseLinkStatusResourceBUpdated:
+		return "Resource B updated"
+	case core.PreciseLinkStatusResourceBUpdateFailed:
+		return "Failed to update resource B"
+	case core.PreciseLinkStatusResourceBUpdateRollingBack:
+		return "Rolling back resource B update..."
+	case core.PreciseLinkStatusResourceBUpdateRollbackFailed:
+		return "Failed to roll back resource B update"
+	case core.PreciseLinkStatusResourceBUpdateRollbackComplete:
+		return "Resource B update rolled back"
+	case core.PreciseLinkStatusUpdatingIntermediaryResources:
+		return "Updating intermediary resources..."
+	case core.PreciseLinkStatusIntermediaryResourcesUpdated:
+		return "Intermediary resources updated"
+	case core.PreciseLinkStatusIntermediaryResourceUpdateFailed:
+		return "Failed to update intermediary resources"
+	case core.PreciseLinkStatusIntermediaryResourceUpdateRollingBack:
+		return "Rolling back intermediary resources..."
+	case core.PreciseLinkStatusIntermediaryResourceUpdateRollbackFailed:
+		return "Failed to roll back intermediary resources"
+	case core.PreciseLinkStatusIntermediaryResourceUpdateRollbackComplete:
+		return "Intermediary resources rolled back"
+	case core.PreciseLinkStatusResourceAUpdateInterrupted:
+		return "Resource A update was interrupted (actual state unknown)"
+	case core.PreciseLinkStatusResourceBUpdateInterrupted:
+		return "Resource B update was interrupted (actual state unknown)"
+	case core.PreciseLinkStatusIntermediaryResourceUpdateInterrupted:
+		return "Intermediary resource update was interrupted (actual state unknown)"
+	default:
+		return "Pending"
+	}
+}

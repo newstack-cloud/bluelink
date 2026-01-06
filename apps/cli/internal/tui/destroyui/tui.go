@@ -70,6 +70,15 @@ type MainModel struct {
 	Error  error
 }
 
+// GetInstanceID returns the instance ID for the InstanceResolver interface.
+func (m MainModel) GetInstanceID() string { return m.instanceID }
+
+// GetInstanceName returns the instance name for the InstanceResolver interface.
+func (m MainModel) GetInstanceName() string { return m.instanceName }
+
+// GetEngine returns the engine for the InstanceResolver interface.
+func (m MainModel) GetEngine() shared.InstanceLookup { return m.engine }
+
 // Init initializes the main model.
 func (m MainModel) Init() tea.Cmd {
 	bpCmd := m.selectBlueprint.Init()

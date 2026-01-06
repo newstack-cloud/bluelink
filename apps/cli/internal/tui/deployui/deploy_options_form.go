@@ -1,12 +1,12 @@
 package deployui
 
 import (
-	"errors"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 )
 
@@ -72,86 +72,34 @@ func NewDeployConfigFormModel(
 	// Build the form fields
 	fields := []huh.Field{}
 
-	// If instance ID is provided, show it as read-only note (not editable)
-	// Otherwise, show instance name input
 	if model.hasInstanceID {
-		// Instance ID provided - show as info, no input needed
-		fields = append(fields,
-			huh.NewNote().
-				Title("Instance ID").
-				Description(model.instanceID),
-		)
+		fields = append(fields, shared.NewInstanceIDNote(model.instanceID))
 	} else {
-		// New deployment - need instance name
-		fields = append(fields,
-			huh.NewInput().
-				Key("instanceName").
-				Title("Instance Name").
-				Description("Name of an existing instance to update, or a new name to create.").
-				Placeholder("my-app-production").
-				Value(&model.instanceName).
-				Validate(func(value string) error {
-					trimmed := strings.TrimSpace(value)
-					if trimmed == "" {
-						return errors.New("instance name cannot be empty")
-					}
-					if len(trimmed) < 3 {
-						return errors.New("instance name must be at least 3 characters")
-					}
-					if len(trimmed) > 128 {
-						return errors.New("instance name must be at most 128 characters")
-					}
-					return nil
-				}),
-		)
+		fields = append(fields, shared.NewInstanceNameInput(
+			&model.instanceName,
+			"Name of an existing instance to update, or a new name to create.",
+		))
 	}
 
-	// Stage first toggle
-	fields = append(fields,
-		huh.NewConfirm().
-			Key("stageFirst").
-			Title("Stage changes first?").
-			Description("Stage now, or use an existing changeset ID.").
-			Affirmative("Yes, stage now").
-			Negative("No, use existing changeset").
-			WithButtonAlignment(lipgloss.Left).
-			Value(&model.stageFirst),
+	fields = append(fields, shared.NewStageFirstConfirm(
+		&model.stageFirst,
+		"Stage changes first?",
+		"Stage now, or use an existing changeset ID.",
+	))
+
+	changesetIDGroup := shared.NewChangesetIDGroup(
+		&model.changesetID,
+		&model.stageFirst,
+		"The ID of a previously staged changeset to deploy.",
 	)
 
-	// Changeset ID input in separate group (only shown when stageFirst is false)
-	changesetIDGroup := huh.NewGroup(
-		huh.NewInput().
-			Key("changesetID").
-			Title("Changeset ID").
-			Description("The ID of a previously staged changeset to deploy.").
-			Placeholder("changeset-abc123").
-			Value(&model.changesetID).
-			Validate(func(value string) error {
-				trimmed := strings.TrimSpace(value)
-				if trimmed == "" {
-					return errors.New("changeset ID is required when not staging first")
-				}
-				return nil
-			}),
-	).WithHideFunc(func() bool {
-		return model.stageFirst
-	})
+	autoApproveGroup := shared.NewAutoApproveGroup(
+		&model.autoApprove,
+		&model.stageFirst,
+		"No, ask before deploy",
+	)
 
-	// Auto-approve toggle in separate group (only shown when stageFirst is true)
-	autoApproveGroup := huh.NewGroup(
-		huh.NewConfirm().
-			Key("autoApprove").
-			Title("Auto-approve staged changes?").
-			Description("Skip confirmation after staging.").
-			Affirmative("Yes, skip confirmation").
-			Negative("No, ask before deploy").
-			WithButtonAlignment(lipgloss.Left).
-			Value(&model.autoApprove),
-	).WithHideFunc(func() bool {
-		return !model.stageFirst
-	})
-
-	// Auto-rollback toggle
+	// Auto-rollback toggle (deploy-specific)
 	autoRollbackGroup := huh.NewGroup(
 		huh.NewConfirm().
 			Key("autoRollback").
@@ -163,12 +111,12 @@ func NewDeployConfigFormModel(
 			Value(&model.autoRollback),
 	)
 
-	model.form = huh.NewForm(
+	model.form = shared.NewThemedForm(styles,
 		huh.NewGroup(fields...),
 		changesetIDGroup,
 		autoApproveGroup,
 		autoRollbackGroup,
-	).WithTheme(stylespkg.NewHuhTheme(styles.Palette))
+	)
 
 	return model
 }

@@ -2,11 +2,11 @@ package destroyui
 
 import (
 	"context"
-	"strconv"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/driftui"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/stateutil"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
@@ -87,7 +87,7 @@ func executeDestroy(
 	model DestroyModel,
 	payload *types.DestroyBlueprintInstancePayload,
 ) (*types.BlueprintInstanceResponse, error) {
-	instanceID := getEffectiveInstanceID(model.instanceID, model.instanceName)
+	instanceID := shared.GetEffectiveInstanceID(model.instanceID, model.instanceName)
 	return model.engine.DestroyBlueprintInstance(context.TODO(), instanceID, payload)
 }
 
@@ -149,29 +149,12 @@ func checkForDestroyErrCmd(model DestroyModel) tea.Cmd {
 // resolveInstanceIdentifiersCmd resolves instance identifiers for staging in the destroy context.
 func resolveInstanceIdentifiersCmd(model MainModel) tea.Cmd {
 	return func() tea.Msg {
-		instanceID, instanceName := resolveInstanceIdentifiers(model)
+		instanceID, instanceName := shared.ResolveInstanceIdentifiers(model)
 		return InstanceResolvedMsg{
 			InstanceID:   instanceID,
 			InstanceName: instanceName,
 		}
 	}
-}
-
-func resolveInstanceIdentifiers(model MainModel) (instanceID, instanceName string) {
-	if model.instanceID != "" {
-		return model.instanceID, model.instanceName
-	}
-
-	if model.instanceName == "" {
-		return "", ""
-	}
-
-	instance, err := model.engine.GetBlueprintInstance(context.TODO(), model.instanceName)
-	if err != nil || instance == nil {
-		return "", ""
-	}
-
-	return instance.InstanceID, model.instanceName
 }
 
 func applyReconciliationCmd(model DestroyModel) tea.Cmd {
@@ -181,7 +164,7 @@ func applyReconciliationCmd(model DestroyModel) tea.Cmd {
 		}
 
 		payload := buildAcceptExternalPayload(model.driftResult)
-		instanceID := getEffectiveInstanceID(model.instanceID, model.instanceName)
+		instanceID := shared.GetEffectiveInstanceID(model.instanceID, model.instanceName)
 
 		_, err := model.engine.ApplyReconciliation(context.TODO(), instanceID, payload)
 		if err != nil {
@@ -195,67 +178,13 @@ func applyReconciliationCmd(model DestroyModel) tea.Cmd {
 	}
 }
 
-func getEffectiveInstanceID(instanceID, instanceName string) string {
-	if instanceID != "" {
-		return instanceID
-	}
-	return instanceName
-}
-
 func buildAcceptExternalPayload(
 	result *container.ReconciliationCheckResult,
 ) *types.ApplyReconciliationPayload {
 	return &types.ApplyReconciliationPayload{
-		ResourceActions: buildResourceActions(result.Resources),
-		LinkActions:     buildLinkActions(result.Links),
+		ResourceActions: shared.BuildResourceActions(result.Resources),
+		LinkActions:     shared.BuildLinkActions(result.Links),
 	}
-}
-
-func buildResourceActions(resources []container.ResourceReconcileResult) []types.ResourceReconcileActionPayload {
-	actions := make([]types.ResourceReconcileActionPayload, 0, len(resources))
-	for _, r := range resources {
-		actions = append(actions, types.ResourceReconcileActionPayload{
-			ResourceID:    r.ResourceID,
-			ChildPath:     r.ChildPath,
-			Action:        string(r.RecommendedAction),
-			ExternalState: r.ExternalState,
-			NewStatus:     strconv.Itoa(int(r.NewStatus)),
-		})
-	}
-	return actions
-}
-
-func buildLinkActions(links []container.LinkReconcileResult) []types.LinkReconcileActionPayload {
-	actions := make([]types.LinkReconcileActionPayload, 0, len(links))
-	for _, l := range links {
-		actions = append(actions, types.LinkReconcileActionPayload{
-			LinkID:              l.LinkID,
-			ChildPath:           l.ChildPath,
-			Action:              string(l.RecommendedAction),
-			NewStatus:           strconv.Itoa(int(l.NewStatus)),
-			LinkDataUpdates:     l.LinkDataUpdates,
-			IntermediaryActions: buildIntermediaryActions(l.IntermediaryChanges),
-		})
-	}
-	return actions
-}
-
-func buildIntermediaryActions(
-	changes map[string]*container.IntermediaryReconcileResult,
-) map[string]*types.IntermediaryReconcileActionPayload {
-	if len(changes) == 0 {
-		return nil
-	}
-
-	actions := make(map[string]*types.IntermediaryReconcileActionPayload, len(changes))
-	for name, intResult := range changes {
-		actions[name] = &types.IntermediaryReconcileActionPayload{
-			Action:        string(container.ReconciliationActionAcceptExternal),
-			ExternalState: intResult.ExternalState,
-			NewStatus:     "created",
-		}
-	}
-	return actions
 }
 
 func continueDestroyCmd(model DestroyModel) tea.Cmd {

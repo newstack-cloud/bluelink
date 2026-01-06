@@ -678,19 +678,7 @@ func (r *StageDetailsRenderer) renderLinkChanges(linkChanges *provider.LinkChang
 
 // renderActionBadge renders an action badge with appropriate styling.
 func renderActionBadge(action ActionType, s *styles.Styles) string {
-	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
-	switch action {
-	case ActionCreate:
-		return successStyle.Render(string(action))
-	case ActionUpdate:
-		return s.Warning.Render(string(action))
-	case ActionDelete:
-		return s.Error.Render(string(action))
-	case ActionRecreate:
-		return s.Info.Render(string(action))
-	default:
-		return s.Muted.Render(string(action))
-	}
+	return shared.RenderActionBadge(action, s)
 }
 
 // StageSectionGrouper implements splitpane.SectionGrouper for stage UI.

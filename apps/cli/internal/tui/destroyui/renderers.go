@@ -147,13 +147,13 @@ func (r *DestroyDetailsRenderer) renderResourceDetails(item *DestroyItem, width 
 		sb.WriteString(renderResourceStatus(res.Status, s))
 		sb.WriteString("\n")
 		sb.WriteString(s.Muted.Render("Details: "))
-		sb.WriteString(renderPreciseResourceStatus(res.PreciseStatus))
+		sb.WriteString(shared.FormatPreciseResourceStatus(res.PreciseStatus))
 	}
 	sb.WriteString("\n")
 
 	if res.Action != "" {
 		sb.WriteString(s.Muted.Render("Action: "))
-		sb.WriteString(renderAction(res.Action, s))
+		sb.WriteString(shared.RenderActionBadge(res.Action, s))
 		sb.WriteString("\n")
 	}
 
@@ -191,13 +191,13 @@ func (r *DestroyDetailsRenderer) renderChildDetails(item *DestroyItem, _ int, s 
 		sb.WriteString(s.Muted.Render("Details: "))
 		sb.WriteString("Not attempted due to destroy failure")
 	} else {
-		sb.WriteString(renderInstanceStatus(child.Status, s))
+		sb.WriteString(shared.RenderInstanceStatus(child.Status, s))
 	}
 	sb.WriteString("\n")
 
 	if child.Action != "" {
 		sb.WriteString(s.Muted.Render("Action: "))
-		sb.WriteString(renderAction(child.Action, s))
+		sb.WriteString(shared.RenderActionBadge(child.Action, s))
 		sb.WriteString("\n")
 	}
 
@@ -249,16 +249,13 @@ func (r *DestroyDetailsRenderer) renderLinkDetails(item *DestroyItem, width int,
 		sb.WriteString("Not attempted due to destroy failure")
 		sb.WriteString("\n")
 	} else {
-		sb.WriteString(renderLinkStatus(link.Status, s))
-		sb.WriteString("\n")
-		sb.WriteString(s.Muted.Render("Details: "))
-		sb.WriteString(renderPreciseLinkStatus(link.PreciseStatus))
+		sb.WriteString(shared.RenderLinkStatus(link.Status, s))
 		sb.WriteString("\n")
 	}
 
 	if link.Action != "" {
 		sb.WriteString(s.Muted.Render("Action: "))
-		sb.WriteString(renderAction(link.Action, s))
+		sb.WriteString(shared.RenderActionBadge(link.Action, s))
 		sb.WriteString("\n")
 	}
 
@@ -525,98 +522,6 @@ func renderResourceStatus(status core.ResourceStatus, s *styles.Styles) string {
 		return s.Warning.Render("Interrupted")
 	default:
 		return s.Muted.Render("Pending")
-	}
-}
-
-func renderPreciseResourceStatus(status core.PreciseResourceStatus) string {
-	switch status {
-	case core.PreciseResourceStatusDestroying:
-		return "Deleting resource..."
-	case core.PreciseResourceStatusDestroyed:
-		return "Resource deleted"
-	case core.PreciseResourceStatusDestroyFailed:
-		return "Failed to delete resource"
-	case core.PreciseResourceStatusDestroyRollingBack:
-		return "Rolling back deletion..."
-	case core.PreciseResourceStatusDestroyRollbackComplete:
-		return "Deletion rolled back"
-	case core.PreciseResourceStatusDestroyRollbackFailed:
-		return "Failed to rollback deletion"
-	case core.PreciseResourceStatusDestroyInterrupted:
-		return "Deletion interrupted"
-	default:
-		return "Pending"
-	}
-}
-
-func renderInstanceStatus(status core.InstanceStatus, s *styles.Styles) string {
-	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
-
-	switch status {
-	case core.InstanceStatusDestroying:
-		return s.Info.Render("Destroying")
-	case core.InstanceStatusDestroyed:
-		return successStyle.Render("Destroyed")
-	case core.InstanceStatusDestroyFailed:
-		return s.Error.Render("Destroy Failed")
-	case core.InstanceStatusDestroyRollingBack:
-		return s.Warning.Render("Rolling Back")
-	case core.InstanceStatusDestroyRollbackComplete:
-		return s.Muted.Render("Rolled Back")
-	case core.InstanceStatusDestroyRollbackFailed:
-		return s.Error.Render("Rollback Failed")
-	case core.InstanceStatusDestroyInterrupted:
-		return s.Warning.Render("Interrupted")
-	default:
-		return s.Muted.Render("Pending")
-	}
-}
-
-func renderLinkStatus(status core.LinkStatus, s *styles.Styles) string {
-	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
-
-	switch status {
-	case core.LinkStatusDestroying:
-		return s.Info.Render("Destroying")
-	case core.LinkStatusDestroyed:
-		return successStyle.Render("Destroyed")
-	case core.LinkStatusDestroyFailed:
-		return s.Error.Render("Destroy Failed")
-	case core.LinkStatusDestroyRollingBack:
-		return s.Warning.Render("Rolling Back")
-	case core.LinkStatusDestroyRollbackComplete:
-		return s.Muted.Render("Rolled Back")
-	case core.LinkStatusDestroyRollbackFailed:
-		return s.Error.Render("Rollback Failed")
-	case core.LinkStatusDestroyInterrupted:
-		return s.Warning.Render("Interrupted")
-	default:
-		return s.Muted.Render("Pending")
-	}
-}
-
-func renderPreciseLinkStatus(status core.PreciseLinkStatus) string {
-	// Links don't have destroy-specific precise statuses, just return the generic string
-	if status == core.PreciseLinkStatusUnknown {
-		return "Pending"
-	}
-	return status.String()
-}
-
-func renderAction(action ActionType, s *styles.Styles) string {
-	switch action {
-	case ActionCreate:
-		return s.Info.Render("Create")
-	case ActionUpdate:
-		return s.Info.Render("Update")
-	case ActionDelete:
-		return s.Error.Render("Delete")
-	case ActionRecreate:
-		return s.Warning.Render("Recreate")
-	case ActionNoChange:
-		return s.Muted.Render("No Change")
-	default:
-		return s.Muted.Render("Unknown")
 	}
 }
 

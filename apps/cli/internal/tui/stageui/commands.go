@@ -2,10 +2,6 @@ package stageui
 
 import (
 	"context"
-	"net/url"
-	"path"
-	"path/filepath"
-	"strconv"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -16,7 +12,6 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
-	"github.com/newstack-cloud/deploy-cli-sdk/consts"
 )
 
 // StageEventMsg is a message containing a change staging event.
@@ -99,7 +94,7 @@ type StageStartedWithStateMsg struct {
 }
 
 func createChangesetPayload(model StageModel) (*types.CreateChangesetPayload, error) {
-	docInfo, err := buildDocumentInfo(model.blueprintSource, model.blueprintFile)
+	docInfo, err := shared.BuildDocumentInfo(model.blueprintSource, model.blueprintFile)
 	if err != nil {
 		return nil, err
 	}
@@ -110,59 +105,6 @@ func createChangesetPayload(model StageModel) (*types.CreateChangesetPayload, er
 		InstanceName:          model.instanceName,
 		Destroy:               model.destroy,
 		SkipDriftCheck:        model.skipDriftCheck,
-	}, nil
-}
-
-// buildDocumentInfo creates BlueprintDocumentInfo based on the source type.
-func buildDocumentInfo(source string, blueprintFile string) (types.BlueprintDocumentInfo, error) {
-	switch source {
-	case consts.BlueprintSourceHTTPS:
-		return buildHTTPSDocumentInfo(blueprintFile)
-	case consts.BlueprintSourceS3:
-		return buildObjectStorageDocumentInfo(blueprintFile, "s3"), nil
-	case consts.BlueprintSourceGCS:
-		return buildObjectStorageDocumentInfo(blueprintFile, "gcs"), nil
-	case consts.BlueprintSourceAzureBlob:
-		return buildObjectStorageDocumentInfo(blueprintFile, "azureblob"), nil
-	default:
-		return buildLocalFileDocumentInfo(blueprintFile)
-	}
-}
-
-func buildLocalFileDocumentInfo(blueprintFile string) (types.BlueprintDocumentInfo, error) {
-	absPath, err := filepath.Abs(blueprintFile)
-	if err != nil {
-		return types.BlueprintDocumentInfo{}, err
-	}
-	return types.BlueprintDocumentInfo{
-		FileSourceScheme: "file",
-		Directory:        filepath.Dir(absPath),
-		BlueprintFile:    filepath.Base(absPath),
-	}, nil
-}
-
-func buildObjectStorageDocumentInfo(blueprintFile, scheme string) types.BlueprintDocumentInfo {
-	return shared.BuildObjectStorageDocumentInfo(blueprintFile, scheme)
-}
-
-func buildHTTPSDocumentInfo(blueprintFile string) (types.BlueprintDocumentInfo, error) {
-	parsedURL, err := url.Parse(blueprintFile)
-	if err != nil {
-		return types.BlueprintDocumentInfo{}, err
-	}
-
-	basePath := path.Dir(parsedURL.Path)
-	if basePath == "/" {
-		basePath = ""
-	}
-
-	return types.BlueprintDocumentInfo{
-		FileSourceScheme: "https",
-		Directory:        basePath,
-		BlueprintFile:    path.Base(parsedURL.Path),
-		BlueprintLocationMetadata: map[string]any{
-			"host": parsedURL.Host,
-		},
 	}, nil
 }
 
@@ -223,62 +165,14 @@ func buildAcceptExternalPayload(
 ) *types.ApplyReconciliationPayload {
 	return &types.ApplyReconciliationPayload{
 		BlueprintDocumentInfo: buildBlueprintDocumentInfoFromModel(model),
-		ResourceActions:       buildResourceActions(result.Resources),
-		LinkActions:           buildLinkActions(result.Links),
+		ResourceActions:       shared.BuildResourceActions(result.Resources),
+		LinkActions:           shared.BuildLinkActions(result.Links),
 	}
-}
-
-func buildResourceActions(resources []container.ResourceReconcileResult) []types.ResourceReconcileActionPayload {
-	actions := make([]types.ResourceReconcileActionPayload, 0, len(resources))
-	for _, r := range resources {
-		actions = append(actions, types.ResourceReconcileActionPayload{
-			ResourceID:    r.ResourceID,
-			ChildPath:     r.ChildPath,
-			Action:        string(r.RecommendedAction),
-			ExternalState: r.ExternalState,
-			NewStatus:     strconv.Itoa(int(r.NewStatus)),
-		})
-	}
-	return actions
-}
-
-func buildLinkActions(links []container.LinkReconcileResult) []types.LinkReconcileActionPayload {
-	actions := make([]types.LinkReconcileActionPayload, 0, len(links))
-	for _, l := range links {
-		actions = append(actions, types.LinkReconcileActionPayload{
-			LinkID:              l.LinkID,
-			ChildPath:           l.ChildPath,
-			Action:              string(l.RecommendedAction),
-			NewStatus:           strconv.Itoa(int(l.NewStatus)),
-			LinkDataUpdates:     l.LinkDataUpdates,
-			IntermediaryActions: buildIntermediaryActions(l.IntermediaryChanges),
-		})
-	}
-	return actions
-}
-
-func buildIntermediaryActions(
-	changes map[string]*container.IntermediaryReconcileResult,
-) map[string]*types.IntermediaryReconcileActionPayload {
-	if len(changes) == 0 {
-		return nil
-	}
-
-	actions := make(map[string]*types.IntermediaryReconcileActionPayload, len(changes))
-	for name, intResult := range changes {
-		actions[name] = &types.IntermediaryReconcileActionPayload{
-			Action:        string(container.ReconciliationActionAcceptExternal),
-			ExternalState: intResult.ExternalState,
-			NewStatus:     "created",
-		}
-	}
-	return actions
 }
 
 // buildBlueprintDocumentInfoFromModel creates BlueprintDocumentInfo from the model.
-// It reuses buildDocumentInfo and returns a fallback on error.
 func buildBlueprintDocumentInfoFromModel(model StageModel) types.BlueprintDocumentInfo {
-	docInfo, err := buildDocumentInfo(model.blueprintSource, model.blueprintFile)
+	docInfo, err := shared.BuildDocumentInfo(model.blueprintSource, model.blueprintFile)
 	if err != nil {
 		return types.BlueprintDocumentInfo{
 			BlueprintFile: model.blueprintFile,

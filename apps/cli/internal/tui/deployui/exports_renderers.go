@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/outpututil"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/deploy-cli-sdk/styles"
 	"github.com/newstack-cloud/deploy-cli-sdk/ui/splitpane"
 )
@@ -140,19 +141,7 @@ var _ splitpane.FooterRenderer = (*ExportsFooterRenderer)(nil)
 func (r *ExportsFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.Styles) string {
 	sb := strings.Builder{}
 	sb.WriteString("\n")
-
-	// Navigation help
-	sb.WriteString(s.Muted.Render("  "))
-	sb.WriteString(s.Key.Render("↑/↓"))
-	sb.WriteString(s.Muted.Render(" navigate  "))
-	sb.WriteString(s.Key.Render("tab"))
-	sb.WriteString(s.Muted.Render(" switch pane  "))
-	sb.WriteString(s.Key.Render("e"))
-	sb.WriteString(s.Muted.Render("/"))
-	sb.WriteString(s.Key.Render("esc"))
-	sb.WriteString(s.Muted.Render(" close"))
-	sb.WriteString("\n")
-
+	shared.RenderExportsFooterNavigation(&sb, s)
 	return sb.String()
 }
 

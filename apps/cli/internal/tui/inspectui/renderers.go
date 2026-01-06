@@ -1,7 +1,6 @@
 package inspectui
 
 import (
-	"sort"
 	"strings"
 
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/deployui"
@@ -65,40 +64,21 @@ func (r *InspectDetailsRenderer) renderResourceDetails(item *deployui.DeployItem
 	if resourceState == nil {
 		// Check item's instance state first (handles nested blueprints)
 		if item.InstanceState != nil {
-			resourceState = findResourceStateByName(item.InstanceState, res.Name)
+			resourceState = shared.FindResourceStateByName(item.InstanceState, res.Name)
 		}
 		// Fall back to root instance state
 		if resourceState == nil && r.InstanceState != nil {
-			resourceState = findResourceStateByName(r.InstanceState, res.Name)
+			resourceState = shared.FindResourceStateByName(r.InstanceState, res.Name)
 		}
 	}
 
-	// Resource ID
-	resourceID := res.ResourceID
-	if resourceID == "" && resourceState != nil {
-		resourceID = resourceState.ResourceID
-	}
-	if resourceID != "" {
-		sb.WriteString(s.Muted.Render("Resource ID: "))
-		sb.WriteString(resourceID)
-		sb.WriteString("\n")
-	}
-	if res.DisplayName != "" {
-		sb.WriteString(s.Muted.Render("Name: "))
-		sb.WriteString(res.Name)
-		sb.WriteString("\n")
-	}
-
-	// Resource type
-	resourceType := res.ResourceType
-	if resourceType == "" && resourceState != nil {
-		resourceType = resourceState.Type
-	}
-	if resourceType != "" {
-		sb.WriteString(s.Muted.Render("Type: "))
-		sb.WriteString(resourceType)
-		sb.WriteString("\n")
-	}
+	// Resource metadata (ID, name, type)
+	shared.RenderResourceMetadata(&sb, shared.ResourceMetadata{
+		ResourceID:   res.ResourceID,
+		DisplayName:  res.DisplayName,
+		Name:         res.Name,
+		ResourceType: res.ResourceType,
+	}, resourceState, s)
 
 	// Status - prefer resourceState, fall back to item status for streaming resources
 	if resourceState != nil {
@@ -162,56 +142,10 @@ func (r *InspectDetailsRenderer) renderSpecHint(resourceState *state.ResourceSta
 }
 
 func (r *InspectDetailsRenderer) renderOutboundLinksSection(resourceName string, s *styles.Styles) string {
-	if r.InstanceState == nil || len(r.InstanceState.Links) == 0 {
+	if r.InstanceState == nil {
 		return ""
 	}
-
-	prefix := resourceName + "::"
-	var outboundLinks []string
-	for linkName, linkState := range r.InstanceState.Links {
-		if strings.HasPrefix(linkName, prefix) {
-			targetResource := strings.TrimPrefix(linkName, prefix)
-			statusStr := formatLinkStatus(linkState.Status)
-			outboundLinks = append(outboundLinks, "→ "+targetResource+" ("+statusStr+")")
-		}
-	}
-
-	if len(outboundLinks) == 0 {
-		return ""
-	}
-
-	sort.Strings(outboundLinks)
-
-	sb := strings.Builder{}
-	sb.WriteString(s.Category.Render("Outbound Links:"))
-	sb.WriteString("\n")
-	for _, link := range outboundLinks {
-		sb.WriteString(s.Muted.Render("  " + link))
-		sb.WriteString("\n")
-	}
-
-	return sb.String()
-}
-
-func formatLinkStatus(status core.LinkStatus) string {
-	switch status {
-	case core.LinkStatusCreated:
-		return "created"
-	case core.LinkStatusUpdated:
-		return "updated"
-	case core.LinkStatusDestroyed:
-		return "destroyed"
-	case core.LinkStatusCreating:
-		return "creating"
-	case core.LinkStatusUpdating:
-		return "updating"
-	case core.LinkStatusDestroying:
-		return "destroying"
-	case core.LinkStatusCreateFailed, core.LinkStatusUpdateFailed, core.LinkStatusDestroyFailed:
-		return "failed"
-	default:
-		return status.String()
-	}
+	return shared.RenderOutboundLinksSection(resourceName, r.InstanceState.Links, s)
 }
 
 func (r *InspectDetailsRenderer) renderChildDetails(item *deployui.DeployItem, width int, s *styles.Styles) string {
@@ -295,17 +229,6 @@ func (r *InspectDetailsRenderer) renderLinkDetails(item *deployui.DeployItem, wi
 	sb.WriteString("\n")
 
 	return sb.String()
-}
-
-func findResourceStateByName(instanceState *state.InstanceState, name string) *state.ResourceState {
-	if instanceState == nil || instanceState.ResourceIDs == nil || instanceState.Resources == nil {
-		return nil
-	}
-	resourceID, ok := instanceState.ResourceIDs[name]
-	if !ok {
-		return nil
-	}
-	return instanceState.Resources[resourceID]
 }
 
 // InspectSectionGrouper implements splitpane.SectionGrouper for inspect UI.

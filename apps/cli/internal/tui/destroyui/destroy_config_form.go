@@ -1,12 +1,12 @@
 package destroyui
 
 import (
-	"errors"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 )
 
@@ -65,82 +65,37 @@ func NewDestroyConfigFormModel(
 	fields := []huh.Field{}
 
 	if model.hasInstanceID {
-		fields = append(fields,
-			huh.NewNote().
-				Title("Instance ID").
-				Description(model.instanceID),
-		)
+		fields = append(fields, shared.NewInstanceIDNote(model.instanceID))
 	} else {
-		fields = append(fields,
-			huh.NewInput().
-				Key("instanceName").
-				Title("Instance Name").
-				Description("Name of the instance to destroy.").
-				Placeholder("my-app-production").
-				Value(&model.instanceName).
-				Validate(func(value string) error {
-					trimmed := strings.TrimSpace(value)
-					if trimmed == "" {
-						return errors.New("instance name cannot be empty")
-					}
-					if len(trimmed) < 3 {
-						return errors.New("instance name must be at least 3 characters")
-					}
-					if len(trimmed) > 128 {
-						return errors.New("instance name must be at most 128 characters")
-					}
-					return nil
-				}),
-		)
+		fields = append(fields, shared.NewInstanceNameInput(
+			&model.instanceName,
+			"Name of the instance to destroy.",
+		))
 	}
 
-	fields = append(fields,
-		huh.NewConfirm().
-			Key("stageFirst").
-			Title("Stage destroy changes first?").
-			Description("Stage now to preview destruction, or use an existing changeset ID.").
-			Affirmative("Yes, stage now").
-			Negative("No, use existing changeset").
-			WithButtonAlignment(lipgloss.Left).
-			Value(&model.stageFirst),
+	fields = append(fields, shared.NewStageFirstConfirm(
+		&model.stageFirst,
+		"Stage destroy changes first?",
+		"Stage now to preview destruction, or use an existing changeset ID.",
+	))
+
+	changesetIDGroup := shared.NewChangesetIDGroup(
+		&model.changesetID,
+		&model.stageFirst,
+		"The ID of a previously staged destroy changeset.",
 	)
 
-	changesetIDGroup := huh.NewGroup(
-		huh.NewInput().
-			Key("changesetID").
-			Title("Changeset ID").
-			Description("The ID of a previously staged destroy changeset.").
-			Placeholder("changeset-abc123").
-			Value(&model.changesetID).
-			Validate(func(value string) error {
-				trimmed := strings.TrimSpace(value)
-				if trimmed == "" {
-					return errors.New("changeset ID is required when not staging first")
-				}
-				return nil
-			}),
-	).WithHideFunc(func() bool {
-		return model.stageFirst
-	})
+	autoApproveGroup := shared.NewAutoApproveGroup(
+		&model.autoApprove,
+		&model.stageFirst,
+		"No, ask before destroy",
+	)
 
-	autoApproveGroup := huh.NewGroup(
-		huh.NewConfirm().
-			Key("autoApprove").
-			Title("Auto-approve staged changes?").
-			Description("Skip confirmation after staging.").
-			Affirmative("Yes, skip confirmation").
-			Negative("No, ask before destroy").
-			WithButtonAlignment(lipgloss.Left).
-			Value(&model.autoApprove),
-	).WithHideFunc(func() bool {
-		return !model.stageFirst
-	})
-
-	model.form = huh.NewForm(
+	model.form = shared.NewThemedForm(styles,
 		huh.NewGroup(fields...),
 		changesetIDGroup,
 		autoApproveGroup,
-	).WithTheme(stylespkg.NewHuhTheme(styles.Palette))
+	)
 
 	return model
 }
