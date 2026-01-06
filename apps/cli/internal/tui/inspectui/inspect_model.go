@@ -312,40 +312,38 @@ func (m InspectModel) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m InspectModel) handleOverviewKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc", "o", "O":
+	result := shared.HandleViewportKeyMsg(msg, m.overviewViewport, "o", "O")
+	if result.ShouldQuit {
+		return m, tea.Quit
+	}
+	if result.ShouldClose {
 		m.showingOverview = false
 		return m, nil
-	case "q", "ctrl+c":
-		return m, tea.Quit
-	default:
-		var cmd tea.Cmd
-		m.overviewViewport, cmd = m.overviewViewport.Update(msg)
-		return m, cmd
 	}
+	m.overviewViewport = result.Viewport
+	return m, result.Cmd
 }
 
 func (m InspectModel) handleSpecViewKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc", "s", "S":
+	result := shared.HandleViewportKeyMsg(msg, m.specViewport, "s", "S")
+	if result.ShouldQuit {
+		return m, tea.Quit
+	}
+	if result.ShouldClose {
 		m.showingSpecView = false
 		return m, nil
-	case "q", "ctrl+c":
-		return m, tea.Quit
-	default:
-		var cmd tea.Cmd
-		m.specViewport, cmd = m.specViewport.Update(msg)
-		return m, cmd
 	}
+	m.specViewport = result.Viewport
+	return m, result.Cmd
 }
 
 func (m InspectModel) handleExportsKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc", "e", "E":
+	switch shared.CheckExportsKeyMsg(msg) {
+	case shared.ExportsKeyActionQuit:
+		return m, tea.Quit
+	case shared.ExportsKeyActionClose:
 		m.showingExports = false
 		return m, nil
-	case "q", "ctrl+c":
-		return m, tea.Quit
 	default:
 		var cmd tea.Cmd
 		m.exportsModel, cmd = m.exportsModel.Update(msg)

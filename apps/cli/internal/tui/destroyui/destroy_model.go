@@ -79,6 +79,10 @@ type ResourceDestroyItem struct {
 	ResourceState  *state.ResourceState
 }
 
+func (r *ResourceDestroyItem) GetAction() shared.ActionType        { return shared.ActionType(r.Action) }
+func (r *ResourceDestroyItem) GetResourceStatus() core.ResourceStatus { return r.Status }
+func (r *ResourceDestroyItem) SetSkipped(skipped bool)             { r.Skipped = skipped }
+
 // ChildDestroyItem represents a child blueprint being destroyed.
 type ChildDestroyItem struct {
 	Name             string
@@ -94,6 +98,10 @@ type ChildDestroyItem struct {
 	Skipped          bool
 	Changes          *changes.BlueprintChanges
 }
+
+func (c *ChildDestroyItem) GetAction() shared.ActionType       { return shared.ActionType(c.Action) }
+func (c *ChildDestroyItem) GetChildStatus() core.InstanceStatus { return c.Status }
+func (c *ChildDestroyItem) SetSkipped(skipped bool)            { c.Skipped = skipped }
 
 // LinkDestroyItem represents a link being destroyed.
 type LinkDestroyItem struct {
@@ -111,6 +119,10 @@ type LinkDestroyItem struct {
 	Timestamp            int64
 	Skipped              bool
 }
+
+func (l *LinkDestroyItem) GetAction() shared.ActionType   { return shared.ActionType(l.Action) }
+func (l *LinkDestroyItem) GetLinkStatus() core.LinkStatus { return l.Status }
+func (l *LinkDestroyItem) SetSkipped(skipped bool)        { l.Skipped = skipped }
 
 // DestroyItem is the unified item type for the split-pane.
 type DestroyItem struct {
@@ -285,19 +297,7 @@ func (m DestroyModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cm
 func (m DestroyModel) handleSelectBlueprint(_ sharedui.SelectBlueprintMsg) (tea.Model, tea.Cmd) {
 	// Blueprint is not required for destroy execution
 	// This message is only relevant when coming from staging
-	if m.streaming || m.fetchingPreDestroyState {
-		return m, nil
-	}
-
-	if m.preDestroyInstanceState == nil && (m.instanceID != "" || m.instanceName != "") {
-		m.fetchingPreDestroyState = true
-		m.detailsRenderer.NavigationStackDepth = len(m.splitPane.NavigationStack())
-		return m, fetchPreDestroyInstanceStateCmd(m)
-	}
-
-	m.streaming = true
-	m.detailsRenderer.NavigationStackDepth = len(m.splitPane.NavigationStack())
-	return m, tea.Batch(startDestroyCmd(m), checkForDestroyErrCmd(m))
+	return m.handleStartDestroy()
 }
 
 func (m DestroyModel) handleStartDestroy() (tea.Model, tea.Cmd) {
@@ -607,31 +607,29 @@ func (m DestroyModel) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m DestroyModel) handleOverviewKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc", "o", "O":
+	result := shared.HandleViewportKeyMsg(msg, m.overviewViewport, "o", "O")
+	if result.ShouldQuit {
+		return m, tea.Quit
+	}
+	if result.ShouldClose {
 		m.showingOverview = false
 		return m, nil
-	case "q", "ctrl+c":
-		return m, tea.Quit
-	default:
-		var cmd tea.Cmd
-		m.overviewViewport, cmd = m.overviewViewport.Update(msg)
-		return m, cmd
 	}
+	m.overviewViewport = result.Viewport
+	return m, result.Cmd
 }
 
 func (m DestroyModel) handlePreDestroyStateKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc", "s", "S":
+	result := shared.HandleViewportKeyMsg(msg, m.preDestroyStateViewport, "s", "S")
+	if result.ShouldQuit {
+		return m, tea.Quit
+	}
+	if result.ShouldClose {
 		m.showingPreDestroyState = false
 		return m, nil
-	case "q", "ctrl+c":
-		return m, tea.Quit
-	default:
-		var cmd tea.Cmd
-		m.preDestroyStateViewport, cmd = m.preDestroyStateViewport.Update(msg)
-		return m, cmd
 	}
+	m.preDestroyStateViewport = result.Viewport
+	return m, result.Cmd
 }
 
 func (m DestroyModel) handleDriftReviewKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -854,32 +852,9 @@ func createDestroySpinner(styles *stylespkg.Styles) spinner.Model {
 }
 
 func (m *DestroyModel) markPendingItemsAsSkipped() {
-	for _, item := range m.resourcesByName {
-		if item.Action == ActionNoChange {
-			continue
-		}
-		if item.Status == core.ResourceStatusUnknown {
-			item.Skipped = true
-		}
-	}
-
-	for _, item := range m.childrenByName {
-		if item.Action == ActionNoChange {
-			continue
-		}
-		if item.Status == core.InstanceStatusPreparing || item.Status == core.InstanceStatusNotDeployed {
-			item.Skipped = true
-		}
-	}
-
-	for _, item := range m.linksByName {
-		if item.Action == ActionNoChange {
-			continue
-		}
-		if item.Status == core.LinkStatusUnknown {
-			item.Skipped = true
-		}
-	}
+	shared.MarkPendingResourcesAsSkipped(m.resourcesByName)
+	shared.MarkPendingChildrenAsSkipped(m.childrenByName)
+	shared.MarkPendingLinksAsSkipped(m.linksByName)
 }
 
 func (m *DestroyModel) markInProgressItemsAsInterrupted() {

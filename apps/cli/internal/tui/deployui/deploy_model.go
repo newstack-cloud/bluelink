@@ -78,6 +78,10 @@ type ResourceDeployItem struct {
 	ResourceState *state.ResourceState
 }
 
+func (r *ResourceDeployItem) GetAction() shared.ActionType      { return shared.ActionType(r.Action) }
+func (r *ResourceDeployItem) GetResourceStatus() core.ResourceStatus { return r.Status }
+func (r *ResourceDeployItem) SetSkipped(skipped bool)           { r.Skipped = skipped }
+
 // ChildDeployItem represents a child blueprint being deployed.
 type ChildDeployItem struct {
 	Name             string
@@ -96,6 +100,10 @@ type ChildDeployItem struct {
 	Changes *changes.BlueprintChanges
 }
 
+func (c *ChildDeployItem) GetAction() shared.ActionType     { return shared.ActionType(c.Action) }
+func (c *ChildDeployItem) GetChildStatus() core.InstanceStatus { return c.Status }
+func (c *ChildDeployItem) SetSkipped(skipped bool)          { c.Skipped = skipped }
+
 // LinkDeployItem represents a link being deployed.
 type LinkDeployItem struct {
 	LinkID               string
@@ -112,6 +120,10 @@ type LinkDeployItem struct {
 	Timestamp            int64
 	Skipped              bool // Set to true when deployment failed before this link was attempted
 }
+
+func (l *LinkDeployItem) GetAction() shared.ActionType { return shared.ActionType(l.Action) }
+func (l *LinkDeployItem) GetLinkStatus() core.LinkStatus  { return l.Status }
+func (l *LinkDeployItem) SetSkipped(skipped bool)      { l.Skipped = skipped }
 
 // DeployItem is the unified item type for the split-pane.
 type DeployItem struct {
@@ -330,22 +342,7 @@ func (m DeployModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd
 func (m DeployModel) handleSelectBlueprint(msg sharedui.SelectBlueprintMsg) (tea.Model, tea.Cmd) {
 	m.blueprintFile = msg.BlueprintFile
 	m.blueprintSource = msg.Source
-
-	if m.streaming || m.fetchingPreDeployState {
-		return m, nil
-	}
-
-	// If we don't have pre-deploy instance state and we have an instance ID/name,
-	// fetch it first to populate unchanged items
-	if m.preDeployInstanceState == nil && (m.instanceID != "" || m.instanceName != "") {
-		m.fetchingPreDeployState = true
-		m.detailsRenderer.NavigationStackDepth = len(m.splitPane.NavigationStack())
-		return m, fetchPreDeployInstanceStateCmd(m)
-	}
-
-	m.streaming = true
-	m.detailsRenderer.NavigationStackDepth = len(m.splitPane.NavigationStack())
-	return m, tea.Batch(startDeploymentCmd(m), checkForErrCmd(m))
+	return m.handleStartDeploy()
 }
 
 func (m DeployModel) handleStartDeploy() (tea.Model, tea.Cmd) {
@@ -808,40 +805,38 @@ func (m DeployModel) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m DeployModel) handleOverviewKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc", "o", "O":
+	result := shared.HandleViewportKeyMsg(msg, m.overviewViewport, "o", "O")
+	if result.ShouldQuit {
+		return m, tea.Quit
+	}
+	if result.ShouldClose {
 		m.showingOverview = false
 		return m, nil
-	case "q", "ctrl+c":
-		return m, tea.Quit
-	default:
-		var cmd tea.Cmd
-		m.overviewViewport, cmd = m.overviewViewport.Update(msg)
-		return m, cmd
 	}
+	m.overviewViewport = result.Viewport
+	return m, result.Cmd
 }
 
 func (m DeployModel) handleSpecViewKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc", "s", "S":
+	result := shared.HandleViewportKeyMsg(msg, m.specViewport, "s", "S")
+	if result.ShouldQuit {
+		return m, tea.Quit
+	}
+	if result.ShouldClose {
 		m.showingSpecView = false
 		return m, nil
-	case "q", "ctrl+c":
-		return m, tea.Quit
-	default:
-		var cmd tea.Cmd
-		m.specViewport, cmd = m.specViewport.Update(msg)
-		return m, cmd
 	}
+	m.specViewport = result.Viewport
+	return m, result.Cmd
 }
 
 func (m DeployModel) handleExportsViewKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc", "e", "E":
+	switch shared.CheckExportsKeyMsg(msg) {
+	case shared.ExportsKeyActionQuit:
+		return m, tea.Quit
+	case shared.ExportsKeyActionClose:
 		m.showingExportsView = false
 		return m, nil
-	case "q", "ctrl+c":
-		return m, tea.Quit
 	default:
 		var cmd tea.Cmd
 		m.exportsModel, cmd = m.exportsModel.Update(msg)
@@ -850,17 +845,16 @@ func (m DeployModel) handleExportsViewKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd
 }
 
 func (m DeployModel) handlePreRollbackStateViewKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc", "r", "R":
+	result := shared.HandleViewportKeyMsg(msg, m.preRollbackStateViewport, "r", "R")
+	if result.ShouldQuit {
+		return m, tea.Quit
+	}
+	if result.ShouldClose {
 		m.showingPreRollbackState = false
 		return m, nil
-	case "q", "ctrl+c":
-		return m, tea.Quit
-	default:
-		var cmd tea.Cmd
-		m.preRollbackStateViewport, cmd = m.preRollbackStateViewport.Update(msg)
-		return m, cmd
 	}
+	m.preRollbackStateViewport = result.Viewport
+	return m, result.Cmd
 }
 
 func (m DeployModel) handleDriftReviewKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -891,29 +885,34 @@ func (m DeployModel) handleMouseMsg(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *DeployModel) processEvent(event *types.BlueprintInstanceEvent) {
-	if resourceData, ok := event.AsResourceUpdate(); ok {
-		m.processResourceUpdate(resourceData)
-		if m.headlessMode && !m.jsonMode {
-			m.printHeadlessResourceEvent(resourceData)
-		}
-	} else if childData, ok := event.AsChildUpdate(); ok {
-		m.processChildUpdate(childData)
-		if m.headlessMode && !m.jsonMode {
-			m.printHeadlessChildEvent(childData)
-		}
-	} else if linkData, ok := event.AsLinkUpdate(); ok {
-		m.processLinkUpdate(linkData)
-		if m.headlessMode && !m.jsonMode {
-			m.printHeadlessLinkEvent(linkData)
-		}
-	} else if instanceData, ok := event.AsInstanceUpdate(); ok {
-		m.processInstanceUpdate(instanceData)
-	} else if preRollbackData, ok := event.AsPreRollbackState(); ok {
-		m.processPreRollbackState(preRollbackData)
-		if m.headlessMode && !m.jsonMode {
-			m.printHeadlessPreRollbackState(preRollbackData)
-		}
-	}
+	printHeadless := m.headlessMode && !m.jsonMode
+	shared.DispatchBlueprintEvent(event, shared.BlueprintEventHandlers{
+		OnResourceUpdate: func(data *container.ResourceDeployUpdateMessage) {
+			m.processResourceUpdate(data)
+			if printHeadless {
+				m.printHeadlessResourceEvent(data)
+			}
+		},
+		OnChildUpdate: func(data *container.ChildDeployUpdateMessage) {
+			m.processChildUpdate(data)
+			if printHeadless {
+				m.printHeadlessChildEvent(data)
+			}
+		},
+		OnLinkUpdate: func(data *container.LinkDeployUpdateMessage) {
+			m.processLinkUpdate(data)
+			if printHeadless {
+				m.printHeadlessLinkEvent(data)
+			}
+		},
+		OnInstanceUpdate: m.processInstanceUpdate,
+		OnPreRollbackState: func(data *container.PreRollbackStateMessage) {
+			m.processPreRollbackState(data)
+			if printHeadless {
+				m.printHeadlessPreRollbackState(data)
+			}
+		},
+	})
 }
 
 // View renders the deploy model.
@@ -1138,39 +1137,9 @@ func createDeploySpinner(styles *stylespkg.Styles) spinner.Model {
 // to indicate they were skipped due to deployment failure.
 // Items with ActionNoChange are excluded since they were never meant to be deployed.
 func (m *DeployModel) markPendingItemsAsSkipped() {
-	// Mark pending items in the shared maps (includes nested items)
-	for _, item := range m.resourcesByName {
-		// Skip items that have no changes - they were never meant to be deployed
-		if item.Action == ActionNoChange {
-			continue
-		}
-		// ResourceStatusUnknown is iota = 0, the initial/pending state
-		if item.Status == core.ResourceStatusUnknown {
-			item.Skipped = true
-		}
-	}
-
-	for _, item := range m.childrenByName {
-		// Skip items that have no changes - they were never meant to be deployed
-		if item.Action == ActionNoChange {
-			continue
-		}
-		// InstanceStatusPreparing is iota = 0, InstanceStatusNotDeployed is also a pending state
-		if item.Status == core.InstanceStatusPreparing || item.Status == core.InstanceStatusNotDeployed {
-			item.Skipped = true
-		}
-	}
-
-	for _, item := range m.linksByName {
-		// Skip items that have no changes - they were never meant to be deployed
-		if item.Action == ActionNoChange {
-			continue
-		}
-		// LinkStatusUnknown is iota = 0, the initial/pending state
-		if item.Status == core.LinkStatusUnknown {
-			item.Skipped = true
-		}
-	}
+	shared.MarkPendingResourcesAsSkipped(m.resourcesByName)
+	shared.MarkPendingChildrenAsSkipped(m.childrenByName)
+	shared.MarkPendingLinksAsSkipped(m.linksByName)
 }
 
 // Updates items that are stuck in an in-progress state

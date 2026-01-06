@@ -11,24 +11,28 @@ import (
 // Event processing methods for DestroyModel.
 
 func (m *DestroyModel) processEvent(event *types.BlueprintInstanceEvent) {
-	if resourceData, ok := event.AsResourceUpdate(); ok {
-		m.processResourceUpdate(resourceData)
-		if m.headlessMode && !m.jsonMode {
-			m.printHeadlessResourceEvent(resourceData)
-		}
-	} else if childData, ok := event.AsChildUpdate(); ok {
-		m.processChildUpdate(childData)
-		if m.headlessMode && !m.jsonMode {
-			m.printHeadlessChildEvent(childData)
-		}
-	} else if linkData, ok := event.AsLinkUpdate(); ok {
-		m.processLinkUpdate(linkData)
-		if m.headlessMode && !m.jsonMode {
-			m.printHeadlessLinkEvent(linkData)
-		}
-	} else if instanceData, ok := event.AsInstanceUpdate(); ok {
-		m.processInstanceUpdate(instanceData)
-	}
+	printHeadless := m.headlessMode && !m.jsonMode
+	shared.DispatchBlueprintEvent(event, shared.BlueprintEventHandlers{
+		OnResourceUpdate: func(data *container.ResourceDeployUpdateMessage) {
+			m.processResourceUpdate(data)
+			if printHeadless {
+				m.printHeadlessResourceEvent(data)
+			}
+		},
+		OnChildUpdate: func(data *container.ChildDeployUpdateMessage) {
+			m.processChildUpdate(data)
+			if printHeadless {
+				m.printHeadlessChildEvent(data)
+			}
+		},
+		OnLinkUpdate: func(data *container.LinkDeployUpdateMessage) {
+			m.processLinkUpdate(data)
+			if printHeadless {
+				m.printHeadlessLinkEvent(data)
+			}
+		},
+		OnInstanceUpdate: m.processInstanceUpdate,
+	})
 }
 
 func (m *DestroyModel) processResourceUpdate(data *container.ResourceDeployUpdateMessage) {
