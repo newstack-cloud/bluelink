@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.4.2...blueprint-state/v0.5.0) (2026-01-06)
+
+
+### Features
+
+* **blueprint-state:** add computed fields to resource state ([0811266](https://github.com/newstack-cloud/bluelink/commit/0811266adf3c7c81b41e37c016c3e060324c19df))
+* **blueprint-state:** add functionality to list blueprint instances ([377139a](https://github.com/newstack-cloud/bluelink/commit/377139a1f1343c12e7f3e5d2fa573860b38ffbde))
+* **blueprint-state:** add persistence for link drift ([a778aa6](https://github.com/newstack-cloud/bluelink/commit/a778aa6dad6b4abdb953413f58ddeb2419a179d2))
+* **blueprint-state:** add persistence for reconciliation results ([9f16d59](https://github.com/newstack-cloud/bluelink/commit/9f16d59772aab7f09a3b109042684aa6d89d0015))
+* **blueprint-state:** add support for getting the last event id for a given channel ([f4dace1](https://github.com/newstack-cloud/bluelink/commit/f4dace1eb321d6a17830249e97f6d6f28a63ba9d))
+* **blueprint-state:** add support for saving system metadata for resources ([7b4a455](https://github.com/newstack-cloud/bluelink/commit/7b4a4554ea4db5ab6738ef334e58cf6d943065d0))
+
+
+### Bug Fixes
+
+* **blueprint-state:** add fix for memfile drift persistence when drift files are not present ([8c1519e](https://github.com/newstack-cloud/bluelink/commit/8c1519ed576a9728ac4632b8e3808d12bc5c30c5))
+* **blueprint-state:** add fix to make sure starting event id is exclusive in memfile ([6966017](https://github.com/newstack-cloud/bluelink/commit/6966017ebf166e5c132ce48c0e079f6815746809))
+
+
+### Dependencies
+
+* **blueprint-state:** update blueprint core lib ([3f33990](https://github.com/newstack-cloud/bluelink/commit/3f3399056c6e4a0b88215f1cb477f7325e0b14b4))
+
 ## [0.4.2](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.4.1...blueprint-state/v0.4.2) (2025-12-16)
 
 
