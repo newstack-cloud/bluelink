@@ -13,7 +13,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.3
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.93.0
 	github.com/gorilla/mux v1.8.1
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.36.0
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.37.0
 	github.com/spf13/afero v1.15.0
 	github.com/stretchr/testify v1.11.1
 	google.golang.org/api v0.257.0
@@ -81,7 +81,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
-	go.uber.org/zap v1.27.0 // indirect
+	go.uber.org/zap v1.27.1 // indirect
 	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/oauth2 v0.33.0 // indirect
