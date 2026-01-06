@@ -106,12 +106,13 @@ func (m *InspectModel) processChildUpdate(data *container.ChildDeployUpdateMessa
 	m.trackChildInstanceMapping(data)
 	childPath := m.buildInstancePath(data.ParentInstanceID, data.ChildName)
 
-	item := m.lookupOrMigrateChild(childPath, data.ChildName)
+	existingItem := m.lookupOrMigrateChild(childPath, data.ChildName)
 
-	if item != nil {
-		m.updateChildItemFromEvent(item, data)
+	if existingItem != nil {
+		m.updateChildItemFromEvent(existingItem, data)
 	} else {
-		item = m.createChildItem(data, childPath)
+		// Create new child item - ignore the return value
+		_ = m.createChildItem(data, childPath)
 	}
 
 	m.childNameToInstancePath[data.ChildName] = childPath

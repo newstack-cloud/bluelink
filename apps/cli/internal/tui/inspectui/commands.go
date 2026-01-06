@@ -119,20 +119,6 @@ func waitForNextEventCmd(model InspectModel) tea.Cmd {
 	}
 }
 
-// checkForErrCmd checks for errors in the error stream.
-func checkForErrCmd(model InspectModel) tea.Cmd {
-	return func() tea.Msg {
-		var err error
-		select {
-		case <-time.After(1 * time.Second):
-			break
-		case newErr := <-model.errStream:
-			err = newErr
-		}
-		return InspectErrorMsg{Err: err}
-	}
-}
-
 func errInstanceNotFound(instanceID, instanceName string) error {
 	identifier := instanceID
 	if identifier == "" {

@@ -123,14 +123,14 @@ type LinkDestroyItem struct {
 
 // DestroyItem is the unified item type for the split-pane.
 type DestroyItem struct {
-	Type        ItemType
-	Resource    *ResourceDestroyItem
-	Child       *ChildDestroyItem
-	Link        *LinkDestroyItem
-	ParentChild string
-	Depth       int
-	Path        string
-	Changes     *changes.BlueprintChanges
+	Type          ItemType
+	Resource      *ResourceDestroyItem
+	Child         *ChildDestroyItem
+	Link          *LinkDestroyItem
+	ParentChild   string
+	Depth         int
+	Path          string
+	Changes       *changes.BlueprintChanges
 	InstanceState *state.InstanceState
 
 	childrenByName  map[string]*ChildDestroyItem
@@ -169,27 +169,26 @@ type DestroyModel struct {
 	instanceIDToParentID    map[string]string
 	childNameToInstancePath map[string]string
 
-	instanceID              string
-	instanceName            string
-	changesetID             string
-	streaming               bool
-	fetchingPreDestroyState bool
-	fetchingChangeset       bool
-	finished                bool
-	destroyOperationStarted bool
-	finalStatus             core.InstanceStatus
-	failureReasons         []string
-	elementFailures        []ElementFailure
-	interruptedElements    []InterruptedElement
-	destroyedElements      []DestroyedElement
-	err                        error
-	deployChangesetError       bool
-	showingOverview            bool
-	showingPreDestroyState     bool
-	overviewViewport           viewport.Model
-	preDestroyStateViewport    viewport.Model
-	preDestroyInstanceState    *state.InstanceState
-	postDestroyInstanceState   *state.InstanceState
+	instanceID               string
+	instanceName             string
+	changesetID              string
+	streaming                bool
+	fetchingPreDestroyState  bool
+	fetchingChangeset        bool
+	finished                 bool
+	finalStatus              core.InstanceStatus
+	failureReasons           []string
+	elementFailures          []ElementFailure
+	interruptedElements      []InterruptedElement
+	destroyedElements        []DestroyedElement
+	err                      error
+	deployChangesetError     bool
+	showingOverview          bool
+	showingPreDestroyState   bool
+	overviewViewport         viewport.Model
+	preDestroyStateViewport  viewport.Model
+	preDestroyInstanceState  *state.InstanceState
+	postDestroyInstanceState *state.InstanceState
 
 	engine      engine.DeployEngine
 	eventStream chan types.BlueprintInstanceEvent
