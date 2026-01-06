@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.37.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.36.4...blueprint/v0.37.0) (2026-01-06)
+
+
+### Features
+
+* **blueprint:** add drift detection and reconciliation support for child blueprints ([347894f](https://github.com/newstack-cloud/bluelink/commit/347894fea55e338d924eef57886a4adf0bfda97e))
+* **blueprint:** add helpers to support rollbacks for new and existing deployments ([9ff363b](https://github.com/newstack-cloud/bluelink/commit/9ff363b3541d4af7fd902f99d6cfa4eda0dbbc41))
+* **blueprint:** add method to list instances to state container ([239b022](https://github.com/newstack-cloud/bluelink/commit/239b022a61118f252a256e65b8af4ae4237b70d8))
+* **blueprint:** add safe to rollback check for links ([f486673](https://github.com/newstack-cloud/bluelink/commit/f4866737a85f7ef5d4d1d9a400f21ae049f011de))
+* **blueprint:** add safe to rollback checks for resources ([881fe79](https://github.com/newstack-cloud/bluelink/commit/881fe79068ae666408208265f43bf64ab32ec2dd))
+* **blueprint:** add support for advanced reconciliation and drift checks ([b889111](https://github.com/newstack-cloud/bluelink/commit/b8891116050e5f2c5d11d48e37853cb65e6f28be))
+* **blueprint:** add support for sorting resource schema arrays for comparison ([d8e8ed6](https://github.com/newstack-cloud/bluelink/commit/d8e8ed6b601c02627f7d4d984e9c6be953469d87))
+* **blueprint:** add support for system-level tagging ([74122ad](https://github.com/newstack-cloud/bluelink/commit/74122ad9cf577eb6775494829b768272617a1c74))
+* **blueprint:** integrate full support for rollbacks  and pre-rollback state capture ([e089295](https://github.com/newstack-cloud/bluelink/commit/e089295bcedb6001b8ff1434d08465b2307e25af))
+
+
+### Bug Fixes
+
+* **blueprint:** add fixes to change set output and add computed fields to resource state ([06b2b08](https://github.com/newstack-cloud/bluelink/commit/06b2b08dad9e509744afa22c028282e891960895))
+* **blueprint:** add missing json struct tags to reconciliation types ([053f155](https://github.com/newstack-cloud/bluelink/commit/053f155d0067bfa22732aff27afd0cd9ab19e67d))
+* **blueprint:** add missing tagging config to drift checker ([4d59e61](https://github.com/newstack-cloud/bluelink/commit/4d59e61cac273db005a872cd33efc9c93a6d250c))
+* **blueprint:** add resource name to get external state input ([56d8434](https://github.com/newstack-cloud/bluelink/commit/56d8434ec331d166f08b01e6c21af81eb9405c5f))
+* **blueprint:** capture child blueprint final status and correct messaging for interruptions ([54dfdc1](https://github.com/newstack-cloud/bluelink/commit/54dfdc196fdd70e48e5f3c4149f6abd02671d249))
+* **blueprint:** ensure resource spec and child attachments are persisted even for failed deployments ([c435296](https://github.com/newstack-cloud/bluelink/commit/c435296c9801fa9fb3ca2db6a4d84be72a3172ae))
+* **blueprint:** improve failure handling for deployment orchestration ([3bedabc](https://github.com/newstack-cloud/bluelink/commit/3bedabcc1107edb05f1a71b3b4e2e9a1f974bd98))
+* **blueprint:** improve failure handling for deployment orchestration process ([d88bd48](https://github.com/newstack-cloud/bluelink/commit/d88bd48362247e6a46a512e7c1d7bb77d9b49a3d))
+
 ## [0.36.4](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.36.3...blueprint/v0.36.4) (2025-12-16)
 
 
