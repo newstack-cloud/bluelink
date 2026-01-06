@@ -1061,7 +1061,7 @@ func createDeployRenderers(instanceID, instanceName, changesetID string) (*Deplo
 		NavigationStackDepth: 0,
 	}
 	sectionGrouper := &DeploySectionGrouper{
-		MaxExpandDepth: MaxExpandDepth,
+		SectionGrouper: shared.SectionGrouper{MaxExpandDepth: MaxExpandDepth},
 	}
 	footerRenderer := &DeployFooterRenderer{
 		InstanceID:   instanceID,

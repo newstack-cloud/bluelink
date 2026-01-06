@@ -138,24 +138,7 @@ func (r *DeployDetailsRenderer) renderResourceDetails(item *DeployItem, width in
 		sb.WriteString("\n")
 	}
 
-	// Failure reasons
-	if len(res.FailureReasons) > 0 {
-		sb.WriteString("\n")
-		sb.WriteString(s.Error.Render("Failure Reasons:"))
-		sb.WriteString("\n\n")
-		// Use nearly full width, just account for minimal padding
-		reasonWidth := ui.SafeWidth(width - 2)
-		wrapStyle := lipgloss.NewStyle().Width(reasonWidth)
-		for i, reason := range res.FailureReasons {
-			wrappedReason := wrapStyle.Render(reason)
-			sb.WriteString(s.Error.Render(wrappedReason))
-			// Add spacing between multiple reasons
-			if i < len(res.FailureReasons)-1 {
-				sb.WriteString("\n\n")
-			}
-		}
-		sb.WriteString("\n")
-	}
+	shared.RenderFailureReasons(&sb, res.FailureReasons, width, s)
 
 	// Duration info (only show if there's actual duration data)
 	if durationContent := renderResourceDurations(res.Durations, s); durationContent != "" {
@@ -548,22 +531,8 @@ func (r *DeployDetailsRenderer) renderChildDetails(item *DeployItem, width int, 
 	}
 
 	// Failure reasons (only show if not skipped)
-	if !child.Skipped && len(child.FailureReasons) > 0 {
-		sb.WriteString("\n")
-		sb.WriteString(s.Error.Render("Failure Reasons:"))
-		sb.WriteString("\n\n")
-		// Use nearly full width, just account for minimal padding
-		reasonWidth := ui.SafeWidth(width - 2)
-		wrapStyle := lipgloss.NewStyle().Width(reasonWidth)
-		for i, reason := range child.FailureReasons {
-			wrappedReason := wrapStyle.Render(reason)
-			sb.WriteString(s.Error.Render(wrappedReason))
-			// Add spacing between multiple reasons
-			if i < len(child.FailureReasons)-1 {
-				sb.WriteString("\n\n")
-			}
-		}
-		sb.WriteString("\n")
+	if !child.Skipped {
+		shared.RenderFailureReasons(&sb, child.FailureReasons, width, s)
 	}
 
 	return sb.String()
@@ -636,22 +605,8 @@ func (r *DeployDetailsRenderer) renderLinkDetails(item *DeployItem, width int, s
 	}
 
 	// Failure reasons (only show if not skipped)
-	if !link.Skipped && len(link.FailureReasons) > 0 {
-		sb.WriteString("\n")
-		sb.WriteString(s.Error.Render("Failure Reasons:"))
-		sb.WriteString("\n\n")
-		// Use nearly full width, just account for minimal padding
-		reasonWidth := ui.SafeWidth(width - 2)
-		wrapStyle := lipgloss.NewStyle().Width(reasonWidth)
-		for i, reason := range link.FailureReasons {
-			wrappedReason := wrapStyle.Render(reason)
-			sb.WriteString(s.Error.Render(wrappedReason))
-			// Add spacing between multiple reasons
-			if i < len(link.FailureReasons)-1 {
-				sb.WriteString("\n\n")
-			}
-		}
-		sb.WriteString("\n")
+	if !link.Skipped {
+		shared.RenderFailureReasons(&sb, link.FailureReasons, width, s)
 	}
 
 	return sb.String()
@@ -708,108 +663,11 @@ func renderPreciseLinkStatus(status core.PreciseLinkStatus) string {
 
 // DeploySectionGrouper implements splitpane.SectionGrouper for deploy UI.
 type DeploySectionGrouper struct {
-	MaxExpandDepth int
+	shared.SectionGrouper
 }
 
 // Ensure DeploySectionGrouper implements splitpane.SectionGrouper.
 var _ splitpane.SectionGrouper = (*DeploySectionGrouper)(nil)
-
-// GroupItems organizes items into sections: Resources, Child Blueprints, Links.
-// The isExpanded function is provided by the splitpane to query expansion state.
-func (g *DeploySectionGrouper) GroupItems(items []splitpane.Item, isExpanded func(id string) bool) []splitpane.Section {
-	var resources []splitpane.Item
-	var children []splitpane.Item
-	var links []splitpane.Item
-
-	for _, item := range items {
-		deployItem, ok := item.(*DeployItem)
-		if !ok {
-			continue
-		}
-
-		// Nested items (with ParentChild set) go to children section
-		if deployItem.ParentChild != "" {
-			children = append(children, item)
-			continue
-		}
-
-		switch deployItem.Type {
-		case ItemTypeResource:
-			resources = append(resources, item)
-		case ItemTypeChild:
-			children = append(children, item)
-			// If expanded, recursively add children inline (respecting max depth)
-			children = g.appendExpandedChildren(children, item, isExpanded)
-		case ItemTypeLink:
-			links = append(links, item)
-		}
-	}
-
-	// Sort each section for consistent ordering
-	sortDeployItems(resources)
-	sortDeployItems(links)
-	// Don't sort children slice as it contains both parents and their expanded children
-	// which need to maintain their relative positions
-
-	var sections []splitpane.Section
-
-	if len(resources) > 0 {
-		sections = append(sections, splitpane.Section{
-			Name:  "Resources",
-			Items: resources,
-		})
-	}
-
-	if len(children) > 0 {
-		sections = append(sections, splitpane.Section{
-			Name:  "Child Blueprints",
-			Items: children,
-		})
-	}
-
-	if len(links) > 0 {
-		sections = append(sections, splitpane.Section{
-			Name:  "Links",
-			Items: links,
-		})
-	}
-
-	return sections
-}
-
-// appendExpandedChildren recursively appends children of an expanded item.
-// It handles nested expansions (grandchildren, etc.) by checking each child's expansion state.
-// Expansion stops when the item's depth reaches MaxExpandDepth.
-func (g *DeploySectionGrouper) appendExpandedChildren(children []splitpane.Item, item splitpane.Item, isExpanded func(id string) bool) []splitpane.Item {
-	if isExpanded == nil || !isExpanded(item.GetID()) {
-		return children
-	}
-
-	// Check if item is at or beyond max expand depth
-	if item.GetDepth() >= g.MaxExpandDepth {
-		return children
-	}
-
-	childItems := item.GetChildren()
-	// Sort child items for consistent ordering
-	sortDeployItems(childItems)
-
-	for _, child := range childItems {
-		children = append(children, child)
-		// Recursively check if this child is also expanded (depth check happens in recursive call)
-		if child.IsExpandable() {
-			children = g.appendExpandedChildren(children, child, isExpanded)
-		}
-	}
-
-	return children
-}
-
-func sortDeployItems(items []splitpane.Item) {
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].GetName() < items[j].GetName()
-	})
-}
 
 // DeployFooterRenderer implements splitpane.FooterRenderer for deploy UI.
 type DeployFooterRenderer struct {
@@ -837,15 +695,7 @@ func (r *DeployFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.St
 	sb.WriteString("\n")
 
 	if model.IsInDrillDown() {
-		// Show breadcrumb path when viewing a child blueprint
-		sb.WriteString(s.Muted.Render("  Viewing: "))
-		for i, name := range model.NavigationPath() {
-			if i > 0 {
-				sb.WriteString(s.Muted.Render(" > "))
-			}
-			sb.WriteString(s.Selected.Render(name))
-		}
-		sb.WriteString("\n\n")
+		shared.RenderBreadcrumb(&sb, model.NavigationPath(), s)
 
 		// Navigation help for child view
 		sb.WriteString(s.Muted.Render("  "))
@@ -991,30 +841,11 @@ func (r *DeployStagingFooterRenderer) RenderFooter(model *splitpane.Model, s *st
 
 	// Show different footer when viewing a child blueprint
 	if model.IsInDrillDown() {
-		// Show breadcrumb path
-		sb.WriteString(s.Muted.Render("  Viewing: "))
-		for i, name := range model.NavigationPath() {
-			if i > 0 {
-				sb.WriteString(s.Muted.Render(" > "))
-			}
-			sb.WriteString(s.Selected.Render(name))
-		}
-		sb.WriteString("\n\n")
-
-		// Navigation help for child view
-		sb.WriteString(s.Muted.Render("  "))
-		sb.WriteString(s.Key.Render("esc"))
-		sb.WriteString(s.Muted.Render(" back  "))
-		sb.WriteString(s.Key.Render("↑/↓"))
-		sb.WriteString(s.Muted.Render(" navigate  "))
-		sb.WriteString(s.Key.Render("enter"))
-		sb.WriteString(s.Muted.Render(" expand/inspect  "))
-		sb.WriteString(s.Key.Render("tab"))
-		sb.WriteString(s.Muted.Render(" switch pane  "))
-		sb.WriteString(s.Key.Render("q"))
-		sb.WriteString(s.Muted.Render(" quit"))
-		sb.WriteString("\n")
-
+		shared.RenderBreadcrumb(&sb, model.NavigationPath(), s)
+		shared.RenderFooterNavigation(&sb, s,
+			shared.KeyHint{Key: "esc", Desc: "back"},
+			shared.KeyHint{Key: "enter", Desc: "expand/inspect"},
+		)
 		return sb.String()
 	}
 

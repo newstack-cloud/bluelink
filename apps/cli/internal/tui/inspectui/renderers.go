@@ -310,95 +310,10 @@ func findResourceStateByName(instanceState *state.InstanceState, name string) *s
 
 // InspectSectionGrouper implements splitpane.SectionGrouper for inspect UI.
 type InspectSectionGrouper struct {
-	MaxExpandDepth int
+	shared.SectionGrouper
 }
 
 var _ splitpane.SectionGrouper = (*InspectSectionGrouper)(nil)
-
-// GroupItems organizes items into sections: Resources, Child Blueprints, Links.
-func (g *InspectSectionGrouper) GroupItems(items []splitpane.Item, isExpanded func(id string) bool) []splitpane.Section {
-	var resources []splitpane.Item
-	var children []splitpane.Item
-	var links []splitpane.Item
-
-	for _, item := range items {
-		deployItem, ok := item.(*deployui.DeployItem)
-		if !ok {
-			continue
-		}
-
-		if deployItem.ParentChild != "" {
-			children = append(children, item)
-			continue
-		}
-
-		switch deployItem.Type {
-		case deployui.ItemTypeResource:
-			resources = append(resources, item)
-		case deployui.ItemTypeChild:
-			children = append(children, item)
-			children = g.appendExpandedChildren(children, item, isExpanded)
-		case deployui.ItemTypeLink:
-			links = append(links, item)
-		}
-	}
-
-	sortItems(resources)
-	sortItems(links)
-
-	var sections []splitpane.Section
-
-	if len(resources) > 0 {
-		sections = append(sections, splitpane.Section{
-			Name:  "Resources",
-			Items: resources,
-		})
-	}
-
-	if len(children) > 0 {
-		sections = append(sections, splitpane.Section{
-			Name:  "Child Blueprints",
-			Items: children,
-		})
-	}
-
-	if len(links) > 0 {
-		sections = append(sections, splitpane.Section{
-			Name:  "Links",
-			Items: links,
-		})
-	}
-
-	return sections
-}
-
-func (g *InspectSectionGrouper) appendExpandedChildren(children []splitpane.Item, item splitpane.Item, isExpanded func(id string) bool) []splitpane.Item {
-	if isExpanded == nil || !isExpanded(item.GetID()) {
-		return children
-	}
-
-	if item.GetDepth() >= g.MaxExpandDepth {
-		return children
-	}
-
-	childItems := item.GetChildren()
-	sortItems(childItems)
-
-	for _, child := range childItems {
-		children = append(children, child)
-		if child.IsExpandable() {
-			children = g.appendExpandedChildren(children, child, isExpanded)
-		}
-	}
-
-	return children
-}
-
-func sortItems(items []splitpane.Item) {
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].GetName() < items[j].GetName()
-	})
-}
 
 // InspectFooterRenderer implements splitpane.FooterRenderer for inspect UI.
 type InspectFooterRenderer struct {
@@ -420,26 +335,8 @@ func (r *InspectFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.S
 	sb.WriteString("\n")
 
 	if model.IsInDrillDown() {
-		sb.WriteString(s.Muted.Render("  Viewing: "))
-		for i, name := range model.NavigationPath() {
-			if i > 0 {
-				sb.WriteString(s.Muted.Render(" > "))
-			}
-			sb.WriteString(s.Selected.Render(name))
-		}
-		sb.WriteString("\n\n")
-
-		sb.WriteString(s.Muted.Render("  "))
-		sb.WriteString(s.Key.Render("esc"))
-		sb.WriteString(s.Muted.Render(" back  "))
-		sb.WriteString(s.Key.Render("↑/↓"))
-		sb.WriteString(s.Muted.Render(" navigate  "))
-		sb.WriteString(s.Key.Render("tab"))
-		sb.WriteString(s.Muted.Render(" switch pane  "))
-		sb.WriteString(s.Key.Render("q"))
-		sb.WriteString(s.Muted.Render(" quit"))
-		sb.WriteString("\n")
-
+		shared.RenderBreadcrumb(&sb, model.NavigationPath(), s)
+		shared.RenderFooterNavigation(&sb, s, shared.KeyHint{Key: "esc", Desc: "back"})
 		return sb.String()
 	}
 

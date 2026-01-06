@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/outpututil"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/deploy-cli-sdk/headless"
@@ -694,111 +695,11 @@ func renderActionBadge(action ActionType, s *styles.Styles) string {
 
 // StageSectionGrouper implements splitpane.SectionGrouper for stage UI.
 type StageSectionGrouper struct {
-	// MaxExpandDepth is the maximum depth for inline expansion.
-	// Children at or beyond this depth will not be expanded inline.
-	MaxExpandDepth int
+	shared.SectionGrouper
 }
 
 // Ensure StageSectionGrouper implements splitpane.SectionGrouper
 var _ splitpane.SectionGrouper = (*StageSectionGrouper)(nil)
-
-// GroupItems organizes items into sections: Resources, Child Blueprints, Links.
-// The isExpanded function is provided by the splitpane to query expansion state.
-func (g *StageSectionGrouper) GroupItems(items []splitpane.Item, isExpanded func(id string) bool) []splitpane.Section {
-	var resources []splitpane.Item
-	var children []splitpane.Item
-	var links []splitpane.Item
-
-	for _, item := range items {
-		stageItem, ok := item.(*StageItem)
-		if !ok {
-			continue
-		}
-
-		// Nested items (with ParentChild set) go to children section
-		if stageItem.ParentChild != "" {
-			children = append(children, item)
-			continue
-		}
-
-		switch stageItem.Type {
-		case ItemTypeResource:
-			resources = append(resources, item)
-		case ItemTypeChild:
-			children = append(children, item)
-			// If expanded, recursively add children inline (respecting max depth)
-			children = g.appendExpandedChildren(children, item, isExpanded)
-		case ItemTypeLink:
-			links = append(links, item)
-		}
-	}
-
-	// Sort each section for consistent ordering
-	sortStageItems(resources)
-	sortStageItems(links)
-	// Don't sort children slice as it contains both parents and their expanded children
-	// which need to maintain their relative positions
-
-	var sections []splitpane.Section
-
-	if len(resources) > 0 {
-		sections = append(sections, splitpane.Section{
-			Name:  "Resources",
-			Items: resources,
-		})
-	}
-
-	if len(children) > 0 {
-		sections = append(sections, splitpane.Section{
-			Name:  "Child Blueprints",
-			Items: children,
-		})
-	}
-
-	if len(links) > 0 {
-		sections = append(sections, splitpane.Section{
-			Name:  "Links",
-			Items: links,
-		})
-	}
-
-	return sections
-}
-
-// appendExpandedChildren recursively appends children of an expanded item.
-// It handles nested expansions (grandchildren, etc.) by checking each child's expansion state.
-// Expansion stops when the item's depth reaches MaxExpandDepth.
-func (g *StageSectionGrouper) appendExpandedChildren(children []splitpane.Item, item splitpane.Item, isExpanded func(id string) bool) []splitpane.Item {
-	if isExpanded == nil || !isExpanded(item.GetID()) {
-		return children
-	}
-
-	// Check if item is at or beyond max expand depth
-	if item.GetDepth() >= g.MaxExpandDepth {
-		return children
-	}
-
-	childItems := item.GetChildren()
-	// Sort child items for consistent ordering
-	sortStageItems(childItems)
-
-	for _, child := range childItems {
-		children = append(children, child)
-		// Recursively check if this child is also expanded (depth check happens in recursive call)
-		if child.IsExpandable() {
-			children = g.appendExpandedChildren(children, child, isExpanded)
-		}
-	}
-
-	return children
-}
-
-// sortStageItems sorts items alphabetically by name for consistent display order.
-func sortStageItems(items []splitpane.Item) {
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].GetName() < items[j].GetName()
-	})
-}
 
 // StageFooterRenderer implements splitpane.FooterRenderer for stage UI.
 // It supports a delegate pattern to allow custom footer rendering (e.g., for deploy flow).
@@ -835,30 +736,11 @@ func (r *StageFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.Sty
 
 	// Show different footer when viewing a child blueprint
 	if model.IsInDrillDown() {
-		// Show breadcrumb path
-		sb.WriteString(s.Muted.Render("  Viewing: "))
-		for i, name := range model.NavigationPath() {
-			if i > 0 {
-				sb.WriteString(s.Muted.Render(" > "))
-			}
-			sb.WriteString(s.Selected.Render(name))
-		}
-		sb.WriteString("\n\n")
-
-		// Navigation help for child view
-		sb.WriteString(s.Muted.Render("  "))
-		sb.WriteString(s.Key.Render("esc"))
-		sb.WriteString(s.Muted.Render(" back  "))
-		sb.WriteString(s.Key.Render("↑/↓"))
-		sb.WriteString(s.Muted.Render(" navigate  "))
-		sb.WriteString(s.Key.Render("enter"))
-		sb.WriteString(s.Muted.Render(" expand/inspect  "))
-		sb.WriteString(s.Key.Render("tab"))
-		sb.WriteString(s.Muted.Render(" switch pane  "))
-		sb.WriteString(s.Key.Render("q"))
-		sb.WriteString(s.Muted.Render(" quit"))
-		sb.WriteString("\n")
-
+		shared.RenderBreadcrumb(&sb, model.NavigationPath(), s)
+		shared.RenderFooterNavigation(&sb, s,
+			shared.KeyHint{Key: "esc", Desc: "back"},
+			shared.KeyHint{Key: "enter", Desc: "expand/inspect"},
+		)
 		return sb.String()
 	}
 

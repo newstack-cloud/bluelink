@@ -569,7 +569,7 @@ func createInspectRenderers(instanceID, instanceName string) (*InspectDetailsRen
 		NavigationStackDepth: 0,
 	}
 	sectionGrouper := &InspectSectionGrouper{
-		MaxExpandDepth: deployui.MaxExpandDepth,
+		SectionGrouper: shared.SectionGrouper{MaxExpandDepth: deployui.MaxExpandDepth},
 	}
 	footerRenderer := &InspectFooterRenderer{
 		InstanceID:   instanceID,

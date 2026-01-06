@@ -780,7 +780,7 @@ func createDestroyRenderers(instanceID, instanceName, changesetID string) (*Dest
 		NavigationStackDepth: 0,
 	}
 	sectionGrouper := &DestroySectionGrouper{
-		MaxExpandDepth: MaxExpandDepth,
+		SectionGrouper: shared.SectionGrouper{MaxExpandDepth: MaxExpandDepth},
 	}
 	footerRenderer := &DestroyFooterRenderer{
 		InstanceID:   instanceID,

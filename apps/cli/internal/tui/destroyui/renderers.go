@@ -2,7 +2,6 @@ package destroyui
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -158,21 +157,7 @@ func (r *DestroyDetailsRenderer) renderResourceDetails(item *DestroyItem, width 
 		sb.WriteString("\n")
 	}
 
-	if len(res.FailureReasons) > 0 {
-		sb.WriteString("\n")
-		sb.WriteString(s.Error.Render("Failure Reasons:"))
-		sb.WriteString("\n\n")
-		reasonWidth := ui.SafeWidth(width - 2)
-		wrapStyle := lipgloss.NewStyle().Width(reasonWidth)
-		for i, reason := range res.FailureReasons {
-			wrappedReason := wrapStyle.Render(reason)
-			sb.WriteString(s.Error.Render(wrappedReason))
-			if i < len(res.FailureReasons)-1 {
-				sb.WriteString("\n\n")
-			}
-		}
-		sb.WriteString("\n")
-	}
+	shared.RenderFailureReasons(&sb, res.FailureReasons, width, s)
 
 	return sb.String()
 }
@@ -292,101 +277,10 @@ func (r *DestroyDetailsRenderer) renderLinkDetails(item *DestroyItem, width int,
 
 // DestroySectionGrouper groups items into sections for the destroy UI.
 type DestroySectionGrouper struct {
-	MaxExpandDepth int
+	shared.SectionGrouper
 }
 
 var _ splitpane.SectionGrouper = (*DestroySectionGrouper)(nil)
-
-// GroupItems groups items into resources, children, and links sections.
-func (g *DestroySectionGrouper) GroupItems(items []splitpane.Item, isExpanded func(id string) bool) []splitpane.Section {
-	var resources, children, links []splitpane.Item
-
-	for _, item := range items {
-		destroyItem, ok := item.(*DestroyItem)
-		if !ok {
-			continue
-		}
-
-		// Nested items (with ParentChild set) go to children section
-		if destroyItem.ParentChild != "" {
-			children = append(children, item)
-			continue
-		}
-
-		switch destroyItem.Type {
-		case ItemTypeResource:
-			resources = append(resources, item)
-		case ItemTypeChild:
-			children = append(children, item)
-			// If expanded, recursively add children inline
-			children = g.appendExpandedChildren(children, item, isExpanded)
-		case ItemTypeLink:
-			links = append(links, item)
-		}
-	}
-
-	// Sort each section for consistent ordering
-	sortDestroyItems(resources)
-	sortDestroyItems(links)
-
-	var sections []splitpane.Section
-
-	if len(resources) > 0 {
-		sections = append(sections, splitpane.Section{
-			Name:  "Resources",
-			Items: resources,
-		})
-	}
-
-	if len(children) > 0 {
-		sections = append(sections, splitpane.Section{
-			Name:  "Child Blueprints",
-			Items: children,
-		})
-	}
-
-	if len(links) > 0 {
-		sections = append(sections, splitpane.Section{
-			Name:  "Links",
-			Items: links,
-		})
-	}
-
-	return sections
-}
-
-// appendExpandedChildren recursively appends children of an expanded item.
-func (g *DestroySectionGrouper) appendExpandedChildren(
-	children []splitpane.Item,
-	item splitpane.Item,
-	isExpanded func(id string) bool,
-) []splitpane.Item {
-	if isExpanded == nil || !isExpanded(item.GetID()) {
-		return children
-	}
-
-	if item.GetDepth() >= g.MaxExpandDepth {
-		return children
-	}
-
-	childItems := item.GetChildren()
-	sortDestroyItems(childItems)
-
-	for _, child := range childItems {
-		children = append(children, child)
-		if child.IsExpandable() {
-			children = g.appendExpandedChildren(children, child, isExpanded)
-		}
-	}
-
-	return children
-}
-
-func sortDestroyItems(items []splitpane.Item) {
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].GetName() < items[j].GetName()
-	})
-}
 
 // DestroyFooterRenderer renders the footer for the destroy split-pane.
 type DestroyFooterRenderer struct {
@@ -437,29 +331,8 @@ func (r *DestroyFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.S
 
 func (r *DestroyFooterRenderer) renderDrillDownFooter(model *splitpane.Model, s *styles.Styles) string {
 	sb := strings.Builder{}
-
-	// Show breadcrumb path when viewing a child blueprint
-	sb.WriteString(s.Muted.Render("  Viewing: "))
-	for i, name := range model.NavigationPath() {
-		if i > 0 {
-			sb.WriteString(s.Muted.Render(" > "))
-		}
-		sb.WriteString(s.Selected.Render(name))
-	}
-	sb.WriteString("\n\n")
-
-	// Navigation help for child view
-	sb.WriteString(s.Muted.Render("  "))
-	sb.WriteString(s.Key.Render("esc"))
-	sb.WriteString(s.Muted.Render(" back  "))
-	sb.WriteString(s.Key.Render("↑/↓"))
-	sb.WriteString(s.Muted.Render(" navigate  "))
-	sb.WriteString(s.Key.Render("tab"))
-	sb.WriteString(s.Muted.Render(" switch pane  "))
-	sb.WriteString(s.Key.Render("q"))
-	sb.WriteString(s.Muted.Render(" quit"))
-	sb.WriteString("\n")
-
+	shared.RenderBreadcrumb(&sb, model.NavigationPath(), s)
+	shared.RenderFooterNavigation(&sb, s, shared.KeyHint{Key: "esc", Desc: "back"})
 	return sb.String()
 }
 
@@ -580,28 +453,11 @@ func (r *DestroyStagingFooterRenderer) RenderFooter(model *splitpane.Model, s *s
 
 	// Show breadcrumb when in drill-down
 	if model.IsInDrillDown() {
-		sb.WriteString(s.Muted.Render("  Viewing: "))
-		for i, name := range model.NavigationPath() {
-			if i > 0 {
-				sb.WriteString(s.Muted.Render(" > "))
-			}
-			sb.WriteString(s.Selected.Render(name))
-		}
-		sb.WriteString("\n\n")
-
-		sb.WriteString(s.Muted.Render("  "))
-		sb.WriteString(s.Key.Render("esc"))
-		sb.WriteString(s.Muted.Render(" back  "))
-		sb.WriteString(s.Key.Render("↑/↓"))
-		sb.WriteString(s.Muted.Render(" navigate  "))
-		sb.WriteString(s.Key.Render("enter"))
-		sb.WriteString(s.Muted.Render(" expand/inspect  "))
-		sb.WriteString(s.Key.Render("tab"))
-		sb.WriteString(s.Muted.Render(" switch pane  "))
-		sb.WriteString(s.Key.Render("q"))
-		sb.WriteString(s.Muted.Render(" quit"))
-		sb.WriteString("\n")
-
+		shared.RenderBreadcrumb(&sb, model.NavigationPath(), s)
+		shared.RenderFooterNavigation(&sb, s,
+			shared.KeyHint{Key: "esc", Desc: "back"},
+			shared.KeyHint{Key: "enter", Desc: "expand/inspect"},
+		)
 		return sb.String()
 	}
 

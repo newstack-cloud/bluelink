@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/outpututil"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
@@ -857,29 +858,12 @@ func (r *DriftFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.Sty
 
 	// Show breadcrumb when in drill-down
 	if model.IsInDrillDown() {
-		sb.WriteString(s.Muted.Render("  Viewing: "))
-		for i, name := range model.NavigationPath() {
-			if i > 0 {
-				sb.WriteString(s.Muted.Render(" > "))
-			}
-			sb.WriteString(s.Selected.Render(name))
-		}
-		sb.WriteString("\n\n")
-
-		// Navigation help for drill-down view
-		sb.WriteString(s.Muted.Render("  "))
-		sb.WriteString(s.Key.Render("esc"))
-		sb.WriteString(s.Muted.Render(" back  "))
-		sb.WriteString(s.Key.Render("↑/↓"))
-		sb.WriteString(s.Muted.Render(" navigate  "))
-		sb.WriteString(s.Key.Render("enter"))
-		sb.WriteString(s.Muted.Render(" expand  "))
-		sb.WriteString(s.Key.Render("a"))
-		sb.WriteString(s.Muted.Render(" accept  "))
-		sb.WriteString(s.Key.Render("q"))
-		sb.WriteString(s.Muted.Render(" quit"))
-		sb.WriteString("\n")
-
+		shared.RenderBreadcrumb(&sb, model.NavigationPath(), s)
+		shared.RenderFooterNavigation(&sb, s,
+			shared.KeyHint{Key: "esc", Desc: "back"},
+			shared.KeyHint{Key: "enter", Desc: "expand"},
+			shared.KeyHint{Key: "a", Desc: "accept"},
+		)
 		return sb.String()
 	}
 

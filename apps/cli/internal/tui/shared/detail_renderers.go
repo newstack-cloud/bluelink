@@ -3,6 +3,7 @@ package shared
 import (
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/deploy-cli-sdk/styles"
 	"github.com/newstack-cloud/deploy-cli-sdk/ui"
@@ -118,4 +119,57 @@ func FindResourceIDByPath(instanceState *state.InstanceState, path, resourceName
 		return ""
 	}
 	return currentState.ResourceIDs[resourceName]
+}
+
+// KeyHint represents a keyboard shortcut hint for footer navigation.
+type KeyHint struct {
+	Key  string
+	Desc string
+}
+
+// RenderBreadcrumb renders navigation breadcrumb for drill-down views.
+func RenderBreadcrumb(sb *strings.Builder, navigationPath []string, s *styles.Styles) {
+	sb.WriteString(s.Muted.Render("  Viewing: "))
+	for i, name := range navigationPath {
+		if i > 0 {
+			sb.WriteString(s.Muted.Render(" > "))
+		}
+		sb.WriteString(s.Selected.Render(name))
+	}
+	sb.WriteString("\n\n")
+}
+
+// RenderFooterNavigation renders standard keyboard navigation hints.
+func RenderFooterNavigation(sb *strings.Builder, s *styles.Styles, extraKeys ...KeyHint) {
+	sb.WriteString(s.Muted.Render("  "))
+	sb.WriteString(s.Key.Render("↑/↓"))
+	sb.WriteString(s.Muted.Render(" navigate  "))
+	sb.WriteString(s.Key.Render("tab"))
+	sb.WriteString(s.Muted.Render(" switch pane  "))
+	for _, key := range extraKeys {
+		sb.WriteString(s.Key.Render(key.Key))
+		sb.WriteString(s.Muted.Render(" " + key.Desc + "  "))
+	}
+	sb.WriteString(s.Key.Render("q"))
+	sb.WriteString(s.Muted.Render(" quit"))
+	sb.WriteString("\n")
+}
+
+// RenderFailureReasons renders failure reasons with word wrapping.
+func RenderFailureReasons(sb *strings.Builder, reasons []string, width int, s *styles.Styles) {
+	if len(reasons) == 0 {
+		return
+	}
+	sb.WriteString("\n")
+	sb.WriteString(s.Error.Render("Failure Reasons:"))
+	sb.WriteString("\n\n")
+	reasonWidth := ui.SafeWidth(width - 2)
+	wrapStyle := lipgloss.NewStyle().Width(reasonWidth)
+	for i, reason := range reasons {
+		sb.WriteString(s.Error.Render(wrapStyle.Render(reason)))
+		if i < len(reasons)-1 {
+			sb.WriteString("\n\n")
+		}
+	}
+	sb.WriteString("\n")
 }

@@ -1053,7 +1053,7 @@ func NewStageModel(
 	}
 
 	sectionGrouper := &StageSectionGrouper{
-		MaxExpandDepth: MaxExpandDepth,
+		SectionGrouper: shared.SectionGrouper{MaxExpandDepth: MaxExpandDepth},
 	}
 
 	footerRenderer := &StageFooterRenderer{
