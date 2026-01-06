@@ -105,10 +105,10 @@ func formatExportValue(value string, maxWidth int) string {
 	}
 
 	// Account for the 6-space indentation prefix
-	wrapWidth := maxWidth - 6
-	if wrapWidth < 20 {
-		wrapWidth = 20 // Minimum wrap width
-	}
+	wrapWidth := max(
+		maxWidth-6,
+		20, // Minimum wrap width
+	)
 
 	lines := strings.Split(value, "\n")
 	sb := strings.Builder{}
@@ -116,8 +116,7 @@ func formatExportValue(value string, maxWidth int) string {
 		// Wrap long lines
 		if len(line) > wrapWidth {
 			wrappedLine := outpututil.WrapText(line, wrapWidth)
-			wrappedLines := strings.Split(wrappedLine, "\n")
-			for _, wl := range wrappedLines {
+			for wl := range strings.SplitSeq(wrappedLine, "\n") {
 				sb.WriteString("      ")
 				sb.WriteString(wl)
 				sb.WriteString("\n")

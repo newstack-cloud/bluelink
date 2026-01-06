@@ -9,7 +9,6 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
-	sdkstrings "github.com/newstack-cloud/deploy-cli-sdk/strings"
 	"github.com/newstack-cloud/deploy-cli-sdk/styles"
 	"github.com/newstack-cloud/deploy-cli-sdk/ui"
 	"github.com/newstack-cloud/deploy-cli-sdk/ui/splitpane"
@@ -298,7 +297,6 @@ func (r *DeployDetailsRenderer) renderOutboundLinksSection(resourceName, parentC
 	return shared.RenderOutboundLinksSection(resourceName, r.PostDeployInstanceState.Links, s)
 }
 
-
 func renderResourceDurations(durations *state.ResourceCompletionDurations, s *styles.Styles) string {
 	if durations == nil {
 		return ""
@@ -402,30 +400,19 @@ func (r *DeployDetailsRenderer) renderLinkDetails(item *DeployItem, width int, s
 
 	sb := strings.Builder{}
 
-	// Header
-	sb.WriteString(s.Header.Render(link.LinkName))
-	sb.WriteString("\n")
-	sb.WriteString(s.Muted.Render(strings.Repeat("─", ui.SafeWidth(width-4))))
-	sb.WriteString("\n\n")
-
-	// Resources
-	sb.WriteString(s.Muted.Render("Resource A: "))
-	sb.WriteString(link.ResourceAName)
-	sb.WriteString("\n")
-	sb.WriteString(s.Muted.Render("Resource B: "))
-	sb.WriteString(link.ResourceBName)
-	sb.WriteString("\n")
-
 	// Link ID - try item first, then fall back to post-deploy state
 	linkID := link.LinkID
 	if linkID == "" {
 		linkID = r.getLinkID(item.Path, link.LinkName)
 	}
-	if linkID != "" {
-		sb.WriteString(s.Muted.Render("Link ID: "))
-		sb.WriteString(linkID)
-		sb.WriteString("\n")
-	}
+
+	// Common header and metadata
+	shared.RenderLinkDetailsBase(&sb, shared.LinkDetailsBase{
+		LinkName:      link.LinkName,
+		ResourceAName: link.ResourceAName,
+		ResourceBName: link.ResourceBName,
+		LinkID:        linkID,
+	}, width, s)
 
 	// Status
 	sb.WriteString(s.Muted.Render("Status: "))
@@ -444,11 +431,7 @@ func (r *DeployDetailsRenderer) renderLinkDetails(item *DeployItem, width int, s
 	}
 
 	// Action
-	if link.Action != "" {
-		sb.WriteString(s.Muted.Render("Action: "))
-		sb.WriteString(shared.RenderActionBadge(link.Action, s))
-		sb.WriteString("\n")
-	}
+	shared.RenderLinkAction(&sb, string(link.Action), s)
 
 	// Stage attempt (only show if not skipped)
 	if !link.Skipped && link.CurrentStageAttempt > 1 {
@@ -503,19 +486,7 @@ func (r *DeployFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.St
 
 	if model.IsInDrillDown() {
 		shared.RenderBreadcrumb(&sb, model.NavigationPath(), s)
-
-		// Navigation help for child view
-		sb.WriteString(s.Muted.Render("  "))
-		sb.WriteString(s.Key.Render("esc"))
-		sb.WriteString(s.Muted.Render(" back  "))
-		sb.WriteString(s.Key.Render("↑/↓"))
-		sb.WriteString(s.Muted.Render(" navigate  "))
-		sb.WriteString(s.Key.Render("tab"))
-		sb.WriteString(s.Muted.Render(" switch pane  "))
-		sb.WriteString(s.Key.Render("q"))
-		sb.WriteString(s.Muted.Render(" quit"))
-		sb.WriteString("\n")
-
+		shared.RenderFooterNavigation(&sb, s, shared.KeyHint{Key: "esc", Desc: "back"})
 		return sb.String()
 	}
 
@@ -542,71 +513,28 @@ func (r *DeployFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.St
 		}
 		sb.WriteString("\n")
 
-		// Show summary of successful, failed, and interrupted elements
-		hasSummary := len(r.SuccessfulElements) > 0 || len(r.ElementFailures) > 0 || len(r.InterruptedElements) > 0
-		if hasSummary {
-			sb.WriteString("  ")
-			needsComma := false
-			if len(r.SuccessfulElements) > 0 {
-				successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
-				sb.WriteString(successStyle.Render(fmt.Sprintf("%d successful", len(r.SuccessfulElements))))
-				needsComma = true
-			}
-			if len(r.ElementFailures) > 0 {
-				if needsComma {
-					sb.WriteString(s.Muted.Render(", "))
-				}
-				sb.WriteString(s.Error.Render(fmt.Sprintf("%d %s", len(r.ElementFailures), sdkstrings.Pluralize(len(r.ElementFailures), "failure", "failures"))))
-				needsComma = true
-			}
-			if len(r.InterruptedElements) > 0 {
-				if needsComma {
-					sb.WriteString(s.Muted.Render(", "))
-				}
-				sb.WriteString(s.Warning.Render(fmt.Sprintf("%d interrupted", len(r.InterruptedElements))))
-			}
-			sb.WriteString("\n")
-		}
+		shared.RenderElementSummary(&sb, shared.ElementSummary{
+			SuccessCount:     len(r.SuccessfulElements),
+			SuccessLabel:     "successful",
+			FailureCount:     len(r.ElementFailures),
+			InterruptedCount: len(r.InterruptedElements),
+		}, s)
 	} else {
-		// Deployment in progress with animated spinner
-		sb.WriteString("  ")
-		if r.SpinnerView != "" {
-			sb.WriteString(r.SpinnerView)
-			sb.WriteString(" ")
-		}
-		sb.WriteString(s.Info.Render("Deploying "))
-		if r.InstanceName != "" {
-			italicStyle := lipgloss.NewStyle().Italic(true)
-			sb.WriteString(italicStyle.Render(r.InstanceName))
-		}
-		sb.WriteString("\n")
-
-		if r.ChangesetID != "" {
-			sb.WriteString(s.Muted.Render("  Changeset: "))
-			sb.WriteString(s.Selected.Render(r.ChangesetID))
-			sb.WriteString("\n")
-		}
-
-		// Show exports hint when in progress
-		if r.HasInstanceState {
-			sb.WriteString(s.Muted.Render("  press "))
-			sb.WriteString(s.Key.Render("e"))
-			sb.WriteString(s.Muted.Render(" for exports"))
-			sb.WriteString("\n")
-		}
+		shared.RenderStreamingFooter(&sb, shared.StreamingFooterParams{
+			SpinnerView:      r.SpinnerView,
+			ActionVerb:       "Deploying",
+			InstanceName:     r.InstanceName,
+			ChangesetID:      r.ChangesetID,
+			HasInstanceState: r.HasInstanceState,
+			StateHintKey:     "e",
+			StateHintLabel:   "exports",
+		}, s)
 	}
 
 	sb.WriteString("\n")
 
 	// Navigation help
-	sb.WriteString(s.Muted.Render("  "))
-	sb.WriteString(s.Key.Render("↑/↓"))
-	sb.WriteString(s.Muted.Render(" navigate  "))
-	sb.WriteString(s.Key.Render("tab"))
-	sb.WriteString(s.Muted.Render(" switch pane  "))
-	sb.WriteString(s.Key.Render("q"))
-	sb.WriteString(s.Muted.Render(" quit"))
-	sb.WriteString("\n")
+	shared.RenderFooterNavigation(&sb, s)
 
 	return sb.String()
 }
@@ -646,25 +574,13 @@ func (r *DeployStagingFooterRenderer) RenderFooter(model *splitpane.Model, s *st
 	sb := strings.Builder{}
 	sb.WriteString("\n")
 
-	// Show different footer when viewing a child blueprint
-	if model.IsInDrillDown() {
-		shared.RenderBreadcrumb(&sb, model.NavigationPath(), s)
-		shared.RenderFooterNavigation(&sb, s,
-			shared.KeyHint{Key: "esc", Desc: "back"},
-			shared.KeyHint{Key: "enter", Desc: "expand/inspect"},
-		)
+	if shared.RenderStagingDrillDownFooter(&sb, model, s) {
 		return sb.String()
 	}
 
-	// Line 1: Staging summary with changeset ID and overview hint
-	sb.WriteString(s.Muted.Render("  Staging complete. Changeset: "))
-	sb.WriteString(s.Selected.Render(r.ChangesetID))
-	sb.WriteString(s.Muted.Render(" - press "))
-	sb.WriteString(s.Key.Render("o"))
-	sb.WriteString(s.Muted.Render(" for overview"))
-	sb.WriteString("\n")
+	shared.RenderStagingCompleteHeader(&sb, r.ChangesetID, s)
 
-	// Line 2-3: Change summary and confirmation prompt (matches "To apply these changes" section)
+	// Change summary
 	sb.WriteString("  ")
 	summaryParts := []string{}
 	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
@@ -687,28 +603,14 @@ func (r *DeployStagingFooterRenderer) RenderFooter(model *splitpane.Model, s *st
 	}
 	sb.WriteString("\n")
 
-	// Line 4: Confirmation prompt (replaces the deploy command line)
-	sb.WriteString(s.Muted.Render("  Apply these changes? "))
-	sb.WriteString(s.Key.Render("y"))
-	sb.WriteString(s.Muted.Render("/"))
-	sb.WriteString(s.Key.Render("n"))
-	sb.WriteString("\n\n")
+	shared.RenderConfirmationPrompt(&sb, "Apply these changes?", s)
 
-	// Line 5: Navigation help
-	sb.WriteString(s.Muted.Render("  "))
-	sb.WriteString(s.Key.Render("↑/↓"))
-	sb.WriteString(s.Muted.Render(" navigate  "))
-	sb.WriteString(s.Key.Render("enter"))
-	sb.WriteString(s.Muted.Render(" expand/collapse  "))
-	sb.WriteString(s.Key.Render("tab"))
-	sb.WriteString(s.Muted.Render(" switch pane  "))
+	// Navigation help
+	extraKeys := []shared.KeyHint{{Key: "enter", Desc: "expand/collapse"}}
 	if r.HasExportChanges {
-		sb.WriteString(s.Key.Render("e"))
-		sb.WriteString(s.Muted.Render(" exports  "))
+		extraKeys = append(extraKeys, shared.KeyHint{Key: "e", Desc: "exports"})
 	}
-	sb.WriteString(s.Key.Render("q"))
-	sb.WriteString(s.Muted.Render(" quit"))
-	sb.WriteString("\n")
+	shared.RenderFooterNavigation(&sb, s, extraKeys...)
 
 	return sb.String()
 }

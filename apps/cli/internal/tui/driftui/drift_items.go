@@ -884,18 +884,10 @@ func (r *DriftFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.Sty
 	}
 
 	// Navigation help
-	sb.WriteString(s.Muted.Render("  "))
-	sb.WriteString(s.Key.Render("↑/↓"))
-	sb.WriteString(s.Muted.Render(" navigate  "))
-	sb.WriteString(s.Key.Render("enter"))
-	sb.WriteString(s.Muted.Render(" expand  "))
-	sb.WriteString(s.Key.Render("tab"))
-	sb.WriteString(s.Muted.Render(" switch pane  "))
-	sb.WriteString(s.Key.Render("a"))
-	sb.WriteString(s.Muted.Render(" accept  "))
-	sb.WriteString(s.Key.Render("q"))
-	sb.WriteString(s.Muted.Render(" quit"))
-	sb.WriteString("\n")
+	shared.RenderFooterNavigation(&sb, s,
+		shared.KeyHint{Key: "enter", Desc: "expand"},
+		shared.KeyHint{Key: "a", Desc: "accept"},
+	)
 
 	return sb.String()
 }

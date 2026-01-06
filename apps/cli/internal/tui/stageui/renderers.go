@@ -767,20 +767,11 @@ func (r *StageFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.Sty
 	}
 
 	// Navigation help
-	sb.WriteString(s.Muted.Render("  "))
-	sb.WriteString(s.Key.Render("↑/↓"))
-	sb.WriteString(s.Muted.Render(" navigate  "))
-	sb.WriteString(s.Key.Render("enter"))
-	sb.WriteString(s.Muted.Render(" expand/collapse  "))
-	sb.WriteString(s.Key.Render("tab"))
-	sb.WriteString(s.Muted.Render(" switch pane  "))
+	extraKeys := []shared.KeyHint{{Key: "enter", Desc: "expand/collapse"}}
 	if r.HasExportChanges {
-		sb.WriteString(s.Key.Render("e"))
-		sb.WriteString(s.Muted.Render(" exports  "))
+		extraKeys = append(extraKeys, shared.KeyHint{Key: "e", Desc: "exports"})
 	}
-	sb.WriteString(s.Key.Render("q"))
-	sb.WriteString(s.Muted.Render(" quit"))
-	sb.WriteString("\n")
+	shared.RenderFooterNavigation(&sb, s, extraKeys...)
 
 	return sb.String()
 }

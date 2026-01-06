@@ -10,7 +10,6 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
-	sdkstrings "github.com/newstack-cloud/deploy-cli-sdk/strings"
 	"github.com/newstack-cloud/deploy-cli-sdk/styles"
 	"github.com/newstack-cloud/deploy-cli-sdk/ui"
 	"github.com/newstack-cloud/deploy-cli-sdk/ui/splitpane"
@@ -144,7 +143,7 @@ func (r *DestroyDetailsRenderer) renderResourceDetails(item *DestroyItem, width 
 		sb.WriteString(s.Muted.Render("Details: "))
 		sb.WriteString("Not attempted due to destroy failure")
 	} else {
-		sb.WriteString(renderResourceStatus(res.Status, s))
+		sb.WriteString(shared.RenderResourceStatus(res.Status, s))
 		sb.WriteString("\n")
 		sb.WriteString(s.Muted.Render("Details: "))
 		sb.WriteString(shared.FormatPreciseResourceStatus(res.PreciseStatus))
@@ -162,7 +161,7 @@ func (r *DestroyDetailsRenderer) renderResourceDetails(item *DestroyItem, width 
 	return sb.String()
 }
 
-func (r *DestroyDetailsRenderer) renderChildDetails(item *DestroyItem, _ int, s *styles.Styles) string {
+func (r *DestroyDetailsRenderer) renderChildDetails(item *DestroyItem, width int, s *styles.Styles) string {
 	child := item.Child
 	if child == nil {
 		return s.Muted.Render("No child data")
@@ -201,15 +200,7 @@ func (r *DestroyDetailsRenderer) renderChildDetails(item *DestroyItem, _ int, s 
 		sb.WriteString("\n")
 	}
 
-	if len(child.FailureReasons) > 0 {
-		sb.WriteString("\n")
-		sb.WriteString(s.Error.Render("Failure Reasons:"))
-		sb.WriteString("\n")
-		for _, reason := range child.FailureReasons {
-			sb.WriteString(s.Error.Render("  • " + reason))
-			sb.WriteString("\n")
-		}
-	}
+	shared.RenderFailureReasons(&sb, child.FailureReasons, width, s)
 
 	return sb.String()
 }
@@ -222,25 +213,17 @@ func (r *DestroyDetailsRenderer) renderLinkDetails(item *DestroyItem, width int,
 
 	sb := strings.Builder{}
 
-	sb.WriteString(s.Header.Render(link.LinkName))
-	sb.WriteString("\n")
-	sb.WriteString(s.Muted.Render(strings.Repeat("─", ui.SafeWidth(width-4))))
-	sb.WriteString("\n\n")
-
-	sb.WriteString(s.Muted.Render("Resource A: "))
-	sb.WriteString(link.ResourceAName)
-	sb.WriteString("\n")
-	sb.WriteString(s.Muted.Render("Resource B: "))
-	sb.WriteString(link.ResourceBName)
-	sb.WriteString("\n")
-
 	linkID := r.getLinkID(item.Path, link.LinkName, link.LinkID)
-	if linkID != "" {
-		sb.WriteString(s.Muted.Render("Link ID: "))
-		sb.WriteString(linkID)
-		sb.WriteString("\n")
-	}
 
+	// Common header and metadata
+	shared.RenderLinkDetailsBase(&sb, shared.LinkDetailsBase{
+		LinkName:      link.LinkName,
+		ResourceAName: link.ResourceAName,
+		ResourceBName: link.ResourceBName,
+		LinkID:        linkID,
+	}, width, s)
+
+	// Status
 	sb.WriteString(s.Muted.Render("Status: "))
 	if link.Skipped {
 		sb.WriteString(s.Warning.Render("Skipped"))
@@ -253,21 +236,10 @@ func (r *DestroyDetailsRenderer) renderLinkDetails(item *DestroyItem, width int,
 		sb.WriteString("\n")
 	}
 
-	if link.Action != "" {
-		sb.WriteString(s.Muted.Render("Action: "))
-		sb.WriteString(shared.RenderActionBadge(link.Action, s))
-		sb.WriteString("\n")
-	}
+	// Action
+	shared.RenderLinkAction(&sb, string(link.Action), s)
 
-	if len(link.FailureReasons) > 0 {
-		sb.WriteString("\n")
-		sb.WriteString(s.Error.Render("Failure Reasons:"))
-		sb.WriteString("\n")
-		for _, reason := range link.FailureReasons {
-			sb.WriteString(s.Error.Render("  • " + reason))
-			sb.WriteString("\n")
-		}
-	}
+	shared.RenderFailureReasons(&sb, link.FailureReasons, width, s)
 
 	return sb.String()
 }
@@ -314,14 +286,7 @@ func (r *DestroyFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.S
 	sb.WriteString("\n")
 
 	// Navigation help
-	sb.WriteString(s.Muted.Render("  "))
-	sb.WriteString(s.Key.Render("↑/↓"))
-	sb.WriteString(s.Muted.Render(" navigate  "))
-	sb.WriteString(s.Key.Render("tab"))
-	sb.WriteString(s.Muted.Render(" switch pane  "))
-	sb.WriteString(s.Key.Render("q"))
-	sb.WriteString(s.Muted.Render(" quit"))
-	sb.WriteString("\n")
+	shared.RenderFooterNavigation(&sb, s)
 
 	return sb.String()
 }
@@ -336,34 +301,18 @@ func (r *DestroyFooterRenderer) renderDrillDownFooter(model *splitpane.Model, s 
 func (r *DestroyFooterRenderer) renderStreamingFooter(s *styles.Styles) string {
 	sb := strings.Builder{}
 
-	sb.WriteString("  ")
-	if r.SpinnerView != "" {
-		sb.WriteString(r.SpinnerView)
-		sb.WriteString(" ")
-	}
-	sb.WriteString(s.Info.Render("Destroying "))
-	if r.InstanceName != "" {
-		italicStyle := lipgloss.NewStyle().Italic(true)
-		sb.WriteString(italicStyle.Render(r.InstanceName))
-	}
-	sb.WriteString("\n")
-
-	if r.ChangesetID != "" {
-		sb.WriteString(s.Muted.Render("  Changeset: "))
-		sb.WriteString(s.Selected.Render(r.ChangesetID))
-		sb.WriteString("\n")
-	}
+	shared.RenderStreamingFooter(&sb, shared.StreamingFooterParams{
+		SpinnerView:      r.SpinnerView,
+		ActionVerb:       "Destroying",
+		InstanceName:     r.InstanceName,
+		ChangesetID:      r.ChangesetID,
+		HasInstanceState: r.HasInstanceState,
+		StateHintKey:     "s",
+		StateHintLabel:   "pre-destroy state",
+	}, s)
 
 	if IsRollingBackStatus(r.CurrentStatus) {
 		sb.WriteString(s.Warning.Render("  Rolling back..."))
-		sb.WriteString("\n")
-	}
-
-	// Show pre-destroy state hint when available
-	if r.HasInstanceState {
-		sb.WriteString(s.Muted.Render("  press "))
-		sb.WriteString(s.Key.Render("s"))
-		sb.WriteString(s.Muted.Render(" for pre-destroy state"))
 		sb.WriteString("\n")
 	}
 
@@ -372,11 +321,10 @@ func (r *DestroyFooterRenderer) renderStreamingFooter(s *styles.Styles) string {
 
 func (r *DestroyFooterRenderer) renderFinishedFooter(s *styles.Styles) string {
 	sb := strings.Builder{}
-	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
 
 	// Destroy complete - compact format
 	sb.WriteString(s.Muted.Render("  Destroy "))
-	sb.WriteString(r.renderFinalStatus(s, successStyle))
+	sb.WriteString(r.renderFinalStatus(s))
 	if r.InstanceName != "" {
 		sb.WriteString(s.Muted.Render(" • "))
 		sb.WriteString(s.Selected.Render(r.InstanceName))
@@ -391,35 +339,18 @@ func (r *DestroyFooterRenderer) renderFinishedFooter(s *styles.Styles) string {
 	}
 	sb.WriteString("\n")
 
-	// Show summary of destroyed, failed, and interrupted elements
-	hasSummary := len(r.DestroyedElements) > 0 || len(r.ElementFailures) > 0 || len(r.InterruptedElements) > 0
-	if hasSummary {
-		sb.WriteString("  ")
-		needsComma := false
-		if len(r.DestroyedElements) > 0 {
-			sb.WriteString(successStyle.Render(fmt.Sprintf("%d destroyed", len(r.DestroyedElements))))
-			needsComma = true
-		}
-		if len(r.ElementFailures) > 0 {
-			if needsComma {
-				sb.WriteString(s.Muted.Render(", "))
-			}
-			sb.WriteString(s.Error.Render(fmt.Sprintf("%d %s", len(r.ElementFailures), sdkstrings.Pluralize(len(r.ElementFailures), "failure", "failures"))))
-			needsComma = true
-		}
-		if len(r.InterruptedElements) > 0 {
-			if needsComma {
-				sb.WriteString(s.Muted.Render(", "))
-			}
-			sb.WriteString(s.Warning.Render(fmt.Sprintf("%d interrupted", len(r.InterruptedElements))))
-		}
-		sb.WriteString("\n")
-	}
+	shared.RenderElementSummary(&sb, shared.ElementSummary{
+		SuccessCount:     len(r.DestroyedElements),
+		SuccessLabel:     "destroyed",
+		FailureCount:     len(r.ElementFailures),
+		InterruptedCount: len(r.InterruptedElements),
+	}, s)
 
 	return sb.String()
 }
 
-func (r *DestroyFooterRenderer) renderFinalStatus(s *styles.Styles, successStyle lipgloss.Style) string {
+func (r *DestroyFooterRenderer) renderFinalStatus(s *styles.Styles) string {
+	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
 	switch r.FinalStatus {
 	case core.InstanceStatusDestroyed:
 		return successStyle.Render("complete")
@@ -448,47 +379,20 @@ func (r *DestroyStagingFooterRenderer) RenderFooter(model *splitpane.Model, s *s
 	sb := strings.Builder{}
 	sb.WriteString("\n")
 
-	// Show breadcrumb when in drill-down
-	if model.IsInDrillDown() {
-		shared.RenderBreadcrumb(&sb, model.NavigationPath(), s)
-		shared.RenderFooterNavigation(&sb, s,
-			shared.KeyHint{Key: "esc", Desc: "back"},
-			shared.KeyHint{Key: "enter", Desc: "expand/inspect"},
-		)
+	if shared.RenderStagingDrillDownFooter(&sb, model, s) {
 		return sb.String()
 	}
 
-	// Staging summary with changeset ID
-	sb.WriteString(s.Muted.Render("  Staging complete. Changeset: "))
-	sb.WriteString(s.Selected.Render(r.ChangesetID))
-	sb.WriteString(s.Muted.Render(" - press "))
-	sb.WriteString(s.Key.Render("o"))
-	sb.WriteString(s.Muted.Render(" for overview"))
-	sb.WriteString("\n")
+	shared.RenderStagingCompleteHeader(&sb, r.ChangesetID, s)
 
 	// Delete summary
 	sb.WriteString("  ")
 	sb.WriteString(s.Error.Render(fmt.Sprintf("%d to delete", r.Summary.Delete)))
 	sb.WriteString("\n")
 
-	// Confirmation prompt
-	sb.WriteString(s.Muted.Render("  Destroy these resources? "))
-	sb.WriteString(s.Key.Render("y"))
-	sb.WriteString(s.Muted.Render("/"))
-	sb.WriteString(s.Key.Render("n"))
-	sb.WriteString("\n\n")
+	shared.RenderConfirmationPrompt(&sb, "Destroy these resources?", s)
 
-	// Navigation help
-	sb.WriteString(s.Muted.Render("  "))
-	sb.WriteString(s.Key.Render("↑/↓"))
-	sb.WriteString(s.Muted.Render(" navigate  "))
-	sb.WriteString(s.Key.Render("enter"))
-	sb.WriteString(s.Muted.Render(" expand/collapse  "))
-	sb.WriteString(s.Key.Render("tab"))
-	sb.WriteString(s.Muted.Render(" switch pane  "))
-	sb.WriteString(s.Key.Render("q"))
-	sb.WriteString(s.Muted.Render(" quit"))
-	sb.WriteString("\n")
+	shared.RenderFooterNavigation(&sb, s, shared.KeyHint{Key: "enter", Desc: "expand/collapse"})
 
 	return sb.String()
 }
@@ -500,30 +404,6 @@ type (
 	DriftFooterRenderer  = driftui.DriftFooterRenderer
 )
 
-// Status helper functions
-
-func renderResourceStatus(status core.ResourceStatus, s *styles.Styles) string {
-	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
-
-	switch status {
-	case core.ResourceStatusDestroying:
-		return s.Info.Render("Destroying")
-	case core.ResourceStatusDestroyed:
-		return successStyle.Render("Destroyed")
-	case core.ResourceStatusDestroyFailed:
-		return s.Error.Render("Destroy Failed")
-	case core.ResourceStatusRollingBack:
-		return s.Warning.Render("Rolling Back")
-	case core.ResourceStatusRollbackComplete:
-		return s.Muted.Render("Rolled Back")
-	case core.ResourceStatusRollbackFailed:
-		return s.Error.Render("Rollback Failed")
-	case core.ResourceStatusDestroyInterrupted:
-		return s.Warning.Render("Interrupted")
-	default:
-		return s.Muted.Render("Pending")
-	}
-}
 
 // BuildDriftItems builds split-pane items from drift reconciliation results.
 func BuildDriftItems(result *container.ReconciliationCheckResult, instanceState *state.InstanceState) []splitpane.Item {

@@ -202,26 +202,13 @@ func (r *InspectDetailsRenderer) renderLinkDetails(item *deployui.DeployItem, wi
 
 	sb := strings.Builder{}
 
-	// Header
-	sb.WriteString(s.Header.Render(link.LinkName))
-	sb.WriteString("\n")
-	sb.WriteString(s.Muted.Render(strings.Repeat("─", ui.SafeWidth(width-4))))
-	sb.WriteString("\n\n")
-
-	// Resources
-	sb.WriteString(s.Muted.Render("Resource A: "))
-	sb.WriteString(link.ResourceAName)
-	sb.WriteString("\n")
-	sb.WriteString(s.Muted.Render("Resource B: "))
-	sb.WriteString(link.ResourceBName)
-	sb.WriteString("\n")
-
-	// Link ID
-	if link.LinkID != "" {
-		sb.WriteString(s.Muted.Render("Link ID: "))
-		sb.WriteString(link.LinkID)
-		sb.WriteString("\n")
-	}
+	// Common header and metadata
+	shared.RenderLinkDetailsBase(&sb, shared.LinkDetailsBase{
+		LinkName:      link.LinkName,
+		ResourceAName: link.ResourceAName,
+		ResourceBName: link.ResourceBName,
+		LinkID:        link.LinkID,
+	}, width, s)
 
 	// Status
 	sb.WriteString(s.Muted.Render("Status: "))
@@ -296,18 +283,11 @@ func (r *InspectFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.S
 	sb.WriteString("\n")
 
 	// Navigation help
-	sb.WriteString(s.Muted.Render("  "))
-	sb.WriteString(s.Key.Render("↑/↓"))
-	sb.WriteString(s.Muted.Render(" navigate  "))
-	sb.WriteString(s.Key.Render("tab"))
-	sb.WriteString(s.Muted.Render(" switch pane  "))
 	if r.EmbeddedInList {
-		sb.WriteString(s.Key.Render("esc"))
-		sb.WriteString(s.Muted.Render(" back to list  "))
+		shared.RenderFooterNavigation(&sb, s, shared.KeyHint{Key: "esc", Desc: "back to list"})
+	} else {
+		shared.RenderFooterNavigation(&sb, s)
 	}
-	sb.WriteString(s.Key.Render("q"))
-	sb.WriteString(s.Muted.Render(" quit"))
-	sb.WriteString("\n")
 
 	return sb.String()
 }

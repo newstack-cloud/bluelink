@@ -1,11 +1,13 @@
 package shared
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+	sdkstrings "github.com/newstack-cloud/deploy-cli-sdk/strings"
 	"github.com/newstack-cloud/deploy-cli-sdk/styles"
 	"github.com/newstack-cloud/deploy-cli-sdk/ui"
 )
@@ -225,6 +227,161 @@ func RenderResourceMetadata(sb *strings.Builder, meta ResourceMetadata, resource
 	if resourceType != "" {
 		sb.WriteString(s.Muted.Render("Type: "))
 		sb.WriteString(resourceType)
+		sb.WriteString("\n")
+	}
+}
+
+// LinkDetailsBase holds the common fields for rendering link details across UIs.
+type LinkDetailsBase struct {
+	LinkName      string
+	ResourceAName string
+	ResourceBName string
+	LinkID        string
+	Action        string
+}
+
+// RenderLinkDetailsBase renders the common link details header and metadata.
+// Returns after writing the metadata section, allowing callers to add UI-specific content.
+func RenderLinkDetailsBase(sb *strings.Builder, link LinkDetailsBase, width int, s *styles.Styles) {
+	// Header
+	RenderSectionHeader(sb, link.LinkName, width, s)
+
+	// Resources
+	RenderLabelValue(sb, "Resource A", link.ResourceAName, s)
+	RenderLabelValue(sb, "Resource B", link.ResourceBName, s)
+
+	// Link ID
+	if link.LinkID != "" {
+		RenderLabelValue(sb, "Link ID", link.LinkID, s)
+	}
+}
+
+// RenderLinkAction renders the action badge for a link if action is non-empty.
+func RenderLinkAction(sb *strings.Builder, action string, s *styles.Styles) {
+	if action != "" {
+		sb.WriteString(s.Muted.Render("Action: "))
+		sb.WriteString(RenderActionBadge(ActionType(action), s))
+		sb.WriteString("\n")
+	}
+}
+
+// RenderStagingDrillDownFooter renders the common drill-down footer for staging views.
+// Returns true if footer was rendered (i.e., model is in drill-down), false otherwise.
+func RenderStagingDrillDownFooter(sb *strings.Builder, model SplitPaneModel, s *styles.Styles) bool {
+	if !model.IsInDrillDown() {
+		return false
+	}
+	RenderBreadcrumb(sb, model.NavigationPath(), s)
+	RenderFooterNavigation(sb, s,
+		KeyHint{Key: "esc", Desc: "back"},
+		KeyHint{Key: "enter", Desc: "expand/inspect"},
+	)
+	return true
+}
+
+// SplitPaneModel is the interface for split pane model methods needed by footer rendering.
+type SplitPaneModel interface {
+	IsInDrillDown() bool
+	NavigationPath() []string
+}
+
+// RenderStagingCompleteHeader renders the "Staging complete. Changeset: X" header line.
+func RenderStagingCompleteHeader(sb *strings.Builder, changesetID string, s *styles.Styles) {
+	sb.WriteString(s.Muted.Render("  Staging complete. Changeset: "))
+	sb.WriteString(s.Selected.Render(changesetID))
+	sb.WriteString(s.Muted.Render(" - press "))
+	sb.WriteString(s.Key.Render("o"))
+	sb.WriteString(s.Muted.Render(" for overview"))
+	sb.WriteString("\n")
+}
+
+// RenderConfirmationPrompt renders a y/n confirmation prompt.
+func RenderConfirmationPrompt(sb *strings.Builder, promptText string, s *styles.Styles) {
+	sb.WriteString(s.Muted.Render("  " + promptText + " "))
+	sb.WriteString(s.Key.Render("y"))
+	sb.WriteString(s.Muted.Render("/"))
+	sb.WriteString(s.Key.Render("n"))
+	sb.WriteString("\n\n")
+}
+
+// ElementSummary holds counts of successful, failed, and interrupted elements for footer rendering.
+type ElementSummary struct {
+	SuccessCount     int
+	SuccessLabel     string // e.g., "successful" or "destroyed"
+	FailureCount     int
+	InterruptedCount int
+}
+
+// RenderElementSummary renders a summary line of element counts (successful/destroyed, failures, interrupted).
+func RenderElementSummary(sb *strings.Builder, summary ElementSummary, s *styles.Styles) {
+	hasSummary := summary.SuccessCount > 0 || summary.FailureCount > 0 || summary.InterruptedCount > 0
+	if !hasSummary {
+		return
+	}
+
+	sb.WriteString("  ")
+	needsComma := false
+	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
+
+	if summary.SuccessCount > 0 {
+		label := summary.SuccessLabel
+		if label == "" {
+			label = "successful"
+		}
+		sb.WriteString(successStyle.Render(fmt.Sprintf("%d %s", summary.SuccessCount, label)))
+		needsComma = true
+	}
+	if summary.FailureCount > 0 {
+		if needsComma {
+			sb.WriteString(s.Muted.Render(", "))
+		}
+		sb.WriteString(s.Error.Render(fmt.Sprintf("%d %s", summary.FailureCount, sdkstrings.Pluralize(summary.FailureCount, "failure", "failures"))))
+		needsComma = true
+	}
+	if summary.InterruptedCount > 0 {
+		if needsComma {
+			sb.WriteString(s.Muted.Render(", "))
+		}
+		sb.WriteString(s.Warning.Render(fmt.Sprintf("%d interrupted", summary.InterruptedCount)))
+	}
+	sb.WriteString("\n")
+}
+
+// StreamingFooterParams holds parameters for rendering a streaming operation footer.
+type StreamingFooterParams struct {
+	SpinnerView      string
+	ActionVerb       string // e.g., "Deploying" or "Destroying"
+	InstanceName     string
+	ChangesetID      string
+	HasInstanceState bool
+	StateHintKey     string // e.g., "e" for exports or "s" for pre-destroy state
+	StateHintLabel   string // e.g., "exports" or "pre-destroy state"
+}
+
+// RenderStreamingFooter renders a footer for an in-progress streaming operation.
+func RenderStreamingFooter(sb *strings.Builder, params StreamingFooterParams, s *styles.Styles) {
+	sb.WriteString("  ")
+	if params.SpinnerView != "" {
+		sb.WriteString(params.SpinnerView)
+		sb.WriteString(" ")
+	}
+	sb.WriteString(s.Info.Render(params.ActionVerb + " "))
+	if params.InstanceName != "" {
+		italicStyle := lipgloss.NewStyle().Italic(true)
+		sb.WriteString(italicStyle.Render(params.InstanceName))
+	}
+	sb.WriteString("\n")
+
+	if params.ChangesetID != "" {
+		sb.WriteString(s.Muted.Render("  Changeset: "))
+		sb.WriteString(s.Selected.Render(params.ChangesetID))
+		sb.WriteString("\n")
+	}
+
+	if params.HasInstanceState && params.StateHintKey != "" {
+		sb.WriteString(s.Muted.Render("  press "))
+		sb.WriteString(s.Key.Render(params.StateHintKey))
+		sb.WriteString(s.Muted.Render(" for " + params.StateHintLabel))
 		sb.WriteString("\n")
 	}
 }
