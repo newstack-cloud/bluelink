@@ -138,6 +138,79 @@ func (s *ControllerTestSuite) Test_create_blueprint_instance_handler_with_instan
 	)
 }
 
+func (s *ControllerTestSuite) Test_create_blueprint_instance_can_be_looked_up_by_name_immediately() {
+	// This test verifies that an instance can be looked up by name immediately
+	// after starting deployment (before deployment completes).
+	// This is important because if the client disconnects and reconnects,
+	// it should still be able to find the instance by name.
+	err := s.saveTestChangeset()
+	s.Require().NoError(err)
+
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/deployments/instances",
+		s.ctrl.CreateBlueprintInstanceHandler,
+	).Methods("POST")
+	router.HandleFunc(
+		"/deployments/instances/{id}",
+		s.ctrl.GetBlueprintInstanceHandler,
+	).Methods("GET")
+
+	newInstanceName := "my-lookup-test-instance"
+	reqPayload := &BlueprintInstanceRequestPayload{
+		BlueprintDocumentInfo: resolve.BlueprintDocumentInfo{
+			FileSourceScheme: "file",
+			Directory:        "/test/dir",
+			BlueprintFile:    "test.blueprint.yaml",
+		},
+		InstanceName: newInstanceName,
+		ChangeSetID:  testChangesetID,
+	}
+
+	reqBytes, err := json.Marshal(reqPayload)
+	s.Require().NoError(err)
+
+	// Create the instance
+	createReq := httptest.NewRequest("POST", "/deployments/instances", bytes.NewReader(reqBytes))
+	createW := httptest.NewRecorder()
+
+	router.ServeHTTP(createW, createReq)
+	createResult := createW.Result()
+	defer createResult.Body.Close()
+	createRespData, err := io.ReadAll(createResult.Body)
+	s.Require().NoError(err)
+
+	createResponse := &helpersv1.AsyncOperationResponse[state.InstanceState]{}
+	err = json.Unmarshal(createRespData, createResponse)
+	s.Require().NoError(err)
+	s.Assert().Equal(http.StatusAccepted, createResult.StatusCode)
+
+	createdInstance := createResponse.Data
+	s.Assert().Equal(newInstanceName, createdInstance.InstanceName)
+
+	// Now immediately look up the instance by name (simulating a reconnect)
+	getPath := fmt.Sprintf("/deployments/instances/%s", newInstanceName)
+	getReq := httptest.NewRequest("GET", getPath, nil)
+	getW := httptest.NewRecorder()
+
+	router.ServeHTTP(getW, getReq)
+	getResult := getW.Result()
+	defer getResult.Body.Close()
+	getRespData, err := io.ReadAll(getResult.Body)
+	s.Require().NoError(err)
+
+	// The lookup by name should succeed
+	s.Assert().Equal(http.StatusOK, getResult.StatusCode,
+		"Instance should be found by name immediately after creation. Response: %s", string(getRespData))
+
+	fetchedInstance := &state.InstanceState{}
+	err = json.Unmarshal(getRespData, fetchedInstance)
+	s.Require().NoError(err)
+
+	s.Assert().Equal(createdInstance.InstanceID, fetchedInstance.InstanceID)
+	s.Assert().Equal(newInstanceName, fetchedInstance.InstanceName)
+}
+
 func (s *ControllerTestSuite) Test_create_blueprint_instance_handler_with_stream_error() {
 	// Create the test change set to be used to start the deployment
 	// process for the new blueprint instance.
