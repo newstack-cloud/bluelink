@@ -258,18 +258,12 @@ func findResourceStateByPath(instanceState *state.InstanceState, path string, re
 	return findResourceStateByName(currentState, resourceName)
 }
 
-// findResourceStateByName finds a resource state by name using the instance state's
-// ResourceIDs map to look up the resource ID, then retrieves the state from Resources.
-func findResourceStateByName(instanceState *state.InstanceState, name string) *state.ResourceState {
-	if instanceState == nil || instanceState.ResourceIDs == nil || instanceState.Resources == nil {
-		return nil
-	}
-	resourceID, ok := instanceState.ResourceIDs[name]
-	if !ok {
-		return nil
-	}
-	return instanceState.Resources[resourceID]
-}
+// Re-export shared helper functions for internal use.
+var (
+	findResourceStateByName   = shared.FindResourceStateByName
+	findChildInstanceIDByPath = shared.FindChildInstanceIDByPath
+	findLinkIDByPath          = shared.FindLinkIDByPath
+)
 
 // getChildInstanceID returns the instance ID for a child blueprint by traversing
 // the instance state hierarchy using the path.
@@ -291,33 +285,6 @@ func (r *DeployDetailsRenderer) getChildInstanceID(path string, childName string
 	return ""
 }
 
-// findChildInstanceIDByPath finds a child blueprint's instance ID by traversing the instance state hierarchy.
-// The path format is "childA/childB" where each segment is a child blueprint name.
-func findChildInstanceIDByPath(instanceState *state.InstanceState, path string) string {
-	if instanceState == nil || path == "" {
-		return ""
-	}
-
-	// Parse the path to navigate to the child blueprint
-	segments := strings.Split(path, "/")
-
-	// Navigate to the target child blueprint
-	currentState := instanceState
-	for _, childName := range segments {
-		if currentState.ChildBlueprints == nil {
-			return ""
-		}
-		childState, ok := currentState.ChildBlueprints[childName]
-		if !ok || childState == nil {
-			return ""
-		}
-		currentState = childState
-	}
-
-	// Return the instance ID of the target child
-	return currentState.InstanceID
-}
-
 // getLinkID returns the link ID for a link by traversing the instance state hierarchy using the path.
 func (r *DeployDetailsRenderer) getLinkID(path string, linkName string) string {
 	// Try post-deploy state first
@@ -335,43 +302,6 @@ func (r *DeployDetailsRenderer) getLinkID(path string, linkName string) string {
 	}
 
 	return ""
-}
-
-// findLinkIDByPath finds a link's ID by traversing the instance state hierarchy.
-// The path format is "childA/childB/linkName" where the last segment is the link name
-// and the preceding segments are child blueprint names.
-func findLinkIDByPath(instanceState *state.InstanceState, path string, linkName string) string {
-	if instanceState == nil {
-		return ""
-	}
-
-	// Parse the path to extract child blueprint names
-	// Path format: "childA/childB/linkName" or just "linkName" for top-level
-	segments := strings.Split(path, "/")
-
-	// Navigate to the correct child blueprint
-	currentState := instanceState
-	for i := 0; i < len(segments)-1; i++ {
-		childName := segments[i]
-		if currentState.ChildBlueprints == nil {
-			return ""
-		}
-		childState, ok := currentState.ChildBlueprints[childName]
-		if !ok || childState == nil {
-			return ""
-		}
-		currentState = childState
-	}
-
-	// Now look up the link in the target instance state
-	if currentState.Links == nil {
-		return ""
-	}
-	linkState, ok := currentState.Links[linkName]
-	if !ok || linkState == nil {
-		return ""
-	}
-	return linkState.LinkID
 }
 
 // renderOutputsSection renders the outputs (computed fields) section.

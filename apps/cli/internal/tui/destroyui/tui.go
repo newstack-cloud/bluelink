@@ -3,18 +3,17 @@ package destroyui
 import (
 	"errors"
 	"io"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
-	"github.com/newstack-cloud/deploy-cli-sdk/consts"
 	"github.com/newstack-cloud/deploy-cli-sdk/engine"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 	sharedui "github.com/newstack-cloud/deploy-cli-sdk/ui"
 	"go.uber.org/zap"
 
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/driftui"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/stageui"
 )
 
@@ -573,7 +572,7 @@ func NewDestroyApp(
 	)
 	staging := &stagingModel
 	staging.SetBlueprintFile(blueprintFile)
-	blueprintSource := blueprintSourceFromPath(blueprintFile)
+	blueprintSource := shared.BlueprintSourceFromPath(blueprintFile)
 	staging.SetBlueprintSource(blueprintSource)
 	staging.SetDeployFlowMode(true)
 
@@ -656,18 +655,3 @@ func shouldAutoSelect(
 	return (blueprintFile != "" && !isDefaultBlueprintFile) || headless || skipPrompts
 }
 
-func blueprintSourceFromPath(blueprintFile string) string {
-	if strings.HasPrefix(blueprintFile, "https://") {
-		return consts.BlueprintSourceHTTPS
-	}
-	if strings.HasPrefix(blueprintFile, "s3://") {
-		return consts.BlueprintSourceS3
-	}
-	if strings.HasPrefix(blueprintFile, "gcs://") {
-		return consts.BlueprintSourceGCS
-	}
-	if strings.HasPrefix(blueprintFile, "azureblob://") {
-		return consts.BlueprintSourceAzureBlob
-	}
-	return consts.BlueprintSourceFile
-}

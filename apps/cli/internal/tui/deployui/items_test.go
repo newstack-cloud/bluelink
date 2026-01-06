@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
@@ -637,7 +638,7 @@ func (s *DeployItemsTestSuite) Test_resourceStatusIcon_all_statuses() {
 	}
 
 	for _, tc := range testCases {
-		s.Equal(tc.expected, resourceStatusIcon(tc.status), "Status: %s", tc.status)
+		s.Equal(tc.expected, shared.ResourceStatusIcon(tc.status), "Status: %s", tc.status)
 	}
 }
 
@@ -666,7 +667,7 @@ func (s *DeployItemsTestSuite) Test_instanceStatusIcon_all_statuses() {
 	}
 
 	for _, tc := range testCases {
-		s.Equal(tc.expected, instanceStatusIcon(tc.status), "Status: %s", tc.status)
+		s.Equal(tc.expected, shared.InstanceStatusIcon(tc.status), "Status: %s", tc.status)
 	}
 }
 
@@ -694,7 +695,7 @@ func (s *DeployItemsTestSuite) Test_linkStatusIcon_all_statuses() {
 	}
 
 	for _, tc := range testCases {
-		s.Equal(tc.expected, linkStatusIcon(tc.status), "Status: %s", tc.status)
+		s.Equal(tc.expected, shared.LinkStatusIcon(tc.status), "Status: %s", tc.status)
 	}
 }
 

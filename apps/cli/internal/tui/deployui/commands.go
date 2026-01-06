@@ -6,11 +6,11 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/driftui"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/stateutil"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
@@ -169,21 +169,7 @@ func buildLocalFileDocumentInfo(blueprintFile string) (types.BlueprintDocumentIn
 }
 
 func buildObjectStorageDocumentInfo(blueprintFile, scheme string) types.BlueprintDocumentInfo {
-	// Strip scheme prefix if present (e.g., "s3://bucket/file.yaml" -> "bucket/file.yaml")
-	pathWithoutScheme := stripObjectStorageScheme(blueprintFile, scheme)
-	return types.BlueprintDocumentInfo{
-		FileSourceScheme: scheme,
-		Directory:        path.Dir(pathWithoutScheme),
-		BlueprintFile:    path.Base(pathWithoutScheme),
-	}
-}
-
-func stripObjectStorageScheme(blueprintFile, scheme string) string {
-	prefix := scheme + "://"
-	if strings.HasPrefix(blueprintFile, prefix) {
-		return strings.TrimPrefix(blueprintFile, prefix)
-	}
-	return blueprintFile
+	return shared.BuildObjectStorageDocumentInfo(blueprintFile, scheme)
 }
 
 func buildHTTPSDocumentInfo(blueprintFile string) (types.BlueprintDocumentInfo, error) {

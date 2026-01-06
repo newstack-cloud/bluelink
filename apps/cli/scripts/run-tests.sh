@@ -43,10 +43,10 @@ Options:
   --e2e                Include E2E tests (requires Docker)
                        This will start the deploy-engine in Docker,
                        run E2E tests with coverage, and merge coverage
-                       with unit test coverage.
+                       with unit and integration test coverage.
 
 Examples:
-  # Run unit tests only
+  # Run unit and integration tests only
   bash scripts/run-tests.sh
 
   # Run all tests including E2E (requires Docker)
@@ -66,8 +66,8 @@ cd "$CLI_DIR"
 # Create coverage directory
 mkdir -p coverage
 
-# Run unit tests
-echo "Running unit tests..."
+# Run unit and integration tests
+echo "Running unit and integration tests..."
 echo "" > coverage/unit.txt
 go test -timeout 30000ms -race -coverprofile=coverage/unit.txt -coverpkg=./... -covermode=atomic $(go list ./... | grep -v '/e2e$' | grep -v '/testutils$')
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/driftui"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
@@ -82,86 +83,12 @@ func (r *DestroyDetailsRenderer) getLinkID(path, linkName, itemLinkID string) st
 	return ""
 }
 
-// findResourceIDByPath finds a resource ID by traversing the instance state hierarchy.
-func findResourceIDByPath(instanceState *state.InstanceState, path, resourceName string) string {
-	if instanceState == nil {
-		return ""
-	}
-
-	segments := strings.Split(path, "/")
-	currentState := instanceState
-
-	for i := 0; i < len(segments)-1; i++ {
-		childName := segments[i]
-		if currentState.ChildBlueprints == nil {
-			return ""
-		}
-		childState, ok := currentState.ChildBlueprints[childName]
-		if !ok || childState == nil {
-			return ""
-		}
-		currentState = childState
-	}
-
-	if currentState.ResourceIDs == nil {
-		return ""
-	}
-	return currentState.ResourceIDs[resourceName]
-}
-
-// findChildInstanceIDByPath finds a child blueprint's instance ID by traversing the instance state hierarchy.
-func findChildInstanceIDByPath(instanceState *state.InstanceState, path string) string {
-	if instanceState == nil || path == "" {
-		return ""
-	}
-
-	segments := strings.Split(path, "/")
-	currentState := instanceState
-
-	for _, childName := range segments {
-		if currentState.ChildBlueprints == nil {
-			return ""
-		}
-		childState, ok := currentState.ChildBlueprints[childName]
-		if !ok || childState == nil {
-			return ""
-		}
-		currentState = childState
-	}
-
-	return currentState.InstanceID
-}
-
-// findLinkIDByPath finds a link's ID by traversing the instance state hierarchy.
-func findLinkIDByPath(instanceState *state.InstanceState, path, linkName string) string {
-	if instanceState == nil {
-		return ""
-	}
-
-	segments := strings.Split(path, "/")
-	currentState := instanceState
-
-	for i := 0; i < len(segments)-1; i++ {
-		childName := segments[i]
-		if currentState.ChildBlueprints == nil {
-			return ""
-		}
-		childState, ok := currentState.ChildBlueprints[childName]
-		if !ok || childState == nil {
-			return ""
-		}
-		currentState = childState
-	}
-
-	if currentState.Links == nil {
-		return ""
-	}
-	linkState, ok := currentState.Links[linkName]
-	if !ok || linkState == nil {
-		return ""
-	}
-	return linkState.LinkID
-}
+// Re-export shared helper functions for internal use.
+var (
+	findResourceIDByPath     = shared.FindResourceIDByPath
+	findChildInstanceIDByPath = shared.FindChildInstanceIDByPath
+	findLinkIDByPath         = shared.FindLinkIDByPath
+)
 
 // RenderDetails renders the right pane content for a selected item.
 func (r *DestroyDetailsRenderer) RenderDetails(item splitpane.Item, width int, s *styles.Styles) string {

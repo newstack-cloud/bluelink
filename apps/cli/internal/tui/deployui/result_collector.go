@@ -3,6 +3,7 @@ package deployui
 import (
 	"strings"
 
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 )
 
@@ -125,43 +126,20 @@ func (c *resultCollector) collectNestedChildren(blueprintChanges *changes.Bluepr
 	}
 }
 
-// buildMapKey builds a path-based key for map lookups.
-func buildMapKey(prefix, name string) string {
-	if prefix == "" {
-		return name
-	}
-	return prefix + "/" + name
-}
+// Re-export shared helper functions for internal use.
+var (
+	buildMapKey      = shared.BuildMapKey
+	buildElementPath = shared.BuildElementPath
+)
 
 // lookupResource looks up a resource by path-based key, falling back to simple name.
 func lookupResource(m map[string]*ResourceDeployItem, pathKey, name string) *ResourceDeployItem {
-	if r, ok := m[pathKey]; ok {
-		return r
-	}
-	if r, ok := m[name]; ok {
-		return r
-	}
-	return nil
+	return shared.LookupByKey(m, pathKey, name)
 }
 
 // lookupChild looks up a child by path-based key, falling back to simple name.
 func lookupChild(m map[string]*ChildDeployItem, pathKey, name string) *ChildDeployItem {
-	if c, ok := m[pathKey]; ok {
-		return c
-	}
-	if c, ok := m[name]; ok {
-		return c
-	}
-	return nil
-}
-
-// buildElementPath constructs a full path like "children.notifications::resources.queue".
-func buildElementPath(parentPath, elementType, elementName string) string {
-	segment := elementType + "." + elementName
-	if parentPath == "" {
-		return segment
-	}
-	return parentPath + "::" + segment
+	return shared.LookupByKey(m, pathKey, name)
 }
 
 func (c *resultCollector) collectResourceResult(item *ResourceDeployItem, path string) {

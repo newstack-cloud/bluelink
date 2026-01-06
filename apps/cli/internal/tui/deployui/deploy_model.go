@@ -47,28 +47,12 @@ const (
 // MaxExpandDepth is the maximum nesting depth for expanding child blueprints.
 const MaxExpandDepth = 2
 
-// ElementFailure represents a failure for a specific element with its root cause reasons.
-type ElementFailure struct {
-	ElementName    string
-	ElementPath    string // Full path like "children.notifications::resources.notificationQueue"
-	ElementType    string // "resource", "child", or "link"
-	FailureReasons []string
-}
-
-// InterruptedElement represents an element that was interrupted during deployment.
-type InterruptedElement struct {
-	ElementName string
-	ElementPath string // Full path like "children.notifications::resources.notificationQueue"
-	ElementType string // "resource", "child", or "link"
-}
-
-// SuccessfulElement represents an element that completed successfully.
-type SuccessfulElement struct {
-	ElementName string
-	ElementPath string // Full path like "children.notifications::resources.notificationQueue"
-	ElementType string // "resource", "child", or "link"
-	Action      string // "created", "updated", "destroyed", etc.
-}
+// Re-export shared result types for backwards compatibility.
+type (
+	ElementFailure     = shared.ElementFailure
+	InterruptedElement = shared.InterruptedElement
+	SuccessfulElement  = shared.SuccessfulElement
+)
 
 // ResourceDeployItem represents a resource being deployed with real-time status.
 type ResourceDeployItem struct {

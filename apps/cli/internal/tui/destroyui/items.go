@@ -1,9 +1,8 @@
 package destroyui
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/deploy-cli-sdk/styles"
 	"github.com/newstack-cloud/deploy-cli-sdk/ui/splitpane"
 )
@@ -45,87 +44,35 @@ func (d *DestroyItem) getIconChar() string {
 	case ItemTypeResource:
 		if d.Resource != nil {
 			if d.Resource.Skipped {
-				return "⊘"
+				return shared.IconSkipped
 			}
 			if d.Resource.Action == ActionNoChange {
-				return "─"
+				return shared.IconNoChange
 			}
-			return resourceStatusIcon(d.Resource.Status)
+			return shared.ResourceStatusIcon(d.Resource.Status)
 		}
 	case ItemTypeChild:
 		if d.Child != nil {
 			if d.Child.Skipped {
-				return "⊘"
+				return shared.IconSkipped
 			}
 			if d.Child.Action == ActionNoChange {
-				return "─"
+				return shared.IconNoChange
 			}
-			return instanceStatusIcon(d.Child.Status)
+			return shared.InstanceStatusIcon(d.Child.Status)
 		}
 	case ItemTypeLink:
 		if d.Link != nil {
 			if d.Link.Skipped {
-				return "⊘"
+				return shared.IconSkipped
 			}
 			if d.Link.Action == ActionNoChange {
-				return "─"
+				return shared.IconNoChange
 			}
-			return linkStatusIcon(d.Link.Status)
+			return shared.LinkStatusIcon(d.Link.Status)
 		}
 	}
-	return "○"
-}
-
-var resourceStatusIcons = map[core.ResourceStatus]string{
-	core.ResourceStatusDestroying:         "◐",
-	core.ResourceStatusDestroyed:          "✓",
-	core.ResourceStatusDestroyFailed:      "✗",
-	core.ResourceStatusRollingBack:        "↺",
-	core.ResourceStatusRollbackFailed:     "⚠",
-	core.ResourceStatusRollbackComplete:   "⟲",
-	core.ResourceStatusDestroyInterrupted: "⏹",
-}
-
-func resourceStatusIcon(status core.ResourceStatus) string {
-	if icon, ok := resourceStatusIcons[status]; ok {
-		return icon
-	}
-	return "○"
-}
-
-var instanceStatusIcons = map[core.InstanceStatus]string{
-	core.InstanceStatusPreparing:               "○",
-	core.InstanceStatusDestroying:              "◐",
-	core.InstanceStatusDestroyed:               "✓",
-	core.InstanceStatusDestroyFailed:           "✗",
-	core.InstanceStatusDestroyRollingBack:      "↺",
-	core.InstanceStatusDestroyRollbackFailed:   "⚠",
-	core.InstanceStatusDestroyRollbackComplete: "⟲",
-	core.InstanceStatusDestroyInterrupted:      "⏹",
-}
-
-func instanceStatusIcon(status core.InstanceStatus) string {
-	if icon, ok := instanceStatusIcons[status]; ok {
-		return icon
-	}
-	return "○"
-}
-
-var linkStatusIcons = map[core.LinkStatus]string{
-	core.LinkStatusDestroying:              "◐",
-	core.LinkStatusDestroyed:               "✓",
-	core.LinkStatusDestroyFailed:           "✗",
-	core.LinkStatusDestroyRollingBack:      "↺",
-	core.LinkStatusDestroyRollbackFailed:   "⚠",
-	core.LinkStatusDestroyRollbackComplete: "⟲",
-	core.LinkStatusDestroyInterrupted:      "⏹",
-}
-
-func linkStatusIcon(status core.LinkStatus) string {
-	if icon, ok := linkStatusIcons[status]; ok {
-		return icon
-	}
-	return "○"
+	return shared.IconPending
 }
 
 // GetIconStyled returns a styled icon for the item.
@@ -144,7 +91,7 @@ func (d *DestroyItem) GetIconStyled(s *styles.Styles, styled bool) string {
 			if d.Resource.Action == ActionNoChange {
 				return s.Muted.Render(icon)
 			}
-			return styleResourceIcon(icon, d.Resource.Status, s)
+			return shared.StyleResourceIcon(icon, d.Resource.Status, s)
 		}
 	case ItemTypeChild:
 		if d.Child != nil {
@@ -154,7 +101,7 @@ func (d *DestroyItem) GetIconStyled(s *styles.Styles, styled bool) string {
 			if d.Child.Action == ActionNoChange {
 				return s.Muted.Render(icon)
 			}
-			return styleInstanceIcon(icon, d.Child.Status, s)
+			return shared.StyleInstanceIcon(icon, d.Child.Status, s)
 		}
 	case ItemTypeLink:
 		if d.Link != nil {
@@ -164,67 +111,10 @@ func (d *DestroyItem) GetIconStyled(s *styles.Styles, styled bool) string {
 			if d.Link.Action == ActionNoChange {
 				return s.Muted.Render(icon)
 			}
-			return styleLinkIcon(icon, d.Link.Status, s)
+			return shared.StyleLinkIcon(icon, d.Link.Status, s)
 		}
 	}
 	return icon
-}
-
-func styleResourceIcon(icon string, status core.ResourceStatus, s *styles.Styles) string {
-	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
-
-	switch status {
-	case core.ResourceStatusDestroying:
-		return s.Info.Render(icon)
-	case core.ResourceStatusDestroyed:
-		return successStyle.Render(icon)
-	case core.ResourceStatusDestroyFailed, core.ResourceStatusRollbackFailed:
-		return s.Error.Render(icon)
-	case core.ResourceStatusRollingBack:
-		return s.Warning.Render(icon)
-	case core.ResourceStatusRollbackComplete:
-		return s.Muted.Render(icon)
-	default:
-		return s.Muted.Render(icon)
-	}
-}
-
-func styleInstanceIcon(icon string, status core.InstanceStatus, s *styles.Styles) string {
-	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
-
-	switch status {
-	case core.InstanceStatusDestroying:
-		return s.Info.Render(icon)
-	case core.InstanceStatusDestroyed:
-		return successStyle.Render(icon)
-	case core.InstanceStatusDestroyFailed, core.InstanceStatusDestroyRollbackFailed:
-		return s.Error.Render(icon)
-	case core.InstanceStatusDestroyRollingBack:
-		return s.Warning.Render(icon)
-	case core.InstanceStatusDestroyRollbackComplete:
-		return s.Muted.Render(icon)
-	default:
-		return s.Muted.Render(icon)
-	}
-}
-
-func styleLinkIcon(icon string, status core.LinkStatus, s *styles.Styles) string {
-	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
-
-	switch status {
-	case core.LinkStatusDestroying:
-		return s.Info.Render(icon)
-	case core.LinkStatusDestroyed:
-		return successStyle.Render(icon)
-	case core.LinkStatusDestroyFailed, core.LinkStatusDestroyRollbackFailed:
-		return s.Error.Render(icon)
-	case core.LinkStatusDestroyRollingBack:
-		return s.Warning.Render(icon)
-	case core.LinkStatusDestroyRollbackComplete:
-		return s.Muted.Render(icon)
-	default:
-		return s.Muted.Render(icon)
-	}
 }
 
 // GetAction returns the action badge text.

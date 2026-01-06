@@ -1,6 +1,7 @@
 package destroyui
 
 import (
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 )
 
@@ -126,54 +127,25 @@ func (c *resultCollector) collectNestedChildren(bpChanges *changes.BlueprintChan
 	}
 }
 
-// buildMapKey builds a path-based key for map lookups.
-func buildMapKey(prefix, name string) string {
-	if prefix == "" {
-		return name
-	}
-	return prefix + "/" + name
-}
+// Re-export shared helper functions for internal use.
+var (
+	buildMapKey      = shared.BuildMapKey
+	buildElementPath = shared.BuildElementPath
+)
 
 // lookupResource looks up a resource by path-based key, falling back to simple name.
 func lookupResource(m map[string]*ResourceDestroyItem, pathKey, name string) *ResourceDestroyItem {
-	if r, ok := m[pathKey]; ok {
-		return r
-	}
-	if r, ok := m[name]; ok {
-		return r
-	}
-	return nil
+	return shared.LookupByKey(m, pathKey, name)
 }
 
 // lookupChild looks up a child by path-based key, falling back to simple name.
 func lookupChild(m map[string]*ChildDestroyItem, pathKey, name string) *ChildDestroyItem {
-	if ch, ok := m[pathKey]; ok {
-		return ch
-	}
-	if ch, ok := m[name]; ok {
-		return ch
-	}
-	return nil
+	return shared.LookupByKey(m, pathKey, name)
 }
 
 // lookupLink looks up a link by path-based key, falling back to simple name.
 func lookupLink(m map[string]*LinkDestroyItem, pathKey, name string) *LinkDestroyItem {
-	if l, ok := m[pathKey]; ok {
-		return l
-	}
-	if l, ok := m[name]; ok {
-		return l
-	}
-	return nil
-}
-
-// buildElementPath constructs a full path like "children.notifications::resources.queue".
-func buildElementPath(parentPath, elementType, elementName string) string {
-	segment := elementType + "." + elementName
-	if parentPath == "" {
-		return segment
-	}
-	return parentPath + "::" + segment
+	return shared.LookupByKey(m, pathKey, name)
 }
 
 func (c *resultCollector) collectResourceResult(item *ResourceDestroyItem, path string) {

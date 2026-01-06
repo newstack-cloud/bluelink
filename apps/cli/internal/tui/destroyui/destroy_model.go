@@ -46,22 +46,13 @@ const (
 // MaxExpandDepth is the maximum nesting depth for expanding child blueprints.
 const MaxExpandDepth = 2
 
-// ElementFailure represents a failure for a specific element with its root cause reasons.
-type ElementFailure struct {
-	ElementName    string
-	ElementPath    string
-	ElementType    string
-	FailureReasons []string
-}
+// Re-export shared result types for backwards compatibility.
+type (
+	ElementFailure     = shared.ElementFailure
+	InterruptedElement = shared.InterruptedElement
+)
 
-// InterruptedElement represents an element that was interrupted during destroy.
-type InterruptedElement struct {
-	ElementName string
-	ElementPath string
-	ElementType string
-}
-
-// DestroyedElement represents an element that completed successfully.
+// DestroyedElement represents an element that was destroyed successfully.
 type DestroyedElement struct {
 	ElementName string
 	ElementPath string

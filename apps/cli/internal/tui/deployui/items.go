@@ -1,9 +1,8 @@
 package deployui
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/deploy-cli-sdk/styles"
@@ -47,104 +46,37 @@ func (i *DeployItem) getIconChar() string {
 	case ItemTypeResource:
 		if i.Resource != nil {
 			if i.Resource.Skipped {
-				return "⊘" // Skipped indicator
+				return shared.IconSkipped
 			}
-			// For no-change items, show a dash to indicate they're unchanged
 			if i.Resource.Action == ActionNoChange {
-				return "─"
+				return shared.IconNoChange
 			}
-			return resourceStatusIcon(i.Resource.Status)
+			return shared.ResourceStatusIcon(i.Resource.Status)
 		}
 	case ItemTypeChild:
 		if i.Child != nil {
 			if i.Child.Skipped {
-				return "⊘" // Skipped indicator
+				return shared.IconSkipped
 			}
-			// For no-change items, show a dash to indicate they're unchanged
 			if i.Child.Action == ActionNoChange {
-				return "─"
+				return shared.IconNoChange
 			}
-			return instanceStatusIcon(i.Child.Status)
+			return shared.InstanceStatusIcon(i.Child.Status)
 		}
 	case ItemTypeLink:
 		if i.Link != nil {
 			if i.Link.Skipped {
-				return "⊘" // Skipped indicator
+				return shared.IconSkipped
 			}
-			// For no-change items, show a dash to indicate they're unchanged
 			if i.Link.Action == ActionNoChange {
-				return "─"
+				return shared.IconNoChange
 			}
-			return linkStatusIcon(i.Link.Status)
+			return shared.LinkStatusIcon(i.Link.Status)
 		}
 	}
-	return "○"
+	return shared.IconPending
 }
 
-func resourceStatusIcon(status core.ResourceStatus) string {
-	switch status {
-	case core.ResourceStatusCreating, core.ResourceStatusUpdating, core.ResourceStatusDestroying:
-		return "◐"
-	case core.ResourceStatusCreated, core.ResourceStatusUpdated, core.ResourceStatusDestroyed:
-		return "✓"
-	case core.ResourceStatusCreateFailed, core.ResourceStatusUpdateFailed, core.ResourceStatusDestroyFailed:
-		return "✗"
-	case core.ResourceStatusRollingBack:
-		return "↺"
-	case core.ResourceStatusRollbackFailed:
-		return "⚠"
-	case core.ResourceStatusRollbackComplete:
-		return "⟲"
-	case core.ResourceStatusCreateInterrupted, core.ResourceStatusUpdateInterrupted, core.ResourceStatusDestroyInterrupted:
-		return "⏹" // Interrupted indicator (stop symbol)
-	default:
-		return "○" // Pending/Unknown
-	}
-}
-
-func instanceStatusIcon(status core.InstanceStatus) string {
-	switch status {
-	case core.InstanceStatusPreparing:
-		return "○"
-	case core.InstanceStatusDeploying, core.InstanceStatusUpdating, core.InstanceStatusDestroying:
-		return "◐"
-	case core.InstanceStatusDeployed, core.InstanceStatusUpdated, core.InstanceStatusDestroyed:
-		return "✓"
-	case core.InstanceStatusDeployFailed, core.InstanceStatusUpdateFailed, core.InstanceStatusDestroyFailed:
-		return "✗"
-	case core.InstanceStatusDeployRollingBack, core.InstanceStatusUpdateRollingBack, core.InstanceStatusDestroyRollingBack:
-		return "↺"
-	case core.InstanceStatusDeployRollbackFailed, core.InstanceStatusUpdateRollbackFailed, core.InstanceStatusDestroyRollbackFailed:
-		return "⚠"
-	case core.InstanceStatusDeployRollbackComplete, core.InstanceStatusUpdateRollbackComplete, core.InstanceStatusDestroyRollbackComplete:
-		return "⟲"
-	case core.InstanceStatusDeployInterrupted, core.InstanceStatusUpdateInterrupted, core.InstanceStatusDestroyInterrupted:
-		return "⏹" // Interrupted indicator (stop symbol)
-	default:
-		return "○"
-	}
-}
-
-func linkStatusIcon(status core.LinkStatus) string {
-	switch status {
-	case core.LinkStatusCreating, core.LinkStatusUpdating, core.LinkStatusDestroying:
-		return "◐"
-	case core.LinkStatusCreated, core.LinkStatusUpdated, core.LinkStatusDestroyed:
-		return "✓"
-	case core.LinkStatusCreateFailed, core.LinkStatusUpdateFailed, core.LinkStatusDestroyFailed:
-		return "✗"
-	case core.LinkStatusCreateRollingBack, core.LinkStatusUpdateRollingBack, core.LinkStatusDestroyRollingBack:
-		return "↺"
-	case core.LinkStatusCreateRollbackFailed, core.LinkStatusUpdateRollbackFailed, core.LinkStatusDestroyRollbackFailed:
-		return "⚠"
-	case core.LinkStatusCreateRollbackComplete, core.LinkStatusUpdateRollbackComplete, core.LinkStatusDestroyRollbackComplete:
-		return "⟲"
-	case core.LinkStatusCreateInterrupted, core.LinkStatusUpdateInterrupted, core.LinkStatusDestroyInterrupted:
-		return "⏹" // Interrupted indicator (stop symbol)
-	default:
-		return "○"
-	}
-}
 
 // GetIconStyled returns a styled icon for the item.
 func (i *DeployItem) GetIconStyled(s *styles.Styles, styled bool) string {
@@ -159,96 +91,33 @@ func (i *DeployItem) GetIconStyled(s *styles.Styles, styled bool) string {
 			if i.Resource.Skipped {
 				return s.Warning.Render(icon)
 			}
-			// No-change items get muted styling
 			if i.Resource.Action == ActionNoChange {
 				return s.Muted.Render(icon)
 			}
-			return styleResourceIcon(icon, i.Resource.Status, s)
+			return shared.StyleResourceIcon(icon, i.Resource.Status, s)
 		}
 	case ItemTypeChild:
 		if i.Child != nil {
 			if i.Child.Skipped {
 				return s.Warning.Render(icon)
 			}
-			// No-change items get muted styling
 			if i.Child.Action == ActionNoChange {
 				return s.Muted.Render(icon)
 			}
-			return styleInstanceIcon(icon, i.Child.Status, s)
+			return shared.StyleInstanceIcon(icon, i.Child.Status, s)
 		}
 	case ItemTypeLink:
 		if i.Link != nil {
 			if i.Link.Skipped {
 				return s.Warning.Render(icon)
 			}
-			// No-change items get muted styling
 			if i.Link.Action == ActionNoChange {
 				return s.Muted.Render(icon)
 			}
-			return styleLinkIcon(icon, i.Link.Status, s)
+			return shared.StyleLinkIcon(icon, i.Link.Status, s)
 		}
 	}
 	return icon
-}
-
-func styleResourceIcon(icon string, status core.ResourceStatus, s *styles.Styles) string {
-	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
-
-	switch status {
-	case core.ResourceStatusCreating, core.ResourceStatusUpdating, core.ResourceStatusDestroying:
-		return s.Info.Render(icon)
-	case core.ResourceStatusCreated, core.ResourceStatusUpdated, core.ResourceStatusDestroyed:
-		return successStyle.Render(icon)
-	case core.ResourceStatusCreateFailed, core.ResourceStatusUpdateFailed, core.ResourceStatusDestroyFailed,
-		core.ResourceStatusRollbackFailed:
-		return s.Error.Render(icon)
-	case core.ResourceStatusRollingBack:
-		return s.Warning.Render(icon)
-	case core.ResourceStatusRollbackComplete:
-		return s.Muted.Render(icon)
-	default:
-		return s.Muted.Render(icon)
-	}
-}
-
-func styleInstanceIcon(icon string, status core.InstanceStatus, s *styles.Styles) string {
-	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
-
-	switch status {
-	case core.InstanceStatusDeploying, core.InstanceStatusUpdating, core.InstanceStatusDestroying:
-		return s.Info.Render(icon)
-	case core.InstanceStatusDeployed, core.InstanceStatusUpdated, core.InstanceStatusDestroyed:
-		return successStyle.Render(icon)
-	case core.InstanceStatusDeployFailed, core.InstanceStatusUpdateFailed, core.InstanceStatusDestroyFailed,
-		core.InstanceStatusDeployRollbackFailed, core.InstanceStatusUpdateRollbackFailed, core.InstanceStatusDestroyRollbackFailed:
-		return s.Error.Render(icon)
-	case core.InstanceStatusDeployRollingBack, core.InstanceStatusUpdateRollingBack, core.InstanceStatusDestroyRollingBack:
-		return s.Warning.Render(icon)
-	case core.InstanceStatusDeployRollbackComplete, core.InstanceStatusUpdateRollbackComplete, core.InstanceStatusDestroyRollbackComplete:
-		return s.Muted.Render(icon)
-	default:
-		return s.Muted.Render(icon)
-	}
-}
-
-func styleLinkIcon(icon string, status core.LinkStatus, s *styles.Styles) string {
-	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
-
-	switch status {
-	case core.LinkStatusCreating, core.LinkStatusUpdating, core.LinkStatusDestroying:
-		return s.Info.Render(icon)
-	case core.LinkStatusCreated, core.LinkStatusUpdated, core.LinkStatusDestroyed:
-		return successStyle.Render(icon)
-	case core.LinkStatusCreateFailed, core.LinkStatusUpdateFailed, core.LinkStatusDestroyFailed,
-		core.LinkStatusCreateRollbackFailed, core.LinkStatusUpdateRollbackFailed, core.LinkStatusDestroyRollbackFailed:
-		return s.Error.Render(icon)
-	case core.LinkStatusCreateRollingBack, core.LinkStatusUpdateRollingBack, core.LinkStatusDestroyRollingBack:
-		return s.Warning.Render(icon)
-	case core.LinkStatusCreateRollbackComplete, core.LinkStatusUpdateRollbackComplete, core.LinkStatusDestroyRollbackComplete:
-		return s.Muted.Render(icon)
-	default:
-		return s.Muted.Render(icon)
-	}
 }
 
 // GetAction returns the action badge text.
