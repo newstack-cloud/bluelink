@@ -26,6 +26,7 @@ ARG TARGETARCH
 
 # Generate version file using the tool's own module (has golang.org/x/mod dependency)
 WORKDIR /build/tools/genversions
+# hadolint ignore=DL3062
 RUN DEPLOY_ENGINE_APPLICATION_VERSION=${DEPLOY_ENGINE_APPLICATION_VERSION} go run main.go
 WORKDIR /build
 
