@@ -10,6 +10,7 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/jsonout"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/inspectui"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/listui"
 	"github.com/newstack-cloud/deploy-cli-sdk/config"
 	"github.com/newstack-cloud/deploy-cli-sdk/engine"
 	"github.com/newstack-cloud/deploy-cli-sdk/headless"
@@ -19,6 +20,7 @@ import (
 )
 
 var errInspectFailed = errors.New("inspect failed")
+var errListFailed = errors.New("list instances failed")
 
 func setupInstancesCommand(rootCmd *cobra.Command, confProvider *config.Provider) {
 	instancesCmd := &cobra.Command{
@@ -29,6 +31,7 @@ deploy engine. Use subcommands to list, inspect, or manage instances.`,
 	}
 
 	setupInstancesInspectCommand(instancesCmd, confProvider)
+	setupInstancesListCommand(instancesCmd, confProvider)
 
 	rootCmd.AddCommand(instancesCmd)
 }
@@ -184,6 +187,111 @@ func runInspect(cmd *cobra.Command, confProvider *config.Provider) error {
 	if finalApp.Error != nil {
 		cmd.SilenceErrors = true
 		return errInspectFailed
+	}
+
+	return nil
+}
+
+func setupInstancesListCommand(instancesCmd *cobra.Command, confProvider *config.Provider) {
+	listCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List blueprint instances",
+		Long: `Lists all blueprint instances managed by the deploy engine.
+
+In interactive mode, the list is paginated and you can filter instances using search.
+Selecting an instance navigates to the inspect view.
+
+Examples:
+  # Interactive mode - browse and filter instances
+  bluelink instances list
+
+  # Filter instances by name
+  bluelink instances list --search "production"
+
+  # Output as JSON (useful for CI/CD or scripting)
+  bluelink instances list --json`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runListInstances(cmd, confProvider)
+		},
+	}
+
+	listCmd.PersistentFlags().String(
+		"search",
+		"",
+		"Filter instances by name (case-insensitive substring match).",
+	)
+	confProvider.BindPFlag("instancesListSearch", listCmd.PersistentFlags().Lookup("search"))
+	confProvider.BindEnvVar("instancesListSearch", "BLUELINK_CLI_INSTANCES_LIST_SEARCH")
+
+	listCmd.PersistentFlags().Bool(
+		"json",
+		false,
+		"Output the instance list as JSON. Implies non-interactive mode.",
+	)
+	confProvider.BindPFlag("instancesListJson", listCmd.PersistentFlags().Lookup("json"))
+	confProvider.BindEnvVar("instancesListJson", "BLUELINK_CLI_INSTANCES_LIST_JSON")
+
+	instancesCmd.AddCommand(listCmd)
+}
+
+func runListInstances(cmd *cobra.Command, confProvider *config.Provider) error {
+	logger, handle, err := utils.SetupLogger()
+	if err != nil {
+		return err
+	}
+	defer handle.Close()
+
+	deployEngine, err := engine.Create(confProvider, logger)
+	if err != nil {
+		return err
+	}
+
+	search, _ := confProvider.GetString("instancesListSearch")
+	jsonMode, _ := confProvider.GetBool("instancesListJson")
+
+	if jsonMode {
+		cmd.SilenceUsage = true
+		cmd.SilenceErrors = true
+	}
+
+	cmd.SilenceUsage = true
+
+	styles := stylespkg.NewStyles(
+		lipgloss.NewRenderer(os.Stdout),
+		stylespkg.NewBluelinkPalette(),
+	)
+	inTerminal := term.IsTerminal(int(os.Stdout.Fd()))
+	headlessMode := !inTerminal || jsonMode
+
+	app, err := listui.NewListApp(
+		deployEngine,
+		logger,
+		search,
+		styles,
+		headlessMode,
+		os.Stdout,
+		jsonMode,
+	)
+	if err != nil {
+		return err
+	}
+
+	options := []tea.ProgramOption{}
+	if !headlessMode {
+		options = append(options, tea.WithAltScreen(), tea.WithMouseCellMotion())
+	} else {
+		options = append(options, tea.WithInput(nil), tea.WithoutRenderer())
+	}
+
+	finalModel, err := tea.NewProgram(app, options...).Run()
+	if err != nil {
+		return err
+	}
+	listApp := finalModel.(listui.MainModel)
+
+	if listApp.Error != nil {
+		cmd.SilenceErrors = true
+		return errListFailed
 	}
 
 	return nil

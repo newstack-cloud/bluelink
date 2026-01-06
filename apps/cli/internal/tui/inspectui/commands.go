@@ -50,8 +50,16 @@ type InstanceStateRefreshedMsg struct {
 // StateRefreshTickMsg triggers a periodic state refresh during streaming.
 type StateRefreshTickMsg struct{}
 
+// BackToListMsg is sent when the user wants to navigate back to the list view.
+type BackToListMsg struct{}
+
 // stateRefreshInterval is the interval between state refreshes during streaming.
 const stateRefreshInterval = 5 * time.Second
+
+// FetchInstanceStateCmd fetches the instance state from the engine (exported for embedding).
+func FetchInstanceStateCmd(model InspectModel) tea.Cmd {
+	return fetchInstanceStateCmd(model)
+}
 
 // fetchInstanceStateCmd fetches the instance state from the engine.
 func fetchInstanceStateCmd(model InspectModel) tea.Cmd {

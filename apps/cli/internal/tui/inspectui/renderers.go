@@ -409,6 +409,7 @@ type InspectFooterRenderer struct {
 	Finished         bool
 	SpinnerView      string
 	HasInstanceState bool
+	EmbeddedInList   bool // When true, shows "esc back to list" instead of "q quit"
 }
 
 var _ splitpane.FooterRenderer = (*InspectFooterRenderer)(nil)
@@ -480,6 +481,10 @@ func (r *InspectFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.S
 	sb.WriteString(s.Muted.Render(" navigate  "))
 	sb.WriteString(s.Key.Render("tab"))
 	sb.WriteString(s.Muted.Render(" switch pane  "))
+	if r.EmbeddedInList {
+		sb.WriteString(s.Key.Render("esc"))
+		sb.WriteString(s.Muted.Render(" back to list  "))
+	}
 	sb.WriteString(s.Key.Render("q"))
 	sb.WriteString(s.Muted.Render(" quit"))
 	sb.WriteString("\n")

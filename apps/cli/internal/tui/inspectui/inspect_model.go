@@ -660,3 +660,26 @@ func isInProgressStatus(status core.InstanceStatus) bool {
 		return false
 	}
 }
+
+// GetError returns the current error from the inspect model.
+func (m *InspectModel) GetError() error {
+	return m.err
+}
+
+// IsFinished returns whether the inspect operation has finished.
+func (m *InspectModel) IsFinished() bool {
+	return m.finished
+}
+
+// SetEmbeddedInList marks the inspect model as embedded within the list UI.
+// This changes the footer to show "esc back to list" instead of just "q quit".
+func (m *InspectModel) SetEmbeddedInList(embedded bool) {
+	m.footerRenderer.EmbeddedInList = embedded
+}
+
+// IsInSubView returns true if the inspect model is showing a sub-view
+// (overview, spec, exports, or drill-down) where esc should close the sub-view
+// rather than navigate back to the list.
+func (m *InspectModel) IsInSubView() bool {
+	return m.showingOverview || m.showingSpecView || m.showingExports || m.splitPane.IsInDrillDown()
+}

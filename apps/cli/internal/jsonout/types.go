@@ -178,3 +178,19 @@ type DestroyDriftOutput struct {
 	Message        string                               `json:"message"`
 	Reconciliation *container.ReconciliationCheckResult `json:"reconciliation"`
 }
+
+// ListInstancesOutput represents the result of listing instances.
+type ListInstancesOutput struct {
+	Success    bool                    `json:"success"`
+	Instances  []ListInstanceItem      `json:"instances"`
+	TotalCount int                     `json:"totalCount"`
+	Search     string                  `json:"search,omitempty"`
+}
+
+// ListInstanceItem represents a single instance in the list output.
+type ListInstanceItem struct {
+	InstanceID            string `json:"instanceId"`
+	InstanceName          string `json:"instanceName"`
+	Status                string `json:"status"`
+	LastDeployedTimestamp int64  `json:"lastDeployedTimestamp"`
+}
