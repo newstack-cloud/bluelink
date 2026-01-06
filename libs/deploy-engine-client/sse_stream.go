@@ -35,7 +35,12 @@ func handleStreamEvents[EventType any](
 			)
 			close(streamTo)
 			return
-		case event := <-internalEventChan:
+		case event, ok := <-internalEventChan:
+			if !ok {
+				// Channel closed by SSE client, stream ended
+				close(streamTo)
+				return
+			}
 			if string(event.Event) == "error" {
 				eventErr := errFromStreamEvent(event)
 				select {
