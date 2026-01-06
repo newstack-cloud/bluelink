@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
@@ -675,6 +676,48 @@ func (c *Client) GetBlueprintInstance(
 	return instance, nil
 }
 
+// ListBlueprintInstances retrieves a paginated list of blueprint instances.
+// The params allow filtering by name and paginating results.
+// This is the `GET {baseURL}/v1/deployments/instances` API endpoint.
+func (c *Client) ListBlueprintInstances(
+	ctx context.Context,
+	params state.ListInstancesParams,
+) (state.ListInstancesResult, error) {
+	url := fmt.Sprintf(
+		"%s/v1/deployments/instances",
+		c.endpoint,
+	)
+
+	queryParams := buildListInstancesQueryParams(params)
+
+	result := state.ListInstancesResult{}
+	err := c.getResourceWithQueryParams(
+		ctx,
+		url,
+		queryParams,
+		&result,
+	)
+	if err != nil {
+		return state.ListInstancesResult{}, err
+	}
+
+	return result, nil
+}
+
+func buildListInstancesQueryParams(params state.ListInstancesParams) map[string]string {
+	queryParams := map[string]string{}
+	if params.Search != "" {
+		queryParams["search"] = params.Search
+	}
+	if params.Offset > 0 {
+		queryParams["offset"] = strconv.Itoa(params.Offset)
+	}
+	if params.Limit > 0 {
+		queryParams["limit"] = strconv.Itoa(params.Limit)
+	}
+	return queryParams
+}
+
 // GetBlueprintInstanceExports retrieves the exports from a blueprint
 // deployment instance.
 // This will return the exported fields from the blueprint instance.
@@ -1040,6 +1083,15 @@ func (c *Client) getResource(
 	url string,
 	respTarget any,
 ) error {
+	return c.getResourceWithQueryParams(ctx, url, nil, respTarget)
+}
+
+func (c *Client) getResourceWithQueryParams(
+	ctx context.Context,
+	url string,
+	queryParams map[string]string,
+	respTarget any,
+) error {
 	headers, err := c.prepareAuthHeaders()
 	if err != nil {
 		return err
@@ -1057,6 +1109,9 @@ func (c *Client) getResource(
 		)
 	}
 	attachHeaders(req, headers)
+	if queryParams != nil {
+		attachQueryParams(req, queryParams)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
