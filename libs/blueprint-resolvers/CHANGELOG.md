@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/newstack-cloud/bluelink/compare/blueprint-resolvers/v0.1.1...blueprint-resolvers/v0.1.2) (2026-01-06)
+
+
+### Dependencies
+
+* **blueprint-resolvers:** update blueprint core lib ([72d09c7](https://github.com/newstack-cloud/bluelink/commit/72d09c7b81943b5ccb6a69e4619391373eb34e68))
+
 ## [0.1.1](https://github.com/newstack-cloud/bluelink/compare/blueprint-resolvers/v0.1.0...blueprint-resolvers/v0.1.1) (2025-12-10)
 
 
