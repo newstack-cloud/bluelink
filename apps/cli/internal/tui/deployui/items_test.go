@@ -468,9 +468,10 @@ func (s *DeployItemsTestSuite) Test_GetChildren_inherits_skipped_status() {
 }
 
 func (s *DeployItemsTestSuite) Test_GetChildren_adds_unchanged_resources_from_instance_state() {
+	// Set Action on the parent child to simulate deploy mode (non-inspect)
 	item := &DeployItem{
 		Type:    ItemTypeChild,
-		Child:   &ChildDeployItem{Name: "childBlueprint"},
+		Child:   &ChildDeployItem{Name: "childBlueprint", Action: ActionUpdate},
 		Changes: &changes.BlueprintChanges{},
 		InstanceState: &state.InstanceState{
 			Resources: map[string]*state.ResourceState{
@@ -490,6 +491,124 @@ func (s *DeployItemsTestSuite) Test_GetChildren_adds_unchanged_resources_from_in
 	childItem := children[0].(*DeployItem)
 	s.Equal("unchangedResource", childItem.Resource.Name)
 	s.Equal(ActionNoChange, childItem.Resource.Action)
+}
+
+func (s *DeployItemsTestSuite) Test_GetChildren_discovers_items_from_shared_maps_during_streaming() {
+	// This test simulates the streaming scenario where:
+	// 1. A child blueprint item exists with empty Changes and nil InstanceState
+	// 2. Resources have been added to the shared maps via streaming events
+	// 3. GetChildren should discover these resources from the maps
+
+	resourcesByName := make(map[string]*ResourceDeployItem)
+	childrenByName := make(map[string]*ChildDeployItem)
+	linksByName := make(map[string]*LinkDeployItem)
+
+	// Simulate a resource added via streaming event with path-based key
+	resourcesByName["streamingChild/streamedResource"] = &ResourceDeployItem{
+		Name:         "streamedResource",
+		ResourceID:   "res-streaming-123",
+		ResourceType: "aws/lambda/function",
+		Action:       ActionInspect,
+		Status:       core.ResourceStatusCreating,
+	}
+
+	// Simulate a nested child added via streaming event
+	childrenByName["streamingChild/nestedChild"] = &ChildDeployItem{
+		Name:    "nestedChild",
+		Action:  ActionInspect,
+		Changes: &changes.BlueprintChanges{},
+	}
+
+	// Simulate a link added via streaming event
+	linksByName["streamingChild/resourceA::resourceB"] = &LinkDeployItem{
+		LinkName:      "resourceA::resourceB",
+		ResourceAName: "resourceA",
+		ResourceBName: "resourceB",
+		Action:        ActionInspect,
+		Status:        core.LinkStatusCreating,
+	}
+
+	// Create a child item representing a child blueprint during streaming
+	// Note: both Changes and InstanceState can be nil/empty in streaming
+	item := &DeployItem{
+		Type:            ItemTypeChild,
+		Child:           &ChildDeployItem{Name: "streamingChild", Action: ActionInspect},
+		Changes:         &changes.BlueprintChanges{}, // Empty changes
+		InstanceState:   nil,                         // No state yet during streaming
+		resourcesByName: resourcesByName,
+		childrenByName:  childrenByName,
+		linksByName:     linksByName,
+	}
+
+	children := item.GetChildren()
+
+	// Should find all 3 items from the shared maps
+	s.Len(children, 3)
+
+	// Verify the items were discovered correctly
+	var foundResource, foundChild, foundLink bool
+	for _, child := range children {
+		childItem := child.(*DeployItem)
+		switch childItem.Type {
+		case ItemTypeResource:
+			s.Equal("streamedResource", childItem.Resource.Name)
+			s.Equal(ActionInspect, childItem.Resource.Action)
+			s.Equal(core.ResourceStatusCreating, childItem.Resource.Status)
+			foundResource = true
+		case ItemTypeChild:
+			s.Equal("nestedChild", childItem.Child.Name)
+			s.Equal(ActionInspect, childItem.Child.Action)
+			foundChild = true
+		case ItemTypeLink:
+			s.Equal("resourceA::resourceB", childItem.Link.LinkName)
+			s.Equal(ActionInspect, childItem.Link.Action)
+			foundLink = true
+		}
+	}
+	s.True(foundResource, "should find resource from shared map")
+	s.True(foundChild, "should find child from shared map")
+	s.True(foundLink, "should find link from shared map")
+}
+
+func (s *DeployItemsTestSuite) Test_GetChildren_only_discovers_direct_children_from_shared_maps() {
+	// This test ensures that GetChildren only discovers direct children,
+	// not grandchildren or items from other parent paths
+
+	resourcesByName := make(map[string]*ResourceDeployItem)
+
+	// Direct child - should be discovered
+	resourcesByName["parentChild/directResource"] = &ResourceDeployItem{
+		Name:   "directResource",
+		Action: ActionInspect,
+	}
+
+	// Grandchild - should NOT be discovered
+	resourcesByName["parentChild/nestedChild/grandchildResource"] = &ResourceDeployItem{
+		Name:   "grandchildResource",
+		Action: ActionInspect,
+	}
+
+	// Sibling's child - should NOT be discovered
+	resourcesByName["otherChild/siblingResource"] = &ResourceDeployItem{
+		Name:   "siblingResource",
+		Action: ActionInspect,
+	}
+
+	item := &DeployItem{
+		Type:            ItemTypeChild,
+		Child:           &ChildDeployItem{Name: "parentChild", Action: ActionInspect},
+		Changes:         &changes.BlueprintChanges{},
+		resourcesByName: resourcesByName,
+		childrenByName:  make(map[string]*ChildDeployItem),
+		linksByName:     make(map[string]*LinkDeployItem),
+	}
+
+	children := item.GetChildren()
+
+	// Should only find the direct child
+	s.Len(children, 1)
+	childItem := children[0].(*DeployItem)
+	s.Equal("directResource", childItem.Resource.Name)
 }
 
 // resourceStatusIcon tests

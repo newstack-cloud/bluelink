@@ -41,6 +41,7 @@ const (
 	ActionDelete   = shared.ActionDelete
 	ActionRecreate = shared.ActionRecreate
 	ActionNoChange = shared.ActionNoChange
+	ActionInspect  = shared.ActionInspect
 )
 
 // MaxExpandDepth is the maximum nesting depth for expanding child blueprints.
@@ -272,6 +273,10 @@ func (m DeployModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handlePreDeployInstanceStateFetched(msg)
 	case PostDeployInstanceStateFetchedMsg:
 		return m.handlePostDeployInstanceStateFetched(msg)
+	case DeployStateRefreshTickMsg:
+		return m.handleDeployStateRefreshTick()
+	case DeployStateRefreshedMsg:
+		return m.handleDeployStateRefreshed(msg)
 	case driftui.DriftDetectedMsg:
 		return m.handleDriftDetected(msg)
 	case driftui.ReconciliationCompleteMsg:
@@ -411,13 +416,19 @@ func (m DeployModel) handleDeployStarted(msg DeployStartedMsg) (tea.Model, tea.C
 	}
 
 	m.detailsRenderer.NavigationStackDepth = len(m.splitPane.NavigationStack())
-	return m, tea.Batch(waitForNextDeployEventCmd(m), checkForErrCmd(m))
+	return m, tea.Batch(
+		waitForNextDeployEventCmd(m),
+		checkForErrCmd(m),
+		startDeployStateRefreshTickerCmd(),
+	)
 }
 
 func (m DeployModel) handleDeployEvent(msg DeployEventMsg) (tea.Model, tea.Cmd) {
 	event := types.BlueprintInstanceEvent(msg)
 	m.processEvent(&event)
-	m.splitPane.SetItems(ToSplitPaneItems(m.items))
+	m.splitPane.UpdateItems(ToSplitPaneItems(m.items))
+	// Explicitly refresh viewports to ensure details view is updated
+	m.splitPane.RefreshViewports()
 
 	cmds := []tea.Cmd{checkForErrCmd(m)}
 
@@ -447,7 +458,7 @@ func (m DeployModel) handleDeployEvent(msg DeployEventMsg) (tea.Model, tea.Cmd) 
 	if IsFailedStatus(finishData.Status) {
 		m.markPendingItemsAsSkipped()
 		m.markInProgressItemsAsInterrupted()
-		m.splitPane.SetItems(ToSplitPaneItems(m.items))
+		m.splitPane.UpdateItems(ToSplitPaneItems(m.items))
 	}
 
 	m.collectDeploymentResults()
@@ -537,6 +548,121 @@ func (m DeployModel) handlePostDeployInstanceStateFetched(msg PostDeployInstance
 	}
 
 	return m, nil
+}
+
+func (m DeployModel) handleDeployStateRefreshTick() (tea.Model, tea.Cmd) {
+	// Only refresh if still streaming and not finished
+	if !m.streaming || m.finished {
+		return m, nil
+	}
+	return m, tea.Batch(
+		refreshDeployInstanceStateCmd(m),
+		startDeployStateRefreshTickerCmd(),
+	)
+}
+
+func (m DeployModel) handleDeployStateRefreshed(msg DeployStateRefreshedMsg) (tea.Model, tea.Cmd) {
+	if msg.InstanceState == nil || !m.streaming {
+		return m, nil
+	}
+
+	// Hydrate existing items with updated ResourceState
+	m.refreshInstanceState(msg.InstanceState)
+
+	// Update the split pane items (preserves selection)
+	m.splitPane.UpdateItems(ToSplitPaneItems(m.items))
+	// Explicitly refresh viewports to ensure details view is updated
+	m.splitPane.RefreshViewports()
+
+	return m, nil
+}
+
+// refreshInstanceState hydrates existing items with the latest state data.
+func (m *DeployModel) refreshInstanceState(instanceState *state.InstanceState) {
+	// Update renderer's reference to instance state
+	m.detailsRenderer.PostDeployInstanceState = instanceState
+
+	// Hydrate existing resource items with updated ResourceState
+	for i := range m.items {
+		m.hydrateItemFromState(&m.items[i], instanceState)
+	}
+}
+
+// hydrateItemFromState updates a deploy item with the latest state data.
+func (m *DeployModel) hydrateItemFromState(item *DeployItem, instanceState *state.InstanceState) {
+	switch item.Type {
+	case ItemTypeResource:
+		m.hydrateResourceFromState(item, instanceState)
+	case ItemTypeChild:
+		m.hydrateChildFromState(item, instanceState)
+	case ItemTypeLink:
+		m.hydrateLinkFromState(item, instanceState)
+	}
+}
+
+func (m *DeployModel) hydrateResourceFromState(item *DeployItem, instanceState *state.InstanceState) {
+	if item.Resource == nil || instanceState == nil {
+		return
+	}
+
+	// Find the resource state in the instance
+	if instanceState.ResourceIDs == nil || instanceState.Resources == nil {
+		return
+	}
+	resourceID, ok := instanceState.ResourceIDs[item.Resource.Name]
+	if !ok {
+		return
+	}
+	resourceState := instanceState.Resources[resourceID]
+	if resourceState != nil {
+		item.Resource.ResourceState = resourceState
+		if item.Resource.ResourceID == "" {
+			item.Resource.ResourceID = resourceState.ResourceID
+		}
+		if item.Resource.ResourceType == "" {
+			item.Resource.ResourceType = resourceState.Type
+		}
+	}
+
+	// Update the item's instance state reference
+	item.InstanceState = instanceState
+}
+
+func (m *DeployModel) hydrateChildFromState(item *DeployItem, instanceState *state.InstanceState) {
+	if item.Child == nil || instanceState == nil {
+		return
+	}
+
+	// Find the child instance state
+	if instanceState.ChildBlueprints == nil {
+		return
+	}
+	childState := instanceState.ChildBlueprints[item.Child.Name]
+	if childState != nil {
+		if item.Child.ChildInstanceID == "" {
+			item.Child.ChildInstanceID = childState.InstanceID
+		}
+		item.InstanceState = childState
+	}
+}
+
+func (m *DeployModel) hydrateLinkFromState(item *DeployItem, instanceState *state.InstanceState) {
+	if item.Link == nil || instanceState == nil {
+		return
+	}
+
+	// Find the link state
+	if instanceState.Links == nil {
+		return
+	}
+	linkState := instanceState.Links[item.Link.LinkName]
+	if linkState != nil {
+		if item.Link.LinkID == "" {
+			item.Link.LinkID = linkState.LinkID
+		}
+	}
+
+	item.InstanceState = instanceState
 }
 
 func (m DeployModel) handleDriftDetected(msg driftui.DriftDetectedMsg) (tea.Model, tea.Cmd) {
@@ -663,6 +789,18 @@ func (m DeployModel) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	// Toggle spec view when a resource with spec data is selected
+	// (available during deployment once the resource has completed and state is refreshed)
+	if msg.String() == "s" || msg.String() == "S" {
+		resourceState, resourceName := m.getSelectedResourceState()
+		if resourceState != nil && resourceState.SpecData != nil {
+			m.showingSpecView = true
+			m.specViewport.SetContent(m.renderSpecContent(resourceState, resourceName))
+			m.specViewport.GotoTop()
+			return m, nil
+		}
+	}
+
 	// Toggle deployment overview when deployment has finished
 	if m.finished {
 		if msg.String() == "o" || msg.String() == "O" {
@@ -670,16 +808,6 @@ func (m DeployModel) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.overviewViewport.SetContent(m.renderOverviewContent())
 			m.overviewViewport.GotoTop()
 			return m, nil
-		}
-		// Toggle spec view when a resource is selected
-		if msg.String() == "s" || msg.String() == "S" {
-			resourceState, resourceName := m.getSelectedResourceState()
-			if resourceState != nil && resourceState.SpecData != nil {
-				m.showingSpecView = true
-				m.specViewport.SetContent(m.renderSpecContent(resourceState, resourceName))
-				m.specViewport.GotoTop()
-				return m, nil
-			}
 		}
 	}
 

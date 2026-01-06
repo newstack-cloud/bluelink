@@ -217,11 +217,13 @@ func (s *DestroyTUISuite) Test_successful_destroy_single_resource() {
 
 	testModel.Send(StartDestroyMsg{})
 
+	// Wait for destroy to complete - "complete" appears in footer when finished
 	testutils.WaitForContainsAll(
 		s.T(),
 		testModel.Output(),
 		"test-resource",
 		"Destroyed",
+		"complete", // destroy finished
 	)
 
 	testutils.KeyQ(testModel)
@@ -259,12 +261,14 @@ func (s *DestroyTUISuite) Test_successful_destroy_multiple_resources() {
 
 	testModel.Send(StartDestroyMsg{})
 
+	// Wait for destroy to complete - "complete" appears in footer when finished
 	testutils.WaitForContainsAll(
 		s.T(),
 		testModel.Output(),
 		"resource-1",
 		"resource-2",
 		"resource-3",
+		"complete", // destroy finished
 	)
 
 	testutils.KeyQ(testModel)
@@ -343,11 +347,13 @@ func (s *DestroyTUISuite) Test_destroy_with_links() {
 
 	testModel.Send(StartDestroyMsg{})
 
+	// Wait for destroy to complete - "complete" appears in footer when finished
 	testutils.WaitForContainsAll(
 		s.T(),
 		testModel.Output(),
 		"resource-a::resource-b",
 		"Destroyed",
+		"complete", // destroy finished
 	)
 
 	testutils.KeyQ(testModel)

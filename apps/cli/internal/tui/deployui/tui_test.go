@@ -487,12 +487,14 @@ func (s *DeployTUISuite) Test_deployment_with_multiple_resources() {
 
 	testModel.Send(StartDeployMsg{})
 
+	// Wait for deployment to complete - "complete" appears in footer when finished
 	testutils.WaitForContainsAll(
 		s.T(),
 		testModel.Output(),
 		"resource-1",
 		"resource-2",
 		"resource-3",
+		"complete", // deployment finished
 	)
 
 	testutils.KeyQ(testModel)

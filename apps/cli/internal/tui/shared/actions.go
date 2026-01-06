@@ -24,6 +24,9 @@ const (
 	ActionDelete   ActionType = "DELETE"
 	ActionRecreate ActionType = "RECREATE"
 	ActionNoChange ActionType = "NO CHANGE"
+	// ActionInspect indicates the item is being viewed in inspect mode.
+	// The icon will be rendered based on the item's actual status rather than its action.
+	ActionInspect ActionType = ""
 )
 
 // DetermineResourceAction determines the appropriate action based on item state and changes.

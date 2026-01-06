@@ -391,6 +391,37 @@ type PostDeployInstanceStateFetchedMsg struct {
 	InstanceState *state.InstanceState
 }
 
+// DeployStateRefreshedMsg is sent when the instance state has been refreshed during deployment.
+type DeployStateRefreshedMsg struct {
+	InstanceState *state.InstanceState
+}
+
+// DeployStateRefreshTickMsg triggers a periodic state refresh during deployment.
+type DeployStateRefreshTickMsg struct{}
+
+// deployStateRefreshInterval is the interval between state refreshes during deployment.
+const deployStateRefreshInterval = 5 * time.Second
+
+// startDeployStateRefreshTickerCmd starts the periodic state refresh ticker for deployment.
+func startDeployStateRefreshTickerCmd() tea.Cmd {
+	return tea.Tick(deployStateRefreshInterval, func(t time.Time) tea.Msg {
+		return DeployStateRefreshTickMsg{}
+	})
+}
+
+// refreshDeployInstanceStateCmd refreshes the instance state during deployment.
+func refreshDeployInstanceStateCmd(model DeployModel) tea.Cmd {
+	return func() tea.Msg {
+		instanceState := stateutil.FetchInstanceState(model.engine, model.instanceID, model.instanceName)
+		if instanceState == nil {
+			return nil
+		}
+		return DeployStateRefreshedMsg{
+			InstanceState: instanceState,
+		}
+	}
+}
+
 // fetchPostDeployInstanceStateCmd fetches the instance state after deployment completes.
 // This is used to get updated computed fields (outputs) for display in the UI.
 func fetchPostDeployInstanceStateCmd(model DeployModel) tea.Cmd {

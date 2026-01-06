@@ -114,6 +114,7 @@ func NewDeployConfigFormModel(
 			Description("Stage now, or use an existing changeset ID.").
 			Affirmative("Yes, stage now").
 			Negative("No, use existing changeset").
+			WithButtonAlignment(lipgloss.Left).
 			Value(&model.stageFirst),
 	)
 
@@ -144,6 +145,7 @@ func NewDeployConfigFormModel(
 			Description("Skip confirmation after staging.").
 			Affirmative("Yes, skip confirmation").
 			Negative("No, ask before deploy").
+			WithButtonAlignment(lipgloss.Left).
 			Value(&model.autoApprove),
 	).WithHideFunc(func() bool {
 		return !model.stageFirst
@@ -157,6 +159,7 @@ func NewDeployConfigFormModel(
 			Description("Automatically rollback on deployment failure.").
 			Affirmative("Yes, auto-rollback").
 			Negative("No, keep failed state").
+			WithButtonAlignment(lipgloss.Left).
 			Value(&model.autoRollback),
 	)
 

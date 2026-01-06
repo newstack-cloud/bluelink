@@ -1,8 +1,6 @@
 package deployui
 
 import (
-	"log"
-
 	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -332,6 +330,10 @@ func (i *DeployItem) GetChildren() []splitpane.Item {
 	// Then add unchanged items from InstanceState
 	items = i.appendUnchangedItemsFromInstanceState(items, parentSkipped, addedResources, addedChildren, addedLinks)
 
+	// Finally, add items discovered from shared maps (for streaming scenarios where items
+	// exist in the lookup maps but aren't yet in Changes or InstanceState)
+	items = i.appendItemsFromSharedMaps(items, parentSkipped, addedResources, addedChildren, addedLinks)
+
 	return items
 }
 
@@ -414,19 +416,14 @@ func (i *DeployItem) getOrCreateResourceItem(name string, action ActionType, ski
 	if i.resourcesByName != nil {
 		// First try path-based lookup
 		if existing, ok := i.resourcesByName[resourcePath]; ok {
-			log.Printf("DEBUG getOrCreateResourceItem: found existing resource=%s path=%s status=%v in shared map\n", name, resourcePath, existing.Status)
 			existing.Skipped = skipped
 			return existing, resourcePath
 		}
 		// Fall back to simple name lookup for backwards compatibility
 		if existing, ok := i.resourcesByName[name]; ok {
-			log.Printf("DEBUG getOrCreateResourceItem: found existing resource=%s (simple key) status=%v in shared map\n", name, existing.Status)
 			existing.Skipped = skipped
 			return existing, resourcePath
 		}
-		log.Printf("DEBUG getOrCreateResourceItem: resource=%s path=%s NOT found in shared map (map has %d entries)\n", name, resourcePath, len(i.resourcesByName))
-	} else {
-		log.Printf("DEBUG getOrCreateResourceItem: resourcesByName is nil for resource=%s\n", name)
 	}
 	// Create a new item if not found
 	newItem := &ResourceDeployItem{
@@ -451,7 +448,6 @@ func (i *DeployItem) getOrCreateResourceItemWithChanges(name string, action Acti
 	if i.resourcesByName != nil {
 		// First try path-based lookup
 		if existing, ok := i.resourcesByName[resourcePath]; ok {
-			log.Printf("DEBUG getOrCreateResourceItemWithChanges: found existing resource=%s path=%s status=%v in shared map\n", name, resourcePath, existing.Status)
 			existing.Skipped = skipped
 			// Update with changes data if not already set
 			if existing.Changes == nil && changes != nil {
@@ -462,7 +458,6 @@ func (i *DeployItem) getOrCreateResourceItemWithChanges(name string, action Acti
 		}
 		// Fall back to simple name lookup for backwards compatibility
 		if existing, ok := i.resourcesByName[name]; ok {
-			log.Printf("DEBUG getOrCreateResourceItemWithChanges: found existing resource=%s (simple key) status=%v in shared map\n", name, existing.Status)
 			existing.Skipped = skipped
 			// Update with changes data if not already set
 			if existing.Changes == nil && changes != nil {
@@ -471,9 +466,6 @@ func (i *DeployItem) getOrCreateResourceItemWithChanges(name string, action Acti
 			}
 			return existing, resourcePath
 		}
-		log.Printf("DEBUG getOrCreateResourceItemWithChanges: resource=%s path=%s NOT found in shared map (map has %d entries)\n", name, resourcePath, len(i.resourcesByName))
-	} else {
-		log.Printf("DEBUG getOrCreateResourceItemWithChanges: resourcesByName is nil for resource=%s\n", name)
 	}
 
 	// Create a new item if not found
@@ -608,19 +600,14 @@ func (i *DeployItem) getOrCreateChildItem(name string, action ActionType, nested
 	if i.childrenByName != nil {
 		// First try path-based lookup
 		if existing, ok := i.childrenByName[childPath]; ok {
-			log.Printf("DEBUG getOrCreateChildItem: found existing child=%s path=%s status=%v in shared map\n", name, childPath, existing.Status)
 			existing.Skipped = skipped
 			return existing, childPath
 		}
 		// Fall back to simple name lookup for backwards compatibility
 		if existing, ok := i.childrenByName[name]; ok {
-			log.Printf("DEBUG getOrCreateChildItem: found existing child=%s (simple key) status=%v in shared map\n", name, existing.Status)
 			existing.Skipped = skipped
 			return existing, childPath
 		}
-		log.Printf("DEBUG getOrCreateChildItem: child=%s path=%s NOT found in shared map (map has %d entries)\n", name, childPath, len(i.childrenByName))
-	} else {
-		log.Printf("DEBUG getOrCreateChildItem: childrenByName is nil for child=%s\n", name)
 	}
 	// Create a new item if not found
 	newItem := &ChildDeployItem{
@@ -764,24 +751,16 @@ func (i *DeployItem) appendUnchangedItemsFromInstanceState(
 		return items
 	}
 
+	// Determine the default action for new items based on the parent's action.
+	// If the parent is in inspect mode (ActionInspect), children should also use ActionInspect.
+	defaultAction := i.getDefaultChildAction()
+
 	// Add resources from instance state that have no changes
 	for _, resourceState := range i.InstanceState.Resources {
 		if addedResources[resourceState.Name] {
 			continue
 		}
-		resourcePath := i.buildChildPath(resourceState.Name)
-		resourceItem := &ResourceDeployItem{
-			Name:          resourceState.Name,
-			ResourceID:    resourceState.ResourceID,
-			ResourceType:  resourceState.Type,
-			Action:        ActionNoChange,
-			ResourceState: resourceState,
-			Skipped:       parentSkipped,
-		}
-		// Store in shared map
-		if i.resourcesByName != nil {
-			i.resourcesByName[resourcePath] = resourceItem
-		}
+		resourceItem, resourcePath := i.getOrCreateResourceItemFromState(resourceState, defaultAction, parentSkipped)
 		items = append(items, &DeployItem{
 			Type:            ItemTypeResource,
 			Resource:        resourceItem,
@@ -793,6 +772,7 @@ func (i *DeployItem) appendUnchangedItemsFromInstanceState(
 			resourcesByName: i.resourcesByName,
 			linksByName:     i.linksByName,
 		})
+		addedResources[resourceState.Name] = true
 	}
 
 	// Add child blueprints from instance state that have no changes
@@ -800,22 +780,11 @@ func (i *DeployItem) appendUnchangedItemsFromInstanceState(
 		if addedChildren[name] {
 			continue
 		}
-		childPath := i.buildChildPath(name)
-		childItem := &ChildDeployItem{
-			Name:    name,
-			Action:  ActionNoChange,
-			Skipped: parentSkipped,
-			// Provide empty changes so the child can still be expanded
-			Changes: &changes.BlueprintChanges{},
-		}
-		// Store in shared map
-		if i.childrenByName != nil {
-			i.childrenByName[childPath] = childItem
-		}
+		childItem, childPath := i.getOrCreateChildItemFromState(name, defaultAction, parentSkipped)
 		items = append(items, &DeployItem{
 			Type:            ItemTypeChild,
 			Child:           childItem,
-			Changes:         &changes.BlueprintChanges{},
+			Changes:         childItem.Changes,
 			ParentChild:     i.GetID(),
 			Depth:           i.Depth + 1,
 			Path:            childPath,
@@ -824,6 +793,7 @@ func (i *DeployItem) appendUnchangedItemsFromInstanceState(
 			resourcesByName: i.resourcesByName,
 			linksByName:     i.linksByName,
 		})
+		addedChildren[name] = true
 	}
 
 	// Add links from instance state that have no changes
@@ -831,20 +801,7 @@ func (i *DeployItem) appendUnchangedItemsFromInstanceState(
 		if addedLinks[linkName] {
 			continue
 		}
-		linkPath := i.buildChildPath(linkName)
-		linkItem := &LinkDeployItem{
-			LinkID:        linkState.LinkID,
-			LinkName:      linkName,
-			ResourceAName: extractResourceAFromLinkName(linkName),
-			ResourceBName: extractResourceBFromLinkName(linkName),
-			Action:        ActionNoChange,
-			Status:        linkState.Status,
-			Skipped:       parentSkipped,
-		}
-		// Store in shared map
-		if i.linksByName != nil {
-			i.linksByName[linkPath] = linkItem
-		}
+		linkItem, linkPath := i.getOrCreateLinkItemFromState(linkName, linkState, defaultAction, parentSkipped)
 		items = append(items, &DeployItem{
 			Type:            ItemTypeLink,
 			Link:            linkItem,
@@ -856,9 +813,169 @@ func (i *DeployItem) appendUnchangedItemsFromInstanceState(
 			resourcesByName: i.resourcesByName,
 			linksByName:     i.linksByName,
 		})
+		addedLinks[linkName] = true
 	}
 
 	return items
+}
+
+// getDefaultChildAction returns the action to use for child items created from state.
+// If the parent has ActionInspect, children inherit that; otherwise ActionNoChange.
+func (i *DeployItem) getDefaultChildAction() ActionType {
+	if i.Child != nil && i.Child.Action == ActionInspect {
+		return ActionInspect
+	}
+	return ActionNoChange
+}
+
+// appendItemsFromSharedMaps discovers items from the shared lookup maps that haven't been
+// added from Changes or InstanceState. This handles the streaming scenario where items
+// are added to the maps via events but the parent's Changes/InstanceState don't yet reflect them.
+func (i *DeployItem) appendItemsFromSharedMaps(
+	items []splitpane.Item,
+	parentSkipped bool,
+	addedResources map[string]bool,
+	addedChildren map[string]bool,
+	addedLinks map[string]bool,
+) []splitpane.Item {
+	if i.Child == nil {
+		return items
+	}
+
+	pathPrefix := i.buildChildPath("")
+	defaultAction := i.getDefaultChildAction()
+
+	items = i.appendResourcesFromSharedMaps(items, pathPrefix, parentSkipped, addedResources, defaultAction)
+	items = i.appendChildrenFromSharedMaps(items, pathPrefix, parentSkipped, addedChildren, defaultAction)
+	items = i.appendLinksFromSharedMaps(items, pathPrefix, parentSkipped, addedLinks, defaultAction)
+
+	return items
+}
+
+func (i *DeployItem) appendResourcesFromSharedMaps(
+	items []splitpane.Item,
+	pathPrefix string,
+	parentSkipped bool,
+	addedResources map[string]bool,
+	defaultAction ActionType,
+) []splitpane.Item {
+	if i.resourcesByName == nil {
+		return items
+	}
+
+	for path, resourceItem := range i.resourcesByName {
+		if !i.isDirectChild(path, pathPrefix) {
+			continue
+		}
+		if addedResources[resourceItem.Name] {
+			continue
+		}
+		resourceItem.Skipped = parentSkipped
+		items = append(items, &DeployItem{
+			Type:            ItemTypeResource,
+			Resource:        resourceItem,
+			ParentChild:     i.GetID(),
+			Depth:           i.Depth + 1,
+			Path:            path,
+			InstanceState:   i.InstanceState,
+			childrenByName:  i.childrenByName,
+			resourcesByName: i.resourcesByName,
+			linksByName:     i.linksByName,
+		})
+		addedResources[resourceItem.Name] = true
+	}
+	return items
+}
+
+func (i *DeployItem) appendChildrenFromSharedMaps(
+	items []splitpane.Item,
+	pathPrefix string,
+	parentSkipped bool,
+	addedChildren map[string]bool,
+	defaultAction ActionType,
+) []splitpane.Item {
+	if i.childrenByName == nil {
+		return items
+	}
+
+	for path, childItem := range i.childrenByName {
+		if !i.isDirectChild(path, pathPrefix) {
+			continue
+		}
+		if addedChildren[childItem.Name] {
+			continue
+		}
+		childItem.Skipped = parentSkipped
+		items = append(items, &DeployItem{
+			Type:            ItemTypeChild,
+			Child:           childItem,
+			Changes:         childItem.Changes,
+			ParentChild:     i.GetID(),
+			Depth:           i.Depth + 1,
+			Path:            path,
+			childrenByName:  i.childrenByName,
+			resourcesByName: i.resourcesByName,
+			linksByName:     i.linksByName,
+		})
+		addedChildren[childItem.Name] = true
+	}
+	return items
+}
+
+func (i *DeployItem) appendLinksFromSharedMaps(
+	items []splitpane.Item,
+	pathPrefix string,
+	parentSkipped bool,
+	addedLinks map[string]bool,
+	defaultAction ActionType,
+) []splitpane.Item {
+	if i.linksByName == nil {
+		return items
+	}
+
+	for path, linkItem := range i.linksByName {
+		if !i.isDirectChild(path, pathPrefix) {
+			continue
+		}
+		if addedLinks[linkItem.LinkName] {
+			continue
+		}
+		linkItem.Skipped = parentSkipped
+		items = append(items, &DeployItem{
+			Type:            ItemTypeLink,
+			Link:            linkItem,
+			ParentChild:     i.GetID(),
+			Depth:           i.Depth + 1,
+			Path:            path,
+			InstanceState:   i.InstanceState,
+			childrenByName:  i.childrenByName,
+			resourcesByName: i.resourcesByName,
+			linksByName:     i.linksByName,
+		})
+		addedLinks[linkItem.LinkName] = true
+	}
+	return items
+}
+
+// isDirectChild checks if a path is a direct child of the given prefix.
+// A direct child has exactly one path component after the prefix.
+// Example: pathPrefix="parent/", path="parent/child" -> true
+// Example: pathPrefix="parent/", path="parent/child/grandchild" -> false
+func (i *DeployItem) isDirectChild(path, pathPrefix string) bool {
+	if len(path) <= len(pathPrefix) {
+		return false
+	}
+	if path[:len(pathPrefix)] != pathPrefix {
+		return false
+	}
+	// Check there's no additional slash in the remainder
+	remainder := path[len(pathPrefix):]
+	for _, c := range remainder {
+		if c == '/' {
+			return false
+		}
+	}
+	return true
 }
 
 // getOrCreateLinkItem looks up a link item from the shared map, or creates one if it doesn't exist.
@@ -894,6 +1011,139 @@ func (i *DeployItem) getOrCreateLinkItem(linkName, resourceAName, resourceBName 
 	return newItem, linkPath
 }
 
+// getOrCreateResourceItemFromState looks up a resource item from the shared map, or creates one
+// using instance state data. It handles migration from simple name keys to path-based keys
+// and hydrates the item with state data.
+func (i *DeployItem) getOrCreateResourceItemFromState(resourceState *state.ResourceState, action ActionType, skipped bool) (*ResourceDeployItem, string) {
+	resourcePath := i.buildChildPath(resourceState.Name)
+
+	if i.resourcesByName != nil {
+		// First try path-based lookup
+		if existing, ok := i.resourcesByName[resourcePath]; ok {
+			existing.Skipped = skipped
+			i.hydrateResourceItemFromState(existing, resourceState)
+			return existing, resourcePath
+		}
+		// Fall back to simple name lookup and migrate to path-based key
+		if existing, ok := i.resourcesByName[resourceState.Name]; ok {
+			existing.Skipped = skipped
+			delete(i.resourcesByName, resourceState.Name)
+			i.resourcesByName[resourcePath] = existing
+			i.hydrateResourceItemFromState(existing, resourceState)
+			return existing, resourcePath
+		}
+	}
+
+	// Create new item from state
+	newItem := &ResourceDeployItem{
+		Name:          resourceState.Name,
+		ResourceID:    resourceState.ResourceID,
+		ResourceType:  resourceState.Type,
+		Action:        action,
+		Status:        resourceState.Status,
+		ResourceState: resourceState,
+		Skipped:       skipped,
+	}
+	if i.resourcesByName != nil {
+		i.resourcesByName[resourcePath] = newItem
+	}
+	return newItem, resourcePath
+}
+
+// hydrateResourceItemFromState fills in resource item fields from state if not already set.
+func (i *DeployItem) hydrateResourceItemFromState(item *ResourceDeployItem, resourceState *state.ResourceState) {
+	if item.ResourceState == nil {
+		item.ResourceState = resourceState
+	}
+	if item.ResourceID == "" {
+		item.ResourceID = resourceState.ResourceID
+	}
+	if item.ResourceType == "" {
+		item.ResourceType = resourceState.Type
+	}
+}
+
+// getOrCreateChildItemFromState looks up a child item from the shared map, or creates one
+// using instance state data. It handles migration from simple name keys to path-based keys.
+func (i *DeployItem) getOrCreateChildItemFromState(name string, action ActionType, skipped bool) (*ChildDeployItem, string) {
+	childPath := i.buildChildPath(name)
+
+	if i.childrenByName != nil {
+		// First try path-based lookup
+		if existing, ok := i.childrenByName[childPath]; ok {
+			existing.Skipped = skipped
+			if existing.Changes == nil {
+				existing.Changes = &changes.BlueprintChanges{}
+			}
+			return existing, childPath
+		}
+		// Fall back to simple name lookup and migrate to path-based key
+		if existing, ok := i.childrenByName[name]; ok {
+			existing.Skipped = skipped
+			if existing.Changes == nil {
+				existing.Changes = &changes.BlueprintChanges{}
+			}
+			delete(i.childrenByName, name)
+			i.childrenByName[childPath] = existing
+			return existing, childPath
+		}
+	}
+
+	// Create new item
+	newItem := &ChildDeployItem{
+		Name:    name,
+		Action:  action,
+		Skipped: skipped,
+		Changes: &changes.BlueprintChanges{},
+	}
+	if i.childrenByName != nil {
+		i.childrenByName[childPath] = newItem
+	}
+	return newItem, childPath
+}
+
+// getOrCreateLinkItemFromState looks up a link item from the shared map, or creates one
+// using instance state data. It handles migration from simple name keys to path-based keys.
+func (i *DeployItem) getOrCreateLinkItemFromState(linkName string, linkState *state.LinkState, action ActionType, skipped bool) (*LinkDeployItem, string) {
+	linkPath := i.buildChildPath(linkName)
+
+	if i.linksByName != nil {
+		// First try path-based lookup
+		if existing, ok := i.linksByName[linkPath]; ok {
+			existing.Skipped = skipped
+			if existing.LinkID == "" {
+				existing.LinkID = linkState.LinkID
+			}
+			return existing, linkPath
+		}
+		// Fall back to simple name lookup and migrate to path-based key
+		if existing, ok := i.linksByName[linkName]; ok {
+			existing.Skipped = skipped
+			if existing.LinkID == "" {
+				existing.LinkID = linkState.LinkID
+			}
+			delete(i.linksByName, linkName)
+			i.linksByName[linkPath] = existing
+			return existing, linkPath
+		}
+	}
+
+	// Create new item from state
+	newItem := &LinkDeployItem{
+		LinkID:        linkState.LinkID,
+		LinkName:      linkName,
+		ResourceAName: extractResourceAFromLinkName(linkName),
+		ResourceBName: extractResourceBFromLinkName(linkName),
+		Action:        action,
+		Status:        linkState.Status,
+		Skipped:       skipped,
+	}
+	if i.linksByName != nil {
+		i.linksByName[linkPath] = newItem
+	}
+	return newItem, linkPath
+}
+
 // ToSplitPaneItems converts a slice of DeployItems to splitpane.Items.
 func ToSplitPaneItems(items []DeployItem) []splitpane.Item {
 	result := make([]splitpane.Item, len(items))
@@ -901,4 +1151,25 @@ func ToSplitPaneItems(items []DeployItem) []splitpane.Item {
 		result[idx] = &items[idx]
 	}
 	return result
+}
+
+// MakeChildDeployItem creates a DeployItem for a child blueprint with lookup maps.
+// This allows child blueprints to properly navigate and display their nested items.
+func MakeChildDeployItem(
+	child *ChildDeployItem,
+	childChanges *changes.BlueprintChanges,
+	instanceState *state.InstanceState,
+	childrenByName map[string]*ChildDeployItem,
+	resourcesByName map[string]*ResourceDeployItem,
+	linksByName map[string]*LinkDeployItem,
+) DeployItem {
+	return DeployItem{
+		Type:            ItemTypeChild,
+		Child:           child,
+		Changes:         childChanges,
+		InstanceState:   instanceState,
+		childrenByName:  childrenByName,
+		resourcesByName: resourcesByName,
+		linksByName:     linksByName,
+	}
 }

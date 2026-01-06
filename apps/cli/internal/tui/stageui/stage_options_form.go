@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/deploy-cli-sdk/engine"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 )
@@ -123,6 +124,7 @@ func (m *StageOptionsFormModel) createOptionsForm() {
 				Description("Stage changes for destroying this instance.").
 				Affirmative("Yes").
 				Negative("No").
+				WithButtonAlignment(lipgloss.Left).
 				Value(&m.destroy),
 			huh.NewConfirm().
 				Key("skipDriftCheck").
@@ -130,6 +132,7 @@ func (m *StageOptionsFormModel) createOptionsForm() {
 				Description("Skip detection of external resource changes.").
 				Affirmative("Yes").
 				Negative("No").
+				WithButtonAlignment(lipgloss.Left).
 				Value(&m.skipDriftCheck),
 		),
 	).WithTheme(stylespkg.NewHuhTheme(m.styles.Palette))

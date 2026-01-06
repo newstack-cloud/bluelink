@@ -403,7 +403,9 @@ func (m DestroyModel) handleDestroyStarted(msg DestroyStartedMsg) (tea.Model, te
 func (m DestroyModel) handleDestroyEvent(msg DestroyEventMsg) (tea.Model, tea.Cmd) {
 	event := types.BlueprintInstanceEvent(msg)
 	m.processEvent(&event)
-	m.splitPane.SetItems(ToSplitPaneItems(m.items))
+	m.splitPane.UpdateItems(ToSplitPaneItems(m.items))
+	// Explicitly refresh viewports to ensure details view is updated
+	m.splitPane.RefreshViewports()
 
 	cmds := []tea.Cmd{checkForDestroyErrCmd(m)}
 
@@ -430,7 +432,7 @@ func (m DestroyModel) handleDestroyEvent(msg DestroyEventMsg) (tea.Model, tea.Cm
 	if IsFailedStatus(finishData.Status) {
 		m.markPendingItemsAsSkipped()
 		m.markInProgressItemsAsInterrupted()
-		m.splitPane.SetItems(ToSplitPaneItems(m.items))
+		m.splitPane.UpdateItems(ToSplitPaneItems(m.items))
 	}
 
 	m.collectDestroyResults()

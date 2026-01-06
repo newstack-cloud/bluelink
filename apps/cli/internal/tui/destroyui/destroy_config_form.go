@@ -101,6 +101,7 @@ func NewDestroyConfigFormModel(
 			Description("Stage now to preview destruction, or use an existing changeset ID.").
 			Affirmative("Yes, stage now").
 			Negative("No, use existing changeset").
+			WithButtonAlignment(lipgloss.Left).
 			Value(&model.stageFirst),
 	)
 
@@ -129,6 +130,7 @@ func NewDestroyConfigFormModel(
 			Description("Skip confirmation after staging.").
 			Affirmative("Yes, skip confirmation").
 			Negative("No, ask before destroy").
+			WithButtonAlignment(lipgloss.Left).
 			Value(&model.autoApprove),
 	).WithHideFunc(func() bool {
 		return !model.stageFirst

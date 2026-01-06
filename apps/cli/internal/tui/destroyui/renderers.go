@@ -501,10 +501,8 @@ func (r *DestroyFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.S
 	sb.WriteString(s.Muted.Render(" navigate  "))
 	sb.WriteString(s.Key.Render("tab"))
 	sb.WriteString(s.Muted.Render(" switch pane  "))
-	if r.Finished {
-		sb.WriteString(s.Key.Render("q"))
-		sb.WriteString(s.Muted.Render(" quit"))
-	}
+	sb.WriteString(s.Key.Render("q"))
+	sb.WriteString(s.Muted.Render(" quit"))
 	sb.WriteString("\n")
 
 	return sb.String()
@@ -531,10 +529,8 @@ func (r *DestroyFooterRenderer) renderDrillDownFooter(model *splitpane.Model, s 
 	sb.WriteString(s.Muted.Render(" navigate  "))
 	sb.WriteString(s.Key.Render("tab"))
 	sb.WriteString(s.Muted.Render(" switch pane  "))
-	if r.Finished {
-		sb.WriteString(s.Key.Render("q"))
-		sb.WriteString(s.Muted.Render(" quit"))
-	}
+	sb.WriteString(s.Key.Render("q"))
+	sb.WriteString(s.Muted.Render(" quit"))
 	sb.WriteString("\n")
 
 	return sb.String()

@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/outpututil"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	sdkstrings "github.com/newstack-cloud/deploy-cli-sdk/strings"
@@ -112,7 +113,7 @@ func (r *DeployDetailsRenderer) renderResourceDetails(item *DeployItem, width in
 			sb.WriteString(s.Muted.Render("Details: "))
 			sb.WriteString("Not attempted due to deployment failure")
 		} else {
-			sb.WriteString(renderResourceStatus(res.Status, s))
+			sb.WriteString(shared.RenderResourceStatus(res.Status, s))
 			sb.WriteString("\n")
 			sb.WriteString(s.Muted.Render("Details: "))
 			sb.WriteString(renderPreciseResourceStatus(res.PreciseStatus))
@@ -172,14 +173,12 @@ func (r *DeployDetailsRenderer) renderResourceDetails(item *DeployItem, width in
 			sb.WriteString(outputsContent)
 		}
 
-		// Spec hint - show field count and shortcut (only when deployment finished)
-		if r.Finished {
-			specHint := r.renderSpecHint(resourceState, s)
-			if specHint != "" {
-				sb.WriteString("\n")
-				sb.WriteString(specHint)
-				sb.WriteString("\n")
-			}
+		// Spec hint - show when resource has spec data (available for completed resources)
+		specHint := r.renderSpecHint(resourceState, s)
+		if specHint != "" {
+			sb.WriteString("\n")
+			sb.WriteString(specHint)
+			sb.WriteString("\n")
 		}
 	}
 
@@ -456,43 +455,6 @@ func formatLinkStatus(status core.LinkStatus) string {
 	}
 }
 
-func renderResourceStatus(status core.ResourceStatus, s *styles.Styles) string {
-	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
-
-	switch status {
-	case core.ResourceStatusCreating:
-		return s.Info.Render("Creating")
-	case core.ResourceStatusCreated:
-		return successStyle.Render("Created")
-	case core.ResourceStatusCreateFailed:
-		return s.Error.Render("Create Failed")
-	case core.ResourceStatusUpdating:
-		return s.Info.Render("Updating")
-	case core.ResourceStatusUpdated:
-		return successStyle.Render("Updated")
-	case core.ResourceStatusUpdateFailed:
-		return s.Error.Render("Update Failed")
-	case core.ResourceStatusDestroying:
-		return s.Info.Render("Destroying")
-	case core.ResourceStatusDestroyed:
-		return successStyle.Render("Destroyed")
-	case core.ResourceStatusDestroyFailed:
-		return s.Error.Render("Destroy Failed")
-	case core.ResourceStatusRollingBack:
-		return s.Warning.Render("Rolling Back")
-	case core.ResourceStatusRollbackFailed:
-		return s.Error.Render("Rollback Failed")
-	case core.ResourceStatusRollbackComplete:
-		return s.Muted.Render("Rolled Back")
-	case core.ResourceStatusCreateInterrupted,
-		core.ResourceStatusUpdateInterrupted,
-		core.ResourceStatusDestroyInterrupted:
-		return s.Warning.Render("Interrupted")
-	default:
-		return s.Muted.Render("Pending")
-	}
-}
-
 func renderPreciseResourceStatus(status core.PreciseResourceStatus) string {
 	switch status {
 	case core.PreciseResourceStatusCreating:
@@ -636,7 +598,7 @@ func (r *DeployDetailsRenderer) renderChildDetails(item *DeployItem, width int, 
 		sb.WriteString("Not attempted due to deployment failure")
 		sb.WriteString("\n")
 	} else {
-		sb.WriteString(renderInstanceStatus(child.Status, s))
+		sb.WriteString(shared.RenderInstanceStatus(child.Status, s))
 		sb.WriteString("\n")
 	}
 
@@ -675,59 +637,6 @@ func (r *DeployDetailsRenderer) renderChildDetails(item *DeployItem, width int, 
 	}
 
 	return sb.String()
-}
-
-func renderInstanceStatus(status core.InstanceStatus, s *styles.Styles) string {
-	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
-
-	switch status {
-	case core.InstanceStatusPreparing:
-		return s.Muted.Render("Preparing")
-	case core.InstanceStatusDeploying:
-		return s.Info.Render("Deploying")
-	case core.InstanceStatusDeployed:
-		return successStyle.Render("Deployed")
-	case core.InstanceStatusDeployFailed:
-		return s.Error.Render("Deploy Failed")
-	case core.InstanceStatusUpdating:
-		return s.Info.Render("Updating")
-	case core.InstanceStatusUpdated:
-		return successStyle.Render("Updated")
-	case core.InstanceStatusUpdateFailed:
-		return s.Error.Render("Update Failed")
-	case core.InstanceStatusDestroying:
-		return s.Info.Render("Destroying")
-	case core.InstanceStatusDestroyed:
-		return successStyle.Render("Destroyed")
-	case core.InstanceStatusDestroyFailed:
-		return s.Error.Render("Destroy Failed")
-	case core.InstanceStatusDeployRollingBack:
-		return s.Warning.Render("Rolling Back Deploy")
-	case core.InstanceStatusDeployRollbackFailed:
-		return s.Error.Render("Deploy Rollback Failed")
-	case core.InstanceStatusDeployRollbackComplete:
-		return s.Muted.Render("Deploy Rolled Back")
-	case core.InstanceStatusUpdateRollingBack:
-		return s.Warning.Render("Rolling Back Update")
-	case core.InstanceStatusUpdateRollbackFailed:
-		return s.Error.Render("Update Rollback Failed")
-	case core.InstanceStatusUpdateRollbackComplete:
-		return s.Muted.Render("Update Rolled Back")
-	case core.InstanceStatusDestroyRollingBack:
-		return s.Warning.Render("Rolling Back Destroy")
-	case core.InstanceStatusDestroyRollbackFailed:
-		return s.Error.Render("Destroy Rollback Failed")
-	case core.InstanceStatusDestroyRollbackComplete:
-		return s.Muted.Render("Destroy Rolled Back")
-	case core.InstanceStatusNotDeployed:
-		return s.Muted.Render("Not Deployed")
-	case core.InstanceStatusDeployInterrupted,
-		core.InstanceStatusUpdateInterrupted,
-		core.InstanceStatusDestroyInterrupted:
-		return s.Warning.Render("Interrupted")
-	default:
-		return s.Muted.Render("Unknown")
-	}
 }
 
 func (r *DeployDetailsRenderer) renderLinkDetails(item *DeployItem, width int, s *styles.Styles) string {
@@ -772,7 +681,7 @@ func (r *DeployDetailsRenderer) renderLinkDetails(item *DeployItem, width int, s
 		sb.WriteString("Not attempted due to deployment failure")
 		sb.WriteString("\n")
 	} else {
-		sb.WriteString(renderLinkStatus(link.Status, s))
+		sb.WriteString(shared.RenderLinkStatus(link.Status, s))
 		sb.WriteString("\n")
 		sb.WriteString(s.Muted.Render("Details: "))
 		sb.WriteString(renderPreciseLinkStatus(link.PreciseStatus))
@@ -816,55 +725,6 @@ func (r *DeployDetailsRenderer) renderLinkDetails(item *DeployItem, width int, s
 	}
 
 	return sb.String()
-}
-
-func renderLinkStatus(status core.LinkStatus, s *styles.Styles) string {
-	successStyle := lipgloss.NewStyle().Foreground(s.Palette.Success())
-
-	switch status {
-	case core.LinkStatusCreating:
-		return s.Info.Render("Creating")
-	case core.LinkStatusCreated:
-		return successStyle.Render("Created")
-	case core.LinkStatusCreateFailed:
-		return s.Error.Render("Create Failed")
-	case core.LinkStatusUpdating:
-		return s.Info.Render("Updating")
-	case core.LinkStatusUpdated:
-		return successStyle.Render("Updated")
-	case core.LinkStatusUpdateFailed:
-		return s.Error.Render("Update Failed")
-	case core.LinkStatusDestroying:
-		return s.Info.Render("Destroying")
-	case core.LinkStatusDestroyed:
-		return successStyle.Render("Destroyed")
-	case core.LinkStatusDestroyFailed:
-		return s.Error.Render("Destroy Failed")
-	case core.LinkStatusCreateRollingBack:
-		return s.Warning.Render("Rolling Back Create")
-	case core.LinkStatusCreateRollbackFailed:
-		return s.Error.Render("Create Rollback Failed")
-	case core.LinkStatusCreateRollbackComplete:
-		return s.Muted.Render("Create Rolled Back")
-	case core.LinkStatusUpdateRollingBack:
-		return s.Warning.Render("Rolling Back Update")
-	case core.LinkStatusUpdateRollbackFailed:
-		return s.Error.Render("Update Rollback Failed")
-	case core.LinkStatusUpdateRollbackComplete:
-		return s.Muted.Render("Update Rolled Back")
-	case core.LinkStatusDestroyRollingBack:
-		return s.Warning.Render("Rolling Back Destroy")
-	case core.LinkStatusDestroyRollbackFailed:
-		return s.Error.Render("Destroy Rollback Failed")
-	case core.LinkStatusDestroyRollbackComplete:
-		return s.Muted.Render("Destroy Rolled Back")
-	case core.LinkStatusCreateInterrupted,
-		core.LinkStatusUpdateInterrupted,
-		core.LinkStatusDestroyInterrupted:
-		return s.Warning.Render("Interrupted")
-	default:
-		return s.Muted.Render("Pending")
-	}
 }
 
 func renderPreciseLinkStatus(status core.PreciseLinkStatus) string {
@@ -1065,10 +925,8 @@ func (r *DeployFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.St
 		sb.WriteString(s.Muted.Render(" navigate  "))
 		sb.WriteString(s.Key.Render("tab"))
 		sb.WriteString(s.Muted.Render(" switch pane  "))
-		if r.Finished {
-			sb.WriteString(s.Key.Render("q"))
-			sb.WriteString(s.Muted.Render(" quit"))
-		}
+		sb.WriteString(s.Key.Render("q"))
+		sb.WriteString(s.Muted.Render(" quit"))
 		sb.WriteString("\n")
 
 		return sb.String()
@@ -1159,10 +1017,8 @@ func (r *DeployFooterRenderer) RenderFooter(model *splitpane.Model, s *styles.St
 	sb.WriteString(s.Muted.Render(" navigate  "))
 	sb.WriteString(s.Key.Render("tab"))
 	sb.WriteString(s.Muted.Render(" switch pane  "))
-	if r.Finished {
-		sb.WriteString(s.Key.Render("q"))
-		sb.WriteString(s.Muted.Render(" quit"))
-	}
+	sb.WriteString(s.Key.Render("q"))
+	sb.WriteString(s.Muted.Render(" quit"))
 	sb.WriteString("\n")
 
 	return sb.String()
