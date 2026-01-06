@@ -204,6 +204,47 @@ func (c *memoryInstancesContainer) Remove(ctx context.Context, instanceID string
 	return *instance, nil
 }
 
+func (c *memoryInstancesContainer) List(
+	ctx context.Context,
+	params state.ListInstancesParams,
+) (state.ListInstancesResult, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	var filtered []state.InstanceSummary
+	searchLower := strings.ToLower(params.Search)
+
+	for _, inst := range c.instances {
+		if params.Search == "" || strings.Contains(strings.ToLower(inst.InstanceName), searchLower) {
+			filtered = append(filtered, state.InstanceSummary{
+				InstanceID:            inst.InstanceID,
+				InstanceName:          inst.InstanceName,
+				Status:                inst.Status,
+				LastDeployedTimestamp: int64(inst.LastDeployedTimestamp),
+			})
+		}
+	}
+
+	totalCount := len(filtered)
+
+	// Apply pagination
+	if params.Offset > 0 {
+		if params.Offset >= len(filtered) {
+			filtered = nil
+		} else {
+			filtered = filtered[params.Offset:]
+		}
+	}
+	if params.Limit > 0 && len(filtered) > params.Limit {
+		filtered = filtered[:params.Limit]
+	}
+
+	return state.ListInstancesResult{
+		Instances:  filtered,
+		TotalCount: totalCount,
+	}, nil
+}
+
 type memoryResourcesContainer struct {
 	instances     map[string]*state.InstanceState
 	resources     map[string]*state.ResourceState

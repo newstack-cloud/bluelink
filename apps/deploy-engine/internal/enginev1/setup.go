@@ -339,6 +339,11 @@ func setupDeploymentHandlers(
 
 	router.HandleFunc(
 		"/deployments/instances",
+		deploymentCtrl.ListBlueprintInstancesHandler,
+	).Methods("GET")
+
+	router.HandleFunc(
+		"/deployments/instances",
 		deploymentCtrl.CreateBlueprintInstanceHandler,
 	).Methods("POST")
 

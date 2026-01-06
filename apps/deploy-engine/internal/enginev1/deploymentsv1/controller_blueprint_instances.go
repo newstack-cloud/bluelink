@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
@@ -42,6 +43,47 @@ func (c *Controller) CreateBlueprintInstanceHandler(
 		/* existingInstance */
 		nil,
 	)
+}
+
+// ListBlueprintInstancesHandler is the handler for the GET /deployments/instances
+// endpoint that retrieves a paginated list of blueprint instances.
+func (c *Controller) ListBlueprintInstancesHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	params := parseListInstancesParams(r)
+
+	result, err := c.instances.List(r.Context(), params)
+	if err != nil {
+		c.logger.Error(
+			"failed to list blueprint instances",
+			core.ErrorLogField("error", err),
+		)
+		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
+		return
+	}
+
+	httputils.HTTPJSONResponse(w, http.StatusOK, result)
+}
+
+func parseListInstancesParams(r *http.Request) state.ListInstancesParams {
+	query := r.URL.Query()
+
+	offset, _ := strconv.Atoi(query.Get("offset"))
+	if offset < 0 {
+		offset = 0
+	}
+
+	limit, _ := strconv.Atoi(query.Get("limit"))
+	if limit < 0 {
+		limit = 0
+	}
+
+	return state.ListInstancesParams{
+		Search: query.Get("search"),
+		Offset: offset,
+		Limit:  limit,
+	}
 }
 
 // UpdateBlueprintInstanceHandler is the handler for the PATCH /deployments/instances/{id}
