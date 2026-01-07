@@ -267,9 +267,9 @@ func (s *StageTUISuite) Test_successful_staging_with_resource_create() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(StageModel)
-	s.Nil(finalModel.err)
-	s.True(finalModel.finished)
-	s.Equal("test-changeset-123", finalModel.changesetID)
+	s.Nil(finalModel.Err())
+	s.True(finalModel.Finished())
+	s.Equal("test-changeset-123", finalModel.ChangesetID())
 }
 
 func (s *StageTUISuite) Test_successful_staging_with_resource_update() {
@@ -311,7 +311,7 @@ func (s *StageTUISuite) Test_successful_staging_with_resource_update() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(StageModel)
-	s.Nil(finalModel.err)
+	s.Nil(finalModel.Err())
 }
 
 func (s *StageTUISuite) Test_successful_staging_with_resource_delete() {
@@ -353,7 +353,7 @@ func (s *StageTUISuite) Test_successful_staging_with_resource_delete() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(StageModel)
-	s.Nil(finalModel.err)
+	s.Nil(finalModel.Err())
 }
 
 func (s *StageTUISuite) Test_successful_staging_with_resource_recreate() {
@@ -395,7 +395,7 @@ func (s *StageTUISuite) Test_successful_staging_with_resource_recreate() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(StageModel)
-	s.Nil(finalModel.err)
+	s.Nil(finalModel.Err())
 }
 
 func (s *StageTUISuite) Test_successful_staging_with_child_blueprint() {
@@ -437,7 +437,7 @@ func (s *StageTUISuite) Test_successful_staging_with_child_blueprint() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(StageModel)
-	s.Nil(finalModel.err)
+	s.Nil(finalModel.Err())
 }
 
 func (s *StageTUISuite) Test_successful_staging_with_link() {
@@ -479,7 +479,7 @@ func (s *StageTUISuite) Test_successful_staging_with_link() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(StageModel)
-	s.Nil(finalModel.err)
+	s.Nil(finalModel.Err())
 }
 
 func (s *StageTUISuite) Test_successful_staging_with_mixed_items() {
@@ -526,8 +526,8 @@ func (s *StageTUISuite) Test_successful_staging_with_mixed_items() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(StageModel)
-	s.Nil(finalModel.err)
-	s.Len(finalModel.items, 4)
+	s.Nil(finalModel.Err())
+	s.Len(finalModel.Items(), 4)
 }
 
 // --- Headless Mode Tests ---
@@ -750,7 +750,7 @@ func (s *StageTUISuite) Test_staging_validation_error() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(StageModel)
-	s.NotNil(finalModel.err)
+	s.NotNil(finalModel.Err())
 }
 
 func (s *StageTUISuite) Test_staging_validation_error_headless() {
@@ -841,7 +841,7 @@ func (s *StageTUISuite) Test_staging_generic_error() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(StageModel)
-	s.NotNil(finalModel.err)
+	s.NotNil(finalModel.Err())
 }
 
 // --- Additional Headless Mode Tests ---

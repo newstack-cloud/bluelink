@@ -237,8 +237,8 @@ func (s *DeployTUISuite) Test_successful_deployment_with_resource_create() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DeployModel)
-	s.Nil(finalModel.err)
-	s.Equal(core.InstanceStatusDeployed, finalModel.finalStatus)
+	s.Nil(finalModel.Err())
+	s.Equal(core.InstanceStatusDeployed, finalModel.FinalStatus())
 }
 
 func (s *DeployTUISuite) Test_successful_deployment_with_resource_update() {
@@ -282,8 +282,8 @@ func (s *DeployTUISuite) Test_successful_deployment_with_resource_update() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DeployModel)
-	s.Nil(finalModel.err)
-	s.Equal(core.InstanceStatusUpdated, finalModel.finalStatus)
+	s.Nil(finalModel.Err())
+	s.Equal(core.InstanceStatusUpdated, finalModel.FinalStatus())
 }
 
 func (s *DeployTUISuite) Test_deployment_failure_shows_error() {
@@ -327,7 +327,7 @@ func (s *DeployTUISuite) Test_deployment_failure_shows_error() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DeployModel)
-	s.Equal(core.InstanceStatusDeployFailed, finalModel.finalStatus)
+	s.Equal(core.InstanceStatusDeployFailed, finalModel.FinalStatus())
 }
 
 func (s *DeployTUISuite) Test_deployment_rollback_sets_final_status() {
@@ -372,8 +372,8 @@ func (s *DeployTUISuite) Test_deployment_rollback_sets_final_status() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DeployModel)
-	s.Equal(core.InstanceStatusDeployRollbackComplete, finalModel.finalStatus)
-	s.Equal(core.ResourceStatusRollbackComplete, finalModel.resourcesByName["resource-1"].Status)
+	s.Equal(core.InstanceStatusDeployRollbackComplete, finalModel.FinalStatus())
+	s.Equal(core.ResourceStatusRollbackComplete, finalModel.ResourcesByName()["resource-1"].Status)
 }
 
 func (s *DeployTUISuite) Test_deployment_with_child_blueprints() {
@@ -417,7 +417,7 @@ func (s *DeployTUISuite) Test_deployment_with_child_blueprints() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DeployModel)
-	s.Equal(core.InstanceStatusDeployed, finalModel.finalStatus)
+	s.Equal(core.InstanceStatusDeployed, finalModel.FinalStatus())
 }
 
 func (s *DeployTUISuite) Test_deployment_with_links() {
@@ -461,7 +461,7 @@ func (s *DeployTUISuite) Test_deployment_with_links() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DeployModel)
-	s.Equal(core.InstanceStatusDeployed, finalModel.finalStatus)
+	s.Equal(core.InstanceStatusDeployed, finalModel.FinalStatus())
 }
 
 func (s *DeployTUISuite) Test_deployment_with_multiple_resources() {
@@ -508,7 +508,7 @@ func (s *DeployTUISuite) Test_deployment_with_multiple_resources() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DeployModel)
-	s.Equal(core.InstanceStatusDeployed, finalModel.finalStatus)
+	s.Equal(core.InstanceStatusDeployed, finalModel.FinalStatus())
 }
 
 // --- Headless Mode Tests ---
@@ -644,8 +644,8 @@ func (s *DeployTUISuite) Test_deployment_uses_changeset_for_initial_items() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DeployModel)
-	s.Contains(finalModel.resourcesByName, "new-resource")
-	s.Contains(finalModel.resourcesByName, "changed-resource")
+	s.Contains(finalModel.ResourcesByName(), "new-resource")
+	s.Contains(finalModel.ResourcesByName(), "changed-resource")
 }
 
 // --- Headless Mode Tests with Children and Links ---

@@ -1259,3 +1259,25 @@ func determineLinkInterruptedStatusFromAction(
 	// For UPDATE, RECREATE (update phase), or unknown actions, use UpdateInterrupted
 	return core.LinkStatusUpdateInterrupted, core.PreciseLinkStatusResourceAUpdateInterrupted
 }
+
+// Test accessor methods - these provide read-only access for testing purposes.
+
+// Err returns the error stored in the model.
+func (m *DeployModel) Err() error {
+	return m.err
+}
+
+// FinalStatus returns the final instance status after deployment.
+func (m *DeployModel) FinalStatus() core.InstanceStatus {
+	return m.finalStatus
+}
+
+// Items returns the deployment items.
+func (m *DeployModel) Items() []DeployItem {
+	return m.items
+}
+
+// ResourcesByName returns the resources lookup map.
+func (m *DeployModel) ResourcesByName() map[string]*ResourceDeployItem {
+	return m.resourcesByName
+}

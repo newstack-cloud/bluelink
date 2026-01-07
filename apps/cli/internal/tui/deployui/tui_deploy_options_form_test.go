@@ -118,8 +118,8 @@ func (s *DeployOptionsFormSuite) Test_deploy_options_form_stage_first_flow() {
 
 	finalModel := testModel.FinalModel(s.T()).(MainModel)
 	s.Nil(finalModel.Error)
-	s.Equal("my-test-instance", finalModel.instanceName)
-	s.True(finalModel.stageFirst)
+	s.Equal("my-test-instance", finalModel.InstanceName())
+	s.True(finalModel.StageFirst())
 }
 
 func (s *DeployOptionsFormSuite) Test_deploy_options_form_existing_changeset_flow() {
@@ -189,9 +189,9 @@ func (s *DeployOptionsFormSuite) Test_deploy_options_form_existing_changeset_flo
 
 	finalModel := testModel.FinalModel(s.T()).(MainModel)
 	s.Nil(finalModel.Error)
-	s.Equal("existing-changeset-instance", finalModel.instanceName)
-	s.Equal("existing-changeset-123", finalModel.changesetID)
-	s.False(finalModel.stageFirst)
+	s.Equal("existing-changeset-instance", finalModel.InstanceName())
+	s.Equal("existing-changeset-123", finalModel.ChangesetID())
+	s.False(finalModel.StageFirst())
 }
 
 func (s *DeployOptionsFormSuite) Test_deploy_options_form_with_instance_id_shows_note() {

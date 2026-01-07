@@ -250,3 +250,20 @@ func NewStageApp(
 		needsOptionsInput: needsOptionsInput,
 	}, nil
 }
+
+// Test accessor methods - these provide read-only access for testing purposes.
+
+// Stage returns the stage model (as tea.Model interface).
+func (m *MainModel) Stage() tea.Model {
+	return m.stage
+}
+
+// StageOptionsForm returns the stage options form model.
+func (m *MainModel) StageOptionsForm() *StageOptionsFormModel {
+	return m.stageOptionsForm
+}
+
+// NeedsOptionsInput returns whether the model requires options input.
+func (m *MainModel) NeedsOptionsInput() bool {
+	return m.needsOptionsInput
+}

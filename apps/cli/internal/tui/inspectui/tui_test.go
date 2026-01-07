@@ -190,9 +190,9 @@ func (s *InspectTUISuite) Test_inspect_completed_deployment_shows_resources() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(InspectModel)
-	s.Nil(finalModel.err)
-	s.NotNil(finalModel.instanceState)
-	s.Equal("test-instance-id", finalModel.instanceState.InstanceID)
+	s.Nil(finalModel.Err())
+	s.NotNil(finalModel.InstanceState())
+	s.Equal("test-instance-id", finalModel.InstanceState().InstanceID)
 }
 
 func (s *InspectTUISuite) Test_inspect_completed_deployment_shows_child_blueprints() {
@@ -492,7 +492,7 @@ func (s *InspectTUISuite) Test_inspect_instance_not_found_shows_error() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(InspectModel)
-	s.NotNil(finalModel.err)
+	s.NotNil(finalModel.Err())
 }
 
 // --- Headless Mode Tests ---
@@ -633,7 +633,7 @@ func (s *InspectTUISuite) Test_inspect_resource_failure_shows_create_failed_stat
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(InspectModel)
-	s.Equal(core.InstanceStatusDeployFailed, finalModel.footerRenderer.CurrentStatus)
+	s.Equal(core.InstanceStatusDeployFailed, finalModel.CurrentStatus())
 }
 
 func (s *InspectTUISuite) Test_inspect_rollback_shows_rolling_back_status() {
@@ -683,7 +683,7 @@ func (s *InspectTUISuite) Test_inspect_rollback_shows_rolling_back_status() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(InspectModel)
-	s.Equal(core.InstanceStatusDeployRollbackComplete, finalModel.footerRenderer.CurrentStatus)
+	s.Equal(core.InstanceStatusDeployRollbackComplete, finalModel.CurrentStatus())
 }
 
 func (s *InspectTUISuite) Test_inspect_update_status_shows_updated() {
@@ -727,7 +727,7 @@ func (s *InspectTUISuite) Test_inspect_update_status_shows_updated() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(InspectModel)
-	s.Equal(core.InstanceStatusUpdated, finalModel.footerRenderer.CurrentStatus)
+	s.Equal(core.InstanceStatusUpdated, finalModel.CurrentStatus())
 }
 
 func (s *InspectTUISuite) Test_inspect_nested_child_events_during_streaming() {

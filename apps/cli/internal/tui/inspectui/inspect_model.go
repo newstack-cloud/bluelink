@@ -659,7 +659,15 @@ func isInProgressStatus(status core.InstanceStatus) bool {
 	}
 }
 
+// Test accessor methods - these provide read-only access for testing purposes.
+
+// Err returns the current error from the inspect model.
+func (m *InspectModel) Err() error {
+	return m.err
+}
+
 // GetError returns the current error from the inspect model.
+// Deprecated: Use Err() for consistency with other models.
 func (m *InspectModel) GetError() error {
 	return m.err
 }
@@ -667,6 +675,16 @@ func (m *InspectModel) GetError() error {
 // IsFinished returns whether the inspect operation has finished.
 func (m *InspectModel) IsFinished() bool {
 	return m.finished
+}
+
+// InstanceState returns the current instance state.
+func (m *InspectModel) InstanceState() *state.InstanceState {
+	return m.instanceState
+}
+
+// CurrentStatus returns the current status from the footer renderer.
+func (m *InspectModel) CurrentStatus() core.InstanceStatus {
+	return m.footerRenderer.CurrentStatus
 }
 
 // SetEmbeddedInList marks the inspect model as embedded within the list UI.

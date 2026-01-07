@@ -233,8 +233,8 @@ func (s *DestroyTUISuite) Test_successful_destroy_single_resource() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DestroyModel)
-	s.Nil(finalModel.err)
-	s.Equal(core.InstanceStatusDestroyed, finalModel.finalStatus)
+	s.Nil(finalModel.Err())
+	s.Equal(core.InstanceStatusDestroyed, finalModel.FinalStatus())
 }
 
 func (s *DestroyTUISuite) Test_successful_destroy_multiple_resources() {
@@ -278,8 +278,8 @@ func (s *DestroyTUISuite) Test_successful_destroy_multiple_resources() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DestroyModel)
-	s.Nil(finalModel.err)
-	s.Equal(core.InstanceStatusDestroyed, finalModel.finalStatus)
+	s.Nil(finalModel.Err())
+	s.Equal(core.InstanceStatusDestroyed, finalModel.FinalStatus())
 }
 
 func (s *DestroyTUISuite) Test_destroy_with_child_blueprints() {
@@ -320,7 +320,7 @@ func (s *DestroyTUISuite) Test_destroy_with_child_blueprints() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DestroyModel)
-	s.Equal(core.InstanceStatusDestroyed, finalModel.finalStatus)
+	s.Equal(core.InstanceStatusDestroyed, finalModel.FinalStatus())
 }
 
 func (s *DestroyTUISuite) Test_destroy_with_links() {
@@ -363,7 +363,7 @@ func (s *DestroyTUISuite) Test_destroy_with_links() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DestroyModel)
-	s.Equal(core.InstanceStatusDestroyed, finalModel.finalStatus)
+	s.Equal(core.InstanceStatusDestroyed, finalModel.FinalStatus())
 }
 
 func (s *DestroyTUISuite) Test_destroy_failure_shows_error() {
@@ -404,7 +404,7 @@ func (s *DestroyTUISuite) Test_destroy_failure_shows_error() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DestroyModel)
-	s.Equal(core.InstanceStatusDestroyFailed, finalModel.finalStatus)
+	s.Equal(core.InstanceStatusDestroyFailed, finalModel.FinalStatus())
 }
 
 func (s *DestroyTUISuite) Test_destroy_rollback_sets_final_status() {
@@ -445,8 +445,8 @@ func (s *DestroyTUISuite) Test_destroy_rollback_sets_final_status() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DestroyModel)
-	s.Equal(core.InstanceStatusDestroyRollbackComplete, finalModel.finalStatus)
-	s.Equal(core.ResourceStatusRollbackComplete, finalModel.resourcesByName["resource-1"].Status)
+	s.Equal(core.InstanceStatusDestroyRollbackComplete, finalModel.FinalStatus())
+	s.Equal(core.ResourceStatusRollbackComplete, finalModel.ResourcesByName()["resource-1"].Status)
 }
 
 func (s *DestroyTUISuite) Test_destroy_interrupted() {
@@ -487,7 +487,7 @@ func (s *DestroyTUISuite) Test_destroy_interrupted() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DestroyModel)
-	s.Equal(core.InstanceStatusDestroyInterrupted, finalModel.finalStatus)
+	s.Equal(core.InstanceStatusDestroyInterrupted, finalModel.FinalStatus())
 }
 
 func (s *DestroyTUISuite) Test_quit_with_q() {
@@ -683,13 +683,13 @@ func (s *DestroyTUISuite) Test_precreated_items_from_changeset_get_updated() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DestroyModel)
-	s.Nil(finalModel.err)
-	s.Equal(core.InstanceStatusDestroyed, finalModel.finalStatus)
+	s.Nil(finalModel.Err())
+	s.Equal(core.InstanceStatusDestroyed, finalModel.FinalStatus())
 
 	// Verify the pre-created item was updated with final status
-	s.Require().Len(finalModel.items, 1)
-	s.Require().NotNil(finalModel.items[0].Resource)
-	s.Equal(core.ResourceStatusDestroyed, finalModel.items[0].Resource.Status)
+	s.Require().Len(finalModel.Items(), 1)
+	s.Require().NotNil(finalModel.Items()[0].Resource)
+	s.Equal(core.ResourceStatusDestroyed, finalModel.Items()[0].Resource.Status)
 }
 
 func (s *DestroyTUISuite) Test_destroy_force_mode() {
@@ -730,8 +730,8 @@ func (s *DestroyTUISuite) Test_destroy_force_mode() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DestroyModel)
-	s.True(finalModel.force)
-	s.Equal(core.InstanceStatusDestroyed, finalModel.finalStatus)
+	s.True(finalModel.Force())
+	s.Equal(core.InstanceStatusDestroyed, finalModel.FinalStatus())
 }
 
 // --- Pre-Destroy State View Tests ---
@@ -1370,7 +1370,7 @@ func (s *DestroyTUISuite) Test_changeset_changes_fetched_when_destroying_with_ch
 	s.Contains(finalModel.changesetChanges.RemovedChildren, "child-1")
 
 	// Verify items were created from the fetched changeset
-	s.GreaterOrEqual(len(finalModel.items), 2)
+	s.GreaterOrEqual(len(finalModel.Items()), 2)
 }
 
 // Test destroy with child showing nested resource changes for navigation.
@@ -1456,10 +1456,10 @@ func (s *DestroyTUISuite) Test_child_blueprint_navigation_available_with_fetched
 
 	// Verify the child item was created with its nested changes for navigation
 	var childItem *DestroyItem
-	for i := range finalModel.items {
-		if finalModel.items[i].Type == ItemTypeChild && finalModel.items[i].Child != nil {
-			if finalModel.items[i].Child.Name == "notifications" {
-				childItem = &finalModel.items[i]
+	for i := range finalModel.Items() {
+		if finalModel.Items()[i].Type == ItemTypeChild && finalModel.Items()[i].Child != nil {
+			if finalModel.Items()[i].Child.Name == "notifications" {
+				childItem = &finalModel.Items()[i]
 				break
 			}
 		}
@@ -1575,9 +1575,9 @@ func (s *DestroyTUISuite) Test_force_flag_bypasses_drift_check() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DestroyModel)
-	s.True(finalModel.force)
+	s.True(finalModel.Force())
 	s.False(finalModel.driftReviewMode)
-	s.Equal(core.InstanceStatusDestroyed, finalModel.finalStatus)
+	s.Equal(core.InstanceStatusDestroyed, finalModel.FinalStatus())
 }
 
 func (s *DestroyTUISuite) Test_drift_detected_headless_mode() {
@@ -1736,7 +1736,7 @@ func (s *DestroyTUISuite) Test_network_error_during_destroy() {
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := testModel.FinalModel(s.T()).(DestroyModel)
-	s.NotNil(finalModel.err)
+	s.NotNil(finalModel.Err())
 }
 
 func (s *DestroyTUISuite) Test_network_error_headless_mode() {

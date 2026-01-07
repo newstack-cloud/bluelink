@@ -887,3 +887,30 @@ func (m *DestroyModel) markInProgressItemsAsInterrupted() {
 		}
 	}
 }
+
+// Test accessor methods - these provide read-only access for testing purposes.
+
+// Err returns the error stored in the model.
+func (m *DestroyModel) Err() error {
+	return m.err
+}
+
+// FinalStatus returns the final instance status after destroy.
+func (m *DestroyModel) FinalStatus() core.InstanceStatus {
+	return m.finalStatus
+}
+
+// Items returns the destroy items.
+func (m *DestroyModel) Items() []DestroyItem {
+	return m.items
+}
+
+// ResourcesByName returns the resources lookup map.
+func (m *DestroyModel) ResourcesByName() map[string]*ResourceDestroyItem {
+	return m.resourcesByName
+}
+
+// Force returns whether force mode is enabled.
+func (m *DestroyModel) Force() bool {
+	return m.force
+}

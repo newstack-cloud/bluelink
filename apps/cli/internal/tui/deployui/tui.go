@@ -616,3 +616,20 @@ func NewDeployApp(
 	}, nil
 }
 
+// Test accessor methods - these provide read-only access for testing purposes.
+
+// StageFirst returns whether staging should happen before deployment.
+func (m *MainModel) StageFirst() bool {
+	return m.stageFirst
+}
+
+// ChangesetID returns the changeset ID.
+func (m *MainModel) ChangesetID() string {
+	return m.changesetID
+}
+
+// InstanceName returns the instance name.
+func (m *MainModel) InstanceName() string {
+	return m.instanceName
+}
+

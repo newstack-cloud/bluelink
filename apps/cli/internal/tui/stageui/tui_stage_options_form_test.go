@@ -93,9 +93,9 @@ func (s *StageOptionsFormSuite) Test_stage_options_flow_new_instance_skips_optio
 	s.Nil(finalModel.Error)
 
 	// Verify the stage model received correct options (no destroy/skipDriftCheck for new instance)
-	stageModel := finalModel.stage.(StageModel)
-	s.False(stageModel.destroy)
-	s.False(stageModel.skipDriftCheck)
+	stageModel := finalModel.Stage().(StageModel)
+	s.False(stageModel.Destroy())
+	s.False(stageModel.SkipDriftCheck())
 }
 
 func (s *StageOptionsFormSuite) Test_stage_options_flow_existing_instance_shows_options() {
@@ -247,8 +247,8 @@ func (s *StageOptionsFormSuite) Test_stage_options_flow_existing_instance_with_d
 	s.Nil(finalModel.Error)
 
 	// Verify destroy was set
-	stageModel := finalModel.stage.(StageModel)
-	s.True(stageModel.destroy)
+	stageModel := finalModel.Stage().(StageModel)
+	s.True(stageModel.Destroy())
 }
 
 func (s *StageOptionsFormSuite) Test_stage_options_skipped_when_instance_name_provided() {
@@ -276,8 +276,8 @@ func (s *StageOptionsFormSuite) Test_stage_options_skipped_when_instance_name_pr
 	s.Require().NoError(err)
 
 	// Options form should not be created when instance name is provided
-	s.Nil(model.stageOptionsForm)
-	s.False(model.needsOptionsInput)
+	s.Nil(model.StageOptionsForm())
+	s.False(model.NeedsOptionsInput())
 }
 
 func (s *StageOptionsFormSuite) Test_stage_options_skipped_in_headless_mode() {
@@ -306,8 +306,8 @@ func (s *StageOptionsFormSuite) Test_stage_options_skipped_in_headless_mode() {
 	s.Require().NoError(err)
 
 	// Options form should not be created in headless mode
-	s.Nil(model.stageOptionsForm)
-	s.False(model.needsOptionsInput)
+	s.Nil(model.StageOptionsForm())
+	s.False(model.NeedsOptionsInput())
 }
 
 func (s *StageOptionsFormSuite) Test_instance_name_validation_rejects_empty() {

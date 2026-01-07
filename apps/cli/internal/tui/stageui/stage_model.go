@@ -1265,3 +1265,35 @@ func (m *StageModel) StartStaging() tea.Cmd {
 	m.streaming = true
 	return tea.Batch(startStagingCmd(*m), waitForNextEventCmd(*m), checkForErrCmd(*m))
 }
+
+// Test accessor methods - these provide read-only access for testing purposes.
+
+// Err returns the error stored in the model.
+func (m *StageModel) Err() error {
+	return m.err
+}
+
+// Finished returns whether staging has completed.
+func (m *StageModel) Finished() bool {
+	return m.finished
+}
+
+// ChangesetID returns the changeset ID.
+func (m *StageModel) ChangesetID() string {
+	return m.changesetID
+}
+
+// Items returns the staging items.
+func (m *StageModel) Items() []StageItem {
+	return m.items
+}
+
+// Destroy returns whether this is a destroy staging operation.
+func (m *StageModel) Destroy() bool {
+	return m.destroy
+}
+
+// SkipDriftCheck returns whether drift check should be skipped.
+func (m *StageModel) SkipDriftCheck() bool {
+	return m.skipDriftCheck
+}
