@@ -735,3 +735,534 @@ func (s *DeployItemsTestSuite) Test_buildChildPath_returns_name_when_no_parent()
 	path := item.buildChildPath("element")
 	s.Equal("element", path)
 }
+
+// isDirectChild tests
+
+func (s *DeployItemsTestSuite) Test_isDirectChild_returns_true_for_direct_child() {
+	item := &DeployItem{}
+	s.True(item.isDirectChild("parent/child", "parent/"))
+}
+
+func (s *DeployItemsTestSuite) Test_isDirectChild_returns_false_for_grandchild() {
+	item := &DeployItem{}
+	s.False(item.isDirectChild("parent/child/grandchild", "parent/"))
+}
+
+func (s *DeployItemsTestSuite) Test_isDirectChild_returns_false_for_different_prefix() {
+	item := &DeployItem{}
+	s.False(item.isDirectChild("other/child", "parent/"))
+}
+
+func (s *DeployItemsTestSuite) Test_isDirectChild_returns_false_for_same_length_path() {
+	item := &DeployItem{}
+	s.False(item.isDirectChild("parent/", "parent/"))
+}
+
+func (s *DeployItemsTestSuite) Test_isDirectChild_returns_false_for_shorter_path() {
+	item := &DeployItem{}
+	s.False(item.isDirectChild("par", "parent/"))
+}
+
+// getDefaultChildAction tests
+
+func (s *DeployItemsTestSuite) Test_getDefaultChildAction_returns_inspect_when_parent_is_inspect() {
+	item := &DeployItem{
+		Type:  ItemTypeChild,
+		Child: &ChildDeployItem{Name: "testChild", Action: ActionInspect},
+	}
+	s.Equal(ActionInspect, item.getDefaultChildAction())
+}
+
+func (s *DeployItemsTestSuite) Test_getDefaultChildAction_returns_no_change_when_parent_is_not_inspect() {
+	item := &DeployItem{
+		Type:  ItemTypeChild,
+		Child: &ChildDeployItem{Name: "testChild", Action: ActionUpdate},
+	}
+	s.Equal(ActionNoChange, item.getDefaultChildAction())
+}
+
+func (s *DeployItemsTestSuite) Test_getDefaultChildAction_returns_no_change_when_child_is_nil() {
+	item := &DeployItem{Type: ItemTypeChild}
+	s.Equal(ActionNoChange, item.getDefaultChildAction())
+}
+
+// MakeChildDeployItem tests
+
+func (s *DeployItemsTestSuite) Test_MakeChildDeployItem_creates_item_with_all_fields() {
+	child := &ChildDeployItem{Name: "testChild", Action: ActionCreate}
+	childChanges := &changes.BlueprintChanges{}
+	instanceState := &state.InstanceState{}
+	childrenByName := make(map[string]*ChildDeployItem)
+	resourcesByName := make(map[string]*ResourceDeployItem)
+	linksByName := make(map[string]*LinkDeployItem)
+
+	result := MakeChildDeployItem(child, childChanges, instanceState, childrenByName, resourcesByName, linksByName)
+
+	s.Equal(ItemTypeChild, result.Type)
+	s.Equal(child, result.Child)
+	s.Equal(childChanges, result.Changes)
+	s.Equal(instanceState, result.InstanceState)
+	s.Equal(childrenByName, result.childrenByName)
+	s.Equal(resourcesByName, result.resourcesByName)
+	s.Equal(linksByName, result.linksByName)
+}
+
+// GetChildren with links tests
+
+func (s *DeployItemsTestSuite) Test_GetChildren_builds_links_from_new_resources() {
+	item := &DeployItem{
+		Type:  ItemTypeChild,
+		Child: &ChildDeployItem{Name: "childBlueprint"},
+		Changes: &changes.BlueprintChanges{
+			NewResources: map[string]provider.Changes{
+				"resourceA": {
+					NewOutboundLinks: map[string]provider.LinkChanges{
+						"resourceB": {},
+					},
+				},
+			},
+		},
+		resourcesByName: make(map[string]*ResourceDeployItem),
+		childrenByName:  make(map[string]*ChildDeployItem),
+		linksByName:     make(map[string]*LinkDeployItem),
+	}
+	children := item.GetChildren()
+	// Should have both the resource and the link
+	s.Len(children, 2)
+
+	var foundResource, foundLink bool
+	for _, child := range children {
+		childItem := child.(*DeployItem)
+		if childItem.Type == ItemTypeResource {
+			s.Equal("resourceA", childItem.Resource.Name)
+			foundResource = true
+		}
+		if childItem.Type == ItemTypeLink {
+			s.Equal("resourceA::resourceB", childItem.Link.LinkName)
+			s.Equal(ActionCreate, childItem.Link.Action)
+			foundLink = true
+		}
+	}
+	s.True(foundResource)
+	s.True(foundLink)
+}
+
+func (s *DeployItemsTestSuite) Test_GetChildren_builds_links_from_resource_changes() {
+	item := &DeployItem{
+		Type:  ItemTypeChild,
+		Child: &ChildDeployItem{Name: "childBlueprint"},
+		Changes: &changes.BlueprintChanges{
+			ResourceChanges: map[string]provider.Changes{
+				"resourceA": {
+					NewOutboundLinks: map[string]provider.LinkChanges{
+						"resourceB": {},
+					},
+					OutboundLinkChanges: map[string]provider.LinkChanges{
+						"resourceC": {},
+					},
+				},
+			},
+		},
+		resourcesByName: make(map[string]*ResourceDeployItem),
+		childrenByName:  make(map[string]*ChildDeployItem),
+		linksByName:     make(map[string]*LinkDeployItem),
+	}
+	children := item.GetChildren()
+	// Should have the resource and 2 links
+	s.Len(children, 3)
+
+	var linkActions []ActionType
+	for _, child := range children {
+		childItem := child.(*DeployItem)
+		if childItem.Type == ItemTypeLink {
+			linkActions = append(linkActions, childItem.Link.Action)
+		}
+	}
+	s.Contains(linkActions, ActionCreate) // New link
+	s.Contains(linkActions, ActionUpdate) // Changed link
+}
+
+func (s *DeployItemsTestSuite) Test_GetChildren_builds_removed_links_from_resource_changes() {
+	item := &DeployItem{
+		Type:  ItemTypeChild,
+		Child: &ChildDeployItem{Name: "childBlueprint"},
+		Changes: &changes.BlueprintChanges{
+			ResourceChanges: map[string]provider.Changes{
+				"resourceA": {
+					RemovedOutboundLinks: []string{"resourceA::resourceB"},
+				},
+			},
+		},
+		resourcesByName: make(map[string]*ResourceDeployItem),
+		childrenByName:  make(map[string]*ChildDeployItem),
+		linksByName:     make(map[string]*LinkDeployItem),
+	}
+	children := item.GetChildren()
+	// Should have resource and removed link
+	s.Len(children, 2)
+
+	var foundRemovedLink bool
+	for _, child := range children {
+		childItem := child.(*DeployItem)
+		if childItem.Type == ItemTypeLink {
+			s.Equal("resourceA::resourceB", childItem.Link.LinkName)
+			s.Equal(ActionDelete, childItem.Link.Action)
+			foundRemovedLink = true
+		}
+	}
+	s.True(foundRemovedLink)
+}
+
+func (s *DeployItemsTestSuite) Test_GetChildren_builds_top_level_removed_links() {
+	item := &DeployItem{
+		Type:  ItemTypeChild,
+		Child: &ChildDeployItem{Name: "childBlueprint"},
+		Changes: &changes.BlueprintChanges{
+			RemovedLinks: []string{"resX::resY"},
+		},
+		resourcesByName: make(map[string]*ResourceDeployItem),
+		childrenByName:  make(map[string]*ChildDeployItem),
+		linksByName:     make(map[string]*LinkDeployItem),
+	}
+	children := item.GetChildren()
+	s.Len(children, 1)
+	childItem := children[0].(*DeployItem)
+	s.Equal(ItemTypeLink, childItem.Type)
+	s.Equal("resX::resY", childItem.Link.LinkName)
+	s.Equal(ActionDelete, childItem.Link.Action)
+}
+
+// GetChildren with nested children tests
+
+func (s *DeployItemsTestSuite) Test_GetChildren_builds_new_nested_children() {
+	item := &DeployItem{
+		Type:  ItemTypeChild,
+		Child: &ChildDeployItem{Name: "parentChild"},
+		Changes: &changes.BlueprintChanges{
+			NewChildren: map[string]changes.NewBlueprintDefinition{
+				"nestedChild": {
+					NewResources: map[string]provider.Changes{
+						"nestedResource": {},
+					},
+				},
+			},
+		},
+		resourcesByName: make(map[string]*ResourceDeployItem),
+		childrenByName:  make(map[string]*ChildDeployItem),
+		linksByName:     make(map[string]*LinkDeployItem),
+	}
+	children := item.GetChildren()
+	s.Len(children, 1)
+	childItem := children[0].(*DeployItem)
+	s.Equal(ItemTypeChild, childItem.Type)
+	s.Equal("nestedChild", childItem.Child.Name)
+	s.Equal(ActionCreate, childItem.Child.Action)
+	// Should have nested Changes converted from NewBlueprintDefinition
+	s.NotNil(childItem.Changes)
+	s.Len(childItem.Changes.NewResources, 1)
+}
+
+func (s *DeployItemsTestSuite) Test_GetChildren_builds_changed_nested_children() {
+	item := &DeployItem{
+		Type:  ItemTypeChild,
+		Child: &ChildDeployItem{Name: "parentChild"},
+		Changes: &changes.BlueprintChanges{
+			ChildChanges: map[string]changes.BlueprintChanges{
+				"nestedChild": {
+					ResourceChanges: map[string]provider.Changes{
+						"changedResource": {
+							ModifiedFields: []provider.FieldChange{{FieldPath: "spec.value"}},
+						},
+					},
+				},
+			},
+		},
+		InstanceState: &state.InstanceState{
+			ChildBlueprints: map[string]*state.InstanceState{
+				"nestedChild": {
+					InstanceID: "nested-instance-123",
+				},
+			},
+		},
+		resourcesByName: make(map[string]*ResourceDeployItem),
+		childrenByName:  make(map[string]*ChildDeployItem),
+		linksByName:     make(map[string]*LinkDeployItem),
+	}
+	children := item.GetChildren()
+	s.Len(children, 1)
+	childItem := children[0].(*DeployItem)
+	s.Equal(ItemTypeChild, childItem.Type)
+	s.Equal("nestedChild", childItem.Child.Name)
+	s.Equal(ActionUpdate, childItem.Child.Action)
+	// Should have nested InstanceState
+	s.NotNil(childItem.InstanceState)
+	s.Equal("nested-instance-123", childItem.InstanceState.InstanceID)
+}
+
+func (s *DeployItemsTestSuite) Test_GetChildren_builds_removed_nested_children() {
+	item := &DeployItem{
+		Type:  ItemTypeChild,
+		Child: &ChildDeployItem{Name: "parentChild"},
+		Changes: &changes.BlueprintChanges{
+			RemovedChildren: []string{"removedChild"},
+		},
+		resourcesByName: make(map[string]*ResourceDeployItem),
+		childrenByName:  make(map[string]*ChildDeployItem),
+		linksByName:     make(map[string]*LinkDeployItem),
+	}
+	children := item.GetChildren()
+	s.Len(children, 1)
+	childItem := children[0].(*DeployItem)
+	s.Equal(ItemTypeChild, childItem.Type)
+	s.Equal("removedChild", childItem.Child.Name)
+	s.Equal(ActionDelete, childItem.Child.Action)
+}
+
+// GetChildren with unchanged items from instance state tests
+
+func (s *DeployItemsTestSuite) Test_GetChildren_adds_unchanged_children_from_instance_state() {
+	item := &DeployItem{
+		Type:    ItemTypeChild,
+		Child:   &ChildDeployItem{Name: "parentChild", Action: ActionUpdate},
+		Changes: &changes.BlueprintChanges{},
+		InstanceState: &state.InstanceState{
+			ChildBlueprints: map[string]*state.InstanceState{
+				"unchangedChild": {
+					InstanceID: "unchanged-instance-123",
+				},
+			},
+		},
+		resourcesByName: make(map[string]*ResourceDeployItem),
+		childrenByName:  make(map[string]*ChildDeployItem),
+		linksByName:     make(map[string]*LinkDeployItem),
+	}
+	children := item.GetChildren()
+	s.Len(children, 1)
+	childItem := children[0].(*DeployItem)
+	s.Equal(ItemTypeChild, childItem.Type)
+	s.Equal("unchangedChild", childItem.Child.Name)
+	s.Equal(ActionNoChange, childItem.Child.Action)
+}
+
+func (s *DeployItemsTestSuite) Test_GetChildren_adds_unchanged_links_from_instance_state() {
+	item := &DeployItem{
+		Type:    ItemTypeChild,
+		Child:   &ChildDeployItem{Name: "parentChild", Action: ActionUpdate},
+		Changes: &changes.BlueprintChanges{},
+		InstanceState: &state.InstanceState{
+			Links: map[string]*state.LinkState{
+				"resA::resB": {
+					LinkID: "link-123",
+					Status: core.LinkStatusCreated,
+				},
+			},
+		},
+		resourcesByName: make(map[string]*ResourceDeployItem),
+		childrenByName:  make(map[string]*ChildDeployItem),
+		linksByName:     make(map[string]*LinkDeployItem),
+	}
+	children := item.GetChildren()
+	s.Len(children, 1)
+	childItem := children[0].(*DeployItem)
+	s.Equal(ItemTypeLink, childItem.Type)
+	s.Equal("resA::resB", childItem.Link.LinkName)
+	s.Equal(ActionNoChange, childItem.Link.Action)
+	s.Equal("link-123", childItem.Link.LinkID)
+}
+
+func (s *DeployItemsTestSuite) Test_GetChildren_inherits_inspect_action_for_unchanged_items() {
+	item := &DeployItem{
+		Type:    ItemTypeChild,
+		Child:   &ChildDeployItem{Name: "parentChild", Action: ActionInspect},
+		Changes: &changes.BlueprintChanges{},
+		InstanceState: &state.InstanceState{
+			Resources: map[string]*state.ResourceState{
+				"res-123": {
+					ResourceID: "res-123",
+					Name:       "inspectResource",
+					Type:       "aws/s3/bucket",
+				},
+			},
+		},
+		resourcesByName: make(map[string]*ResourceDeployItem),
+		childrenByName:  make(map[string]*ChildDeployItem),
+		linksByName:     make(map[string]*LinkDeployItem),
+	}
+	children := item.GetChildren()
+	s.Len(children, 1)
+	childItem := children[0].(*DeployItem)
+	s.Equal("inspectResource", childItem.Resource.Name)
+	s.Equal(ActionInspect, childItem.Resource.Action)
+}
+
+// GetChildren with resource changes that have only link changes
+
+func (s *DeployItemsTestSuite) Test_GetChildren_sets_no_change_for_resource_with_only_link_changes() {
+	item := &DeployItem{
+		Type:  ItemTypeChild,
+		Child: &ChildDeployItem{Name: "childBlueprint"},
+		Changes: &changes.BlueprintChanges{
+			ResourceChanges: map[string]provider.Changes{
+				"resourceA": {
+					// No ModifiedFields, only link changes
+					NewOutboundLinks: map[string]provider.LinkChanges{
+						"resourceB": {},
+					},
+				},
+			},
+		},
+		resourcesByName: make(map[string]*ResourceDeployItem),
+		childrenByName:  make(map[string]*ChildDeployItem),
+		linksByName:     make(map[string]*LinkDeployItem),
+	}
+	children := item.GetChildren()
+
+	var resourceItem *DeployItem
+	for _, child := range children {
+		childItem := child.(*DeployItem)
+		if childItem.Type == ItemTypeResource {
+			resourceItem = childItem
+			break
+		}
+	}
+	s.NotNil(resourceItem)
+	s.Equal("resourceA", resourceItem.Resource.Name)
+	s.Equal(ActionNoChange, resourceItem.Resource.Action)
+}
+
+// populateResourceItemFromChanges tests (via getOrCreateResourceItemWithChanges)
+
+func (s *DeployItemsTestSuite) Test_GetChildren_populates_resource_from_changes_data() {
+	item := &DeployItem{
+		Type:  ItemTypeChild,
+		Child: &ChildDeployItem{Name: "childBlueprint"},
+		Changes: &changes.BlueprintChanges{
+			ResourceChanges: map[string]provider.Changes{
+				"changedResource": {
+					ModifiedFields: []provider.FieldChange{{FieldPath: "spec.value"}},
+					AppliedResourceInfo: provider.ResourceInfo{
+						ResourceID: "res-from-changes",
+						CurrentResourceState: &state.ResourceState{
+							ResourceID: "res-from-changes",
+							Type:       "aws/lambda/function",
+						},
+					},
+				},
+			},
+		},
+		resourcesByName: make(map[string]*ResourceDeployItem),
+		childrenByName:  make(map[string]*ChildDeployItem),
+		linksByName:     make(map[string]*LinkDeployItem),
+	}
+	children := item.GetChildren()
+	s.Len(children, 1)
+	childItem := children[0].(*DeployItem)
+	s.Equal("changedResource", childItem.Resource.Name)
+	s.Equal("res-from-changes", childItem.Resource.ResourceID)
+	s.Equal("aws/lambda/function", childItem.Resource.ResourceType)
+	s.NotNil(childItem.Resource.ResourceState)
+}
+
+// getOrCreateResourceItemFromState tests (via GetChildren with instance state)
+
+func (s *DeployItemsTestSuite) Test_GetChildren_hydrates_existing_resource_from_state() {
+	// Pre-populate the shared map with a resource item (simulating streaming scenario)
+	resourcesByName := make(map[string]*ResourceDeployItem)
+	resourcesByName["childBlueprint/existingResource"] = &ResourceDeployItem{
+		Name:   "existingResource",
+		Action: ActionInspect,
+		Status: core.ResourceStatusCreating, // Status from streaming
+	}
+
+	item := &DeployItem{
+		Type:    ItemTypeChild,
+		Child:   &ChildDeployItem{Name: "childBlueprint", Action: ActionUpdate},
+		Changes: &changes.BlueprintChanges{},
+		InstanceState: &state.InstanceState{
+			Resources: map[string]*state.ResourceState{
+				"res-456": {
+					ResourceID: "res-456",
+					Name:       "existingResource",
+					Type:       "aws/sqs/queue",
+				},
+			},
+		},
+		resourcesByName: resourcesByName,
+		childrenByName:  make(map[string]*ChildDeployItem),
+		linksByName:     make(map[string]*LinkDeployItem),
+	}
+	children := item.GetChildren()
+	s.Len(children, 1)
+	childItem := children[0].(*DeployItem)
+	// Should have hydrated the existing resource with state data
+	s.Equal("existingResource", childItem.Resource.Name)
+	s.Equal("res-456", childItem.Resource.ResourceID)
+	s.Equal("aws/sqs/queue", childItem.Resource.ResourceType)
+	// Should preserve the streaming status
+	s.Equal(core.ResourceStatusCreating, childItem.Resource.Status)
+}
+
+// getOrCreateChildItemFromState tests
+
+func (s *DeployItemsTestSuite) Test_GetChildren_migrates_child_from_simple_key_to_path_key() {
+	// Pre-populate the shared map with a simple name key (backwards compat scenario)
+	childrenByName := make(map[string]*ChildDeployItem)
+	childrenByName["existingChild"] = &ChildDeployItem{
+		Name:   "existingChild",
+		Action: ActionInspect,
+	}
+
+	item := &DeployItem{
+		Type:    ItemTypeChild,
+		Child:   &ChildDeployItem{Name: "parentChild", Action: ActionUpdate},
+		Changes: &changes.BlueprintChanges{},
+		InstanceState: &state.InstanceState{
+			ChildBlueprints: map[string]*state.InstanceState{
+				"existingChild": {InstanceID: "child-instance-789"},
+			},
+		},
+		resourcesByName: make(map[string]*ResourceDeployItem),
+		childrenByName:  childrenByName,
+		linksByName:     make(map[string]*LinkDeployItem),
+	}
+	children := item.GetChildren()
+	s.Len(children, 1)
+	childItem := children[0].(*DeployItem)
+	s.Equal("existingChild", childItem.Child.Name)
+	// Should have migrated from simple key to path-based key
+	s.Nil(childrenByName["existingChild"])
+	s.NotNil(childrenByName["parentChild/existingChild"])
+}
+
+// getOrCreateLinkItemFromState tests
+
+func (s *DeployItemsTestSuite) Test_GetChildren_migrates_link_from_simple_key_to_path_key() {
+	// Pre-populate the shared map with a simple name key
+	linksByName := make(map[string]*LinkDeployItem)
+	linksByName["resA::resB"] = &LinkDeployItem{
+		LinkName: "resA::resB",
+		Action:   ActionInspect,
+	}
+
+	item := &DeployItem{
+		Type:    ItemTypeChild,
+		Child:   &ChildDeployItem{Name: "parentChild", Action: ActionUpdate},
+		Changes: &changes.BlueprintChanges{},
+		InstanceState: &state.InstanceState{
+			Links: map[string]*state.LinkState{
+				"resA::resB": {LinkID: "link-migrated"},
+			},
+		},
+		resourcesByName: make(map[string]*ResourceDeployItem),
+		childrenByName:  make(map[string]*ChildDeployItem),
+		linksByName:     linksByName,
+	}
+	children := item.GetChildren()
+	s.Len(children, 1)
+	childItem := children[0].(*DeployItem)
+	s.Equal("resA::resB", childItem.Link.LinkName)
+	s.Equal("link-migrated", childItem.Link.LinkID)
+	// Should have migrated from simple key to path-based key
+	s.Nil(linksByName["resA::resB"])
+	s.NotNil(linksByName["parentChild/resA::resB"])
+}
