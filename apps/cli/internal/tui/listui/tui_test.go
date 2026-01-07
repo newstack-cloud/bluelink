@@ -377,19 +377,12 @@ func (s *ListTUISuite) Test_headless_outputs_empty_list() {
 
 func (s *ListTUISuite) Test_headless_outputs_error() {
 	headlessOutput := &bytes.Buffer{}
-	model, _ := NewListApp(
-		testutils.NewTestDeployEngineForListError(),
-		zap.NewNop(),
-		"",
-		s.styles,
-		true,
-		headlessOutput,
-		false,
-	)
+	// Use a non-error mock so we can control the error via Send()
+	model := s.newHeadlessTestModel(nil, headlessOutput, false)
 
 	testModel := teatest.NewTestModel(
 		s.T(),
-		*model,
+		model,
 		teatest.WithInitialTermSize(300, 100),
 	)
 
