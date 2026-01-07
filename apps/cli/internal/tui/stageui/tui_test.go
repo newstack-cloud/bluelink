@@ -844,6 +844,710 @@ func (s *StageTUISuite) Test_staging_generic_error() {
 	s.NotNil(finalModel.err)
 }
 
+// --- Additional Headless Mode Tests ---
+
+func (s *StageTUISuite) Test_staging_headless_with_existing_resource() {
+	headlessOutput := testutils.NewSaveBuffer()
+	model := NewStageModel(
+		testutils.NewTestDeployEngineWithStaging(
+			testStagingEvents(stagingSuccessUpdate),
+			"test-changeset-existing",
+		),
+		zap.NewNop(),
+		"",
+		"test-instance",
+		false,
+		false,
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
+		true, // headless
+		headlessOutput,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(sharedui.SelectBlueprintMsg{
+		BlueprintFile: "test.blueprint.yaml",
+		Source:        consts.BlueprintSourceFile,
+	})
+
+	// Existing resource should not show "(new)"
+	testutils.WaitForContainsAll(
+		s.T(),
+		headlessOutput,
+		"test-resource",
+		"UPDATE",
+	)
+	s.NotContains(headlessOutput.String(), "(new)")
+
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *StageTUISuite) Test_staging_headless_with_existing_link() {
+	headlessOutput := testutils.NewSaveBuffer()
+	events := []*types.ChangeStagingEvent{
+		{
+			LinkChanges: &types.LinkChangesEventData{
+				LinkChangesMessage: container.LinkChangesMessage{
+					ResourceAName: "resA",
+					ResourceBName: "resB",
+					New:           false,
+					Changes: provider.LinkChanges{
+						ModifiedFields: []*provider.FieldChange{
+							{FieldPath: "field1", PrevValue: stringMappingNode("old"), NewValue: stringMappingNode("new")},
+						},
+					},
+				},
+				Timestamp: time.Now().Unix(),
+			},
+		},
+		completeChangesEvent(),
+	}
+
+	model := NewStageModel(
+		testutils.NewTestDeployEngineWithStaging(events, "test-changeset-link-existing"),
+		zap.NewNop(),
+		"",
+		"test-instance",
+		false,
+		false,
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
+		true,
+		headlessOutput,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(sharedui.SelectBlueprintMsg{
+		BlueprintFile: "test.blueprint.yaml",
+		Source:        consts.BlueprintSourceFile,
+	})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		headlessOutput,
+		"resA::resB",
+		"UPDATE",
+	)
+
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *StageTUISuite) Test_staging_headless_with_existing_child() {
+	headlessOutput := testutils.NewSaveBuffer()
+	events := []*types.ChangeStagingEvent{
+		{
+			ChildChanges: &types.ChildChangesEventData{
+				ChildChangesMessage: container.ChildChangesMessage{
+					ChildBlueprintName: "existingChild",
+					New:                false,
+					Changes: changes.BlueprintChanges{
+						ResourceChanges: map[string]provider.Changes{
+							"res1": {ModifiedFields: []provider.FieldChange{{FieldPath: "spec.field"}}},
+						},
+					},
+				},
+				Timestamp: time.Now().Unix(),
+			},
+		},
+		completeChangesEvent(),
+	}
+
+	model := NewStageModel(
+		testutils.NewTestDeployEngineWithStaging(events, "test-changeset-child-existing"),
+		zap.NewNop(),
+		"",
+		"test-instance",
+		false,
+		false,
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
+		true,
+		headlessOutput,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(sharedui.SelectBlueprintMsg{
+		BlueprintFile: "test.blueprint.yaml",
+		Source:        consts.BlueprintSourceFile,
+	})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		headlessOutput,
+		"existingChild",
+		"UPDATE",
+		"1 resource",
+	)
+
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *StageTUISuite) Test_staging_headless_destroy_hint() {
+	headlessOutput := testutils.NewSaveBuffer()
+	model := NewStageModel(
+		testutils.NewTestDeployEngineWithStaging(
+			testStagingEvents(stagingSuccessDelete),
+			"test-changeset-destroy",
+		),
+		zap.NewNop(),
+		"",
+		"test-instance",
+		true, // destroy mode
+		false,
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
+		true,
+		headlessOutput,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(sharedui.SelectBlueprintMsg{
+		BlueprintFile: "test.blueprint.yaml",
+		Source:        consts.BlueprintSourceFile,
+	})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		headlessOutput,
+		"bluelink destroy",
+		"--changeset-id",
+	)
+
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *StageTUISuite) Test_staging_headless_with_instance_id() {
+	headlessOutput := testutils.NewSaveBuffer()
+	model := NewStageModel(
+		testutils.NewTestDeployEngineWithStaging(
+			testStagingEvents(stagingSuccessCreate),
+			"test-changeset-id",
+		),
+		zap.NewNop(),
+		"inst-456", // instanceID instead of instanceName
+		"",         // no instanceName
+		false,
+		false,
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
+		true,
+		headlessOutput,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(sharedui.SelectBlueprintMsg{
+		BlueprintFile: "test.blueprint.yaml",
+		Source:        consts.BlueprintSourceFile,
+	})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		headlessOutput,
+		"--instance-id inst-456",
+	)
+
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *StageTUISuite) Test_staging_headless_placeholder_name() {
+	headlessOutput := testutils.NewSaveBuffer()
+	model := NewStageModel(
+		testutils.NewTestDeployEngineWithStaging(
+			testStagingEvents(stagingSuccessCreate),
+			"test-changeset-placeholder",
+		),
+		zap.NewNop(),
+		"", // no instanceID
+		"", // no instanceName
+		false,
+		false,
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
+		true,
+		headlessOutput,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(sharedui.SelectBlueprintMsg{
+		BlueprintFile: "test.blueprint.yaml",
+		Source:        consts.BlueprintSourceFile,
+	})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		headlessOutput,
+		"--instance-name <name>",
+	)
+
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *StageTUISuite) Test_staging_headless_no_changes() {
+	headlessOutput := testutils.NewSaveBuffer()
+	// Empty events - just complete changes with no actual changes
+	events := []*types.ChangeStagingEvent{
+		completeChangesEvent(),
+	}
+
+	model := NewStageModel(
+		testutils.NewTestDeployEngineWithStaging(events, "test-changeset-no-changes"),
+		zap.NewNop(),
+		"",
+		"test-instance",
+		false,
+		false,
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
+		true,
+		headlessOutput,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(sharedui.SelectBlueprintMsg{
+		BlueprintFile: "test.blueprint.yaml",
+		Source:        consts.BlueprintSourceFile,
+	})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		headlessOutput,
+		"No changes to apply",
+	)
+
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *StageTUISuite) Test_staging_headless_stream_error() {
+	headlessOutput := testutils.NewSaveBuffer()
+	streamErr := &engineerrors.StreamError{
+		Event: &types.StreamErrorMessageEvent{
+			Message: "Stream error during staging",
+			Diagnostics: []*core.Diagnostic{
+				{Level: core.DiagnosticLevelError, Message: "Diagnostic message for stream error"},
+			},
+		},
+	}
+
+	model := NewStageModel(
+		testutils.NewTestDeployEngineWithStagingError(streamErr),
+		zap.NewNop(),
+		"",
+		"test-instance",
+		false,
+		false,
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
+		true,
+		headlessOutput,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(sharedui.SelectBlueprintMsg{
+		BlueprintFile: "test.blueprint.yaml",
+		Source:        consts.BlueprintSourceFile,
+	})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		headlessOutput,
+		"Error during change staging",
+		"Stream error during staging",
+		"Diagnostics",
+		"Diagnostic message for stream error",
+	)
+
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *StageTUISuite) Test_staging_headless_with_validation_errors() {
+	headlessOutput := testutils.NewSaveBuffer()
+	validationErr := &engineerrors.ClientError{
+		StatusCode: 400,
+		Message:    "Validation failed",
+		ValidationErrors: []*engineerrors.ValidationError{
+			{Location: "resources.myRes", Message: "invalid field value"},
+		},
+	}
+
+	model := NewStageModel(
+		testutils.NewTestDeployEngineWithStagingError(validationErr),
+		zap.NewNop(),
+		"",
+		"test-instance",
+		false,
+		false,
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
+		true,
+		headlessOutput,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(sharedui.SelectBlueprintMsg{
+		BlueprintFile: "test.blueprint.yaml",
+		Source:        consts.BlueprintSourceFile,
+	})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		headlessOutput,
+		"Failed to create changeset",
+		"resources.myRes",
+		"invalid field value",
+	)
+
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *StageTUISuite) Test_staging_headless_generic_error() {
+	headlessOutput := testutils.NewSaveBuffer()
+	genericErr := &engineerrors.ClientError{
+		StatusCode: 500,
+		Message:    "Internal server error",
+	}
+
+	model := NewStageModel(
+		testutils.NewTestDeployEngineWithStagingError(genericErr),
+		zap.NewNop(),
+		"",
+		"test-instance",
+		false,
+		false,
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
+		true,
+		headlessOutput,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(sharedui.SelectBlueprintMsg{
+		BlueprintFile: "test.blueprint.yaml",
+		Source:        consts.BlueprintSourceFile,
+	})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		headlessOutput,
+		"Error during change staging",
+	)
+
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *StageTUISuite) Test_staging_headless_shows_link_field_changes() {
+	headlessOutput := testutils.NewSaveBuffer()
+	events := []*types.ChangeStagingEvent{
+		{
+			LinkChanges: &types.LinkChangesEventData{
+				LinkChangesMessage: container.LinkChangesMessage{
+					ResourceAName: "resA",
+					ResourceBName: "resB",
+					New:           true,
+					Changes: provider.LinkChanges{
+						NewFields: []*provider.FieldChange{
+							{FieldPath: "link.field1", NewValue: stringMappingNode("linked-value")},
+						},
+					},
+				},
+				Timestamp: time.Now().Unix(),
+			},
+		},
+		completeChangesEvent(),
+	}
+
+	model := NewStageModel(
+		testutils.NewTestDeployEngineWithStaging(events, "test-changeset-link-fields"),
+		zap.NewNop(),
+		"",
+		"test-instance",
+		false,
+		false,
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
+		true,
+		headlessOutput,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(sharedui.SelectBlueprintMsg{
+		BlueprintFile: "test.blueprint.yaml",
+		Source:        consts.BlueprintSourceFile,
+	})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		headlessOutput,
+		"link.field1",
+		"linked-value",
+	)
+
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *StageTUISuite) Test_staging_headless_shows_child_change_counts() {
+	headlessOutput := testutils.NewSaveBuffer()
+	events := []*types.ChangeStagingEvent{
+		{
+			ChildChanges: &types.ChildChangesEventData{
+				ChildChangesMessage: container.ChildChangesMessage{
+					ChildBlueprintName: "myChild",
+					New:                true,
+					Changes: changes.BlueprintChanges{
+						NewResources:    map[string]provider.Changes{"res1": {}, "res2": {}},
+						RemovedChildren: []string{}, // explicitly empty
+					},
+				},
+				Timestamp: time.Now().Unix(),
+			},
+		},
+		completeChangesEvent(),
+	}
+
+	model := NewStageModel(
+		testutils.NewTestDeployEngineWithStaging(events, "test-changeset-child-counts"),
+		zap.NewNop(),
+		"",
+		"test-instance",
+		false,
+		false,
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
+		true,
+		headlessOutput,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(sharedui.SelectBlueprintMsg{
+		BlueprintFile: "test.blueprint.yaml",
+		Source:        consts.BlueprintSourceFile,
+	})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		headlessOutput,
+		"myChild",
+		"(new, 2 resources)",
+	)
+
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *StageTUISuite) Test_staging_headless_with_resource_outbound_links() {
+	headlessOutput := testutils.NewSaveBuffer()
+	events := []*types.ChangeStagingEvent{
+		resourceCreateEvent("resource-a"),
+		{
+			LinkChanges: &types.LinkChangesEventData{
+				LinkChangesMessage: container.LinkChangesMessage{
+					ResourceAName: "resource-a",
+					ResourceBName: "resource-b",
+					New:           true,
+					Changes: provider.LinkChanges{
+						NewFields: []*provider.FieldChange{
+							{FieldPath: "outbound.field", NewValue: stringMappingNode("outbound-value")},
+						},
+					},
+				},
+				Timestamp: time.Now().Unix(),
+			},
+		},
+		completeChangesEvent(),
+	}
+
+	model := NewStageModel(
+		testutils.NewTestDeployEngineWithStaging(events, "test-changeset-outbound"),
+		zap.NewNop(),
+		"",
+		"test-instance",
+		false,
+		false,
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
+		true,
+		headlessOutput,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(sharedui.SelectBlueprintMsg{
+		BlueprintFile: "test.blueprint.yaml",
+		Source:        consts.BlueprintSourceFile,
+	})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		headlessOutput,
+		"resource-a",
+		"resource-a::resource-b",
+	)
+
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *StageTUISuite) Test_staging_headless_with_export_changes() {
+	headlessOutput := testutils.NewSaveBuffer()
+	events := []*types.ChangeStagingEvent{
+		resourceCreateEvent("test-resource"),
+		{
+			CompleteChanges: &types.CompleteChangesEventData{
+				Changes: &changes.BlueprintChanges{
+					NewExports: map[string]provider.FieldChange{
+						"myExport": {NewValue: stringMappingNode("exported-value")},
+					},
+				},
+			},
+		},
+	}
+
+	model := NewStageModel(
+		testutils.NewTestDeployEngineWithStaging(events, "test-changeset-exports"),
+		zap.NewNop(),
+		"",
+		"test-instance",
+		false,
+		false,
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
+		true,
+		headlessOutput,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(sharedui.SelectBlueprintMsg{
+		BlueprintFile: "test.blueprint.yaml",
+		Source:        consts.BlueprintSourceFile,
+	})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		headlessOutput,
+		"exports",
+		"New Exports",
+		"myExport",
+	)
+
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *StageTUISuite) Test_staging_headless_with_diagnostic_location() {
+	headlessOutput := testutils.NewSaveBuffer()
+	validationErr := &engineerrors.ClientError{
+		StatusCode: 400,
+		Message:    "Validation failed",
+		ValidationDiagnostics: []*core.Diagnostic{
+			{
+				Level:   core.DiagnosticLevelError,
+				Message: "Error with location",
+				Range: &core.DiagnosticRange{
+					Start: &source.Meta{Position: source.Position{Line: 42, Column: 10}},
+				},
+			},
+		},
+	}
+
+	model := NewStageModel(
+		testutils.NewTestDeployEngineWithStagingError(validationErr),
+		zap.NewNop(),
+		"",
+		"test-instance",
+		false,
+		false,
+		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
+		true,
+		headlessOutput,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(sharedui.SelectBlueprintMsg{
+		BlueprintFile: "test.blueprint.yaml",
+		Source:        consts.BlueprintSourceFile,
+	})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		headlessOutput,
+		"line 42",
+		"col 10",
+	)
+
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
 // --- Navigation Tests ---
 
 func (s *StageTUISuite) Test_quit_with_q() {

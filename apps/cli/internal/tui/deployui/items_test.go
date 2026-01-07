@@ -1266,3 +1266,120 @@ func (s *DeployItemsTestSuite) Test_GetChildren_migrates_link_from_simple_key_to
 	s.Nil(linksByName["resA::resB"])
 	s.NotNil(linksByName["parentChild/resA::resB"])
 }
+
+// GetID edge cases for nil pointers
+
+func (s *DeployItemsTestSuite) Test_GetID_returns_empty_for_nil_child() {
+	item := &DeployItem{Type: ItemTypeChild}
+	s.Equal("", item.GetID())
+}
+
+func (s *DeployItemsTestSuite) Test_GetID_returns_empty_for_nil_link() {
+	item := &DeployItem{Type: ItemTypeLink}
+	s.Equal("", item.GetID())
+}
+
+func (s *DeployItemsTestSuite) Test_GetID_returns_empty_for_unknown_type() {
+	item := &DeployItem{Type: "unknown"}
+	s.Equal("", item.GetID())
+}
+
+// GetIcon edge cases for nil pointers
+
+func (s *DeployItemsTestSuite) Test_GetIcon_returns_pending_for_nil_child() {
+	item := &DeployItem{Type: ItemTypeChild}
+	s.Equal(shared.IconPending, item.GetIcon(false))
+}
+
+func (s *DeployItemsTestSuite) Test_GetIcon_returns_pending_for_nil_link() {
+	item := &DeployItem{Type: ItemTypeLink}
+	s.Equal(shared.IconPending, item.GetIcon(false))
+}
+
+func (s *DeployItemsTestSuite) Test_GetIcon_returns_pending_for_unknown_type() {
+	item := &DeployItem{Type: "unknown"}
+	s.Equal(shared.IconPending, item.GetIcon(false))
+}
+
+// GetIconStyled edge cases for nil pointers
+
+func (s *DeployItemsTestSuite) Test_GetIconStyled_returns_icon_for_nil_resource() {
+	item := &DeployItem{Type: ItemTypeResource}
+	icon := item.GetIconStyled(s.testStyles, true)
+	s.Equal(shared.IconPending, icon)
+}
+
+func (s *DeployItemsTestSuite) Test_GetIconStyled_returns_icon_for_nil_child() {
+	item := &DeployItem{Type: ItemTypeChild}
+	icon := item.GetIconStyled(s.testStyles, true)
+	s.Equal(shared.IconPending, icon)
+}
+
+func (s *DeployItemsTestSuite) Test_GetIconStyled_returns_icon_for_nil_link() {
+	item := &DeployItem{Type: ItemTypeLink}
+	icon := item.GetIconStyled(s.testStyles, true)
+	s.Equal(shared.IconPending, icon)
+}
+
+func (s *DeployItemsTestSuite) Test_GetIconStyled_child_skipped() {
+	item := &DeployItem{
+		Type:  ItemTypeChild,
+		Child: &ChildDeployItem{Skipped: true},
+	}
+	icon := item.GetIconStyled(s.testStyles, true)
+	s.Contains(icon, shared.IconSkipped)
+}
+
+func (s *DeployItemsTestSuite) Test_GetIconStyled_child_no_change() {
+	item := &DeployItem{
+		Type:  ItemTypeChild,
+		Child: &ChildDeployItem{Action: ActionNoChange},
+	}
+	icon := item.GetIconStyled(s.testStyles, true)
+	s.Contains(icon, shared.IconNoChange)
+}
+
+func (s *DeployItemsTestSuite) Test_GetIconStyled_link_skipped() {
+	item := &DeployItem{
+		Type: ItemTypeLink,
+		Link: &LinkDeployItem{Skipped: true},
+	}
+	icon := item.GetIconStyled(s.testStyles, true)
+	s.Contains(icon, shared.IconSkipped)
+}
+
+func (s *DeployItemsTestSuite) Test_GetIconStyled_link_no_change() {
+	item := &DeployItem{
+		Type: ItemTypeLink,
+		Link: &LinkDeployItem{Action: ActionNoChange},
+	}
+	icon := item.GetIconStyled(s.testStyles, true)
+	s.Contains(icon, shared.IconNoChange)
+}
+
+// GetAction edge cases for nil pointers
+
+func (s *DeployItemsTestSuite) Test_GetAction_returns_empty_for_nil_child() {
+	item := &DeployItem{Type: ItemTypeChild}
+	s.Equal("", item.GetAction())
+}
+
+func (s *DeployItemsTestSuite) Test_GetAction_returns_empty_for_nil_link() {
+	item := &DeployItem{Type: ItemTypeLink}
+	s.Equal("", item.GetAction())
+}
+
+func (s *DeployItemsTestSuite) Test_GetAction_returns_empty_for_unknown_type() {
+	item := &DeployItem{Type: "unknown"}
+	s.Equal("", item.GetAction())
+}
+
+// Link no change icon test
+
+func (s *DeployItemsTestSuite) Test_GetIcon_link_no_change() {
+	item := &DeployItem{
+		Type: ItemTypeLink,
+		Link: &LinkDeployItem{Action: ActionNoChange},
+	}
+	s.Equal(shared.IconNoChange, item.GetIcon(false))
+}

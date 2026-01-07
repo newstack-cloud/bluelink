@@ -19,18 +19,9 @@ func TestEventProcessorsTestSuite(t *testing.T) {
 	suite.Run(t, new(EventProcessorsTestSuite))
 }
 
-// Helper to create a minimal DeployModel for testing
-func (s *EventProcessorsTestSuite) newTestModel() *DeployModel {
-	return &DeployModel{
-		instanceID:              "root-instance-id",
-		resourcesByName:         make(map[string]*ResourceDeployItem),
-		childrenByName:          make(map[string]*ChildDeployItem),
-		linksByName:             make(map[string]*LinkDeployItem),
-		instanceIDToChildName:   make(map[string]string),
-		instanceIDToParentID:    make(map[string]string),
-		childNameToInstancePath: make(map[string]string),
-		footerRenderer:          &DeployFooterRenderer{},
-	}
+// Helper to create a minimal EventProcessorState for testing
+func (s *EventProcessorsTestSuite) newTestState() *EventProcessorState {
+	return NewEventProcessorState("root-instance-id")
 }
 
 // shared.JoinPath tests (delegating to shared package)
@@ -50,143 +41,143 @@ func (s *EventProcessorsTestSuite) Test_JoinPath_multiple_elements() {
 	s.Equal("parent/child/resource", result)
 }
 
-// buildResourcePath tests
+// BuildResourcePath tests
 
-func (s *EventProcessorsTestSuite) Test_buildResourcePath_empty_instanceID_returns_name() {
-	m := s.newTestModel()
-	path := m.buildResourcePath("", "myResource")
+func (s *EventProcessorsTestSuite) Test_BuildResourcePath_empty_instanceID_returns_name() {
+	state := s.newTestState()
+	path := BuildResourcePath(state, "", "myResource")
 	s.Equal("myResource", path)
 }
 
-func (s *EventProcessorsTestSuite) Test_buildResourcePath_root_instanceID_returns_name() {
-	m := s.newTestModel()
-	path := m.buildResourcePath("root-instance-id", "myResource")
+func (s *EventProcessorsTestSuite) Test_BuildResourcePath_root_instanceID_returns_name() {
+	state := s.newTestState()
+	path := BuildResourcePath(state, "root-instance-id", "myResource")
 	s.Equal("myResource", path)
 }
 
-func (s *EventProcessorsTestSuite) Test_buildResourcePath_nested_instance_builds_path() {
-	m := s.newTestModel()
-	m.instanceIDToChildName["child-instance-id"] = "childBlueprint"
-	m.instanceIDToParentID["child-instance-id"] = "root-instance-id"
+func (s *EventProcessorsTestSuite) Test_BuildResourcePath_nested_instance_builds_path() {
+	state := s.newTestState()
+	state.InstanceIDToChildName["child-instance-id"] = "childBlueprint"
+	state.InstanceIDToParentID["child-instance-id"] = "root-instance-id"
 
-	path := m.buildResourcePath("child-instance-id", "nestedResource")
+	path := BuildResourcePath(state, "child-instance-id", "nestedResource")
 	s.Equal("childBlueprint/nestedResource", path)
 }
 
-func (s *EventProcessorsTestSuite) Test_buildResourcePath_deeply_nested_builds_full_path() {
-	m := s.newTestModel()
-	m.instanceIDToChildName["child-instance-id"] = "childBlueprint"
-	m.instanceIDToParentID["child-instance-id"] = "root-instance-id"
-	m.instanceIDToChildName["grandchild-instance-id"] = "grandchildBlueprint"
-	m.instanceIDToParentID["grandchild-instance-id"] = "child-instance-id"
+func (s *EventProcessorsTestSuite) Test_BuildResourcePath_deeply_nested_builds_full_path() {
+	state := s.newTestState()
+	state.InstanceIDToChildName["child-instance-id"] = "childBlueprint"
+	state.InstanceIDToParentID["child-instance-id"] = "root-instance-id"
+	state.InstanceIDToChildName["grandchild-instance-id"] = "grandchildBlueprint"
+	state.InstanceIDToParentID["grandchild-instance-id"] = "child-instance-id"
 
-	path := m.buildResourcePath("grandchild-instance-id", "deepResource")
+	path := BuildResourcePath(state, "grandchild-instance-id", "deepResource")
 	s.Equal("childBlueprint/grandchildBlueprint/deepResource", path)
 }
 
-// buildInstancePath tests
+// BuildInstancePath tests
 
-func (s *EventProcessorsTestSuite) Test_buildInstancePath_empty_parent_returns_name() {
-	m := s.newTestModel()
-	path := m.buildInstancePath("", "childBlueprint")
+func (s *EventProcessorsTestSuite) Test_BuildInstancePath_empty_parent_returns_name() {
+	state := s.newTestState()
+	path := BuildInstancePath(state, "", "childBlueprint")
 	s.Equal("childBlueprint", path)
 }
 
-func (s *EventProcessorsTestSuite) Test_buildInstancePath_root_parent_returns_name() {
-	m := s.newTestModel()
-	path := m.buildInstancePath("root-instance-id", "childBlueprint")
+func (s *EventProcessorsTestSuite) Test_BuildInstancePath_root_parent_returns_name() {
+	state := s.newTestState()
+	path := BuildInstancePath(state, "root-instance-id", "childBlueprint")
 	s.Equal("childBlueprint", path)
 }
 
-func (s *EventProcessorsTestSuite) Test_buildInstancePath_nested_parent_builds_path() {
-	m := s.newTestModel()
-	m.instanceIDToChildName["child-instance-id"] = "parentChild"
-	m.instanceIDToParentID["child-instance-id"] = "root-instance-id"
+func (s *EventProcessorsTestSuite) Test_BuildInstancePath_nested_parent_builds_path() {
+	state := s.newTestState()
+	state.InstanceIDToChildName["child-instance-id"] = "parentChild"
+	state.InstanceIDToParentID["child-instance-id"] = "root-instance-id"
 
-	path := m.buildInstancePath("child-instance-id", "nestedChild")
+	path := BuildInstancePath(state, "child-instance-id", "nestedChild")
 	s.Equal("parentChild/nestedChild", path)
 }
 
-// lookupOrMigrateResource tests
+// LookupOrMigrateResource tests
 
-func (s *EventProcessorsTestSuite) Test_lookupOrMigrateResource_returns_existing_by_path() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_LookupOrMigrateResource_returns_existing_by_path() {
+	state := s.newTestState()
 	existingItem := &ResourceDeployItem{Name: "resource1"}
-	m.resourcesByName["child/resource1"] = existingItem
+	state.ResourcesByName["child/resource1"] = existingItem
 
-	result := m.lookupOrMigrateResource("child/resource1", "resource1")
+	result := LookupOrMigrateResource(state, "child/resource1", "resource1")
 	s.Same(existingItem, result)
 }
 
-func (s *EventProcessorsTestSuite) Test_lookupOrMigrateResource_migrates_from_name_to_path() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_LookupOrMigrateResource_migrates_from_name_to_path() {
+	state := s.newTestState()
 	existingItem := &ResourceDeployItem{Name: "resource1"}
-	m.resourcesByName["resource1"] = existingItem
+	state.ResourcesByName["resource1"] = existingItem
 
-	result := m.lookupOrMigrateResource("child/resource1", "resource1")
+	result := LookupOrMigrateResource(state, "child/resource1", "resource1")
 
 	s.Same(existingItem, result)
-	s.Nil(m.resourcesByName["resource1"])
-	s.Same(existingItem, m.resourcesByName["child/resource1"])
+	s.Nil(state.ResourcesByName["resource1"])
+	s.Same(existingItem, state.ResourcesByName["child/resource1"])
 }
 
-func (s *EventProcessorsTestSuite) Test_lookupOrMigrateResource_returns_nil_when_not_found() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_LookupOrMigrateResource_returns_nil_when_not_found() {
+	state := s.newTestState()
 
-	result := m.lookupOrMigrateResource("child/resource1", "resource1")
+	result := LookupOrMigrateResource(state, "child/resource1", "resource1")
 	s.Nil(result)
 }
 
-// lookupOrMigrateChild tests
+// LookupOrMigrateChild tests
 
-func (s *EventProcessorsTestSuite) Test_lookupOrMigrateChild_returns_existing_by_path() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_LookupOrMigrateChild_returns_existing_by_path() {
+	state := s.newTestState()
 	existingItem := &ChildDeployItem{Name: "child1"}
-	m.childrenByName["parent/child1"] = existingItem
+	state.ChildrenByName["parent/child1"] = existingItem
 
-	result := m.lookupOrMigrateChild("parent/child1", "child1")
+	result := LookupOrMigrateChild(state, "parent/child1", "child1")
 	s.Same(existingItem, result)
 }
 
-func (s *EventProcessorsTestSuite) Test_lookupOrMigrateChild_migrates_from_name_to_path() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_LookupOrMigrateChild_migrates_from_name_to_path() {
+	state := s.newTestState()
 	existingItem := &ChildDeployItem{Name: "child1"}
-	m.childrenByName["child1"] = existingItem
+	state.ChildrenByName["child1"] = existingItem
 
-	result := m.lookupOrMigrateChild("parent/child1", "child1")
+	result := LookupOrMigrateChild(state, "parent/child1", "child1")
 
 	s.Same(existingItem, result)
-	s.Nil(m.childrenByName["child1"])
-	s.Same(existingItem, m.childrenByName["parent/child1"])
+	s.Nil(state.ChildrenByName["child1"])
+	s.Same(existingItem, state.ChildrenByName["parent/child1"])
 }
 
-// lookupOrMigrateLink tests
+// LookupOrMigrateLink tests
 
-func (s *EventProcessorsTestSuite) Test_lookupOrMigrateLink_returns_existing_by_path() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_LookupOrMigrateLink_returns_existing_by_path() {
+	state := s.newTestState()
 	existingItem := &LinkDeployItem{LinkName: "resA::resB"}
-	m.linksByName["child/resA::resB"] = existingItem
+	state.LinksByName["child/resA::resB"] = existingItem
 
-	result := m.lookupOrMigrateLink("child/resA::resB", "resA::resB")
+	result := LookupOrMigrateLink(state, "child/resA::resB", "resA::resB")
 	s.Same(existingItem, result)
 }
 
-func (s *EventProcessorsTestSuite) Test_lookupOrMigrateLink_migrates_from_name_to_path() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_LookupOrMigrateLink_migrates_from_name_to_path() {
+	state := s.newTestState()
 	existingItem := &LinkDeployItem{LinkName: "resA::resB"}
-	m.linksByName["resA::resB"] = existingItem
+	state.LinksByName["resA::resB"] = existingItem
 
-	result := m.lookupOrMigrateLink("child/resA::resB", "resA::resB")
+	result := LookupOrMigrateLink(state, "child/resA::resB", "resA::resB")
 
 	s.Same(existingItem, result)
-	s.Nil(m.linksByName["resA::resB"])
-	s.Same(existingItem, m.linksByName["child/resA::resB"])
+	s.Nil(state.LinksByName["resA::resB"])
+	s.Same(existingItem, state.LinksByName["child/resA::resB"])
 }
 
-// processResourceUpdate tests
+// ProcessResourceUpdate tests
 
-func (s *EventProcessorsTestSuite) Test_processResourceUpdate_creates_new_root_item() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_ProcessResourceUpdate_creates_new_root_item() {
+	state := s.newTestState()
 	data := &container.ResourceDeployUpdateMessage{
 		ResourceName:    "newResource",
 		ResourceID:      "res-123",
@@ -197,23 +188,23 @@ func (s *EventProcessorsTestSuite) Test_processResourceUpdate_creates_new_root_i
 		UpdateTimestamp: 12345,
 	}
 
-	m.processResourceUpdate(data)
+	ProcessResourceUpdate(state, data)
 
-	s.Len(m.items, 1)
-	s.Equal(ItemTypeResource, m.items[0].Type)
-	s.Equal("newResource", m.items[0].Resource.Name)
-	s.Equal("res-123", m.items[0].Resource.ResourceID)
-	s.Equal(core.ResourceStatusCreating, m.items[0].Resource.Status)
+	s.Len(state.Items, 1)
+	s.Equal(ItemTypeResource, state.Items[0].Type)
+	s.Equal("newResource", state.Items[0].Resource.Name)
+	s.Equal("res-123", state.Items[0].Resource.ResourceID)
+	s.Equal(core.ResourceStatusCreating, state.Items[0].Resource.Status)
 }
 
-func (s *EventProcessorsTestSuite) Test_processResourceUpdate_updates_existing_item() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_ProcessResourceUpdate_updates_existing_item() {
+	state := s.newTestState()
 	existingItem := &ResourceDeployItem{
 		Name:   "existingResource",
 		Status: core.ResourceStatusCreating,
 	}
-	m.resourcesByName["existingResource"] = existingItem
-	m.items = []DeployItem{{Type: ItemTypeResource, Resource: existingItem}}
+	state.ResourcesByName["existingResource"] = existingItem
+	state.Items = []DeployItem{{Type: ItemTypeResource, Resource: existingItem}}
 
 	data := &container.ResourceDeployUpdateMessage{
 		ResourceName:    "existingResource",
@@ -224,17 +215,17 @@ func (s *EventProcessorsTestSuite) Test_processResourceUpdate_updates_existing_i
 		UpdateTimestamp: 12345,
 	}
 
-	m.processResourceUpdate(data)
+	ProcessResourceUpdate(state, data)
 
-	s.Len(m.items, 1)
+	s.Len(state.Items, 1)
 	s.Equal(core.ResourceStatusCreated, existingItem.Status)
 	s.Equal(int64(12345), existingItem.Timestamp)
 }
 
-func (s *EventProcessorsTestSuite) Test_processResourceUpdate_does_not_add_nested_to_root_items() {
-	m := s.newTestModel()
-	m.instanceIDToChildName["child-instance-id"] = "childBlueprint"
-	m.instanceIDToParentID["child-instance-id"] = "root-instance-id"
+func (s *EventProcessorsTestSuite) Test_ProcessResourceUpdate_does_not_add_nested_to_root_items() {
+	state := s.newTestState()
+	state.InstanceIDToChildName["child-instance-id"] = "childBlueprint"
+	state.InstanceIDToParentID["child-instance-id"] = "root-instance-id"
 
 	data := &container.ResourceDeployUpdateMessage{
 		ResourceName:  "nestedResource",
@@ -244,16 +235,16 @@ func (s *EventProcessorsTestSuite) Test_processResourceUpdate_does_not_add_neste
 		PreciseStatus: core.PreciseResourceStatusCreating,
 	}
 
-	m.processResourceUpdate(data)
+	ProcessResourceUpdate(state, data)
 
-	s.Len(m.items, 0)
-	s.NotNil(m.resourcesByName["childBlueprint/nestedResource"])
+	s.Len(state.Items, 0)
+	s.NotNil(state.ResourcesByName["childBlueprint/nestedResource"])
 }
 
-// processChildUpdate tests
+// ProcessChildUpdate tests
 
-func (s *EventProcessorsTestSuite) Test_processChildUpdate_creates_new_direct_child() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_ProcessChildUpdate_creates_new_direct_child() {
+	state := s.newTestState()
 	data := &container.ChildDeployUpdateMessage{
 		ChildName:        "newChild",
 		ChildInstanceID:  "child-inst-123",
@@ -263,16 +254,16 @@ func (s *EventProcessorsTestSuite) Test_processChildUpdate_creates_new_direct_ch
 		UpdateTimestamp:  12345,
 	}
 
-	m.processChildUpdate(data)
+	ProcessChildUpdate(state, data)
 
-	s.Len(m.items, 1)
-	s.Equal(ItemTypeChild, m.items[0].Type)
-	s.Equal("newChild", m.items[0].Child.Name)
-	s.Equal(core.InstanceStatusDeploying, m.items[0].Child.Status)
+	s.Len(state.Items, 1)
+	s.Equal(ItemTypeChild, state.Items[0].Type)
+	s.Equal("newChild", state.Items[0].Child.Name)
+	s.Equal(core.InstanceStatusDeploying, state.Items[0].Child.Status)
 }
 
-func (s *EventProcessorsTestSuite) Test_processChildUpdate_tracks_instance_mapping() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_ProcessChildUpdate_tracks_instance_mapping() {
+	state := s.newTestState()
 	data := &container.ChildDeployUpdateMessage{
 		ChildName:        "newChild",
 		ChildInstanceID:  "child-inst-123",
@@ -280,16 +271,16 @@ func (s *EventProcessorsTestSuite) Test_processChildUpdate_tracks_instance_mappi
 		Status:           core.InstanceStatusDeploying,
 	}
 
-	m.processChildUpdate(data)
+	ProcessChildUpdate(state, data)
 
-	s.Equal("newChild", m.instanceIDToChildName["child-inst-123"])
-	s.Equal("root-instance-id", m.instanceIDToParentID["child-inst-123"])
+	s.Equal("newChild", state.InstanceIDToChildName["child-inst-123"])
+	s.Equal("root-instance-id", state.InstanceIDToParentID["child-inst-123"])
 }
 
-func (s *EventProcessorsTestSuite) Test_processChildUpdate_does_not_add_nested_child_to_root_items() {
-	m := s.newTestModel()
-	m.instanceIDToChildName["parent-child-id"] = "parentChild"
-	m.instanceIDToParentID["parent-child-id"] = "root-instance-id"
+func (s *EventProcessorsTestSuite) Test_ProcessChildUpdate_does_not_add_nested_child_to_root_items() {
+	state := s.newTestState()
+	state.InstanceIDToChildName["parent-child-id"] = "parentChild"
+	state.InstanceIDToParentID["parent-child-id"] = "root-instance-id"
 
 	data := &container.ChildDeployUpdateMessage{
 		ChildName:        "nestedChild",
@@ -298,16 +289,16 @@ func (s *EventProcessorsTestSuite) Test_processChildUpdate_does_not_add_nested_c
 		Status:           core.InstanceStatusDeploying,
 	}
 
-	m.processChildUpdate(data)
+	ProcessChildUpdate(state, data)
 
-	s.Len(m.items, 0)
-	s.NotNil(m.childrenByName["parentChild/nestedChild"])
+	s.Len(state.Items, 0)
+	s.NotNil(state.ChildrenByName["parentChild/nestedChild"])
 }
 
-// processLinkUpdate tests
+// ProcessLinkUpdate tests
 
-func (s *EventProcessorsTestSuite) Test_processLinkUpdate_creates_new_root_link() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_ProcessLinkUpdate_creates_new_root_link() {
+	state := s.newTestState()
 	data := &container.LinkDeployUpdateMessage{
 		LinkName:        "resourceA::resourceB",
 		LinkID:          "link-123",
@@ -317,24 +308,24 @@ func (s *EventProcessorsTestSuite) Test_processLinkUpdate_creates_new_root_link(
 		UpdateTimestamp: 12345,
 	}
 
-	m.processLinkUpdate(data)
+	ProcessLinkUpdate(state, data)
 
-	s.Len(m.items, 1)
-	s.Equal(ItemTypeLink, m.items[0].Type)
-	s.Equal("resourceA::resourceB", m.items[0].Link.LinkName)
-	s.Equal(core.LinkStatusCreating, m.items[0].Link.Status)
-	s.Equal("resourceA", m.items[0].Link.ResourceAName)
-	s.Equal("resourceB", m.items[0].Link.ResourceBName)
+	s.Len(state.Items, 1)
+	s.Equal(ItemTypeLink, state.Items[0].Type)
+	s.Equal("resourceA::resourceB", state.Items[0].Link.LinkName)
+	s.Equal(core.LinkStatusCreating, state.Items[0].Link.Status)
+	s.Equal("resourceA", state.Items[0].Link.ResourceAName)
+	s.Equal("resourceB", state.Items[0].Link.ResourceBName)
 }
 
-func (s *EventProcessorsTestSuite) Test_processLinkUpdate_updates_existing_link() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_ProcessLinkUpdate_updates_existing_link() {
+	state := s.newTestState()
 	existingLink := &LinkDeployItem{
 		LinkName: "resourceA::resourceB",
 		Status:   core.LinkStatusCreating,
 	}
-	m.linksByName["resourceA::resourceB"] = existingLink
-	m.items = []DeployItem{{Type: ItemTypeLink, Link: existingLink}}
+	state.LinksByName["resourceA::resourceB"] = existingLink
+	state.Items = []DeployItem{{Type: ItemTypeLink, Link: existingLink}}
 
 	data := &container.LinkDeployUpdateMessage{
 		LinkName:        "resourceA::resourceB",
@@ -345,55 +336,39 @@ func (s *EventProcessorsTestSuite) Test_processLinkUpdate_updates_existing_link(
 		UpdateTimestamp: 12345,
 	}
 
-	m.processLinkUpdate(data)
+	ProcessLinkUpdate(state, data)
 
-	s.Len(m.items, 1)
+	s.Len(state.Items, 1)
 	s.Equal(core.LinkStatusCreated, existingLink.Status)
 }
 
-// processInstanceUpdate tests
+// ProcessInstanceUpdate tests
 
-func (s *EventProcessorsTestSuite) Test_processInstanceUpdate_updates_footer_status() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_ProcessInstanceUpdate_updates_footer_status() {
+	state := s.newTestState()
 	data := &container.DeploymentUpdateMessage{
 		Status: core.InstanceStatusDeploying,
 	}
 
-	m.processInstanceUpdate(data)
+	ProcessInstanceUpdate(state, data)
 
-	s.Equal(core.InstanceStatusDeploying, m.footerRenderer.CurrentStatus)
+	s.Equal(core.InstanceStatusDeploying, state.FooterRenderer.CurrentStatus)
 }
 
-// processPreRollbackState tests
+// GetChildChanges tests
 
-func (s *EventProcessorsTestSuite) Test_processPreRollbackState_stores_data() {
-	m := s.newTestModel()
-	data := &container.PreRollbackStateMessage{
-		InstanceID:   "test-instance",
-		InstanceName: "test-name",
-		Status:       core.InstanceStatusDeployFailed,
-	}
-
-	m.processPreRollbackState(data)
-
-	s.Same(data, m.preRollbackState)
-	s.True(m.footerRenderer.HasPreRollbackState)
-}
-
-// getChildChanges tests
-
-func (s *EventProcessorsTestSuite) Test_getChildChanges_returns_nil_when_no_changeset() {
-	m := s.newTestModel()
-	result := m.getChildChanges("someChild")
+func (s *EventProcessorsTestSuite) Test_GetChildChanges_returns_nil_when_no_changeset() {
+	state := s.newTestState()
+	result := GetChildChanges(state, "someChild")
 	s.Nil(result)
 }
 
-func (s *EventProcessorsTestSuite) Test_getChildChanges_returns_new_child_changes() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_GetChildChanges_returns_new_child_changes() {
+	state := s.newTestState()
 	newResources := map[string]provider.Changes{
 		"res1": {},
 	}
-	m.changesetChanges = &changes.BlueprintChanges{
+	state.ChangesetChanges = &changes.BlueprintChanges{
 		NewChildren: map[string]changes.NewBlueprintDefinition{
 			"newChild": {
 				NewResources: newResources,
@@ -401,57 +376,57 @@ func (s *EventProcessorsTestSuite) Test_getChildChanges_returns_new_child_change
 		},
 	}
 
-	result := m.getChildChanges("newChild")
+	result := GetChildChanges(state, "newChild")
 
 	s.NotNil(result)
 	s.Equal(newResources, result.NewResources)
 }
 
-func (s *EventProcessorsTestSuite) Test_getChildChanges_returns_existing_child_changes() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_GetChildChanges_returns_existing_child_changes() {
+	state := s.newTestState()
 	childChanges := changes.BlueprintChanges{
 		ResourceChanges: map[string]provider.Changes{
 			"res1": {},
 		},
 	}
-	m.changesetChanges = &changes.BlueprintChanges{
+	state.ChangesetChanges = &changes.BlueprintChanges{
 		ChildChanges: map[string]changes.BlueprintChanges{
 			"existingChild": childChanges,
 		},
 	}
 
-	result := m.getChildChanges("existingChild")
+	result := GetChildChanges(state, "existingChild")
 
 	s.NotNil(result)
 	s.Equal(childChanges.ResourceChanges, result.ResourceChanges)
 }
 
-// trackChildInstanceMapping tests
+// TrackChildInstanceMapping tests
 
-func (s *EventProcessorsTestSuite) Test_trackChildInstanceMapping_stores_mapping() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_TrackChildInstanceMapping_stores_mapping() {
+	state := s.newTestState()
 	data := &container.ChildDeployUpdateMessage{
 		ChildName:        "myChild",
 		ChildInstanceID:  "child-123",
 		ParentInstanceID: "parent-456",
 	}
 
-	m.trackChildInstanceMapping(data)
+	TrackChildInstanceMapping(state, data)
 
-	s.Equal("myChild", m.instanceIDToChildName["child-123"])
-	s.Equal("parent-456", m.instanceIDToParentID["child-123"])
+	s.Equal("myChild", state.InstanceIDToChildName["child-123"])
+	s.Equal("parent-456", state.InstanceIDToParentID["child-123"])
 }
 
-func (s *EventProcessorsTestSuite) Test_trackChildInstanceMapping_ignores_empty_ids() {
-	m := s.newTestModel()
+func (s *EventProcessorsTestSuite) Test_TrackChildInstanceMapping_ignores_empty_ids() {
+	state := s.newTestState()
 	data := &container.ChildDeployUpdateMessage{
 		ChildName:        "myChild",
 		ChildInstanceID:  "",
 		ParentInstanceID: "parent-456",
 	}
 
-	m.trackChildInstanceMapping(data)
+	TrackChildInstanceMapping(state, data)
 
-	s.Empty(m.instanceIDToChildName)
-	s.Empty(m.instanceIDToParentID)
+	s.Empty(state.InstanceIDToChildName)
+	s.Empty(state.InstanceIDToParentID)
 }

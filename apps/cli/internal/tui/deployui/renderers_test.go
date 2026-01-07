@@ -94,18 +94,18 @@ func (s *DeployRenderersTestSuite) Test_RenderDetails_returns_unknown_for_unknow
 	s.Contains(result, "Unknown item type")
 }
 
-// --- renderResourceDetails tests ---
+// --- Resource details tests (via RenderDetails) ---
 
-func (s *DeployRenderersTestSuite) Test_renderResourceDetails_returns_no_data_for_nil_resource() {
+func (s *DeployRenderersTestSuite) Test_RenderDetails_resource_returns_no_data_for_nil_resource() {
 	item := &DeployItem{
 		Type:     ItemTypeResource,
 		Resource: nil,
 	}
-	result := s.renderer.renderResourceDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "No resource data")
 }
 
-func (s *DeployRenderersTestSuite) Test_renderResourceDetails_shows_display_name() {
+func (s *DeployRenderersTestSuite) Test_RenderDetails_resource_shows_display_name() {
 	item := &DeployItem{
 		Type: ItemTypeResource,
 		Resource: &ResourceDeployItem{
@@ -114,11 +114,11 @@ func (s *DeployRenderersTestSuite) Test_renderResourceDetails_shows_display_name
 			Action:      shared.ActionCreate,
 		},
 	}
-	result := s.renderer.renderResourceDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "My Display Name")
 }
 
-func (s *DeployRenderersTestSuite) Test_renderResourceDetails_shows_skipped_status() {
+func (s *DeployRenderersTestSuite) Test_RenderDetails_resource_shows_skipped_status() {
 	item := &DeployItem{
 		Type: ItemTypeResource,
 		Resource: &ResourceDeployItem{
@@ -127,12 +127,12 @@ func (s *DeployRenderersTestSuite) Test_renderResourceDetails_shows_skipped_stat
 			Skipped: true,
 		},
 	}
-	result := s.renderer.renderResourceDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "Skipped")
 	s.Contains(result, "deployment failure")
 }
 
-func (s *DeployRenderersTestSuite) Test_renderResourceDetails_shows_attempt_info() {
+func (s *DeployRenderersTestSuite) Test_RenderDetails_resource_shows_attempt_info() {
 	item := &DeployItem{
 		Type: ItemTypeResource,
 		Resource: &ResourceDeployItem{
@@ -142,13 +142,13 @@ func (s *DeployRenderersTestSuite) Test_renderResourceDetails_shows_attempt_info
 			CanRetry: true,
 		},
 	}
-	result := s.renderer.renderResourceDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "Attempt:")
 	s.Contains(result, "3")
 	s.Contains(result, "can retry")
 }
 
-func (s *DeployRenderersTestSuite) Test_renderResourceDetails_shows_failure_reasons() {
+func (s *DeployRenderersTestSuite) Test_RenderDetails_resource_shows_failure_reasons() {
 	item := &DeployItem{
 		Type: ItemTypeResource,
 		Resource: &ResourceDeployItem{
@@ -158,12 +158,12 @@ func (s *DeployRenderersTestSuite) Test_renderResourceDetails_shows_failure_reas
 			FailureReasons: []string{"Connection timeout", "Permission denied"},
 		},
 	}
-	result := s.renderer.renderResourceDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "Connection timeout")
 	s.Contains(result, "Permission denied")
 }
 
-func (s *DeployRenderersTestSuite) Test_renderResourceDetails_shows_durations() {
+func (s *DeployRenderersTestSuite) Test_RenderDetails_resource_shows_durations() {
 	configDuration := float64(5000)
 	totalDuration := float64(10000)
 	item := &DeployItem{
@@ -178,15 +178,15 @@ func (s *DeployRenderersTestSuite) Test_renderResourceDetails_shows_durations() 
 			},
 		},
 	}
-	result := s.renderer.renderResourceDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "Timing")
 	s.Contains(result, "Config Complete")
 	s.Contains(result, "Total")
 }
 
-// --- getResourceState tests ---
+// --- Resource state tests (via RenderDetails with state) ---
 
-func (s *DeployRenderersTestSuite) Test_getResourceState_returns_post_deploy_state_first() {
+func (s *DeployRenderersTestSuite) Test_RenderDetails_resource_uses_post_deploy_state() {
 	postDeployState := &state.InstanceState{
 		Resources: map[string]*state.ResourceState{
 			"res-123": {ResourceID: "res-123", Name: "myResource"},
@@ -196,14 +196,19 @@ func (s *DeployRenderersTestSuite) Test_getResourceState_returns_post_deploy_sta
 	renderer := &DeployDetailsRenderer{
 		PostDeployInstanceState: postDeployState,
 	}
-	res := &ResourceDeployItem{Name: "myResource"}
-
-	result := renderer.getResourceState(res, "myResource")
-	s.NotNil(result)
-	s.Equal("res-123", result.ResourceID)
+	item := &DeployItem{
+		Type: ItemTypeResource,
+		Resource: &ResourceDeployItem{
+			Name:   "myResource",
+			Action: shared.ActionCreate,
+			Status: core.ResourceStatusCreated,
+		},
+	}
+	result := renderer.RenderDetails(item, 80, s.testStyles)
+	s.Contains(result, "res-123")
 }
 
-func (s *DeployRenderersTestSuite) Test_getResourceState_falls_back_to_pre_deploy_state() {
+func (s *DeployRenderersTestSuite) Test_RenderDetails_resource_uses_pre_deploy_state_fallback() {
 	preDeployState := &state.InstanceState{
 		Resources: map[string]*state.ResourceState{
 			"res-456": {ResourceID: "res-456", Name: "myResource"},
@@ -213,68 +218,56 @@ func (s *DeployRenderersTestSuite) Test_getResourceState_falls_back_to_pre_deplo
 	renderer := &DeployDetailsRenderer{
 		PreDeployInstanceState: preDeployState,
 	}
-	res := &ResourceDeployItem{Name: "myResource"}
-
-	result := renderer.getResourceState(res, "myResource")
-	s.NotNil(result)
-	s.Equal("res-456", result.ResourceID)
-}
-
-func (s *DeployRenderersTestSuite) Test_getResourceState_falls_back_to_resource_state_field() {
-	resourceState := &state.ResourceState{ResourceID: "res-789", Name: "myResource"}
-	renderer := &DeployDetailsRenderer{}
-	res := &ResourceDeployItem{
-		Name:          "myResource",
-		ResourceState: resourceState,
+	item := &DeployItem{
+		Type: ItemTypeResource,
+		Resource: &ResourceDeployItem{
+			Name:   "myResource",
+			Action: shared.ActionUpdate,
+			Status: core.ResourceStatusUpdated,
+		},
 	}
-
-	result := renderer.getResourceState(res, "myResource")
-	s.NotNil(result)
-	s.Equal("res-789", result.ResourceID)
+	result := renderer.RenderDetails(item, 80, s.testStyles)
+	s.Contains(result, "res-456")
 }
 
-func (s *DeployRenderersTestSuite) Test_getResourceState_falls_back_to_changeset() {
-	changesetState := &state.ResourceState{ResourceID: "res-999", Name: "myResource"}
-	renderer := &DeployDetailsRenderer{}
-	res := &ResourceDeployItem{
-		Name: "myResource",
-		Changes: &provider.Changes{
-			AppliedResourceInfo: provider.ResourceInfo{
-				CurrentResourceState: changesetState,
+func (s *DeployRenderersTestSuite) Test_RenderDetails_resource_uses_resource_state_field_fallback() {
+	item := &DeployItem{
+		Type: ItemTypeResource,
+		Resource: &ResourceDeployItem{
+			Name:   "myResource",
+			Action: shared.ActionUpdate,
+			Status: core.ResourceStatusUpdated,
+			ResourceState: &state.ResourceState{
+				ResourceID: "res-789",
+				Name:       "myResource",
 			},
 		},
 	}
-
-	result := renderer.getResourceState(res, "myResource")
-	s.NotNil(result)
-	s.Equal("res-999", result.ResourceID)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
+	s.Contains(result, "res-789")
 }
 
-func (s *DeployRenderersTestSuite) Test_getResourceState_returns_nil_when_not_found() {
-	renderer := &DeployDetailsRenderer{}
-	res := &ResourceDeployItem{Name: "missingResource"}
-
-	result := renderer.getResourceState(res, "missingResource")
-	s.Nil(result)
-}
-
-// --- findResourceStateByPath tests ---
-
-func (s *DeployRenderersTestSuite) Test_findResourceStateByPath_finds_top_level_resource() {
-	instanceState := &state.InstanceState{
-		Resources: map[string]*state.ResourceState{
-			"res-123": {ResourceID: "res-123", Name: "myResource"},
+func (s *DeployRenderersTestSuite) Test_RenderDetails_resource_uses_changeset_state_fallback() {
+	changesetState := &state.ResourceState{ResourceID: "res-999", Name: "myResource"}
+	item := &DeployItem{
+		Type: ItemTypeResource,
+		Resource: &ResourceDeployItem{
+			Name:   "myResource",
+			Action: shared.ActionUpdate,
+			Status: core.ResourceStatusUpdated,
+			Changes: &provider.Changes{
+				AppliedResourceInfo: provider.ResourceInfo{
+					CurrentResourceState: changesetState,
+				},
+			},
 		},
-		ResourceIDs: map[string]string{"myResource": "res-123"},
 	}
-
-	result := findResourceStateByPath(instanceState, "myResource", "myResource")
-	s.NotNil(result)
-	s.Equal("res-123", result.ResourceID)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
+	s.Contains(result, "res-999")
 }
 
-func (s *DeployRenderersTestSuite) Test_findResourceStateByPath_finds_nested_resource() {
-	instanceState := &state.InstanceState{
+func (s *DeployRenderersTestSuite) Test_RenderDetails_resource_handles_nested_state() {
+	postDeployState := &state.InstanceState{
 		ChildBlueprints: map[string]*state.InstanceState{
 			"childA": {
 				Resources: map[string]*state.ResourceState{
@@ -284,36 +277,35 @@ func (s *DeployRenderersTestSuite) Test_findResourceStateByPath_finds_nested_res
 			},
 		},
 	}
-
-	result := findResourceStateByPath(instanceState, "childA/nestedResource", "nestedResource")
-	s.NotNil(result)
-	s.Equal("res-nested", result.ResourceID)
+	renderer := &DeployDetailsRenderer{
+		PostDeployInstanceState: postDeployState,
+	}
+	item := &DeployItem{
+		Type: ItemTypeResource,
+		Resource: &ResourceDeployItem{
+			Name:   "nestedResource",
+			Action: shared.ActionCreate,
+			Status: core.ResourceStatusCreated,
+		},
+		ParentChild: "childA",
+		Path:        "childA/nestedResource",
+	}
+	result := renderer.RenderDetails(item, 80, s.testStyles)
+	s.Contains(result, "res-nested")
 }
 
-func (s *DeployRenderersTestSuite) Test_findResourceStateByPath_returns_nil_for_missing_child() {
-	instanceState := &state.InstanceState{}
+// --- Child details tests (via RenderDetails) ---
 
-	result := findResourceStateByPath(instanceState, "missingChild/resource", "resource")
-	s.Nil(result)
-}
-
-func (s *DeployRenderersTestSuite) Test_findResourceStateByPath_returns_nil_for_nil_state() {
-	result := findResourceStateByPath(nil, "path", "resource")
-	s.Nil(result)
-}
-
-// --- renderChildDetails tests ---
-
-func (s *DeployRenderersTestSuite) Test_renderChildDetails_returns_no_data_for_nil_child() {
+func (s *DeployRenderersTestSuite) Test_RenderDetails_child_returns_no_data_for_nil_child() {
 	item := &DeployItem{
 		Type:  ItemTypeChild,
 		Child: nil,
 	}
-	result := s.renderer.renderChildDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "No child data")
 }
 
-func (s *DeployRenderersTestSuite) Test_renderChildDetails_shows_instance_ids() {
+func (s *DeployRenderersTestSuite) Test_RenderDetails_child_shows_instance_ids() {
 	item := &DeployItem{
 		Type: ItemTypeChild,
 		Child: &ChildDeployItem{
@@ -324,12 +316,12 @@ func (s *DeployRenderersTestSuite) Test_renderChildDetails_shows_instance_ids() 
 			Status:           core.InstanceStatusDeployed,
 		},
 	}
-	result := s.renderer.renderChildDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "child-123")
 	s.Contains(result, "parent-456")
 }
 
-func (s *DeployRenderersTestSuite) Test_renderChildDetails_shows_skipped_status() {
+func (s *DeployRenderersTestSuite) Test_RenderDetails_child_shows_skipped_status() {
 	item := &DeployItem{
 		Type: ItemTypeChild,
 		Child: &ChildDeployItem{
@@ -338,12 +330,12 @@ func (s *DeployRenderersTestSuite) Test_renderChildDetails_shows_skipped_status(
 			Skipped: true,
 		},
 	}
-	result := s.renderer.renderChildDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "Skipped")
 	s.Contains(result, "deployment failure")
 }
 
-func (s *DeployRenderersTestSuite) Test_renderChildDetails_shows_drill_down_hint_at_max_depth() {
+func (s *DeployRenderersTestSuite) Test_RenderDetails_child_shows_drill_down_hint_at_max_depth() {
 	renderer := &DeployDetailsRenderer{
 		MaxExpandDepth:       2,
 		NavigationStackDepth: 0,
@@ -355,25 +347,25 @@ func (s *DeployRenderersTestSuite) Test_renderChildDetails_shows_drill_down_hint
 			Action: shared.ActionUpdate,
 			Status: core.InstanceStatusDeployed,
 		},
-		Changes: &changes.BlueprintChanges{}, // Non-nil changes
+		Changes: &changes.BlueprintChanges{},
 		Depth:   2,
 	}
-	result := renderer.renderChildDetails(item, 80, s.testStyles)
+	result := renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "Press enter to inspect")
 }
 
-// --- renderLinkDetails tests ---
+// --- Link details tests (via RenderDetails) ---
 
-func (s *DeployRenderersTestSuite) Test_renderLinkDetails_returns_no_data_for_nil_link() {
+func (s *DeployRenderersTestSuite) Test_RenderDetails_link_returns_no_data_for_nil_link() {
 	item := &DeployItem{
 		Type: ItemTypeLink,
 		Link: nil,
 	}
-	result := s.renderer.renderLinkDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "No link data")
 }
 
-func (s *DeployRenderersTestSuite) Test_renderLinkDetails_shows_link_info() {
+func (s *DeployRenderersTestSuite) Test_RenderDetails_link_shows_link_info() {
 	item := &DeployItem{
 		Type: ItemTypeLink,
 		Link: &LinkDeployItem{
@@ -385,12 +377,12 @@ func (s *DeployRenderersTestSuite) Test_renderLinkDetails_shows_link_info() {
 			Status:        core.LinkStatusCreated,
 		},
 	}
-	result := s.renderer.renderLinkDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "resourceA::resourceB")
 	s.Contains(result, "link-123")
 }
 
-func (s *DeployRenderersTestSuite) Test_renderLinkDetails_shows_skipped_status() {
+func (s *DeployRenderersTestSuite) Test_RenderDetails_link_shows_skipped_status() {
 	item := &DeployItem{
 		Type: ItemTypeLink,
 		Link: &LinkDeployItem{
@@ -399,12 +391,12 @@ func (s *DeployRenderersTestSuite) Test_renderLinkDetails_shows_skipped_status()
 			Skipped:  true,
 		},
 	}
-	result := s.renderer.renderLinkDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "Skipped")
 	s.Contains(result, "deployment failure")
 }
 
-func (s *DeployRenderersTestSuite) Test_renderLinkDetails_shows_stage_attempt() {
+func (s *DeployRenderersTestSuite) Test_RenderDetails_link_shows_stage_attempt() {
 	item := &DeployItem{
 		Type: ItemTypeLink,
 		Link: &LinkDeployItem{
@@ -415,50 +407,15 @@ func (s *DeployRenderersTestSuite) Test_renderLinkDetails_shows_stage_attempt() 
 			CanRetryCurrentStage: true,
 		},
 	}
-	result := s.renderer.renderLinkDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "Stage Attempt:")
 	s.Contains(result, "3")
 	s.Contains(result, "can retry")
 }
 
-// --- renderResourceDurations tests ---
-
-func (s *DeployRenderersTestSuite) Test_renderResourceDurations_returns_empty_for_nil() {
-	result := renderResourceDurations(nil, s.testStyles)
-	s.Empty(result)
-}
-
-func (s *DeployRenderersTestSuite) Test_renderResourceDurations_shows_config_complete_duration() {
-	duration := float64(5000)
-	durations := &state.ResourceCompletionDurations{
-		ConfigCompleteDuration: &duration,
-	}
-	result := renderResourceDurations(durations, s.testStyles)
-	s.Contains(result, "Config Complete")
-}
-
-func (s *DeployRenderersTestSuite) Test_renderResourceDurations_shows_total_duration() {
-	duration := float64(10000)
-	durations := &state.ResourceCompletionDurations{
-		TotalDuration: &duration,
-	}
-	result := renderResourceDurations(durations, s.testStyles)
-	s.Contains(result, "Total")
-}
-
-func (s *DeployRenderersTestSuite) Test_renderResourceDurations_skips_zero_durations() {
-	zeroDuration := float64(0)
-	durations := &state.ResourceCompletionDurations{
-		ConfigCompleteDuration: &zeroDuration,
-		TotalDuration:          &zeroDuration,
-	}
-	result := renderResourceDurations(durations, s.testStyles)
-	s.Empty(result)
-}
-
 // --- DeployFooterRenderer tests ---
 
-func (s *DeployRenderersTestSuite) Test_DeployFooterRenderer_shows_deploying_when_not_finished() {
+func (s *DeployRenderersTestSuite) Test_RenderFooter_shows_deploying_when_not_finished() {
 	footer := &DeployFooterRenderer{
 		InstanceName: "my-instance",
 		ChangesetID:  "cs-123",
@@ -470,7 +427,7 @@ func (s *DeployRenderersTestSuite) Test_DeployFooterRenderer_shows_deploying_whe
 	s.Contains(result, "my-instance")
 }
 
-func (s *DeployRenderersTestSuite) Test_DeployFooterRenderer_shows_complete_when_finished() {
+func (s *DeployRenderersTestSuite) Test_RenderFooter_shows_complete_when_finished() {
 	footer := &DeployFooterRenderer{
 		InstanceName: "my-instance",
 		FinalStatus:  core.InstanceStatusDeployed,
@@ -481,7 +438,7 @@ func (s *DeployRenderersTestSuite) Test_DeployFooterRenderer_shows_complete_when
 	s.Contains(result, "complete")
 }
 
-func (s *DeployRenderersTestSuite) Test_DeployFooterRenderer_shows_failed_status() {
+func (s *DeployRenderersTestSuite) Test_RenderFooter_shows_failed_status() {
 	footer := &DeployFooterRenderer{
 		InstanceName: "my-instance",
 		FinalStatus:  core.InstanceStatusDeployFailed,
@@ -491,7 +448,7 @@ func (s *DeployRenderersTestSuite) Test_DeployFooterRenderer_shows_failed_status
 	s.Contains(result, "failed")
 }
 
-func (s *DeployRenderersTestSuite) Test_DeployFooterRenderer_shows_rolled_back_status() {
+func (s *DeployRenderersTestSuite) Test_RenderFooter_shows_rolled_back_status() {
 	footer := &DeployFooterRenderer{
 		InstanceName: "my-instance",
 		FinalStatus:  core.InstanceStatusDeployRollbackComplete,
@@ -501,7 +458,7 @@ func (s *DeployRenderersTestSuite) Test_DeployFooterRenderer_shows_rolled_back_s
 	s.Contains(result, "rolled back")
 }
 
-func (s *DeployRenderersTestSuite) Test_DeployFooterRenderer_shows_exports_hint_when_available() {
+func (s *DeployRenderersTestSuite) Test_RenderFooter_shows_exports_hint_when_available() {
 	footer := &DeployFooterRenderer{
 		InstanceName:     "my-instance",
 		FinalStatus:      core.InstanceStatusDeployed,
@@ -512,7 +469,7 @@ func (s *DeployRenderersTestSuite) Test_DeployFooterRenderer_shows_exports_hint_
 	s.Contains(result, "exports")
 }
 
-func (s *DeployRenderersTestSuite) Test_DeployFooterRenderer_shows_pre_rollback_hint_when_available() {
+func (s *DeployRenderersTestSuite) Test_RenderFooter_shows_pre_rollback_hint_when_available() {
 	footer := &DeployFooterRenderer{
 		InstanceName:        "my-instance",
 		FinalStatus:         core.InstanceStatusDeployRollbackComplete,
@@ -523,7 +480,7 @@ func (s *DeployRenderersTestSuite) Test_DeployFooterRenderer_shows_pre_rollback_
 	s.Contains(result, "pre-rollback")
 }
 
-func (s *DeployRenderersTestSuite) Test_DeployFooterRenderer_shows_element_summary() {
+func (s *DeployRenderersTestSuite) Test_RenderFooter_shows_element_summary() {
 	footer := &DeployFooterRenderer{
 		InstanceName: "my-instance",
 		FinalStatus:  core.InstanceStatusDeployed,
@@ -541,41 +498,66 @@ func (s *DeployRenderersTestSuite) Test_DeployFooterRenderer_shows_element_summa
 	s.Contains(result, "successful")
 }
 
-// --- renderFinalStatus tests ---
+// --- renderFinalStatus tests (via RenderFooter) ---
 
-func (s *DeployRenderersTestSuite) Test_renderFinalStatus_deployed() {
-	result := renderFinalStatus(core.InstanceStatusDeployed, s.testStyles)
+func (s *DeployRenderersTestSuite) Test_RenderFooter_status_deployed() {
+	footer := &DeployFooterRenderer{
+		InstanceName: "my-instance",
+		FinalStatus:  core.InstanceStatusDeployed,
+		Finished:     true,
+	}
+	result := footer.RenderFooter(&splitpane.Model{}, s.testStyles)
 	s.Contains(result, "complete")
 }
 
-func (s *DeployRenderersTestSuite) Test_renderFinalStatus_updated() {
-	result := renderFinalStatus(core.InstanceStatusUpdated, s.testStyles)
+func (s *DeployRenderersTestSuite) Test_RenderFooter_status_updated() {
+	footer := &DeployFooterRenderer{
+		InstanceName: "my-instance",
+		FinalStatus:  core.InstanceStatusUpdated,
+		Finished:     true,
+	}
+	result := footer.RenderFooter(&splitpane.Model{}, s.testStyles)
 	s.Contains(result, "complete")
 }
 
-func (s *DeployRenderersTestSuite) Test_renderFinalStatus_destroyed() {
-	result := renderFinalStatus(core.InstanceStatusDestroyed, s.testStyles)
+func (s *DeployRenderersTestSuite) Test_RenderFooter_status_destroyed() {
+	footer := &DeployFooterRenderer{
+		InstanceName: "my-instance",
+		FinalStatus:  core.InstanceStatusDestroyed,
+		Finished:     true,
+	}
+	result := footer.RenderFooter(&splitpane.Model{}, s.testStyles)
 	s.Contains(result, "complete")
 }
 
-func (s *DeployRenderersTestSuite) Test_renderFinalStatus_deploy_failed() {
-	result := renderFinalStatus(core.InstanceStatusDeployFailed, s.testStyles)
+func (s *DeployRenderersTestSuite) Test_RenderFooter_status_deploy_failed() {
+	footer := &DeployFooterRenderer{
+		InstanceName: "my-instance",
+		FinalStatus:  core.InstanceStatusDeployFailed,
+		Finished:     true,
+	}
+	result := footer.RenderFooter(&splitpane.Model{}, s.testStyles)
 	s.Contains(result, "failed")
 }
 
-func (s *DeployRenderersTestSuite) Test_renderFinalStatus_rollback_complete() {
-	result := renderFinalStatus(core.InstanceStatusDeployRollbackComplete, s.testStyles)
+func (s *DeployRenderersTestSuite) Test_RenderFooter_status_rollback_complete() {
+	footer := &DeployFooterRenderer{
+		InstanceName: "my-instance",
+		FinalStatus:  core.InstanceStatusDeployRollbackComplete,
+		Finished:     true,
+	}
+	result := footer.RenderFooter(&splitpane.Model{}, s.testStyles)
 	s.Contains(result, "rolled back")
 }
 
-func (s *DeployRenderersTestSuite) Test_renderFinalStatus_rollback_failed() {
-	result := renderFinalStatus(core.InstanceStatusDeployRollbackFailed, s.testStyles)
+func (s *DeployRenderersTestSuite) Test_RenderFooter_status_rollback_failed() {
+	footer := &DeployFooterRenderer{
+		InstanceName: "my-instance",
+		FinalStatus:  core.InstanceStatusDeployRollbackFailed,
+		Finished:     true,
+	}
+	result := footer.RenderFooter(&splitpane.Model{}, s.testStyles)
 	s.Contains(result, "rollback failed")
-}
-
-func (s *DeployRenderersTestSuite) Test_renderFinalStatus_unknown() {
-	result := renderFinalStatus(core.InstanceStatus(999), s.testStyles)
-	s.Contains(result, "unknown")
 }
 
 // --- DeployStagingFooterRenderer tests ---
@@ -636,14 +618,14 @@ func (s *DeployRenderersTestSuite) Test_DeployStagingFooterRenderer_shows_export
 
 type mockItem struct{}
 
-func (m *mockItem) GetID() string                                   { return "mock" }
-func (m *mockItem) GetName() string                                 { return "mock" }
-func (m *mockItem) GetIcon(bool) string                             { return "" }
-func (m *mockItem) GetIconStyled(*styles.Styles, bool) string       { return "" }
-func (m *mockItem) GetAction() string                               { return "" }
-func (m *mockItem) GetDepth() int                                   { return 0 }
-func (m *mockItem) GetParentID() string                             { return "" }
-func (m *mockItem) GetItemType() string                             { return "" }
-func (m *mockItem) IsExpandable() bool                              { return false }
-func (m *mockItem) CanDrillDown() bool                              { return false }
-func (m *mockItem) GetChildren() []splitpane.Item                   { return nil }
+func (m *mockItem) GetID() string                               { return "mock" }
+func (m *mockItem) GetName() string                             { return "mock" }
+func (m *mockItem) GetIcon(bool) string                         { return "" }
+func (m *mockItem) GetIconStyled(*styles.Styles, bool) string   { return "" }
+func (m *mockItem) GetAction() string                           { return "" }
+func (m *mockItem) GetDepth() int                               { return 0 }
+func (m *mockItem) GetParentID() string                         { return "" }
+func (m *mockItem) GetItemType() string                         { return "" }
+func (m *mockItem) IsExpandable() bool                          { return false }
+func (m *mockItem) CanDrillDown() bool                          { return false }
+func (m *mockItem) GetChildren() []splitpane.Item               { return nil }

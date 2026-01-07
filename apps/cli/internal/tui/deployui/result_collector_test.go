@@ -97,32 +97,32 @@ func (s *ResultCollectorTestSuite) Test_lookupChild_falls_back_to_name() {
 	s.Equal("child1", result.Name)
 }
 
-// extractResourceAFromLinkName tests
+// ExtractResourceAFromLinkName tests
 
-func (s *ResultCollectorTestSuite) Test_extractResourceAFromLinkName_extracts_first_part() {
-	result := extractResourceAFromLinkName("resourceA::resourceB")
+func (s *ResultCollectorTestSuite) Test_ExtractResourceAFromLinkName_extracts_first_part() {
+	result := ExtractResourceAFromLinkName("resourceA::resourceB")
 	s.Equal("resourceA", result)
 }
 
-func (s *ResultCollectorTestSuite) Test_extractResourceAFromLinkName_handles_no_separator() {
-	result := extractResourceAFromLinkName("singleName")
+func (s *ResultCollectorTestSuite) Test_ExtractResourceAFromLinkName_handles_no_separator() {
+	result := ExtractResourceAFromLinkName("singleName")
 	s.Equal("singleName", result)
 }
 
-func (s *ResultCollectorTestSuite) Test_extractResourceAFromLinkName_handles_empty_string() {
-	result := extractResourceAFromLinkName("")
+func (s *ResultCollectorTestSuite) Test_ExtractResourceAFromLinkName_handles_empty_string() {
+	result := ExtractResourceAFromLinkName("")
 	s.Equal("", result)
 }
 
-// extractResourceBFromLinkName tests
+// ExtractResourceBFromLinkName tests
 
-func (s *ResultCollectorTestSuite) Test_extractResourceBFromLinkName_extracts_second_part() {
-	result := extractResourceBFromLinkName("resourceA::resourceB")
+func (s *ResultCollectorTestSuite) Test_ExtractResourceBFromLinkName_extracts_second_part() {
+	result := ExtractResourceBFromLinkName("resourceA::resourceB")
 	s.Equal("resourceB", result)
 }
 
-func (s *ResultCollectorTestSuite) Test_extractResourceBFromLinkName_handles_no_separator() {
-	result := extractResourceBFromLinkName("singleName")
+func (s *ResultCollectorTestSuite) Test_ExtractResourceBFromLinkName_handles_no_separator() {
+	result := ExtractResourceBFromLinkName("singleName")
 	s.Equal("", result)
 }
 

@@ -57,8 +57,8 @@ func (m *DeployModel) processLinkUpdate(data *container.LinkDeployUpdateMessage)
 		item = &LinkDeployItem{
 			LinkID:        data.LinkID,
 			LinkName:      data.LinkName,
-			ResourceAName: extractResourceAFromLinkName(data.LinkName),
-			ResourceBName: extractResourceBFromLinkName(data.LinkName),
+			ResourceAName: ExtractResourceAFromLinkName(data.LinkName),
+			ResourceBName: ExtractResourceBFromLinkName(data.LinkName),
 		}
 		m.linksByName[linkPath] = item
 		if isRootLink {

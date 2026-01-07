@@ -36,6 +36,7 @@ test-*.sh
 !e2e/testdata/fixtures/*.blueprint.yaml
 
 .claude
+CLAUDE.md
 
 engine.auth.json
 

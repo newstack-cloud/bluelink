@@ -38,7 +38,6 @@ func (s *StageRenderersTestSuite) SetupTest() {
 // --- RenderDetails tests ---
 
 func (s *StageRenderersTestSuite) Test_RenderDetails_returns_unknown_for_wrong_type() {
-	// Create a mock item that isn't a *StageItem
 	result := s.renderer.RenderDetails(&mockItem{}, 80, s.testStyles)
 	s.Contains(result, "Unknown item type")
 }
@@ -80,16 +79,16 @@ func (s *StageRenderersTestSuite) Test_RenderDetails_renders_link_details() {
 
 func (s *StageRenderersTestSuite) Test_RenderDetails_returns_unknown_for_unknown_type() {
 	item := &StageItem{
-		Type: ItemType("unknown_type"), // Unknown type
+		Type: ItemType("unknown_type"),
 		Name: "unknown",
 	}
 	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "Unknown item type")
 }
 
-// --- renderResourceDetails tests ---
+// --- Resource details tests (via RenderDetails) ---
 
-func (s *StageRenderersTestSuite) Test_renderResourceDetails_shows_display_name_in_header() {
+func (s *StageRenderersTestSuite) Test_RenderDetails_resource_shows_display_name_in_header() {
 	item := &StageItem{
 		Type:         ItemTypeResource,
 		Name:         "myResource",
@@ -98,13 +97,13 @@ func (s *StageRenderersTestSuite) Test_renderResourceDetails_shows_display_name_
 		Action:       ActionCreate,
 		Changes:      &provider.Changes{},
 	}
-	result := s.renderer.renderResourceDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "My Display Name")
 	s.Contains(result, "Name:")
 	s.Contains(result, "myResource")
 }
 
-func (s *StageRenderersTestSuite) Test_renderResourceDetails_shows_removed_message() {
+func (s *StageRenderersTestSuite) Test_RenderDetails_resource_shows_removed_message() {
 	item := &StageItem{
 		Type:    ItemTypeResource,
 		Name:    "deletedResource",
@@ -112,22 +111,22 @@ func (s *StageRenderersTestSuite) Test_renderResourceDetails_shows_removed_messa
 		Removed: true,
 		Changes: &provider.Changes{},
 	}
-	result := s.renderer.renderResourceDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "will be destroyed")
 }
 
-func (s *StageRenderersTestSuite) Test_renderResourceDetails_shows_no_changes() {
+func (s *StageRenderersTestSuite) Test_RenderDetails_resource_shows_no_changes() {
 	item := &StageItem{
 		Type:    ItemTypeResource,
 		Name:    "unchangedResource",
 		Action:  ActionNoChange,
 		Changes: &provider.Changes{},
 	}
-	result := s.renderer.renderResourceDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "No changes")
 }
 
-func (s *StageRenderersTestSuite) Test_renderResourceDetails_shows_resource_id_from_changes() {
+func (s *StageRenderersTestSuite) Test_RenderDetails_resource_shows_resource_id_from_changes() {
 	item := &StageItem{
 		Type:   ItemTypeResource,
 		Name:   "myResource",
@@ -138,11 +137,11 @@ func (s *StageRenderersTestSuite) Test_renderResourceDetails_shows_resource_id_f
 			},
 		},
 	}
-	result := s.renderer.renderResourceDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "res-123-from-changes")
 }
 
-func (s *StageRenderersTestSuite) Test_renderResourceDetails_shows_resource_id_from_state() {
+func (s *StageRenderersTestSuite) Test_RenderDetails_resource_shows_resource_id_from_state() {
 	item := &StageItem{
 		Type:    ItemTypeResource,
 		Name:    "myResource",
@@ -152,11 +151,11 @@ func (s *StageRenderersTestSuite) Test_renderResourceDetails_shows_resource_id_f
 			ResourceID: "res-456-from-state",
 		},
 	}
-	result := s.renderer.renderResourceDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "res-456-from-state")
 }
 
-func (s *StageRenderersTestSuite) Test_renderResourceDetails_shows_outputs_from_state() {
+func (s *StageRenderersTestSuite) Test_RenderDetails_resource_shows_outputs_from_state() {
 	item := &StageItem{
 		Type:    ItemTypeResource,
 		Name:    "myResource",
@@ -168,122 +167,148 @@ func (s *StageRenderersTestSuite) Test_renderResourceDetails_shows_outputs_from_
 			ComputedFields: []string{"arn"},
 		},
 	}
-	result := s.renderer.renderResourceDetails(item, 80, s.testStyles)
-	// Output section should be rendered (even if empty when SpecData has no matching fields)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.NotEmpty(result)
 }
 
-// --- renderResourceChanges tests ---
+// --- Resource changes tests (via RenderDetails) ---
 
-func (s *StageRenderersTestSuite) Test_renderResourceChanges_shows_new_fields() {
-	resourceChanges := &provider.Changes{
-		NewFields: []provider.FieldChange{
-			{FieldPath: "spec.bucketName", NewValue: &core.MappingNode{Scalar: &core.ScalarValue{StringValue: strPtr("my-bucket")}}},
+func (s *StageRenderersTestSuite) Test_RenderDetails_resource_shows_new_fields() {
+	item := &StageItem{
+		Type:   ItemTypeResource,
+		Name:   "myResource",
+		Action: ActionCreate,
+		Changes: &provider.Changes{
+			NewFields: []provider.FieldChange{
+				{FieldPath: "spec.bucketName", NewValue: &core.MappingNode{Scalar: &core.ScalarValue{StringValue: strPtr("my-bucket")}}},
+			},
 		},
 	}
-	result := s.renderer.renderResourceChanges(resourceChanges, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "Field Changes")
 	s.Contains(result, "spec.bucketName")
 	s.Contains(result, "my-bucket")
 }
 
-func (s *StageRenderersTestSuite) Test_renderResourceChanges_shows_modified_fields() {
-	resourceChanges := &provider.Changes{
-		ModifiedFields: []provider.FieldChange{
-			{
-				FieldPath: "spec.size",
-				PrevValue: &core.MappingNode{Scalar: &core.ScalarValue{StringValue: strPtr("10")}},
-				NewValue:  &core.MappingNode{Scalar: &core.ScalarValue{StringValue: strPtr("20")}},
+func (s *StageRenderersTestSuite) Test_RenderDetails_resource_shows_modified_fields() {
+	item := &StageItem{
+		Type:   ItemTypeResource,
+		Name:   "myResource",
+		Action: ActionUpdate,
+		Changes: &provider.Changes{
+			ModifiedFields: []provider.FieldChange{
+				{
+					FieldPath: "spec.size",
+					PrevValue: &core.MappingNode{Scalar: &core.ScalarValue{StringValue: strPtr("10")}},
+					NewValue:  &core.MappingNode{Scalar: &core.ScalarValue{StringValue: strPtr("20")}},
+				},
 			},
 		},
 	}
-	result := s.renderer.renderResourceChanges(resourceChanges, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "Field Changes")
 	s.Contains(result, "spec.size")
 	s.Contains(result, "10")
 	s.Contains(result, "20")
 }
 
-func (s *StageRenderersTestSuite) Test_renderResourceChanges_shows_removed_fields() {
-	resourceChanges := &provider.Changes{
-		RemovedFields: []string{"spec.oldField"},
+func (s *StageRenderersTestSuite) Test_RenderDetails_resource_shows_removed_fields() {
+	item := &StageItem{
+		Type:   ItemTypeResource,
+		Name:   "myResource",
+		Action: ActionUpdate,
+		Changes: &provider.Changes{
+			RemovedFields: []string{"spec.oldField"},
+		},
 	}
-	result := s.renderer.renderResourceChanges(resourceChanges, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "Field Changes")
 	s.Contains(result, "spec.oldField")
 }
 
-func (s *StageRenderersTestSuite) Test_renderResourceChanges_shows_no_changes_when_empty() {
-	resourceChanges := &provider.Changes{}
-	result := s.renderer.renderResourceChanges(resourceChanges, 80, s.testStyles)
-	s.Contains(result, "No changes")
-}
-
-func (s *StageRenderersTestSuite) Test_renderResourceChanges_shows_outbound_link_changes() {
-	resourceChanges := &provider.Changes{
-		NewOutboundLinks: map[string]provider.LinkChanges{
-			"targetResource": {},
+func (s *StageRenderersTestSuite) Test_RenderDetails_resource_shows_outbound_link_changes() {
+	item := &StageItem{
+		Type:   ItemTypeResource,
+		Name:   "myResource",
+		Action: ActionUpdate,
+		Changes: &provider.Changes{
+			NewOutboundLinks: map[string]provider.LinkChanges{
+				"targetResource": {},
+			},
 		},
 	}
-	result := s.renderer.renderResourceChanges(resourceChanges, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "Outbound Link Changes")
 	s.Contains(result, "targetResource")
 	s.Contains(result, "new link")
 }
 
-// --- renderOutboundLinkChanges tests ---
-
-func (s *StageRenderersTestSuite) Test_renderOutboundLinkChanges_shows_new_links() {
-	resourceChanges := &provider.Changes{
-		NewOutboundLinks: map[string]provider.LinkChanges{
-			"newTarget": {
-				NewFields: []*provider.FieldChange{
-					{FieldPath: "linkField", NewValue: &core.MappingNode{Scalar: &core.ScalarValue{StringValue: strPtr("value")}}},
+func (s *StageRenderersTestSuite) Test_RenderDetails_resource_shows_new_outbound_links() {
+	item := &StageItem{
+		Type:   ItemTypeResource,
+		Name:   "myResource",
+		Action: ActionUpdate,
+		Changes: &provider.Changes{
+			NewOutboundLinks: map[string]provider.LinkChanges{
+				"newTarget": {
+					NewFields: []*provider.FieldChange{
+						{FieldPath: "linkField", NewValue: &core.MappingNode{Scalar: &core.ScalarValue{StringValue: strPtr("value")}}},
+					},
 				},
 			},
 		},
 	}
-	result := s.renderer.renderOutboundLinkChanges(resourceChanges, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "newTarget")
 	s.Contains(result, "new link")
 	s.Contains(result, "linkField")
 }
 
-func (s *StageRenderersTestSuite) Test_renderOutboundLinkChanges_shows_modified_links() {
-	resourceChanges := &provider.Changes{
-		OutboundLinkChanges: map[string]provider.LinkChanges{
-			"modifiedTarget": {},
+func (s *StageRenderersTestSuite) Test_RenderDetails_resource_shows_modified_outbound_links() {
+	item := &StageItem{
+		Type:   ItemTypeResource,
+		Name:   "myResource",
+		Action: ActionUpdate,
+		Changes: &provider.Changes{
+			OutboundLinkChanges: map[string]provider.LinkChanges{
+				"modifiedTarget": {},
+			},
 		},
 	}
-	result := s.renderer.renderOutboundLinkChanges(resourceChanges, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "modifiedTarget")
 	s.Contains(result, "link updated")
 }
 
-func (s *StageRenderersTestSuite) Test_renderOutboundLinkChanges_shows_removed_links() {
-	resourceChanges := &provider.Changes{
-		RemovedOutboundLinks: []string{"removedTarget"},
+func (s *StageRenderersTestSuite) Test_RenderDetails_resource_shows_removed_outbound_links() {
+	item := &StageItem{
+		Type:   ItemTypeResource,
+		Name:   "myResource",
+		Action: ActionUpdate,
+		Changes: &provider.Changes{
+			RemovedOutboundLinks: []string{"removedTarget"},
+		},
 	}
-	result := s.renderer.renderOutboundLinkChanges(resourceChanges, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "removedTarget")
 	s.Contains(result, "link removed")
 }
 
-// --- renderChildDetails tests ---
+// --- Child details tests (via RenderDetails) ---
 
-func (s *StageRenderersTestSuite) Test_renderChildDetails_shows_basic_info() {
+func (s *StageRenderersTestSuite) Test_RenderDetails_child_shows_basic_info() {
 	item := &StageItem{
 		Type:    ItemTypeChild,
 		Name:    "childBlueprint",
 		Action:  ActionUpdate,
 		Changes: &changes.BlueprintChanges{},
 	}
-	result := s.renderer.renderChildDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "childBlueprint")
 	s.Contains(result, "Changes computed")
 }
 
-func (s *StageRenderersTestSuite) Test_renderChildDetails_shows_removed_message() {
+func (s *StageRenderersTestSuite) Test_RenderDetails_child_shows_removed_message() {
 	item := &StageItem{
 		Type:    ItemTypeChild,
 		Name:    "deletedChild",
@@ -291,11 +316,11 @@ func (s *StageRenderersTestSuite) Test_renderChildDetails_shows_removed_message(
 		Removed: true,
 		Changes: &changes.BlueprintChanges{},
 	}
-	result := s.renderer.renderChildDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "will be destroyed")
 }
 
-func (s *StageRenderersTestSuite) Test_renderChildDetails_shows_instance_id() {
+func (s *StageRenderersTestSuite) Test_RenderDetails_child_shows_instance_id() {
 	item := &StageItem{
 		Type:    ItemTypeChild,
 		Name:    "childBlueprint",
@@ -305,11 +330,11 @@ func (s *StageRenderersTestSuite) Test_renderChildDetails_shows_instance_id() {
 			InstanceID: "child-instance-123",
 		},
 	}
-	result := s.renderer.renderChildDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "child-instance-123")
 }
 
-func (s *StageRenderersTestSuite) Test_renderChildDetails_shows_drill_down_hint_at_max_depth() {
+func (s *StageRenderersTestSuite) Test_RenderDetails_child_shows_drill_down_hint_at_max_depth() {
 	renderer := &StageDetailsRenderer{
 		MaxExpandDepth:       2,
 		NavigationStackDepth: 0,
@@ -321,11 +346,11 @@ func (s *StageRenderersTestSuite) Test_renderChildDetails_shows_drill_down_hint_
 		Changes: &changes.BlueprintChanges{},
 		Depth:   2, // At max depth
 	}
-	result := renderer.renderChildDetails(item, 80, s.testStyles)
+	result := renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "Press enter to inspect")
 }
 
-func (s *StageRenderersTestSuite) Test_renderChildDetails_shows_changes_summary() {
+func (s *StageRenderersTestSuite) Test_RenderDetails_child_shows_changes_summary() {
 	item := &StageItem{
 		Type:   ItemTypeChild,
 		Name:   "childBlueprint",
@@ -341,7 +366,7 @@ func (s *StageRenderersTestSuite) Test_renderChildDetails_shows_changes_summary(
 			RemovedResources: []string{"deletedRes"},
 		},
 	}
-	result := s.renderer.renderChildDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "Summary")
 	s.Contains(result, "2")
 	s.Contains(result, "to be created")
@@ -349,46 +374,43 @@ func (s *StageRenderersTestSuite) Test_renderChildDetails_shows_changes_summary(
 	s.Contains(result, "to be removed")
 }
 
-// --- renderChildChangesSummary tests ---
-
-func (s *StageRenderersTestSuite) Test_renderChildChangesSummary_shows_child_blueprint_changes() {
-	childChanges := &changes.BlueprintChanges{
-		NewChildren: map[string]changes.NewBlueprintDefinition{
-			"newChild1": {},
-			"newChild2": {},
+func (s *StageRenderersTestSuite) Test_RenderDetails_child_shows_child_blueprint_changes() {
+	item := &StageItem{
+		Type:   ItemTypeChild,
+		Name:   "childBlueprint",
+		Action: ActionUpdate,
+		Changes: &changes.BlueprintChanges{
+			NewChildren: map[string]changes.NewBlueprintDefinition{
+				"newChild1": {},
+				"newChild2": {},
+			},
+			ChildChanges: map[string]changes.BlueprintChanges{
+				"updatedChild": {},
+			},
+			RemovedChildren: []string{"deletedChild"},
 		},
-		ChildChanges: map[string]changes.BlueprintChanges{
-			"updatedChild": {},
-		},
-		RemovedChildren: []string{"deletedChild"},
 	}
-	result := s.renderer.renderChildChangesSummary(childChanges, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "2 child blueprints to be created")
 	s.Contains(result, "1 child blueprint to be updated")
 	s.Contains(result, "1 child blueprint to be removed")
 }
 
-func (s *StageRenderersTestSuite) Test_renderChildChangesSummary_returns_empty_for_no_changes() {
-	childChanges := &changes.BlueprintChanges{}
-	result := s.renderer.renderChildChangesSummary(childChanges, s.testStyles)
-	s.Empty(result)
-}
+// --- Link details tests (via RenderDetails) ---
 
-// --- renderLinkDetails tests ---
-
-func (s *StageRenderersTestSuite) Test_renderLinkDetails_shows_basic_info() {
+func (s *StageRenderersTestSuite) Test_RenderDetails_link_shows_basic_info() {
 	item := &StageItem{
 		Type:    ItemTypeLink,
 		Name:    "resourceA::resourceB",
 		Action:  ActionCreate,
 		Changes: &provider.LinkChanges{},
 	}
-	result := s.renderer.renderLinkDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "resourceA::resourceB")
 	s.Contains(result, "Changes computed")
 }
 
-func (s *StageRenderersTestSuite) Test_renderLinkDetails_shows_removed_message() {
+func (s *StageRenderersTestSuite) Test_RenderDetails_link_shows_removed_message() {
 	item := &StageItem{
 		Type:    ItemTypeLink,
 		Name:    "resourceA::resourceB",
@@ -396,11 +418,11 @@ func (s *StageRenderersTestSuite) Test_renderLinkDetails_shows_removed_message()
 		Removed: true,
 		Changes: &provider.LinkChanges{},
 	}
-	result := s.renderer.renderLinkDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "will be destroyed")
 }
 
-func (s *StageRenderersTestSuite) Test_renderLinkDetails_shows_link_id() {
+func (s *StageRenderersTestSuite) Test_RenderDetails_link_shows_link_id() {
 	item := &StageItem{
 		Type:    ItemTypeLink,
 		Name:    "resourceA::resourceB",
@@ -410,78 +432,76 @@ func (s *StageRenderersTestSuite) Test_renderLinkDetails_shows_link_id() {
 			LinkID: "link-456",
 		},
 	}
-	result := s.renderer.renderLinkDetails(item, 80, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "link-456")
 }
 
-// --- renderLinkChanges tests ---
+// --- Link changes tests (via RenderDetails) ---
 
-func (s *StageRenderersTestSuite) Test_renderLinkChanges_shows_new_fields() {
-	linkChanges := &provider.LinkChanges{
-		NewFields: []*provider.FieldChange{
-			{FieldPath: "linkData.field1", NewValue: &core.MappingNode{Scalar: &core.ScalarValue{StringValue: strPtr("value1")}}},
+func (s *StageRenderersTestSuite) Test_RenderDetails_link_shows_new_fields() {
+	item := &StageItem{
+		Type:   ItemTypeLink,
+		Name:   "resourceA::resourceB",
+		Action: ActionCreate,
+		Changes: &provider.LinkChanges{
+			NewFields: []*provider.FieldChange{
+				{FieldPath: "linkData.field1", NewValue: &core.MappingNode{Scalar: &core.ScalarValue{StringValue: strPtr("value1")}}},
+			},
 		},
 	}
-	result := s.renderer.renderLinkChanges(linkChanges, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "Changes")
 	s.Contains(result, "linkData.field1")
 	s.Contains(result, "value1")
 }
 
-func (s *StageRenderersTestSuite) Test_renderLinkChanges_shows_modified_fields() {
-	linkChanges := &provider.LinkChanges{
-		ModifiedFields: []*provider.FieldChange{
-			{
-				FieldPath: "linkData.field1",
-				PrevValue: &core.MappingNode{Scalar: &core.ScalarValue{StringValue: strPtr("old")}},
-				NewValue:  &core.MappingNode{Scalar: &core.ScalarValue{StringValue: strPtr("new")}},
+func (s *StageRenderersTestSuite) Test_RenderDetails_link_shows_modified_fields() {
+	item := &StageItem{
+		Type:   ItemTypeLink,
+		Name:   "resourceA::resourceB",
+		Action: ActionUpdate,
+		Changes: &provider.LinkChanges{
+			ModifiedFields: []*provider.FieldChange{
+				{
+					FieldPath: "linkData.field1",
+					PrevValue: &core.MappingNode{Scalar: &core.ScalarValue{StringValue: strPtr("old")}},
+					NewValue:  &core.MappingNode{Scalar: &core.ScalarValue{StringValue: strPtr("new")}},
+				},
 			},
 		},
 	}
-	result := s.renderer.renderLinkChanges(linkChanges, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "old")
 	s.Contains(result, "new")
 }
 
-func (s *StageRenderersTestSuite) Test_renderLinkChanges_shows_removed_fields() {
-	linkChanges := &provider.LinkChanges{
-		RemovedFields: []string{"linkData.oldField"},
+func (s *StageRenderersTestSuite) Test_RenderDetails_link_shows_removed_fields() {
+	item := &StageItem{
+		Type:   ItemTypeLink,
+		Name:   "resourceA::resourceB",
+		Action: ActionUpdate,
+		Changes: &provider.LinkChanges{
+			RemovedFields: []string{"linkData.oldField"},
+		},
 	}
-	result := s.renderer.renderLinkChanges(linkChanges, s.testStyles)
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "linkData.oldField")
 }
 
-func (s *StageRenderersTestSuite) Test_renderLinkChanges_shows_no_field_changes() {
-	linkChanges := &provider.LinkChanges{}
-	result := s.renderer.renderLinkChanges(linkChanges, s.testStyles)
+func (s *StageRenderersTestSuite) Test_RenderDetails_link_shows_no_field_changes() {
+	item := &StageItem{
+		Type:    ItemTypeLink,
+		Name:    "resourceA::resourceB",
+		Action:  ActionUpdate,
+		Changes: &provider.LinkChanges{},
+	}
+	result := s.renderer.RenderDetails(item, 80, s.testStyles)
 	s.Contains(result, "No field changes")
-}
-
-// --- forceWrap tests ---
-
-func (s *StageRenderersTestSuite) Test_forceWrap_breaks_long_text() {
-	result := s.renderer.forceWrap("abcdefghij", 3)
-	s.Equal([]string{"abc", "def", "ghi", "j"}, result)
-}
-
-func (s *StageRenderersTestSuite) Test_forceWrap_returns_original_for_short_text() {
-	result := s.renderer.forceWrap("abc", 10)
-	s.Equal([]string{"abc"}, result)
-}
-
-func (s *StageRenderersTestSuite) Test_forceWrap_handles_zero_width() {
-	result := s.renderer.forceWrap("abc", 0)
-	s.Equal([]string{"abc"}, result)
-}
-
-func (s *StageRenderersTestSuite) Test_forceWrap_handles_negative_width() {
-	result := s.renderer.forceWrap("abc", -1)
-	s.Equal([]string{"abc"}, result)
 }
 
 // --- StageFooterRenderer tests ---
 
-func (s *StageRenderersTestSuite) Test_StageFooterRenderer_uses_delegate_when_set() {
+func (s *StageRenderersTestSuite) Test_RenderFooter_uses_delegate_when_set() {
 	delegate := &mockFooterRenderer{output: "delegate output"}
 	footer := &StageFooterRenderer{
 		ChangesetID: "cs-123",
@@ -491,7 +511,7 @@ func (s *StageRenderersTestSuite) Test_StageFooterRenderer_uses_delegate_when_se
 	s.Equal("delegate output", result)
 }
 
-func (s *StageRenderersTestSuite) Test_StageFooterRenderer_shows_changeset_id() {
+func (s *StageRenderersTestSuite) Test_RenderFooter_shows_changeset_id() {
 	footer := &StageFooterRenderer{
 		ChangesetID: "cs-123",
 	}
@@ -499,7 +519,7 @@ func (s *StageRenderersTestSuite) Test_StageFooterRenderer_shows_changeset_id() 
 	s.Contains(result, "cs-123")
 }
 
-func (s *StageRenderersTestSuite) Test_StageFooterRenderer_shows_deploy_instruction() {
+func (s *StageRenderersTestSuite) Test_RenderFooter_shows_deploy_instruction() {
 	footer := &StageFooterRenderer{
 		ChangesetID: "cs-123",
 		CreateCount: 1,
@@ -508,7 +528,7 @@ func (s *StageRenderersTestSuite) Test_StageFooterRenderer_shows_deploy_instruct
 	s.Contains(result, "bluelink deploy")
 }
 
-func (s *StageRenderersTestSuite) Test_StageFooterRenderer_shows_destroy_instruction_when_destroy() {
+func (s *StageRenderersTestSuite) Test_RenderFooter_shows_destroy_instruction_when_destroy() {
 	footer := &StageFooterRenderer{
 		ChangesetID: "cs-123",
 		Destroy:     true,
@@ -518,7 +538,7 @@ func (s *StageRenderersTestSuite) Test_StageFooterRenderer_shows_destroy_instruc
 	s.Contains(result, "bluelink destroy")
 }
 
-func (s *StageRenderersTestSuite) Test_StageFooterRenderer_shows_no_changes_message() {
+func (s *StageRenderersTestSuite) Test_RenderFooter_shows_no_changes_message() {
 	footer := &StageFooterRenderer{
 		ChangesetID: "cs-123",
 	}
@@ -526,7 +546,7 @@ func (s *StageRenderersTestSuite) Test_StageFooterRenderer_shows_no_changes_mess
 	s.Contains(result, "No changes to apply")
 }
 
-func (s *StageRenderersTestSuite) Test_StageFooterRenderer_shows_exports_key_hint() {
+func (s *StageRenderersTestSuite) Test_RenderFooter_shows_exports_key_hint() {
 	footer := &StageFooterRenderer{
 		ChangesetID:      "cs-123",
 		HasExportChanges: true,
@@ -535,75 +555,62 @@ func (s *StageRenderersTestSuite) Test_StageFooterRenderer_shows_exports_key_hin
 	s.Contains(result, "exports")
 }
 
-// --- renderChangeSummary tests ---
+// --- renderChangeSummary tests (via RenderFooter) ---
 
-func (s *StageRenderersTestSuite) Test_renderChangeSummary_shows_create_count() {
-	footer := &StageFooterRenderer{CreateCount: 3}
-	result := footer.renderChangeSummary(s.testStyles)
+func (s *StageRenderersTestSuite) Test_RenderFooter_shows_create_count() {
+	footer := &StageFooterRenderer{ChangesetID: "cs-123", CreateCount: 3}
+	result := footer.RenderFooter(&splitpane.Model{}, s.testStyles)
 	s.Contains(result, "3 creates")
 }
 
-func (s *StageRenderersTestSuite) Test_renderChangeSummary_shows_update_count() {
-	footer := &StageFooterRenderer{UpdateCount: 2}
-	result := footer.renderChangeSummary(s.testStyles)
+func (s *StageRenderersTestSuite) Test_RenderFooter_shows_update_count() {
+	footer := &StageFooterRenderer{ChangesetID: "cs-123", UpdateCount: 2}
+	result := footer.RenderFooter(&splitpane.Model{}, s.testStyles)
 	s.Contains(result, "2 updates")
 }
 
-func (s *StageRenderersTestSuite) Test_renderChangeSummary_shows_recreate_count() {
-	footer := &StageFooterRenderer{RecreateCount: 1}
-	result := footer.renderChangeSummary(s.testStyles)
+func (s *StageRenderersTestSuite) Test_RenderFooter_shows_recreate_count() {
+	footer := &StageFooterRenderer{ChangesetID: "cs-123", RecreateCount: 1}
+	result := footer.RenderFooter(&splitpane.Model{}, s.testStyles)
 	s.Contains(result, "1 recreate")
 }
 
-func (s *StageRenderersTestSuite) Test_renderChangeSummary_shows_delete_count() {
-	footer := &StageFooterRenderer{DeleteCount: 4}
-	result := footer.renderChangeSummary(s.testStyles)
+func (s *StageRenderersTestSuite) Test_RenderFooter_shows_delete_count() {
+	footer := &StageFooterRenderer{ChangesetID: "cs-123", DeleteCount: 4}
+	result := footer.RenderFooter(&splitpane.Model{}, s.testStyles)
 	s.Contains(result, "4 deletes")
 }
 
-func (s *StageRenderersTestSuite) Test_renderChangeSummary_shows_all_counts() {
+func (s *StageRenderersTestSuite) Test_RenderFooter_shows_all_counts() {
 	footer := &StageFooterRenderer{
+		ChangesetID:   "cs-123",
 		CreateCount:   1,
 		UpdateCount:   2,
 		RecreateCount: 3,
 		DeleteCount:   4,
 	}
-	result := footer.renderChangeSummary(s.testStyles)
+	result := footer.RenderFooter(&splitpane.Model{}, s.testStyles)
 	s.Contains(result, "1 create")
 	s.Contains(result, "2 updates")
 	s.Contains(result, "3 recreates")
 	s.Contains(result, "4 deletes")
 }
 
-// --- sortedMapKeys tests ---
-
-func (s *StageRenderersTestSuite) Test_sortedMapKeys_returns_sorted_keys() {
-	m := map[string]int{"c": 3, "a": 1, "b": 2}
-	result := sortedMapKeys(m)
-	s.Equal([]string{"a", "b", "c"}, result)
-}
-
-func (s *StageRenderersTestSuite) Test_sortedMapKeys_handles_empty_map() {
-	m := map[string]int{}
-	result := sortedMapKeys(m)
-	s.Empty(result)
-}
-
 // --- Helper types ---
 
 type mockItem struct{}
 
-func (m *mockItem) GetID() string                                   { return "mock" }
-func (m *mockItem) GetName() string                                 { return "mock" }
-func (m *mockItem) GetIcon(bool) string                             { return "" }
-func (m *mockItem) GetIconStyled(*styles.Styles, bool) string       { return "" }
-func (m *mockItem) GetAction() string                               { return "" }
-func (m *mockItem) GetDepth() int                                   { return 0 }
-func (m *mockItem) GetParentID() string                             { return "" }
-func (m *mockItem) GetItemType() string                             { return "" }
-func (m *mockItem) IsExpandable() bool                              { return false }
-func (m *mockItem) CanDrillDown() bool                              { return false }
-func (m *mockItem) GetChildren() []splitpane.Item                   { return nil }
+func (m *mockItem) GetID() string                                 { return "mock" }
+func (m *mockItem) GetName() string                               { return "mock" }
+func (m *mockItem) GetIcon(bool) string                           { return "" }
+func (m *mockItem) GetIconStyled(*styles.Styles, bool) string     { return "" }
+func (m *mockItem) GetAction() string                             { return "" }
+func (m *mockItem) GetDepth() int                                 { return 0 }
+func (m *mockItem) GetParentID() string                           { return "" }
+func (m *mockItem) GetItemType() string                           { return "" }
+func (m *mockItem) IsExpandable() bool                            { return false }
+func (m *mockItem) CanDrillDown() bool                            { return false }
+func (m *mockItem) GetChildren() []splitpane.Item                 { return nil }
 
 type mockFooterRenderer struct {
 	output string
@@ -613,7 +620,6 @@ func (m *mockFooterRenderer) RenderFooter(*splitpane.Model, *styles.Styles) stri
 	return m.output
 }
 
-// Helper function to create string pointer
 func strPtr(s string) *string {
 	return &s
 }

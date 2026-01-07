@@ -228,7 +228,8 @@ func (c *resultCollector) collectLinkResult(item *LinkDeployItem, path string) {
 
 // Helper functions for link name parsing.
 
-func extractResourceAFromLinkName(linkName string) string {
+// ExtractResourceAFromLinkName extracts the first resource name from a link name (format: "resourceA::resourceB").
+func ExtractResourceAFromLinkName(linkName string) string {
 	parts := strings.Split(linkName, "::")
 	if len(parts) >= 1 {
 		return parts[0]
@@ -236,7 +237,8 @@ func extractResourceAFromLinkName(linkName string) string {
 	return ""
 }
 
-func extractResourceBFromLinkName(linkName string) string {
+// ExtractResourceBFromLinkName extracts the second resource name from a link name (format: "resourceA::resourceB").
+func ExtractResourceBFromLinkName(linkName string) string {
 	parts := strings.Split(linkName, "::")
 	if len(parts) >= 2 {
 		return parts[1]

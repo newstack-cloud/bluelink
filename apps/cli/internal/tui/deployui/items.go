@@ -561,8 +561,8 @@ func (i *DeployItem) appendChildLinkItems(items []splitpane.Item, parentSkipped 
 		for _, linkName := range resourceChanges.RemovedOutboundLinks {
 			linkItem, linkPath := i.getOrCreateLinkItem(
 				linkName,
-				extractResourceAFromLinkName(linkName),
-				extractResourceBFromLinkName(linkName),
+				ExtractResourceAFromLinkName(linkName),
+				ExtractResourceBFromLinkName(linkName),
 				ActionDelete,
 				parentSkipped,
 			)
@@ -585,8 +585,8 @@ func (i *DeployItem) appendChildLinkItems(items []splitpane.Item, parentSkipped 
 	for _, linkName := range childChanges.RemovedLinks {
 		linkItem, linkPath := i.getOrCreateLinkItem(
 			linkName,
-			extractResourceAFromLinkName(linkName),
-			extractResourceBFromLinkName(linkName),
+			ExtractResourceAFromLinkName(linkName),
+			ExtractResourceBFromLinkName(linkName),
 			ActionDelete,
 			parentSkipped,
 		)
@@ -1001,8 +1001,8 @@ func (i *DeployItem) getOrCreateLinkItemFromState(linkName string, linkState *st
 	newItem := &LinkDeployItem{
 		LinkID:        linkState.LinkID,
 		LinkName:      linkName,
-		ResourceAName: extractResourceAFromLinkName(linkName),
-		ResourceBName: extractResourceBFromLinkName(linkName),
+		ResourceAName: ExtractResourceAFromLinkName(linkName),
+		ResourceBName: ExtractResourceBFromLinkName(linkName),
 		Action:        action,
 		Status:        linkState.Status,
 		Skipped:       skipped,

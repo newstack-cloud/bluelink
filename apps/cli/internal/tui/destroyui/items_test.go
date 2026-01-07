@@ -560,17 +560,17 @@ func (s *DestroyItemsTestSuite) Test_GetChildren_propagates_skipped() {
 
 // --- getOrCreateResourceItem tests ---
 
-func (s *DestroyItemsTestSuite) Test_getOrCreateResourceItem_creates_new_item() {
+func (s *DestroyItemsTestSuite) Test_GetOrCreateResourceItem_creates_new_item() {
 	item := &DestroyItem{
 		resourcesByName: make(map[string]*ResourceDestroyItem),
 	}
-	result := item.getOrCreateResourceItem("newRes", ActionDelete, false)
+	result := item.GetOrCreateResourceItem("newRes", ActionDelete, false)
 	s.Equal("newRes", result.Name)
 	s.Equal(ActionDelete, result.Action)
 	s.False(result.Skipped)
 }
 
-func (s *DestroyItemsTestSuite) Test_getOrCreateResourceItem_returns_existing_by_path() {
+func (s *DestroyItemsTestSuite) Test_GetOrCreateResourceItem_returns_existing_by_path() {
 	existing := &ResourceDestroyItem{
 		Name:   "res",
 		Action: ActionDelete,
@@ -581,12 +581,12 @@ func (s *DestroyItemsTestSuite) Test_getOrCreateResourceItem_returns_existing_by
 			"parent/res": existing,
 		},
 	}
-	result := item.getOrCreateResourceItem("res", ActionUpdate, true)
+	result := item.GetOrCreateResourceItem("res", ActionUpdate, true)
 	s.Same(existing, result)
 	s.True(result.Skipped)
 }
 
-func (s *DestroyItemsTestSuite) Test_getOrCreateResourceItem_returns_existing_by_name() {
+func (s *DestroyItemsTestSuite) Test_GetOrCreateResourceItem_returns_existing_by_name() {
 	existing := &ResourceDestroyItem{
 		Name:   "res",
 		Action: ActionDelete,
@@ -596,23 +596,23 @@ func (s *DestroyItemsTestSuite) Test_getOrCreateResourceItem_returns_existing_by
 			"res": existing,
 		},
 	}
-	result := item.getOrCreateResourceItem("res", ActionUpdate, false)
+	result := item.GetOrCreateResourceItem("res", ActionUpdate, false)
 	s.Same(existing, result)
 }
 
 // --- getOrCreateChildItem tests ---
 
-func (s *DestroyItemsTestSuite) Test_getOrCreateChildItem_creates_new_item() {
+func (s *DestroyItemsTestSuite) Test_GetOrCreateChildItem_creates_new_item() {
 	item := &DestroyItem{
 		childrenByName: make(map[string]*ChildDestroyItem),
 	}
-	result := item.getOrCreateChildItem("newChild", ActionDelete, nil, false)
+	result := item.GetOrCreateChildItem("newChild", ActionDelete, nil, false)
 	s.Equal("newChild", result.Name)
 	s.Equal(ActionDelete, result.Action)
 	s.False(result.Skipped)
 }
 
-func (s *DestroyItemsTestSuite) Test_getOrCreateChildItem_returns_existing_by_path() {
+func (s *DestroyItemsTestSuite) Test_GetOrCreateChildItem_returns_existing_by_path() {
 	existing := &ChildDestroyItem{
 		Name:   "child",
 		Action: ActionDelete,
@@ -623,12 +623,12 @@ func (s *DestroyItemsTestSuite) Test_getOrCreateChildItem_returns_existing_by_pa
 			"parent/child": existing,
 		},
 	}
-	result := item.getOrCreateChildItem("child", ActionUpdate, nil, true)
+	result := item.GetOrCreateChildItem("child", ActionUpdate, nil, true)
 	s.Same(existing, result)
 	s.True(result.Skipped)
 }
 
-func (s *DestroyItemsTestSuite) Test_getOrCreateChildItem_returns_existing_by_name() {
+func (s *DestroyItemsTestSuite) Test_GetOrCreateChildItem_returns_existing_by_name() {
 	existing := &ChildDestroyItem{
 		Name:   "child",
 		Action: ActionDelete,
@@ -638,37 +638,37 @@ func (s *DestroyItemsTestSuite) Test_getOrCreateChildItem_returns_existing_by_na
 			"child": existing,
 		},
 	}
-	result := item.getOrCreateChildItem("child", ActionUpdate, nil, false)
+	result := item.GetOrCreateChildItem("child", ActionUpdate, nil, false)
 	s.Same(existing, result)
 }
 
 // --- buildChildPath tests ---
 
-func (s *DestroyItemsTestSuite) Test_buildChildPath_with_existing_path() {
+func (s *DestroyItemsTestSuite) Test_BuildChildPath_with_existing_path() {
 	item := &DestroyItem{
 		Path: "parent/child",
 	}
-	result := item.buildChildPath("grandchild")
+	result := item.BuildChildPath("grandchild")
 	s.Equal("parent/child/grandchild", result)
 }
 
-func (s *DestroyItemsTestSuite) Test_buildChildPath_without_path_with_child() {
+func (s *DestroyItemsTestSuite) Test_BuildChildPath_without_path_with_child() {
 	item := &DestroyItem{
 		Child: &ChildDestroyItem{Name: "parent"},
 	}
-	result := item.buildChildPath("nested")
+	result := item.BuildChildPath("nested")
 	s.Equal("parent/nested", result)
 }
 
-func (s *DestroyItemsTestSuite) Test_buildChildPath_without_path_without_child() {
+func (s *DestroyItemsTestSuite) Test_BuildChildPath_without_path_without_child() {
 	item := &DestroyItem{}
-	result := item.buildChildPath("simple")
+	result := item.BuildChildPath("simple")
 	s.Equal("simple", result)
 }
 
 // --- appendResourceItems tests ---
 
-func (s *DestroyItemsTestSuite) Test_appendResourceItems_handles_removed_and_changed() {
+func (s *DestroyItemsTestSuite) Test_AppendResourceItems_handles_removed_and_changed() {
 	item := &DestroyItem{
 		Type:  ItemTypeChild,
 		Child: &ChildDestroyItem{Name: "parent"},
@@ -681,13 +681,13 @@ func (s *DestroyItemsTestSuite) Test_appendResourceItems_handles_removed_and_cha
 		resourcesByName: make(map[string]*ResourceDestroyItem),
 	}
 	var items []splitpane.Item
-	result := item.appendResourceItems(items, false)
+	result := item.AppendResourceItems(items, false)
 	s.Len(result, 2)
 }
 
 // --- appendChildItems tests ---
 
-func (s *DestroyItemsTestSuite) Test_appendChildItems_handles_removed_and_changed() {
+func (s *DestroyItemsTestSuite) Test_AppendChildItems_handles_removed_and_changed() {
 	item := &DestroyItem{
 		Type:  ItemTypeChild,
 		Child: &ChildDestroyItem{Name: "parent"},
@@ -700,6 +700,6 @@ func (s *DestroyItemsTestSuite) Test_appendChildItems_handles_removed_and_change
 		childrenByName: make(map[string]*ChildDestroyItem),
 	}
 	var items []splitpane.Item
-	result := item.appendChildItems(items, false)
+	result := item.AppendChildItems(items, false)
 	s.Len(result, 2)
 }

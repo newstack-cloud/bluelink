@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/exp/teatest"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
@@ -733,8 +734,8 @@ func (s *InspectTUISuite) Test_inspect_nested_child_events_during_streaming() {
 	instanceState := testInstanceState(core.InstanceStatusDeploying)
 	events := []*types.BlueprintInstanceEvent{
 		childEvent("parent-child", core.InstanceStatusDeploying),
-		nestedChildEvent("parent-child", "nested-child", core.InstanceStatusDeploying),
-		nestedChildEvent("parent-child", "nested-child", core.InstanceStatusDeployed),
+		nestedChildEvent("nested-child", core.InstanceStatusDeploying),
+		nestedChildEvent("nested-child", core.InstanceStatusDeployed),
 		childEvent("parent-child", core.InstanceStatusDeployed),
 		finishEvent(core.InstanceStatusDeployed),
 	}
@@ -878,6 +879,381 @@ func (s *InspectTUISuite) Test_headless_mode_shows_link_status() {
 	s.Contains(output, "CREATED")
 }
 
+// --- Overview View Tests ---
+
+func (s *InspectTUISuite) Test_overview_shows_exports_section() {
+	instanceState := testInstanceStateWithExports(core.InstanceStatusDeployed)
+
+	model := *NewInspectModel(
+		testutils.NewTestDeployEngineForInspect(instanceState, nil),
+		zap.NewNop(),
+		"test-instance-id",
+		"",
+		s.styles,
+		false,
+		os.Stdout,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(InstanceStateFetchedMsg{
+		InstanceState: instanceState,
+		IsInProgress:  false,
+	})
+
+	testutils.WaitForContainsAll(s.T(), testModel.Output(), "test-instance")
+
+	// Press 'o' to show overview
+	testModel.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		testModel.Output(),
+		"Instance Overview",
+		"Exports",
+		"myExport",
+	)
+
+	testutils.KeyQ(testModel)
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *InspectTUISuite) Test_overview_shows_timing_section() {
+	instanceState := testInstanceStateWithTiming(core.InstanceStatusDeployed)
+
+	model := *NewInspectModel(
+		testutils.NewTestDeployEngineForInspect(instanceState, nil),
+		zap.NewNop(),
+		"test-instance-id",
+		"",
+		s.styles,
+		false,
+		os.Stdout,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(InstanceStateFetchedMsg{
+		InstanceState: instanceState,
+		IsInProgress:  false,
+	})
+
+	testutils.WaitForContainsAll(s.T(), testModel.Output(), "test-instance")
+
+	// Press 'o' to show overview
+	testModel.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		testModel.Output(),
+		"Instance Overview",
+		"Timing",
+	)
+
+	testutils.KeyQ(testModel)
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *InspectTUISuite) Test_overview_shows_instance_info() {
+	instanceState := testInstanceStateWithResources(core.InstanceStatusDeployed)
+
+	model := *NewInspectModel(
+		testutils.NewTestDeployEngineForInspect(instanceState, nil),
+		zap.NewNop(),
+		"test-instance-id",
+		"",
+		s.styles,
+		false,
+		os.Stdout,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(InstanceStateFetchedMsg{
+		InstanceState: instanceState,
+		IsInProgress:  false,
+	})
+
+	testutils.WaitForContainsAll(s.T(), testModel.Output(), "resource-1")
+
+	// Press 'o' to show overview
+	testModel.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		testModel.Output(),
+		"Instance Overview",
+		"Instance Information",
+		"test-instance-id",
+		"Resources",
+	)
+
+	testutils.KeyQ(testModel)
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *InspectTUISuite) Test_overview_toggle_closes_with_o_key() {
+	instanceState := testInstanceStateWithResources(core.InstanceStatusDeployed)
+
+	model := *NewInspectModel(
+		testutils.NewTestDeployEngineForInspect(instanceState, nil),
+		zap.NewNop(),
+		"test-instance-id",
+		"",
+		s.styles,
+		false,
+		os.Stdout,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(InstanceStateFetchedMsg{
+		InstanceState: instanceState,
+		IsInProgress:  false,
+	})
+
+	testutils.WaitForContainsAll(s.T(), testModel.Output(), "resource-1")
+
+	// Press 'o' to show overview
+	testModel.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}})
+
+	testutils.WaitForContainsAll(s.T(), testModel.Output(), "Instance Overview")
+
+	// Press 'o' again to close overview
+	testModel.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}})
+
+	// Wait for main view to return (shows resource-1 in left pane)
+	testutils.WaitForContainsAll(s.T(), testModel.Output(), "resource-1")
+
+	testutils.KeyQ(testModel)
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+// --- Spec View Tests ---
+
+func (s *InspectTUISuite) Test_spec_view_shows_resource_specification() {
+	instanceState := testInstanceStateWithResourceSpec(core.InstanceStatusDeployed)
+
+	model := *NewInspectModel(
+		testutils.NewTestDeployEngineForInspect(instanceState, nil),
+		zap.NewNop(),
+		"test-instance-id",
+		"",
+		s.styles,
+		false,
+		os.Stdout,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(InstanceStateFetchedMsg{
+		InstanceState: instanceState,
+		IsInProgress:  false,
+	})
+
+	testutils.WaitForContainsAll(s.T(), testModel.Output(), "resource-1")
+
+	// Press 's' to show spec view (resource should be selected by default)
+	testModel.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		testModel.Output(),
+		"Resource Specification",
+		"Specification",
+		"inputField",
+	)
+
+	testutils.KeyQ(testModel)
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *InspectTUISuite) Test_spec_view_shows_outputs_section() {
+	instanceState := testInstanceStateWithResourceSpec(core.InstanceStatusDeployed)
+
+	model := *NewInspectModel(
+		testutils.NewTestDeployEngineForInspect(instanceState, nil),
+		zap.NewNop(),
+		"test-instance-id",
+		"",
+		s.styles,
+		false,
+		os.Stdout,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(InstanceStateFetchedMsg{
+		InstanceState: instanceState,
+		IsInProgress:  false,
+	})
+
+	testutils.WaitForContainsAll(s.T(), testModel.Output(), "resource-1")
+
+	// Press 's' to show spec view
+	testModel.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		testModel.Output(),
+		"Outputs",
+		"outputField",
+	)
+
+	testutils.KeyQ(testModel)
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+func (s *InspectTUISuite) Test_spec_view_toggle_closes_with_s_key() {
+	instanceState := testInstanceStateWithResourceSpec(core.InstanceStatusDeployed)
+
+	model := *NewInspectModel(
+		testutils.NewTestDeployEngineForInspect(instanceState, nil),
+		zap.NewNop(),
+		"test-instance-id",
+		"",
+		s.styles,
+		false,
+		os.Stdout,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(InstanceStateFetchedMsg{
+		InstanceState: instanceState,
+		IsInProgress:  false,
+	})
+
+	testutils.WaitForContainsAll(s.T(), testModel.Output(), "resource-1")
+
+	// Press 's' to show spec view
+	testModel.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+
+	testutils.WaitForContainsAll(s.T(), testModel.Output(), "Resource Specification")
+
+	// Press 's' again to close spec view
+	testModel.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+
+	// Wait for main view to return (shows resource-1 in left pane)
+	testutils.WaitForContainsAll(s.T(), testModel.Output(), "resource-1")
+
+	testutils.KeyQ(testModel)
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+// --- Exports View Tests ---
+
+func (s *InspectTUISuite) Test_exports_view_shows_exports() {
+	instanceState := testInstanceStateWithExports(core.InstanceStatusDeployed)
+
+	model := *NewInspectModel(
+		testutils.NewTestDeployEngineForInspect(instanceState, nil),
+		zap.NewNop(),
+		"test-instance-id",
+		"",
+		s.styles,
+		false,
+		os.Stdout,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(InstanceStateFetchedMsg{
+		InstanceState: instanceState,
+		IsInProgress:  false,
+	})
+
+	testutils.WaitForContainsAll(s.T(), testModel.Output(), "test-instance")
+
+	// Press 'e' to show exports view
+	testModel.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		testModel.Output(),
+		"myExport",
+	)
+
+	testutils.KeyQ(testModel)
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
+// --- Error View Tests ---
+
+func (s *InspectTUISuite) Test_error_view_shows_error_and_quit_instruction() {
+	model := *NewInspectModel(
+		testutils.NewTestDeployEngineForInspectNotFound(),
+		zap.NewNop(),
+		"non-existent-id",
+		"",
+		s.styles,
+		false,
+		os.Stdout,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(InstanceNotFoundMsg{
+		Err: errInstanceNotFound("non-existent-id", ""),
+	})
+
+	testutils.WaitForContainsAll(
+		s.T(),
+		testModel.Output(),
+		"Error",
+		"instance not found",
+		"Press q to quit",
+	)
+
+	testutils.KeyQ(testModel)
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+}
+
 // --- Additional Test Helpers ---
 
 func resourceEventFailed(name string, status core.ResourceStatus, preciseStatus core.PreciseResourceStatus, reasons []string) *types.BlueprintInstanceEvent {
@@ -917,7 +1293,7 @@ func instanceStatusEvent(status core.InstanceStatus) *types.BlueprintInstanceEve
 	}
 }
 
-func nestedChildEvent(parentChild, childName string, status core.InstanceStatus) *types.BlueprintInstanceEvent {
+func nestedChildEvent(childName string, status core.InstanceStatus) *types.BlueprintInstanceEvent {
 	return &types.BlueprintInstanceEvent{
 		DeployEvent: container.DeployEvent{
 			ChildUpdateEvent: &container.ChildDeployUpdateMessage{
@@ -948,6 +1324,64 @@ func testInstanceStateWithNestedChildren(status core.InstanceStatus) *state.Inst
 					},
 				},
 			},
+		},
+	}
+}
+
+func testInstanceStateWithExports(status core.InstanceStatus) *state.InstanceState {
+	exportValue := "exported-value-123"
+	return &state.InstanceState{
+		InstanceID:   "test-instance-id",
+		InstanceName: "test-instance",
+		Status:       status,
+		Exports: map[string]*state.ExportState{
+			"myExport": {
+				Value: &core.MappingNode{
+					Scalar: &core.ScalarValue{StringValue: &exportValue},
+				},
+			},
+		},
+	}
+}
+
+func testInstanceStateWithTiming(status core.InstanceStatus) *state.InstanceState {
+	prepareDuration := float64(5000)
+	totalDuration := float64(15000)
+	return &state.InstanceState{
+		InstanceID:   "test-instance-id",
+		InstanceName: "test-instance",
+		Status:       status,
+		Durations: &state.InstanceCompletionDuration{
+			PrepareDuration: &prepareDuration,
+			TotalDuration:   &totalDuration,
+		},
+	}
+}
+
+func testInstanceStateWithResourceSpec(status core.InstanceStatus) *state.InstanceState {
+	inputVal := "input-value"
+	outputVal := "output-value"
+	return &state.InstanceState{
+		InstanceID:   "test-instance-id",
+		InstanceName: "test-instance",
+		Status:       status,
+		Resources: map[string]*state.ResourceState{
+			"res-resource-1": {
+				ResourceID: "res-resource-1",
+				Name:       "resource-1",
+				Type:       "aws/lambda/function",
+				Status:     core.ResourceStatusCreated,
+				SpecData: &core.MappingNode{
+					Fields: map[string]*core.MappingNode{
+						"inputField":  {Scalar: &core.ScalarValue{StringValue: &inputVal}},
+						"outputField": {Scalar: &core.ScalarValue{StringValue: &outputVal}},
+					},
+				},
+				ComputedFields: []string{"outputField"},
+			},
+		},
+		ResourceIDs: map[string]string{
+			"resource-1": "res-resource-1",
 		},
 	}
 }

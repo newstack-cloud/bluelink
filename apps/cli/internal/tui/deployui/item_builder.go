@@ -285,8 +285,8 @@ func (b *itemBuilder) appendLinksFromChangedResource(items []DeployItem, resourc
 	for _, linkName := range rc.RemovedOutboundLinks {
 		item := &LinkDeployItem{
 			LinkName:      linkName,
-			ResourceAName: extractResourceAFromLinkName(linkName),
-			ResourceBName: extractResourceBFromLinkName(linkName),
+			ResourceAName: ExtractResourceAFromLinkName(linkName),
+			ResourceBName: ExtractResourceBFromLinkName(linkName),
 			Action:        ActionDelete,
 		}
 		b.linksByName[linkName] = item
@@ -302,8 +302,8 @@ func (b *itemBuilder) appendRemovedLinks(items []DeployItem, changes *changes.Bl
 		if _, exists := b.linksByName[linkName]; !exists {
 			item := &LinkDeployItem{
 				LinkName:      linkName,
-				ResourceAName: extractResourceAFromLinkName(linkName),
-				ResourceBName: extractResourceBFromLinkName(linkName),
+				ResourceAName: ExtractResourceAFromLinkName(linkName),
+				ResourceBName: ExtractResourceBFromLinkName(linkName),
 				Action:        ActionDelete,
 			}
 			b.linksByName[linkName] = item
@@ -381,8 +381,8 @@ func (b *itemBuilder) appendNoChangeLinks(items []DeployItem) []DeployItem {
 		item := &LinkDeployItem{
 			LinkID:        linkState.LinkID,
 			LinkName:      linkName,
-			ResourceAName: extractResourceAFromLinkName(linkName),
-			ResourceBName: extractResourceBFromLinkName(linkName),
+			ResourceAName: ExtractResourceAFromLinkName(linkName),
+			ResourceBName: ExtractResourceBFromLinkName(linkName),
 			Action:        ActionNoChange,
 			Status:        linkState.Status,
 		}

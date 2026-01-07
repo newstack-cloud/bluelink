@@ -176,18 +176,19 @@ func (d *DestroyItem) GetChildren() []splitpane.Item {
 
 	// Add items from changes if available
 	if d.Changes != nil {
-		items = d.appendResourceItems(items, parentSkipped)
-		items = d.appendChildItems(items, parentSkipped)
+		items = d.AppendResourceItems(items, parentSkipped)
+		items = d.AppendChildItems(items, parentSkipped)
 	}
 
 	return items
 }
 
-func (d *DestroyItem) appendResourceItems(items []splitpane.Item, parentSkipped bool) []splitpane.Item {
+// AppendResourceItems adds resource items from this child's changes to the list.
+func (d *DestroyItem) AppendResourceItems(items []splitpane.Item, parentSkipped bool) []splitpane.Item {
 	// Handle removed resources (the primary case for destroy)
 	for _, name := range d.Changes.RemovedResources {
-		resourceItem := d.getOrCreateResourceItem(name, ActionDelete, parentSkipped)
-		resourcePath := d.buildChildPath(name)
+		resourceItem := d.GetOrCreateResourceItem(name, ActionDelete, parentSkipped)
+		resourcePath := d.BuildChildPath(name)
 		items = append(items, &DestroyItem{
 			Type:            ItemTypeResource,
 			Resource:        resourceItem,
@@ -203,8 +204,8 @@ func (d *DestroyItem) appendResourceItems(items []splitpane.Item, parentSkipped 
 
 	// Handle resources with changes (for partial destroys or updates)
 	for name := range d.Changes.ResourceChanges {
-		resourceItem := d.getOrCreateResourceItem(name, ActionUpdate, parentSkipped)
-		resourcePath := d.buildChildPath(name)
+		resourceItem := d.GetOrCreateResourceItem(name, ActionUpdate, parentSkipped)
+		resourcePath := d.BuildChildPath(name)
 		items = append(items, &DestroyItem{
 			Type:            ItemTypeResource,
 			Resource:        resourceItem,
@@ -221,11 +222,12 @@ func (d *DestroyItem) appendResourceItems(items []splitpane.Item, parentSkipped 
 	return items
 }
 
-func (d *DestroyItem) appendChildItems(items []splitpane.Item, parentSkipped bool) []splitpane.Item {
+// AppendChildItems adds child blueprint items from this child's changes to the list.
+func (d *DestroyItem) AppendChildItems(items []splitpane.Item, parentSkipped bool) []splitpane.Item {
 	// Handle removed children
 	for _, name := range d.Changes.RemovedChildren {
-		childItem := d.getOrCreateChildItem(name, ActionDelete, nil, parentSkipped)
-		childPath := d.buildChildPath(name)
+		childItem := d.GetOrCreateChildItem(name, ActionDelete, nil, parentSkipped)
+		childPath := d.BuildChildPath(name)
 		items = append(items, &DestroyItem{
 			Type:            ItemTypeChild,
 			Child:           childItem,
@@ -241,8 +243,8 @@ func (d *DestroyItem) appendChildItems(items []splitpane.Item, parentSkipped boo
 	// Handle child changes
 	for name, cc := range d.Changes.ChildChanges {
 		ccCopy := cc
-		childItem := d.getOrCreateChildItem(name, ActionUpdate, &ccCopy, parentSkipped)
-		childPath := d.buildChildPath(name)
+		childItem := d.GetOrCreateChildItem(name, ActionUpdate, &ccCopy, parentSkipped)
+		childPath := d.BuildChildPath(name)
 		items = append(items, &DestroyItem{
 			Type:            ItemTypeChild,
 			Child:           childItem,
@@ -259,8 +261,9 @@ func (d *DestroyItem) appendChildItems(items []splitpane.Item, parentSkipped boo
 	return items
 }
 
-func (d *DestroyItem) getOrCreateResourceItem(name string, action ActionType, skipped bool) *ResourceDestroyItem {
-	resourcePath := d.buildChildPath(name)
+// GetOrCreateResourceItem looks up a resource item from the shared map, or creates one if it doesn't exist.
+func (d *DestroyItem) GetOrCreateResourceItem(name string, action ActionType, skipped bool) *ResourceDestroyItem {
+	resourcePath := d.BuildChildPath(name)
 
 	if d.resourcesByName != nil {
 		if existing, ok := d.resourcesByName[resourcePath]; ok {
@@ -284,8 +287,9 @@ func (d *DestroyItem) getOrCreateResourceItem(name string, action ActionType, sk
 	return newItem
 }
 
-func (d *DestroyItem) getOrCreateChildItem(name string, action ActionType, changes *changes.BlueprintChanges, skipped bool) *ChildDestroyItem {
-	childPath := d.buildChildPath(name)
+// GetOrCreateChildItem looks up a child item from the shared map, or creates one if it doesn't exist.
+func (d *DestroyItem) GetOrCreateChildItem(name string, action ActionType, changes *changes.BlueprintChanges, skipped bool) *ChildDestroyItem {
+	childPath := d.BuildChildPath(name)
 
 	if d.childrenByName != nil {
 		if existing, ok := d.childrenByName[childPath]; ok {
@@ -310,7 +314,8 @@ func (d *DestroyItem) getOrCreateChildItem(name string, action ActionType, chang
 	return newItem
 }
 
-func (d *DestroyItem) buildChildPath(childName string) string {
+// BuildChildPath builds a path for a child element based on this item's path.
+func (d *DestroyItem) BuildChildPath(childName string) string {
 	if d.Path == "" {
 		if d.Child != nil {
 			return d.Child.Name + "/" + childName

@@ -647,3 +647,883 @@ func (s *DeployTUISuite) Test_deployment_uses_changeset_for_initial_items() {
 	s.Contains(finalModel.resourcesByName, "new-resource")
 	s.Contains(finalModel.resourcesByName, "changed-resource")
 }
+
+// --- Headless Mode Tests with Children and Links ---
+
+func (s *DeployTUISuite) Test_headless_mode_outputs_child_and_link_events() {
+	headlessOutput := &bytes.Buffer{}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDeployEvents(deployWithChild),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDeployed),
+		),
+		zap.NewNop(),
+		"test-changeset-child",
+		"",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true, // headless
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "child-blueprint")
+	s.Contains(output, "deployed")
+	s.Contains(output, "Deployment completed")
+}
+
+func (s *DeployTUISuite) Test_headless_mode_outputs_link_events() {
+	headlessOutput := &bytes.Buffer{}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDeployEvents(deployWithLink),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDeployed),
+		),
+		zap.NewNop(),
+		"test-changeset-link",
+		"",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true, // headless
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "resource-a::resource-b")
+	s.Contains(output, "created")
+}
+
+func (s *DeployTUISuite) Test_headless_mode_outputs_exports() {
+	headlessOutput := &bytes.Buffer{}
+
+	instanceStateWithExports := &state.InstanceState{
+		InstanceID: "test-instance-id",
+		Status:     core.InstanceStatusDeployed,
+		Exports: map[string]*state.ExportState{
+			"apiEndpoint": {
+				Value: core.MappingNodeFromString("https://api.example.com"),
+				Type:  "string",
+				Field: "api.endpoint",
+			},
+		},
+	}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDeployEvents(deploySuccessCreate),
+			"test-instance-id",
+			instanceStateWithExports,
+		),
+		zap.NewNop(),
+		"test-changeset-exports",
+		"",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true, // headless
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "apiEndpoint")
+	s.Contains(output, "exports")
+}
+
+func (s *DeployTUISuite) Test_headless_mode_outputs_nested_child_exports() {
+	headlessOutput := &bytes.Buffer{}
+
+	instanceStateWithNestedExports := &state.InstanceState{
+		InstanceID: "test-instance-id",
+		Status:     core.InstanceStatusDeployed,
+		ChildBlueprints: map[string]*state.InstanceState{
+			"child-blueprint": {
+				InstanceID: "child-instance-id",
+				Status:     core.InstanceStatusDeployed,
+				Exports: map[string]*state.ExportState{
+					"childExport": {
+						Value: core.MappingNodeFromString("child-value"),
+						Type:  "string",
+					},
+				},
+			},
+		},
+	}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDeployEvents(deployWithChild),
+			"test-instance-id",
+			instanceStateWithNestedExports,
+		),
+		zap.NewNop(),
+		"test-changeset-nested",
+		"",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true, // headless
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "child-blueprint")
+	s.Contains(output, "childExport")
+}
+
+func (s *DeployTUISuite) Test_headless_mode_outputs_rollback_status() {
+	headlessOutput := &bytes.Buffer{}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDeployEvents(deployRollback),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDeployRollbackComplete),
+		),
+		zap.NewNop(),
+		"test-changeset-rollback",
+		"",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true, // headless
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "Deployment rolled back")
+}
+
+func (s *DeployTUISuite) Test_headless_mode_outputs_resource_with_durations() {
+	headlessOutput := &bytes.Buffer{}
+
+	configDuration := float64(1500)
+	totalDuration := float64(3000)
+	instanceStateWithDurations := &state.InstanceState{
+		InstanceID: "test-instance-id",
+		Status:     core.InstanceStatusDeployed,
+		ResourceIDs: map[string]string{
+			"test-resource": "res-test-resource",
+		},
+		Resources: map[string]*state.ResourceState{
+			"res-test-resource": {
+				ResourceID: "res-test-resource",
+				Name:       "test-resource",
+				Type:       "aws/s3/bucket",
+				Status:     core.ResourceStatusCreated,
+				Durations: &state.ResourceCompletionDurations{
+					ConfigCompleteDuration: &configDuration,
+					TotalDuration:          &totalDuration,
+				},
+			},
+		},
+	}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDeployEvents(deploySuccessCreate),
+			"test-instance-id",
+			instanceStateWithDurations,
+		),
+		zap.NewNop(),
+		"test-changeset-durations",
+		"",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true, // headless
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "test-resource")
+	s.Contains(output, "Deployment completed")
+}
+
+// --- Additional Headless Mode Tests for Edge Cases ---
+
+func (s *DeployTUISuite) Test_headless_mode_outputs_header_info() {
+	headlessOutput := &bytes.Buffer{}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDeployEvents(deploySuccessCreate),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDeployed),
+		),
+		zap.NewNop(),
+		"test-changeset-header",
+		"",
+		"my-test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true, // headless
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "Starting deployment")
+	s.Contains(output, "Instance ID:")
+	s.Contains(output, "Instance Name: my-test-instance")
+	s.Contains(output, "Changeset: test-changeset-header")
+}
+
+func (s *DeployTUISuite) Test_headless_mode_update_rollback_complete() {
+	headlessOutput := &bytes.Buffer{}
+
+	events := []*types.BlueprintInstanceEvent{
+		resourceEvent("resource-1", core.ResourceStatusUpdating, core.PreciseResourceStatusUpdating),
+		resourceEventFailed("resource-1", core.ResourceStatusUpdateFailed, core.PreciseResourceStatusUpdateFailed, []string{"Update failed"}),
+		deploymentStatusEvent(core.InstanceStatusUpdateRollingBack),
+		resourceEvent("resource-1", core.ResourceStatusRollingBack, core.PreciseResourceStatusUpdateRollingBack),
+		resourceEvent("resource-1", core.ResourceStatusRollbackComplete, core.PreciseResourceStatusUpdateRollbackComplete),
+		finishEvent(core.InstanceStatusUpdateRollbackComplete),
+	}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			events,
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusUpdateRollbackComplete),
+		),
+		zap.NewNop(),
+		"test-changeset-update-rollback",
+		"existing-id",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true,
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "Update rolled back")
+}
+
+func (s *DeployTUISuite) Test_headless_mode_destroy_rollback_complete() {
+	headlessOutput := &bytes.Buffer{}
+
+	events := []*types.BlueprintInstanceEvent{
+		resourceEvent("resource-1", core.ResourceStatusDestroying, core.PreciseResourceStatusDestroying),
+		resourceEventFailed("resource-1", core.ResourceStatusDestroyFailed, core.PreciseResourceStatusDestroyFailed, []string{"Destroy failed"}),
+		deploymentStatusEvent(core.InstanceStatusDestroyRollingBack),
+		resourceEvent("resource-1", core.ResourceStatusRollingBack, core.PreciseResourceStatusDestroyRollingBack),
+		resourceEvent("resource-1", core.ResourceStatusRollbackComplete, core.PreciseResourceStatusDestroyRollbackComplete),
+		finishEvent(core.InstanceStatusDestroyRollbackComplete),
+	}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			events,
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDestroyRollbackComplete),
+		),
+		zap.NewNop(),
+		"test-changeset-destroy-rollback",
+		"existing-id",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true,
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "Destroy rolled back")
+}
+
+func (s *DeployTUISuite) Test_headless_mode_rollback_failed() {
+	headlessOutput := &bytes.Buffer{}
+
+	events := []*types.BlueprintInstanceEvent{
+		resourceEvent("resource-1", core.ResourceStatusCreating, core.PreciseResourceStatusCreating),
+		resourceEventFailed("resource-1", core.ResourceStatusCreateFailed, core.PreciseResourceStatusCreateFailed, []string{"Create failed"}),
+		deploymentStatusEvent(core.InstanceStatusDeployRollingBack),
+		resourceEvent("resource-1", core.ResourceStatusRollingBack, core.PreciseResourceStatusCreateRollingBack),
+		resourceEventFailed("resource-1", core.ResourceStatusRollbackFailed, core.PreciseResourceStatusCreateRollbackFailed, []string{"Rollback failed"}),
+		finishEvent(core.InstanceStatusDeployRollbackFailed),
+	}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			events,
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDeployRollbackFailed),
+		),
+		zap.NewNop(),
+		"test-changeset-rollback-failed",
+		"",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true,
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "Deployment rollback failed")
+}
+
+func (s *DeployTUISuite) Test_headless_mode_update_failed() {
+	headlessOutput := &bytes.Buffer{}
+
+	events := []*types.BlueprintInstanceEvent{
+		resourceEvent("resource-1", core.ResourceStatusUpdating, core.PreciseResourceStatusUpdating),
+		resourceEventFailed("resource-1", core.ResourceStatusUpdateFailed, core.PreciseResourceStatusUpdateFailed, []string{"Update failed"}),
+		finishEvent(core.InstanceStatusUpdateFailed),
+	}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			events,
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusUpdateFailed),
+		),
+		zap.NewNop(),
+		"test-changeset-update-failed",
+		"existing-id",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true,
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "Update failed")
+}
+
+func (s *DeployTUISuite) Test_headless_mode_destroy_failed() {
+	headlessOutput := &bytes.Buffer{}
+
+	events := []*types.BlueprintInstanceEvent{
+		resourceEvent("resource-1", core.ResourceStatusDestroying, core.PreciseResourceStatusDestroying),
+		resourceEventFailed("resource-1", core.ResourceStatusDestroyFailed, core.PreciseResourceStatusDestroyFailed, []string{"Destroy failed"}),
+		finishEvent(core.InstanceStatusDestroyFailed),
+	}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			events,
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDestroyFailed),
+		),
+		zap.NewNop(),
+		"test-changeset-destroy-failed",
+		"existing-id",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true,
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "Destroy failed")
+}
+
+func (s *DeployTUISuite) Test_headless_mode_destroyed_status() {
+	headlessOutput := &bytes.Buffer{}
+
+	events := []*types.BlueprintInstanceEvent{
+		resourceEvent("resource-1", core.ResourceStatusDestroying, core.PreciseResourceStatusDestroying),
+		resourceEvent("resource-1", core.ResourceStatusDestroyed, core.PreciseResourceStatusDestroyed),
+		finishEvent(core.InstanceStatusDestroyed),
+	}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			events,
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDestroyed),
+		),
+		zap.NewNop(),
+		"test-changeset-destroyed",
+		"existing-id",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true,
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "Destroy completed")
+}
+
+func (s *DeployTUISuite) Test_headless_mode_resource_with_outputs() {
+	headlessOutput := &bytes.Buffer{}
+
+	bucketArn := "arn:aws:s3:::my-bucket"
+	instanceStateWithOutputs := &state.InstanceState{
+		InstanceID: "test-instance-id",
+		Status:     core.InstanceStatusDeployed,
+		ResourceIDs: map[string]string{
+			"test-resource": "res-test-resource",
+		},
+		Resources: map[string]*state.ResourceState{
+			"res-test-resource": {
+				ResourceID: "res-test-resource",
+				Name:       "test-resource",
+				Type:       "aws/s3/bucket",
+				Status:     core.ResourceStatusCreated,
+				SpecData: &core.MappingNode{
+					Fields: map[string]*core.MappingNode{
+						"bucketArn": {Scalar: &core.ScalarValue{StringValue: &bucketArn}},
+					},
+				},
+				ComputedFields: []string{"bucketArn"},
+			},
+		},
+	}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDeployEvents(deploySuccessCreate),
+			"test-instance-id",
+			instanceStateWithOutputs,
+		),
+		zap.NewNop(),
+		"test-changeset-outputs",
+		"",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true,
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "test-resource")
+	s.Contains(output, "Deployment completed")
+}
+
+func (s *DeployTUISuite) Test_headless_mode_interrupted() {
+	headlessOutput := &bytes.Buffer{}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDeployEvents(deployInterrupted),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDeployInterrupted),
+		),
+		zap.NewNop(),
+		"test-changeset-interrupted",
+		"",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true,
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "interrupted")
+}
+
+func (s *DeployTUISuite) Test_headless_mode_with_pre_rollback_state() {
+	headlessOutput := &bytes.Buffer{}
+
+	events := []*types.BlueprintInstanceEvent{
+		resourceEvent("resource-1", core.ResourceStatusCreating, core.PreciseResourceStatusCreating),
+		resourceEvent("resource-1", core.ResourceStatusCreated, core.PreciseResourceStatusCreated),
+		resourceEvent("resource-2", core.ResourceStatusCreating, core.PreciseResourceStatusCreating),
+		resourceEventFailed("resource-2", core.ResourceStatusCreateFailed, core.PreciseResourceStatusCreateFailed, []string{"Failed to create"}),
+		{
+			DeployEvent: container.DeployEvent{
+				PreRollbackStateEvent: &container.PreRollbackStateMessage{
+					InstanceID:     "test-instance-id",
+					InstanceName:   "test-instance",
+					Status:         core.InstanceStatusDeployFailed,
+					FailureReasons: []string{"resource-2 failed to create"},
+					Resources: []container.ResourceSnapshot{
+						{
+							ResourceName: "resource-1",
+							ResourceType: "aws/s3/bucket",
+							Status:       core.ResourceStatusCreated,
+						},
+						{
+							ResourceName: "resource-2",
+							ResourceType: "aws/lambda/function",
+							Status:       core.ResourceStatusCreateFailed,
+						},
+					},
+				},
+			},
+		},
+		deploymentStatusEvent(core.InstanceStatusDeployRollingBack),
+		resourceEvent("resource-1", core.ResourceStatusRollingBack, core.PreciseResourceStatusCreateRollingBack),
+		resourceEvent("resource-1", core.ResourceStatusRollbackComplete, core.PreciseResourceStatusCreateRollbackComplete),
+		finishEvent(core.InstanceStatusDeployRollbackComplete),
+	}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			events,
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDeployRollbackComplete),
+		),
+		zap.NewNop(),
+		"test-changeset-pre-rollback",
+		"",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true,
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "Pre-Rollback State Captured")
+	s.Contains(output, "resource-1")
+	s.Contains(output, "resource-2")
+	s.Contains(output, "Auto-rollback is starting")
+}
+
+func (s *DeployTUISuite) Test_headless_mode_with_skipped_rollback_items() {
+	headlessOutput := &bytes.Buffer{}
+
+	events := []*types.BlueprintInstanceEvent{
+		resourceEvent("resource-1", core.ResourceStatusCreating, core.PreciseResourceStatusCreating),
+		resourceEvent("resource-1", core.ResourceStatusCreated, core.PreciseResourceStatusCreated),
+		resourceEvent("resource-2", core.ResourceStatusCreating, core.PreciseResourceStatusCreating),
+		resourceEventFailed("resource-2", core.ResourceStatusCreateFailed, core.PreciseResourceStatusCreateFailed, []string{"Failed to create"}),
+		deploymentStatusEvent(core.InstanceStatusDeployRollingBack),
+		resourceEvent("resource-1", core.ResourceStatusRollingBack, core.PreciseResourceStatusCreateRollingBack),
+		resourceEvent("resource-1", core.ResourceStatusRollbackComplete, core.PreciseResourceStatusCreateRollbackComplete),
+		// Finish event with skipped rollback items
+		{
+			DeployEvent: container.DeployEvent{
+				FinishEvent: &container.DeploymentFinishedMessage{
+					Status:      core.InstanceStatusDeployRollbackComplete,
+					EndOfStream: true,
+					SkippedRollbackItems: []container.SkippedRollbackItem{
+						{
+							Name:      "resource-2",
+							Type:      "resource",
+							ChildPath: "",
+							Status:    "create_failed",
+							Reason:    "resource was in failed state",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			events,
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDeployRollbackComplete),
+		),
+		zap.NewNop(),
+		"test-changeset-skipped",
+		"",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true,
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "Skipped Rollback Items")
+	s.Contains(output, "resource-2")
+	s.Contains(output, "resource was in failed state")
+}
+
+func (s *DeployTUISuite) Test_headless_mode_export_with_all_fields() {
+	headlessOutput := &bytes.Buffer{}
+
+	instanceStateWithExportFields := &state.InstanceState{
+		InstanceID: "test-instance-id",
+		Status:     core.InstanceStatusDeployed,
+		Exports: map[string]*state.ExportState{
+			"apiEndpoint": {
+				Value:       core.MappingNodeFromString("https://api.example.com"),
+				Type:        "string",
+				Field:       "api.endpoint",
+				Description: "The API endpoint URL",
+			},
+		},
+	}
+
+	model := NewDeployModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDeployEvents(deploySuccessCreate),
+			"test-instance-id",
+			instanceStateWithExportFields,
+		),
+		zap.NewNop(),
+		"test-changeset-export-fields",
+		"",
+		"test-instance",
+		"test.blueprint.yaml",
+		"",
+		false,
+		false,
+		s.styles,
+		true,
+		headlessOutput,
+		nil,
+		false,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(StartDeployMsg{})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := headlessOutput.String()
+	s.Contains(output, "apiEndpoint")
+	s.Contains(output, "string")
+	s.Contains(output, "https://api.example.com")
+}

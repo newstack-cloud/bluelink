@@ -431,3 +431,109 @@ func (s *ListTUISuite) Test_headless_includes_search_filter() {
 	s.Contains(output, "prod")
 	s.Contains(output, "production-api")
 }
+
+// --- JSON Mode Tests ---
+
+func (s *ListTUISuite) Test_json_mode_outputs_structured_list() {
+	jsonOutput := &bytes.Buffer{}
+	instances := testInstances()
+	model := s.newHeadlessTestModel(instances, jsonOutput, true)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(PageLoadedMsg{
+		Instances:  instances,
+		TotalCount: len(instances),
+		Page:       0,
+	})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := jsonOutput.String()
+	s.Contains(output, `"success": true`)
+	s.Contains(output, `"totalCount": 3`)
+	s.Contains(output, `"production-api"`)
+	s.Contains(output, `"staging-api"`)
+	s.Contains(output, `"dev-api"`)
+}
+
+func (s *ListTUISuite) Test_json_mode_includes_search_term() {
+	jsonOutput := &bytes.Buffer{}
+	instances := testInstances()[:1] // Just production-api
+	model, _ := NewListApp(
+		testutils.NewTestDeployEngineForList(instances),
+		zap.NewNop(),
+		"prod",
+		s.styles,
+		true,
+		jsonOutput,
+		true,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		*model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(PageLoadedMsg{
+		Instances:  instances,
+		TotalCount: len(instances),
+		Page:       0,
+	})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := jsonOutput.String()
+	s.Contains(output, `"search": "prod"`)
+	s.Contains(output, `"production-api"`)
+}
+
+func (s *ListTUISuite) Test_json_mode_empty_list() {
+	jsonOutput := &bytes.Buffer{}
+	model := s.newHeadlessTestModel(nil, jsonOutput, true)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.Send(PageLoadedMsg{
+		Instances:  nil,
+		TotalCount: 0,
+		Page:       0,
+	})
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := jsonOutput.String()
+	s.Contains(output, `"success": true`)
+	s.Contains(output, `"totalCount": 0`)
+}
+
+func (s *ListTUISuite) Test_json_mode_outputs_error() {
+	jsonOutput := &bytes.Buffer{}
+	model, _ := NewListApp(
+		testutils.NewTestDeployEngineForListError(),
+		zap.NewNop(),
+		"",
+		s.styles,
+		true,
+		jsonOutput,
+		true,
+	)
+
+	testModel := teatest.NewTestModel(
+		s.T(),
+		*model,
+		teatest.WithInitialTermSize(300, 100),
+	)
+
+	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
+
+	output := jsonOutput.String()
+	s.Contains(output, `"success": false`)
+	s.Contains(output, `"error"`)
+}
