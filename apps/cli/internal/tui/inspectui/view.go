@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/outpututil"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
@@ -26,17 +25,7 @@ func (m InspectModel) renderOverviewView() string {
 	sb.WriteString("\n")
 
 	// Fixed footer with navigation help
-	keyStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Primary()).Bold(true)
-	sb.WriteString(m.styles.Muted.MarginLeft(2).Render("Press "))
-	sb.WriteString(keyStyle.Render("↑/↓"))
-	sb.WriteString(m.styles.Muted.Render(" to scroll  "))
-	sb.WriteString(keyStyle.Render("esc"))
-	sb.WriteString(m.styles.Muted.Render("/"))
-	sb.WriteString(keyStyle.Render("o"))
-	sb.WriteString(m.styles.Muted.Render(" to return  "))
-	sb.WriteString(keyStyle.Render("q"))
-	sb.WriteString(m.styles.Muted.Render(" to quit"))
-	sb.WriteString("\n")
+	shared.RenderViewportScrollHints(&sb, "o", m.styles)
 
 	return sb.String()
 }
@@ -165,17 +154,7 @@ func (m InspectModel) renderSpecView() string {
 	sb.WriteString("\n")
 
 	// Fixed footer with navigation help
-	keyStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Primary()).Bold(true)
-	sb.WriteString(m.styles.Muted.MarginLeft(2).Render("Press "))
-	sb.WriteString(keyStyle.Render("↑/↓"))
-	sb.WriteString(m.styles.Muted.Render(" to scroll  "))
-	sb.WriteString(keyStyle.Render("esc"))
-	sb.WriteString(m.styles.Muted.Render("/"))
-	sb.WriteString(keyStyle.Render("s"))
-	sb.WriteString(m.styles.Muted.Render(" to return  "))
-	sb.WriteString(keyStyle.Render("q"))
-	sb.WriteString(m.styles.Muted.Render(" to quit"))
-	sb.WriteString("\n")
+	shared.RenderViewportScrollHints(&sb, "s", m.styles)
 
 	return sb.String()
 }

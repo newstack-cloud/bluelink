@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/outpututil"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	sdkstrings "github.com/newstack-cloud/deploy-cli-sdk/strings"
 	"github.com/newstack-cloud/deploy-cli-sdk/styles"
@@ -383,6 +384,72 @@ func RenderStreamingFooter(sb *strings.Builder, params StreamingFooterParams, s 
 		sb.WriteString(s.Key.Render(params.StateHintKey))
 		sb.WriteString(s.Muted.Render(" for " + params.StateHintLabel))
 		sb.WriteString("\n")
+	}
+}
+
+// RenderViewportOverlayFooter renders a footer for viewport overlay views (overview, spec, etc.).
+// The toggleKey is the key that toggles the overlay (e.g., "o" for overview, "s" for spec).
+func RenderViewportOverlayFooter(sb *strings.Builder, toggleKey string, s *styles.Styles) {
+	sb.WriteString(s.Muted.Render("  " + strings.Repeat("─", 60)))
+	sb.WriteString("\n")
+	RenderViewportScrollHints(sb, toggleKey, s)
+}
+
+// RenderViewportScrollHints renders just the scroll/return/quit key hints for viewport overlays.
+// Use this when you don't want the separator line (e.g., for inspect model).
+func RenderViewportScrollHints(sb *strings.Builder, toggleKey string, s *styles.Styles) {
+	keyStyle := lipgloss.NewStyle().Foreground(s.Palette.Primary()).Bold(true)
+	sb.WriteString(s.Muted.Render("  Press "))
+	sb.WriteString(keyStyle.Render("↑/↓"))
+	sb.WriteString(s.Muted.Render(" to scroll  "))
+	sb.WriteString(keyStyle.Render("esc"))
+	sb.WriteString(s.Muted.Render("/"))
+	sb.WriteString(keyStyle.Render(toggleKey))
+	sb.WriteString(s.Muted.Render(" to return  "))
+	sb.WriteString(keyStyle.Render("q"))
+	sb.WriteString(s.Muted.Render(" to quit"))
+	sb.WriteString("\n")
+}
+
+// RenderElementFailures renders a list of element failures with text wrapping.
+// Set showElementType to true to display the element type for resources (used by destroy).
+func RenderElementFailures(sb *strings.Builder, failures []ElementFailure, contentWidth int, showElementType bool, s *styles.Styles) {
+	if len(failures) == 0 {
+		return
+	}
+
+	failureLabel := sdkstrings.Pluralize(len(failures), "Failure", "Failures")
+	sb.WriteString(s.Error.Render(fmt.Sprintf("  %d %s:", len(failures), failureLabel)))
+	sb.WriteString("\n\n")
+
+	reasonWidth := contentWidth - 8
+
+	for _, failure := range failures {
+		sb.WriteString(s.Error.Render("  ✗ "))
+		sb.WriteString(s.Selected.Render(failure.ElementPath))
+		if showElementType && failure.ElementType != "" && failure.ElementType != "child" && failure.ElementType != "link" {
+			sb.WriteString(s.Muted.Render(" (" + failure.ElementType + ")"))
+		}
+		sb.WriteString("\n")
+		RenderWrappedFailureReasons(sb, failure.FailureReasons, reasonWidth, s)
+		sb.WriteString("\n")
+	}
+}
+
+// RenderWrappedFailureReasons renders failure reasons with bullet points and text wrapping.
+func RenderWrappedFailureReasons(sb *strings.Builder, reasons []string, width int, s *styles.Styles) {
+	for _, reason := range reasons {
+		wrappedLines := outpututil.WrapTextLines(reason, width)
+		for i, line := range wrappedLines {
+			sb.WriteString("      ")
+			if i == 0 {
+				sb.WriteString(s.Error.Render("• "))
+			} else {
+				sb.WriteString("  ")
+			}
+			sb.WriteString(s.Error.Render(line))
+			sb.WriteString("\n")
+		}
 	}
 }
 

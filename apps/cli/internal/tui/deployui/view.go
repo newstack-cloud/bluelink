@@ -12,7 +12,6 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	engineerrors "github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 	sdkstrings "github.com/newstack-cloud/deploy-cli-sdk/strings"
-	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 )
 
 // Interactive error rendering methods
@@ -34,40 +33,12 @@ func (m DeployModel) renderError(err error) string {
 	return shared.RenderGenericError(err, "Deployment failed", m.styles)
 }
 
-func (m DeployModel) renderErrorFooter() string {
-	return shared.RenderErrorFooter(m.styles)
-}
-
 func (m DeployModel) renderDestroyChangesetError() string {
-	sb := strings.Builder{}
-	sb.WriteString("\n")
-	sb.WriteString("  ")
-	sb.WriteString(m.styles.Error.Render("✗ Cannot deploy using a destroy changeset"))
-	sb.WriteString("\n\n")
-
-	sb.WriteString("  ")
-	sb.WriteString(m.styles.Muted.Render("The changeset you specified was created for a destroy operation and cannot"))
-	sb.WriteString("\n")
-	sb.WriteString("  ")
-	sb.WriteString(m.styles.Muted.Render("be used with the deploy command."))
-	sb.WriteString("\n\n")
-
-	sb.WriteString("  ")
-	sb.WriteString(m.styles.Muted.Render("To resolve this issue, you can either:"))
-	sb.WriteString("\n\n")
-
-	sb.WriteString("    ")
-	sb.WriteString(m.styles.Muted.Render("1. Use the 'destroy' command to apply this changeset:"))
-	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("       bluelink destroy --instance-name %s --change-set-id %s\n\n", m.instanceName, m.changesetID))
-
-	sb.WriteString("    ")
-	sb.WriteString(m.styles.Muted.Render("2. Create a new changeset for deployment (without --destroy):"))
-	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("       bluelink stage --instance-name %s\n", m.instanceName))
-
-	sb.WriteString(m.renderErrorFooter())
-	return sb.String()
+	return shared.RenderChangesetTypeMismatchError(shared.ChangesetTypeMismatchParams{
+		IsDestroyChangeset: true,
+		InstanceName:       m.instanceName,
+		ChangesetID:        m.changesetID,
+	}, m.styles)
 }
 
 // overviewFooterHeight returns the height of the fixed footer in overview view.
@@ -81,26 +52,9 @@ func overviewFooterHeight() int {
 // Uses a scrollable viewport for the content with a fixed footer.
 func (m DeployModel) renderOverviewView() string {
 	sb := strings.Builder{}
-
-	// Scrollable viewport content
 	sb.WriteString(m.overviewViewport.View())
 	sb.WriteString("\n")
-
-	// Fixed footer with navigation help
-	sb.WriteString(m.styles.Muted.Render("  " + strings.Repeat("─", 60)))
-	sb.WriteString("\n")
-	keyStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Primary()).Bold(true)
-	sb.WriteString(m.styles.Muted.Render("  Press "))
-	sb.WriteString(keyStyle.Render("↑/↓"))
-	sb.WriteString(m.styles.Muted.Render(" to scroll  "))
-	sb.WriteString(keyStyle.Render("esc"))
-	sb.WriteString(m.styles.Muted.Render("/"))
-	sb.WriteString(keyStyle.Render("o"))
-	sb.WriteString(m.styles.Muted.Render(" to return  "))
-	sb.WriteString(keyStyle.Render("q"))
-	sb.WriteString(m.styles.Muted.Render(" to quit"))
-	sb.WriteString("\n")
-
+	shared.RenderViewportOverlayFooter(&sb, "o", m.styles)
 	return sb.String()
 }
 
@@ -114,26 +68,9 @@ func specViewFooterHeight() int {
 // This is shown when the user presses 's' while a resource is selected.
 func (m DeployModel) renderSpecView() string {
 	sb := strings.Builder{}
-
-	// Scrollable viewport content
 	sb.WriteString(m.specViewport.View())
 	sb.WriteString("\n")
-
-	// Fixed footer with navigation help
-	sb.WriteString(m.styles.Muted.Render("  " + strings.Repeat("─", 60)))
-	sb.WriteString("\n")
-	keyStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Primary()).Bold(true)
-	sb.WriteString(m.styles.Muted.Render("  Press "))
-	sb.WriteString(keyStyle.Render("↑/↓"))
-	sb.WriteString(m.styles.Muted.Render(" to scroll  "))
-	sb.WriteString(keyStyle.Render("esc"))
-	sb.WriteString(m.styles.Muted.Render("/"))
-	sb.WriteString(keyStyle.Render("s"))
-	sb.WriteString(m.styles.Muted.Render(" to return  "))
-	sb.WriteString(keyStyle.Render("q"))
-	sb.WriteString(m.styles.Muted.Render(" to quit"))
-	sb.WriteString("\n")
-
+	shared.RenderViewportOverlayFooter(&sb, "s", m.styles)
 	return sb.String()
 }
 
@@ -353,40 +290,7 @@ func (m DeployModel) renderSuccessfulElements(sb *strings.Builder) {
 // renderElementFailuresWithWrapping renders element failures with text wrapping
 // and full element paths for the scrollable error details view.
 func (m DeployModel) renderElementFailuresWithWrapping(sb *strings.Builder, contentWidth int) {
-	if len(m.elementFailures) == 0 {
-		return
-	}
-
-	failureLabel := sdkstrings.Pluralize(len(m.elementFailures), "Failure", "Failures")
-	sb.WriteString(m.styles.Error.Render(fmt.Sprintf("  %d %s:", len(m.elementFailures), failureLabel)))
-	sb.WriteString("\n\n")
-
-	// Calculate available width for failure reasons (after indent)
-	reasonWidth := contentWidth - 8 // 6 chars indent + 2 chars bullet
-
-	for _, failure := range m.elementFailures {
-		sb.WriteString(m.styles.Error.Render("  ✗ "))
-		sb.WriteString(m.styles.Selected.Render(failure.ElementPath))
-		sb.WriteString("\n")
-		renderFailureReasons(sb, failure.FailureReasons, reasonWidth, m.styles)
-		sb.WriteString("\n")
-	}
-}
-
-func renderFailureReasons(sb *strings.Builder, reasons []string, width int, styles *stylespkg.Styles) {
-	for _, reason := range reasons {
-		wrappedLines := outpututil.WrapTextLines(reason, width)
-		for i, line := range wrappedLines {
-			sb.WriteString("      ")
-			if i == 0 {
-				sb.WriteString(styles.Error.Render("• "))
-			} else {
-				sb.WriteString("  ")
-			}
-			sb.WriteString(styles.Error.Render(line))
-			sb.WriteString("\n")
-		}
-	}
+	shared.RenderElementFailures(sb, m.elementFailures, contentWidth, false, m.styles)
 }
 
 // renderInterruptedElementsWithPath renders interrupted elements with full paths.
@@ -457,26 +361,9 @@ func preRollbackStateFooterHeight() int {
 // renderPreRollbackStateView renders a full-screen pre-rollback state view.
 func (m DeployModel) renderPreRollbackStateView() string {
 	sb := strings.Builder{}
-
-	// Scrollable viewport content
 	sb.WriteString(m.preRollbackStateViewport.View())
 	sb.WriteString("\n")
-
-	// Fixed footer with navigation help
-	sb.WriteString(m.styles.Muted.Render("  " + strings.Repeat("─", 60)))
-	sb.WriteString("\n")
-	keyStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Primary()).Bold(true)
-	sb.WriteString(m.styles.Muted.Render("  Press "))
-	sb.WriteString(keyStyle.Render("↑/↓"))
-	sb.WriteString(m.styles.Muted.Render(" to scroll  "))
-	sb.WriteString(keyStyle.Render("esc"))
-	sb.WriteString(m.styles.Muted.Render("/"))
-	sb.WriteString(keyStyle.Render("r"))
-	sb.WriteString(m.styles.Muted.Render(" to return  "))
-	sb.WriteString(keyStyle.Render("q"))
-	sb.WriteString(m.styles.Muted.Render(" to quit"))
-	sb.WriteString("\n")
-
+	shared.RenderViewportOverlayFooter(&sb, "r", m.styles)
 	return sb.String()
 }
 

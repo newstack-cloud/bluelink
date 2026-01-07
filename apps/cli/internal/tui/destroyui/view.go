@@ -39,66 +39,20 @@ func (m DestroyModel) renderError(err error) string {
 	return shared.RenderGenericError(err, "Destroy failed", m.styles)
 }
 
-// renderErrorFooter renders the footer for error view.
-func (m DestroyModel) renderErrorFooter() string {
-	return shared.RenderErrorFooter(m.styles)
-}
-
 func (m DestroyModel) renderDeployChangesetError() string {
-	sb := strings.Builder{}
-	sb.WriteString("\n")
-	sb.WriteString("  ")
-	sb.WriteString(m.styles.Error.Render("✗ Cannot destroy using a deploy changeset"))
-	sb.WriteString("\n\n")
-
-	sb.WriteString("  ")
-	sb.WriteString(m.styles.Muted.Render("The changeset you specified was created for a deploy operation and cannot"))
-	sb.WriteString("\n")
-	sb.WriteString("  ")
-	sb.WriteString(m.styles.Muted.Render("be used with the destroy command."))
-	sb.WriteString("\n\n")
-
-	sb.WriteString("  ")
-	sb.WriteString(m.styles.Muted.Render("To resolve this issue, you can either:"))
-	sb.WriteString("\n\n")
-
-	sb.WriteString("    ")
-	sb.WriteString(m.styles.Muted.Render("1. Use the 'deploy' command to apply this changeset:"))
-	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("       bluelink deploy --instance-name %s --change-set-id %s\n\n", m.instanceName, m.changesetID))
-
-	sb.WriteString("    ")
-	sb.WriteString(m.styles.Muted.Render("2. Create a new changeset for destroy:"))
-	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("       bluelink stage --instance-name %s --destroy\n", m.instanceName))
-
-	sb.WriteString(m.renderErrorFooter())
-	return sb.String()
+	return shared.RenderChangesetTypeMismatchError(shared.ChangesetTypeMismatchParams{
+		IsDestroyChangeset: false,
+		InstanceName:       m.instanceName,
+		ChangesetID:        m.changesetID,
+	}, m.styles)
 }
 
 // renderOverviewView renders a full-screen destroy summary view.
 func (m DestroyModel) renderOverviewView() string {
 	sb := strings.Builder{}
-
-	// Scrollable viewport content
 	sb.WriteString(m.overviewViewport.View())
 	sb.WriteString("\n")
-
-	// Fixed footer with navigation help
-	sb.WriteString(m.styles.Muted.Render("  " + strings.Repeat("─", 60)))
-	sb.WriteString("\n")
-	keyStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Primary()).Bold(true)
-	sb.WriteString(m.styles.Muted.Render("  Press "))
-	sb.WriteString(keyStyle.Render("↑/↓"))
-	sb.WriteString(m.styles.Muted.Render(" to scroll  "))
-	sb.WriteString(keyStyle.Render("esc"))
-	sb.WriteString(m.styles.Muted.Render("/"))
-	sb.WriteString(keyStyle.Render("o"))
-	sb.WriteString(m.styles.Muted.Render(" to return  "))
-	sb.WriteString(keyStyle.Render("q"))
-	sb.WriteString(m.styles.Muted.Render(" to quit"))
-	sb.WriteString("\n")
-
+	shared.RenderViewportOverlayFooter(&sb, "o", m.styles)
 	return sb.String()
 }
 
@@ -192,38 +146,7 @@ func (m DestroyModel) renderDestroyedElements(sb *strings.Builder, successStyle 
 
 // renderFailedElements renders element failures with text wrapping and full element paths.
 func (m DestroyModel) renderFailedElements(sb *strings.Builder, contentWidth int) {
-	if len(m.elementFailures) == 0 {
-		return
-	}
-
-	failureLabel := sdkstrings.Pluralize(len(m.elementFailures), "Failure", "Failures")
-	sb.WriteString(m.styles.Error.Render(fmt.Sprintf("  %d %s:", len(m.elementFailures), failureLabel)))
-	sb.WriteString("\n\n")
-
-	reasonWidth := contentWidth - 8
-
-	for _, failure := range m.elementFailures {
-		sb.WriteString(m.styles.Error.Render("  ✗ "))
-		sb.WriteString(m.styles.Selected.Render(failure.ElementPath))
-		if failure.ElementType != "" && failure.ElementType != "child" && failure.ElementType != "link" {
-			sb.WriteString(m.styles.Muted.Render(" (" + failure.ElementType + ")"))
-		}
-		sb.WriteString("\n")
-		for _, reason := range failure.FailureReasons {
-			wrappedLines := outpututil.WrapTextLines(reason, reasonWidth)
-			for i, line := range wrappedLines {
-				sb.WriteString("      ")
-				if i == 0 {
-					sb.WriteString(m.styles.Error.Render("• "))
-				} else {
-					sb.WriteString("  ")
-				}
-				sb.WriteString(m.styles.Error.Render(line))
-				sb.WriteString("\n")
-			}
-		}
-		sb.WriteString("\n")
-	}
+	shared.RenderElementFailures(sb, m.elementFailures, contentWidth, true, m.styles)
 }
 
 // renderInterruptedElements renders interrupted elements with full paths.
@@ -252,26 +175,9 @@ func (m DestroyModel) renderInterruptedElements(sb *strings.Builder) {
 // renderPreDestroyStateView renders a full-screen pre-destroy instance state view.
 func (m DestroyModel) renderPreDestroyStateView() string {
 	sb := strings.Builder{}
-
-	// Scrollable viewport content
 	sb.WriteString(m.preDestroyStateViewport.View())
 	sb.WriteString("\n")
-
-	// Fixed footer with navigation help
-	sb.WriteString(m.styles.Muted.Render("  " + strings.Repeat("─", 60)))
-	sb.WriteString("\n")
-	keyStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Primary()).Bold(true)
-	sb.WriteString(m.styles.Muted.Render("  Press "))
-	sb.WriteString(keyStyle.Render("↑/↓"))
-	sb.WriteString(m.styles.Muted.Render(" to scroll  "))
-	sb.WriteString(keyStyle.Render("esc"))
-	sb.WriteString(m.styles.Muted.Render("/"))
-	sb.WriteString(keyStyle.Render("s"))
-	sb.WriteString(m.styles.Muted.Render(" to return  "))
-	sb.WriteString(keyStyle.Render("q"))
-	sb.WriteString(m.styles.Muted.Render(" to quit"))
-	sb.WriteString("\n")
-
+	shared.RenderViewportOverlayFooter(&sb, "s", m.styles)
 	return sb.String()
 }
 
@@ -577,4 +483,3 @@ func (m DestroyModel) renderExports(sb *strings.Builder, exports map[string]*sta
 		}
 	}
 }
-

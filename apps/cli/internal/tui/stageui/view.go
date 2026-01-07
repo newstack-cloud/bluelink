@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	sdkstrings "github.com/newstack-cloud/deploy-cli-sdk/strings"
 )
 
@@ -48,24 +49,9 @@ func (m StageModel) handleOverviewKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m StageModel) renderOverviewView() string {
 	sb := strings.Builder{}
-
 	sb.WriteString(m.overviewViewport.View())
 	sb.WriteString("\n")
-
-	sb.WriteString(m.styles.Muted.Render("  " + strings.Repeat("─", 60)))
-	sb.WriteString("\n")
-	keyStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Primary()).Bold(true)
-	sb.WriteString(m.styles.Muted.Render("  Press "))
-	sb.WriteString(keyStyle.Render("↑/↓"))
-	sb.WriteString(m.styles.Muted.Render(" to scroll  "))
-	sb.WriteString(keyStyle.Render("esc"))
-	sb.WriteString(m.styles.Muted.Render("/"))
-	sb.WriteString(keyStyle.Render("o"))
-	sb.WriteString(m.styles.Muted.Render(" to return  "))
-	sb.WriteString(keyStyle.Render("q"))
-	sb.WriteString(m.styles.Muted.Render(" to quit"))
-	sb.WriteString("\n")
-
+	shared.RenderViewportOverlayFooter(&sb, "o", m.styles)
 	return sb.String()
 }
 

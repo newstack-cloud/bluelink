@@ -162,3 +162,65 @@ func RenderGenericError(err error, operationFailedHeader string, s *styles.Style
 	sb.WriteString(RenderErrorFooter(s))
 	return sb.String()
 }
+
+// ChangesetTypeMismatchParams holds the parameters for rendering a changeset type mismatch error.
+type ChangesetTypeMismatchParams struct {
+	// IsDestroyChangeset indicates whether the changeset is a destroy changeset (true)
+	// or a deploy changeset (false). This determines the error message direction.
+	IsDestroyChangeset bool
+	InstanceName       string
+	ChangesetID        string
+}
+
+// RenderChangesetTypeMismatchError renders an error when attempting to use a changeset
+// with the wrong command (e.g., using a destroy changeset with deploy command).
+func RenderChangesetTypeMismatchError(params ChangesetTypeMismatchParams, s *styles.Styles) string {
+	sb := strings.Builder{}
+	sb.WriteString("\n")
+	sb.WriteString("  ")
+
+	var errorMsg, explanation, correctCommand, correctCommandExample, alternativeDesc, alternativeExample string
+	if params.IsDestroyChangeset {
+		// User tried to deploy with a destroy changeset
+		errorMsg = "✗ Cannot deploy using a destroy changeset"
+		explanation = "The changeset you specified was created for a destroy operation and cannot\n  be used with the deploy command."
+		correctCommand = "1. Use the 'destroy' command to apply this changeset:"
+		correctCommandExample = fmt.Sprintf("       bluelink destroy --instance-name %s --change-set-id %s", params.InstanceName, params.ChangesetID)
+		alternativeDesc = "2. Create a new changeset for deployment (without --destroy):"
+		alternativeExample = fmt.Sprintf("       bluelink stage --instance-name %s", params.InstanceName)
+	} else {
+		// User tried to destroy with a deploy changeset
+		errorMsg = "✗ Cannot destroy using a deploy changeset"
+		explanation = "The changeset you specified was created for a deploy operation and cannot\n  be used with the destroy command."
+		correctCommand = "1. Use the 'deploy' command to apply this changeset:"
+		correctCommandExample = fmt.Sprintf("       bluelink deploy --instance-name %s --change-set-id %s", params.InstanceName, params.ChangesetID)
+		alternativeDesc = "2. Create a new changeset for destroy:"
+		alternativeExample = fmt.Sprintf("       bluelink stage --instance-name %s --destroy", params.InstanceName)
+	}
+
+	sb.WriteString(s.Error.Render(errorMsg))
+	sb.WriteString("\n\n")
+
+	sb.WriteString("  ")
+	sb.WriteString(s.Muted.Render(explanation))
+	sb.WriteString("\n\n")
+
+	sb.WriteString("  ")
+	sb.WriteString(s.Muted.Render("To resolve this issue, you can either:"))
+	sb.WriteString("\n\n")
+
+	sb.WriteString("    ")
+	sb.WriteString(s.Muted.Render(correctCommand))
+	sb.WriteString("\n")
+	sb.WriteString(correctCommandExample)
+	sb.WriteString("\n\n")
+
+	sb.WriteString("    ")
+	sb.WriteString(s.Muted.Render(alternativeDesc))
+	sb.WriteString("\n")
+	sb.WriteString(alternativeExample)
+	sb.WriteString("\n")
+
+	sb.WriteString(RenderErrorFooter(s))
+	return sb.String()
+}

@@ -149,7 +149,7 @@ type StageModel struct {
 	showingExportsView bool              // When true, show exports overlay
 	exportsModel       StageExportsModel // Exports view model
 
-	styles *stylespkg.Styles
+	styles  *stylespkg.Styles
 	logger  *zap.Logger
 	spinner spinner.Model
 }
