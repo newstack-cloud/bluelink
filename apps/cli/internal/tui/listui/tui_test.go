@@ -377,23 +377,28 @@ func (s *ListTUISuite) Test_headless_outputs_empty_list() {
 
 func (s *ListTUISuite) Test_headless_outputs_error() {
 	headlessOutput := &bytes.Buffer{}
-	// Use a non-error mock so we can control the error via Send()
-	model := s.newHeadlessTestModel(nil, headlessOutput, false)
+	// Use the error mock so the engine returns an error on list
+	model, _ := NewListApp(
+		testutils.NewTestDeployEngineForListError(),
+		zap.NewNop(),
+		"",
+		s.styles,
+		true,
+		headlessOutput,
+		false,
+	)
 
 	testModel := teatest.NewTestModel(
 		s.T(),
-		model,
+		*model,
 		teatest.WithInitialTermSize(300, 100),
 	)
 
-	testModel.Send(PageLoadErrorMsg{
-		Err: fmt.Errorf("connection refused"),
-	})
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	output := headlessOutput.String()
 	s.Contains(output, "ERR")
-	s.Contains(output, "connection refused")
+	s.Contains(output, "List instances failed")
 }
 
 func (s *ListTUISuite) Test_headless_includes_search_filter() {
