@@ -659,10 +659,10 @@ func (s *DestroyTUISuite) Test_precreated_items_from_changeset_get_updated() {
 	)
 
 	// Verify item was pre-created with pending status
-	s.Require().Len(model.items, 1)
-	s.Require().NotNil(model.items[0].Resource)
-	s.Equal("test-resource", model.items[0].Resource.Name)
-	s.Equal(core.ResourceStatusUnknown, model.items[0].Resource.Status) // Should be pending initially
+	s.Require().Len(model.Items(), 1)
+	s.Require().NotNil(model.Items()[0].Resource)
+	s.Equal("test-resource", model.Items()[0].Resource.Name)
+	s.Equal(core.ResourceStatusUnknown, model.Items()[0].Resource.Status) // Should be pending initially
 
 	testModel := teatest.NewTestModel(
 		s.T(),
@@ -2023,7 +2023,7 @@ func (s *DestroyTUISuite) Test_SetChangesetChanges_nil_changes() {
 
 	// SetChangesetChanges with nil should not panic or modify model
 	model.SetChangesetChanges(nil)
-	s.Empty(model.items)
+	s.Empty(model.Items())
 }
 
 func (s *DestroyTUISuite) Test_SetChangesetChanges_builds_items() {
@@ -2052,7 +2052,7 @@ func (s *DestroyTUISuite) Test_SetChangesetChanges_builds_items() {
 
 	model.SetChangesetChanges(changesetChanges)
 
-	s.Len(model.items, 3) // 2 resources + 1 child
+	s.Len(model.Items(), 3) // 2 resources + 1 child
 }
 
 // --- View Tests for Edge Cases ---

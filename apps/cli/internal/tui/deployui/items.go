@@ -1042,3 +1042,20 @@ func MakeChildDeployItem(
 		linksByName:     linksByName,
 	}
 }
+
+// Test accessor methods - these provide read-only access for testing purposes.
+
+// ChildrenByName returns the internal children lookup map.
+func (i *DeployItem) ChildrenByName() map[string]*ChildDeployItem {
+	return i.childrenByName
+}
+
+// ResourcesByName returns the internal resources lookup map.
+func (i *DeployItem) ResourcesByName() map[string]*ResourceDeployItem {
+	return i.resourcesByName
+}
+
+// LinksByName returns the internal links lookup map.
+func (i *DeployItem) LinksByName() map[string]*LinkDeployItem {
+	return i.linksByName
+}

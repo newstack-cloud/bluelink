@@ -802,9 +802,9 @@ func (s *DeployItemsTestSuite) Test_MakeChildDeployItem_creates_item_with_all_fi
 	s.Equal(child, result.Child)
 	s.Equal(childChanges, result.Changes)
 	s.Equal(instanceState, result.InstanceState)
-	s.Equal(childrenByName, result.childrenByName)
-	s.Equal(resourcesByName, result.resourcesByName)
-	s.Equal(linksByName, result.linksByName)
+	s.Equal(childrenByName, result.ChildrenByName())
+	s.Equal(resourcesByName, result.ResourcesByName())
+	s.Equal(linksByName, result.LinksByName())
 }
 
 // GetChildren with links tests
