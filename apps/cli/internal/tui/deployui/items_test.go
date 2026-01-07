@@ -714,76 +714,76 @@ func (s *DeployItemsTestSuite) Test_ToSplitPaneItems_converts_slice() {
 
 // buildChildPath tests
 
-func (s *DeployItemsTestSuite) Test_buildChildPath_uses_child_name_when_no_path() {
+func (s *DeployItemsTestSuite) Test_BuildChildPath_uses_child_name_when_no_path() {
 	item := &DeployItem{
 		Child: &ChildDeployItem{Name: "parentChild"},
 	}
-	path := item.buildChildPath("childElement")
+	path := item.BuildChildPath("childElement")
 	s.Equal("parentChild/childElement", path)
 }
 
-func (s *DeployItemsTestSuite) Test_buildChildPath_extends_existing_path() {
+func (s *DeployItemsTestSuite) Test_BuildChildPath_extends_existing_path() {
 	item := &DeployItem{
 		Path: "level1/level2",
 	}
-	path := item.buildChildPath("level3")
+	path := item.BuildChildPath("level3")
 	s.Equal("level1/level2/level3", path)
 }
 
-func (s *DeployItemsTestSuite) Test_buildChildPath_returns_name_when_no_parent() {
+func (s *DeployItemsTestSuite) Test_BuildChildPath_returns_name_when_no_parent() {
 	item := &DeployItem{}
-	path := item.buildChildPath("element")
+	path := item.BuildChildPath("element")
 	s.Equal("element", path)
 }
 
 // isDirectChild tests
 
-func (s *DeployItemsTestSuite) Test_isDirectChild_returns_true_for_direct_child() {
+func (s *DeployItemsTestSuite) Test_IsDirectChild_returns_true_for_direct_child() {
 	item := &DeployItem{}
-	s.True(item.isDirectChild("parent/child", "parent/"))
+	s.True(item.IsDirectChild("parent/child", "parent/"))
 }
 
-func (s *DeployItemsTestSuite) Test_isDirectChild_returns_false_for_grandchild() {
+func (s *DeployItemsTestSuite) Test_IsDirectChild_returns_false_for_grandchild() {
 	item := &DeployItem{}
-	s.False(item.isDirectChild("parent/child/grandchild", "parent/"))
+	s.False(item.IsDirectChild("parent/child/grandchild", "parent/"))
 }
 
-func (s *DeployItemsTestSuite) Test_isDirectChild_returns_false_for_different_prefix() {
+func (s *DeployItemsTestSuite) Test_IsDirectChild_returns_false_for_different_prefix() {
 	item := &DeployItem{}
-	s.False(item.isDirectChild("other/child", "parent/"))
+	s.False(item.IsDirectChild("other/child", "parent/"))
 }
 
-func (s *DeployItemsTestSuite) Test_isDirectChild_returns_false_for_same_length_path() {
+func (s *DeployItemsTestSuite) Test_IsDirectChild_returns_false_for_same_length_path() {
 	item := &DeployItem{}
-	s.False(item.isDirectChild("parent/", "parent/"))
+	s.False(item.IsDirectChild("parent/", "parent/"))
 }
 
-func (s *DeployItemsTestSuite) Test_isDirectChild_returns_false_for_shorter_path() {
+func (s *DeployItemsTestSuite) Test_IsDirectChild_returns_false_for_shorter_path() {
 	item := &DeployItem{}
-	s.False(item.isDirectChild("par", "parent/"))
+	s.False(item.IsDirectChild("par", "parent/"))
 }
 
 // getDefaultChildAction tests
 
-func (s *DeployItemsTestSuite) Test_getDefaultChildAction_returns_inspect_when_parent_is_inspect() {
+func (s *DeployItemsTestSuite) Test_GetDefaultChildAction_returns_inspect_when_parent_is_inspect() {
 	item := &DeployItem{
 		Type:  ItemTypeChild,
 		Child: &ChildDeployItem{Name: "testChild", Action: ActionInspect},
 	}
-	s.Equal(ActionInspect, item.getDefaultChildAction())
+	s.Equal(ActionInspect, item.GetDefaultChildAction())
 }
 
-func (s *DeployItemsTestSuite) Test_getDefaultChildAction_returns_no_change_when_parent_is_not_inspect() {
+func (s *DeployItemsTestSuite) Test_GetDefaultChildAction_returns_no_change_when_parent_is_not_inspect() {
 	item := &DeployItem{
 		Type:  ItemTypeChild,
 		Child: &ChildDeployItem{Name: "testChild", Action: ActionUpdate},
 	}
-	s.Equal(ActionNoChange, item.getDefaultChildAction())
+	s.Equal(ActionNoChange, item.GetDefaultChildAction())
 }
 
-func (s *DeployItemsTestSuite) Test_getDefaultChildAction_returns_no_change_when_child_is_nil() {
+func (s *DeployItemsTestSuite) Test_GetDefaultChildAction_returns_no_change_when_child_is_nil() {
 	item := &DeployItem{Type: ItemTypeChild}
-	s.Equal(ActionNoChange, item.getDefaultChildAction())
+	s.Equal(ActionNoChange, item.GetDefaultChildAction())
 }
 
 // MakeChildDeployItem tests

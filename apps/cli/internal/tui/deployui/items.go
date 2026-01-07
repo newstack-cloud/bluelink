@@ -280,7 +280,7 @@ func (i *DeployItem) appendChildResourceItems(items []splitpane.Item, parentSkip
 // It uses path-based keys to uniquely identify resources across different child blueprints.
 func (i *DeployItem) getOrCreateResourceItem(name string, action ActionType, skipped bool) (*ResourceDeployItem, string) {
 	// Build path-based key: parentPath/resourceName
-	resourcePath := i.buildChildPath(name)
+	resourcePath := i.BuildChildPath(name)
 
 	if i.resourcesByName != nil {
 		// First try path-based lookup
@@ -312,7 +312,7 @@ func (i *DeployItem) getOrCreateResourceItem(name string, action ActionType, ski
 // to ensure we have access to ResourceID, ResourceType, and CurrentResourceState.
 func (i *DeployItem) getOrCreateResourceItemWithChanges(name string, action ActionType, skipped bool, changes *provider.Changes) (*ResourceDeployItem, string) {
 	// Build path-based key: parentPath/resourceName
-	resourcePath := i.buildChildPath(name)
+	resourcePath := i.BuildChildPath(name)
 
 	if i.resourcesByName != nil {
 		// First try path-based lookup
@@ -373,8 +373,8 @@ func (i *DeployItem) populateResourceItemFromChanges(item *ResourceDeployItem, c
 	}
 }
 
-// buildChildPath builds a path for a child element based on this item's path.
-func (i *DeployItem) buildChildPath(childName string) string {
+// BuildChildPath builds a path for a child element based on this item's path.
+func (i *DeployItem) BuildChildPath(childName string) string {
 	if i.Path == "" {
 		// If parent has no path, use the parent's ID (child name) as the base
 		if i.Child != nil {
@@ -464,7 +464,7 @@ func (i *DeployItem) appendNestedChildItems(items []splitpane.Item, parentSkippe
 // It uses path-based keys to uniquely identify children across different parent blueprints.
 func (i *DeployItem) getOrCreateChildItem(name string, action ActionType, nestedChanges *changes.BlueprintChanges, skipped bool) (*ChildDeployItem, string) {
 	// Build path-based key: parentPath/childName
-	childPath := i.buildChildPath(name)
+	childPath := i.BuildChildPath(name)
 
 	if i.childrenByName != nil {
 		// First try path-based lookup
@@ -622,7 +622,7 @@ func (i *DeployItem) appendUnchangedItemsFromInstanceState(
 
 	// Determine the default action for new items based on the parent's action.
 	// If the parent is in inspect mode (ActionInspect), children should also use ActionInspect.
-	defaultAction := i.getDefaultChildAction()
+	defaultAction := i.GetDefaultChildAction()
 
 	// Add resources from instance state that have no changes
 	for _, resourceState := range i.InstanceState.Resources {
@@ -688,9 +688,9 @@ func (i *DeployItem) appendUnchangedItemsFromInstanceState(
 	return items
 }
 
-// getDefaultChildAction returns the action to use for child items created from state.
+// GetDefaultChildAction returns the action to use for child items created from state.
 // If the parent has ActionInspect, children inherit that; otherwise ActionNoChange.
-func (i *DeployItem) getDefaultChildAction() ActionType {
+func (i *DeployItem) GetDefaultChildAction() ActionType {
 	if i.Child != nil && i.Child.Action == ActionInspect {
 		return ActionInspect
 	}
@@ -711,8 +711,8 @@ func (i *DeployItem) appendItemsFromSharedMaps(
 		return items
 	}
 
-	pathPrefix := i.buildChildPath("")
-	defaultAction := i.getDefaultChildAction()
+	pathPrefix := i.BuildChildPath("")
+	defaultAction := i.GetDefaultChildAction()
 
 	items = i.appendResourcesFromSharedMaps(items, pathPrefix, parentSkipped, addedResources, defaultAction)
 	items = i.appendChildrenFromSharedMaps(items, pathPrefix, parentSkipped, addedChildren, defaultAction)
@@ -733,7 +733,7 @@ func (i *DeployItem) appendResourcesFromSharedMaps(
 	}
 
 	for path, resourceItem := range i.resourcesByName {
-		if !i.isDirectChild(path, pathPrefix) {
+		if !i.IsDirectChild(path, pathPrefix) {
 			continue
 		}
 		if addedResources[resourceItem.Name] {
@@ -768,7 +768,7 @@ func (i *DeployItem) appendChildrenFromSharedMaps(
 	}
 
 	for path, childItem := range i.childrenByName {
-		if !i.isDirectChild(path, pathPrefix) {
+		if !i.IsDirectChild(path, pathPrefix) {
 			continue
 		}
 		if addedChildren[childItem.Name] {
@@ -803,7 +803,7 @@ func (i *DeployItem) appendLinksFromSharedMaps(
 	}
 
 	for path, linkItem := range i.linksByName {
-		if !i.isDirectChild(path, pathPrefix) {
+		if !i.IsDirectChild(path, pathPrefix) {
 			continue
 		}
 		if addedLinks[linkItem.LinkName] {
@@ -826,11 +826,11 @@ func (i *DeployItem) appendLinksFromSharedMaps(
 	return items
 }
 
-// isDirectChild checks if a path is a direct child of the given prefix.
+// IsDirectChild checks if the given path represents a direct child of the pathPrefix.
 // A direct child has exactly one path component after the prefix.
 // Example: pathPrefix="parent/", path="parent/child" -> true
 // Example: pathPrefix="parent/", path="parent/child/grandchild" -> false
-func (i *DeployItem) isDirectChild(path, pathPrefix string) bool {
+func (i *DeployItem) IsDirectChild(path, pathPrefix string) bool {
 	if len(path) <= len(pathPrefix) {
 		return false
 	}
@@ -851,7 +851,7 @@ func (i *DeployItem) isDirectChild(path, pathPrefix string) bool {
 // It uses path-based keys to uniquely identify links across different child blueprints.
 func (i *DeployItem) getOrCreateLinkItem(linkName, resourceAName, resourceBName string, action ActionType, skipped bool) (*LinkDeployItem, string) {
 	// Build path-based key: parentPath/linkName
-	linkPath := i.buildChildPath(linkName)
+	linkPath := i.BuildChildPath(linkName)
 
 	if i.linksByName != nil {
 		// First try path-based lookup
@@ -884,7 +884,7 @@ func (i *DeployItem) getOrCreateLinkItem(linkName, resourceAName, resourceBName 
 // using instance state data. It handles migration from simple name keys to path-based keys
 // and hydrates the item with state data.
 func (i *DeployItem) getOrCreateResourceItemFromState(resourceState *state.ResourceState, action ActionType, skipped bool) (*ResourceDeployItem, string) {
-	resourcePath := i.buildChildPath(resourceState.Name)
+	resourcePath := i.BuildChildPath(resourceState.Name)
 
 	if i.resourcesByName != nil {
 		// First try path-based lookup
@@ -935,7 +935,7 @@ func (i *DeployItem) hydrateResourceItemFromState(item *ResourceDeployItem, reso
 // getOrCreateChildItemFromState looks up a child item from the shared map, or creates one
 // using instance state data. It handles migration from simple name keys to path-based keys.
 func (i *DeployItem) getOrCreateChildItemFromState(name string, action ActionType, skipped bool) (*ChildDeployItem, string) {
-	childPath := i.buildChildPath(name)
+	childPath := i.BuildChildPath(name)
 
 	if i.childrenByName != nil {
 		// First try path-based lookup
@@ -974,7 +974,7 @@ func (i *DeployItem) getOrCreateChildItemFromState(name string, action ActionTyp
 // getOrCreateLinkItemFromState looks up a link item from the shared map, or creates one
 // using instance state data. It handles migration from simple name keys to path-based keys.
 func (i *DeployItem) getOrCreateLinkItemFromState(linkName string, linkState *state.LinkState, action ActionType, skipped bool) (*LinkDeployItem, string) {
-	linkPath := i.buildChildPath(linkName)
+	linkPath := i.BuildChildPath(linkName)
 
 	if i.linksByName != nil {
 		// First try path-based lookup

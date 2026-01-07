@@ -11,57 +11,61 @@ import (
 // These methods scan deployment items to collect successful operations,
 // failures, and interrupted elements for the deployment overview.
 
-// resultCollector encapsulates the state needed for collecting deployment results.
+// ResultCollector encapsulates the state needed for collecting deployment results.
 // This pattern reduces parameter counts by grouping related data together.
-type resultCollector struct {
-	resourcesByName map[string]*ResourceDeployItem
-	childrenByName  map[string]*ChildDeployItem
-	linksByName     map[string]*LinkDeployItem
-	successful      []SuccessfulElement
-	failures        []ElementFailure
-	interrupted     []InterruptedElement
+// Exported for testing purposes.
+type ResultCollector struct {
+	ResourcesByName map[string]*ResourceDeployItem
+	ChildrenByName  map[string]*ChildDeployItem
+	LinksByName     map[string]*LinkDeployItem
+	Successful      []SuccessfulElement
+	Failures        []ElementFailure
+	Interrupted     []InterruptedElement
 }
+
+// resultCollector is an alias for internal use within this package.
+type resultCollector = ResultCollector
 
 // collectDeploymentResults scans all items to collect successful operations,
 // failures, and interrupted elements. This provides the data for the deployment overview.
 // It traverses the hierarchy to build full element paths.
 func (m *DeployModel) collectDeploymentResults() {
 	collector := &resultCollector{
-		resourcesByName: m.resourcesByName,
-		childrenByName:  m.childrenByName,
-		linksByName:     m.linksByName,
+		ResourcesByName: m.resourcesByName,
+		ChildrenByName:  m.childrenByName,
+		LinksByName:     m.linksByName,
 	}
 
-	collector.collectFromItems(m.items, "")
+	collector.CollectFromItems(m.items, "")
 
-	m.successfulElements = collector.successful
-	m.elementFailures = collector.failures
-	m.interruptedElements = collector.interrupted
+	m.successfulElements = collector.Successful
+	m.elementFailures = collector.Failures
+	m.interruptedElements = collector.Interrupted
 }
 
 // collectFromItems recursively collects successful operations, failures, and interruptions from items,
 // building full paths as it traverses the hierarchy.
-func (c *resultCollector) collectFromItems(items []DeployItem, parentPath string) {
+func (c *ResultCollector) CollectFromItems(items []DeployItem, parentPath string) {
 	for _, item := range items {
 		switch item.Type {
 		case ItemTypeResource:
 			if item.Resource != nil {
 				path := buildElementPath(parentPath, "resources", item.Resource.Name)
-				c.collectResourceResult(item.Resource, path)
+				c.CollectResourceResult(item.Resource, path)
 			}
 		case ItemTypeChild:
 			if item.Child != nil {
 				path := buildElementPath(parentPath, "children", item.Child.Name)
-				c.collectChildResult(item.Child, path)
+				c.CollectChildResult(item.Child, path)
 
 				if item.Changes != nil {
-					c.collectFromChanges(item.Changes, path, item.Child.Name)
+					c.CollectFromChanges(item.Changes, path, item.Child.Name)
 				}
 			}
 		case ItemTypeLink:
 			if item.Link != nil {
 				path := buildElementPath(parentPath, "links", item.Link.LinkName)
-				c.collectLinkResult(item.Link, path)
+				c.CollectLinkResult(item.Link, path)
 			}
 		}
 	}
@@ -70,7 +74,7 @@ func (c *resultCollector) collectFromItems(items []DeployItem, parentPath string
 // collectFromChanges recursively collects results from nested blueprint changes.
 // The pathPrefix is used for map key lookups (e.g., "parentChild/childName"),
 // while parentPath is used for display (e.g., "children.parentChild::children.childName").
-func (c *resultCollector) collectFromChanges(blueprintChanges *changes.BlueprintChanges, parentPath, pathPrefix string) {
+func (c *ResultCollector) CollectFromChanges(blueprintChanges *changes.BlueprintChanges, parentPath, pathPrefix string) {
 	if blueprintChanges == nil {
 		return
 	}
@@ -79,49 +83,49 @@ func (c *resultCollector) collectFromChanges(blueprintChanges *changes.Blueprint
 	c.collectNestedChildren(blueprintChanges, parentPath, pathPrefix)
 }
 
-func (c *resultCollector) collectNestedResources(blueprintChanges *changes.BlueprintChanges, parentPath, pathPrefix string) {
+func (c *ResultCollector) collectNestedResources(blueprintChanges *changes.BlueprintChanges, parentPath, pathPrefix string) {
 	for resourceName := range blueprintChanges.NewResources {
 		resourceKey := buildMapKey(pathPrefix, resourceName)
-		resource := lookupResource(c.resourcesByName, resourceKey, resourceName)
+		resource := lookupResource(c.ResourcesByName, resourceKey, resourceName)
 		if resource != nil {
 			path := buildElementPath(parentPath, "resources", resourceName)
-			c.collectResourceResult(resource, path)
+			c.CollectResourceResult(resource, path)
 		}
 	}
 	for resourceName := range blueprintChanges.ResourceChanges {
 		resourceKey := buildMapKey(pathPrefix, resourceName)
-		resource := lookupResource(c.resourcesByName, resourceKey, resourceName)
+		resource := lookupResource(c.ResourcesByName, resourceKey, resourceName)
 		if resource != nil {
 			path := buildElementPath(parentPath, "resources", resourceName)
-			c.collectResourceResult(resource, path)
+			c.CollectResourceResult(resource, path)
 		}
 	}
 }
 
-func (c *resultCollector) collectNestedChildren(blueprintChanges *changes.BlueprintChanges, parentPath, pathPrefix string) {
+func (c *ResultCollector) collectNestedChildren(blueprintChanges *changes.BlueprintChanges, parentPath, pathPrefix string) {
 	for childName, nc := range blueprintChanges.NewChildren {
 		childKey := buildMapKey(pathPrefix, childName)
-		child := lookupChild(c.childrenByName, childKey, childName)
+		child := lookupChild(c.ChildrenByName, childKey, childName)
 		if child != nil {
 			path := buildElementPath(parentPath, "children", childName)
-			c.collectChildResult(child, path)
+			c.CollectChildResult(child, path)
 
 			childChanges := &changes.BlueprintChanges{
 				NewResources: nc.NewResources,
 				NewChildren:  nc.NewChildren,
 			}
-			c.collectFromChanges(childChanges, path, childKey)
+			c.CollectFromChanges(childChanges, path, childKey)
 		}
 	}
 	for childName, cc := range blueprintChanges.ChildChanges {
 		childKey := buildMapKey(pathPrefix, childName)
-		child := lookupChild(c.childrenByName, childKey, childName)
+		child := lookupChild(c.ChildrenByName, childKey, childName)
 		if child != nil {
 			path := buildElementPath(parentPath, "children", childName)
-			c.collectChildResult(child, path)
+			c.CollectChildResult(child, path)
 
 			ccCopy := cc
-			c.collectFromChanges(&ccCopy, path, childKey)
+			c.CollectFromChanges(&ccCopy, path, childKey)
 		}
 	}
 }
@@ -142,9 +146,9 @@ func lookupChild(m map[string]*ChildDeployItem, pathKey, name string) *ChildDepl
 	return shared.LookupByKey(m, pathKey, name)
 }
 
-func (c *resultCollector) collectResourceResult(item *ResourceDeployItem, path string) {
+func (c *ResultCollector) CollectResourceResult(item *ResourceDeployItem, path string) {
 	if IsFailedResourceStatus(item.Status) && len(item.FailureReasons) > 0 {
-		c.failures = append(c.failures, ElementFailure{
+		c.Failures = append(c.Failures, ElementFailure{
 			ElementName:    item.Name,
 			ElementPath:    path,
 			ElementType:    "resource",
@@ -153,7 +157,7 @@ func (c *resultCollector) collectResourceResult(item *ResourceDeployItem, path s
 		return
 	}
 	if IsInterruptedResourceStatus(item.Status) {
-		c.interrupted = append(c.interrupted, InterruptedElement{
+		c.Interrupted = append(c.Interrupted, InterruptedElement{
 			ElementName: item.Name,
 			ElementPath: path,
 			ElementType: "resource",
@@ -161,7 +165,7 @@ func (c *resultCollector) collectResourceResult(item *ResourceDeployItem, path s
 		return
 	}
 	if IsSuccessResourceStatus(item.Status) {
-		c.successful = append(c.successful, SuccessfulElement{
+		c.Successful = append(c.Successful, SuccessfulElement{
 			ElementName: item.Name,
 			ElementPath: path,
 			ElementType: "resource",
@@ -170,9 +174,9 @@ func (c *resultCollector) collectResourceResult(item *ResourceDeployItem, path s
 	}
 }
 
-func (c *resultCollector) collectChildResult(item *ChildDeployItem, path string) {
+func (c *ResultCollector) CollectChildResult(item *ChildDeployItem, path string) {
 	if IsFailedInstanceStatus(item.Status) && len(item.FailureReasons) > 0 {
-		c.failures = append(c.failures, ElementFailure{
+		c.Failures = append(c.Failures, ElementFailure{
 			ElementName:    item.Name,
 			ElementPath:    path,
 			ElementType:    "child",
@@ -181,7 +185,7 @@ func (c *resultCollector) collectChildResult(item *ChildDeployItem, path string)
 		return
 	}
 	if IsInterruptedInstanceStatus(item.Status) {
-		c.interrupted = append(c.interrupted, InterruptedElement{
+		c.Interrupted = append(c.Interrupted, InterruptedElement{
 			ElementName: item.Name,
 			ElementPath: path,
 			ElementType: "child",
@@ -189,7 +193,7 @@ func (c *resultCollector) collectChildResult(item *ChildDeployItem, path string)
 		return
 	}
 	if IsSuccessInstanceStatus(item.Status) {
-		c.successful = append(c.successful, SuccessfulElement{
+		c.Successful = append(c.Successful, SuccessfulElement{
 			ElementName: item.Name,
 			ElementPath: path,
 			ElementType: "child",
@@ -198,9 +202,9 @@ func (c *resultCollector) collectChildResult(item *ChildDeployItem, path string)
 	}
 }
 
-func (c *resultCollector) collectLinkResult(item *LinkDeployItem, path string) {
+func (c *ResultCollector) CollectLinkResult(item *LinkDeployItem, path string) {
 	if IsFailedLinkStatus(item.Status) && len(item.FailureReasons) > 0 {
-		c.failures = append(c.failures, ElementFailure{
+		c.Failures = append(c.Failures, ElementFailure{
 			ElementName:    item.LinkName,
 			ElementPath:    path,
 			ElementType:    "link",
@@ -209,7 +213,7 @@ func (c *resultCollector) collectLinkResult(item *LinkDeployItem, path string) {
 		return
 	}
 	if IsInterruptedLinkStatus(item.Status) {
-		c.interrupted = append(c.interrupted, InterruptedElement{
+		c.Interrupted = append(c.Interrupted, InterruptedElement{
 			ElementName: item.LinkName,
 			ElementPath: path,
 			ElementType: "link",
@@ -217,7 +221,7 @@ func (c *resultCollector) collectLinkResult(item *LinkDeployItem, path string) {
 		return
 	}
 	if IsSuccessLinkStatus(item.Status) {
-		c.successful = append(c.successful, SuccessfulElement{
+		c.Successful = append(c.Successful, SuccessfulElement{
 			ElementName: item.LinkName,
 			ElementPath: path,
 			ElementType: "link",
