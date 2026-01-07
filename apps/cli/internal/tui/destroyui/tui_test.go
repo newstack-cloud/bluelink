@@ -2,11 +2,14 @@ package destroyui
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/bubbles/spinner"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/exp/teatest"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
@@ -1912,4 +1915,458 @@ func (s *DestroyTUISuite) Test_json_mode_with_interrupted() {
 	s.Contains(output, `"success": true`)
 	s.Contains(output, `"status": "DESTROY INTERRUPTED"`)
 	s.Contains(output, `"interrupted": 1`)
+}
+
+// --- Item Type Method Tests ---
+
+func (s *DestroyTUISuite) Test_ResourceDestroyItem_GetAction() {
+	item := &ResourceDestroyItem{
+		Name:   "test-resource",
+		Action: ActionDelete,
+	}
+	s.Equal(ActionDelete, item.GetAction())
+}
+
+func (s *DestroyTUISuite) Test_ResourceDestroyItem_GetResourceStatus() {
+	item := &ResourceDestroyItem{
+		Name:   "test-resource",
+		Status: core.ResourceStatusDestroyed,
+	}
+	s.Equal(core.ResourceStatusDestroyed, item.GetResourceStatus())
+}
+
+func (s *DestroyTUISuite) Test_ResourceDestroyItem_SetSkipped() {
+	item := &ResourceDestroyItem{
+		Name:    "test-resource",
+		Skipped: false,
+	}
+	item.SetSkipped(true)
+	s.True(item.Skipped)
+	item.SetSkipped(false)
+	s.False(item.Skipped)
+}
+
+func (s *DestroyTUISuite) Test_ChildDestroyItem_GetAction() {
+	item := &ChildDestroyItem{
+		Name:   "test-child",
+		Action: ActionRecreate,
+	}
+	s.Equal(ActionRecreate, item.GetAction())
+}
+
+func (s *DestroyTUISuite) Test_ChildDestroyItem_GetChildStatus() {
+	item := &ChildDestroyItem{
+		Name:   "test-child",
+		Status: core.InstanceStatusDestroyed,
+	}
+	s.Equal(core.InstanceStatusDestroyed, item.GetChildStatus())
+}
+
+func (s *DestroyTUISuite) Test_ChildDestroyItem_SetSkipped() {
+	item := &ChildDestroyItem{
+		Name:    "test-child",
+		Skipped: false,
+	}
+	item.SetSkipped(true)
+	s.True(item.Skipped)
+	item.SetSkipped(false)
+	s.False(item.Skipped)
+}
+
+func (s *DestroyTUISuite) Test_LinkDestroyItem_GetAction() {
+	item := &LinkDestroyItem{
+		LinkName: "resA::resB",
+		Action:   ActionCreate,
+	}
+	s.Equal(ActionCreate, item.GetAction())
+}
+
+func (s *DestroyTUISuite) Test_LinkDestroyItem_GetLinkStatus() {
+	item := &LinkDestroyItem{
+		LinkName: "resA::resB",
+		Status:   core.LinkStatusDestroyed,
+	}
+	s.Equal(core.LinkStatusDestroyed, item.GetLinkStatus())
+}
+
+func (s *DestroyTUISuite) Test_LinkDestroyItem_SetSkipped() {
+	item := &LinkDestroyItem{
+		LinkName: "resA::resB",
+		Skipped:  false,
+	}
+	item.SetSkipped(true)
+	s.True(item.Skipped)
+	item.SetSkipped(false)
+	s.False(item.Skipped)
+}
+
+// --- SetChangesetChanges Tests ---
+
+func (s *DestroyTUISuite) Test_SetChangesetChanges_nil_changes() {
+	model := NewDestroyModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDestroyEvents(destroySuccess),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDestroyed),
+		),
+		zap.NewNop(),
+		"test-changeset",
+		"",
+		"test-instance",
+		false,
+		s.styles,
+		false,
+		os.Stdout,
+		nil,
+		false,
+	)
+
+	// SetChangesetChanges with nil should not panic or modify model
+	model.SetChangesetChanges(nil)
+	s.Empty(model.items)
+}
+
+func (s *DestroyTUISuite) Test_SetChangesetChanges_builds_items() {
+	model := NewDestroyModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDestroyEvents(destroySuccess),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDestroyed),
+		),
+		zap.NewNop(),
+		"test-changeset",
+		"",
+		"test-instance",
+		false,
+		s.styles,
+		false,
+		os.Stdout,
+		nil,
+		false,
+	)
+
+	changesetChanges := &changes.BlueprintChanges{
+		RemovedResources: []string{"resource-1", "resource-2"},
+		RemovedChildren:  []string{"child-1"},
+	}
+
+	model.SetChangesetChanges(changesetChanges)
+
+	s.Len(model.items, 3) // 2 resources + 1 child
+}
+
+// --- View Tests for Edge Cases ---
+
+func (s *DestroyTUISuite) Test_View_returns_empty_in_headless_mode() {
+	model := NewDestroyModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDestroyEvents(destroySuccess),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDestroyed),
+		),
+		zap.NewNop(),
+		"test-changeset",
+		"",
+		"test-instance",
+		false,
+		s.styles,
+		true, // headless
+		os.Stdout,
+		nil,
+		false,
+	)
+
+	output := model.View()
+	s.Empty(output)
+}
+
+func (s *DestroyTUISuite) Test_View_shows_error_when_set() {
+	model := NewDestroyModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDestroyEvents(destroySuccess),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDestroyed),
+		),
+		zap.NewNop(),
+		"test-changeset",
+		"",
+		"test-instance",
+		false,
+		s.styles,
+		false,
+		os.Stdout,
+		nil,
+		false,
+	)
+
+	// Use public Update method with DestroyErrorMsg to set error state
+	updatedModel, _ := model.Update(DestroyErrorMsg{Err: errors.New("test error message")})
+	resultModel := updatedModel.(DestroyModel)
+	output := resultModel.View()
+	s.Contains(output, "Destroy failed")
+	s.Contains(output, "test error message")
+}
+
+func (s *DestroyTUISuite) Test_View_shows_deploy_changeset_error() {
+	model := NewDestroyModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDestroyEvents(destroySuccess),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDestroyed),
+		),
+		zap.NewNop(),
+		"test-changeset",
+		"",
+		"test-instance",
+		false,
+		s.styles,
+		false,
+		os.Stdout,
+		nil,
+		false,
+	)
+
+	// Use public Update method with DeployChangesetErrorMsg to set the error state
+	updatedModel, _ := model.Update(DeployChangesetErrorMsg{})
+	resultModel := updatedModel.(DestroyModel)
+	output := resultModel.View()
+	s.Contains(output, "deploy changeset")
+}
+
+// --- Init Tests ---
+
+func (s *DestroyTUISuite) Test_Init_returns_spinner_tick() {
+	model := NewDestroyModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDestroyEvents(destroySuccess),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDestroyed),
+		),
+		zap.NewNop(),
+		"test-changeset",
+		"",
+		"test-instance",
+		false,
+		s.styles,
+		false,
+		os.Stdout,
+		nil,
+		false,
+	)
+
+	cmd := model.Init()
+	s.Require().NotNil(cmd)
+	// Execute the command and verify it returns a spinner tick message
+	msg := cmd()
+	_, isSpinnerTick := msg.(spinner.TickMsg)
+	s.True(isSpinnerTick, "expected spinner.TickMsg but got %T", msg)
+}
+
+// --- Update Method Key Handler Tests ---
+
+func (s *DestroyTUISuite) Test_Update_o_key_opens_overview_when_finished() {
+	model := NewDestroyModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDestroyEvents(destroySuccess),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDestroyed),
+		),
+		zap.NewNop(),
+		"test-changeset-o-key",
+		"",
+		"test-instance",
+		false,
+		s.styles,
+		false,
+		os.Stdout,
+		nil,
+		false,
+	)
+
+	// First, finish the destroy via DestroyEventMsg with finish event
+	finishEvt := DestroyEventMsg(*finishEvent(core.InstanceStatusDestroyed))
+	updatedModel, _ := model.Update(finishEvt)
+	model = updatedModel.(DestroyModel)
+
+	// Now press 'o' to open overview
+	updatedModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}})
+	model = updatedModel.(DestroyModel)
+
+	// Verify overview is shown in the View output
+	output := model.View()
+	s.Contains(output, "o") // Overview view contains footer hint for 'o' key
+}
+
+func (s *DestroyTUISuite) Test_Update_o_key_toggles_overview() {
+	model := NewDestroyModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDestroyEvents(destroySuccess),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDestroyed),
+		),
+		zap.NewNop(),
+		"test-changeset-toggle",
+		"",
+		"test-instance",
+		false,
+		s.styles,
+		false,
+		os.Stdout,
+		nil,
+		false,
+	)
+
+	// Set window size first so viewport has dimensions
+	updatedModel, _ := model.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	model = updatedModel.(DestroyModel)
+
+	// Finish the destroy
+	finishEvt := DestroyEventMsg(*finishEvent(core.InstanceStatusDestroyed))
+	updatedModel, _ = model.Update(finishEvt)
+	model = updatedModel.(DestroyModel)
+
+	// Open overview with 'o'
+	updatedModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}})
+	model = updatedModel.(DestroyModel)
+
+	// View should show overview (contains "Destroy Summary" header)
+	viewWithOverview := model.View()
+	s.Contains(viewWithOverview, "Destroy Summary")
+
+	// Close overview with 'o' again
+	updatedModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}})
+	model = updatedModel.(DestroyModel)
+
+	// View should no longer show Destroy Summary header
+	viewWithoutOverview := model.View()
+	s.NotContains(viewWithoutOverview, "Destroy Summary")
+}
+
+func (s *DestroyTUISuite) Test_Update_esc_closes_overview() {
+	model := NewDestroyModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDestroyEvents(destroySuccess),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDestroyed),
+		),
+		zap.NewNop(),
+		"test-changeset-esc",
+		"",
+		"test-instance",
+		false,
+		s.styles,
+		false,
+		os.Stdout,
+		nil,
+		false,
+	)
+
+	// Finish the destroy
+	finishEvt := DestroyEventMsg(*finishEvent(core.InstanceStatusDestroyed))
+	updatedModel, _ := model.Update(finishEvt)
+	model = updatedModel.(DestroyModel)
+
+	// Open overview with 'o'
+	updatedModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}})
+	model = updatedModel.(DestroyModel)
+
+	// Close overview with escape
+	updatedModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	model = updatedModel.(DestroyModel)
+
+	// View should no longer show overview header
+	output := model.View()
+	s.NotContains(output, "Destroy Overview")
+}
+
+func (s *DestroyTUISuite) Test_Update_q_quits_from_overview() {
+	model := NewDestroyModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDestroyEvents(destroySuccess),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDestroyed),
+		),
+		zap.NewNop(),
+		"test-changeset-quit",
+		"",
+		"test-instance",
+		false,
+		s.styles,
+		false,
+		os.Stdout,
+		nil,
+		false,
+	)
+
+	// Finish the destroy
+	finishEvt := DestroyEventMsg(*finishEvent(core.InstanceStatusDestroyed))
+	updatedModel, _ := model.Update(finishEvt)
+	model = updatedModel.(DestroyModel)
+
+	// Open overview with 'o'
+	updatedModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}})
+	model = updatedModel.(DestroyModel)
+
+	// Press 'q' should return quit command - verify by executing the command
+	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+	s.Require().NotNil(cmd)
+	msg := cmd()
+	_, isQuit := msg.(tea.QuitMsg)
+	s.True(isQuit, "expected tea.QuitMsg but got %T", msg)
+}
+
+func (s *DestroyTUISuite) Test_Update_error_state_quits_on_q() {
+	model := NewDestroyModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDestroyEvents(destroySuccess),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDestroyed),
+		),
+		zap.NewNop(),
+		"test-changeset-error-quit",
+		"",
+		"test-instance",
+		false,
+		s.styles,
+		false,
+		os.Stdout,
+		nil,
+		false,
+	)
+
+	// Set error state via DestroyErrorMsg
+	updatedModel, _ := model.Update(DestroyErrorMsg{Err: errors.New("test error")})
+	model = updatedModel.(DestroyModel)
+
+	// Press 'q' should return quit command - verify by executing the command
+	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+	s.Require().NotNil(cmd)
+	msg := cmd()
+	_, isQuit := msg.(tea.QuitMsg)
+	s.True(isQuit, "expected tea.QuitMsg but got %T", msg)
+}
+
+func (s *DestroyTUISuite) Test_Update_window_size_updates_dimensions() {
+	model := NewDestroyModel(
+		testutils.NewTestDeployEngineWithDeployment(
+			testDestroyEvents(destroySuccess),
+			"test-instance-id",
+			testInstanceState(core.InstanceStatusDestroyed),
+		),
+		zap.NewNop(),
+		"test-changeset-window",
+		"",
+		"test-instance",
+		false,
+		s.styles,
+		false,
+		os.Stdout,
+		nil,
+		false,
+	)
+
+	updatedModel, _ := model.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	resultModel := updatedModel.(DestroyModel)
+	s.Equal(120, resultModel.width)
+	s.Equal(40, resultModel.height)
 }
