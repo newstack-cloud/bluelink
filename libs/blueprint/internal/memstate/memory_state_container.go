@@ -139,6 +139,22 @@ func (c *memoryInstancesContainer) Save(
 	return c.save(instanceState)
 }
 
+func (c *memoryInstancesContainer) SaveBatch(
+	ctx context.Context,
+	instances []state.InstanceState,
+) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for i := range instances {
+		if err := c.save(instances[i]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (c *memoryInstancesContainer) save(
 	instanceState state.InstanceState,
 ) error {

@@ -58,6 +58,10 @@ type InstancesContainer interface {
 	List(ctx context.Context, params ListInstancesParams) (ListInstancesResult, error)
 	// Save deals with persisting a blueprint instance.
 	Save(ctx context.Context, instanceState InstanceState) error
+	// SaveBatch deals with persisting multiple blueprint instances efficiently.
+	// This is optimized for bulk operations such as state import where many instances
+	// need to be saved at once. Implementations should use batch operations where possible.
+	SaveBatch(ctx context.Context, instances []InstanceState) error
 	// UpdateStatus deals with updating the status of the latest blueprint
 	// instance deployment.
 	UpdateStatus(
