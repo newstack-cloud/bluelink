@@ -134,6 +134,23 @@ func (c *instancesContainerImpl) Save(
 	return c.save(ctx, instanceState)
 }
 
+func (c *instancesContainerImpl) SaveBatch(
+	ctx context.Context,
+	instances []state.InstanceState,
+) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for i := range instances {
+		if err := c.save(ctx, instances[i]); err != nil {
+			return fmt.Errorf("failed to save instance %d/%d (%s): %w",
+				i+1, len(instances), instances[i].InstanceID, err)
+		}
+	}
+
+	return nil
+}
+
 func (c *instancesContainerImpl) save(
 	ctx context.Context,
 	instanceState state.InstanceState,

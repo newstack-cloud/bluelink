@@ -245,6 +245,224 @@ func (c *instancesContainerImpl) Save(
 	return tx.Commit(ctx)
 }
 
+// SaveBatch efficiently saves multiple instances in a single transaction.
+// It handles nested children at any depth and deduplicates instances that
+// appear both at the top level and as children.
+//
+// The operation flattens the entire instance tree first, then uses pgx.Batch
+// to minimize database round-trips. The order respects FK constraints:
+// 1. All instances (flattened, deduplicated)
+// 2. All resources
+// 3. All instance-resource relations
+// 4. All links
+// 5. All instance-link relations
+// 6. All parent-child relations
+func (c *instancesContainerImpl) SaveBatch(
+	ctx context.Context,
+	instances []state.InstanceState,
+) error {
+	if len(instances) == 0 {
+		return nil
+	}
+
+	tx, err := c.connPool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	// Flatten and deduplicate the entire instance tree
+	flatInstances, childRelations := flattenInstanceTree(instances)
+
+	if err := c.saveFlattenedBatch(ctx, tx, flatInstances, childRelations); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+type childRelation struct {
+	parentInstanceID string
+	childName        string
+	childInstanceID  string
+}
+
+// flattenInstanceTree recursively collects all instances and parent-child
+// relations from the tree, deduplicating by instance ID.
+func flattenInstanceTree(instances []state.InstanceState) ([]state.InstanceState, []childRelation) {
+	seen := make(map[string]bool)
+	var flatInstances []state.InstanceState
+	var relations []childRelation
+
+	var flatten func(inst *state.InstanceState)
+	flatten = func(inst *state.InstanceState) {
+		if seen[inst.InstanceID] {
+			return
+		}
+		seen[inst.InstanceID] = true
+		flatInstances = append(flatInstances, *inst)
+
+		for childName, child := range inst.ChildBlueprints {
+			relations = append(relations, childRelation{
+				parentInstanceID: inst.InstanceID,
+				childName:        childName,
+				childInstanceID:  child.InstanceID,
+			})
+			flatten(child)
+		}
+	}
+
+	for i := range instances {
+		flatten(&instances[i])
+	}
+
+	return flatInstances, relations
+}
+
+func (c *instancesContainerImpl) saveFlattenedBatch(
+	ctx context.Context,
+	tx pgx.Tx,
+	instances []state.InstanceState,
+	childRelations []childRelation,
+) error {
+	// Step 1: Batch upsert all instances
+	if err := c.upsertInstancesBatch(ctx, tx, instances); err != nil {
+		return err
+	}
+
+	// Step 2: Collect and batch upsert all resources
+	allResources, allLinks := collectResourcesAndLinks(instances)
+
+	if err := upsertResources(ctx, tx, allResources); err != nil {
+		return err
+	}
+
+	// Step 3: Batch upsert instance-resource relations
+	if err := c.upsertResourceRelationsBatch(ctx, tx, instances); err != nil {
+		return err
+	}
+
+	// Step 4: Batch upsert all links
+	if err := upsertLinks(ctx, tx, allLinks); err != nil {
+		return err
+	}
+
+	// Step 5: Batch upsert instance-link relations
+	if err := c.upsertLinkRelationsBatch(ctx, tx, instances); err != nil {
+		return err
+	}
+
+	// Step 6: Batch upsert parent-child relations
+	if len(childRelations) > 0 {
+		return c.upsertChildRelationsBatch(ctx, tx, childRelations)
+	}
+
+	return nil
+}
+
+func (c *instancesContainerImpl) upsertInstancesBatch(
+	ctx context.Context,
+	tx pgx.Tx,
+	instances []state.InstanceState,
+) error {
+	query := upsertInstanceQuery()
+	batch := &pgx.Batch{}
+	for i := range instances {
+		args := buildInstanceArgs(&instances[i])
+		batch.Queue(query, args)
+	}
+
+	return tx.SendBatch(ctx, batch).Close()
+}
+
+func collectResourcesAndLinks(
+	instances []state.InstanceState,
+) ([]*state.ResourceState, []*state.LinkState) {
+	var allResources []*state.ResourceState
+	var allLinks []*state.LinkState
+
+	for i := range instances {
+		resources := commoncore.MapToSlice(instances[i].Resources)
+		allResources = append(allResources, resources...)
+
+		links := commoncore.MapToSlice(instances[i].Links)
+		allLinks = append(allLinks, links...)
+	}
+
+	return allResources, allLinks
+}
+
+func (c *instancesContainerImpl) upsertResourceRelationsBatch(
+	ctx context.Context,
+	tx pgx.Tx,
+	instances []state.InstanceState,
+) error {
+	query := upsertBlueprintResourceRelationsQuery()
+	batch := &pgx.Batch{}
+	for i := range instances {
+		resources := commoncore.MapToSlice(instances[i].Resources)
+		for _, resource := range resources {
+			args := pgx.NamedArgs{
+				"instanceId":   instances[i].InstanceID,
+				"resourceName": resource.Name,
+				"resourceId":   resource.ResourceID,
+			}
+			batch.Queue(query, args)
+		}
+	}
+
+	if batch.Len() == 0 {
+		return nil
+	}
+
+	return tx.SendBatch(ctx, batch).Close()
+}
+
+func (c *instancesContainerImpl) upsertLinkRelationsBatch(
+	ctx context.Context,
+	tx pgx.Tx,
+	instances []state.InstanceState,
+) error {
+	query := upsertBlueprintLinkRelationsQuery()
+	batch := &pgx.Batch{}
+	for i := range instances {
+		links := commoncore.MapToSlice(instances[i].Links)
+		for _, link := range links {
+			args := pgx.NamedArgs{
+				"instanceId": instances[i].InstanceID,
+				"linkName":   link.Name,
+				"linkId":     link.LinkID,
+			}
+			batch.Queue(query, args)
+		}
+	}
+
+	if batch.Len() == 0 {
+		return nil
+	}
+
+	return tx.SendBatch(ctx, batch).Close()
+}
+
+func (c *instancesContainerImpl) upsertChildRelationsBatch(
+	ctx context.Context,
+	tx pgx.Tx,
+	relations []childRelation,
+) error {
+	query := upsertBlueprintInstanceRelationsQuery()
+	batch := &pgx.Batch{}
+	for _, rel := range relations {
+		args := pgx.NamedArgs{
+			"parentInstanceId":  rel.parentInstanceID,
+			"childInstanceName": rel.childName,
+			"childInstanceId":   rel.childInstanceID,
+		}
+		batch.Queue(query, args)
+	}
+
+	return tx.SendBatch(ctx, batch).Close()
+}
+
 func (c *instancesContainerImpl) save(
 	ctx context.Context,
 	tx pgx.Tx,

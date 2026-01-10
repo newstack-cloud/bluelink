@@ -31,6 +31,7 @@ func upsertInstanceQuery() string {
 		@childDependencies,
 		@durations
 	) ON CONFLICT (id) DO UPDATE SET
+		"name" = excluded.name,
 	 	status = excluded.status,
 		last_status_update_timestamp = excluded.last_status_update_timestamp,
 		last_deployed_timestamp = excluded.last_deployed_timestamp,
