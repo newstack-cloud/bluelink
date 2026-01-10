@@ -30,6 +30,8 @@ report.json
 # in non-interactive mode.
 test-*.sh
 
+!.env.test
+
 # Test blueprint files used when testing the CLI during development.
 *.blueprint.yaml
 # But allow e2e test fixtures
@@ -42,3 +44,7 @@ engine.auth.json
 
 # E2E test provider binary (built by docker-compose)
 e2e/testprovider/bluelink-test-provider
+
+# Migration files that are copied from the blueprint state library
+# for integration tests, primarily for the export and import functionality.
+internal/stateio/postgres

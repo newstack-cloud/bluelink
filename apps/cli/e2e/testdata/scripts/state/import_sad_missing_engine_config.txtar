@@ -1,0 +1,10 @@
+# Test state import fails when engine config file does not exist
+
+! exec bluelink state import --file state.json --engine-config-file nonexistent-config.json
+stderr 'failed to load engine config'
+
+-- bluelink.config.toml --
+# Empty config file to prevent config loading error
+
+-- state.json --
+[{"id":"inst-123","name":"Test Instance","status":2}]

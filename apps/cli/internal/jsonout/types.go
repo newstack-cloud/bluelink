@@ -194,3 +194,12 @@ type ListInstanceItem struct {
 	Status                string `json:"status"`
 	LastDeployedTimestamp int64  `json:"lastDeployedTimestamp"`
 }
+
+// StateImportOutput represents a state import result.
+type StateImportOutput struct {
+	Success        bool   `json:"success"`
+	Mode           string `json:"mode"`
+	InstancesCount int    `json:"instancesCount,omitempty"`
+	FilesExtracted int    `json:"filesExtracted,omitempty"`
+	Message        string `json:"message"`
+}

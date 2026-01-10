@@ -1,0 +1,79 @@
+services:
+  # Object storage emulators
+  localstack:
+    container_name: "localstack_bluelink_stateio_tests"
+    image: localstack/localstack:3.2.0
+    network_mode: bridge
+    ports:
+      - "4580:4566"
+    environment:
+      SERVICES: s3
+      DEBUG: 1
+      DOCKER_HOST: unix:///var/run/docker.sock
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  fake_gcs_server:
+    container_name: "fake_gcs_server_bluelink_stateio_tests"
+    image: fsouza/fake-gcs-server:1.50.2
+    ports:
+      - "8185:8000"
+    command:
+      ["-scheme", "http", "-port", "8000", "-public-host", "localhost:8185"]
+    volumes:
+      - ./__testdata/gcs:/data
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: "azurite_bluelink_stateio_tests"
+    hostname: azurite
+    restart: always
+    command: ["azurite-blob", "--blobHost", "0.0.0.0", "--blobPort", "10003", "--skipApiVersionCheck"]
+    ports:
+      - "10003:10003"
+
+  # Postgres for state import tests
+  stateio_test_postgres:
+    image: postgres:17.3
+    container_name: stateio_test_postgres
+    networks:
+      - bluelink_stateio_test_network
+    restart: always
+    shm_size: 128mb
+    environment:
+      POSTGRES_DB: ${STATEIO_POSTGRES_DATABASE}
+      POSTGRES_PASSWORD: ${STATEIO_POSTGRES_PASSWORD}
+      POSTGRES_USER: ${STATEIO_POSTGRES_USER}
+    ports:
+      - 45434:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d ${STATEIO_POSTGRES_DATABASE} -U ${STATEIO_POSTGRES_USER}"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  stateio_test_postgres_migrate:
+    image: migrate/migrate:v4.18.2
+    container_name: stateio_test_postgres_migrate
+    networks:
+      - bluelink_stateio_test_network
+    command:
+      [
+        "-source",
+        "file:///migrations",
+        "-database",
+        "pgx5://${STATEIO_POSTGRES_USER}:${STATEIO_POSTGRES_PASSWORD}@stateio_test_postgres:5432/${STATEIO_POSTGRES_DATABASE}?sslmode=disable",
+        "up",
+      ]
+    links:
+      - stateio_test_postgres
+    depends_on:
+      stateio_test_postgres:
+        condition: service_healthy
+    volumes:
+      - ./postgres/migrations:/migrations
+
+networks:
+  bluelink_stateio_test_network:
+    name: bluelink_stateio_test_network

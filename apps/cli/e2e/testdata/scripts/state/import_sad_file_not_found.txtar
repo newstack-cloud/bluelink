@@ -1,0 +1,17 @@
+# Test state import fails when file does not exist
+
+mkdir state
+! exec bluelink state import --file nonexistent.json --engine-config-file engine.config.json
+stdout 'Import failed'
+stdout 'failed to read input file'
+
+-- bluelink.config.toml --
+# Empty config file to prevent config loading error
+
+-- engine.config.json --
+{
+  "state": {
+    "storage_engine": "memfile",
+    "memfile_state_dir": "./state"
+  }
+}

@@ -1,0 +1,20 @@
+# Test state import fails with invalid JSON file
+
+mkdir state
+! exec bluelink state import --file invalid.json --engine-config-file engine.config.json --json
+stdout '"success": false'
+stdout '"error"'
+
+-- bluelink.config.toml --
+# Empty config file to prevent config loading error
+
+-- engine.config.json --
+{
+  "state": {
+    "storage_engine": "memfile",
+    "memfile_state_dir": "./state"
+  }
+}
+
+-- invalid.json --
+this is not valid json

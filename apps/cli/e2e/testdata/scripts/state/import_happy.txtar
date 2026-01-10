@@ -1,0 +1,20 @@
+# Test state import successfully imports instances from JSON file
+
+mkdir state
+exec bluelink state import --file state.json --engine-config-file engine.config.json
+stdout 'Successfully imported'
+stdout '1'
+
+-- bluelink.config.toml --
+# Empty config file to prevent config loading error
+
+-- engine.config.json --
+{
+  "state": {
+    "storage_engine": "memfile",
+    "memfile_state_dir": "./state"
+  }
+}
+
+-- state.json --
+[{"id":"inst-123","name":"Test Instance","status":2}]

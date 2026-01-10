@@ -211,6 +211,24 @@ func TestScriptsInstances(t *testing.T) {
 	})
 }
 
+// TestScriptsState runs state command test scripts.
+// These tests don't require the deploy engine as they work directly with state backends.
+func TestScriptsState(t *testing.T) {
+	testscript.Run(t, testscript.Params{
+		Dir: "testdata/scripts/state",
+		Setup: func(env *testscript.Env) error {
+			env.Setenv("PATH", filepath.Dir(binaryPath)+":"+env.Getenv("PATH"))
+
+			// Use the absolute path stored during TestMain
+			if coverDir != "" {
+				env.Setenv("GOCOVERDIR", coverDir)
+			}
+
+			return nil
+		},
+	})
+}
+
 // waitForEngine waits for the deploy-engine to be ready by polling its health endpoint.
 // Usage in .txtar: wait_engine [timeout_seconds]
 // Default timeout is 30 seconds.

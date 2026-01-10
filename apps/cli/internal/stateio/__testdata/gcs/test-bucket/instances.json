@@ -1,0 +1,28 @@
+[
+  {
+    "id": "integration-test-001",
+    "name": "Integration Test Instance 1",
+    "status": 2,
+    "lastDeployedTimestamp": 1704067200,
+    "lastDeployAttemptTimestamp": 0,
+    "resourceIds": null,
+    "resources": null,
+    "links": null,
+    "metadata": null,
+    "exports": null,
+    "childBlueprints": null
+  },
+  {
+    "id": "integration-test-002",
+    "name": "Integration Test Instance 2",
+    "status": 2,
+    "lastDeployedTimestamp": 1704067300,
+    "lastDeployAttemptTimestamp": 0,
+    "resourceIds": null,
+    "resources": null,
+    "links": null,
+    "metadata": null,
+    "exports": null,
+    "childBlueprints": null
+  }
+]

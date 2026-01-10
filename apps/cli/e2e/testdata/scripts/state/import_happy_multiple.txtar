@@ -1,0 +1,25 @@
+# Test state import successfully imports multiple instances
+
+mkdir state
+exec bluelink state import --file state.json --engine-config-file engine.config.json --json
+stdout '"success": true'
+stdout '"instancesCount": 3'
+stdout 'Successfully imported 3 instances'
+
+-- bluelink.config.toml --
+# Empty config file to prevent config loading error
+
+-- engine.config.json --
+{
+  "state": {
+    "storage_engine": "memfile",
+    "memfile_state_dir": "./state"
+  }
+}
+
+-- state.json --
+[
+  {"id":"inst-1","name":"Instance One","status":2},
+  {"id":"inst-2","name":"Instance Two","status":2},
+  {"id":"inst-3","name":"Instance Three","status":2}
+]

@@ -1,0 +1,9 @@
+# Test state import with --json fails without --file flag
+
+! exec bluelink state import --json
+stdout '"success": false'
+stdout '"error"'
+stdout '--file is required when --json is set'
+
+-- bluelink.config.toml --
+# Empty config file to prevent config loading error
