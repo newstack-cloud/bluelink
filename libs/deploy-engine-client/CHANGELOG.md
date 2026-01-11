@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.2.0...deploy-engine-client/v0.3.0) (2026-01-11)
+
+
+### Features
+
+* **deploy-engine-client:** add cleanup operation tracking functionality ([86afcff](https://github.com/newstack-cloud/bluelink/commit/86afcffb6ea6f8963473e69696e7916b6bf2bfa4))
+
 ## [0.2.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.1.2...deploy-engine-client/v0.2.0) (2026-01-06)
 
 
