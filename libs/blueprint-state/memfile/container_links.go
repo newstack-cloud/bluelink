@@ -101,12 +101,18 @@ func (c *linksContainerImpl) buildResourceDataMappings(instanceID string) map[st
 	instanceResourceDataMappings := map[string][]string{}
 	for linkID, link := range c.links {
 		if link.InstanceID == instanceID {
+			addedResources := map[string]bool{}
 			for resourceNameFieldPath := range link.ResourceDataMappings {
 				// The resourceNameFieldPath is of the form "resourceName::fieldPath"
 				// where resourceName is the logical name of the resource in the blueprint instance.
 				parts := strings.SplitN(resourceNameFieldPath, "::", 2)
 				if len(parts) == 2 {
 					resourceName := parts[0]
+					// Only add each resource once per link to avoid duplicates.
+					if addedResources[resourceName] {
+						continue
+					}
+					addedResources[resourceName] = true
 					if _, ok := instanceResourceDataMappings[resourceName]; !ok {
 						instanceResourceDataMappings[resourceName] = []string{}
 					}
@@ -114,7 +120,6 @@ func (c *linksContainerImpl) buildResourceDataMappings(instanceID string) map[st
 						instanceResourceDataMappings[resourceName],
 						linkID,
 					)
-					break
 				}
 			}
 		}
