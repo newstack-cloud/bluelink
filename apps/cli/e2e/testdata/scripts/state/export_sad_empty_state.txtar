@@ -1,0 +1,18 @@
+# Test state export with no instances exports empty array
+
+mkdir state
+# Export from empty state - should succeed with 0 instances
+exec bluelink state export --file exported.json --engine-config-file engine.config.json --json
+stdout '"success": true'
+stdout 'exported 0 instances'
+
+-- bluelink.config.toml --
+# Empty config file to prevent config loading error
+
+-- engine.config.json --
+{
+  "state": {
+    "storage_engine": "memfile",
+    "memfile_state_dir": "./state"
+  }
+}

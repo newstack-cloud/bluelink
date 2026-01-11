@@ -31,3 +31,33 @@ func (e *ImportError) Error() string {
 func (e *ImportError) Unwrap() error {
 	return e.Err
 }
+
+// ExportErrorCode represents the type of export error.
+type ExportErrorCode string
+
+const (
+	// ErrCodeExportFailed indicates a general export failure.
+	ErrCodeExportFailed ExportErrorCode = "export_failed"
+	// ErrCodeInstanceNotFound indicates one or more instances were not found.
+	ErrCodeInstanceNotFound ExportErrorCode = "instance_not_found"
+	// ErrCodeRemoteUploadFailed indicates a remote upload failed.
+	ErrCodeRemoteUploadFailed ExportErrorCode = "remote_upload_failed"
+)
+
+// ExportError represents an error that occurred during export.
+type ExportError struct {
+	Code    ExportErrorCode
+	Message string
+	Err     error
+}
+
+func (e *ExportError) Error() string {
+	if e.Err != nil {
+		return fmt.Sprintf("%s: %s: %v", e.Code, e.Message, e.Err)
+	}
+	return fmt.Sprintf("%s: %s", e.Code, e.Message)
+}
+
+func (e *ExportError) Unwrap() error {
+	return e.Err
+}

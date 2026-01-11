@@ -1,0 +1,29 @@
+# Test state export with --instances filter exports specific instances
+
+mkdir state
+# First import multiple instances
+exec bluelink state import --file input.json --engine-config-file engine.config.json
+stdout 'Successfully imported'
+stdout '2'
+
+# Export only one specific instance by ID
+exec bluelink state export --file exported.json --instances inst-123 --engine-config-file engine.config.json --json
+stdout '"success": true'
+stdout '"instancesCount": 1'
+
+-- bluelink.config.toml --
+# Empty config file to prevent config loading error
+
+-- engine.config.json --
+{
+  "state": {
+    "storage_engine": "memfile",
+    "memfile_state_dir": "./state"
+  }
+}
+
+-- input.json --
+[
+  {"id":"inst-123","name":"Instance One","status":2},
+  {"id":"inst-456","name":"Instance Two","status":2}
+]

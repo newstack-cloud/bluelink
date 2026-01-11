@@ -1,0 +1,26 @@
+# Test state export fails when instance is not found
+
+mkdir state
+# First import one instance
+exec bluelink state import --file input.json --engine-config-file engine.config.json --json
+stdout '"success": true'
+
+# Try to export a non-existent instance
+! exec bluelink state export --file exported.json --instances nonexistent-instance --engine-config-file engine.config.json --json
+stdout '"success": false'
+stdout '"error"'
+stdout 'not found'
+
+-- bluelink.config.toml --
+# Empty config file to prevent config loading error
+
+-- engine.config.json --
+{
+  "state": {
+    "storage_engine": "memfile",
+    "memfile_state_dir": "./state"
+  }
+}
+
+-- input.json --
+[{"id":"inst-123","name":"Test Instance","status":2}]

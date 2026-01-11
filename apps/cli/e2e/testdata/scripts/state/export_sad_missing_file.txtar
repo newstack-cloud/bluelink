@@ -1,0 +1,8 @@
+# Test state export fails in headless mode without --file flag
+
+! exec bluelink state export
+stderr 'file'
+stderr 'non-interactive'
+
+-- bluelink.config.toml --
+# Empty config file to prevent config loading error

@@ -268,3 +268,147 @@ func parseAzureBlobPath(pathWithoutScheme string) (container, blob string, err e
 	}
 	return parts[0], parts[1], nil
 }
+
+// RemoteUploadOptions contains options for uploading files to remote storage.
+type RemoteUploadOptions struct {
+	// S3Endpoint overrides the default S3 endpoint (useful for testing with LocalStack).
+	S3Endpoint string
+	// S3UsePathStyle enables path-style addressing for S3 (required for LocalStack).
+	S3UsePathStyle bool
+	// GCSEndpoint overrides the default GCS endpoint (useful for testing with fake-gcs-server).
+	GCSEndpoint string
+	// AzureConnectionString is the connection string for Azure Blob Storage.
+	// If empty, DefaultAzureCredential will be used.
+	AzureConnectionString string
+}
+
+// UploadRemoteFile uploads a file to a remote storage location.
+// Supports s3://, gcs://, and azureblob:// URL schemes.
+func UploadRemoteFile(ctx context.Context, filePath string, data []byte, opts *RemoteUploadOptions) error {
+	if opts == nil {
+		opts = &RemoteUploadOptions{}
+	}
+
+	source := shared.BlueprintSourceFromPath(filePath)
+	switch source {
+	case consts.BlueprintSourceS3:
+		return uploadToS3(ctx, filePath, data, opts)
+	case consts.BlueprintSourceGCS:
+		return uploadToGCS(ctx, filePath, data, opts)
+	case consts.BlueprintSourceAzureBlob:
+		return uploadToAzureBlob(ctx, filePath, data, opts)
+	default:
+		return &ExportError{
+			Code:    ErrCodeRemoteUploadFailed,
+			Message: fmt.Sprintf("unsupported remote source type for path: %s", filePath),
+		}
+	}
+}
+
+func uploadToS3(ctx context.Context, filePath string, data []byte, opts *RemoteUploadOptions) error {
+	pathWithoutScheme := shared.StripObjectStorageScheme(filePath, "s3")
+	bucket, key, err := parseS3Path(pathWithoutScheme)
+	if err != nil {
+		return err
+	}
+
+	configOpts := []func(*awsconfig.LoadOptions) error{}
+	if opts.S3Endpoint != "" {
+		configOpts = append(configOpts, awsconfig.WithRegion("us-east-1"))
+	}
+
+	conf, err := awsconfig.LoadDefaultConfig(ctx, configOpts...)
+	if err != nil {
+		return &ExportError{
+			Code:    ErrCodeRemoteUploadFailed,
+			Message: "failed to load AWS config",
+			Err:     err,
+		}
+	}
+
+	client := createS3Client(conf, opts.S3Endpoint, opts.S3UsePathStyle)
+	contentType := "application/json"
+	_, err = client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      &bucket,
+		Key:         &key,
+		Body:        bytes.NewReader(data),
+		ContentType: &contentType,
+	})
+	if err != nil {
+		return &ExportError{
+			Code:    ErrCodeRemoteUploadFailed,
+			Message: "failed to upload to S3",
+			Err:     err,
+		}
+	}
+
+	return nil
+}
+
+func uploadToGCS(ctx context.Context, filePath string, data []byte, opts *RemoteUploadOptions) error {
+	pathWithoutScheme := shared.StripObjectStorageScheme(filePath, "gcs")
+	bucket, object, err := parseGCSPath(pathWithoutScheme)
+	if err != nil {
+		return err
+	}
+
+	client, err := createGCSClient(ctx, opts.GCSEndpoint)
+	if err != nil {
+		return &ExportError{
+			Code:    ErrCodeRemoteUploadFailed,
+			Message: "failed to create GCS client",
+			Err:     err,
+		}
+	}
+	defer client.Close()
+
+	writer := client.Bucket(bucket).Object(object).NewWriter(ctx)
+	writer.ContentType = "application/json"
+
+	if _, err := writer.Write(data); err != nil {
+		writer.Close()
+		return &ExportError{
+			Code:    ErrCodeRemoteUploadFailed,
+			Message: "failed to write to GCS",
+			Err:     err,
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		return &ExportError{
+			Code:    ErrCodeRemoteUploadFailed,
+			Message: "failed to close GCS writer",
+			Err:     err,
+		}
+	}
+
+	return nil
+}
+
+func uploadToAzureBlob(ctx context.Context, filePath string, data []byte, opts *RemoteUploadOptions) error {
+	pathWithoutScheme := shared.StripObjectStorageScheme(filePath, "azureblob")
+	container, blobPath, err := parseAzureBlobPath(pathWithoutScheme)
+	if err != nil {
+		return err
+	}
+
+	client, err := createAzureBlobClient(opts.AzureConnectionString)
+	if err != nil {
+		return &ExportError{
+			Code:    ErrCodeRemoteUploadFailed,
+			Message: "failed to create Azure Blob client",
+			Err:     err,
+		}
+	}
+
+	_, err = client.UploadBuffer(ctx, container, blobPath, data, nil)
+	if err != nil {
+		return &ExportError{
+			Code:    ErrCodeRemoteUploadFailed,
+			Message: "failed to upload to Azure Blob Storage",
+			Err:     err,
+		}
+	}
+
+	return nil
+}

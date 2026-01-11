@@ -1,0 +1,27 @@
+# Test state export with --json outputs JSON success
+
+mkdir state
+# First import some state to export
+exec bluelink state import --file input.json --engine-config-file engine.config.json --json
+stdout '"success": true'
+
+# Now export with JSON output
+exec bluelink state export --file exported.json --engine-config-file engine.config.json --json
+stdout '"success": true'
+stdout '"mode": "export"'
+stdout '"instancesCount": 1'
+stdout 'Successfully exported'
+
+-- bluelink.config.toml --
+# Empty config file to prevent config loading error
+
+-- engine.config.json --
+{
+  "state": {
+    "storage_engine": "memfile",
+    "memfile_state_dir": "./state"
+  }
+}
+
+-- input.json --
+[{"id":"inst-456","name":"JSON Mode Test","status":2}]

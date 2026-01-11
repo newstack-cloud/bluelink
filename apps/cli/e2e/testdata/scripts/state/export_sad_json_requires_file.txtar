@@ -1,0 +1,9 @@
+# Test state export with --json fails without --file
+
+! exec bluelink state export --json
+stdout '"success": false'
+stdout '"error"'
+stdout '--file is required'
+
+-- bluelink.config.toml --
+# Empty config file to prevent config loading error

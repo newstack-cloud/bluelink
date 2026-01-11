@@ -54,6 +54,15 @@ func (s *StateCommandSuite) Test_import_subcommand_exists() {
 	s.Equal("import", importCmd.Name())
 }
 
+func (s *StateCommandSuite) Test_export_subcommand_exists() {
+	rootCmd := NewRootCmd()
+	exportCmd, _, err := rootCmd.Find([]string{"state", "export"})
+
+	s.Require().NoError(err)
+	s.NotNil(exportCmd)
+	s.Equal("export", exportCmd.Name())
+}
+
 // Flag tests
 
 func (s *StateCommandSuite) Test_import_has_file_flag() {
@@ -79,6 +88,42 @@ func (s *StateCommandSuite) Test_import_has_engine_config_file_flag() {
 	importCmd, _, _ := rootCmd.Find([]string{"state", "import"})
 
 	flag := importCmd.Flag("engine-config-file")
+	s.NotNil(flag)
+	s.Equal("", flag.DefValue)
+}
+
+func (s *StateCommandSuite) Test_export_has_file_flag() {
+	rootCmd := NewRootCmd()
+	exportCmd, _, _ := rootCmd.Find([]string{"state", "export"})
+
+	flag := exportCmd.Flag("file")
+	s.NotNil(flag)
+	s.Equal("", flag.DefValue)
+}
+
+func (s *StateCommandSuite) Test_export_has_instances_flag() {
+	rootCmd := NewRootCmd()
+	exportCmd, _, _ := rootCmd.Find([]string{"state", "export"})
+
+	flag := exportCmd.Flag("instances")
+	s.NotNil(flag)
+	s.Equal("", flag.DefValue)
+}
+
+func (s *StateCommandSuite) Test_export_has_json_flag() {
+	rootCmd := NewRootCmd()
+	exportCmd, _, _ := rootCmd.Find([]string{"state", "export"})
+
+	flag := exportCmd.Flag("json")
+	s.NotNil(flag)
+	s.Equal("false", flag.DefValue)
+}
+
+func (s *StateCommandSuite) Test_export_has_engine_config_file_flag() {
+	rootCmd := NewRootCmd()
+	exportCmd, _, _ := rootCmd.Find([]string{"state", "export"})
+
+	flag := exportCmd.Flag("engine-config-file")
 	s.NotNil(flag)
 	s.Equal("", flag.DefValue)
 }
@@ -110,6 +155,34 @@ func (s *StateCommandSuite) Test_import_help_contains_usage_info() {
 	s.Contains(output, "s3://")
 	s.Contains(output, "gcs://")
 	s.Contains(output, "azureblob://")
+}
+
+func (s *StateCommandSuite) Test_export_help_contains_usage_info() {
+	rootCmd := NewRootCmd()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{"state", "export", "--help"})
+
+	rootCmd.Execute()
+	output := buf.String()
+	s.Contains(output, "bluelink state export")
+	s.Contains(output, "--file")
+	s.Contains(output, "--instances")
+	s.Contains(output, "s3://")
+	s.Contains(output, "gcs://")
+	s.Contains(output, "azureblob://")
+}
+
+func (s *StateCommandSuite) Test_state_help_lists_export_subcommand() {
+	rootCmd := NewRootCmd()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{"state", "--help"})
+
+	rootCmd.Execute()
+	output := buf.String()
+	s.Contains(output, "export")
+	s.Contains(output, "import")
 }
 
 func TestStateCommandSuite(t *testing.T) {
