@@ -3,6 +3,9 @@ package stateio
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
@@ -40,13 +43,38 @@ func (e *ContainerStateExporter) ExportInstances(
 
 	instances, err := e.container.Instances().GetBatch(ctx, instanceFilters)
 	if err != nil {
-		return nil, &ExportError{
+		return nil, createInstanceNotFoundError(err)
+	}
+	return instances, nil
+}
+
+func createInstanceNotFoundError(err error) *ExportError {
+	var notFoundErr *state.InstancesNotFoundError
+	if errors.As(err, &notFoundErr) {
+		return &ExportError{
 			Code:    ErrCodeInstanceNotFound,
-			Message: err.Error(),
+			Message: formatMissingInstancesMessage(notFoundErr.MissingIDsOrNames),
 			Err:     err,
 		}
 	}
-	return instances, nil
+
+	return &ExportError{
+		Code:    ErrCodeInstanceNotFound,
+		Message: "one or more instances not found",
+		Err:     err,
+	}
+}
+
+func formatMissingInstancesMessage(missing []string) string {
+	if len(missing) == 1 {
+		return fmt.Sprintf("instance %q not found", missing[0])
+	}
+
+	quoted := make([]string, len(missing))
+	for i, m := range missing {
+		quoted[i] = fmt.Sprintf("%q", m)
+	}
+	return fmt.Sprintf("instances not found: %s", strings.Join(quoted, ", "))
 }
 
 func (e *ContainerStateExporter) exportAllInstances(ctx context.Context) ([]state.InstanceState, error) {

@@ -1,6 +1,7 @@
 package jsonout
 
 import (
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/stateio"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	engineerrors "github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 	"github.com/newstack-cloud/deploy-cli-sdk/headless"
@@ -21,6 +22,28 @@ func NewErrorOutput(err error) ErrorOutput {
 	// Handle other client errors
 	if clientErr, ok := err.(*engineerrors.ClientError); ok {
 		return newClientErrorOutput(clientErr)
+	}
+
+	// Handle stateio export errors
+	if exportErr, ok := err.(*stateio.ExportError); ok {
+		return ErrorOutput{
+			Success: false,
+			Error: ErrorDetail{
+				Type:    string(exportErr.Code),
+				Message: exportErr.Message,
+			},
+		}
+	}
+
+	// Handle stateio import errors
+	if importErr, ok := err.(*stateio.ImportError); ok {
+		return ErrorOutput{
+			Success: false,
+			Error: ErrorDetail{
+				Type:    string(importErr.Code),
+				Message: importErr.Message,
+			},
+		}
 	}
 
 	// Generic error

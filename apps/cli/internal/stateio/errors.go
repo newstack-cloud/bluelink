@@ -39,7 +39,7 @@ const (
 	// ErrCodeExportFailed indicates a general export failure.
 	ErrCodeExportFailed ExportErrorCode = "export_failed"
 	// ErrCodeInstanceNotFound indicates one or more instances were not found.
-	ErrCodeInstanceNotFound ExportErrorCode = "instance_not_found"
+	ErrCodeInstanceNotFound ExportErrorCode = "not_found"
 	// ErrCodeRemoteUploadFailed indicates a remote upload failed.
 	ErrCodeRemoteUploadFailed ExportErrorCode = "remote_upload_failed"
 )
@@ -52,9 +52,6 @@ type ExportError struct {
 }
 
 func (e *ExportError) Error() string {
-	if e.Err != nil {
-		return fmt.Sprintf("%s: %s: %v", e.Code, e.Message, e.Err)
-	}
 	return fmt.Sprintf("%s: %s", e.Code, e.Message)
 }
 
