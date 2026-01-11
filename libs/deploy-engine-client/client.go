@@ -404,14 +404,14 @@ func (c *Client) handleValidationStreamEvents(
 // This is the `POST {baseURL}/v1/validations/cleanup` API endpoint.
 func (c *Client) CleanupBlueprintValidations(
 	ctx context.Context,
-) error {
-	return c.cleanupResources(
-		ctx,
-		fmt.Sprintf(
-			"%s/v1/validations/cleanup",
-			c.endpoint,
-		),
-	)
+) (*manage.CleanupOperation, error) {
+	url := fmt.Sprintf("%s/v1/validations/cleanup", c.endpoint)
+	resp := &types.CleanupOperationResponse{}
+	err := c.startCleanupOperation(ctx, url, resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Data, nil
 }
 
 // CreateChangeset creates a change set for a blueprint deployment.
@@ -568,14 +568,14 @@ func (c *Client) handleChangeStagingStreamEvents(
 // This is the `POST {baseURL}/v1/deployments/changes/cleanup` API endpoint.
 func (c *Client) CleanupChangesets(
 	ctx context.Context,
-) error {
-	return c.cleanupResources(
-		ctx,
-		fmt.Sprintf(
-			"%s/v1/deployments/changes/cleanup",
-			c.endpoint,
-		),
-	)
+) (*manage.CleanupOperation, error) {
+	url := fmt.Sprintf("%s/v1/deployments/changes/cleanup", c.endpoint)
+	resp := &types.CleanupOperationResponse{}
+	err := c.startCleanupOperation(ctx, url, resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Data, nil
 }
 
 // CreateBlueprintInstance (Deploy New) creates a new blueprint deployment instance.
@@ -888,14 +888,14 @@ func (c *Client) handleBlueprintInstanceStreamEvents(
 // This is the `POST {baseURL}/v1/events/cleanup` API endpoint.
 func (c *Client) CleanupEvents(
 	ctx context.Context,
-) error {
-	return c.cleanupResources(
-		ctx,
-		fmt.Sprintf(
-			"%s/v1/events/cleanup",
-			c.endpoint,
-		),
-	)
+) (*manage.CleanupOperation, error) {
+	url := fmt.Sprintf("%s/v1/events/cleanup", c.endpoint)
+	resp := &types.CleanupOperationResponse{}
+	err := c.startCleanupOperation(ctx, url, resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Data, nil
 }
 
 // CheckReconciliation checks for drift and interrupted state in a blueprint instance.
@@ -970,48 +970,112 @@ func (c *Client) ApplyReconciliation(
 // This is the `POST {baseURL}/v1/deployments/reconciliation-results/cleanup` API endpoint.
 func (c *Client) CleanupReconciliationResults(
 	ctx context.Context,
-) error {
-	return c.cleanupResources(
-		ctx,
-		fmt.Sprintf(
-			"%s/v1/deployments/reconciliation-results/cleanup",
-			c.endpoint,
-		),
-	)
+) (*manage.CleanupOperation, error) {
+	url := fmt.Sprintf("%s/v1/deployments/reconciliation-results/cleanup", c.endpoint)
+	resp := &types.CleanupOperationResponse{}
+	err := c.startCleanupOperation(ctx, url, resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Data, nil
 }
 
-func (c *Client) cleanupResources(
+// GetCleanupOperation retrieves the status of a cleanup operation by ID.
+// This is used to poll the status of an asynchronous cleanup operation.
+func (c *Client) GetCleanupOperation(
+	ctx context.Context,
+	cleanupType manage.CleanupType,
+	operationID string,
+) (*manage.CleanupOperation, error) {
+	url := c.cleanupStatusURL(cleanupType, operationID)
+	if url == "" {
+		return nil, createRequestPrepError("invalid cleanup type")
+	}
+
+	result := &manage.CleanupOperation{}
+	err := c.getResource(ctx, url, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (c *Client) cleanupStatusURL(cleanupType manage.CleanupType, operationID string) string {
+	switch cleanupType {
+	case manage.CleanupTypeEvents:
+		return fmt.Sprintf("%s/v1/events/cleanup/%s", c.endpoint, operationID)
+	case manage.CleanupTypeValidations:
+		return fmt.Sprintf("%s/v1/validations/cleanup/%s", c.endpoint, operationID)
+	case manage.CleanupTypeChangesets:
+		return fmt.Sprintf("%s/v1/deployments/changes/cleanup/%s", c.endpoint, operationID)
+	case manage.CleanupTypeReconciliationResults:
+		return fmt.Sprintf("%s/v1/deployments/reconciliation-results/cleanup/%s", c.endpoint, operationID)
+	default:
+		return ""
+	}
+}
+
+// WaitForCleanupCompletion polls until the cleanup operation completes or fails.
+// The pollInterval parameter controls how often the status is checked.
+// Returns the final operation state when status is no longer "running".
+func (c *Client) WaitForCleanupCompletion(
+	ctx context.Context,
+	cleanupType manage.CleanupType,
+	operationID string,
+	pollInterval time.Duration,
+) (*manage.CleanupOperation, error) {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		op, err := c.GetCleanupOperation(ctx, cleanupType, operationID)
+		if err != nil {
+			return nil, err
+		}
+
+		if op.Status != manage.CleanupOperationStatusRunning {
+			return op, nil
+		}
+
+		time.Sleep(pollInterval)
+	}
+}
+
+func (c *Client) startCleanupOperation(
 	ctx context.Context,
 	url string,
+	respTarget any,
 ) error {
 	headers, err := c.prepareAuthHeaders()
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(
-		ctx, "POST", url, nil,
-	)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, nil)
 	if err != nil {
 		return createRequestPrepError(
-			fmt.Sprintf(
-				"failed to prepare request: %s",
-				err.Error(),
-			),
+			fmt.Sprintf("failed to prepare request: %s", err.Error()),
 		)
 	}
 	attachHeaders(req, headers)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return createRequestError(
-			err,
-		)
+		return createRequestError(err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusAccepted {
 		return createClientError(resp)
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(respTarget); err != nil {
+		return createDeserialiseError(
+			fmt.Sprintf("failed to decode response: %s", err.Error()),
+		)
 	}
 
 	return nil

@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
@@ -87,6 +88,11 @@ func CreateDeployEngineServer(
 	).Methods("POST")
 
 	router.HandleFunc(
+		"/v1/validations/cleanup/{id}",
+		ctrl.getCleanupStatusHandler(manage.CleanupTypeValidations),
+	).Methods("GET")
+
+	router.HandleFunc(
 		"/v1/deployments/changes",
 		ctrl.createChangesetHandler,
 	).Methods("POST")
@@ -105,6 +111,11 @@ func CreateDeployEngineServer(
 		"/v1/deployments/changes/cleanup",
 		ctrl.cleanupChangesetsHandler,
 	).Methods("POST")
+
+	router.HandleFunc(
+		"/v1/deployments/changes/cleanup/{id}",
+		ctrl.getCleanupStatusHandler(manage.CleanupTypeChangesets),
+	).Methods("GET")
 
 	router.HandleFunc(
 		"/v1/deployments/instances",
@@ -142,6 +153,11 @@ func CreateDeployEngineServer(
 	).Methods("POST")
 
 	router.HandleFunc(
+		"/v1/events/cleanup/{id}",
+		ctrl.getCleanupStatusHandler(manage.CleanupTypeEvents),
+	).Methods("GET")
+
+	router.HandleFunc(
 		"/v1/deployments/instances/{id}/reconciliation/check",
 		ctrl.checkReconciliationHandler,
 	).Methods("POST")
@@ -155,6 +171,11 @@ func CreateDeployEngineServer(
 		"/v1/deployments/reconciliation-results/cleanup",
 		ctrl.cleanupReconciliationResultsHandler,
 	).Methods("POST")
+
+	router.HandleFunc(
+		"/v1/deployments/reconciliation-results/cleanup/{id}",
+		ctrl.getCleanupStatusHandler(manage.CleanupTypeReconciliationResults),
+	).Methods("GET")
 
 	if serverConfig.UseUnixDomainSocket {
 		return NewUnixDomainSocketServer(
@@ -274,9 +295,7 @@ func (c *stubDeployEngineController) cleanupBlueprintValidationsHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusAccepted)
-	w.Write([]byte(`{"message":"Cleanup started"}`))
+	c.writeCleanupOperationResponse(w, manage.CleanupTypeValidations)
 }
 
 func (c *stubDeployEngineController) createChangesetHandler(
@@ -586,27 +605,74 @@ func (c *stubDeployEngineController) cleanupChangesetsHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusAccepted)
-	w.Write([]byte(`{"message":"Cleanup started"}`))
+	c.writeCleanupOperationResponse(w, manage.CleanupTypeChangesets)
 }
 
 func (c *stubDeployEngineController) cleanupEventsHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusAccepted)
-	w.Write([]byte(`{"message":"Cleanup started"}`))
+	c.writeCleanupOperationResponse(w, manage.CleanupTypeEvents)
 }
 
 func (c *stubDeployEngineController) cleanupReconciliationResultsHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	c.writeCleanupOperationResponse(w, manage.CleanupTypeReconciliationResults)
+}
+
+func (c *stubDeployEngineController) writeCleanupOperationResponse(
+	w http.ResponseWriter,
+	cleanupType manage.CleanupType,
+) {
+	operation := &manage.CleanupOperation{
+		ID:            "test-cleanup-operation-id",
+		CleanupType:   cleanupType,
+		Status:        manage.CleanupOperationStatusRunning,
+		StartedAt:     c.clock.Now().Unix(),
+		ThresholdDate: c.clock.Now().Add(-7 * 24 * time.Hour).Unix(),
+	}
+
+	response := map[string]any{
+		"data": operation,
+	}
+
+	respBytes, _ := json.Marshal(response)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	w.Write([]byte(`{"message":"Cleanup started"}`))
+	w.Write(respBytes)
+}
+
+func (c *stubDeployEngineController) getCleanupStatusHandler(
+	cleanupType manage.CleanupType,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		id := vars["id"]
+
+		exitEarly := c.handleIDErrorTriggers(w, id, http.StatusOK)
+		if exitEarly {
+			return
+		}
+
+		operation := &manage.CleanupOperation{
+			ID:            id,
+			CleanupType:   cleanupType,
+			Status:        manage.CleanupOperationStatusCompleted,
+			StartedAt:     c.clock.Now().Add(-1 * time.Minute).Unix(),
+			EndedAt:       c.clock.Now().Unix(),
+			ItemsDeleted:  42,
+			ThresholdDate: c.clock.Now().Add(-7 * 24 * time.Hour).Unix(),
+		}
+
+		respBytes, _ := json.Marshal(operation)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(respBytes)
+	}
 }
 
 func (c *stubDeployEngineController) checkReconciliationHandler(

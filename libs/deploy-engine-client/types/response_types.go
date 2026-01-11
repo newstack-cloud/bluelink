@@ -34,3 +34,9 @@ type BlueprintInstanceResponse struct {
 	// Data contains the InstanceState.
 	Data state.InstanceState `json:"data"`
 }
+
+// CleanupOperationResponse wraps a CleanupOperation for async cleanup tracking.
+type CleanupOperationResponse struct {
+	// Data contains the CleanupOperation.
+	Data *manage.CleanupOperation `json:"data"`
+}

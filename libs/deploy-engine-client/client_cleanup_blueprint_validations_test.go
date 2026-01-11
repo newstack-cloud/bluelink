@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 )
 
@@ -27,10 +28,12 @@ func (s *ClientSuite) Test_cleanup_blueprint_validations() {
 	)
 	s.Require().NoError(err)
 
-	err = client.CleanupBlueprintValidations(
-		context.Background(),
-	)
+	operation, err := client.CleanupBlueprintValidations(context.Background())
 	s.Require().NoError(err)
+
+	s.Assert().Equal("test-cleanup-operation-id", operation.ID)
+	s.Assert().Equal(manage.CleanupTypeValidations, operation.CleanupType)
+	s.Assert().Equal(manage.CleanupOperationStatusRunning, operation.Status)
 }
 
 func (s *ClientSuite) Test_cleanup_blueprint_validations_fails_for_unauthorised_client() {
@@ -42,20 +45,12 @@ func (s *ClientSuite) Test_cleanup_blueprint_validations_fails_for_unauthorised_
 	)
 	s.Require().NoError(err)
 
-	err = client.CleanupBlueprintValidations(
-		context.Background(),
-	)
+	_, err = client.CleanupBlueprintValidations(context.Background())
 	s.Require().Error(err)
 
 	clientErr, isClientErr := err.(*errors.ClientError)
 	s.Require().True(isClientErr)
 
-	s.Assert().Equal(
-		http.StatusUnauthorized,
-		clientErr.StatusCode,
-	)
-	s.Assert().Equal(
-		"Unauthorized",
-		clientErr.Message,
-	)
+	s.Assert().Equal(http.StatusUnauthorized, clientErr.StatusCode)
+	s.Assert().Equal("Unauthorized", clientErr.Message)
 }
