@@ -62,6 +62,11 @@ type InstancesContainer interface {
 	// This is optimized for bulk operations such as state import where many instances
 	// need to be saved at once. Implementations should use batch operations where possible.
 	SaveBatch(ctx context.Context, instances []InstanceState) error
+	// GetBatch retrieves multiple instances by their IDs or names efficiently.
+	// Each identifier can be either an instance ID or an instance name.
+	// Returns instances in the same order as the input identifiers.
+	// Returns an error if any instance is not found.
+	GetBatch(ctx context.Context, instanceIDsOrNames []string) ([]InstanceState, error)
 	// UpdateStatus deals with updating the status of the latest blueprint
 	// instance deployment.
 	UpdateStatus(

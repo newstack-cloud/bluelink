@@ -262,6 +262,43 @@ func (c *memoryInstancesContainer) List(
 	}, nil
 }
 
+func (c *memoryInstancesContainer) GetBatch(
+	ctx context.Context,
+	instanceIDsOrNames []string,
+) ([]state.InstanceState, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	instances := make([]state.InstanceState, 0, len(instanceIDsOrNames))
+	var missing []string
+	for _, idOrName := range instanceIDsOrNames {
+		instance := c.findByIDOrName(idOrName)
+		if instance == nil {
+			missing = append(missing, idOrName)
+			continue
+		}
+		instances = append(instances, copyInstance(instance, instance.InstanceID))
+	}
+
+	if len(missing) > 0 {
+		return nil, state.NewInstancesNotFoundError(missing)
+	}
+
+	return instances, nil
+}
+
+func (c *memoryInstancesContainer) findByIDOrName(idOrName string) *state.InstanceState {
+	if inst, ok := c.instances[idOrName]; ok {
+		return inst
+	}
+	if instanceID, ok := c.instanceNameIDLookup[idOrName]; ok {
+		if inst, ok := c.instances[instanceID]; ok {
+			return inst
+		}
+	}
+	return nil
+}
+
 type memoryResourcesContainer struct {
 	instances     map[string]*state.InstanceState
 	resources     map[string]*state.ResourceState

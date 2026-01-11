@@ -116,3 +116,30 @@ func IsExportNotFound(err error) bool {
 	}
 	return false
 }
+
+// InstancesNotFoundError represents an error when multiple instances
+// could not be found by their IDs or names.
+type InstancesNotFoundError struct {
+	MissingIDsOrNames []string
+}
+
+func (e *InstancesNotFoundError) Error() string {
+	if len(e.MissingIDsOrNames) == 1 {
+		return fmt.Sprintf("StateError: instance %q not found", e.MissingIDsOrNames[0])
+	}
+	return fmt.Sprintf("StateError: instances not found: %v", e.MissingIDsOrNames)
+}
+
+// NewInstancesNotFoundError creates a new error for when multiple
+// instances could not be found.
+func NewInstancesNotFoundError(missingIDsOrNames []string) *InstancesNotFoundError {
+	return &InstancesNotFoundError{
+		MissingIDsOrNames: missingIDsOrNames,
+	}
+}
+
+// IsInstancesNotFound checks if the provided error is an instances not found error.
+func IsInstancesNotFound(err error) bool {
+	_, ok := err.(*InstancesNotFoundError)
+	return ok
+}
