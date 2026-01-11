@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.38.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.37.0...blueprint/v0.38.0) (2026-01-11)
+
+
+### Features
+
+* **blueprint:** add method to get batch of instances for list of ids or names ([2321597](https://github.com/newstack-cloud/bluelink/commit/2321597d8d048c4a753d2e190c8101ea7f8021a5))
+* **blueprint:** add support for saving blueprint instances in batches ([ef2e18b](https://github.com/newstack-cloud/bluelink/commit/ef2e18b97c85481766773f68ef3a04ddbc0fe47b))
+
 ## [0.37.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.36.4...blueprint/v0.37.0) (2026-01-06)
 
 
