@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.2.0](https://github.com/newstack-cloud/bluelink/compare/cli/v0.1.1...cli/v0.2.0) (2026-01-11)
+
+
+### Features
+
+* **cli:** add command to export blueprint instances ([df4a34f](https://github.com/newstack-cloud/bluelink/commit/df4a34f866ce6944290f89dd588aadca2c376672))
+* **cli:** add command to import instance state from a json file ([e2a3ee7](https://github.com/newstack-cloud/bluelink/commit/e2a3ee740bfcc77339a8dd3adaf0597d80612989))
+* **cli:** add command to inspect a blueprint instance ([b2a4c29](https://github.com/newstack-cloud/bluelink/commit/b2a4c29fb692433f22606b50e866cbf3b7ba8cce))
+* **cli:** add command to list and search blueprint instances ([9e9a76b](https://github.com/newstack-cloud/bluelink/commit/9e9a76b5c69d7969d1928aff2e2bc852160f0657))
+* **cli:** add complete implementation of init command ([21ffb36](https://github.com/newstack-cloud/bluelink/commit/21ffb361578f6214e4656e4f41cfb0386a50156e))
+* **cli:** add feature complete deploy command ([1bd4f02](https://github.com/newstack-cloud/bluelink/commit/1bd4f02a527be48109c347277eb67c17e7049f5a))
+* **cli:** add feature complete stage command ([ccc6460](https://github.com/newstack-cloud/bluelink/commit/ccc6460032395669427ed57968ff6d0b0ade8ae0))
+* **cli:** add fully functioning destroy command ([93849b5](https://github.com/newstack-cloud/bluelink/commit/93849b5b098d9cbdf9cbd43a3b15a683708e5e9b))
+* **cli:** add stage command for change staging ([8c118ae](https://github.com/newstack-cloud/bluelink/commit/8c118aed001cc1f802076c0180e93c501460a9ed))
+
+
+### Bug Fixes
+
+* **blueprint:** improve failure handling for deployment orchestration ([3bedabc](https://github.com/newstack-cloud/bluelink/commit/3bedabcc1107edb05f1a71b3b4e2e9a1f974bd98))
+* **cli:** add correction to not found json output for export command ([f5a318e](https://github.com/newstack-cloud/bluelink/commit/f5a318e3323f454ed3785c35d95d92273d468234))
+* **cli:** add fixes for passing through blueprint files from remote sources ([2a0db3f](https://github.com/newstack-cloud/bluelink/commit/2a0db3fc0a885dbb2308ae27f84272a3fedc0674))
+* **cli:** add missing options in interactive prompt form for the stage command ([e43cb30](https://github.com/newstack-cloud/bluelink/commit/e43cb3002ed42e34892098ba085e1c6030a5f20e))
+* **cli:** address security hotspot by using absolute path for git binary ([5a96d96](https://github.com/newstack-cloud/bluelink/commit/5a96d964202855feec7ea160320fcdb66bc6e866))
+
+
+### Dependencies
+
+* **cli:** bump the go-deps group in /apps/cli with 8 updates ([0719ebf](https://github.com/newstack-cloud/bluelink/commit/0719ebfaa6732ea62acfac2dad5712c019b5da59))
+* **cli:** update bluelink libs ([e9e3ccc](https://github.com/newstack-cloud/bluelink/commit/e9e3ccc259936852242d2f7ac2c409f553fa75c1))
+
 ## [0.1.1](https://github.com/newstack-cloud/bluelink/compare/cli/v0.1.0...cli/v0.1.1) (2025-12-03)
 
 
