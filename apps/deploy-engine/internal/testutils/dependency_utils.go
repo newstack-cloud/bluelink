@@ -8,6 +8,7 @@ func CopyDependencies(deps *typesv1.Dependencies) *typesv1.Dependencies {
 		ValidationStore:            deps.ValidationStore,
 		ChangesetStore:             deps.ChangesetStore,
 		ReconciliationResultsStore: deps.ReconciliationResultsStore,
+		CleanupOperationsStore:     deps.CleanupOperationsStore,
 		Instances:                  deps.Instances,
 		Exports:                    deps.Exports,
 		IDGenerator:                deps.IDGenerator,

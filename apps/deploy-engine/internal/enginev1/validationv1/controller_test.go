@@ -55,6 +55,9 @@ func (s *ControllerTestSuite) SetupTest() {
 		ChangesetStore: testutils.NewMockChangesetStore(
 			map[string]*manage.Changeset{},
 		),
+		CleanupOperationsStore: testutils.NewMockCleanupOperationsStore(
+			map[string]*manage.CleanupOperation{},
+		),
 		Instances:         stateContainer.Instances(),
 		Exports:           stateContainer.Exports(),
 		IDGenerator:       core.NewUUIDGenerator(),

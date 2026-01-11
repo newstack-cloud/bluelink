@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
@@ -241,27 +242,52 @@ func (c *Controller) CleanupChangesetsHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	// Carry out the cleanup process in a separate goroutine
-	// to avoid blocking the request,
-	// general clean up should be a task that a client can trigger
-	// but not need to wait for.
-	go c.cleanupChangesets()
+	operationID, err := c.idGenerator.GenerateID()
+	if err != nil {
+		c.logger.Debug(
+			"failed to generate cleanup operation ID",
+			core.ErrorLogField("error", err),
+		)
+		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
+		return
+	}
+
+	cleanupBefore := c.clock.Now().Add(-c.changesetRetentionPeriod)
+
+	operation := &manage.CleanupOperation{
+		ID:            operationID,
+		CleanupType:   manage.CleanupTypeChangesets,
+		Status:        manage.CleanupOperationStatusRunning,
+		StartedAt:     c.clock.Now().Unix(),
+		ThresholdDate: cleanupBefore.Unix(),
+	}
+
+	if err := c.cleanupOperationsStore.Save(r.Context(), operation); err != nil {
+		c.logger.Debug(
+			"failed to save cleanup operation",
+			core.ErrorLogField("error", err),
+		)
+		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
+		return
+	}
+
+	// Copy the operation for the response to avoid data race between
+	// json.Marshal and the goroutine modifying the original.
+	responseCopy := *operation
+
+	go c.cleanupChangesets(operation)
 
 	httputils.HTTPJSONResponse(
 		w,
 		http.StatusAccepted,
-		&helpersv1.MessageResponse{
-			Message: "Cleanup started",
+		&helpersv1.AsyncOperationResponse[*manage.CleanupOperation]{
+			Data: &responseCopy,
 		},
 	)
 }
 
-func (c *Controller) cleanupChangesets() {
+func (c *Controller) cleanupChangesets(operation *manage.CleanupOperation) {
 	logger := c.logger.Named("changesetCleanup")
-
-	cleanupBefore := c.clock.Now().Add(
-		-c.changesetRetentionPeriod,
-	)
 
 	ctxWithTimeout, cancel := context.WithTimeout(
 		context.Background(),
@@ -269,17 +295,61 @@ func (c *Controller) cleanupChangesets() {
 	)
 	defer cancel()
 
-	err := c.changesetStore.Cleanup(
-		ctxWithTimeout,
-		cleanupBefore,
-	)
+	thresholdDate := time.Unix(operation.ThresholdDate, 0)
+	itemsDeleted, err := c.changesetStore.Cleanup(ctxWithTimeout, thresholdDate)
+
+	operation.EndedAt = c.clock.Now().Unix()
+	operation.ItemsDeleted = itemsDeleted
+
 	if err != nil {
 		logger.Error(
 			"failed to clean up old change sets",
 			core.ErrorLogField("error", err),
 		)
+		operation.Status = manage.CleanupOperationStatusFailed
+		operation.ErrorMessage = err.Error()
+	} else {
+		operation.Status = manage.CleanupOperationStatusCompleted
+	}
+
+	if updateErr := c.cleanupOperationsStore.Update(ctxWithTimeout, operation); updateErr != nil {
+		logger.Error(
+			"failed to update cleanup operation",
+			core.ErrorLogField("error", updateErr),
+		)
+	}
+}
+
+// GetChangesetsCleanupStatusHandler is the handler for the
+// GET /deployments/changes/cleanup/{id} endpoint that retrieves the
+// status of a cleanup operation.
+func (c *Controller) GetChangesetsCleanupStatusHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	params := mux.Vars(r)
+	operationID := params["id"]
+
+	operation, err := c.cleanupOperationsStore.Get(r.Context(), operationID)
+	if err != nil {
+		notFoundErr := &manage.CleanupOperationNotFound{}
+		if errors.As(err, &notFoundErr) {
+			httputils.HTTPError(
+				w,
+				http.StatusNotFound,
+				notFoundErr.Error(),
+			)
+			return
+		}
+		c.logger.Debug(
+			"failed to get cleanup operation",
+			core.ErrorLogField("error", err),
+		)
+		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
 		return
 	}
+
+	httputils.HTTPJSONResponse(w, http.StatusOK, operation)
 }
 
 // CleanupReconciliationResultsHandler is the handler for the
@@ -290,27 +360,52 @@ func (c *Controller) CleanupReconciliationResultsHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	// Carry out the cleanup process in a separate goroutine
-	// to avoid blocking the request,
-	// general clean up should be a task that a client can trigger
-	// but not need to wait for.
-	go c.cleanupReconciliationResults()
+	operationID, err := c.idGenerator.GenerateID()
+	if err != nil {
+		c.logger.Debug(
+			"failed to generate cleanup operation ID",
+			core.ErrorLogField("error", err),
+		)
+		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
+		return
+	}
+
+	cleanupBefore := c.clock.Now().Add(-c.reconciliationResultsRetentionPeriod)
+
+	operation := &manage.CleanupOperation{
+		ID:            operationID,
+		CleanupType:   manage.CleanupTypeReconciliationResults,
+		Status:        manage.CleanupOperationStatusRunning,
+		StartedAt:     c.clock.Now().Unix(),
+		ThresholdDate: cleanupBefore.Unix(),
+	}
+
+	if err := c.cleanupOperationsStore.Save(r.Context(), operation); err != nil {
+		c.logger.Debug(
+			"failed to save cleanup operation",
+			core.ErrorLogField("error", err),
+		)
+		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
+		return
+	}
+
+	// Copy the operation for the response to avoid data race between
+	// json.Marshal and the goroutine modifying the original.
+	responseCopy := *operation
+
+	go c.cleanupReconciliationResults(operation)
 
 	httputils.HTTPJSONResponse(
 		w,
 		http.StatusAccepted,
-		&helpersv1.MessageResponse{
-			Message: "Cleanup started",
+		&helpersv1.AsyncOperationResponse[*manage.CleanupOperation]{
+			Data: &responseCopy,
 		},
 	)
 }
 
-func (c *Controller) cleanupReconciliationResults() {
+func (c *Controller) cleanupReconciliationResults(operation *manage.CleanupOperation) {
 	logger := c.logger.Named("reconciliationResultsCleanup")
-
-	cleanupBefore := c.clock.Now().Add(
-		-c.reconciliationResultsRetentionPeriod,
-	)
 
 	ctxWithTimeout, cancel := context.WithTimeout(
 		context.Background(),
@@ -318,17 +413,61 @@ func (c *Controller) cleanupReconciliationResults() {
 	)
 	defer cancel()
 
-	err := c.reconciliationResultsStore.Cleanup(
-		ctxWithTimeout,
-		cleanupBefore,
-	)
+	thresholdDate := time.Unix(operation.ThresholdDate, 0)
+	itemsDeleted, err := c.reconciliationResultsStore.Cleanup(ctxWithTimeout, thresholdDate)
+
+	operation.EndedAt = c.clock.Now().Unix()
+	operation.ItemsDeleted = itemsDeleted
+
 	if err != nil {
 		logger.Error(
 			"failed to clean up old reconciliation results",
 			core.ErrorLogField("error", err),
 		)
+		operation.Status = manage.CleanupOperationStatusFailed
+		operation.ErrorMessage = err.Error()
+	} else {
+		operation.Status = manage.CleanupOperationStatusCompleted
+	}
+
+	if updateErr := c.cleanupOperationsStore.Update(ctxWithTimeout, operation); updateErr != nil {
+		logger.Error(
+			"failed to update cleanup operation",
+			core.ErrorLogField("error", updateErr),
+		)
+	}
+}
+
+// GetReconciliationResultsCleanupStatusHandler is the handler for the
+// GET /deployments/reconciliation-results/cleanup/{id} endpoint that retrieves the
+// status of a cleanup operation.
+func (c *Controller) GetReconciliationResultsCleanupStatusHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	params := mux.Vars(r)
+	operationID := params["id"]
+
+	operation, err := c.cleanupOperationsStore.Get(r.Context(), operationID)
+	if err != nil {
+		notFoundErr := &manage.CleanupOperationNotFound{}
+		if errors.As(err, &notFoundErr) {
+			httputils.HTTPError(
+				w,
+				http.StatusNotFound,
+				notFoundErr.Error(),
+			)
+			return
+		}
+		c.logger.Debug(
+			"failed to get cleanup operation",
+			core.ErrorLogField("error", err),
+		)
+		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
 		return
 	}
+
+	httputils.HTTPJSONResponse(w, http.StatusOK, operation)
 }
 
 func (c *Controller) startChangeStaging(

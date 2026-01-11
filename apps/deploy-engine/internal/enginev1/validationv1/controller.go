@@ -52,6 +52,7 @@ type Controller struct {
 	validationRetentionPeriod  time.Duration
 	eventStore                 manage.Events
 	validationStore            manage.Validation
+	cleanupOperationsStore     manage.CleanupOperations
 	idGenerator                core.IDGenerator
 	eventIDGenerator           core.IDGenerator
 	blueprintLoader            container.Loader
@@ -79,6 +80,7 @@ func NewController(
 		validationRetentionPeriod:  validationRetentionPeriod,
 		eventStore:                 deps.EventStore,
 		validationStore:            deps.ValidationStore,
+		cleanupOperationsStore:     deps.CleanupOperationsStore,
 		idGenerator:                deps.IDGenerator,
 		eventIDGenerator:           deps.EventIDGenerator,
 		blueprintLoader:            deps.ValidationLoader,
@@ -273,34 +275,59 @@ func (c *Controller) GetBlueprintValidationHandler(
 }
 
 // CleanupBlueprintValidationsHandler is the handler for the
-// POST /validation/cleanup endpoint that cleans up
+// POST /validations/cleanup endpoint that cleans up
 // blueprint validations that are older than the configured
 // retention period.
 func (c *Controller) CleanupBlueprintValidationsHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	// Carry out the cleanup process in a separate goroutine
-	// to avoid blocking the request,
-	// general clean up should be a task that a client can trigger
-	// but not need to wait for.
-	go c.cleanup()
+	operationID, err := c.idGenerator.GenerateID()
+	if err != nil {
+		c.logger.Debug(
+			"failed to generate cleanup operation ID",
+			core.ErrorLogField("error", err),
+		)
+		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
+		return
+	}
+
+	cleanupBefore := c.clock.Now().Add(-c.validationRetentionPeriod)
+
+	operation := &manage.CleanupOperation{
+		ID:            operationID,
+		CleanupType:   manage.CleanupTypeValidations,
+		Status:        manage.CleanupOperationStatusRunning,
+		StartedAt:     c.clock.Now().Unix(),
+		ThresholdDate: cleanupBefore.Unix(),
+	}
+
+	if err := c.cleanupOperationsStore.Save(r.Context(), operation); err != nil {
+		c.logger.Debug(
+			"failed to save cleanup operation",
+			core.ErrorLogField("error", err),
+		)
+		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
+		return
+	}
+
+	// Copy the operation for the response to avoid data race between
+	// json.Marshal and the goroutine modifying the original.
+	responseCopy := *operation
+
+	go c.cleanup(operation)
 
 	httputils.HTTPJSONResponse(
 		w,
 		http.StatusAccepted,
-		&helpersv1.MessageResponse{
-			Message: "Cleanup started",
+		&helpersv1.AsyncOperationResponse[*manage.CleanupOperation]{
+			Data: &responseCopy,
 		},
 	)
 }
 
-func (c *Controller) cleanup() {
+func (c *Controller) cleanup(operation *manage.CleanupOperation) {
 	logger := c.logger.Named("validationCleanup")
-
-	cleanupBefore := c.clock.Now().Add(
-		-c.validationRetentionPeriod,
-	)
 
 	ctxWithTimeout, cancel := context.WithTimeout(
 		context.Background(),
@@ -308,17 +335,61 @@ func (c *Controller) cleanup() {
 	)
 	defer cancel()
 
-	err := c.validationStore.Cleanup(
-		ctxWithTimeout,
-		cleanupBefore,
-	)
+	thresholdDate := time.Unix(operation.ThresholdDate, 0)
+	itemsDeleted, err := c.validationStore.Cleanup(ctxWithTimeout, thresholdDate)
+
+	operation.EndedAt = c.clock.Now().Unix()
+	operation.ItemsDeleted = itemsDeleted
+
 	if err != nil {
 		logger.Error(
 			"failed to clean up old blueprint validations",
 			core.ErrorLogField("error", err),
 		)
+		operation.Status = manage.CleanupOperationStatusFailed
+		operation.ErrorMessage = err.Error()
+	} else {
+		operation.Status = manage.CleanupOperationStatusCompleted
+	}
+
+	if updateErr := c.cleanupOperationsStore.Update(ctxWithTimeout, operation); updateErr != nil {
+		logger.Error(
+			"failed to update cleanup operation",
+			core.ErrorLogField("error", updateErr),
+		)
+	}
+}
+
+// GetCleanupStatusHandler is the handler for the
+// GET /validations/cleanup/{id} endpoint that retrieves the
+// status of a cleanup operation.
+func (c *Controller) GetCleanupStatusHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	params := mux.Vars(r)
+	operationID := params["id"]
+
+	operation, err := c.cleanupOperationsStore.Get(r.Context(), operationID)
+	if err != nil {
+		notFoundErr := &manage.CleanupOperationNotFound{}
+		if errors.As(err, &notFoundErr) {
+			httputils.HTTPError(
+				w,
+				http.StatusNotFound,
+				notFoundErr.Error(),
+			)
+			return
+		}
+		c.logger.Debug(
+			"failed to get cleanup operation",
+			core.ErrorLogField("error", err),
+		)
+		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
 		return
 	}
+
+	httputils.HTTPJSONResponse(w, http.StatusOK, operation)
 }
 
 func (c *Controller) startValidationStream(

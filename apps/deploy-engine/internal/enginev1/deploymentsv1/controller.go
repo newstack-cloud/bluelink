@@ -67,6 +67,7 @@ type Controller struct {
 	exports                              state.ExportsContainer
 	changesetStore                       manage.Changesets
 	reconciliationResultsStore           manage.ReconciliationResults
+	cleanupOperationsStore               manage.CleanupOperations
 	idGenerator                          core.IDGenerator
 	eventIDGenerator                     core.IDGenerator
 	blueprintLoader                      container.Loader
@@ -100,6 +101,7 @@ func NewController(
 		exports:                              deps.Exports,
 		changesetStore:                       deps.ChangesetStore,
 		reconciliationResultsStore:           deps.ReconciliationResultsStore,
+		cleanupOperationsStore:               deps.CleanupOperationsStore,
 		idGenerator:                          deps.IDGenerator,
 		eventIDGenerator:                     deps.EventIDGenerator,
 		blueprintLoader:                      deps.DeploymentLoader,

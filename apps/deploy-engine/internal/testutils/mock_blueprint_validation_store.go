@@ -47,7 +47,7 @@ func (s *MockBlueprintValidationStore) Save(
 	return nil
 }
 
-func (s *MockBlueprintValidationStore) Cleanup(ctx context.Context, thresholdDate time.Time) error {
+func (s *MockBlueprintValidationStore) Cleanup(ctx context.Context, thresholdDate time.Time) (int64, error) {
 	// This is a no-op for the mock event store.
-	return nil
+	return 0, nil
 }

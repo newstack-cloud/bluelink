@@ -133,7 +133,7 @@ func (s *MockReconciliationResultsStore) Save(
 func (s *MockReconciliationResultsStore) Cleanup(
 	ctx context.Context,
 	thresholdDate time.Time,
-) error {
+) (int64, error) {
 	// This is a no-op for the mock store.
-	return nil
+	return 0, nil
 }

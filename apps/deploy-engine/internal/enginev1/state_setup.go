@@ -25,6 +25,7 @@ type stateServices struct {
 	validation             manage.Validation
 	changesets             manage.Changesets
 	reconciliationResults  manage.ReconciliationResults
+	cleanupOperations      manage.CleanupOperations
 }
 
 func loadStateServices(
@@ -98,6 +99,7 @@ func loadMemfileStateServices(
 	validation := stateContainer.Validation()
 	changesets := stateContainer.Changesets()
 	reconciliationResults := stateContainer.ReconciliationResults()
+	cleanupOperations := stateContainer.CleanupOperations()
 
 	return &stateServices{
 		container:             stateContainer,
@@ -105,6 +107,7 @@ func loadMemfileStateServices(
 		events:                events,
 		changesets:            changesets,
 		reconciliationResults: reconciliationResults,
+		cleanupOperations:     cleanupOperations,
 	}, memfileStubClose, nil
 }
 
@@ -159,6 +162,7 @@ func loadPostgresStateServices(
 	validation := stateContainer.Validation()
 	changesets := stateContainer.Changesets()
 	reconciliationResults := stateContainer.ReconciliationResults()
+	cleanupOperations := stateContainer.CleanupOperations()
 
 	return &stateServices{
 		container:             stateContainer,
@@ -166,6 +170,7 @@ func loadPostgresStateServices(
 		events:                events,
 		changesets:            changesets,
 		reconciliationResults: reconciliationResults,
+		cleanupOperations:     cleanupOperations,
 	}, closePool, nil
 }
 

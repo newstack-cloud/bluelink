@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 
 	"github.com/gorilla/mux"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 )
 
 func (s *ControllerTestSuite) Test_cleanup_changeset_handler() {
@@ -25,13 +27,19 @@ func (s *ControllerTestSuite) Test_cleanup_changeset_handler() {
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	response := map[string]string{}
+	response := helpersv1.AsyncOperationResponse[*manage.CleanupOperation]{}
 	err = json.Unmarshal(respData, &response)
 	s.Require().NoError(err)
 
 	s.Assert().Equal(http.StatusAccepted, result.StatusCode)
-	s.Assert().Equal(
-		"Cleanup started",
-		response["message"],
+	s.Assert().Contains(
+		[]manage.CleanupOperationStatus{
+			manage.CleanupOperationStatusRunning,
+			manage.CleanupOperationStatusCompleted,
+		},
+		response.Data.Status,
+		"cleanup operation status should be running or completed",
 	)
+	s.Assert().Equal(manage.CleanupTypeChangesets, response.Data.CleanupType)
+	s.Assert().NotEmpty(response.Data.ID)
 }

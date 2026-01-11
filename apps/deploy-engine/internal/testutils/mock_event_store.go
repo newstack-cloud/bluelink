@@ -120,9 +120,9 @@ func (s *MockEventStore) Stream(
 	return endChan, nil
 }
 
-func (s *MockEventStore) Cleanup(ctx context.Context, thresholdDate time.Time) error {
+func (s *MockEventStore) Cleanup(ctx context.Context, thresholdDate time.Time) (int64, error) {
 	// This is a no-op for the mock event store.
-	return nil
+	return 0, nil
 }
 
 func (s *MockEventStore) GetLastEventID(

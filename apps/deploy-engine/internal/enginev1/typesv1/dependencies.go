@@ -21,6 +21,7 @@ type Dependencies struct {
 	ValidationStore            manage.Validation
 	ChangesetStore             manage.Changesets
 	ReconciliationResultsStore manage.ReconciliationResults
+	CleanupOperationsStore     manage.CleanupOperations
 	Instances                  state.InstancesContainer
 	Exports                    state.ExportsContainer
 	IDGenerator                core.IDGenerator

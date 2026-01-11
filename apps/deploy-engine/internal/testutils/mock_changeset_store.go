@@ -47,7 +47,7 @@ func (s *MockChangesetStore) Save(
 	return nil
 }
 
-func (s *MockChangesetStore) Cleanup(ctx context.Context, thresholdDate time.Time) error {
+func (s *MockChangesetStore) Cleanup(ctx context.Context, thresholdDate time.Time) (int64, error) {
 	// This is a no-op for the mock event store.
-	return nil
+	return 0, nil
 }

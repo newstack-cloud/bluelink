@@ -176,6 +176,7 @@ func Setup(
 		ValidationStore:            stateServices.validation,
 		ChangesetStore:             stateServices.changesets,
 		ReconciliationResultsStore: stateServices.reconciliationResults,
+		CleanupOperationsStore:     stateServices.cleanupOperations,
 		Instances:                  stateServices.container.Instances(),
 		Exports:                    stateServices.container.Exports(),
 		IDGenerator:                idGenerator,
@@ -283,6 +284,11 @@ func setupValidationHandlers(
 		"/validations/cleanup",
 		validationCtrl.CleanupBlueprintValidationsHandler,
 	).Methods("POST")
+
+	router.HandleFunc(
+		"/validations/cleanup/{id}",
+		validationCtrl.GetCleanupStatusHandler,
+	).Methods("GET")
 }
 
 func setupDeploymentHandlers(
@@ -333,9 +339,19 @@ func setupDeploymentHandlers(
 	).Methods("POST")
 
 	router.HandleFunc(
+		"/deployments/changes/cleanup/{id}",
+		deploymentCtrl.GetChangesetsCleanupStatusHandler,
+	).Methods("GET")
+
+	router.HandleFunc(
 		"/deployments/reconciliation-results/cleanup",
 		deploymentCtrl.CleanupReconciliationResultsHandler,
 	).Methods("POST")
+
+	router.HandleFunc(
+		"/deployments/reconciliation-results/cleanup/{id}",
+		deploymentCtrl.GetReconciliationResultsCleanupStatusHandler,
+	).Methods("GET")
 
 	router.HandleFunc(
 		"/deployments/instances",
@@ -400,7 +416,12 @@ func setupEventManagementHandlers(
 	router.HandleFunc(
 		"/events/cleanup",
 		eventsCtrl.CleanupEventsHandler,
-	)
+	).Methods("POST")
+
+	router.HandleFunc(
+		"/events/cleanup/{id}",
+		eventsCtrl.GetCleanupStatusHandler,
+	).Methods("GET")
 }
 
 func createResourceStabilityPollingConfig(
