@@ -28,9 +28,9 @@ type Events interface {
 		errChan chan error,
 	) (chan struct{}, error)
 
-	// Cleanup removes all events that are older
-	// than the given threshold date.
-	Cleanup(ctx context.Context, thresholdDate time.Time) error
+	// Cleanup removes all events that are older than the given threshold date.
+	// Returns the number of events deleted.
+	Cleanup(ctx context.Context, thresholdDate time.Time) (int64, error)
 
 	// GetLastEventID returns the ID of the last event for a given channel.
 	// Returns empty string if no events exist for the channel.

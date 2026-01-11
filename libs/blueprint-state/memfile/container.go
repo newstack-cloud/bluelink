@@ -26,6 +26,7 @@ type StateContainer struct {
 	changesetsContainer             *changesetsContainerImpl
 	validationContainer             *validationContainerImpl
 	reconciliationResultsContainer  *reconciliationResultsContainerImpl
+	cleanupOperationsContainer      *cleanupOperationsContainerImpl
 	persister                       *statePersister
 }
 
@@ -212,6 +213,7 @@ func LoadStateContainer(
 			logger:                logger,
 			mu:                    mu,
 		},
+		cleanupOperationsContainer: newCleanupOperationsContainer(),
 	}
 
 	for _, opt := range opts {
@@ -259,6 +261,10 @@ func (c *StateContainer) Validation() manage.Validation {
 
 func (c *StateContainer) ReconciliationResults() manage.ReconciliationResults {
 	return c.reconciliationResultsContainer
+}
+
+func (c *StateContainer) CleanupOperations() manage.CleanupOperations {
+	return c.cleanupOperationsContainer
 }
 
 func getLastChunkFromIndex(index map[string]*indexLocation) int {

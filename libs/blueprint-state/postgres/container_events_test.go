@@ -199,7 +199,7 @@ func (s *PostgresEventsTestSuite) Test_returns_event_not_found_error_for_missing
 }
 
 func (s *PostgresEventsTestSuite) Test_cleans_up_old_events() {
-	err := s.container.Events().Cleanup(
+	_, err := s.container.Events().Cleanup(
 		context.Background(),
 		time.Unix(cleanupThresholdTimestamp, 0),
 	)

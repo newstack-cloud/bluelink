@@ -119,7 +119,7 @@ func (s *MemFileStateContainerChangesetsSuite) Test_updates_existing_changeset()
 }
 
 func (s *MemFileStateContainerChangesetsSuite) Test_cleans_up_old_changesets() {
-	err := s.container.Changesets().Cleanup(
+	_, err := s.container.Changesets().Cleanup(
 		context.Background(),
 		time.Unix(cleanupThresholdTimestamp, 0),
 	)

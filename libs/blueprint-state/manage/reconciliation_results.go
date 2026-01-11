@@ -35,7 +35,8 @@ type ReconciliationResults interface {
 	Save(ctx context.Context, result *ReconciliationResult) error
 
 	// Cleanup removes all results older than the threshold date.
-	Cleanup(ctx context.Context, thresholdDate time.Time) error
+	// Returns the number of results deleted.
+	Cleanup(ctx context.Context, thresholdDate time.Time) (int64, error)
 }
 
 // ReconciliationResult represents a reconciliation check result that is produced

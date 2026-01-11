@@ -196,13 +196,15 @@ func (c *reconciliationResultsContainerImpl) addToInstanceIndex(result *manage.R
 func (c *reconciliationResultsContainerImpl) Cleanup(
 	ctx context.Context,
 	thresholdDate time.Time,
-) error {
+) (int64, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	originalCount := len(c.reconciliationResults)
+
 	newLookup, err := c.persister.cleanupReconciliationResults(thresholdDate)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	c.reconciliationResults = newLookup
 
@@ -210,7 +212,7 @@ func (c *reconciliationResultsContainerImpl) Cleanup(
 	c.changesetIndex = buildChangesetIndex(newLookup)
 	c.instanceIndex = buildInstanceIndex(newLookup)
 
-	return nil
+	return int64(originalCount - len(newLookup)), nil
 }
 
 func buildChangesetIndex(results map[string]*manage.ReconciliationResult) map[string][]string {

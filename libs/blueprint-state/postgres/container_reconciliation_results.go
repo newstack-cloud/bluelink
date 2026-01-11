@@ -158,16 +158,19 @@ func (r *reconciliationResultsContainerImpl) Save(
 func (r *reconciliationResultsContainerImpl) Cleanup(
 	ctx context.Context,
 	thresholdDate time.Time,
-) error {
+) (int64, error) {
 	query := cleanupReconciliationResultsQuery()
-	_, err := r.connPool.Exec(
+	result, err := r.connPool.Exec(
 		ctx,
 		query,
 		pgx.NamedArgs{
 			"cleanupBefore": thresholdDate,
 		},
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 func prepareSaveReconciliationResultQuery(result *manage.ReconciliationResult) *queryInfo {

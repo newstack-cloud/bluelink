@@ -330,7 +330,7 @@ func (c *eventsContainerImpl) GetLastEventID(
 func (c *eventsContainerImpl) Cleanup(
 	ctx context.Context,
 	thresholdDate time.Time,
-) error {
+) (int64, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -370,11 +370,12 @@ func (c *eventsContainerImpl) Cleanup(
 
 	c.removeEventsFromMemoryLookup(removedEvents)
 
-	return c.persister.updateEventPartitionsForRemovals(
+	err := c.persister.updateEventPartitionsForRemovals(
 		c.partitionEvents,
 		removedPartitions,
 		removedEvents,
 	)
+	return int64(len(removedEvents)), err
 }
 
 func (c *eventsContainerImpl) removeEventsFromMemoryLookup(

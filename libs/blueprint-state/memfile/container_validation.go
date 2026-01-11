@@ -68,9 +68,11 @@ func (c *validationContainerImpl) save(
 func (c *validationContainerImpl) Cleanup(
 	ctx context.Context,
 	thresholdDate time.Time,
-) error {
+) (int64, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	originalCount := len(c.validations)
 
 	// As the persister manages how blueprint validations are stored,
 	// it is responsible for cleaning them up.
@@ -80,11 +82,11 @@ func (c *validationContainerImpl) Cleanup(
 	// when saving blueprint validations to files.
 	newLookup, err := c.persister.cleanupBlueprintValidations(thresholdDate)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	c.validations = newLookup
 
-	return nil
+	return int64(originalCount - len(newLookup)), nil
 }
 
 func copyBlueprintValidation(

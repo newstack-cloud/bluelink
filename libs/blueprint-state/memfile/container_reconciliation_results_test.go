@@ -180,7 +180,7 @@ func (s *MemFileStateContainerReconciliationResultsSuite) Test_saves_new_reconci
 }
 
 func (s *MemFileStateContainerReconciliationResultsSuite) Test_cleans_up_old_reconciliation_results() {
-	err := s.container.ReconciliationResults().Cleanup(
+	_, err := s.container.ReconciliationResults().Cleanup(
 		context.Background(),
 		time.Unix(cleanupThresholdTimestamp, 0),
 	)

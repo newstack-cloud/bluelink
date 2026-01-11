@@ -27,6 +27,7 @@ type StateContainer struct {
 	changesetsContainer             *changesetsContainerImpl
 	eventsContainer                 *eventsContainerImpl
 	reconciliationResultsContainer  *reconciliationResultsContainerImpl
+	cleanupOperationsContainer      *cleanupOperationsContainerImpl
 }
 
 // Option is a type for options that can be passed to LoadStateContainer
@@ -108,6 +109,10 @@ func LoadStateContainer(
 			connPool: connPool,
 			logger:   logger,
 		},
+		cleanupOperationsContainer: &cleanupOperationsContainerImpl{
+			connPool: connPool,
+			logger:   logger,
+		},
 	}
 
 	for _, opt := range opts {
@@ -155,4 +160,8 @@ func (c *StateContainer) Events() manage.Events {
 
 func (c *StateContainer) ReconciliationResults() manage.ReconciliationResults {
 	return c.reconciliationResultsContainer
+}
+
+func (c *StateContainer) CleanupOperations() manage.CleanupOperations {
+	return c.cleanupOperationsContainer
 }

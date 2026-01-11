@@ -20,9 +20,9 @@ type Changesets interface {
 		changeset *Changeset,
 	) error
 
-	// Cleanup removes all change sets that are older
-	// than the given threshold date.
-	Cleanup(ctx context.Context, thresholdDate time.Time) error
+	// Cleanup removes all change sets that are older than the given threshold date.
+	// Returns the number of change sets deleted.
+	Cleanup(ctx context.Context, thresholdDate time.Time) (int64, error)
 }
 
 // Changeset represents the state of a change set for a blueprint

@@ -62,16 +62,19 @@ func (c *changesetsContainerImpl) Save(
 func (c *changesetsContainerImpl) Cleanup(
 	ctx context.Context,
 	thresholdDate time.Time,
-) error {
+) (int64, error) {
 	query := cleanupChangesetsQuery()
-	_, err := c.connPool.Exec(
+	result, err := c.connPool.Exec(
 		ctx,
 		query,
 		pgx.NamedArgs{
 			"cleanupBefore": thresholdDate,
 		},
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 func prepareSaveChangesetQuery(changeset *manage.Changeset) *queryInfo {

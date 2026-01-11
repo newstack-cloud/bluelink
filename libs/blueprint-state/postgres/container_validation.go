@@ -62,16 +62,19 @@ func (v *validationContainerImpl) Save(
 func (v *validationContainerImpl) Cleanup(
 	ctx context.Context,
 	thresholdDate time.Time,
-) error {
+) (int64, error) {
 	query := cleanupBlueprintValidationsQuery()
-	_, err := v.connPool.Exec(
+	result, err := v.connPool.Exec(
 		ctx,
 		query,
 		pgx.NamedArgs{
 			"cleanupBefore": thresholdDate,
 		},
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 func prepareSaveBlueprintValidationQuery(validation *manage.BlueprintValidation) *queryInfo {

@@ -242,7 +242,7 @@ func (s *MemFileStateContainerEventsTestSuite) Test_ends_stream_when_last_saved_
 }
 
 func (s *MemFileStateContainerEventsTestSuite) Test_cleans_up_old_events() {
-	err := s.container.Events().Cleanup(
+	_, err := s.container.Events().Cleanup(
 		context.Background(),
 		time.Unix(cleanupThresholdTimestamp, 0),
 	)

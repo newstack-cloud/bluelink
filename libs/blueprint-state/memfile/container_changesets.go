@@ -73,9 +73,11 @@ func (c *changesetsContainerImpl) save(
 func (c *changesetsContainerImpl) Cleanup(
 	ctx context.Context,
 	thresholdDate time.Time,
-) error {
+) (int64, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	originalCount := len(c.changesets)
 
 	// As the persister manages how change sets are stored,
 	// it is responsible for cleaning up the change sets.
@@ -85,11 +87,11 @@ func (c *changesetsContainerImpl) Cleanup(
 	// when saving change sets to files.
 	newLookup, err := c.persister.cleanupChangesets(thresholdDate)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	c.changesets = newLookup
 
-	return nil
+	return int64(originalCount - len(newLookup)), nil
 }
 
 func copyChangeset(

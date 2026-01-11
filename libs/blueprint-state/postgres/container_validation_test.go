@@ -115,7 +115,7 @@ func (s *PostgresBlueprintValidationTestSuite) Test_update_existing_blueprint_va
 }
 
 func (s *PostgresBlueprintValidationTestSuite) Test_cleans_up_old_blueprint_validations() {
-	err := s.container.Validation().Cleanup(
+	_, err := s.container.Validation().Cleanup(
 		context.Background(),
 		time.Unix(cleanupThresholdTimestamp, 0),
 	)

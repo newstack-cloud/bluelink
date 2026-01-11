@@ -122,7 +122,7 @@ func (s *MemFileStateContainerValidationSuite) Test_updates_existing_blueprint_v
 }
 
 func (s *MemFileStateContainerValidationSuite) Test_cleans_up_old_validations() {
-	err := s.container.Validation().Cleanup(
+	_, err := s.container.Validation().Cleanup(
 		context.Background(),
 		time.Unix(cleanupThresholdTimestamp, 0),
 	)

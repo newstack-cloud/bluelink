@@ -17,9 +17,9 @@ type Validation interface {
 		validation *BlueprintValidation,
 	) error
 
-	// Cleanup removes all blueprint validations that are older
-	// than the given threshold date.
-	Cleanup(ctx context.Context, thresholdDate time.Time) error
+	// Cleanup removes all blueprint validations that are older than the given threshold date.
+	// Returns the number of validations deleted.
+	Cleanup(ctx context.Context, thresholdDate time.Time) (int64, error)
 }
 
 // BlueprintValidation represents the state of a blueprint validation request.
