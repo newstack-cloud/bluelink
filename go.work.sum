@@ -877,7 +877,7 @@ github.com/nats-io/nats.go v1.34.0/go.mod h1:Ubdu4Nh9exXdSz0RVWRFBbRfrbSxOYd26oF
 github.com/nats-io/nkeys v0.4.7/go.mod h1:kqXRgRDPlGy7nGaEDMuYzmiJCIAAWDK0IMBtDmGD0nc=
 github.com/nats-io/nuid v1.0.1/go.mod h1:19wcPz3Ph3q0Jbyiqsd0kePYG7A95tJPxeL+1OSON2c=
 github.com/newstack-cloud/bluelink/libs/blueprint v0.35.0/go.mod h1:5Unn3mYYUB7WHiuoy+QvHmw8cCQFV0rZY4sK8+dqoBk=
-github.com/newstack-cloud/bluelink/libs/blueprint v0.38.0/go.mod h1:BMnMYG+/C14VN46QjtwMLS2umagVaRvE5kfoji896yM=
+github.com/newstack-cloud/bluelink/libs/blueprint-state v0.6.0/go.mod h1:SKTrmBLedeMIkhvI2vfYCANiNjf88ya6W19KvcxJ+fw=
 github.com/newstack-cloud/bluelink/libs/plugin-framework v0.1.1/go.mod h1:xgN76byAuT7hHxT6a5s2nZGez056Q6NLnkQBGn8wivc=
 github.com/newstack-cloud/celerity/libs/blueprint v0.24.0 h1:X16jrofn/13+xXPRZCairoKNzkGMY64L2igIefD6Z00=
 github.com/newstack-cloud/celerity/libs/blueprint v0.24.0/go.mod h1:5FDL6R3oPxg3e3M3+cI5AbQ4lIkDxKWof4wOi/WvH8A=
