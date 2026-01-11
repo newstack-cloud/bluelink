@@ -151,6 +151,44 @@ func (c *instancesContainerImpl) SaveBatch(
 	return nil
 }
 
+func (c *instancesContainerImpl) GetBatch(
+	ctx context.Context,
+	instanceIDsOrNames []string,
+) ([]state.InstanceState, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	instances := make([]state.InstanceState, 0, len(instanceIDsOrNames))
+	var missing []string
+	for _, idOrName := range instanceIDsOrNames {
+		instance := c.findByIDOrName(idOrName)
+		if instance == nil {
+			missing = append(missing, idOrName)
+			continue
+		}
+		instances = append(instances, copyInstance(instance, instance.InstanceID))
+	}
+
+	if len(missing) > 0 {
+		return nil, state.NewInstancesNotFoundError(missing)
+	}
+
+	return instances, nil
+}
+
+// A read lock must be held when calling this method.
+func (c *instancesContainerImpl) findByIDOrName(idOrName string) *state.InstanceState {
+	if inst, ok := c.instances[idOrName]; ok {
+		return inst
+	}
+	if instanceID, ok := c.instanceIDLookup[idOrName]; ok {
+		if inst, ok := c.instances[instanceID]; ok {
+			return inst
+		}
+	}
+	return nil
+}
+
 func (c *instancesContainerImpl) save(
 	ctx context.Context,
 	instanceState state.InstanceState,

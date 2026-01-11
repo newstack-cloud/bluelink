@@ -173,6 +173,173 @@ func (c *instancesContainerImpl) wireDescendantInstances(
 	}
 }
 
+func (c *instancesContainerImpl) GetBatch(
+	ctx context.Context,
+	instanceIDsOrNames []string,
+) ([]state.InstanceState, error) {
+	if len(instanceIDsOrNames) == 0 {
+		return []state.InstanceState{}, nil
+	}
+
+	instances, err := c.getInstancesBatch(ctx, instanceIDsOrNames)
+	if err != nil {
+		return nil, err
+	}
+
+	missingIDsOrNames := c.findMissingInstances(instances, instanceIDsOrNames)
+	if len(missingIDsOrNames) > 0 {
+		return nil, state.NewInstancesNotFoundError(missingIDsOrNames)
+	}
+
+	instanceIDs := make([]string, len(instances))
+	for i := range instances {
+		instanceIDs[i] = instances[i].InstanceID
+	}
+
+	descendants, err := c.getBatchDescendantInstances(ctx, instanceIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	c.wireBatchDescendantInstances(instances, descendants)
+
+	return c.orderByInput(instances, instanceIDsOrNames), nil
+}
+
+func (c *instancesContainerImpl) getInstancesBatch(
+	ctx context.Context,
+	instanceIDsOrNames []string,
+) ([]state.InstanceState, error) {
+	rows, err := c.connPool.Query(
+		ctx,
+		blueprintInstanceBatchQuery(),
+		&pgx.NamedArgs{
+			"instanceIds":   instanceIDsOrNames,
+			"instanceNames": instanceIDsOrNames,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var instances []state.InstanceState
+	for rows.Next() {
+		var instance state.InstanceState
+		if err := rows.Scan(&instance); err != nil {
+			return nil, err
+		}
+		instances = append(instances, instance)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return instances, nil
+}
+
+func (c *instancesContainerImpl) getBatchDescendantInstances(
+	ctx context.Context,
+	instanceIDs []string,
+) ([]*descendantBlueprintInfo, error) {
+	rows, err := c.connPool.Query(
+		ctx,
+		blueprintInstanceBatchDescendantsQuery(),
+		&pgx.NamedArgs{
+			"parentInstanceIds": instanceIDs,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var descendants []*descendantBlueprintInfo
+	for rows.Next() {
+		var descendant descendantBlueprintInfo
+		err = rows.Scan(
+			&descendant.parentInstanceID,
+			&descendant.childInstanceName,
+			&descendant.childInstanceID,
+			&descendant.instance,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		descendants = append(descendants, &descendant)
+	}
+
+	return descendants, nil
+}
+
+func (c *instancesContainerImpl) wireBatchDescendantInstances(
+	instances []state.InstanceState,
+	descendants []*descendantBlueprintInfo,
+) {
+	instanceLookup := make(map[string]*state.InstanceState, len(instances)+len(descendants))
+	for i := range instances {
+		instanceLookup[instances[i].InstanceID] = &instances[i]
+	}
+	for _, descendant := range descendants {
+		instanceLookup[descendant.childInstanceID] = &descendant.instance
+	}
+
+	for _, descendant := range descendants {
+		parent, ok := instanceLookup[descendant.parentInstanceID]
+		if ok {
+			if parent.ChildBlueprints == nil {
+				parent.ChildBlueprints = make(map[string]*state.InstanceState)
+			}
+			parent.ChildBlueprints[descendant.childInstanceName] = &descendant.instance
+		}
+	}
+}
+
+func (c *instancesContainerImpl) findMissingInstances(
+	found []state.InstanceState,
+	requested []string,
+) []string {
+	foundSet := make(map[string]bool, len(found)*2)
+	for _, inst := range found {
+		foundSet[inst.InstanceID] = true
+		foundSet[inst.InstanceName] = true
+	}
+
+	var missing []string
+	for _, idOrName := range requested {
+		if !foundSet[idOrName] {
+			missing = append(missing, idOrName)
+		}
+	}
+
+	return missing
+}
+
+func (c *instancesContainerImpl) orderByInput(
+	instances []state.InstanceState,
+	inputOrder []string,
+) []state.InstanceState {
+	instanceByID := make(map[string]*state.InstanceState, len(instances))
+	instanceByName := make(map[string]*state.InstanceState, len(instances))
+	for i := range instances {
+		instanceByID[instances[i].InstanceID] = &instances[i]
+		instanceByName[instances[i].InstanceName] = &instances[i]
+	}
+
+	result := make([]state.InstanceState, 0, len(inputOrder))
+	for _, idOrName := range inputOrder {
+		if inst, ok := instanceByID[idOrName]; ok {
+			result = append(result, *inst)
+		} else if inst, ok := instanceByName[idOrName]; ok {
+			result = append(result, *inst)
+		}
+	}
+
+	return result
+}
+
 func (c *instancesContainerImpl) getInstance(ctx context.Context, instanceID string) (state.InstanceState, error) {
 	var instance state.InstanceState
 	err := c.connPool.QueryRow(

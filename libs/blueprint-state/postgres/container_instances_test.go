@@ -361,6 +361,95 @@ func (s *PostgresStateContainerInstancesTestSuite) Test_lists_instances_handles_
 	s.Assert().GreaterOrEqual(result.TotalCount, 18)
 }
 
+func (s *PostgresStateContainerInstancesTestSuite) Test_get_batch_retrieves_instances_by_id() {
+	instances := s.container.Instances()
+
+	result, err := instances.GetBatch(context.Background(), []string{
+		getTestRootInstanceID,
+		"94203c13-a63a-4b22-83e5-2d2aa85657e8",
+	})
+	s.Require().NoError(err)
+	s.Require().Len(result, 2)
+	s.Assert().Equal(getTestRootInstanceID, result[0].InstanceID)
+	s.Assert().Equal("94203c13-a63a-4b22-83e5-2d2aa85657e8", result[1].InstanceID)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_get_batch_retrieves_instances_by_name() {
+	instances := s.container.Instances()
+
+	result, err := instances.GetBatch(context.Background(), []string{
+		"SeedBlueprintInstance1",
+		"SeedBlueprintInstance2",
+	})
+	s.Require().NoError(err)
+	s.Require().Len(result, 2)
+	s.Assert().Equal("SeedBlueprintInstance1", result[0].InstanceName)
+	s.Assert().Equal("SeedBlueprintInstance2", result[1].InstanceName)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_get_batch_retrieves_instances_by_mixed_id_and_name() {
+	instances := s.container.Instances()
+
+	result, err := instances.GetBatch(context.Background(), []string{
+		getTestRootInstanceID,
+		"SeedBlueprintInstance2",
+	})
+	s.Require().NoError(err)
+	s.Require().Len(result, 2)
+	s.Assert().Equal(getTestRootInstanceID, result[0].InstanceID)
+	s.Assert().Equal("SeedBlueprintInstance2", result[1].InstanceName)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_get_batch_reports_all_missing_instances() {
+	instances := s.container.Instances()
+
+	_, err := instances.GetBatch(context.Background(), []string{
+		getTestRootInstanceID,
+		"nonexistent-instance-1",
+		"nonexistent-instance-2",
+	})
+	s.Require().Error(err)
+	s.Assert().True(state.IsInstancesNotFound(err))
+	notFoundErr, ok := err.(*state.InstancesNotFoundError)
+	s.Require().True(ok)
+	s.Assert().ElementsMatch(
+		[]string{"nonexistent-instance-1", "nonexistent-instance-2"},
+		notFoundErr.MissingIDsOrNames,
+	)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_get_batch_returns_empty_for_empty_input() {
+	instances := s.container.Instances()
+
+	result, err := instances.GetBatch(context.Background(), []string{})
+	s.Require().NoError(err)
+	s.Assert().Empty(result)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_get_batch_preserves_order() {
+	instances := s.container.Instances()
+
+	result, err := instances.GetBatch(context.Background(), []string{
+		"SeedBlueprintInstance2",
+		"SeedBlueprintInstance1",
+	})
+	s.Require().NoError(err)
+	s.Require().Len(result, 2)
+	s.Assert().Equal("SeedBlueprintInstance2", result[0].InstanceName)
+	s.Assert().Equal("SeedBlueprintInstance1", result[1].InstanceName)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_get_batch_includes_child_blueprints() {
+	instances := s.container.Instances()
+
+	result, err := instances.GetBatch(context.Background(), []string{
+		getTestRootInstanceID,
+	})
+	s.Require().NoError(err)
+	s.Require().Len(result, 1)
+	s.Assert().NotEmpty(result[0].ChildBlueprints)
+}
+
 func TestPostgresStateContainerInstancesTestSuite(t *testing.T) {
 	suite.Run(t, new(PostgresStateContainerInstancesTestSuite))
 }

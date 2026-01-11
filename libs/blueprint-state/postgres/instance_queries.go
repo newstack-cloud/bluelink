@@ -370,3 +370,78 @@ func listInstancesQuery(search string, limit, offset int) string {
 
 	return query
 }
+
+func blueprintInstanceBatchQuery() string {
+	return `
+	SELECT
+		json_build_object(
+			'id', bi.id,
+			'name', bi.name,
+			'status', bi.status,
+			'lastStatusUpdateTimestamp', EXTRACT(EPOCH FROM bi.last_status_update_timestamp)::bigint,
+			'lastDeployedTimestamp', EXTRACT(EPOCH FROM bi.last_deployed_timestamp)::bigint,
+			'lastDeployAttemptTimestamp', EXTRACT(EPOCH FROM bi.last_deploy_attempt_timestamp)::bigint,
+			'resourceIds', COALESCE(json_object_agg(r.name, r.id) FILTER (WHERE r.name IS NOT NULL), '{}'::json),
+			'resources', COALESCE(json_object_agg(r.id, r.json) FILTER (WHERE r.id IS NOT NULL), '{}'::json),
+			'links', COALESCE(json_object_agg(l.name, l.json) FILTER (WHERE l.name IS NOT NULL), '{}'::json),
+			'metadata', bi.metadata,
+			'exports', bi.exports,
+			'childDependencies', bi.child_dependencies,
+			'durations', bi.durations
+		) As instance_json
+	FROM
+		blueprint_instances bi
+	LEFT JOIN resources_json r ON bi.id = r.instance_id
+	LEFT JOIN links_json l ON bi.id = l.instance_id
+	WHERE bi.id = ANY(@instanceIds) OR bi.name = ANY(@instanceNames)
+	GROUP BY bi.id
+	`
+}
+
+func blueprintInstanceBatchDescendantsQuery() string {
+	return `
+	WITH RECURSIVE descendants AS (
+		SELECT
+			bic.parent_instance_id,
+			bic.child_instance_name,
+			bic.child_instance_id
+		FROM
+			blueprint_instance_children bic
+		INNER JOIN blueprint_instances bi ON bi.id = bic.child_instance_id
+		WHERE
+			parent_instance_id = ANY(@parentInstanceIds)
+		UNION
+		SELECT
+			c.parent_instance_id,
+			c.child_instance_name,
+			c.child_instance_id
+		FROM
+			blueprint_instance_children c
+		INNER JOIN descendants d ON d.child_instance_id = c.parent_instance_id
+	)
+	SELECT
+		d.parent_instance_id,
+		d.child_instance_name,
+		d.child_instance_id,
+		json_build_object(
+			'id', bi.id,
+			'name', bi.name,
+			'status', bi.status,
+			'lastStatusUpdateTimestamp', EXTRACT(EPOCH FROM bi.last_status_update_timestamp)::bigint,
+			'lastDeployedTimestamp', EXTRACT(EPOCH FROM bi.last_deployed_timestamp)::bigint,
+			'lastDeployAttemptTimestamp', EXTRACT(EPOCH FROM bi.last_deploy_attempt_timestamp)::bigint,
+			'resourceIds', COALESCE(json_object_agg(r.name, r.id) FILTER (WHERE r.name IS NOT NULL), '{}'::json),
+			'resources', COALESCE(json_object_agg(r.id, r.json) FILTER (WHERE r.id IS NOT NULL), '{}'::json),
+			'links', COALESCE(json_object_agg(l.name, l.json) FILTER (WHERE l.name IS NOT NULL), '{}'::json),
+			'metadata', bi.metadata,
+			'exports', bi.exports,
+			'childDependencies', bi.child_dependencies,
+			'durations', bi.durations
+		) AS instance_json
+	FROM descendants d
+	INNER JOIN blueprint_instances bi ON bi.id = d.child_instance_id
+	LEFT JOIN resources_json r ON bi.id = r.instance_id
+	LEFT JOIN links_json l ON bi.id = l.instance_id
+	GROUP BY d.parent_instance_id, d.child_instance_name, d.child_instance_id, bi.id
+	`
+}

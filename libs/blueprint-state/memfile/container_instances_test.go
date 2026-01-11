@@ -409,6 +409,89 @@ func (s *MemFileStateContainerInstancesTestSuite) assertInstanceRemovedFromPersi
 	s.Assert().Equal(state.ErrInstanceNotFound, stateErr.Code)
 }
 
+func (s *MemFileStateContainerInstancesTestSuite) Test_get_batch_retrieves_instances_by_id() {
+	s.saveTestInstances()
+	instances := s.container.Instances()
+
+	result, err := instances.GetBatch(context.Background(), []string{
+		"test-instance-prod",
+		"test-instance-staging",
+	})
+	s.Require().NoError(err)
+	s.Require().Len(result, 2)
+	s.Assert().Equal("test-instance-prod", result[0].InstanceID)
+	s.Assert().Equal("test-instance-staging", result[1].InstanceID)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_get_batch_retrieves_instances_by_name() {
+	s.saveTestInstances()
+	instances := s.container.Instances()
+
+	result, err := instances.GetBatch(context.Background(), []string{
+		"my-app-production",
+		"my-app-staging",
+	})
+	s.Require().NoError(err)
+	s.Require().Len(result, 2)
+	s.Assert().Equal("my-app-production", result[0].InstanceName)
+	s.Assert().Equal("my-app-staging", result[1].InstanceName)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_get_batch_retrieves_instances_by_mixed_id_and_name() {
+	s.saveTestInstances()
+	instances := s.container.Instances()
+
+	result, err := instances.GetBatch(context.Background(), []string{
+		"test-instance-prod",
+		"my-app-staging",
+	})
+	s.Require().NoError(err)
+	s.Require().Len(result, 2)
+	s.Assert().Equal("test-instance-prod", result[0].InstanceID)
+	s.Assert().Equal("my-app-staging", result[1].InstanceName)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_get_batch_reports_all_missing_instances() {
+	s.saveTestInstances()
+	instances := s.container.Instances()
+
+	_, err := instances.GetBatch(context.Background(), []string{
+		"test-instance-prod",
+		"nonexistent-instance-1",
+		"nonexistent-instance-2",
+	})
+	s.Require().Error(err)
+	s.Assert().True(state.IsInstancesNotFound(err))
+	notFoundErr, ok := err.(*state.InstancesNotFoundError)
+	s.Require().True(ok)
+	s.Assert().ElementsMatch(
+		[]string{"nonexistent-instance-1", "nonexistent-instance-2"},
+		notFoundErr.MissingIDsOrNames,
+	)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_get_batch_returns_empty_for_empty_input() {
+	instances := s.container.Instances()
+
+	result, err := instances.GetBatch(context.Background(), []string{})
+	s.Require().NoError(err)
+	s.Assert().Empty(result)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_get_batch_preserves_order() {
+	s.saveTestInstances()
+	instances := s.container.Instances()
+
+	result, err := instances.GetBatch(context.Background(), []string{
+		"my-app-staging",
+		"my-app-production",
+	})
+	s.Require().NoError(err)
+	s.Require().Len(result, 2)
+	s.Assert().Equal("my-app-staging", result[0].InstanceName)
+	s.Assert().Equal("my-app-production", result[1].InstanceName)
+}
+
 func TestMemFileStateContainerInstancesTestSuite(t *testing.T) {
 	suite.Run(t, new(MemFileStateContainerInstancesTestSuite))
 }
