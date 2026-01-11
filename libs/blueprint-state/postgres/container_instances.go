@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/idutils"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
@@ -210,12 +211,13 @@ func (c *instancesContainerImpl) getInstancesBatch(
 	ctx context.Context,
 	instanceIDsOrNames []string,
 ) ([]state.InstanceState, error) {
+	ids, names := idutils.SeparateIDsAndNames(instanceIDsOrNames)
 	rows, err := c.connPool.Query(
 		ctx,
 		blueprintInstanceBatchQuery(),
 		&pgx.NamedArgs{
-			"instanceIds":   instanceIDsOrNames,
-			"instanceNames": instanceIDsOrNames,
+			"instanceIds":   ids,
+			"instanceNames": names,
 		},
 	)
 	if err != nil {
