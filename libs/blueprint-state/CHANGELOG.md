@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.5.0...blueprint-state/v0.6.0) (2026-01-11)
+
+
+### Features
+
+* **blueprint-state:** add functionality to get batches of instances by ids or names ([4871fbd](https://github.com/newstack-cloud/bluelink/commit/4871fbd20865ac1457e5ba54097f56c948552569))
+* **blueprint-state:** add functionality to save instance state in batches ([c51030c](https://github.com/newstack-cloud/bluelink/commit/c51030c644c0a65c3e5fc22ddf90bdc0073af017))
+* **blueprint-state:** add support for tracking cleanup operations ([1941a68](https://github.com/newstack-cloud/bluelink/commit/1941a689a74ff94088b75ff9a52dce1185e05e97))
+
+
+### Bug Fixes
+
+* **blueprint-state:** add fix to separate ids and names for get batch to avoid uuid errors ([34e3032](https://github.com/newstack-cloud/bluelink/commit/34e30327c279b9c36c6e910ad34d64c37902caf0))
+* **blueprint-state:** correct resource data mapping building for links ([6266399](https://github.com/newstack-cloud/bluelink/commit/6266399aa9945901c85d6aed63180eded6048329))
+
+
+### Dependencies
+
+* **blueprint-state:** update core blueprint library version ([dfbeb91](https://github.com/newstack-cloud/bluelink/commit/dfbeb91f1ce92062b2fc832c601ff3b13f6e9d8e))
+
 ## [0.5.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.4.2...blueprint-state/v0.5.0) (2026-01-06)
 
 
