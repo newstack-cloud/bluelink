@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.2.0...deploy-engine/v0.3.0) (2026-01-11)
+
+
+### Features
+
+* **deploy-engine:** add support for cleanup operation tracking ([daf62cc](https://github.com/newstack-cloud/bluelink/commit/daf62cc98e3ca4851583a2bd9fa7750832e92c7c))
+
+
+### Dependencies
+
+* **deploy-engine:** update blueprint core and state libs ([5037b95](https://github.com/newstack-cloud/bluelink/commit/5037b9583b909aa49ec4ebde5e5c3938145e3e08))
+
 ## [0.2.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.1.5...deploy-engine/v0.2.0) (2026-01-06)
 
 
