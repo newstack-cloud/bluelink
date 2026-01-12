@@ -244,6 +244,8 @@ github.com/newstack-cloud/bluelink/libs/common v0.3.2 h1:YqD47176o62SwJyEqpTH/87
 github.com/newstack-cloud/bluelink/libs/common v0.3.2/go.mod h1:b18HJMiIRGIFyom6jiweqcxA8vRO6D5Gkfssrq9C+Wc=
 github.com/newstack-cloud/bluelink/libs/deploy-engine-client v0.3.0 h1:P/Ka7W//Qj5euNXCq1KGzKrJ2JsBd8tmLJ+lETlmBVk=
 github.com/newstack-cloud/bluelink/libs/deploy-engine-client v0.3.0/go.mod h1:2iHSr79+ICCDJ4vcHUaNNG+AzMb7yyZF0cxQWEo0ur0=
+github.com/newstack-cloud/deploy-cli-sdk v0.1.6 h1:UWSbzplrKRjdgVQcFUQZYxh3MX11NgYxTwMrhSrHxns=
+github.com/newstack-cloud/deploy-cli-sdk v0.1.6/go.mod h1:2/P7LKZWGUF5AMIDnSl/oYE51EPdnFiP8NZdyCMokV4=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c h1:+mdjkGKdHQG3305AYmdv1U2eRNDiU2ErMBj1gwrq8eQ=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c/go.mod h1:7rwL4CYBLnjLxUqIJNnCWiEdr3bn6IUYi15bNlnbCCU=
 github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 h1:GFCKgmp0tecUJ0sJuv4pzYCqS9+RGSn52M3FUwPs+uo=

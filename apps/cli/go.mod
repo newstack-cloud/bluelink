@@ -20,7 +20,7 @@ require (
 	github.com/newstack-cloud/bluelink/libs/blueprint v0.38.0
 	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.6.0
 	github.com/newstack-cloud/bluelink/libs/deploy-engine-client v0.3.0
-	github.com/newstack-cloud/deploy-cli-sdk v0.1.5
+	github.com/newstack-cloud/deploy-cli-sdk v0.1.6
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/spf13/afero v1.15.0
 	github.com/spf13/cobra v1.10.2
@@ -147,7 +147,3 @@ require (
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-// Temporary replace directive for local integration testing of cleanup command.
-// Remove before committing.
-replace github.com/newstack-cloud/deploy-cli-sdk => /Users/andresutherland/projects2025/newstack/deploy-cli-sdk
