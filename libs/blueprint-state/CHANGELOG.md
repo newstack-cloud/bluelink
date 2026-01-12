@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.1](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.6.0...blueprint-state/v0.6.1) (2026-01-12)
+
+
+### Bug Fixes
+
+* **blueprint-state:** ensure error is not returned when there are no resources to cleanup ([e1098c6](https://github.com/newstack-cloud/bluelink/commit/e1098c665e3f8197ad14f1502680897f74344bcb))
+
 ## [0.6.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.5.0...blueprint-state/v0.6.0) (2026-01-11)
 
 
