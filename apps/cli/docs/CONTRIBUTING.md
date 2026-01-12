@@ -60,7 +60,7 @@ go run ./cmd/main.go validate --blueprint-file app.blueprint.yml
 Testing in a non-interactive mode can be done by running:
 
 ```bash
-go run ./cmd/main.go <command> <options>  2>&1 | tee debug.log
+go run ./cmd/main.go <command> <options> 2>&1 | tee debug.log
 ```
 
 For example:
