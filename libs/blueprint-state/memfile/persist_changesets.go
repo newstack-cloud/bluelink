@@ -247,6 +247,12 @@ func (s *statePersister) loadAllChangesetChunks() (
 	[][]*manage.Changeset,
 	error,
 ) {
+	// If there are no changesets in the index,
+	// there are no chunk files to load.
+	if len(s.changesetIndex) == 0 {
+		return nil, nil
+	}
+
 	changesetChunks := [][]*manage.Changeset{}
 
 	for i := 0; i <= s.lastChangesetChunk; i++ {

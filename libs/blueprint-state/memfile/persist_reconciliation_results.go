@@ -162,6 +162,12 @@ func (s *statePersister) loadAllReconciliationResultChunks() (
 	[][]*manage.ReconciliationResult,
 	error,
 ) {
+	// If there are no reconciliation results in the index,
+	// there are no chunk files to load.
+	if len(s.reconciliationResultIndex) == 0 {
+		return nil, nil
+	}
+
 	resultChunks := [][]*manage.ReconciliationResult{}
 
 	for i := 0; i <= s.lastReconciliationResultChunk; i++ {

@@ -250,6 +250,12 @@ func (s *statePersister) loadAllBlueprintValidationChunks() (
 	[][]*manage.BlueprintValidation,
 	error,
 ) {
+	// If there are no blueprint validations in the index,
+	// there are no chunk files to load.
+	if len(s.blueprintValidationIndex) == 0 {
+		return nil, nil
+	}
+
 	validationChunks := [][]*manage.BlueprintValidation{}
 
 	for i := 0; i <= s.lastBlueprintValidationChunk; i++ {
