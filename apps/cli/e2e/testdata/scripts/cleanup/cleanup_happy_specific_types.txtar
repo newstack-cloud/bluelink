@@ -1,0 +1,17 @@
+# Test cleanup of specific resource types using flags
+
+wait_engine
+
+exec bluelink cleanup --validations --changesets --connect-protocol=tcp --engine-endpoint=$BLUELINK_ENGINE_ENDPOINT --engine-auth-config-file=engine.auth.json
+stdout 'Cleanup complete'
+stdout 'validations'
+stdout 'changesets'
+
+-- bluelink.config.toml --
+# Empty config file
+
+-- engine.auth.json --
+{
+  "method": "apiKey",
+  "apiKey": "test-api-key"
+}

@@ -18,29 +18,29 @@ func TestItemBuilderTestSuite(t *testing.T) {
 	suite.Run(t, new(ItemBuilderTestSuite))
 }
 
-// buildItemsFromChangeset tests
+// BuildItemsFromChangeset tests
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_returns_empty_for_nil_changeset() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_returns_empty_for_nil_changeset() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
 
-	items := buildItemsFromChangeset(nil, resourcesByName, childrenByName, linksByName, nil)
+	items := BuildItemsFromChangeset(nil, resourcesByName, childrenByName, linksByName, nil)
 
 	s.Empty(items)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_returns_empty_for_empty_changeset() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_returns_empty_for_empty_changeset() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
 
-	items := buildItemsFromChangeset(&changes.BlueprintChanges{}, resourcesByName, childrenByName, linksByName, nil)
+	items := BuildItemsFromChangeset(&changes.BlueprintChanges{}, resourcesByName, childrenByName, linksByName, nil)
 
 	s.Empty(items)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_new_resources() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_adds_new_resources() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -51,7 +51,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_new_resources()
 		},
 	}
 
-	items := buildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
 
 	s.Len(items, 1)
 	s.Equal(ItemTypeResource, items[0].Type)
@@ -61,7 +61,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_new_resources()
 	s.NotNil(resourcesByName["newResource"])
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_changed_resources() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_adds_changed_resources() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -74,7 +74,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_changed_resourc
 		},
 	}
 
-	items := buildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
 
 	s.Len(items, 1)
 	s.Equal(ItemTypeResource, items[0].Type)
@@ -82,7 +82,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_changed_resourc
 	s.Equal(ActionUpdate, items[0].Resource.Action)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_removed_resources() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_adds_removed_resources() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -91,7 +91,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_removed_resourc
 		RemovedResources: []string{"removedResource"},
 	}
 
-	items := buildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
 
 	s.Len(items, 1)
 	s.Equal(ItemTypeResource, items[0].Type)
@@ -99,7 +99,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_removed_resourc
 	s.Equal(ActionDelete, items[0].Resource.Action)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_removed_resources_with_state() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_adds_removed_resources_with_state() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -121,7 +121,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_removed_resourc
 		RemovedResources: []string{"removedResource"},
 	}
 
-	items := buildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, instanceState)
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, instanceState)
 
 	s.Len(items, 1)
 	s.Equal(ActionDelete, items[0].Resource.Action)
@@ -129,7 +129,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_removed_resourc
 	s.Equal("res-123", items[0].Resource.ResourceState.ResourceID)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_new_children() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_adds_new_children() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -144,7 +144,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_new_children() 
 		},
 	}
 
-	items := buildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
 
 	s.Len(items, 1)
 	s.Equal(ItemTypeChild, items[0].Type)
@@ -155,7 +155,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_new_children() 
 	s.NotNil(childrenByName["newChild"])
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_changed_children() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_adds_changed_children() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -178,7 +178,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_changed_childre
 		},
 	}
 
-	items := buildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, instanceState)
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, instanceState)
 
 	s.Len(items, 1)
 	s.Equal(ItemTypeChild, items[0].Type)
@@ -188,7 +188,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_changed_childre
 	s.Equal("child-instance-123", items[0].InstanceState.InstanceID)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_recreate_children() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_adds_recreate_children() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -197,7 +197,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_recreate_childr
 		RecreateChildren: []string{"recreateChild"},
 	}
 
-	items := buildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
 
 	s.Len(items, 1)
 	s.Equal(ItemTypeChild, items[0].Type)
@@ -205,7 +205,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_recreate_childr
 	s.Equal(ActionRecreate, items[0].Child.Action)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_removed_children() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_adds_removed_children() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -214,7 +214,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_removed_childre
 		RemovedChildren: []string{"removedChild"},
 	}
 
-	items := buildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
 
 	s.Len(items, 1)
 	s.Equal(ItemTypeChild, items[0].Type)
@@ -222,7 +222,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_removed_childre
 	s.Equal(ActionDelete, items[0].Child.Action)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_links_from_new_resources() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_adds_links_from_new_resources() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -237,7 +237,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_links_from_new_
 		},
 	}
 
-	items := buildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
 
 	// Should have both the resource and the link
 	s.Len(items, 2)
@@ -256,7 +256,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_links_from_new_
 	s.Equal("resourceB", linkItem.Link.ResourceBName)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_links_from_changed_resources() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_adds_links_from_changed_resources() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -275,7 +275,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_links_from_chan
 		},
 	}
 
-	items := buildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
 
 	// Should have the resource and 3 links
 	s.Len(items, 4)
@@ -291,7 +291,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_links_from_chan
 	s.Contains(linkActions, ActionDelete) // Removed link
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_removed_links() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_adds_removed_links() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -300,7 +300,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_removed_links()
 		RemovedLinks: []string{"resX::resY"},
 	}
 
-	items := buildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
 
 	s.Len(items, 1)
 	s.Equal(ItemTypeLink, items[0].Type)
@@ -308,7 +308,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_removed_links()
 	s.Equal(ActionDelete, items[0].Link.Action)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_skips_duplicate_removed_links() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_skips_duplicate_removed_links() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -323,19 +323,19 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_skips_duplicate_remo
 		RemovedLinks: []string{"resourceA::resourceB"},
 	}
 
-	items := buildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
 
 	// Should only have resource and one link (not duplicated)
 	linkCount := 0
 	for idx := range items {
 		if items[idx].Type == ItemTypeLink {
-			linkCount++
+			linkCount += 1
 		}
 	}
 	s.Equal(1, linkCount)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_no_change_resources_from_state() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_adds_no_change_resources_from_state() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -350,7 +350,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_no_change_resou
 		},
 	}
 
-	items := buildItemsFromChangeset(&changes.BlueprintChanges{}, resourcesByName, childrenByName, linksByName, instanceState)
+	items := BuildItemsFromChangeset(&changes.BlueprintChanges{}, resourcesByName, childrenByName, linksByName, instanceState)
 
 	s.Len(items, 1)
 	s.Equal(ItemTypeResource, items[0].Type)
@@ -359,7 +359,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_no_change_resou
 	s.Equal("res-123", items[0].Resource.ResourceID)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_no_change_children_from_state() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_adds_no_change_children_from_state() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -370,7 +370,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_no_change_child
 		},
 	}
 
-	items := buildItemsFromChangeset(&changes.BlueprintChanges{}, resourcesByName, childrenByName, linksByName, instanceState)
+	items := BuildItemsFromChangeset(&changes.BlueprintChanges{}, resourcesByName, childrenByName, linksByName, instanceState)
 
 	s.Len(items, 1)
 	s.Equal(ItemTypeChild, items[0].Type)
@@ -379,7 +379,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_no_change_child
 	s.NotNil(items[0].InstanceState)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_no_change_links_from_state() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_adds_no_change_links_from_state() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -393,7 +393,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_no_change_links
 		},
 	}
 
-	items := buildItemsFromChangeset(&changes.BlueprintChanges{}, resourcesByName, childrenByName, linksByName, instanceState)
+	items := BuildItemsFromChangeset(&changes.BlueprintChanges{}, resourcesByName, childrenByName, linksByName, instanceState)
 
 	s.Len(items, 1)
 	s.Equal(ItemTypeLink, items[0].Type)
@@ -403,7 +403,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_adds_no_change_links
 	s.Equal(core.LinkStatusCreated, items[0].Link.Status)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_does_not_duplicate_changed_items_from_state() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_does_not_duplicate_changed_items_from_state() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -426,7 +426,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_does_not_duplicate_c
 		},
 	}
 
-	items := buildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, instanceState)
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, instanceState)
 
 	// Should only have one resource (from changes, not duplicated from state)
 	s.Len(items, 1)
@@ -434,7 +434,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_does_not_duplicate_c
 	s.Equal(ActionUpdate, items[0].Resource.Action)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_populates_nested_items_in_shared_maps() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_populates_nested_items_in_shared_maps() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -466,7 +466,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_populates_nested_ite
 		},
 	}
 
-	_ = buildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+	_ = BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
 
 	// parentChild should be added via appendNewChildren
 	s.NotNil(childrenByName["parentChild"])
@@ -478,101 +478,119 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_populates_nested_ite
 	s.NotNil(resourcesByName["deepestResource"])
 }
 
-// determineResourceAction tests
+// Tests for action determination behavior (via BuildItemsFromChangeset)
 
-func (s *ItemBuilderTestSuite) Test_determineResourceAction_returns_recreate_for_must_recreate() {
-	rc := &provider.Changes{MustRecreate: true}
-	s.Equal(ActionRecreate, determineResourceAction(rc))
-}
+func (s *ItemBuilderTestSuite) Test_changed_resource_returns_recreate_for_must_recreate() {
+	resourcesByName := make(map[string]*ResourceDeployItem)
+	childrenByName := make(map[string]*ChildDeployItem)
+	linksByName := make(map[string]*LinkDeployItem)
 
-func (s *ItemBuilderTestSuite) Test_determineResourceAction_returns_no_change_for_no_field_changes() {
-	rc := &provider.Changes{}
-	s.Equal(ActionNoChange, determineResourceAction(rc))
-}
-
-func (s *ItemBuilderTestSuite) Test_determineResourceAction_returns_update_for_field_changes() {
-	rc := &provider.Changes{
-		ModifiedFields: []provider.FieldChange{{FieldPath: "spec.value"}},
-	}
-	s.Equal(ActionUpdate, determineResourceAction(rc))
-}
-
-// extractResourceInfo tests
-
-func (s *ItemBuilderTestSuite) Test_extractResourceInfo_extracts_resource_id() {
-	rc := &provider.Changes{
-		AppliedResourceInfo: provider.ResourceInfo{
-			ResourceID: "res-info-123",
+	bpChanges := &changes.BlueprintChanges{
+		ResourceChanges: map[string]provider.Changes{
+			"testResource": {MustRecreate: true},
 		},
 	}
-	resourceID, resourceType := extractResourceInfo(rc)
-	s.Equal("res-info-123", resourceID)
-	s.Equal("", resourceType)
+
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+
+	s.Len(items, 1)
+	s.Equal(ActionRecreate, items[0].Resource.Action)
 }
 
-func (s *ItemBuilderTestSuite) Test_extractResourceInfo_extracts_resource_type_from_state() {
-	rc := &provider.Changes{
-		AppliedResourceInfo: provider.ResourceInfo{
-			ResourceID: "res-info-456",
-			CurrentResourceState: &state.ResourceState{
-				Type: "aws/lambda/function",
+func (s *ItemBuilderTestSuite) Test_changed_resource_returns_no_change_for_no_field_changes() {
+	resourcesByName := make(map[string]*ResourceDeployItem)
+	childrenByName := make(map[string]*ChildDeployItem)
+	linksByName := make(map[string]*LinkDeployItem)
+
+	bpChanges := &changes.BlueprintChanges{
+		ResourceChanges: map[string]provider.Changes{
+			"testResource": {},
+		},
+	}
+
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+
+	s.Len(items, 1)
+	s.Equal(ActionNoChange, items[0].Resource.Action)
+}
+
+func (s *ItemBuilderTestSuite) Test_changed_resource_returns_update_for_field_changes() {
+	resourcesByName := make(map[string]*ResourceDeployItem)
+	childrenByName := make(map[string]*ChildDeployItem)
+	linksByName := make(map[string]*LinkDeployItem)
+
+	bpChanges := &changes.BlueprintChanges{
+		ResourceChanges: map[string]provider.Changes{
+			"testResource": {
+				ModifiedFields: []provider.FieldChange{{FieldPath: "spec.value"}},
 			},
 		},
 	}
-	resourceID, resourceType := extractResourceInfo(rc)
-	s.Equal("res-info-456", resourceID)
-	s.Equal("aws/lambda/function", resourceType)
+
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+
+	s.Len(items, 1)
+	s.Equal(ActionUpdate, items[0].Resource.Action)
 }
 
-// findResourceState tests
+// Tests for resource info extraction behavior (via BuildItemsFromChangeset)
 
-func (s *ItemBuilderTestSuite) Test_findResourceState_returns_nil_for_nil_instance_state() {
-	result := findResourceState(nil, "resource")
-	s.Nil(result)
-}
+func (s *ItemBuilderTestSuite) Test_changed_resource_extracts_resource_id() {
+	resourcesByName := make(map[string]*ResourceDeployItem)
+	childrenByName := make(map[string]*ChildDeployItem)
+	linksByName := make(map[string]*LinkDeployItem)
 
-func (s *ItemBuilderTestSuite) Test_findResourceState_returns_nil_for_missing_resource_id() {
-	instanceState := &state.InstanceState{
-		ResourceIDs: map[string]string{},
-		Resources:   map[string]*state.ResourceState{},
-	}
-	result := findResourceState(instanceState, "unknownResource")
-	s.Nil(result)
-}
-
-func (s *ItemBuilderTestSuite) Test_findResourceState_finds_resource_by_name() {
-	instanceState := &state.InstanceState{
-		ResourceIDs: map[string]string{
-			"myResource": "res-lookup-789",
-		},
-		Resources: map[string]*state.ResourceState{
-			"res-lookup-789": {
-				ResourceID: "res-lookup-789",
-				Name:       "myResource",
+	bpChanges := &changes.BlueprintChanges{
+		ResourceChanges: map[string]provider.Changes{
+			"testResource": {
+				ModifiedFields: []provider.FieldChange{{FieldPath: "spec.value"}},
+				AppliedResourceInfo: provider.ResourceInfo{
+					ResourceID: "res-info-123",
+				},
 			},
 		},
 	}
-	result := findResourceState(instanceState, "myResource")
-	s.NotNil(result)
-	s.Equal("res-lookup-789", result.ResourceID)
+
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+
+	s.Len(items, 1)
+	s.Equal("res-info-123", items[0].Resource.ResourceID)
+	s.Equal("", items[0].Resource.ResourceType)
 }
 
-// buildChangedResourceItem tests
+func (s *ItemBuilderTestSuite) Test_changed_resource_extracts_resource_type_from_state() {
+	resourcesByName := make(map[string]*ResourceDeployItem)
+	childrenByName := make(map[string]*ChildDeployItem)
+	linksByName := make(map[string]*LinkDeployItem)
 
-func (s *ItemBuilderTestSuite) Test_buildChangedResourceItem_sets_action_from_changes() {
-	rc := &provider.Changes{
-		ModifiedFields: []provider.FieldChange{{FieldPath: "spec.value"}},
+	bpChanges := &changes.BlueprintChanges{
+		ResourceChanges: map[string]provider.Changes{
+			"testResource": {
+				ModifiedFields: []provider.FieldChange{{FieldPath: "spec.value"}},
+				AppliedResourceInfo: provider.ResourceInfo{
+					ResourceID: "res-info-456",
+					CurrentResourceState: &state.ResourceState{
+						Type: "aws/lambda/function",
+					},
+				},
+			},
+		},
 	}
-	item := buildChangedResourceItem("testResource", rc, nil)
-	s.Equal("testResource", item.Name)
-	s.Equal(ActionUpdate, item.Action)
-	s.Equal(rc, item.Changes)
+
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+
+	s.Len(items, 1)
+	s.Equal("res-info-456", items[0].Resource.ResourceID)
+	s.Equal("aws/lambda/function", items[0].Resource.ResourceType)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildChangedResourceItem_includes_resource_state() {
-	rc := &provider.Changes{
-		ModifiedFields: []provider.FieldChange{{FieldPath: "spec.value"}},
-	}
+// Tests for resource state lookup behavior (via BuildItemsFromChangeset)
+
+func (s *ItemBuilderTestSuite) Test_changed_resource_includes_resource_state_from_instance() {
+	resourcesByName := make(map[string]*ResourceDeployItem)
+	childrenByName := make(map[string]*ChildDeployItem)
+	linksByName := make(map[string]*LinkDeployItem)
+
 	instanceState := &state.InstanceState{
 		ResourceIDs: map[string]string{
 			"testResource": "res-state-123",
@@ -585,58 +603,123 @@ func (s *ItemBuilderTestSuite) Test_buildChangedResourceItem_includes_resource_s
 			},
 		},
 	}
-	item := buildChangedResourceItem("testResource", rc, instanceState)
-	s.NotNil(item.ResourceState)
-	s.Equal("res-state-123", item.ResourceState.ResourceID)
-}
 
-func (s *ItemBuilderTestSuite) Test_buildChangedResourceItem_extracts_resource_info_from_changes() {
-	rc := &provider.Changes{
-		ModifiedFields: []provider.FieldChange{{FieldPath: "spec.value"}},
-		AppliedResourceInfo: provider.ResourceInfo{
-			ResourceID: "res-from-changes",
-			CurrentResourceState: &state.ResourceState{
-				Type: "aws/dynamodb/table",
+	bpChanges := &changes.BlueprintChanges{
+		ResourceChanges: map[string]provider.Changes{
+			"testResource": {
+				ModifiedFields: []provider.FieldChange{{FieldPath: "spec.value"}},
 			},
 		},
 	}
-	item := buildChangedResourceItem("testResource", rc, nil)
-	s.Equal("res-from-changes", item.ResourceID)
-	s.Equal("aws/dynamodb/table", item.ResourceType)
+
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, instanceState)
+
+	s.Len(items, 1)
+	s.NotNil(items[0].Resource.ResourceState)
+	s.Equal("res-state-123", items[0].Resource.ResourceState.ResourceID)
 }
 
-// buildNestedChangedResourceItem tests
+func (s *ItemBuilderTestSuite) Test_changed_resource_has_nil_state_when_not_in_instance() {
+	resourcesByName := make(map[string]*ResourceDeployItem)
+	childrenByName := make(map[string]*ChildDeployItem)
+	linksByName := make(map[string]*LinkDeployItem)
 
-func (s *ItemBuilderTestSuite) Test_buildNestedChangedResourceItem_creates_item() {
-	rc := &provider.Changes{
-		ModifiedFields: []provider.FieldChange{{FieldPath: "spec.value"}},
-		AppliedResourceInfo: provider.ResourceInfo{
-			ResourceID: "nested-res-123",
-			CurrentResourceState: &state.ResourceState{
-				ResourceID: "nested-res-123",
-				Type:       "aws/sns/topic",
+	instanceState := &state.InstanceState{
+		ResourceIDs: map[string]string{},
+		Resources:   map[string]*state.ResourceState{},
+	}
+
+	bpChanges := &changes.BlueprintChanges{
+		ResourceChanges: map[string]provider.Changes{
+			"unknownResource": {
+				ModifiedFields: []provider.FieldChange{{FieldPath: "spec.value"}},
 			},
 		},
 	}
-	item := buildNestedChangedResourceItem("nestedResource", rc)
-	s.Equal("nestedResource", item.Name)
-	s.Equal(ActionUpdate, item.Action)
-	s.Equal("nested-res-123", item.ResourceID)
-	s.Equal("aws/sns/topic", item.ResourceType)
-	s.NotNil(item.ResourceState)
+
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, instanceState)
+
+	s.Len(items, 1)
+	s.Nil(items[0].Resource.ResourceState)
 }
 
-func (s *ItemBuilderTestSuite) Test_buildNestedChangedResourceItem_with_recreate() {
-	rc := &provider.Changes{
-		MustRecreate: true,
+// Tests for nested changed resources (via BuildItemsFromChangeset shared maps)
+// Note: Resources inside ChildChanges are populated via populateNestedChangedChildren,
+// which recurses through nested ChildChanges. For direct ResourceChanges within a
+// ChildChange, they're added when the child itself is processed by appendChangedChildren
+// and then recursively via populateNestedItems.
+
+func (s *ItemBuilderTestSuite) Test_nested_changed_resource_creates_item_in_shared_maps() {
+	resourcesByName := make(map[string]*ResourceDeployItem)
+	childrenByName := make(map[string]*ChildDeployItem)
+	linksByName := make(map[string]*LinkDeployItem)
+
+	// Use a structure with nested ChildChanges to test recursive resource population
+	bpChanges := &changes.BlueprintChanges{
+		ChildChanges: map[string]changes.BlueprintChanges{
+			"parentChild": {
+				ChildChanges: map[string]changes.BlueprintChanges{
+					"grandChild": {
+						ResourceChanges: map[string]provider.Changes{
+							"nestedResource": {
+								ModifiedFields: []provider.FieldChange{{FieldPath: "spec.value"}},
+								AppliedResourceInfo: provider.ResourceInfo{
+									ResourceID: "nested-res-123",
+									CurrentResourceState: &state.ResourceState{
+										ResourceID: "nested-res-123",
+										Type:       "aws/sns/topic",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
-	item := buildNestedChangedResourceItem("nestedResource", rc)
-	s.Equal(ActionRecreate, item.Action)
+
+	_ = BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+
+	// Verify the nested resource was added to the shared map
+	s.NotNil(resourcesByName["nestedResource"])
+	s.Equal("nestedResource", resourcesByName["nestedResource"].Name)
+	s.Equal(ActionUpdate, resourcesByName["nestedResource"].Action)
+	s.Equal("nested-res-123", resourcesByName["nestedResource"].ResourceID)
+	s.Equal("aws/sns/topic", resourcesByName["nestedResource"].ResourceType)
+	s.NotNil(resourcesByName["nestedResource"].ResourceState)
+}
+
+func (s *ItemBuilderTestSuite) Test_nested_changed_resource_with_recreate() {
+	resourcesByName := make(map[string]*ResourceDeployItem)
+	childrenByName := make(map[string]*ChildDeployItem)
+	linksByName := make(map[string]*LinkDeployItem)
+
+	// Use a structure with nested ChildChanges to test recursive resource population
+	bpChanges := &changes.BlueprintChanges{
+		ChildChanges: map[string]changes.BlueprintChanges{
+			"parentChild": {
+				ChildChanges: map[string]changes.BlueprintChanges{
+					"grandChild": {
+						ResourceChanges: map[string]provider.Changes{
+							"nestedResource": {
+								MustRecreate: true,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	_ = BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, nil)
+
+	s.NotNil(resourcesByName["nestedResource"])
+	s.Equal(ActionRecreate, resourcesByName["nestedResource"].Action)
 }
 
 // Complex integration test
 
-func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_complex_hierarchy() {
+func (s *ItemBuilderTestSuite) Test_BuildItemsFromChangeset_complex_hierarchy() {
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
@@ -676,7 +759,7 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_complex_hierarchy() 
 		RemovedChildren: []string{"removedChild"},
 	}
 
-	items := buildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, instanceState)
+	items := BuildItemsFromChangeset(bpChanges, resourcesByName, childrenByName, linksByName, instanceState)
 
 	// Count items by type and action
 	resourceItems := 0
@@ -685,11 +768,11 @@ func (s *ItemBuilderTestSuite) Test_buildItemsFromChangeset_complex_hierarchy() 
 	for idx := range items {
 		switch items[idx].Type {
 		case ItemTypeResource:
-			resourceItems++
+			resourceItems += 1
 		case ItemTypeChild:
-			childItems++
+			childItems += 1
 		case ItemTypeLink:
-			linkItems++
+			linkItems += 1
 		}
 	}
 

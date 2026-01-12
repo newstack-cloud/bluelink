@@ -150,12 +150,12 @@ func countExportChanges(bc *changes.BlueprintChanges) (newCount, modifiedCount, 
 	// Resolve-on-deploy placeholders are counted as unchanged when there are no actual changes.
 	for exportName, change := range bc.ExportChanges {
 		if change.PrevValue == nil {
-			newCount++
+			newCount += 1
 		} else if !hasActualChanges && isResolveOnDeployPlaceholder(exportName, &change, bc.ResolveOnDeploy) {
 			// Count resolve-on-deploy placeholders as unchanged when there are no actual changes
-			unchangedCount++
+			unchangedCount += 1
 		} else {
-			modifiedCount++
+			modifiedCount += 1
 		}
 	}
 

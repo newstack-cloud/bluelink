@@ -17,9 +17,9 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
 	github.com/charmbracelet/x/exp/teatest v0.0.0-20251201173703-9f73bfd934ff
 	github.com/jackc/pgx/v5 v5.7.6
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.37.0
-	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.5.0
-	github.com/newstack-cloud/bluelink/libs/deploy-engine-client v0.2.0
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.38.0
+	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.6.0
+	github.com/newstack-cloud/bluelink/libs/deploy-engine-client v0.3.0
 	github.com/newstack-cloud/deploy-cli-sdk v0.1.5
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/spf13/afero v1.15.0
@@ -147,3 +147,7 @@ require (
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+// Temporary replace directive for local integration testing of cleanup command.
+// Remove before committing.
+replace github.com/newstack-cloud/deploy-cli-sdk => /Users/andresutherland/projects2025/newstack/deploy-cli-sdk

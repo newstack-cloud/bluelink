@@ -377,7 +377,7 @@ func (m DeployModel) handlePreDeployInstanceStateFetched(msg PreDeployInstanceSt
 
 	// Rebuild items with the instance state to include unchanged items
 	if m.changesetChanges != nil {
-		m.items = buildItemsFromChangeset(m.changesetChanges, m.resourcesByName, m.childrenByName, m.linksByName, m.preDeployInstanceState)
+		m.items = BuildItemsFromChangeset(m.changesetChanges, m.resourcesByName, m.childrenByName, m.linksByName, m.preDeployInstanceState)
 		m.splitPane.SetItems(ToSplitPaneItems(m.items))
 	}
 
@@ -965,7 +965,7 @@ func (m *DeployModel) SetChangesetChanges(changesetChanges *changes.BlueprintCha
 		return
 	}
 	m.changesetChanges = changesetChanges
-	m.items = buildItemsFromChangeset(changesetChanges, m.resourcesByName, m.childrenByName, m.linksByName, m.preDeployInstanceState)
+	m.items = BuildItemsFromChangeset(changesetChanges, m.resourcesByName, m.childrenByName, m.linksByName, m.preDeployInstanceState)
 	m.splitPane.SetItems(ToSplitPaneItems(m.items))
 }
 
@@ -1009,7 +1009,7 @@ func NewDeployModel(
 	resourcesByName := make(map[string]*ResourceDeployItem)
 	childrenByName := make(map[string]*ChildDeployItem)
 	linksByName := make(map[string]*LinkDeployItem)
-	items := buildItemsFromChangeset(changesetChanges, resourcesByName, childrenByName, linksByName, nil)
+	items := BuildItemsFromChangeset(changesetChanges, resourcesByName, childrenByName, linksByName, nil)
 
 	model := DeployModel{
 		splitPane:               splitpane.New(splitPaneConfig),

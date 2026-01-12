@@ -1,0 +1,7 @@
+# Test cleanup fails when auth config file is missing
+
+! exec bluelink cleanup --connect-protocol=tcp --engine-endpoint=http://localhost:8325
+stderr 'engine.auth.json'
+
+-- bluelink.config.toml --
+# Empty config file

@@ -165,7 +165,7 @@ func (m MainModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "down", "j":
 		if m.cursor < len(m.instances)-1 {
-			m.cursor++
+			m.cursor += 1
 		}
 
 	case "left", "h":

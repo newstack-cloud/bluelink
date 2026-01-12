@@ -102,6 +102,7 @@ This CLI validates, stages changes for, and deploys blueprints.`,
 	setupDestroyCommand(rootCmd, confProvider)
 	setupInstancesCommand(rootCmd, confProvider)
 	setupStateCommand(rootCmd, confProvider)
+	setupCleanupCommand(rootCmd, confProvider)
 
 	return rootCmd
 }
@@ -127,10 +128,4 @@ func validateConnectProtocol(protocol string) error {
 		"invalid connect protocol \"%s\" provided, must be either \"unix\" or \"tcp\"",
 		protocol,
 	)
-}
-
-func OnInitialise() {
-	// No-op: Logo is now only shown in help/usage output via the template.
-	// This avoids printing extraneous text when commands run with --json
-	// or when output is being piped/processed programmatically.
 }

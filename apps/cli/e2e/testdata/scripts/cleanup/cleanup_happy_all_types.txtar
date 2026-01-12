@@ -1,0 +1,21 @@
+# Test cleanup of all resource types (default behavior in headless mode)
+# When no flags are provided and running in headless mode, all resource types
+# are cleaned up by default.
+
+wait_engine
+
+exec bluelink cleanup --connect-protocol=tcp --engine-endpoint=$BLUELINK_ENGINE_ENDPOINT --engine-auth-config-file=engine.auth.json
+stdout 'Cleanup complete'
+stdout 'validations'
+stdout 'changesets'
+stdout 'reconciliation results'
+stdout 'events'
+
+-- bluelink.config.toml --
+# Empty config file
+
+-- engine.auth.json --
+{
+  "method": "apiKey",
+  "apiKey": "test-api-key"
+}

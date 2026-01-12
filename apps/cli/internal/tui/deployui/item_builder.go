@@ -18,10 +18,10 @@ type itemBuilder struct {
 	addedLinks      map[string]bool
 }
 
-// buildItemsFromChangeset creates the initial item list from changeset data.
+// BuildItemsFromChangeset creates the initial item list from changeset data.
 // This provides the proper hierarchy (resources, children, links) from the start.
 // It also includes items with no changes from the instance state.
-func buildItemsFromChangeset(
+func BuildItemsFromChangeset(
 	changesetChanges *changes.BlueprintChanges,
 	resourcesByName map[string]*ResourceDeployItem,
 	childrenByName map[string]*ChildDeployItem,

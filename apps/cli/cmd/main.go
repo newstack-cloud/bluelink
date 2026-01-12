@@ -5,12 +5,7 @@ import (
 	"os"
 
 	"github.com/newstack-cloud/bluelink/apps/cli/cmd/commands"
-	"github.com/spf13/cobra"
 )
-
-func init() {
-	cobra.OnInitialize(commands.OnInitialise)
-}
 
 // Sentinel errors that should exit silently (detailed errors already displayed by TUI)
 var silentErrors = []error{

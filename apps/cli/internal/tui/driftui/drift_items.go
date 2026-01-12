@@ -701,11 +701,11 @@ func (r *DriftDetailsRenderer) renderChildDetails(item *DriftItem, width int, s 
 	for _, child := range item.Children {
 		switch child.Type {
 		case DriftItemTypeResource:
-			resourceCount++
+			resourceCount += 1
 		case DriftItemTypeLink:
-			linkCount++
+			linkCount += 1
 		case DriftItemTypeChild:
-			childCount++
+			childCount += 1
 		}
 	}
 

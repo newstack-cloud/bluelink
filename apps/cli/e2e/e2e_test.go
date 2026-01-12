@@ -229,6 +229,33 @@ func TestScriptsState(t *testing.T) {
 	})
 }
 
+// TestScriptsCleanup runs cleanup command test scripts.
+// These tests require the deploy engine to be running.
+func TestScriptsCleanup(t *testing.T) {
+	engineEndpoint := os.Getenv("DEPLOY_ENGINE_ENDPOINT")
+	if engineEndpoint == "" {
+		engineEndpoint = "http://localhost:18325"
+	}
+
+	testscript.Run(t, testscript.Params{
+		Dir: "testdata/scripts/cleanup",
+		Setup: func(env *testscript.Env) error {
+			env.Setenv("PATH", filepath.Dir(binaryPath)+":"+env.Getenv("PATH"))
+			env.Setenv("BLUELINK_ENGINE_ENDPOINT", engineEndpoint)
+			env.Setenv("BLUELINK_CONNECT_PROTOCOL", "tcp")
+
+			if coverDir != "" {
+				env.Setenv("GOCOVERDIR", coverDir)
+			}
+
+			return nil
+		},
+		Cmds: map[string]func(ts *testscript.TestScript, neg bool, args []string){
+			"wait_engine": waitForEngine,
+		},
+	})
+}
+
 // waitForEngine waits for the deploy-engine to be ready by polling its health endpoint.
 // Usage in .txtar: wait_engine [timeout_seconds]
 // Default timeout is 30 seconds.
