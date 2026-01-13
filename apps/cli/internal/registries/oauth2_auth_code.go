@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"time"
@@ -23,19 +24,54 @@ const (
 type BrowserOpener func(url string) error
 
 // DefaultBrowserOpener opens a URL in the default system browser.
+// Uses absolute paths to system utilities to avoid PATH-based attacks.
 func DefaultBrowserOpener(url string) error {
 	var cmd *exec.Cmd
 
 	switch runtime.GOOS {
 	case "darwin":
-		cmd = exec.Command("open", url)
+		// /usr/bin/open is the standard location on macOS
+		cmd = exec.Command("/usr/bin/open", url)
 	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", url)
+		// cmd.exe is always in the system directory, accessed via ComSpec or fixed path
+		cmd = exec.Command("C:\\Windows\\System32\\cmd.exe", "/c", "start", url)
 	default:
-		cmd = exec.Command("xdg-open", url)
+		// xdg-open is typically in /usr/bin on most Linux distributions
+		xdgPath := findXdgOpen()
+		if xdgPath == "" {
+			return fmt.Errorf("xdg-open not found in standard locations")
+		}
+		cmd = exec.Command(xdgPath, url)
 	}
 
 	return cmd.Start()
+}
+
+// findXdgOpen searches for xdg-open in standard system directories.
+// Returns the absolute path if found, empty string otherwise.
+func findXdgOpen() string {
+	// Standard locations for xdg-open on Linux systems
+	standardPaths := []string{
+		"/usr/bin/xdg-open",
+		"/usr/local/bin/xdg-open",
+		"/bin/xdg-open",
+	}
+
+	for _, path := range standardPaths {
+		if fileExists(path) {
+			return path
+		}
+	}
+	return ""
+}
+
+// fileExists checks if a file exists and is not a directory.
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return !info.IsDir()
 }
 
 // OAuth2AuthCodeAuthenticator handles OAuth2 authorization code authentication.
