@@ -17,13 +17,11 @@ COPY *.go ./
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o plugin-registry-test-server .
 
 # Runtime stage
-FROM alpine:latest
+FROM alpine:3.23
 
-# Install ca-certificates for HTTPS support
-RUN apk --no-cache add ca-certificates
-
-# Create non-root user
-RUN adduser -D -g '' appuser
+# Install ca-certificates for HTTPS support and create non-root user
+RUN apk --no-cache add ca-certificates=20251003-r0 \
+    && adduser -D -g '' appuser
 
 WORKDIR /app
 
