@@ -256,6 +256,71 @@ func TestScriptsCleanup(t *testing.T) {
 	})
 }
 
+// TestScriptsPlugins runs plugins command test scripts.
+// These tests require the mock registry to be running for happy path tests.
+func TestScriptsPlugins(t *testing.T) {
+	mockRegistryEndpoint := os.Getenv("MOCK_REGISTRY_ENDPOINT")
+	if mockRegistryEndpoint == "" {
+		// Use port 18080 to avoid conflicts with locally running services
+		mockRegistryEndpoint = "http://localhost:18080"
+	}
+
+	testscript.Run(t, testscript.Params{
+		Dir: "testdata/scripts/plugins",
+		Setup: func(env *testscript.Env) error {
+			env.Setenv("PATH", filepath.Dir(binaryPath)+":"+env.Getenv("PATH"))
+			env.Setenv("MOCK_REGISTRY_ENDPOINT", mockRegistryEndpoint)
+
+			// Use the absolute path stored during TestMain
+			if coverDir != "" {
+				env.Setenv("GOCOVERDIR", coverDir)
+			}
+
+			return nil
+		},
+		Cmds: map[string]func(ts *testscript.TestScript, neg bool, args []string){
+			"wait_registry": waitForRegistry,
+		},
+	})
+}
+
+// waitForRegistry waits for the mock registry to be ready by polling its health endpoint.
+// Usage in .txtar: wait_registry [timeout_seconds]
+// Default timeout is 30 seconds.
+func waitForRegistry(ts *testscript.TestScript, neg bool, args []string) {
+	timeout := 30 * time.Second
+	if len(args) > 0 {
+		if d, err := time.ParseDuration(args[0] + "s"); err == nil {
+			timeout = d
+		}
+	}
+
+	endpoint := ts.Getenv("MOCK_REGISTRY_ENDPOINT")
+	if endpoint == "" {
+		endpoint = "http://localhost:18080"
+	}
+	healthURL := endpoint + "/health"
+
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		resp, err := http.Get(healthURL)
+		if err == nil {
+			resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				if neg {
+					ts.Fatalf("expected registry to be unavailable, but it responded")
+				}
+				return
+			}
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	if !neg {
+		ts.Fatalf("mock-registry did not become ready at %s within %v", healthURL, timeout)
+	}
+}
+
 // waitForEngine waits for the deploy-engine to be ready by polling its health endpoint.
 // Usage in .txtar: wait_engine [timeout_seconds]
 // Default timeout is 30 seconds.

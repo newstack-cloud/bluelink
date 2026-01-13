@@ -71,6 +71,10 @@ go run ./cmd/main.go validate --blueprint-file app.blueprint.yml 2>&1 | tee debu
 
 This will write the output to the console and also to the `debug.log` file.
 
+### Testing plugin commands
+
+You'll find a detailed guide for testing plugin commands against a local registry server in [TESTING_PLUGIN_REGISTRY.md](TESTING_PLUGIN_REGISTRY.md).
+
 ## Releasing
 
 Releases are automated using [release-please](https://github.com/googleapis/release-please).

@@ -1,0 +1,26 @@
+# Test plugins install fails gracefully when plugin doesn't exist
+# This test requires the mock-registry container to be running
+
+wait_registry
+
+# First, save API key credentials to the registry
+mkdir $WORK/.bluelink/clients
+cp plugins.auth.json $WORK/.bluelink/clients/plugins.auth.json
+env HOME=$WORK
+
+# Set plugin installation directory to a temp location
+env BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH=$WORK/plugins
+
+# Run install for non-existent plugin
+! exec bluelink plugins install localhost:18080/bluelink/nonexistent@1.0.0
+stdout 'not found'
+
+-- bluelink.config.toml --
+# Empty config file
+
+-- plugins.auth.json --
+{
+  "localhost:18080": {
+    "apiKey": "test-api-key-12345"
+  }
+}

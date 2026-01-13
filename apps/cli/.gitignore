@@ -48,3 +48,9 @@ e2e/testprovider/bluelink-test-provider
 # Migration files that are copied from the blueprint state library
 # for integration tests, primarily for the export and import functionality.
 internal/stateio/postgres
+
+# E2E test registry server binary (built by docker-compose)
+e2e/testregistry/testregistry
+
+# Binary for plugin registry test server
+tools/plugin-registry-test-server/plugin-registry-test-server

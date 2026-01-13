@@ -1,0 +1,18 @@
+# Test plugins login discovers authentication methods from mock registry
+# This test requires the mock-registry container to be running
+#
+# The mock registry serves API key auth by default.
+# In headless mode (CI), after successful service discovery,
+# the command properly exits requiring an interactive terminal.
+
+wait_registry
+
+# Run login against the mock registry using http:// scheme for testing
+# Should discover auth methods but exit because it needs interactive input
+! exec bluelink plugins login http://localhost:18080
+stdout 'Discovering authentication methods'
+stdout 'Found 1 authentication method'
+stdout 'API key authentication requires an interactive terminal'
+
+-- bluelink.config.toml --
+# Empty config file

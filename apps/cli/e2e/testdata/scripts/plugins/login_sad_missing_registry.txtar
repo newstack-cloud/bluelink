@@ -1,0 +1,7 @@
+# Test plugins login fails without registry argument
+
+! exec bluelink plugins login
+stderr 'accepts 1 arg'
+
+-- bluelink.config.toml --
+# Empty config file to prevent config loading error

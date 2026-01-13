@@ -1,0 +1,33 @@
+# Test plugins install downloads and installs a single plugin from the mock registry
+# This test requires the mock-registry container to be running
+
+wait_registry
+
+# First, save API key credentials to the registry
+mkdir $WORK/.bluelink/clients
+cp plugins.auth.json $WORK/.bluelink/clients/plugins.auth.json
+env HOME=$WORK
+
+# Set plugin installation directory to a temp location
+env BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH=$WORK/plugins
+
+# Run install with explicit registry URL
+exec bluelink plugins install localhost:18080/bluelink/test-provider@1.0.0
+stdout 'test-provider.*installed'
+stdout 'Installed: 1'
+
+# Verify the plugin was extracted
+exists $WORK/plugins/bluelink/test-provider/1.0.0/plugin
+
+# Verify manifest was updated
+exists $WORK/plugins/manifest.json
+
+-- bluelink.config.toml --
+# Empty config file
+
+-- plugins.auth.json --
+{
+  "localhost:18080": {
+    "apiKey": "test-api-key-12345"
+  }
+}

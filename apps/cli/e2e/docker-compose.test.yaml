@@ -9,6 +9,38 @@
 #   go test -tags=e2e -v ./e2e/...
 
 services:
+  # Build the mock registry server as a Linux binary inside Docker
+  # The testregistry is a standalone Go module for testing plugins login
+  mock-registry-builder:
+    image: golang:1.24-alpine
+    working_dir: /testregistry
+    command: ["go", "build", "-o", "/output/registry", "."]
+    volumes:
+      - ./testregistry:/testregistry:ro
+      - mock-registry-bin:/output
+    environment:
+      GOOS: linux
+      GOARCH: amd64
+      CGO_ENABLED: "0"
+
+  # Mock plugin registry server for testing plugins login command
+  mock-registry:
+    image: alpine:latest
+    command: ["/app/registry"]
+    ports:
+      - "18080:8080"
+    volumes:
+      - mock-registry-bin:/app:ro
+    depends_on:
+      mock-registry-builder:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+      start_period: 2s
+
   # Build the test provider as a Linux binary inside Docker
   # The testprovider is a standalone Go module with its own go.mod
   test-provider-builder:
@@ -103,3 +135,5 @@ networks:
 volumes:
   # Shared volume for the built test provider binary
   test-provider-bin:
+  # Shared volume for the built mock registry binary
+  mock-registry-bin:

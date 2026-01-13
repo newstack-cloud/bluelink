@@ -632,10 +632,12 @@ github.com/bazelbuild/rules_go v0.49.0/go.mod h1:Dhcz716Kqg1RHNWos+N6MlXNkjNP2Ew
 github.com/beevik/etree v1.3.0/go.mod h1:aiPf89g/1k3AShMVAzriilpcE4R/Vuor90y83zVZWFc=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/bits-and-blooms/bitset v1.22.0/go.mod h1:7hO7Gc7Pp1vODcmWvKMRA9BNmbv6a/7QIWpPxHddWR8=
+github.com/bwesterb/go-ristretto v1.2.3/go.mod h1:fUIoIZaG73pV5biE2Blr2xEzDoMj7NFEuV9ekS419A0=
 github.com/campoy/embedmd v1.0.0/go.mod h1:oxyr9RCiSXg0M3VJ3ks0UGfp98BpSSGr0kpiX3MzVl8=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/census-instrumentation/opencensus-proto v0.4.1/go.mod h1:4T9NM4+4Vw91VeyqjLS6ao50K5bOcLKN6Q42XnYaRYw=
 github.com/cespare/xxhash/v2 v2.2.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
+github.com/charmbracelet/harmonica v0.2.0 h1:8NxJWRWg/bzKqqEaaeFNipOu77YR5t8aSwG4pgaUBiQ=
 github.com/charmbracelet/harmonica v0.2.0/go.mod h1:KSri/1RMQOZLbw7AHqgcBycp8pgJnQMYYT8QZRqZ1Ao=
 github.com/charmbracelet/x/exp/golden v0.0.0-20240806155701-69247e0abc2a/go.mod h1:wDlXFlCrmJ8J+swcL/MnGUuYnqgQdW9rhSD61oNMb6U=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
@@ -887,8 +889,6 @@ github.com/newstack-cloud/deploy-cli-sdk v0.1.1 h1:Ngmj2HhzaNKyZkTDlrfVtz5daMwU6
 github.com/newstack-cloud/deploy-cli-sdk v0.1.1/go.mod h1:Ez+pQxjOwBYGN22/uX3oodz0gOJHNSI3TQf50gs3HQU=
 github.com/newstack-cloud/deploy-cli-sdk v0.1.3 h1:oY4Wd39dmT4SZ8JPGHhl5X0JdfssqkwApq0rCWOvssA=
 github.com/newstack-cloud/deploy-cli-sdk v0.1.3/go.mod h1:tLF5qQmegiN2BtBc3V74Ee1H2cMV7+Pr/JpXkf99mwY=
-github.com/newstack-cloud/deploy-cli-sdk v0.1.6 h1:UWSbzplrKRjdgVQcFUQZYxh3MX11NgYxTwMrhSrHxns=
-github.com/newstack-cloud/deploy-cli-sdk v0.1.6/go.mod h1:2/P7LKZWGUF5AMIDnSl/oYE51EPdnFiP8NZdyCMokV4=
 github.com/newstack-cloud/ls-builder v0.2.3/go.mod h1:zOvsTcujiPa4TmoJvAuXbswYoAdoK0T8zlcMa3YYYcI=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.0-rc3/go.mod h1:X4pATf0uXsnn3g5aiGIsVnJBR4mxhKzfwmvK/B2NTm8=

@@ -1,0 +1,24 @@
+# Docker Compose for running the plugin registry test server locally
+#
+# Usage:
+#   docker compose up -d
+#
+# Then test with:
+#   bluelink plugins login http://localhost:8080
+
+services:
+  plugin-registry:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      # Test credentials (can be overridden)
+      OAUTH2_CLIENT_ID: test-client-id
+      OAUTH2_CLIENT_SECRET: test-client-secret
+      OAUTH2_API_KEY: test-api-key-12345
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s

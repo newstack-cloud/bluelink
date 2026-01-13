@@ -1,0 +1,9 @@
+# Test plugins login fails with unreachable registry
+# Headless mode outputs error to stdout
+
+! exec bluelink plugins login nonexistent.invalid.registry.example
+stdout 'Discovering authentication methods'
+stdout 'Error'
+
+-- bluelink.config.toml --
+# Empty config file to prevent config loading error
