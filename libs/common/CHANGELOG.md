@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.3](https://github.com/newstack-cloud/bluelink/compare/common/v0.3.2...common/v0.3.3) (2026-01-15)
+
+
+### Dependencies
+
+* **common:** bump github.com/stretchr/testify ([37e7135](https://github.com/newstack-cloud/bluelink/commit/37e7135774f242bf6f4f777ff70ecac35de7daaa))
+
 ## [0.3.2] - 2025-06-24
 
 ### Fixed
