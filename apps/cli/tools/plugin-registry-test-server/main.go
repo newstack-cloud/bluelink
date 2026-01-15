@@ -64,7 +64,7 @@ var (
 	clientID     string
 	clientSecret string
 	apiKey       string
-	privateKey   interface{}
+	privateKey   any
 	publicJWKS   []byte
 
 	// Store for authorization codes (in-memory, for testing only)
@@ -315,8 +315,8 @@ func handleBluelinkServiceDiscovery(w http.ResponseWriter, r *http.Request) {
 	baseURL := fmt.Sprintf("%s://%s", scheme, r.Host)
 
 	// Return a service discovery document that supports all auth types
-	doc := map[string]interface{}{
-		"auth.v1": map[string]interface{}{
+	doc := map[string]any{
+		"auth.v1": map[string]any{
 			"apiKeyHeader": "X-API-Key",
 			"downloadAuth": "bearer",
 			"endpoint":     baseURL + "/oauth2",
@@ -326,7 +326,7 @@ func handleBluelinkServiceDiscovery(w http.ResponseWriter, r *http.Request) {
 			"grantTypes":   []string{"client_credentials", "authorization_code"},
 			"pkce":         true,
 		},
-		"provider.v1": map[string]interface{}{
+		"provider.v1": map[string]any{
 			"endpoint": "/v1/plugins",
 		},
 	}
@@ -342,7 +342,7 @@ func handleOpenIDConfiguration(w http.ResponseWriter, r *http.Request) {
 	}
 	baseURL := fmt.Sprintf("%s://%s", scheme, r.Host)
 
-	config := map[string]interface{}{
+	config := map[string]any{
 		"issuer":                                issuer,
 		"authorization_endpoint":                baseURL + "/oauth2/authorize",
 		"token_endpoint":                        baseURL + "/oauth2/token",
@@ -1013,13 +1013,48 @@ func containsVersion(versions []string, version string) bool {
 func verifyPluginAuth(r *http.Request) bool {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
-		return false
+		// Also check X-API-Key header
+		authHeader = r.Header.Get("X-API-Key")
+		if authHeader == "" {
+			return false
+		}
+		// X-API-Key header contains the key directly
+		return constantTimeCompare(authHeader, apiKey)
 	}
 
 	// Accept "Bearer <token>" format
 	token := strings.TrimPrefix(authHeader, "Bearer ")
-	// Accept test API key or any JWT tokens (they start with "ey")
-	return token == apiKey || strings.HasPrefix(token, "ey")
+
+	// Check if it's the API key
+	if constantTimeCompare(token, apiKey) {
+		return true
+	}
+
+	// Check if it's a valid JWT issued by this server
+	return validateJWT(token)
+}
+
+func validateJWT(tokenString string) bool {
+	token, err := jwt.ParseSigned(tokenString)
+	if err != nil {
+		return false
+	}
+
+	// Verify signature using our public key
+	var claims jwt.Claims
+	if err := token.Claims(privateKey.(*rsa.PrivateKey).Public(), &claims); err != nil {
+		return false
+	}
+
+	// Validate claims
+	if err := claims.Validate(jwt.Expected{
+		Issuer: issuer,
+		Time:   time.Now(),
+	}); err != nil {
+		return false
+	}
+
+	return true
 }
 
 // createShasumsContentAllPlatforms generates a SHA256SUMS file with entries for all common platforms.

@@ -102,6 +102,10 @@ func NewManagerWithPluginsDir(
 // Priority: BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH env var > default platform path.
 // If BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH contains multiple paths (separated by
 // os.PathListSeparator), the first path is used for installation.
+//
+// Directory structure:
+//   - {pluginsDir}/manifest.json - Plugin manifest tracking installed plugins
+//   - {pluginsDir}/bin/{namespace}/{name}/{version}/ - Plugin executables
 func GetPluginsDir() string {
 	if envPath := os.Getenv("BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH"); envPath != "" {
 		// Handle multiple paths separated by os.PathListSeparator
@@ -113,12 +117,11 @@ func GetPluginsDir() string {
 	}
 
 	// Use platform-appropriate default path with env var expansion
-	// These paths match the deploy engine's getOSDefaultPluginPath() in core/config.go
 	if runtime.GOOS == "windows" {
 		return utils.ExpandEnv("%LOCALAPPDATA%\\NewStack\\Bluelink\\engine\\plugins")
 	}
 
-	return utils.ExpandEnv("$HOME/.bluelink/engine/plugins/bin")
+	return utils.ExpandEnv("$HOME/.bluelink/engine/plugins")
 }
 
 // Installs a single plugin.
@@ -132,6 +135,10 @@ func (m *Manager) Install(
 		return nil, err
 	}
 	if len(results) == 0 {
+		// No plugins to install - check if already installed
+		if installed, _, _ := m.IsInstalled(pluginID); installed {
+			return &InstallResult{PluginID: pluginID, Status: StatusSkipped}, nil
+		}
 		return nil, fmt.Errorf("unexpected empty results")
 	}
 	return results[0], nil
@@ -405,7 +412,8 @@ func (m *Manager) extractAndInstallPlugin(
 	archivePath string,
 	metadata *registries.PluginPackageMetadata,
 ) error {
-	destDir := filepath.Join(m.pluginsDir, pluginID.Namespace, pluginID.Name, pluginID.Version)
+	// Plugin executables are extracted to the bin subdirectory
+	destDir := filepath.Join(m.pluginsDir, "bin", pluginID.Namespace, pluginID.Name, pluginID.Version)
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return fmt.Errorf("failed to create plugin directory: %w", err)
 	}

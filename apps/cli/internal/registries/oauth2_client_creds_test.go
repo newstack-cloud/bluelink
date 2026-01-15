@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -30,66 +29,49 @@ func (s *OAuth2ClientCredsSuite) TearDownTest() {
 	os.RemoveAll(s.tempDir)
 }
 
-func (s *OAuth2ClientCredsSuite) TestNewOAuth2ClientCredsAuthenticator_creates_authenticator() {
-	auth := NewOAuth2ClientCredsAuthenticator(s.authConfigStore)
+func (s *OAuth2ClientCredsSuite) TestNewOAuth2ClientCredsStore_creates_store() {
+	auth := NewOAuth2ClientCredsStore(s.authConfigStore)
 	s.NotNil(auth)
 	s.NotNil(auth.httpClient)
 	s.Equal(s.authConfigStore, auth.authConfigStore)
 }
 
-func (s *OAuth2ClientCredsSuite) TestAuthenticate_returns_error_for_empty_client_id() {
-	auth := NewOAuth2ClientCredsAuthenticator(s.authConfigStore)
+func (s *OAuth2ClientCredsSuite) TestStore_returns_error_for_empty_client_id() {
+	auth := NewOAuth2ClientCredsStore(s.authConfigStore)
 	authConfig := &AuthV1Config{
 		Endpoint: "https://auth.example.com",
 		Token:    "/token",
 	}
 
-	err := auth.Authenticate(context.Background(), "registry.example.com", authConfig, "", "secret")
+	err := auth.Store(context.Background(), "registry.example.com", authConfig, "", "secret")
 
 	s.Error(err)
 	s.True(errors.Is(err, ErrCredentialsRequired))
 }
 
-func (s *OAuth2ClientCredsSuite) TestAuthenticate_returns_error_for_empty_client_secret() {
-	auth := NewOAuth2ClientCredsAuthenticator(s.authConfigStore)
+func (s *OAuth2ClientCredsSuite) TestStore_returns_error_for_empty_client_secret() {
+	auth := NewOAuth2ClientCredsStore(s.authConfigStore)
 	authConfig := &AuthV1Config{
 		Endpoint: "https://auth.example.com",
 		Token:    "/token",
 	}
 
-	err := auth.Authenticate(context.Background(), "registry.example.com", authConfig, "client-id", "")
+	err := auth.Store(context.Background(), "registry.example.com", authConfig, "client-id", "")
 
 	s.Error(err)
 	s.True(errors.Is(err, ErrCredentialsRequired))
 }
 
-func (s *OAuth2ClientCredsSuite) TestAuthenticate_obtains_token_and_saves_credentials() {
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		s.Equal("/token", r.URL.Path)
-		s.Equal("application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
-
-		err := r.ParseForm()
-		s.NoError(err)
-		s.Equal("client_credentials", r.Form.Get("grant_type"))
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{
-			"access_token": "test-access-token",
-			"token_type": "Bearer",
-			"expires_in": 3600
-		}`))
-	}))
-	defer server.Close()
-
-	auth := NewOAuth2ClientCredsAuthenticatorWithHTTPClient(server.Client(), s.authConfigStore)
+func (s *OAuth2ClientCredsSuite) TestStore_saves_credentials() {
+	// Authenticate no longer verifies credentials - it just stores them for later use
+	auth := NewOAuth2ClientCredsStore(s.authConfigStore)
 	authConfig := &AuthV1Config{
-		Endpoint: server.URL,
+		Endpoint: "https://auth.example.com",
 		Token:    "/token",
 	}
-	host := strings.TrimPrefix(server.URL, "https://")
+	host := "registry.example.com"
 
-	err := auth.Authenticate(context.Background(), host, authConfig, "test-client-id", "test-client-secret")
+	err := auth.Store(context.Background(), host, authConfig, "test-client-id", "test-client-secret")
 
 	s.NoError(err)
 
@@ -102,38 +84,8 @@ func (s *OAuth2ClientCredsSuite) TestAuthenticate_obtains_token_and_saves_creden
 	s.Equal("test-client-secret", savedAuth.OAuth2.ClientSecret)
 }
 
-func (s *OAuth2ClientCredsSuite) TestAuthenticate_returns_error_for_invalid_credentials() {
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		_, _ = w.Write([]byte(`{
-			"error": "invalid_client",
-			"error_description": "Client authentication failed"
-		}`))
-	}))
-	defer server.Close()
-
-	auth := NewOAuth2ClientCredsAuthenticatorWithHTTPClient(server.Client(), s.authConfigStore)
-	authConfig := &AuthV1Config{
-		Endpoint: server.URL,
-		Token:    "/token",
-	}
-	host := strings.TrimPrefix(server.URL, "https://")
-
-	err := auth.Authenticate(context.Background(), host, authConfig, "bad-client", "bad-secret")
-
-	s.Error(err)
-	s.True(errors.Is(err, ErrAuthenticationFailed))
-	s.Contains(err.Error(), "invalid_client")
-
-	// Verify credentials were NOT saved
-	savedAuth, err := s.authConfigStore.GetRegistryAuth(host)
-	s.NoError(err)
-	s.Nil(savedAuth)
-}
-
 func (s *OAuth2ClientCredsSuite) TestObtainToken_returns_error_for_nil_auth_config() {
-	auth := NewOAuth2ClientCredsAuthenticator(s.authConfigStore)
+	auth := NewOAuth2ClientCredsStore(s.authConfigStore)
 
 	_, err := auth.ObtainToken(context.Background(), nil, "client", "secret")
 
@@ -143,7 +95,7 @@ func (s *OAuth2ClientCredsSuite) TestObtainToken_returns_error_for_nil_auth_conf
 }
 
 func (s *OAuth2ClientCredsSuite) TestObtainToken_returns_error_for_missing_token_url() {
-	auth := NewOAuth2ClientCredsAuthenticator(s.authConfigStore)
+	auth := NewOAuth2ClientCredsStore(s.authConfigStore)
 	authConfig := &AuthV1Config{
 		Endpoint: "",
 		Token:    "",
@@ -169,7 +121,7 @@ func (s *OAuth2ClientCredsSuite) TestObtainToken_returns_token_response() {
 	}))
 	defer server.Close()
 
-	auth := NewOAuth2ClientCredsAuthenticatorWithHTTPClient(server.Client(), s.authConfigStore)
+	auth := NewOAuth2ClientCredsStoreWithHTTPClient(server.Client(), s.authConfigStore)
 	authConfig := &AuthV1Config{
 		Endpoint: server.URL,
 		Token:    "/token",
@@ -196,7 +148,7 @@ func (s *OAuth2ClientCredsSuite) TestObtainToken_returns_error_for_empty_access_
 	}))
 	defer server.Close()
 
-	auth := NewOAuth2ClientCredsAuthenticatorWithHTTPClient(server.Client(), s.authConfigStore)
+	auth := NewOAuth2ClientCredsStoreWithHTTPClient(server.Client(), s.authConfigStore)
 	authConfig := &AuthV1Config{
 		Endpoint: server.URL,
 		Token:    "/token",
@@ -218,7 +170,7 @@ func (s *OAuth2ClientCredsSuite) TestObtainToken_returns_error_for_invalid_json(
 	}))
 	defer server.Close()
 
-	auth := NewOAuth2ClientCredsAuthenticatorWithHTTPClient(server.Client(), s.authConfigStore)
+	auth := NewOAuth2ClientCredsStoreWithHTTPClient(server.Client(), s.authConfigStore)
 	authConfig := &AuthV1Config{
 		Endpoint: server.URL,
 		Token:    "/token",
@@ -241,7 +193,7 @@ func (s *OAuth2ClientCredsSuite) TestObtainToken_parses_oauth2_error_with_descri
 	}))
 	defer server.Close()
 
-	auth := NewOAuth2ClientCredsAuthenticatorWithHTTPClient(server.Client(), s.authConfigStore)
+	auth := NewOAuth2ClientCredsStoreWithHTTPClient(server.Client(), s.authConfigStore)
 	authConfig := &AuthV1Config{
 		Endpoint: server.URL,
 		Token:    "/token",
@@ -264,7 +216,7 @@ func (s *OAuth2ClientCredsSuite) TestObtainToken_parses_oauth2_error_without_des
 	}))
 	defer server.Close()
 
-	auth := NewOAuth2ClientCredsAuthenticatorWithHTTPClient(server.Client(), s.authConfigStore)
+	auth := NewOAuth2ClientCredsStoreWithHTTPClient(server.Client(), s.authConfigStore)
 	authConfig := &AuthV1Config{
 		Endpoint: server.URL,
 		Token:    "/token",
@@ -288,7 +240,7 @@ func (s *OAuth2ClientCredsSuite) TestObtainToken_handles_401_error() {
 	}))
 	defer server.Close()
 
-	auth := NewOAuth2ClientCredsAuthenticatorWithHTTPClient(server.Client(), s.authConfigStore)
+	auth := NewOAuth2ClientCredsStoreWithHTTPClient(server.Client(), s.authConfigStore)
 	authConfig := &AuthV1Config{
 		Endpoint: server.URL,
 		Token:    "/token",
@@ -311,7 +263,7 @@ func (s *OAuth2ClientCredsSuite) TestObtainToken_handles_500_error() {
 	}))
 	defer server.Close()
 
-	auth := NewOAuth2ClientCredsAuthenticatorWithHTTPClient(server.Client(), s.authConfigStore)
+	auth := NewOAuth2ClientCredsStoreWithHTTPClient(server.Client(), s.authConfigStore)
 	authConfig := &AuthV1Config{
 		Endpoint: server.URL,
 		Token:    "/token",

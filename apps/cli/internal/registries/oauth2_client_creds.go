@@ -12,15 +12,17 @@ import (
 
 const defaultOAuth2Timeout = 30 * time.Second
 
-// OAuth2ClientCredsAuthenticator handles OAuth2 client credentials authentication.
-type OAuth2ClientCredsAuthenticator struct {
+// OAuth2ClientCredsStore handles storing OAuth2 client credentials for registries.
+// Unlike OAuth2 Authorization Code flow, this does not perform authentication
+// during login - it only stores credentials for later use.
+type OAuth2ClientCredsStore struct {
 	httpClient      *http.Client
 	authConfigStore *AuthConfigStore
 }
 
-// NewOAuth2ClientCredsAuthenticator creates a new OAuth2 client credentials authenticator.
-func NewOAuth2ClientCredsAuthenticator(authConfigStore *AuthConfigStore) *OAuth2ClientCredsAuthenticator {
-	return &OAuth2ClientCredsAuthenticator{
+// NewOAuth2ClientCredsStore creates a new OAuth2 client credentials store.
+func NewOAuth2ClientCredsStore(authConfigStore *AuthConfigStore) *OAuth2ClientCredsStore {
+	return &OAuth2ClientCredsStore{
 		httpClient: &http.Client{
 			Timeout: defaultOAuth2Timeout,
 		},
@@ -28,23 +30,25 @@ func NewOAuth2ClientCredsAuthenticator(authConfigStore *AuthConfigStore) *OAuth2
 	}
 }
 
-// NewOAuth2ClientCredsAuthenticatorWithHTTPClient creates a new authenticator with a custom HTTP client.
+// NewOAuth2ClientCredsStoreWithHTTPClient creates a new credential store with a custom HTTP client.
 // This is primarily useful for testing.
-func NewOAuth2ClientCredsAuthenticatorWithHTTPClient(
+func NewOAuth2ClientCredsStoreWithHTTPClient(
 	httpClient *http.Client,
 	authConfigStore *AuthConfigStore,
-) *OAuth2ClientCredsAuthenticator {
-	return &OAuth2ClientCredsAuthenticator{
+) *OAuth2ClientCredsStore {
+	return &OAuth2ClientCredsStore{
 		httpClient:      httpClient,
 		authConfigStore: authConfigStore,
 	}
 }
 
-// Authenticate obtains a token using client credentials and stores the credentials if successful.
-func (a *OAuth2ClientCredsAuthenticator) Authenticate(
-	ctx context.Context,
+// Store saves the client credentials in the auth config for later use.
+// The credentials are not verified during storage - validation happens when making
+// authenticated requests to the registry.
+func (a *OAuth2ClientCredsStore) Store(
+	_ context.Context,
 	registryHost string,
-	authConfig *AuthV1Config,
+	_ *AuthV1Config,
 	clientId string,
 	clientSecret string,
 ) error {
@@ -52,13 +56,7 @@ func (a *OAuth2ClientCredsAuthenticator) Authenticate(
 		return ErrCredentialsRequired
 	}
 
-	// Verify by obtaining a token
-	_, err := a.ObtainToken(ctx, authConfig, clientId, clientSecret)
-	if err != nil {
-		return err
-	}
-
-	// Store the client credentials (not the token) for future use
+	// Store the client credentials for future use
 	auth := &RegistryAuthConfig{
 		OAuth2: &OAuth2ClientConfig{
 			ClientId:     clientId,
@@ -73,7 +71,7 @@ func (a *OAuth2ClientCredsAuthenticator) Authenticate(
 }
 
 // ObtainToken exchanges client credentials for an access token using the oauth2 package.
-func (a *OAuth2ClientCredsAuthenticator) ObtainToken(
+func (a *OAuth2ClientCredsStore) ObtainToken(
 	ctx context.Context,
 	authConfig *AuthV1Config,
 	clientId string,

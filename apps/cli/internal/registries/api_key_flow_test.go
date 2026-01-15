@@ -30,41 +30,29 @@ func (s *APIKeyFlowSuite) TearDownTest() {
 	os.RemoveAll(s.tempDir)
 }
 
-func (s *APIKeyFlowSuite) TestNewAPIKeyAuthenticator_creates_authenticator() {
-	auth := NewAPIKeyAuthenticator(s.authConfigStore)
+func (s *APIKeyFlowSuite) TestNewAPIKeyCredentialStore_creates_store() {
+	auth := NewAPIKeyCredentialStore(s.authConfigStore)
 	s.NotNil(auth)
 	s.NotNil(auth.httpClient)
 	s.Equal(s.authConfigStore, auth.authConfigStore)
 }
 
-func (s *APIKeyFlowSuite) TestAuthenticate_returns_error_for_empty_api_key() {
-	auth := NewAPIKeyAuthenticator(s.authConfigStore)
+func (s *APIKeyFlowSuite) TestStore_returns_error_for_empty_api_key() {
+	auth := NewAPIKeyCredentialStore(s.authConfigStore)
 	authConfig := &AuthV1Config{APIKeyHeader: "X-API-Key"}
 
-	err := auth.Authenticate(context.Background(), "registry.example.com", authConfig, "")
+	err := auth.Store(context.Background(), "registry.example.com", authConfig, "")
 
 	s.Error(err)
 	s.True(errors.Is(err, ErrCredentialsRequired))
 }
 
-func (s *APIKeyFlowSuite) TestAuthenticate_verifies_and_saves_valid_api_key() {
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Verify API key is sent in the correct header
-		apiKey := r.Header.Get("X-API-Key")
-		if apiKey != "valid-api-key" {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{}`))
-	}))
-	defer server.Close()
-
-	auth := NewAPIKeyAuthenticatorWithHTTPClient(server.Client(), s.authConfigStore)
+func (s *APIKeyFlowSuite) TestStore_saves_api_key() {
+	auth := NewAPIKeyCredentialStore(s.authConfigStore)
 	authConfig := &AuthV1Config{APIKeyHeader: "X-API-Key"}
-	host := strings.TrimPrefix(server.URL, "https://")
+	host := "registry.example.com"
 
-	err := auth.Authenticate(context.Background(), host, authConfig, "valid-api-key")
+	err := auth.Store(context.Background(), host, authConfig, "any-api-key")
 
 	s.NoError(err)
 
@@ -72,33 +60,11 @@ func (s *APIKeyFlowSuite) TestAuthenticate_verifies_and_saves_valid_api_key() {
 	savedAuth, err := s.authConfigStore.GetRegistryAuth(host)
 	s.NoError(err)
 	s.NotNil(savedAuth)
-	s.Equal("valid-api-key", savedAuth.APIKey)
-}
-
-func (s *APIKeyFlowSuite) TestAuthenticate_returns_error_for_invalid_api_key() {
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusUnauthorized)
-	}))
-	defer server.Close()
-
-	auth := NewAPIKeyAuthenticatorWithHTTPClient(server.Client(), s.authConfigStore)
-	authConfig := &AuthV1Config{APIKeyHeader: "X-API-Key"}
-	host := strings.TrimPrefix(server.URL, "https://")
-
-	err := auth.Authenticate(context.Background(), host, authConfig, "invalid-key")
-
-	s.Error(err)
-	s.True(errors.Is(err, ErrAuthenticationFailed))
-	s.Contains(err.Error(), "invalid API key")
-
-	// Verify the API key was NOT saved
-	savedAuth, err := s.authConfigStore.GetRegistryAuth(host)
-	s.NoError(err)
-	s.Nil(savedAuth)
+	s.Equal("any-api-key", savedAuth.APIKey)
 }
 
 func (s *APIKeyFlowSuite) TestVerify_returns_error_when_auth_config_nil() {
-	auth := NewAPIKeyAuthenticator(s.authConfigStore)
+	auth := NewAPIKeyCredentialStore(s.authConfigStore)
 
 	err := auth.Verify(context.Background(), "registry.example.com", nil, "api-key")
 
@@ -108,7 +74,7 @@ func (s *APIKeyFlowSuite) TestVerify_returns_error_when_auth_config_nil() {
 }
 
 func (s *APIKeyFlowSuite) TestVerify_returns_error_when_api_key_header_empty() {
-	auth := NewAPIKeyAuthenticator(s.authConfigStore)
+	auth := NewAPIKeyCredentialStore(s.authConfigStore)
 	authConfig := &AuthV1Config{APIKeyHeader: ""}
 
 	err := auth.Verify(context.Background(), "registry.example.com", authConfig, "api-key")
@@ -126,7 +92,7 @@ func (s *APIKeyFlowSuite) TestVerify_sends_api_key_in_correct_header() {
 	}))
 	defer server.Close()
 
-	auth := NewAPIKeyAuthenticatorWithHTTPClient(server.Client(), s.authConfigStore)
+	auth := NewAPIKeyCredentialStoreWithHTTPClient(server.Client(), s.authConfigStore)
 	authConfig := &AuthV1Config{APIKeyHeader: "Custom-API-Header"}
 	host := strings.TrimPrefix(server.URL, "https://")
 
@@ -144,7 +110,7 @@ func (s *APIKeyFlowSuite) TestVerify_accepts_2xx_status_codes() {
 			w.WriteHeader(statusCode)
 		}))
 
-		auth := NewAPIKeyAuthenticatorWithHTTPClient(server.Client(), s.authConfigStore)
+		auth := NewAPIKeyCredentialStoreWithHTTPClient(server.Client(), s.authConfigStore)
 		authConfig := &AuthV1Config{APIKeyHeader: "X-API-Key"}
 		host := strings.TrimPrefix(server.URL, "https://")
 
@@ -161,7 +127,7 @@ func (s *APIKeyFlowSuite) TestVerify_returns_error_for_401() {
 	}))
 	defer server.Close()
 
-	auth := NewAPIKeyAuthenticatorWithHTTPClient(server.Client(), s.authConfigStore)
+	auth := NewAPIKeyCredentialStoreWithHTTPClient(server.Client(), s.authConfigStore)
 	authConfig := &AuthV1Config{APIKeyHeader: "X-API-Key"}
 	host := strings.TrimPrefix(server.URL, "https://")
 
@@ -178,7 +144,7 @@ func (s *APIKeyFlowSuite) TestVerify_returns_error_for_403() {
 	}))
 	defer server.Close()
 
-	auth := NewAPIKeyAuthenticatorWithHTTPClient(server.Client(), s.authConfigStore)
+	auth := NewAPIKeyCredentialStoreWithHTTPClient(server.Client(), s.authConfigStore)
 	authConfig := &AuthV1Config{APIKeyHeader: "X-API-Key"}
 	host := strings.TrimPrefix(server.URL, "https://")
 
@@ -195,7 +161,7 @@ func (s *APIKeyFlowSuite) TestVerify_returns_error_for_500() {
 	}))
 	defer server.Close()
 
-	auth := NewAPIKeyAuthenticatorWithHTTPClient(server.Client(), s.authConfigStore)
+	auth := NewAPIKeyCredentialStoreWithHTTPClient(server.Client(), s.authConfigStore)
 	authConfig := &AuthV1Config{APIKeyHeader: "X-API-Key"}
 	host := strings.TrimPrefix(server.URL, "https://")
 

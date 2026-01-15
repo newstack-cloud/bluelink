@@ -8,10 +8,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/newstack-cloud/deploy-cli-sdk/config"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/plugins"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/plugininstallui"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/pluginloginui"
+	"github.com/newstack-cloud/deploy-cli-sdk/config"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -23,9 +23,8 @@ var errInstallFailed = errors.New("install failed")
 func setupPluginsCommand(rootCmd *cobra.Command, confProvider *config.Provider) {
 	pluginsCmd := &cobra.Command{
 		Use:   "plugins",
-		Short: "Manage plugins and plugin registries",
-		Long: `Commands for managing plugins and plugin registries, including
-authentication, installation, and plugin discovery.`,
+		Short: "Manage plugins and login to plugin registries",
+		Long:  `Commands for managing plugins and signing into plugin registries.`,
 	}
 
 	setupPluginsLoginCommand(pluginsCmd)
@@ -141,7 +140,7 @@ If no plugins are specified, dependencies are read from the deploy config file
 
 Plugins are installed to the path specified by BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH
 environment variable, or the default platform-specific path if not set:
-  - Linux/macOS: ~/.bluelink/engine/plugins/bin
+  - Linux/macOS: ~/.bluelink/engine/plugins
   - Windows: %LOCALAPPDATA%\NewStack\Bluelink\engine\plugins
 
 Examples:

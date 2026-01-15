@@ -9,9 +9,9 @@ import (
 type AuthType string
 
 const (
-	AuthTypeAPIKey              AuthType = "api_key"
-	AuthTypeOAuth2ClientCreds   AuthType = "oauth2_client_credentials"
-	AuthTypeOAuth2AuthCode      AuthType = "oauth2_authorization_code"
+	AuthTypeAPIKey            AuthType = "api_key"
+	AuthTypeOAuth2ClientCreds AuthType = "oauth2_client_credentials"
+	AuthTypeOAuth2AuthCode    AuthType = "oauth2_authorization_code"
 )
 
 // ServiceDiscoveryDocument represents the .well-known/bluelink-services.json response.

@@ -73,7 +73,7 @@ func (s *PluginLoginTUISuite) Test_successful_api_key_login() {
 			Styles:              s.newTestStyles(),
 			Headless:            false,
 			DiscoveryClient:     registries.NewServiceDiscoveryClientWithHTTPClient(server.Client()),
-			APIKeyAuthenticator: registries.NewAPIKeyAuthenticatorWithHTTPClient(server.Client(), authConfigStore),
+			APIKeyStore: registries.NewAPIKeyCredentialStoreWithHTTPClient(server.Client(), authConfigStore),
 		},
 	)
 	s.Require().NoError(err)
@@ -96,11 +96,11 @@ func (s *PluginLoginTUISuite) Test_successful_api_key_login() {
 	testModel.Type("test-api-key")
 	testutils.KeyEnter(testModel)
 
-	// Wait for success
+	// Wait for success - API key auth shows "Credentials saved" not "logged in"
 	testutils.WaitForContainsAll(
 		s.T(),
 		testModel.Output(),
-		"Successfully logged in",
+		"Credentials saved",
 		server.URL,
 	)
 
@@ -155,7 +155,7 @@ func (s *PluginLoginTUISuite) Test_successful_oauth2_client_creds_login() {
 			Styles:                s.newTestStyles(),
 			Headless:              false,
 			DiscoveryClient:       registries.NewServiceDiscoveryClientWithHTTPClient(server.Client()),
-			OAuth2ClientCredsAuth: registries.NewOAuth2ClientCredsAuthenticatorWithHTTPClient(server.Client(), authConfigStore),
+			OAuth2ClientCredsStore: registries.NewOAuth2ClientCredsStoreWithHTTPClient(server.Client(), authConfigStore),
 		},
 	)
 	s.Require().NoError(err)
@@ -184,11 +184,11 @@ func (s *PluginLoginTUISuite) Test_successful_oauth2_client_creds_login() {
 	testModel.Type("mysecret")
 	testutils.KeyEnter(testModel)
 
-	// Wait for success
+	// Wait for success - OAuth2 client credentials shows "Credentials saved" not "logged in"
 	testutils.WaitForContainsAll(
 		s.T(),
 		testModel.Output(),
-		"Successfully logged in",
+		"Credentials saved",
 		server.URL,
 	)
 
@@ -284,72 +284,6 @@ func (s *PluginLoginTUISuite) Test_no_auth_methods_supported_error() {
 		testModel.Output(),
 		"Login failed",
 		"does not support any known authentication methods",
-	)
-
-	testutils.KeyQ(testModel)
-	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
-}
-
-func (s *PluginLoginTUISuite) Test_authentication_failed_error() {
-	// Create mock registry server that rejects credentials
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/.well-known/bluelink-services.json" {
-			// Check if there's an API key header - if so, reject it
-			if r.Header.Get("X-API-Key") != "" {
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{
-				"auth.v1": {
-					"apiKeyHeader": "X-API-Key"
-				}
-			}`))
-			return
-		}
-		w.WriteHeader(http.StatusUnauthorized)
-	}))
-	defer server.Close()
-
-	// Pass full URL with scheme - Discover respects explicit schemes
-	authConfigStore := s.newTestAuthConfigStore()
-
-	model, err := NewLoginApp(
-		context.Background(),
-		LoginAppOptions{
-			RegistryHost:        server.URL,
-			Styles:              s.newTestStyles(),
-			Headless:            false,
-			DiscoveryClient:     registries.NewServiceDiscoveryClientWithHTTPClient(server.Client()),
-			APIKeyAuthenticator: registries.NewAPIKeyAuthenticatorWithHTTPClient(server.Client(), authConfigStore),
-		},
-	)
-	s.Require().NoError(err)
-
-	testModel := teatest.NewTestModel(
-		s.T(),
-		model,
-		teatest.WithInitialTermSize(300, 100),
-	)
-
-	// Wait for API key form
-	testutils.WaitForContainsAll(
-		s.T(),
-		testModel.Output(),
-		"API Key",
-	)
-
-	// Type an invalid API key
-	testModel.Type("invalid-key")
-	testutils.KeyEnter(testModel)
-
-	// Wait for error display
-	testutils.WaitForContainsAll(
-		s.T(),
-		testModel.Output(),
-		"Login failed",
-		"invalid API key",
 	)
 
 	testutils.KeyQ(testModel)

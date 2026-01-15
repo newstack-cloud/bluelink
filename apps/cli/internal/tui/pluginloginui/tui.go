@@ -64,8 +64,8 @@ type MainModel struct {
 
 	// Dependencies (for testing)
 	discoveryClient       *registries.ServiceDiscoveryClient
-	apiKeyAuthenticator   *registries.APIKeyAuthenticator
-	oauth2ClientCredsAuth *registries.OAuth2ClientCredsAuthenticator
+	apiKeyStore   *registries.APIKeyCredentialStore
+	oauth2ClientCredsStore *registries.OAuth2ClientCredsStore
 	oauth2AuthCodeAuth    *registries.OAuth2AuthCodeAuthenticator
 }
 
@@ -121,9 +121,9 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.headless {
 			fmt.Fprintln(m.headlessWriter, "Authenticating...")
 		}
-		return m, authenticateAPIKeyCmd(
+		return m, storeAPIKeyCmd(
 			m.ctx,
-			m.apiKeyAuthenticator,
+			m.apiKeyStore,
 			m.registryHost,
 			m.authConfig,
 			msg.APIKey,
@@ -134,9 +134,9 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.headless {
 			fmt.Fprintln(m.headlessWriter, "Authenticating...")
 		}
-		return m, authenticateOAuth2ClientCredsCmd(
+		return m, storeOAuth2ClientCredsCmd(
 			m.ctx,
-			m.oauth2ClientCredsAuth,
+			m.oauth2ClientCredsStore,
 			m.registryHost,
 			m.authConfig,
 			msg.ClientId,
@@ -291,10 +291,21 @@ func (m *MainModel) handleAuthTypeSelected() (tea.Model, tea.Cmd) {
 func (m *MainModel) handleAuthComplete() (tea.Model, tea.Cmd) {
 	m.stage = loginCompleteStage
 	if m.headless {
-		fmt.Fprintf(m.headlessWriter, "Successfully logged in to %s\n", m.registryHost)
+		msg := m.getSuccessMessage()
+		fmt.Fprintf(m.headlessWriter, "%s %s\n", msg, m.registryHost)
 		return m, tea.Quit
 	}
 	return m, nil
+}
+
+// getSuccessMessage returns the appropriate success message based on auth type.
+// OAuth2 Authorization Code flow performs actual authentication, while API key
+// and client credentials just store credentials for later use.
+func (m *MainModel) getSuccessMessage() string {
+	if m.selectedAuth == registries.AuthTypeOAuth2AuthCode {
+		return "Successfully logged in to"
+	}
+	return "Credentials saved for"
 }
 
 func (m *MainModel) handleAuthError(err error) (tea.Model, tea.Cmd) {
@@ -337,7 +348,12 @@ func (m MainModel) renderComplete() string {
 	successStyle := lipgloss.NewStyle().Foreground(m.styles.Palette.Success())
 
 	sb.WriteString("\n")
-	sb.WriteString(successStyle.Render("  ✓ Successfully logged in!"))
+	// Show different message based on auth type
+	if m.selectedAuth == registries.AuthTypeOAuth2AuthCode {
+		sb.WriteString(successStyle.Render("  ✓ Successfully logged in!"))
+	} else {
+		sb.WriteString(successStyle.Render("  ✓ Credentials saved!"))
+	}
 	sb.WriteString("\n\n")
 
 	sb.WriteString(m.styles.Muted.Render("  Registry: "))
@@ -384,14 +400,14 @@ func (m MainModel) renderError() string {
 
 // LoginAppOptions contains options for creating a new login app.
 type LoginAppOptions struct {
-	RegistryHost          string
-	Styles                *stylespkg.Styles
-	Headless              bool
-	HeadlessWriter        io.Writer
-	DiscoveryClient       *registries.ServiceDiscoveryClient
-	APIKeyAuthenticator   *registries.APIKeyAuthenticator
-	OAuth2ClientCredsAuth *registries.OAuth2ClientCredsAuthenticator
-	OAuth2AuthCodeAuth    *registries.OAuth2AuthCodeAuthenticator
+	RegistryHost           string
+	Styles                 *stylespkg.Styles
+	Headless               bool
+	HeadlessWriter         io.Writer
+	DiscoveryClient        *registries.ServiceDiscoveryClient
+	APIKeyStore            *registries.APIKeyCredentialStore
+	OAuth2ClientCredsStore *registries.OAuth2ClientCredsStore
+	OAuth2AuthCodeAuth     *registries.OAuth2AuthCodeAuthenticator
 }
 
 // NewLoginApp creates a new plugin login TUI application.
@@ -406,14 +422,14 @@ func NewLoginApp(ctx context.Context, opts LoginAppOptions) (*MainModel, error) 
 		discoveryClient = registries.NewServiceDiscoveryClient()
 	}
 
-	apiKeyAuth := opts.APIKeyAuthenticator
-	if apiKeyAuth == nil {
-		apiKeyAuth = registries.NewAPIKeyAuthenticator(registries.NewAuthConfigStore())
+	apiKeyStore := opts.APIKeyStore
+	if apiKeyStore == nil {
+		apiKeyStore = registries.NewAPIKeyCredentialStore(registries.NewAuthConfigStore())
 	}
 
-	oauth2ClientCredsAuth := opts.OAuth2ClientCredsAuth
-	if oauth2ClientCredsAuth == nil {
-		oauth2ClientCredsAuth = registries.NewOAuth2ClientCredsAuthenticator(registries.NewAuthConfigStore())
+	oauth2ClientCredsStore := opts.OAuth2ClientCredsStore
+	if oauth2ClientCredsStore == nil {
+		oauth2ClientCredsStore = registries.NewOAuth2ClientCredsStore(registries.NewAuthConfigStore())
 	}
 
 	oauth2AuthCodeAuth := opts.OAuth2AuthCodeAuth
@@ -431,8 +447,8 @@ func NewLoginApp(ctx context.Context, opts LoginAppOptions) (*MainModel, error) 
 		headlessWriter:        opts.HeadlessWriter,
 		width:                 80, // Default width until WindowSizeMsg is received
 		discoveryClient:       discoveryClient,
-		apiKeyAuthenticator:   apiKeyAuth,
-		oauth2ClientCredsAuth: oauth2ClientCredsAuth,
+		apiKeyStore:           apiKeyStore,
+		oauth2ClientCredsStore: oauth2ClientCredsStore,
 		oauth2AuthCodeAuth:    oauth2AuthCodeAuth,
 	}, nil
 }

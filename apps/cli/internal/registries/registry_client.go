@@ -465,8 +465,8 @@ func (c *RegistryClient) exchangeClientCredentials(
 	oauth2Config *OAuth2ClientConfig,
 	authConfig *AuthV1Config,
 ) (string, error) {
-	authenticator := NewOAuth2ClientCredsAuthenticatorWithHTTPClient(c.httpClient, nil)
-	token, err := authenticator.ObtainToken(ctx, authConfig, oauth2Config.ClientId, oauth2Config.ClientSecret)
+	store := NewOAuth2ClientCredsStoreWithHTTPClient(c.httpClient, nil)
+	token, err := store.ObtainToken(ctx, authConfig, oauth2Config.ClientId, oauth2Config.ClientSecret)
 	if err != nil {
 		return "", err
 	}

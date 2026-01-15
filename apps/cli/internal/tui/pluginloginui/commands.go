@@ -39,15 +39,15 @@ type APIKeyAuthErrorMsg struct {
 	Err error
 }
 
-func authenticateAPIKeyCmd(
+func storeAPIKeyCmd(
 	ctx context.Context,
-	authenticator *registries.APIKeyAuthenticator,
+	store *registries.APIKeyCredentialStore,
 	registryHost string,
 	authConfig *registries.AuthV1Config,
 	apiKey string,
 ) tea.Cmd {
 	return func() tea.Msg {
-		if err := authenticator.Authenticate(ctx, registryHost, authConfig, apiKey); err != nil {
+		if err := store.Store(ctx, registryHost, authConfig, apiKey); err != nil {
 			return APIKeyAuthErrorMsg{Err: err}
 		}
 		return APIKeyAuthCompleteMsg{}
@@ -62,16 +62,16 @@ type OAuth2ClientCredsAuthErrorMsg struct {
 	Err error
 }
 
-func authenticateOAuth2ClientCredsCmd(
+func storeOAuth2ClientCredsCmd(
 	ctx context.Context,
-	authenticator *registries.OAuth2ClientCredsAuthenticator,
+	store *registries.OAuth2ClientCredsStore,
 	registryHost string,
 	authConfig *registries.AuthV1Config,
 	clientId string,
 	clientSecret string,
 ) tea.Cmd {
 	return func() tea.Msg {
-		if err := authenticator.Authenticate(ctx, registryHost, authConfig, clientId, clientSecret); err != nil {
+		if err := store.Store(ctx, registryHost, authConfig, clientId, clientSecret); err != nil {
 			return OAuth2ClientCredsAuthErrorMsg{Err: err}
 		}
 		return OAuth2ClientCredsAuthCompleteMsg{}

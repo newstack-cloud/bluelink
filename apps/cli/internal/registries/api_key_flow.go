@@ -10,15 +10,17 @@ import (
 
 const defaultAPIKeyVerifyTimeout = 30 * time.Second
 
-// APIKeyAuthenticator handles API key authentication with registries.
-type APIKeyAuthenticator struct {
+// APIKeyCredentialStore handles storing and verifying API keys for registries.
+// Unlike OAuth2 Authorization Code flow, this does not perform authentication
+// during login - it only stores credentials for later use.
+type APIKeyCredentialStore struct {
 	httpClient      *http.Client
 	authConfigStore *AuthConfigStore
 }
 
-// NewAPIKeyAuthenticator creates a new API key authenticator with default settings.
-func NewAPIKeyAuthenticator(authConfigStore *AuthConfigStore) *APIKeyAuthenticator {
-	return &APIKeyAuthenticator{
+// NewAPIKeyCredentialStore creates a new API key credential store with default settings.
+func NewAPIKeyCredentialStore(authConfigStore *AuthConfigStore) *APIKeyCredentialStore {
+	return &APIKeyCredentialStore{
 		httpClient: &http.Client{
 			Timeout: defaultAPIKeyVerifyTimeout,
 		},
@@ -26,31 +28,29 @@ func NewAPIKeyAuthenticator(authConfigStore *AuthConfigStore) *APIKeyAuthenticat
 	}
 }
 
-// NewAPIKeyAuthenticatorWithHTTPClient creates a new API key authenticator with a custom HTTP client.
+// NewAPIKeyCredentialStoreWithHTTPClient creates a new API key credential store with a custom HTTP client.
 // This is primarily useful for testing.
-func NewAPIKeyAuthenticatorWithHTTPClient(
+func NewAPIKeyCredentialStoreWithHTTPClient(
 	httpClient *http.Client,
 	authConfigStore *AuthConfigStore,
-) *APIKeyAuthenticator {
-	return &APIKeyAuthenticator{
+) *APIKeyCredentialStore {
+	return &APIKeyCredentialStore{
 		httpClient:      httpClient,
 		authConfigStore: authConfigStore,
 	}
 }
 
-// Authenticate verifies the API key and stores it in the auth config if valid.
-func (a *APIKeyAuthenticator) Authenticate(
-	ctx context.Context,
+// Store saves the API key in the auth config for later use.
+// The key is not verified during storage - validation happens when making
+// authenticated requests to the registry.
+func (a *APIKeyCredentialStore) Store(
+	_ context.Context,
 	registryHost string,
-	authConfig *AuthV1Config,
+	_ *AuthV1Config,
 	apiKey string,
 ) error {
 	if apiKey == "" {
 		return ErrCredentialsRequired
-	}
-
-	if err := a.Verify(ctx, registryHost, authConfig, apiKey); err != nil {
-		return err
 	}
 
 	auth := &RegistryAuthConfig{
@@ -64,7 +64,7 @@ func (a *APIKeyAuthenticator) Authenticate(
 }
 
 // Verify checks if the API key is valid by making a test request to the registry.
-func (a *APIKeyAuthenticator) Verify(
+func (a *APIKeyCredentialStore) Verify(
 	ctx context.Context,
 	registryHost string,
 	authConfig *AuthV1Config,
