@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.3.0...deploy-engine/v0.3.1) (2026-01-15)
+
+
+### Dependencies
+
+* **deploy-engine:** update blueprint state lib to version with fix for empty cleanups ([30665ad](https://github.com/newstack-cloud/bluelink/commit/30665ad29d14b38ba93568f4c206f754c3763fdc))
+
 ## [0.3.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.2.0...deploy-engine/v0.3.0) (2026-01-11)
 
 
