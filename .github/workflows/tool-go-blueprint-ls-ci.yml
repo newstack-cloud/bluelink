@@ -21,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       working-directory: ./tools/blueprint-ls
+      CGO_ENABLED: 1
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -31,6 +32,10 @@ jobs:
     - uses: actions/setup-go@v6
       with:
         go-version: '1.24'
+
+    # Install C compiler for CGO (tree-sitter requires CGO)
+    - name: Install C Compiler
+      run: sudo apt-get update && sudo apt-get install -y gcc
 
     # Install global Go dependencies
     - name: Install Go Global Dependencies

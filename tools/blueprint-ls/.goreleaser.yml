@@ -9,21 +9,74 @@ before:
     - go generate ./...
 
 builds:
-  - id: blueprint-ls
+  # Native builds for each OS/arch combination
+  # CGO is required for tree-sitter parsing support
+  - id: blueprint-ls-linux-amd64
     main: ./cmd/main.go
     binary: blueprint-ls
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
+      - CC=x86_64-linux-gnu-gcc
     goos:
       - linux
+    goarch:
+      - amd64
+    ldflags:
+      - -s -w
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+  - id: blueprint-ls-linux-arm64
+    main: ./cmd/main.go
+    binary: blueprint-ls
+    env:
+      - CGO_ENABLED=1
+      - CC=aarch64-linux-gnu-gcc
+    goos:
+      - linux
+    goarch:
+      - arm64
+    ldflags:
+      - -s -w
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+  - id: blueprint-ls-darwin-amd64
+    main: ./cmd/main.go
+    binary: blueprint-ls
+    env:
+      - CGO_ENABLED=1
+      - CC=o64-clang
+    goos:
       - darwin
+    goarch:
+      - amd64
+    ldflags:
+      - -s -w
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+  - id: blueprint-ls-darwin-arm64
+    main: ./cmd/main.go
+    binary: blueprint-ls
+    env:
+      - CGO_ENABLED=1
+      - CC=oa64-clang
+    goos:
+      - darwin
+    goarch:
+      - arm64
+    ldflags:
+      - -s -w
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+  - id: blueprint-ls-windows-amd64
+    main: ./cmd/main.go
+    binary: blueprint-ls
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-w64-mingw32-gcc
+    goos:
       - windows
     goarch:
       - amd64
-      - arm64
-    ignore:
-      - goos: windows
-        goarch: arm64
     ldflags:
       - -s -w
     mod_timestamp: "{{ .CommitTimestamp }}"

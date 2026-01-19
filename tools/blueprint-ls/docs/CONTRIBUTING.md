@@ -5,6 +5,35 @@
 ### Prerequisites
 
 - [Go](https://golang.org/dl/) >=1.22
+- A C compiler (required for tree-sitter parsing via CGO)
+
+#### Installing a C Compiler
+
+The language server uses [tree-sitter](https://tree-sitter.github.io/) for robust YAML and JSON parsing, which requires CGO. You'll need a C compiler installed:
+
+**macOS:**
+```bash
+xcode-select --install
+```
+
+**Linux (Debian/Ubuntu):**
+```bash
+sudo apt-get update && sudo apt-get install -y gcc
+```
+
+**Linux (Fedora/RHEL):**
+```bash
+sudo dnf install gcc
+```
+
+**Windows:**
+
+Install [MinGW-w64](https://www.mingw-w64.org/) or use [MSYS2](https://www.msys2.org/):
+```bash
+pacman -S mingw-w64-x86_64-gcc
+```
+
+### Installing Dependencies
 
 Dependencies are managed with Go modules (go.mod) and will be installed automatically when you first
 run tests.
@@ -23,9 +52,13 @@ bash ./scripts/run-tests.sh
 
 ## Building the language server binary
 
+CGO must be enabled for tree-sitter support:
+
 ```bash
-go build -o blueprint-language-server ./cmd/main.go
+CGO_ENABLED=1 go build -o blueprint-language-server ./cmd/main.go
 ```
+
+On most systems CGO is enabled by default when building for the native platform.
 
 ## Releasing
 
