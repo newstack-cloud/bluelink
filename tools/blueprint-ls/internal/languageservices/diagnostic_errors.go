@@ -1,7 +1,9 @@
 package languageservices
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
@@ -47,6 +49,12 @@ func (s *DiagnosticErrorService) BlueprintErrorToDiagnostics(
 	schemaErr, isSchemaErr := err.(*schema.Error)
 	if isSchemaErr {
 		s.collectSchemaError(schemaErr, &diagnostics, docURI)
+		return diagnostics
+	}
+
+	coreErr, isCoreErr := err.(*core.Error)
+	if isCoreErr {
+		s.collectCoreError(coreErr, &diagnostics, nil, docURI)
 		return diagnostics
 	}
 
@@ -141,16 +149,57 @@ func (s *DiagnosticErrorService) collectLoadErrors(
 	if len(err.ChildErrors) == 0 {
 		s.logger.Debug("adding diagnostics for error", zap.String("error", err.Error()))
 		severity := lsp.DiagnosticSeverityError
-		*diagnostics = append(*diagnostics, lsp.Diagnostic{
+		source := "blueprint-validator"
+
+		// Build enhanced message with context if available
+		message := err.Err.Error()
+		if err.Context != nil {
+			message = formatLoadErrorWithContext(err)
+		}
+
+		diag := lsp.Diagnostic{
 			Range: s.rangeFromBlueprintErrorLocation(
 				&blueprintErrorLocationLoadErr{err},
 				&blueprintErrorLocationLoadErr{parentLoadErr},
 				docURI,
 			),
 			Severity: &severity,
-			Message:  err.Error(),
-		})
+			Message:  message,
+			Source:   &source,
+		}
+
+		// Add Code if ReasonCode is available
+		if err.ReasonCode != "" {
+			code := string(err.ReasonCode)
+			diag.Code = &lsp.IntOrString{StrVal: &code}
+		}
+
+		*diagnostics = append(*diagnostics, diag)
 	}
+}
+
+// formatLoadErrorWithContext formats a LoadError with its ErrorContext,
+// including suggested actions in a plain text format suitable for VS Code diagnostics.
+func formatLoadErrorWithContext(err *errors.LoadError) string {
+	if err.Context == nil {
+		return err.Err.Error()
+	}
+
+	sb := strings.Builder{}
+	sb.WriteString(err.Err.Error())
+
+	if len(err.Context.SuggestedActions) > 0 {
+		sb.WriteString("\n\nSuggested Actions:\n")
+		for i, action := range err.Context.SuggestedActions {
+			sb.WriteString(fmt.Sprintf("  %d. %s", i+1, action.Title))
+			if action.Description != "" {
+				sb.WriteString(fmt.Sprintf(": %s", action.Description))
+			}
+			sb.WriteString("\n")
+		}
+	}
+
+	return sb.String()
 }
 
 func (s *DiagnosticErrorService) rangeFromBlueprintErrorLocation(
@@ -281,10 +330,16 @@ func (s *DiagnosticErrorService) collectCoreError(
 	docURI lsp.URI,
 ) {
 	severity := lsp.DiagnosticSeverityError
+
+	var parentLocation blueprintErrorLocation
+	if parentLoadErr != nil {
+		parentLocation = &blueprintErrorLocationLoadErr{parentLoadErr}
+	}
+
 	*diagnostics = append(*diagnostics, lsp.Diagnostic{
 		Range: s.rangeFromBlueprintErrorLocation(
 			&blueprintErrorLocationCoreErr{err},
-			&blueprintErrorLocationLoadErr{parentLoadErr},
+			parentLocation,
 			docURI,
 		),
 		Severity: &severity,
