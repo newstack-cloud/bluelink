@@ -1,8 +1,10 @@
 package jsonout
 
 import (
+	"github.com/newstack-cloud/bluelink/apps/cli/diagutils"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/stateio"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	engineerrors "github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 	"github.com/newstack-cloud/deploy-cli-sdk/headless"
 )
@@ -124,7 +126,57 @@ func convertDiagnostics(diagnostics []*core.Diagnostic) []Diagnostic {
 			diag.Line = d.Range.Start.Line
 			diag.Column = d.Range.Start.Column
 		}
+		if d.Context != nil {
+			addContextToDiagnostic(&diag, d.Context)
+		}
 		result[i] = diag
+	}
+	return result
+}
+
+func addContextToDiagnostic(diag *Diagnostic, ctx *errors.ErrorContext) {
+	if ctx.ReasonCode != "" {
+		diag.Code = string(ctx.ReasonCode)
+	}
+	if ctx.Category != "" {
+		diag.Category = string(ctx.Category)
+	}
+	if len(ctx.SuggestedActions) > 0 {
+		diag.SuggestedActions = convertSuggestedActions(ctx.SuggestedActions, ctx.Metadata)
+	}
+}
+
+func convertSuggestedActions(
+	actions []errors.SuggestedAction,
+	metadata map[string]any,
+) []SuggestedAction {
+	result := make([]SuggestedAction, 0, len(actions))
+	for _, action := range actions {
+		sa := SuggestedAction{
+			Type:        string(action.Type),
+			Title:       action.Title,
+			Description: action.Description,
+		}
+		concrete := diagutils.GetConcreteAction(action, metadata)
+		if concrete != nil {
+			sa.Commands = concrete.Commands
+			sa.Links = convertLinks(concrete.Links)
+		}
+		result = append(result, sa)
+	}
+	return result
+}
+
+func convertLinks(links []*diagutils.Link) []ActionLink {
+	if len(links) == 0 {
+		return nil
+	}
+	result := make([]ActionLink, len(links))
+	for i, link := range links {
+		result[i] = ActionLink{
+			Title: link.Title,
+			URL:   link.URL,
+		}
 	}
 	return result
 }

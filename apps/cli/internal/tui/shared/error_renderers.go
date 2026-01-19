@@ -5,46 +5,48 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/newstack-cloud/bluelink/apps/cli/diagutils"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	engineerrors "github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 	"github.com/newstack-cloud/deploy-cli-sdk/styles"
 )
 
 // ErrorContext provides context-specific strings for error rendering.
 type ErrorContext struct {
-	OperationName      string // e.g., "deployment", "change staging"
-	FailedHeader       string // e.g., "Failed to start deployment"
-	ErrorDuringHeader  string // e.g., "Error during deployment"
-	IssuesPreamble     string // e.g., "The following issues must be resolved before deployment can proceed:"
+	OperationName     string // e.g., "deployment", "change staging"
+	FailedHeader      string // e.g., "Failed to start deployment"
+	ErrorDuringHeader string // e.g., "Error during deployment"
+	IssuesPreamble    string // e.g., "The following issues must be resolved before deployment can proceed:"
 }
 
 // DeployErrorContext returns the error context for deployment operations.
 func DeployErrorContext() ErrorContext {
 	return ErrorContext{
-		OperationName:      "deployment",
-		FailedHeader:       "Failed to start deployment",
-		ErrorDuringHeader:  "Error during deployment",
-		IssuesPreamble:     "The following issues must be resolved before deployment can proceed:",
+		OperationName:     "deployment",
+		FailedHeader:      "Failed to start deployment",
+		ErrorDuringHeader: "Error during deployment",
+		IssuesPreamble:    "The following issues must be resolved before deployment can proceed:",
 	}
 }
 
 // StageErrorContext returns the error context for staging operations.
 func StageErrorContext() ErrorContext {
 	return ErrorContext{
-		OperationName:      "change staging",
-		FailedHeader:       "Failed to create changeset",
-		ErrorDuringHeader:  "Error during change staging",
-		IssuesPreamble:     "The following issues must be resolved in the blueprint before changes can be staged:",
+		OperationName:     "change staging",
+		FailedHeader:      "Failed to create changeset",
+		ErrorDuringHeader: "Error during change staging",
+		IssuesPreamble:    "The following issues must be resolved in the blueprint before changes can be staged:",
 	}
 }
 
 // DestroyErrorContext returns the error context for destroy operations.
 func DestroyErrorContext() ErrorContext {
 	return ErrorContext{
-		OperationName:      "destroy",
-		FailedHeader:       "Failed to start destroy",
-		ErrorDuringHeader:  "Error during destroy",
-		IssuesPreamble:     "The following issues must be resolved before destroy can proceed:",
+		OperationName:     "destroy",
+		FailedHeader:      "Failed to start destroy",
+		ErrorDuringHeader: "Error during destroy",
+		IssuesPreamble:    "The following issues must be resolved before destroy can proceed:",
 	}
 }
 
@@ -60,25 +62,11 @@ func RenderErrorFooter(s *styles.Styles) string {
 	return sb.String()
 }
 
-// RenderDiagnostic renders a single diagnostic with level styling.
+// RenderDiagnostic renders a single diagnostic with level styling and suggested actions.
 func RenderDiagnostic(diag *core.Diagnostic, s *styles.Styles) string {
 	sb := strings.Builder{}
 
-	var levelStyle lipgloss.Style
-	levelName := "unknown"
-	switch diag.Level {
-	case core.DiagnosticLevelError:
-		levelStyle = s.Error
-		levelName = "ERROR"
-	case core.DiagnosticLevelWarning:
-		levelStyle = s.Warning
-		levelName = "WARNING"
-	case core.DiagnosticLevelInfo:
-		levelStyle = s.Info
-		levelName = "INFO"
-	default:
-		levelStyle = s.Muted
-	}
+	levelStyle, levelName := getDiagnosticLevelStyle(diag.Level, s)
 
 	sb.WriteString("    ")
 	sb.WriteString(levelStyle.Render(levelName))
@@ -89,7 +77,64 @@ func RenderDiagnostic(diag *core.Diagnostic, s *styles.Styles) string {
 	sb.WriteString(diag.Message)
 	sb.WriteString("\n")
 
+	if diag.Context != nil && len(diag.Context.SuggestedActions) > 0 {
+		sb.WriteString(renderSuggestedActions(diag.Context, s))
+	}
+
 	return sb.String()
+}
+
+func getDiagnosticLevelStyle(level core.DiagnosticLevel, s *styles.Styles) (lipgloss.Style, string) {
+	switch level {
+	case core.DiagnosticLevelError:
+		return s.Error, "ERROR"
+	case core.DiagnosticLevelWarning:
+		return s.Warning, "WARNING"
+	case core.DiagnosticLevelInfo:
+		return s.Info, "INFO"
+	default:
+		return s.Muted, "unknown"
+	}
+}
+
+func renderSuggestedActions(ctx *errors.ErrorContext, s *styles.Styles) string {
+	if ctx == nil || len(ctx.SuggestedActions) == 0 {
+		return ""
+	}
+
+	sb := strings.Builder{}
+	sb.WriteString(s.Muted.Render("\n      Suggested Actions:\n"))
+
+	for i, action := range ctx.SuggestedActions {
+		renderSuggestedAction(&sb, i+1, action, ctx.Metadata, s)
+	}
+
+	return sb.String()
+}
+
+func renderSuggestedAction(
+	sb *strings.Builder,
+	index int,
+	action errors.SuggestedAction,
+	metadata map[string]any,
+	s *styles.Styles,
+) {
+	fmt.Fprintf(sb, "        %d. %s\n", index, s.Info.Render(action.Title))
+	if action.Description != "" {
+		fmt.Fprintf(sb, "           %s\n", action.Description)
+	}
+
+	concrete := diagutils.GetConcreteAction(action, metadata)
+	if concrete == nil {
+		return
+	}
+
+	for _, cmd := range concrete.Commands {
+		fmt.Fprintf(sb, "           %s %s\n", s.Muted.Render("Run:"), cmd)
+	}
+	for _, link := range concrete.Links {
+		fmt.Fprintf(sb, "           %s %s\n", s.Muted.Render("See:"), link.URL)
+	}
 }
 
 // RenderValidationError renders a validation error with diagnostics.

@@ -85,10 +85,28 @@ type ExportSummary struct {
 
 // Diagnostic represents a single diagnostic message.
 type Diagnostic struct {
-	Level   string `json:"level"`
-	Message string `json:"message"`
-	Line    int    `json:"line,omitempty"`
-	Column  int    `json:"column,omitempty"`
+	Level            string            `json:"level"`
+	Message          string            `json:"message"`
+	Line             int               `json:"line,omitempty"`
+	Column           int               `json:"column,omitempty"`
+	Code             string            `json:"code,omitempty"`
+	Category         string            `json:"category,omitempty"`
+	SuggestedActions []SuggestedAction `json:"suggestedActions,omitempty"`
+}
+
+// SuggestedAction represents an actionable suggestion for resolving an error.
+type SuggestedAction struct {
+	Type        string `json:"type"`
+	Title       string `json:"title"`
+	Description string `json:"description,omitempty"`
+	Commands    []string `json:"commands,omitempty"`
+	Links       []ActionLink `json:"links,omitempty"`
+}
+
+// ActionLink represents a link to documentation or resources.
+type ActionLink struct {
+	Title string `json:"title,omitempty"`
+	URL   string `json:"url"`
 }
 
 // ValidationError represents a single validation error.

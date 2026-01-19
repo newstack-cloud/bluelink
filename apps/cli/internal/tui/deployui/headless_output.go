@@ -3,11 +3,13 @@ package deployui
 import (
 	"strings"
 
+	"github.com/newstack-cloud/bluelink/apps/cli/diagutils"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/driftui"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/outpututil"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	engineerrors "github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 	"github.com/newstack-cloud/deploy-cli-sdk/headless"
@@ -496,24 +498,66 @@ func (m *DeployModel) printHeadlessStreamError(streamErr *engineerrors.StreamErr
 func (m *DeployModel) printHeadlessDiagnostic(diag *core.Diagnostic) {
 	w := m.printer.Writer()
 
-	levelName := "INFO"
-	switch diag.Level {
-	case core.DiagnosticLevelError:
-		levelName = "ERROR"
-	case core.DiagnosticLevelWarning:
-		levelName = "WARNING"
-	}
-
-	line, col := 0, 0
-	if diag.Range != nil {
-		line = diag.Range.Start.Line
-		col = diag.Range.Start.Column
-	}
+	levelName := getDiagnosticLevelName(diag.Level)
+	line, col := getDiagnosticPosition(diag.Range)
 
 	if line > 0 {
 		w.Printf("  [%s] line %d, col %d: %s\n", levelName, line, col, diag.Message)
 	} else {
 		w.Printf("  [%s] %s\n", levelName, diag.Message)
+	}
+
+	if diag.Context != nil && len(diag.Context.SuggestedActions) > 0 {
+		printHeadlessSuggestedActions(w, diag.Context)
+	}
+}
+
+func getDiagnosticLevelName(level core.DiagnosticLevel) string {
+	switch level {
+	case core.DiagnosticLevelError:
+		return "ERROR"
+	case core.DiagnosticLevelWarning:
+		return "WARNING"
+	default:
+		return "INFO"
+	}
+}
+
+func getDiagnosticPosition(r *core.DiagnosticRange) (int, int) {
+	if r == nil {
+		return 0, 0
+	}
+	return r.Start.Line, r.Start.Column
+}
+
+func printHeadlessSuggestedActions(w *headless.PrefixedWriter, ctx *errors.ErrorContext) {
+	w.Println("  Suggested Actions:")
+	for i, action := range ctx.SuggestedActions {
+		printHeadlessSuggestedAction(w, i+1, action, ctx.Metadata)
+	}
+}
+
+func printHeadlessSuggestedAction(
+	w *headless.PrefixedWriter,
+	index int,
+	action errors.SuggestedAction,
+	metadata map[string]any,
+) {
+	w.Printf("    %d. %s\n", index, action.Title)
+	if action.Description != "" {
+		w.Printf("       %s\n", action.Description)
+	}
+
+	concrete := diagutils.GetConcreteAction(action, metadata)
+	if concrete == nil {
+		return
+	}
+
+	for _, cmd := range concrete.Commands {
+		w.Printf("       Run: %s\n", cmd)
+	}
+	for _, link := range concrete.Links {
+		w.Printf("       See: %s\n", link.URL)
 	}
 }
 

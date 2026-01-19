@@ -65,14 +65,25 @@ func GetConcreteAction(
 
 func installProviderAction(diagMetadata map[string]any) *ConcreteAction {
 	providerNamespace, hasProviderNamespace := diagMetadata["providerNamespace"].(string)
+	category, _ := diagMetadata["category"].(string)
+
+	// If no namespace is available, provide links to explore plugins in the registry.
+	// For resources, both providers and transformers can provide resource types.
 	if !hasProviderNamespace {
-		return &ConcreteAction{
-			Links: []*Link{
-				{
-					Title: "Explore providers in the official registry",
-					URL:   "https://registry.bluelink.dev/providers",
-				},
+		links := []*Link{
+			{
+				Title: "Explore providers in the official registry",
+				URL:   "https://registry.bluelink.dev/providers",
 			},
+		}
+		if category == "resource" {
+			links = append(links, &Link{
+				Title: "Explore transformers in the official registry",
+				URL:   "https://registry.bluelink.dev/transformers",
+			})
+		}
+		return &ConcreteAction{
+			Links: links,
 		}
 	}
 
