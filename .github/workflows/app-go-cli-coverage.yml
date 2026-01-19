@@ -1,0 +1,55 @@
+name: Bluelink CLI Coverage (with E2E)
+
+# Scheduled workflow for comprehensive test coverage reporting to SonarCloud
+# Runs daily and can be triggered manually
+# Includes unit, integration, AND e2e tests for full coverage metrics
+on:
+  schedule:
+    # Run daily at 6:00 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    env:
+      working-directory: ./apps/cli
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.24'
+
+      - name: Install Go Global Dependencies
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go get -u golang.org/x/sys/unix
+        working-directory: ${{ env.working-directory }}
+
+      # SonarCloud scan runs in a docker container where the workspace directory gets mounted to /github/workspace
+      # so we need to replace all references to the github workspace directory with /github/workspace.
+      - name: Linting
+        run: >
+          export PATH=$PATH:$(go env GOPATH)/bin && bash scripts/lint.sh &&
+            sed -i 's#${{ github.workspace }}#/github/workspace#g' govet-report.out &&
+            sed -i 's#${{ github.workspace }}#/github/workspace#g' staticcheck.out
+        working-directory: ${{ env.working-directory }}
+
+      - name: Run Tests (Unit, Integration, and E2E)
+        run: bash scripts/run-tests.sh --e2e
+        working-directory: ${{ env.working-directory }}
+        env:
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@master
+        with:
+          projectBaseDir: ${{ env.working-directory }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
