@@ -74,6 +74,7 @@ func (s *DataSource) FromJSONNode(
 		parentPath,
 		/* parentIsRoot */ false,
 		/* required */ true,
+		bpcore.WithParentNode(node),
 	)
 	if err != nil {
 		return err
@@ -88,6 +89,7 @@ func (s *DataSource) FromJSONNode(
 		parentPath,
 		/* parentIsRoot */ false,
 		/* required */ true,
+		bpcore.WithParentNode(node),
 	)
 	if err != nil {
 		return err
@@ -116,6 +118,7 @@ func (s *DataSource) FromJSONNode(
 		parentPath,
 		/* parentIsRoot */ false,
 		/* required */ true,
+		bpcore.WithParentNode(node),
 	)
 	if err != nil {
 		return err

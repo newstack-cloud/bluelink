@@ -230,16 +230,18 @@ func validateResourceType(
 		)
 	}
 
+	// Use the type definition's location for more precise error reporting
+	location := resourceType.SourceMeta
 	hasType, err := resourceRegistry.HasResourceType(ctx, resourceType.Value)
 	if err != nil {
-		return diagnostics, err
+		return diagnostics, wrapRegistryError(err, location)
 	}
 
 	if !hasType {
 		return diagnostics, errResourceTypeNotSupported(
 			resourceName,
 			resourceType.Value,
-			getResourceSourceMeta(resourceMap, resourceName),
+			location,
 		)
 	}
 

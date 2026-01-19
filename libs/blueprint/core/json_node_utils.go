@@ -7,6 +7,22 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 )
 
+// UnpackJSONOptions contains optional configuration for JSON unpacking.
+type UnpackJSONOptions struct {
+	// ParentNode is the parent JSON node, used to provide position info for errors.
+	ParentNode *json.Node
+}
+
+// UnpackJSONOption is a function that configures UnpackJSONOptions.
+type UnpackJSONOption func(*UnpackJSONOptions)
+
+// WithParentNode sets the parent node for error position info.
+func WithParentNode(node *json.Node) UnpackJSONOption {
+	return func(opts *UnpackJSONOptions) {
+		opts.ParentNode = node
+	}
+}
+
 // UnpackValueFromJSONMapNode unpacks a value from a JSON map node
 // into the target struct.
 func UnpackValueFromJSONMapNode(
@@ -17,10 +33,28 @@ func UnpackValueFromJSONMapNode(
 	parentPath string,
 	parentIsRoot bool,
 	required bool,
+	opts ...UnpackJSONOption,
 ) error {
+	options := &UnpackJSONOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+
 	node, ok := nodeMap[key]
 	if !ok && required {
-		return fmt.Errorf("required field missing %s in %s", key, parentPath)
+		err := fmt.Errorf("required field %q is missing in %s", key, parentPath)
+		if options.ParentNode != nil {
+			position := source.PositionFromJSONNode(options.ParentNode, linePositions)
+			line := position.Line
+			col := position.Column
+			return &Error{
+				ReasonCode:   ErrorCoreReasonCodeMissingMappingNode,
+				Err:          err,
+				SourceLine:   &line,
+				SourceColumn: &col,
+			}
+		}
+		return err
 	}
 
 	if node.Value == nil && !required {

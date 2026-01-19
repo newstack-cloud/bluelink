@@ -103,13 +103,7 @@ func loadResourceSpecDefinition(
 		},
 	)
 	if err != nil {
-		return nil, errResourceTypeMissingSpecDefinition(
-			resourceName,
-			resourceType,
-			/* inSubstitution */ false,
-			location,
-			"failed to load spec definition",
-		)
+		return nil, wrapRegistryError(err, location)
 	}
 
 	if specDefOutput.SpecDefinition == nil {

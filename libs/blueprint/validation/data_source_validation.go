@@ -198,16 +198,18 @@ func validateDataSourceType(
 		)
 	}
 
+	// Use the type definition's location for more precise error reporting
+	location := dataSourceType.SourceMeta
 	hasType, err := dataSourceRegistry.HasDataSourceType(ctx, dataSourceType.Value)
 	if err != nil {
-		return diagnostics, err
+		return diagnostics, wrapRegistryError(err, location)
 	}
 
 	if !hasType {
 		return diagnostics, errDataSourceTypeNotSupported(
 			dataSourceName,
 			dataSourceType.Value,
-			getDataSourceMeta(dataSourceMap, dataSourceName),
+			location,
 		)
 	}
 

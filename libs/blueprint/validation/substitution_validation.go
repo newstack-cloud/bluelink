@@ -410,13 +410,7 @@ func validateResourcePropertySubSpec(
 		},
 	)
 	if err != nil {
-		return "", diagnostics, errResourceTypeMissingSpecDefinition(
-			subResourceProp.ResourceName,
-			resourceType,
-			/* inSubstitution */ true,
-			subResourceProp.SourceMeta,
-			"failed to load spec definition",
-		)
+		return "", diagnostics, wrapRegistryError(err, subResourceProp.SourceMeta, WrapInSubstitution())
 	}
 
 	if specDefOutput.SpecDefinition == nil {
@@ -755,13 +749,7 @@ func validateDataSourcePropertySubstitution(
 		},
 	)
 	if err != nil {
-		return "", diagnostics, errDataSourceTypeMissingSpecDefinition(
-			subDataSourceProp.DataSourceName,
-			dataSourceType,
-			/* inSubstitution */ true,
-			subDataSourceProp.SourceMeta,
-			"failed to load spec definition",
-		)
+		return "", diagnostics, wrapRegistryError(err, subDataSourceProp.SourceMeta, WrapInSubstitution())
 	}
 
 	if specDefOutput.SpecDefinition == nil {

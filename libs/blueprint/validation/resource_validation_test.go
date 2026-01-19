@@ -198,7 +198,7 @@ func (s *ResourceValidationTestSuite) Test_reports_errors_when_resource_type_is_
 		loadErr.Error(),
 		Equals,
 		"blueprint load error: validation failed due to resource \"unknownHandler\" having an "+
-			"unsupported type \"aws/lambda/unknown\", this type is not made available by any of the loaded providers",
+			"unsupported type \"aws/lambda/unknown\", this type is not made available by any of the loaded plugins",
 	)
 }
 

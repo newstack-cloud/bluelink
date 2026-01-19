@@ -6,6 +6,7 @@ import (
 
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
@@ -1857,6 +1858,68 @@ func errResourceMissingType(resourceName string, location *source.Meta) error {
 	}
 }
 
+type wrapRegistryErrorOption func(*wrapRegistryErrorOptions)
+
+type wrapRegistryErrorOptions struct {
+	inSubstitution bool
+}
+
+// WrapInSubstitution marks the error as occurring within a substitution context.
+func WrapInSubstitution() wrapRegistryErrorOption {
+	return func(opts *wrapRegistryErrorOptions) {
+		opts.inSubstitution = true
+	}
+}
+
+// wrapRegistryError wraps a RunError from the resource or data source registry into a LoadError
+// while preserving the original error's context and suggested actions.
+// This is needed because the language server only handles LoadError types for diagnostics
+// and errors such as a missing provider or resource type should appear in diagnostics.
+func wrapRegistryError(err error, location *source.Meta, opts ...wrapRegistryErrorOption) error {
+	line, col := source.PositionFromSourceMeta(location)
+
+	options := &wrapRegistryErrorOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	contextSuffix := ""
+	if options.inSubstitution {
+		contextSuffix = " (referenced in substitution)"
+	}
+
+	runErr, isRunErr := err.(*errors.RunError)
+	if !isRunErr {
+		return &errors.LoadError{
+			Err:    fmt.Errorf("%s%s", err.Error(), contextSuffix),
+			Line:   line,
+			Column: col,
+		}
+	}
+
+	// If this is a multiple errors wrapper (e.g., provider not found AND transformer not found),
+	// extract the first child error which typically has the most relevant context for the user.
+	if len(runErr.ChildErrors) > 0 {
+		if firstChild, ok := runErr.ChildErrors[0].(*errors.RunError); ok {
+			return &errors.LoadError{
+				ReasonCode: firstChild.ReasonCode,
+				Err:        fmt.Errorf("%s%s", firstChild.Err.Error(), contextSuffix),
+				Context:    firstChild.Context,
+				Line:       line,
+				Column:     col,
+			}
+		}
+	}
+
+	return &errors.LoadError{
+		ReasonCode: runErr.ReasonCode,
+		Err:        fmt.Errorf("%s%s", runErr.Err.Error(), contextSuffix),
+		Context:    runErr.Context,
+		Line:       line,
+		Column:     col,
+	}
+}
+
 func errResourceTypeMissingSpecDefinition(
 	resourceName string,
 	resourceType string,
@@ -2606,6 +2669,7 @@ func errDataSourceTypeNotSupported(
 	wrapperLocation *source.Meta,
 ) error {
 	line, col := source.PositionFromSourceMeta(wrapperLocation)
+	providerNamespace := provider.ExtractProviderFromItemType(dataSourceType)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidDataSource,
 		Err: fmt.Errorf(
@@ -2616,6 +2680,29 @@ func errDataSourceTypeNotSupported(
 		),
 		Line:   line,
 		Column: col,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryDataSourceType,
+			ReasonCode: ErrorReasonCodeInvalidDataSource,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeInstallProvider),
+					Title:       "Install Provider",
+					Description: fmt.Sprintf("Install the %s provider to support %s data sources", providerNamespace, dataSourceType),
+					Priority:    1,
+				},
+				{
+					Type:        string(errors.ActionTypeCheckDataSourceType),
+					Title:       "Check Data Source Type",
+					Description: "Verify the data source type name is correct",
+					Priority:    2,
+				},
+			},
+			Metadata: map[string]any{
+				"providerNamespace": providerNamespace,
+				"dataSourceName":    dataSourceName,
+				"dataSourceType":    dataSourceType,
+			},
+		},
 	}
 }
 
@@ -2644,16 +2731,41 @@ func errResourceTypeNotSupported(
 	wrapperLocation *source.Meta,
 ) error {
 	line, col := source.PositionFromSourceMeta(wrapperLocation)
+	pluginNamespace := provider.ExtractProviderFromItemType(resourceType)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidResource,
 		Err: fmt.Errorf(
 			"validation failed due to resource %q having an unsupported type %q,"+
-				" this type is not made available by any of the loaded providers",
+				" this type is not made available by any of the loaded plugins",
 			resourceName,
 			resourceType,
 		),
 		Line:   line,
 		Column: col,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryResourceType,
+			ReasonCode: ErrorReasonCodeInvalidResource,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeInstallProvider),
+					Title:       "Install Plugin",
+					Description: fmt.Sprintf("Install a provider or transformer plugin with namespace %q that supports the %s resource type", pluginNamespace, resourceType),
+					Priority:    1,
+				},
+				{
+					Type:        string(errors.ActionTypeCheckResourceType),
+					Title:       "Check Resource Type",
+					Description: "Verify the resource type name is correct",
+					Priority:    2,
+				},
+			},
+			Metadata: map[string]any{
+				"providerNamespace": pluginNamespace,
+				"resourceName":      resourceName,
+				"resourceType":      resourceType,
+				"category":          "resource",
+			},
+		},
 	}
 }
 

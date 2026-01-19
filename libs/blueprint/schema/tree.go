@@ -584,7 +584,7 @@ func resourceToTreeNode(resourceName string, resource *Resource, parentPath stri
 }
 
 func resourceLinkSelectorToTreeNode(linkSelector *LinkSelector, parentPath string) *TreeNode {
-	if linkSelector == nil {
+	if linkSelector == nil || linkSelector.SourceMeta == nil {
 		return nil
 	}
 
@@ -615,7 +615,7 @@ func resourceLinkSelectorToTreeNode(linkSelector *LinkSelector, parentPath strin
 }
 
 func resourceConditionToTreeNode(label string, condition *Condition, parentPath string) *TreeNode {
-	if condition == nil {
+	if condition == nil || condition.SourceMeta == nil {
 		return nil
 	}
 
@@ -747,9 +747,10 @@ func resourceMetadataToTreeNode(metadata *Metadata, parentPath string) *TreeNode
 		Path:          fmt.Sprintf("%s/metadata", parentPath),
 		Type:          TreeNodeTypeNonTerminal,
 		SchemaElement: metadata,
-		Range: &source.Range{
-			Start: &metadata.SourceMeta.Position,
-		},
+		Range:         &source.Range{},
+	}
+	if metadata.SourceMeta != nil {
+		metadataNode.Range.Start = &metadata.SourceMeta.Position
 	}
 
 	children := []*TreeNode{}
@@ -772,6 +773,10 @@ func resourceMetadataToTreeNode(metadata *Metadata, parentPath string) *TreeNode
 	customNode := mappingNodeToTreeNode("custom", metadata.Custom, metadataNode.Path, nil)
 	if customNode != nil {
 		children = append(children, customNode)
+	}
+
+	if len(children) == 0 {
+		return nil
 	}
 
 	sortTreeNodes(children)
@@ -887,9 +892,10 @@ func dataSourceMetadataToTreeNode(metadata *DataSourceMetadata, parentPath strin
 		Path:          fmt.Sprintf("%s/metadata", parentPath),
 		Type:          TreeNodeTypeNonTerminal,
 		SchemaElement: metadata,
-		Range: &source.Range{
-			Start: &metadata.SourceMeta.Position,
-		},
+		Range:         &source.Range{},
+	}
+	if metadata.SourceMeta != nil {
+		metadataNode.Range.Start = &metadata.SourceMeta.Position
 	}
 
 	children := []*TreeNode{}
@@ -907,6 +913,10 @@ func dataSourceMetadataToTreeNode(metadata *DataSourceMetadata, parentPath strin
 	customNode := mappingNodeToTreeNode("custom", metadata.Custom, metadataNode.Path, nil)
 	if customNode != nil {
 		children = append(children, customNode)
+	}
+
+	if len(children) == 0 {
+		return nil
 	}
 
 	sortTreeNodes(children)
@@ -1427,7 +1437,7 @@ func scalarsToTreeNode(label string, scalars []*bpcore.ScalarValue, parentPath s
 }
 
 func stringSubsToTreeNode(label string, subs *substitutions.StringOrSubstitutions, parentPath string) *TreeNode {
-	if subs == nil {
+	if subs == nil || subs.SourceMeta == nil {
 		return nil
 	}
 
