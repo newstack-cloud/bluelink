@@ -131,6 +131,57 @@ func (s *PluginsCommandSuite) Test_plugins_login_has_no_flags() {
 	s.Nil(loginCmd.Flag("client-id"))
 }
 
+// Uninstall command tests
+
+func (s *PluginsCommandSuite) Test_plugins_uninstall_command_exists() {
+	rootCmd := NewRootCmd()
+	uninstallCmd, _, err := rootCmd.Find([]string{"plugins", "uninstall"})
+
+	s.NoError(err)
+	s.NotNil(uninstallCmd)
+	s.Equal("uninstall <plugin-id> [plugin-id] ...", uninstallCmd.Use)
+}
+
+func (s *PluginsCommandSuite) Test_plugins_uninstall_requires_at_least_one_argument() {
+	rootCmd := NewRootCmd()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetErr(buf)
+	rootCmd.SetArgs([]string{"plugins", "uninstall"})
+
+	err := rootCmd.Execute()
+
+	s.Error(err)
+	s.Contains(err.Error(), "requires at least 1 arg")
+}
+
+func (s *PluginsCommandSuite) Test_plugins_uninstall_help_contains_usage() {
+	rootCmd := NewRootCmd()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{"plugins", "uninstall", "--help"})
+
+	rootCmd.Execute()
+	output := buf.String()
+
+	s.Contains(output, "uninstall")
+	s.Contains(output, "plugin-id")
+	s.Contains(output, "Usage:")
+}
+
+func (s *PluginsCommandSuite) Test_plugins_uninstall_accepts_multiple_arguments() {
+	rootCmd := NewRootCmd()
+	uninstallCmd, _, err := rootCmd.Find([]string{"plugins", "uninstall"})
+
+	s.NoError(err)
+	s.NotNil(uninstallCmd)
+
+	// Verify the command uses MinimumNArgs(1) by checking it accepts multiple args
+	// The Args field should accept more than 1 argument
+	err = uninstallCmd.Args(uninstallCmd, []string{"bluelink/aws", "bluelink/gcp"})
+	s.NoError(err)
+}
+
 func TestPluginsCommandSuite(t *testing.T) {
 	suite.Run(t, new(PluginsCommandSuite))
 }

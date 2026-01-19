@@ -1,26 +1,29 @@
-# Test plugins install downloads and installs a single plugin from the mock registry
+# Test plugins uninstall removes a single plugin
 # This test requires the mock-registry container to be running
 
 wait_registry
 
-# First, save API key credentials to the registry
+# Setup auth and plugin path
 mkdir $WORK/.bluelink/clients
 cp plugins.auth.json $WORK/.bluelink/clients/plugins.auth.json
 env HOME=$WORK
-
-# Set plugin installation directory to a temp location
 env BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH=$WORK/plugins
 
-# Run install with explicit registry URL
+# First install a plugin
 exec bluelink plugins install localhost:18080/bluelink/test-provider@1.0.0
-stdout 'test-provider.*installed'
-stdout 'Installed: 1'
+stdout 'installed'
 
-# Verify the plugin was extracted
-exists $WORK/plugins/bin/bluelink/test-provider/1.0.0/plugin
+# Verify plugin exists
+exists $WORK/plugins/bin/bluelink/test-provider/1.0.0
 
-# Verify manifest was updated
-exists $WORK/plugins/manifest.json
+# Now uninstall it
+exec bluelink plugins uninstall localhost:18080/bluelink/test-provider
+stdout 'test-provider'
+stdout 'removed'
+stdout 'Removed: 1'
+
+# Verify plugin directory was removed
+! exists $WORK/plugins/bin/bluelink/test-provider/1.0.0
 
 -- bluelink.config.toml --
 # Empty config file

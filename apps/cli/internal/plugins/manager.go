@@ -904,3 +904,105 @@ func (m *Manager) ListInstalled() ([]*InstalledPlugin, error) {
 
 	return plugins, nil
 }
+
+// UninstallStatus represents the result status of a plugin uninstallation.
+type UninstallStatus int
+
+const (
+	UninstallStatusRemoved UninstallStatus = iota
+	UninstallStatusNotFound
+	UninstallStatusFailed
+)
+
+// UninstallResult contains the result of a plugin uninstallation attempt.
+type UninstallResult struct {
+	PluginID *PluginID
+	Status   UninstallStatus
+	Error    error
+}
+
+// Uninstall removes a single plugin from the local machine.
+func (m *Manager) Uninstall(pluginID *PluginID) *UninstallResult {
+	result := &UninstallResult{PluginID: pluginID}
+
+	manifest, err := m.LoadManifest()
+	if err != nil {
+		result.Status = UninstallStatusFailed
+		result.Error = fmt.Errorf("failed to load manifest: %w", err)
+		return result
+	}
+
+	key := pluginID.ManifestKey()
+	installedPlugin, exists := manifest.Plugins[key]
+	if !exists {
+		result.Status = UninstallStatusNotFound
+		return result
+	}
+
+	if err := m.removePluginFiles(installedPlugin); err != nil {
+		result.Status = UninstallStatusFailed
+		result.Error = fmt.Errorf("failed to remove plugin files: %w", err)
+		return result
+	}
+
+	if err := m.removeFromManifest(key, manifest); err != nil {
+		result.Status = UninstallStatusFailed
+		result.Error = fmt.Errorf("failed to update manifest: %w", err)
+		return result
+	}
+
+	result.Status = UninstallStatusRemoved
+	return result
+}
+
+// UninstallAll removes multiple plugins from the local machine.
+func (m *Manager) UninstallAll(pluginIDs []*PluginID) []*UninstallResult {
+	results := make([]*UninstallResult, 0, len(pluginIDs))
+	for _, pluginID := range pluginIDs {
+		results = append(results, m.Uninstall(pluginID))
+	}
+	return results
+}
+
+func (m *Manager) removePluginFiles(plugin *InstalledPlugin) error {
+	pluginID, err := ParsePluginID(plugin.ID)
+	if err != nil {
+		return fmt.Errorf("failed to parse plugin ID: %w", err)
+	}
+
+	versionDir := filepath.Join(m.pluginsDir, "bin", pluginID.Namespace, pluginID.Name, plugin.Version)
+	if err := os.RemoveAll(versionDir); err != nil {
+		return err
+	}
+
+	m.cleanupEmptyParentDirs(versionDir)
+	return nil
+}
+
+func (m *Manager) cleanupEmptyParentDirs(versionDir string) {
+	nameDir := filepath.Dir(versionDir)
+	namespaceDir := filepath.Dir(nameDir)
+
+	// Try to remove empty name directory
+	if isEmpty, _ := isDirEmpty(nameDir); isEmpty {
+		os.Remove(nameDir)
+	}
+
+	// Try to remove empty namespace directory
+	if isEmpty, _ := isDirEmpty(namespaceDir); isEmpty {
+		os.Remove(namespaceDir)
+	}
+}
+
+func isDirEmpty(path string) (bool, error) {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return false, err
+	}
+	return len(entries) == 0, nil
+}
+
+func (m *Manager) removeFromManifest(key string, manifest *PluginManifest) error {
+	delete(manifest.Plugins, key)
+	return m.SaveManifest(manifest)
+}

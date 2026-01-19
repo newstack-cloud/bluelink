@@ -11,6 +11,7 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/plugins"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/plugininstallui"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/pluginloginui"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/pluginuninstallui"
 	"github.com/newstack-cloud/deploy-cli-sdk/config"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 	"github.com/spf13/cobra"
@@ -19,6 +20,7 @@ import (
 
 var errLoginFailed = errors.New("login failed")
 var errInstallFailed = errors.New("install failed")
+var errUninstallFailed = errors.New("uninstall failed")
 
 func setupPluginsCommand(rootCmd *cobra.Command, confProvider *config.Provider) {
 	pluginsCmd := &cobra.Command{
@@ -29,6 +31,7 @@ func setupPluginsCommand(rootCmd *cobra.Command, confProvider *config.Provider) 
 
 	setupPluginsLoginCommand(pluginsCmd)
 	setupPluginsInstallCommand(pluginsCmd, confProvider)
+	setupPluginsUninstallCommand(pluginsCmd)
 
 	rootCmd.AddCommand(pluginsCmd)
 }
@@ -250,6 +253,104 @@ func runPluginsInstall(args []string, deployConfigFile string) error {
 	case *plugininstallui.MainModel:
 		if m.Error != nil {
 			return errInstallFailed
+		}
+	}
+
+	return nil
+}
+
+func setupPluginsUninstallCommand(pluginsCmd *cobra.Command) {
+	uninstallCmd := &cobra.Command{
+		Use:   "uninstall <plugin-id> [plugin-id] ...",
+		Short: "Uninstall one or more plugins",
+		Long: `Uninstall plugins from the local machine.
+
+Plugin IDs can be specified in the following formats:
+  - Default registry: bluelink/aws (resolves to registry.bluelink.dev/bluelink/aws)
+  - Custom registry: registry.example.com/my-org/plugin (full host required)
+
+Plugins are removed from the path specified by BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH
+environment variable, or the default platform-specific path if not set:
+  - Linux/macOS: ~/.bluelink/engine/plugins/bin
+  - Windows: %LOCALAPPDATA%\NewStack\Bluelink\engine\plugins
+
+Examples:
+  # Uninstall a single plugin
+  bluelink plugins uninstall bluelink/aws
+
+  # Uninstall multiple plugins
+  bluelink plugins uninstall bluelink/aws bluelink/gcp
+
+  # Uninstall from a custom registry (full host required)
+  bluelink plugins uninstall registry.example.com/my-org/custom`,
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
+			cmd.SilenceErrors = true
+			return runPluginsUninstall(args)
+		},
+	}
+
+	pluginsCmd.AddCommand(uninstallCmd)
+}
+
+func runPluginsUninstall(args []string) error {
+	// Parse plugin IDs from arguments
+	var pluginIDs []*plugins.PluginID
+	for _, arg := range args {
+		id, err := plugins.ParsePluginID(arg)
+		if err != nil {
+			return fmt.Errorf("invalid plugin ID %q: %w", arg, err)
+		}
+		pluginIDs = append(pluginIDs, id)
+	}
+
+	// Detect if running in a terminal
+	inTerminal := term.IsTerminal(int(os.Stdout.Fd()))
+	headlessMode := !inTerminal
+
+	// Create styles
+	styles := stylespkg.NewStyles(
+		lipgloss.NewRenderer(os.Stdout),
+		stylespkg.NewBluelinkPalette(),
+	)
+
+	// Create the uninstall app
+	uninstallApp, err := pluginuninstallui.NewUninstallApp(
+		pluginuninstallui.UninstallAppOptions{
+			PluginIDs:      pluginIDs,
+			Styles:         styles,
+			Headless:       headlessMode,
+			HeadlessWriter: os.Stdout,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	// Run the TUI
+	var teaOpts []tea.ProgramOption
+	if headlessMode {
+		teaOpts = append(teaOpts, tea.WithoutRenderer(), tea.WithInput(nil))
+	} else {
+		teaOpts = append(teaOpts, tea.WithAltScreen())
+	}
+
+	p := tea.NewProgram(uninstallApp, teaOpts...)
+	finalModel, err := p.Run()
+	if err != nil {
+		return err
+	}
+
+	// Check if there was an error in the final model
+	switch m := finalModel.(type) {
+	case pluginuninstallui.MainModel:
+		if m.Error != nil {
+			return errUninstallFailed
+		}
+	case *pluginuninstallui.MainModel:
+		if m.Error != nil {
+			return errUninstallFailed
 		}
 	}
 

@@ -1223,3 +1223,205 @@ func (s *ManagerSuite) TestResolveDependencies_with_constraint() {
 	s.Equal("1.5.0", resolved[0].Version)
 	s.Equal("plugin-a", resolved[1].Name)
 }
+
+func (s *ManagerSuite) TestUninstall_removes_plugin_from_manifest() {
+	pluginsDir := filepath.Join(s.tempDir, "plugins")
+
+	manager := &Manager{pluginsDir: pluginsDir}
+
+	// Pre-populate manifest with a plugin
+	manifest := &PluginManifest{
+		Plugins: map[string]*InstalledPlugin{
+			"registry.bluelink.dev/bluelink/aws": {
+				ID:           "bluelink/aws@1.0.0",
+				Version:      "1.0.0",
+				RegistryHost: "registry.bluelink.dev",
+				Shasum:       "abc123",
+				InstalledAt:  time.Now(),
+			},
+		},
+	}
+	err := manager.SaveManifest(manifest)
+	s.Require().NoError(err)
+
+	// Create plugin directory
+	pluginDir := filepath.Join(pluginsDir, "bin", "bluelink", "aws", "1.0.0")
+	err = os.MkdirAll(pluginDir, 0755)
+	s.Require().NoError(err)
+	err = os.WriteFile(filepath.Join(pluginDir, "plugin"), []byte("binary"), 0755)
+	s.Require().NoError(err)
+
+	pluginID := &PluginID{
+		RegistryHost: DefaultRegistryHost,
+		Namespace:    "bluelink",
+		Name:         "aws",
+	}
+
+	result := manager.Uninstall(pluginID)
+	s.Equal(UninstallStatusRemoved, result.Status)
+	s.NoError(result.Error)
+
+	// Verify manifest no longer contains the plugin
+	loadedManifest, err := manager.LoadManifest()
+	s.NoError(err)
+	s.Len(loadedManifest.Plugins, 0)
+}
+
+func (s *ManagerSuite) TestUninstall_removes_plugin_files() {
+	pluginsDir := filepath.Join(s.tempDir, "plugins")
+
+	manager := &Manager{pluginsDir: pluginsDir}
+
+	// Pre-populate manifest
+	manifest := &PluginManifest{
+		Plugins: map[string]*InstalledPlugin{
+			"registry.bluelink.dev/bluelink/aws": {
+				ID:           "bluelink/aws@1.0.0",
+				Version:      "1.0.0",
+				RegistryHost: "registry.bluelink.dev",
+				Shasum:       "abc123",
+				InstalledAt:  time.Now(),
+			},
+		},
+	}
+	err := manager.SaveManifest(manifest)
+	s.Require().NoError(err)
+
+	// Create plugin directory with files
+	pluginDir := filepath.Join(pluginsDir, "bin", "bluelink", "aws", "1.0.0")
+	err = os.MkdirAll(pluginDir, 0755)
+	s.Require().NoError(err)
+	err = os.WriteFile(filepath.Join(pluginDir, "plugin"), []byte("binary"), 0755)
+	s.Require().NoError(err)
+
+	pluginID := &PluginID{
+		RegistryHost: DefaultRegistryHost,
+		Namespace:    "bluelink",
+		Name:         "aws",
+	}
+
+	result := manager.Uninstall(pluginID)
+	s.Equal(UninstallStatusRemoved, result.Status)
+
+	// Verify plugin directory was removed
+	_, err = os.Stat(pluginDir)
+	s.True(os.IsNotExist(err))
+}
+
+func (s *ManagerSuite) TestUninstall_returns_not_found_for_missing_plugin() {
+	pluginsDir := filepath.Join(s.tempDir, "plugins")
+
+	manager := &Manager{pluginsDir: pluginsDir}
+
+	pluginID := &PluginID{
+		RegistryHost: DefaultRegistryHost,
+		Namespace:    "bluelink",
+		Name:         "nonexistent",
+	}
+
+	result := manager.Uninstall(pluginID)
+	s.Equal(UninstallStatusNotFound, result.Status)
+	s.NoError(result.Error)
+}
+
+func (s *ManagerSuite) TestUninstallAll_removes_multiple_plugins() {
+	pluginsDir := filepath.Join(s.tempDir, "plugins")
+
+	manager := &Manager{pluginsDir: pluginsDir}
+
+	// Pre-populate manifest with multiple plugins
+	manifest := &PluginManifest{
+		Plugins: map[string]*InstalledPlugin{
+			"registry.bluelink.dev/bluelink/aws": {
+				ID:           "bluelink/aws@1.0.0",
+				Version:      "1.0.0",
+				RegistryHost: "registry.bluelink.dev",
+				Shasum:       "abc123",
+				InstalledAt:  time.Now(),
+			},
+			"registry.bluelink.dev/bluelink/gcp": {
+				ID:           "bluelink/gcp@2.0.0",
+				Version:      "2.0.0",
+				RegistryHost: "registry.bluelink.dev",
+				Shasum:       "def456",
+				InstalledAt:  time.Now(),
+			},
+		},
+	}
+	err := manager.SaveManifest(manifest)
+	s.Require().NoError(err)
+
+	// Create plugin directories
+	for _, name := range []string{"aws", "gcp"} {
+		version := "1.0.0"
+		if name == "gcp" {
+			version = "2.0.0"
+		}
+		pluginDir := filepath.Join(pluginsDir, "bin", "bluelink", name, version)
+		err = os.MkdirAll(pluginDir, 0755)
+		s.Require().NoError(err)
+		err = os.WriteFile(filepath.Join(pluginDir, "plugin"), []byte("binary"), 0755)
+		s.Require().NoError(err)
+	}
+
+	pluginIDs := []*PluginID{
+		{RegistryHost: DefaultRegistryHost, Namespace: "bluelink", Name: "aws"},
+		{RegistryHost: DefaultRegistryHost, Namespace: "bluelink", Name: "gcp"},
+	}
+
+	results := manager.UninstallAll(pluginIDs)
+	s.Len(results, 2)
+	s.Equal(UninstallStatusRemoved, results[0].Status)
+	s.Equal(UninstallStatusRemoved, results[1].Status)
+
+	// Verify manifest is empty
+	loadedManifest, err := manager.LoadManifest()
+	s.NoError(err)
+	s.Len(loadedManifest.Plugins, 0)
+}
+
+func (s *ManagerSuite) TestUninstall_cleans_up_empty_parent_directories() {
+	pluginsDir := filepath.Join(s.tempDir, "plugins")
+
+	manager := &Manager{pluginsDir: pluginsDir}
+
+	// Pre-populate manifest
+	manifest := &PluginManifest{
+		Plugins: map[string]*InstalledPlugin{
+			"registry.bluelink.dev/bluelink/aws": {
+				ID:           "bluelink/aws@1.0.0",
+				Version:      "1.0.0",
+				RegistryHost: "registry.bluelink.dev",
+				Shasum:       "abc123",
+				InstalledAt:  time.Now(),
+			},
+		},
+	}
+	err := manager.SaveManifest(manifest)
+	s.Require().NoError(err)
+
+	// Create plugin directory
+	pluginDir := filepath.Join(pluginsDir, "bin", "bluelink", "aws", "1.0.0")
+	err = os.MkdirAll(pluginDir, 0755)
+	s.Require().NoError(err)
+	err = os.WriteFile(filepath.Join(pluginDir, "plugin"), []byte("binary"), 0755)
+	s.Require().NoError(err)
+
+	pluginID := &PluginID{
+		RegistryHost: DefaultRegistryHost,
+		Namespace:    "bluelink",
+		Name:         "aws",
+	}
+
+	result := manager.Uninstall(pluginID)
+	s.Equal(UninstallStatusRemoved, result.Status)
+
+	// Verify empty parent directories were cleaned up
+	nameDir := filepath.Join(pluginsDir, "bin", "bluelink", "aws")
+	_, err = os.Stat(nameDir)
+	s.True(os.IsNotExist(err))
+
+	namespaceDir := filepath.Join(pluginsDir, "bin", "bluelink")
+	_, err = os.Stat(namespaceDir)
+	s.True(os.IsNotExist(err))
+}

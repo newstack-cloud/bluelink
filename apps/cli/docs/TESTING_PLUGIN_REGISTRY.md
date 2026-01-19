@@ -8,7 +8,7 @@ The plugin registry test server (`tools/plugin-registry-test-server`) provides a
 
 - **Login** - Authentication flows (API Key, OAuth2 Client Credentials, OAuth2 Auth Code)
 - **Install** - Plugin discovery, download, and installation
-- **Uninstall** - Plugin removal (TODO)
+- **Uninstall** - Plugin removal from local machine
 
 ## Prerequisites
 
@@ -268,15 +268,102 @@ Expected: Shows "Skipped: 1" on second run
 
 ## Testing `plugins uninstall`
 
-> **TODO:** This section will be added when the uninstall command is implemented.
+The uninstall command removes locally installed plugins from the plugin directory and updates the manifest.
 
-The uninstall command will remove a locally installed plugin.
+### Prerequisites
+
+Before testing uninstall, install some plugins first:
+```bash
+bluelink plugins login http://localhost:8080
+bluelink plugins install localhost:8080/bluelink/test-provider@1.0.0
+bluelink plugins install localhost:8080/bluelink/test-transformer@1.0.0
+```
 
 ### Basic Uninstall
 
+Uninstall a single plugin:
 ```bash
-# TODO: Example uninstall command
-bluelink plugins uninstall example-provider
+bluelink plugins uninstall localhost:8080/bluelink/test-provider
+```
+
+**Expected behavior:**
+- Plugin files are removed from the plugin directory
+- Plugin entry is removed from manifest
+- Empty parent directories are cleaned up
+- Shows "Removed: 1" in the summary
+
+### Uninstall Multiple Plugins
+
+```bash
+bluelink plugins uninstall \
+  localhost:8080/bluelink/test-provider \
+  localhost:8080/bluelink/test-transformer
+```
+
+**Expected behavior:**
+- Both plugins are removed
+- Shows "Removed: 2" in the summary
+
+### Uninstall with Default Registry
+
+For plugins installed from the default registry (`registry.bluelink.dev`), you can use the short form:
+```bash
+bluelink plugins uninstall bluelink/aws
+```
+
+This is equivalent to:
+```bash
+bluelink plugins uninstall registry.bluelink.dev/bluelink/aws
+```
+
+### Verify Uninstallation
+
+Check that the plugin was removed from the manifest:
+```bash
+cat ${BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH:-~/.bluelink/engine/plugins}/manifest.json
+```
+
+Check that plugin files were removed:
+```bash
+ls ${BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH:-~/.bluelink/engine/plugins}/bin/bluelink/
+```
+
+### Uninstall Error Cases
+
+**Plugin not installed (not found):**
+```bash
+bluelink plugins uninstall localhost:8080/bluelink/nonexistent
+```
+Expected: Shows "Not found: 1" in the summary (not an error, graceful handling)
+
+**Missing plugin argument:**
+```bash
+bluelink plugins uninstall
+```
+Expected: Error "requires at least 1 arg"
+
+**Invalid plugin ID format:**
+```bash
+bluelink plugins uninstall invalid-format
+```
+Expected: Error about invalid plugin ID
+
+### Mixed Results
+
+When uninstalling multiple plugins where some exist and some don't:
+```bash
+bluelink plugins uninstall \
+  localhost:8080/bluelink/test-provider \
+  localhost:8080/bluelink/nonexistent
+```
+Expected: Shows "Removed: 1, Not found: 1" (processes all plugins, reports combined results)
+
+### Custom Plugin Directory
+
+Use the `BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH` environment variable:
+```bash
+BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH=/tmp/my-plugins \
+  bluelink plugins uninstall localhost:8080/bluelink/test-provider
 ```
 
 ---

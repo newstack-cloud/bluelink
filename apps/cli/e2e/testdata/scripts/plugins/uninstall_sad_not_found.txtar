@@ -1,0 +1,13 @@
+# Test plugins uninstall handles non-existent plugins gracefully
+
+# Setup plugin path
+env HOME=$WORK
+env BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH=$WORK/plugins
+
+# Try to uninstall a plugin that was never installed
+exec bluelink plugins uninstall bluelink/nonexistent
+stdout 'not found'
+stdout 'Not found: 1'
+
+-- bluelink.config.toml --
+# Empty config file

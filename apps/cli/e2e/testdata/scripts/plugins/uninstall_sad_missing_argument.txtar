@@ -1,0 +1,7 @@
+# Test plugins uninstall requires at least one plugin argument
+
+! exec bluelink plugins uninstall
+stderr 'requires at least 1 arg'
+
+-- bluelink.config.toml --
+# Empty config file

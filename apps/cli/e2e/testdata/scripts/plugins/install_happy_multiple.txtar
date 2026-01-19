@@ -18,8 +18,8 @@ stdout 'test-transformer.*installed'
 stdout 'Installed: 2'
 
 # Verify both plugins were extracted
-exists $WORK/plugins/bluelink/test-provider/1.0.0/plugin
-exists $WORK/plugins/bluelink/test-transformer/1.0.0/plugin
+exists $WORK/plugins/bin/bluelink/test-provider/1.0.0/plugin
+exists $WORK/plugins/bin/bluelink/test-transformer/1.0.0/plugin
 
 -- bluelink.config.toml --
 # Empty config file
