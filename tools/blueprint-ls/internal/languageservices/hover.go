@@ -7,6 +7,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/helpinfo"
 	common "github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
@@ -71,43 +72,40 @@ func (s *HoverService) getHoverElementContent(
 	blueprint *schema.Blueprint,
 	collected []*schema.TreeNode,
 ) (*HoverContent, error) {
-
-	if len(collected) == 0 {
+	hoverCtx := docmodel.DetermineHoverContext(collected)
+	if hoverCtx == nil {
 		return &HoverContent{}, nil
 	}
 
-	// Work backwards through the collected elements to find the first element
-	// of a type that supports hover content.
-	var node *schema.TreeNode
-	var elementType string
-	i := len(collected) - 1
-	for node == nil && i >= 0 {
-		pathParts := strings.Split(collected[i].Path, "/")
-		node, elementType = matchHoverElement(collected, i, pathParts)
-		i -= 1
-	}
+	return s.getHoverContentByKind(ctx, blueprint, hoverCtx)
+}
 
-	switch elementType {
-	case "functionCall":
-		return s.getFunctionCallHoverContent(ctx, node)
-	case "varRef":
-		return getVarRefHoverContent(node, blueprint)
-	case "valRef":
-		return getValRefHoverContent(node, blueprint)
-	case "childRef":
-		return getChildRefHoverContent(node, blueprint)
-	case "resourceRef":
-		return s.getResourceRefHoverContent(ctx, node, blueprint)
-	case "datasourceRef":
-		return getDataSourceRefHoverContent(node, blueprint)
-	case "elemRef":
-		return getElemRefHoverContent(node, blueprint)
-	case "elemIndexRef":
-		return getElemIndexRefHoverContent(node, blueprint)
-	case "resourceType":
-		return s.getResourceTypeHoverContent(ctx, node)
-	case "dataSourceType":
-		return s.getDataSourceTypeHoverContent(ctx, node)
+func (s *HoverService) getHoverContentByKind(
+	ctx *common.LSPContext,
+	blueprint *schema.Blueprint,
+	hoverCtx *docmodel.HoverContext,
+) (*HoverContent, error) {
+	switch hoverCtx.ElementKind {
+	case docmodel.SchemaElementFunctionCall:
+		return s.getFunctionCallHoverContent(ctx, hoverCtx.TreeNode)
+	case docmodel.SchemaElementVariableRef:
+		return getVarRefHoverContent(hoverCtx.TreeNode, blueprint)
+	case docmodel.SchemaElementValueRef:
+		return getValRefHoverContent(hoverCtx.TreeNode, blueprint)
+	case docmodel.SchemaElementChildRef:
+		return getChildRefHoverContent(hoverCtx.TreeNode, blueprint)
+	case docmodel.SchemaElementResourceRef:
+		return s.getResourceRefHoverContent(ctx, hoverCtx.TreeNode, blueprint)
+	case docmodel.SchemaElementDataSourceRef:
+		return getDataSourceRefHoverContent(hoverCtx.TreeNode, blueprint)
+	case docmodel.SchemaElementElemRef:
+		return getElemRefHoverContent(hoverCtx.TreeNode, blueprint)
+	case docmodel.SchemaElementElemIndexRef:
+		return getElemIndexRefHoverContent(hoverCtx.TreeNode, blueprint)
+	case docmodel.SchemaElementResourceType:
+		return s.getResourceTypeHoverContent(ctx, hoverCtx.TreeNode)
+	case docmodel.SchemaElementDataSourceType:
+		return s.getDataSourceTypeHoverContent(ctx, hoverCtx.TreeNode)
 	default:
 		return &HoverContent{}, nil
 	}
@@ -254,80 +252,6 @@ func (s *HoverService) getDataSourceTypeHoverContent(
 	}, nil
 }
 
-func matchHoverElement(
-	collected []*schema.TreeNode,
-	index int,
-	pathParts []string,
-) (*schema.TreeNode, string) {
-
-	if isFunctionCallPath(pathParts) {
-		return collected[index], "functionCall"
-	} else if isVarRefPath(pathParts) {
-		return collected[index], "varRef"
-	} else if isValRefPath(pathParts) {
-		return collected[index], "valRef"
-	} else if isChildRefPath(pathParts) {
-		return collected[index], "childRef"
-	} else if isResourceRefPath(pathParts) {
-		return collected[index], "resourceRef"
-	} else if isDataSourceRefPath(pathParts) {
-		return collected[index], "datasourceRef"
-	} else if isElemRefPath(pathParts) {
-		return collected[index], "elemRef"
-	} else if isElemIndexRefPath(pathParts) {
-		return collected[index], "elemIndexRef"
-	} else if isResourceTypePath(pathParts) {
-		return collected[index], "resourceType"
-	} else if isDataSourceTypePath(pathParts) {
-		return collected[index], "dataSourceType"
-	}
-
-	return nil, ""
-}
-
-func isFunctionCallPath(pathParts []string) bool {
-	return len(pathParts) > 1 && pathParts[len(pathParts)-2] == "functionCall"
-}
-
-func isVarRefPath(pathParts []string) bool {
-	return len(pathParts) > 1 && pathParts[len(pathParts)-2] == "varRef"
-}
-
-func isValRefPath(pathParts []string) bool {
-	return len(pathParts) > 1 && pathParts[len(pathParts)-2] == "valRef"
-}
-
-func isChildRefPath(pathParts []string) bool {
-	return len(pathParts) > 1 && pathParts[len(pathParts)-2] == "childRef"
-}
-
-func isResourceRefPath(pathParts []string) bool {
-	return len(pathParts) > 1 && pathParts[len(pathParts)-2] == "resourceRef"
-}
-
-func isDataSourceRefPath(pathParts []string) bool {
-	return len(pathParts) > 1 && pathParts[len(pathParts)-2] == "datasourceRef"
-}
-
-func isElemRefPath(pathParts []string) bool {
-	return len(pathParts) >= 1 && pathParts[len(pathParts)-1] == "elemRef"
-}
-
-func isElemIndexRefPath(pathParts []string) bool {
-	return len(pathParts) >= 1 && pathParts[len(pathParts)-1] == "elemIndexRef"
-}
-
-func isResourceTypePath(pathParts []string) bool {
-	return len(pathParts) > 2 &&
-		pathParts[len(pathParts)-3] == "resources" &&
-		pathParts[len(pathParts)-1] == "type"
-}
-
-func isDataSourceTypePath(pathParts []string) bool {
-	return len(pathParts) > 2 &&
-		pathParts[len(pathParts)-3] == "datasources" &&
-		pathParts[len(pathParts)-1] == "type"
-}
 
 func getVarRefHoverContent(
 	node *schema.TreeNode,

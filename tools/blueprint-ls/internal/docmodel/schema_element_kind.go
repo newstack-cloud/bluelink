@@ -120,78 +120,48 @@ func KindFromSchemaElement(elem any) SchemaElementKind {
 	}
 }
 
+var schemaElementKindNames = map[SchemaElementKind]string{
+	SchemaElementUnknown:                  "unknown",
+	SchemaElementVariables:                "variables",
+	SchemaElementValues:                   "values",
+	SchemaElementResources:                "resources",
+	SchemaElementDataSources:              "datasources",
+	SchemaElementIncludes:                 "includes",
+	SchemaElementExports:                  "exports",
+	SchemaElementVariable:                 "variable",
+	SchemaElementValue:                    "value",
+	SchemaElementResource:                 "resource",
+	SchemaElementDataSource:               "datasource",
+	SchemaElementInclude:                  "include",
+	SchemaElementExport:                   "export",
+	SchemaElementResourceType:             "resource_type",
+	SchemaElementDataSourceType:           "datasource_type",
+	SchemaElementVariableType:             "variable_type",
+	SchemaElementValueType:                "value_type",
+	SchemaElementExportType:               "export_type",
+	SchemaElementDataSourceFieldType:      "datasource_field_type",
+	SchemaElementDataSourceFilterField:    "datasource_filter_field",
+	SchemaElementDataSourceFilterOperator: "datasource_filter_operator",
+	SchemaElementSubstitution:             "substitution",
+	SchemaElementFunctionCall:             "function_call",
+	SchemaElementVariableRef:              "variable_ref",
+	SchemaElementValueRef:                 "value_ref",
+	SchemaElementResourceRef:              "resource_ref",
+	SchemaElementDataSourceRef:            "datasource_ref",
+	SchemaElementChildRef:                 "child_ref",
+	SchemaElementElemRef:                  "elem_ref",
+	SchemaElementElemIndexRef:             "elem_index_ref",
+	SchemaElementScalar:                   "scalar",
+	SchemaElementMapping:                  "mapping",
+	SchemaElementSequence:                 "sequence",
+}
+
 // String returns a string representation of SchemaElementKind.
 func (k SchemaElementKind) String() string {
-	switch k {
-	case SchemaElementUnknown:
-		return "unknown"
-	case SchemaElementVariables:
-		return "variables"
-	case SchemaElementValues:
-		return "values"
-	case SchemaElementResources:
-		return "resources"
-	case SchemaElementDataSources:
-		return "datasources"
-	case SchemaElementIncludes:
-		return "includes"
-	case SchemaElementExports:
-		return "exports"
-	case SchemaElementVariable:
-		return "variable"
-	case SchemaElementValue:
-		return "value"
-	case SchemaElementResource:
-		return "resource"
-	case SchemaElementDataSource:
-		return "datasource"
-	case SchemaElementInclude:
-		return "include"
-	case SchemaElementExport:
-		return "export"
-	case SchemaElementResourceType:
-		return "resource_type"
-	case SchemaElementDataSourceType:
-		return "datasource_type"
-	case SchemaElementVariableType:
-		return "variable_type"
-	case SchemaElementValueType:
-		return "value_type"
-	case SchemaElementExportType:
-		return "export_type"
-	case SchemaElementDataSourceFieldType:
-		return "datasource_field_type"
-	case SchemaElementDataSourceFilterField:
-		return "datasource_filter_field"
-	case SchemaElementDataSourceFilterOperator:
-		return "datasource_filter_operator"
-	case SchemaElementSubstitution:
-		return "substitution"
-	case SchemaElementFunctionCall:
-		return "function_call"
-	case SchemaElementVariableRef:
-		return "variable_ref"
-	case SchemaElementValueRef:
-		return "value_ref"
-	case SchemaElementResourceRef:
-		return "resource_ref"
-	case SchemaElementDataSourceRef:
-		return "datasource_ref"
-	case SchemaElementChildRef:
-		return "child_ref"
-	case SchemaElementElemRef:
-		return "elem_ref"
-	case SchemaElementElemIndexRef:
-		return "elem_index_ref"
-	case SchemaElementScalar:
-		return "scalar"
-	case SchemaElementMapping:
-		return "mapping"
-	case SchemaElementSequence:
-		return "sequence"
-	default:
-		return "unknown"
+	if name, ok := schemaElementKindNames[k]; ok {
+		return name
 	}
+	return "unknown"
 }
 
 // IsTypeField returns true if this is a type field kind.
