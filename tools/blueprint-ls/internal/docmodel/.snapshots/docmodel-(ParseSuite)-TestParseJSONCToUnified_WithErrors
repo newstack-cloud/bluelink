@@ -1,0 +1,138 @@
+(*docmodel.snapshotNode)({
+  Kind: (string) (len=8) "document",
+  FieldName: (string) "",
+  Value: (string) "",
+  Index: (int) 0,
+  Range: (*docmodel.snapshotRange)({
+    Start: (docmodel.snapshotPosition) {
+      Line: (int) 1,
+      Column: (int) 1
+    },
+    End: (docmodel.snapshotPosition) {
+      Line: (int) 4,
+      Column: (int) 1
+    }
+  }),
+  KeyRange: (*docmodel.snapshotRange)(<nil>),
+  Children: ([]*docmodel.snapshotNode) (len=1) {
+    (*docmodel.snapshotNode)({
+      Kind: (string) (len=7) "mapping",
+      FieldName: (string) "",
+      Value: (string) "",
+      Index: (int) 0,
+      Range: (*docmodel.snapshotRange)({
+        Start: (docmodel.snapshotPosition) {
+          Line: (int) 1,
+          Column: (int) 1
+        },
+        End: (docmodel.snapshotPosition) {
+          Line: (int) 3,
+          Column: (int) 17
+        }
+      }),
+      KeyRange: (*docmodel.snapshotRange)(<nil>),
+      Children: ([]*docmodel.snapshotNode) (len=2) {
+        (*docmodel.snapshotNode)({
+          Kind: (string) (len=6) "scalar",
+          FieldName: (string) "",
+          Value: (string) (len=10) "2021-12-18",
+          Index: (int) 0,
+          Range: (*docmodel.snapshotRange)({
+            Start: (docmodel.snapshotPosition) {
+              Line: (int) 2,
+              Column: (int) 14
+            },
+            End: (docmodel.snapshotPosition) {
+              Line: (int) 2,
+              Column: (int) 26
+            }
+          }),
+          KeyRange: (*docmodel.snapshotRange)(<nil>),
+          Children: ([]*docmodel.snapshotNode) (len=3) {
+            (*docmodel.snapshotNode)({
+              Kind: (string) (len=6) "scalar",
+              FieldName: (string) "",
+              Value: (string) (len=1) "\"",
+              Index: (int) 0,
+              Range: (*docmodel.snapshotRange)({
+                Start: (docmodel.snapshotPosition) {
+                  Line: (int) 2,
+                  Column: (int) 14
+                },
+                End: (docmodel.snapshotPosition) {
+                  Line: (int) 2,
+                  Column: (int) 15
+                }
+              }),
+              KeyRange: (*docmodel.snapshotRange)(<nil>),
+              Children: ([]*docmodel.snapshotNode) <nil>
+            }),
+            (*docmodel.snapshotNode)({
+              Kind: (string) (len=6) "scalar",
+              FieldName: (string) "",
+              Value: (string) (len=10) "2021-12-18",
+              Index: (int) 0,
+              Range: (*docmodel.snapshotRange)({
+                Start: (docmodel.snapshotPosition) {
+                  Line: (int) 2,
+                  Column: (int) 15
+                },
+                End: (docmodel.snapshotPosition) {
+                  Line: (int) 2,
+                  Column: (int) 25
+                }
+              }),
+              KeyRange: (*docmodel.snapshotRange)(<nil>),
+              Children: ([]*docmodel.snapshotNode) <nil>
+            }),
+            (*docmodel.snapshotNode)({
+              Kind: (string) (len=6) "scalar",
+              FieldName: (string) "",
+              Value: (string) (len=1) "\"",
+              Index: (int) 0,
+              Range: (*docmodel.snapshotRange)({
+                Start: (docmodel.snapshotPosition) {
+                  Line: (int) 2,
+                  Column: (int) 25
+                },
+                End: (docmodel.snapshotPosition) {
+                  Line: (int) 2,
+                  Column: (int) 26
+                }
+              }),
+              KeyRange: (*docmodel.snapshotRange)(<nil>),
+              Children: ([]*docmodel.snapshotNode) <nil>
+            })
+          }
+        }),
+        (*docmodel.snapshotNode)({
+          Kind: (string) (len=7) "mapping",
+          FieldName: (string) (len=9) "resources",
+          Value: (string) "",
+          Index: (int) 0,
+          Range: (*docmodel.snapshotRange)({
+            Start: (docmodel.snapshotPosition) {
+              Line: (int) 3,
+              Column: (int) 16
+            },
+            End: (docmodel.snapshotPosition) {
+              Line: (int) 3,
+              Column: (int) 17
+            }
+          }),
+          KeyRange: (*docmodel.snapshotRange)({
+            Start: (docmodel.snapshotPosition) {
+              Line: (int) 3,
+              Column: (int) 3
+            },
+            End: (docmodel.snapshotPosition) {
+              Line: (int) 3,
+              Column: (int) 14
+            }
+          }),
+          Children: ([]*docmodel.snapshotNode) <nil>
+        })
+      }
+    })
+  }
+})

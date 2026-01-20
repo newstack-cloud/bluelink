@@ -44,4 +44,4 @@ resources:
     spec:
       environment:
         variables:
-          ORDERS_TABLE: ${resources.ordersTable.state}
+          ORDERS_TABLE: ${resources.ordersTable.spec}

@@ -1249,7 +1249,7 @@ func (s *CompletionService) getStringSubDataSourcePropCompletionItems(
 				Detail:   &detail,
 				Kind:     &fieldKind,
 				TextEdit: edit,
-				Data:     map[string]interface{}{"completionType": "dataSourceProperty"},
+				Data:     map[string]any{"completionType": "dataSourceProperty"},
 			},
 		)
 	}
