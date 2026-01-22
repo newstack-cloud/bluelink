@@ -1,13 +1,26 @@
 package languageserver
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"time"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/plugin"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/blueprint"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/pluginhost"
 	common "github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
+	"go.uber.org/zap"
 )
 
 func (a *Application) handleInitialise(ctx *common.LSPContext, params *lsp.InitializeParams) (any, error) {
@@ -23,7 +36,7 @@ func (a *Application) handleInitialise(ctx *common.LSPContext, params *lsp.Initi
 		TriggerCharacters: []string{"(", ","},
 	}
 	capabilities.CompletionProvider = &lsp.CompletionOptions{
-		TriggerCharacters: []string{"{", ",", "\"", "'", "(", "=", ".", " ", ":"},
+		TriggerCharacters: []string{"{", ",", "\"", "'", "(", "=", ".", " ", ":", "["},
 		ResolveProvider:   &lsp.True,
 	}
 
@@ -42,6 +55,23 @@ func (a *Application) handleInitialise(ctx *common.LSPContext, params *lsp.Initi
 		clientCapabilities.TextDocument.Definition != nil &&
 		*clientCapabilities.TextDocument.Definition.LinkSupport
 	a.state.SetLinkSupportCapability(hasLinkSupportCapability)
+
+	// Parse initializationOptions for plugin configuration
+	var initOpts *pluginhost.InitializationOptions
+	if params.InitializationOptions != nil {
+		optBytes, err := json.Marshal(params.InitializationOptions)
+		if err == nil {
+			if err := json.Unmarshal(optBytes, &initOpts); err != nil {
+				a.logger.Warn("Failed to parse initializationOptions", zap.Error(err))
+			}
+		}
+	}
+
+	// Load plugins if configured (only once per server lifetime)
+	pluginConfig := pluginhost.NewDefaultConfig().WithInitOptions(initOpts)
+	if a.pluginHostService == nil && pluginConfig.IsEnabled() && pluginConfig.GetPluginPath() != "" {
+		a.loadPlugins(context.Background(), pluginConfig)
+	}
 
 	result := lsp.InitializeResult{
 		Capabilities: capabilities,
@@ -83,18 +113,16 @@ func (a *Application) handleWorkspaceDidChangeConfiguration(ctx *common.LSPConte
 func (a *Application) handleHover(ctx *common.LSPContext, params *lsp.HoverParams) (*lsp.Hover, error) {
 	dispatcher := lsp.NewDispatcher(ctx)
 
-	tree := a.state.GetDocumentTree(params.TextDocument.URI)
-	if tree == nil {
+	docCtx := a.state.GetDocumentContext(params.TextDocument.URI)
+	if docCtx == nil || docCtx.SchemaTree == nil {
 		err := a.validateAndPublishDiagnostics(ctx, params.TextDocument.URI, dispatcher)
 		if err != nil {
 			return nil, err
 		}
-
-		tree = a.state.GetDocumentTree(params.TextDocument.URI)
+		docCtx = a.state.GetDocumentContext(params.TextDocument.URI)
 	}
 
-	bpSchema := a.state.GetDocumentSchema(params.TextDocument.URI)
-	if bpSchema == nil {
+	if docCtx == nil || docCtx.Blueprint == nil {
 		a.logger.Error(
 			"no schema found for document, current document is not a valid blueprint",
 		)
@@ -103,8 +131,7 @@ func (a *Application) handleHover(ctx *common.LSPContext, params *lsp.HoverParam
 
 	content, err := a.hoverService.GetHoverContent(
 		ctx,
-		tree,
-		bpSchema,
+		docCtx,
 		&params.TextDocumentPositionParams,
 	)
 	if err != nil {
@@ -127,19 +154,18 @@ func (a *Application) handleHover(ctx *common.LSPContext, params *lsp.HoverParam
 func (a *Application) handleSignatureHelp(ctx *common.LSPContext, params *lsp.SignatureHelpParams) (*lsp.SignatureHelp, error) {
 	dispatcher := lsp.NewDispatcher(ctx)
 
-	tree := a.state.GetDocumentTree(params.TextDocument.URI)
-	if tree == nil {
+	docCtx := a.state.GetDocumentContext(params.TextDocument.URI)
+	if docCtx == nil || docCtx.SchemaTree == nil {
 		err := a.validateAndPublishDiagnostics(ctx, params.TextDocument.URI, dispatcher)
 		if err != nil {
 			return nil, err
 		}
-
-		tree = a.state.GetDocumentTree(params.TextDocument.URI)
+		docCtx = a.state.GetDocumentContext(params.TextDocument.URI)
 	}
 
 	signatures, err := a.signatureService.GetFunctionSignatures(
 		ctx,
-		tree,
+		docCtx,
 		&params.TextDocumentPositionParams,
 	)
 	if err != nil {
@@ -230,31 +256,39 @@ func (a *Application) storeDocumentAndDerivedStructures(
 	parsed *schema.Blueprint,
 	content string,
 ) error {
-	if parsed == nil {
-		return nil
-	}
-
-	docFormat := blueprint.DetermineDocFormat(uri)
-
-	a.state.SetDocumentSchema(uri, parsed)
-	tree := schema.SchemaToTree(parsed)
-	// positionMap := blueprint.CreatePositionMap(tree)
-	a.state.SetDocumentTree(uri, tree)
-	// a.state.SetDocumentPositionMap(uri, positionMap)
-
-	if docFormat == schema.YAMLSpecFormat {
-		yamlNode, err := blueprint.ParseYAMLNode(content)
-		if err != nil {
-			return err
-		}
-		a.state.SetDocumentYAMLNode(uri, yamlNode)
+	specFormat := blueprint.DetermineDocFormat(uri)
+	var docFormat docmodel.DocumentFormat
+	if specFormat == schema.JWCCSpecFormat {
+		docFormat = docmodel.FormatJSONC
 	} else {
-		jsonNode, err := blueprint.ParseJWCCNode(content)
-		if err != nil {
-			return err
-		}
-		a.state.SetDocumentJSONNode(uri, jsonNode)
+		docFormat = docmodel.FormatYAML
 	}
+
+	// Get existing DocumentContext to preserve last-known-good state
+	existingDocCtx := a.state.GetDocumentContext(uri)
+
+	// Create new DocumentContext with tree-sitter AST
+	docCtx := docmodel.NewDocumentContext(
+		string(uri),
+		content,
+		docFormat,
+		a.logger,
+	)
+
+	// Preserve last-known-good schema from existing context if parsing failed
+	if existingDocCtx != nil && existingDocCtx.LastValidSchema != nil {
+		docCtx.LastValidSchema = existingDocCtx.LastValidSchema
+		docCtx.LastValidTree = existingDocCtx.LastValidTree
+		docCtx.LastValidVersion = existingDocCtx.LastValidVersion
+	}
+
+	// Add schema information if parsing succeeded
+	if parsed != nil {
+		tree := schema.SchemaToTree(parsed)
+		docCtx.UpdateSchema(parsed, tree)
+	}
+
+	a.state.SetDocumentContext(uri, docCtx)
 	return nil
 }
 
@@ -303,26 +337,32 @@ func (a *Application) handleCompletion(
 ) (any, error) {
 	dispatcher := lsp.NewDispatcher(ctx)
 
-	tree := a.state.GetDocumentTree(params.TextDocument.URI)
-	if tree == nil {
+	docCtx := a.state.GetDocumentContext(params.TextDocument.URI)
+	// Try to validate if we don't have any schema (current or last-known-good)
+	if docCtx == nil || (docCtx.SchemaTree == nil && docCtx.LastValidTree == nil) {
 		err := a.validateAndPublishDiagnostics(ctx, params.TextDocument.URI, dispatcher)
 		if err != nil {
 			return nil, err
 		}
-
-		tree = a.state.GetDocumentTree(params.TextDocument.URI)
+		docCtx = a.state.GetDocumentContext(params.TextDocument.URI)
 	}
-	content := a.getDocumentContent(params.TextDocument.URI, true)
-	bpSchema := a.state.GetDocumentSchema(params.TextDocument.URI)
-	if bpSchema == nil {
+
+	// Use GetEffectiveSchema() to fall back to last-known-good schema during editing
+	if docCtx == nil || docCtx.GetEffectiveSchema() == nil {
 		return nil, errors.New("no parsed blueprint found for document")
+	}
+
+	// Update DocumentContext with the latest content from state.
+	// This handles race conditions where completion request arrives before
+	// the didChange notification is fully processed and docCtx is updated.
+	latestContent := a.state.GetDocumentContent(params.TextDocument.URI)
+	if latestContent != nil && *latestContent != docCtx.Content {
+		docCtx.UpdateContent(*latestContent, docCtx.Version+1)
 	}
 
 	completionItems, err := a.completionService.GetCompletionItems(
 		ctx,
-		*content,
-		tree,
-		bpSchema,
+		docCtx,
 		&params.TextDocumentPositionParams,
 	)
 	if err != nil {
@@ -354,13 +394,33 @@ func (a *Application) handleDocumentSymbols(
 	ctx *common.LSPContext,
 	params *lsp.DocumentSymbolParams,
 ) (any, error) {
-	content := a.state.GetDocumentContent(params.TextDocument.URI)
-	if content == nil {
-		return nil, errors.New("no content found for document")
+	docCtx := a.state.GetDocumentContext(params.TextDocument.URI)
+
+	// If no stored context, create one from content for symbols
+	if docCtx == nil {
+		content := a.state.GetDocumentContent(params.TextDocument.URI)
+		if content == nil {
+			return nil, errors.New("no content found for document")
+		}
+
+		format := blueprint.DetermineDocFormat(params.TextDocument.URI)
+		var docFormat docmodel.DocumentFormat
+		if format == schema.JWCCSpecFormat {
+			docFormat = docmodel.FormatJSONC
+		} else {
+			docFormat = docmodel.FormatYAML
+		}
+
+		docCtx = docmodel.NewDocumentContext(
+			string(params.TextDocument.URI),
+			*content,
+			docFormat,
+			a.logger,
+		)
 	}
 
 	if a.state.HasHierarchicalDocumentSymbolCapability() {
-		return a.symbolService.GetDocumentSymbols(params.TextDocument.URI, *content)
+		return a.symbolService.GetDocumentSymbolsFromContext(docCtx)
 	}
 
 	return []lsp.DocumentSymbol{}, nil
@@ -372,26 +432,22 @@ func (a *Application) handleGotoDefinition(
 ) (any, error) {
 	dispatcher := lsp.NewDispatcher(ctx)
 
-	tree := a.state.GetDocumentTree(params.TextDocument.URI)
-	if tree == nil {
+	docCtx := a.state.GetDocumentContext(params.TextDocument.URI)
+	if docCtx == nil || docCtx.SchemaTree == nil {
 		err := a.validateAndPublishDiagnostics(ctx, params.TextDocument.URI, dispatcher)
 		if err != nil {
 			return nil, err
 		}
-
-		tree = a.state.GetDocumentTree(params.TextDocument.URI)
+		docCtx = a.state.GetDocumentContext(params.TextDocument.URI)
 	}
-	content := a.getDocumentContent(params.TextDocument.URI, true)
-	bpSchema := a.state.GetDocumentSchema(params.TextDocument.URI)
-	if bpSchema == nil {
+
+	if docCtx == nil || docCtx.Blueprint == nil {
 		return nil, errors.New("no parsed blueprint found for document")
 	}
 
 	if a.state.HasLinkSupportCapability() {
-		return a.gotoDefinitionService.GetDefinitions(
-			*content,
-			tree,
-			bpSchema,
+		return a.gotoDefinitionService.GetDefinitionsFromContext(
+			docCtx,
 			&params.TextDocumentPositionParams,
 		)
 	}
@@ -401,5 +457,105 @@ func (a *Application) handleGotoDefinition(
 
 func (a *Application) handleShutdown(ctx *common.LSPContext) error {
 	a.logger.Info("Shutting down server...")
+	if a.pluginHostService != nil {
+		a.pluginHostService.Close()
+	}
 	return nil
+}
+
+func (a *Application) loadPlugins(ctx context.Context, config pluginhost.Config) {
+	a.logger.Info("Loading plugins...",
+		zap.String("pluginPath", config.GetPluginPath()),
+		zap.String("logFileRootDir", config.GetLogFileRootDir()),
+	)
+
+	pluginHostService, err := pluginhost.LoadDefaultService(
+		&pluginhost.LoadDependencies{
+			Executor:         plugin.NewOSCmdExecutor(config.GetLogFileRootDir(), nil),
+			InstanceFactory:  plugin.CreatePluginInstance,
+			PluginHostConfig: config,
+		},
+		pluginhost.WithServiceLogger(a.frameworkLogger),
+		pluginhost.WithInitialProviders(a.builtInProviders),
+	)
+	if err != nil {
+		a.logger.Warn("Failed to initialize plugin host", zap.Error(err))
+		return
+	}
+	a.pluginHostService = pluginHostService
+
+	loadCtx, cancel := context.WithTimeout(
+		ctx,
+		time.Duration(config.GetTotalLaunchWaitTimeoutMS())*time.Millisecond,
+	)
+	defer cancel()
+
+	pluginMaps, err := pluginHostService.LoadPlugins(loadCtx)
+	if err != nil {
+		a.logger.Warn("Failed to load plugins", zap.Error(err))
+		return
+	}
+
+	a.logger.Info("Loaded plugins",
+		zap.Int("providers", len(pluginMaps.Providers)-len(a.builtInProviders)),
+		zap.Int("transformers", len(pluginMaps.Transformers)-len(a.builtInTransformers)),
+	)
+
+	// Merge providers and transformers
+	mergedProviders := make(map[string]provider.Provider)
+	maps.Copy(mergedProviders, a.builtInProviders)
+	maps.Copy(mergedProviders, pluginMaps.Providers)
+
+	mergedTransformers := make(map[string]transform.SpecTransformer)
+	maps.Copy(mergedTransformers, a.builtInTransformers)
+	maps.Copy(mergedTransformers, pluginMaps.Transformers)
+
+	// Reinitialize registries with merged providers
+	a.reinitialiseRegistries(mergedProviders, mergedTransformers)
+}
+
+func (a *Application) reinitialiseRegistries(
+	providers map[string]provider.Provider,
+	transformers map[string]transform.SpecTransformer,
+) {
+	a.functionRegistry = provider.NewFunctionRegistry(providers)
+	a.resourceRegistry = resourcehelpers.NewRegistry(
+		providers,
+		transformers,
+		time.Second, // Not used by LS
+		nil,         // No state container needed
+		nil,         // No params needed
+	)
+	a.dataSourceRegistry = provider.NewDataSourceRegistry(
+		providers,
+		core.SystemClock{},
+		a.frameworkLogger,
+	)
+	a.customVarTypeRegistry = provider.NewCustomVariableTypeRegistry(providers)
+
+	// Create a new blueprint loader with merged providers
+	blueprintLoader := container.NewDefaultLoader(
+		providers,
+		transformers,
+		nil, // No state container
+		nil, // No child resolver
+		container.WithLoaderValidateRuntimeValues(false),
+		container.WithLoaderTransformSpec(false),
+	)
+	a.blueprintLoader = blueprintLoader
+
+	// Update services with new registries
+	a.completionService.UpdateRegistries(
+		a.resourceRegistry,
+		a.dataSourceRegistry,
+		a.customVarTypeRegistry,
+		a.functionRegistry,
+	)
+	a.diagnosticService.UpdateLoader(blueprintLoader)
+	a.signatureService.UpdateRegistry(a.functionRegistry)
+	a.hoverService.UpdateRegistries(
+		a.functionRegistry,
+		a.resourceRegistry,
+		a.dataSourceRegistry,
+	)
 }

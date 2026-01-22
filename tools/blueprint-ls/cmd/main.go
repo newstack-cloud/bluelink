@@ -117,6 +117,7 @@ func main() {
 		functionRegistry,
 		resourceRegistry,
 		dataSourceRegistry,
+		customVarTypeRegistry,
 		blueprintLoader,
 		completionService,
 		diagnosticService,
@@ -124,6 +125,9 @@ func main() {
 		hoverService,
 		symbolService,
 		gotoDefinitionService,
+		providers,
+		transformers,
+		frameworkLogger,
 		logger,
 	)
 	app.Setup()

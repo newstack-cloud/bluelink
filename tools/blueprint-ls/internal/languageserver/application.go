@@ -2,9 +2,12 @@ package languageserver
 
 import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/languageservices"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/pluginhost"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"go.uber.org/zap"
 )
@@ -25,6 +28,15 @@ type Application struct {
 	gotoDefinitionService *languageservices.GotoDefinitionService
 	logger                *zap.Logger
 	traceService          *lsp.TraceService
+
+	// Plugin loading support
+	builtInProviders    map[string]provider.Provider
+	builtInTransformers map[string]transform.SpecTransformer
+	frameworkLogger     core.Logger
+	pluginHostService   pluginhost.Service
+
+	// Custom variable type registry (used by completion service)
+	customVarTypeRegistry provider.CustomVariableTypeRegistry
 }
 
 func NewApplication(
@@ -34,6 +46,7 @@ func NewApplication(
 	functionRegistry provider.FunctionRegistry,
 	resourceRegistry resourcehelpers.Registry,
 	dataSourceRegistry provider.DataSourceRegistry,
+	customVarTypeRegistry provider.CustomVariableTypeRegistry,
 	blueprintLoader container.Loader,
 	completionService *languageservices.CompletionService,
 	diagnosticService *languageservices.DiagnosticsService,
@@ -41,6 +54,9 @@ func NewApplication(
 	hoverService *languageservices.HoverService,
 	symbolService *languageservices.SymbolService,
 	gotoDefinitionService *languageservices.GotoDefinitionService,
+	builtInProviders map[string]provider.Provider,
+	builtInTransformers map[string]transform.SpecTransformer,
+	frameworkLogger core.Logger,
 	logger *zap.Logger,
 ) *Application {
 	return &Application{
@@ -50,6 +66,7 @@ func NewApplication(
 		functionRegistry:      functionRegistry,
 		resourceRegistry:      resourceRegistry,
 		dataSourceRegistry:    dataSourceRegistry,
+		customVarTypeRegistry: customVarTypeRegistry,
 		blueprintLoader:       blueprintLoader,
 		completionService:     completionService,
 		diagnosticService:     diagnosticService,
@@ -57,6 +74,9 @@ func NewApplication(
 		hoverService:          hoverService,
 		symbolService:         symbolService,
 		gotoDefinitionService: gotoDefinitionService,
+		builtInProviders:      builtInProviders,
+		builtInTransformers:   builtInTransformers,
+		frameworkLogger:       frameworkLogger,
 		logger:                logger,
 	}
 }
