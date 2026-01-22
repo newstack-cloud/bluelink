@@ -247,8 +247,8 @@ func checkIdentifierOrKeyword(sequence string, startPos int, state *lexState) (i
 
 func lexCheckStringLiteral(sequence string, startPos int, state *lexState) (int, int, error) {
 	char, width := utf8.DecodeRuneInString(sequence[startPos:])
-	if char == '"' {
-		return takeStringLiteral(state, sequence, startPos+width)
+	if char == '"' || char == '\'' {
+		return takeStringLiteral(state, sequence, startPos+width, char)
 	}
 	return 0, 0, nil
 }
@@ -355,14 +355,14 @@ func takeIntLiteral(state *lexState, sequence string, startPos int) (int, int) {
 	return utf8.RuneCountInString(value), len(value)
 }
 
-func takeStringLiteral(state *lexState, sequence string, startPos int) (int, int, error) {
+func takeStringLiteral(state *lexState, sequence string, startPos int, quoteChar rune) (int, int, error) {
 	inStringLiteral := true
 	i := startPos
 	prevChar := ' '
 	value := ""
 	for inStringLiteral && i < len(sequence) {
 		char, width := utf8.DecodeRuneInString(sequence[i:])
-		if char == '"' && prevChar != '\\' {
+		if char == quoteChar && prevChar != '\\' {
 			inStringLiteral = false
 		} else {
 			value += string(char)
@@ -394,12 +394,12 @@ func takeStringLiteral(state *lexState, sequence string, startPos int) (int, int
 
 	// Differentiate between a string literal and a name string literal
 	// to allow the parser to catch errors when unexpected characters are used
-	// in a string that is used as a name in a [".."] accessor.
+	// in a string that is used as a name in a [".."] or ['..'] accessor.
 	prevTokenOpenBracket := len(state.tokens) > 0 && state.tokens[len(state.tokens)-1].tokenType == tokenOpenBracket
 	if prevTokenOpenBracket && lexStringLiteralNamePattern.MatchString(value) {
 		state.tokens = append(state.tokens, &token{
 			tokenType:    tokenNameStringLiteral,
-			value:        strings.ReplaceAll(value, "\\\"", "\""),
+			value:        unescapeStringLiteral(value, quoteChar),
 			relativeLine: state.relativeLineInfo.Line,
 			relativeCol:  state.relativeLineInfo.Column,
 		})
@@ -408,13 +408,19 @@ func takeStringLiteral(state *lexState, sequence string, startPos int) (int, int
 
 	state.tokens = append(state.tokens, &token{
 		tokenType:    tokenStringLiteral,
-		value:        strings.ReplaceAll(value, "\\\"", "\""),
+		value:        unescapeStringLiteral(value, quoteChar),
 		relativeLine: state.relativeLineInfo.Line,
 		relativeCol:  state.relativeLineInfo.Column,
 	})
 
 	// Add 2 to account for the quotes.
 	return utf8.RuneCountInString(value) + 2, len(value) + 2, nil
+}
+
+// unescapeStringLiteral handles escape sequences for the given quote character.
+func unescapeStringLiteral(value string, quoteChar rune) string {
+	escapeSeq := "\\" + string(quoteChar)
+	return strings.ReplaceAll(value, escapeSeq, string(quoteChar))
 }
 
 func takeIdentifierOrKeyword(state *lexState, sequence string, restStartPos int, startChar rune) (int, int) {

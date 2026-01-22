@@ -17,6 +17,12 @@ type ParseSubstitutionsTestSuite struct{}
 
 var _ = Suite(&ParseSubstitutionsTestSuite{})
 
+// exactColAccuracy returns a pointer to ColumnAccuracyExact for use in test expectations.
+func exactColAccuracy() *source.ColumnAccuracy {
+	ca := source.ColumnAccuracyExact
+	return &ca
+}
+
 func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_multiple_substitutions(c *C) {
 	parsed, err := ParseSubstitutionValues(
 		"",
@@ -57,6 +63,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_multip
 										Line:   200,
 										Column: 133,
 									},
+									ColumnAccuracy: exactColAccuracy(),
 								},
 							},
 							SourceMeta: &source.Meta{
@@ -68,6 +75,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_multip
 									Line:   200,
 									Column: 133,
 								},
+								ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -79,6 +87,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_multip
 								Line:   200,
 								Column: 133,
 							},
+							ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 					{
@@ -93,6 +102,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_multip
 									Line:   200,
 									Column: 140,
 								},
+								ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -104,6 +114,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_multip
 								Line:   200,
 								Column: 140,
 							},
+							ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 					{
@@ -117,7 +128,9 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_multip
 								EndPosition: &source.Position{
 									Line:   200,
 									Column: 144,
-								}},
+								},
+								ColumnAccuracy: exactColAccuracy(),
+							},
 						},
 						SourceMeta: &source.Meta{
 							Position: source.Position{
@@ -128,6 +141,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_multip
 								Line:   200,
 								Column: 144,
 							},
+							ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 				},
@@ -141,6 +155,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_multip
 						Line:   200,
 						Column: 145,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -152,6 +167,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_multip
 					Line:   200,
 					Column: 145,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -163,6 +179,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_multip
 				Line:   200,
 				Column: 146,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 
@@ -178,6 +195,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_multip
 				Line:   200,
 				Column: 147,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 
@@ -194,6 +212,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_multip
 						Line:   200,
 						Column: 166,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -205,6 +224,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_multip
 					Line:   200,
 					Column: 166,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -216,6 +236,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_multip
 				Line:   200,
 				Column: 167,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 
@@ -256,6 +277,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_data
 						Line:   1,
 						Column: 45,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -267,6 +289,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_data
 					Line:   1,
 					Column: 45,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -278,6 +301,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_data
 				Line:   1,
 				Column: 45,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -309,6 +333,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_data
 						Line:   1,
 						Column: 35,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -320,6 +345,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_data
 					Line:   1,
 					Column: 35,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -331,6 +357,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_data
 				Line:   1,
 				Column: 35,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -354,12 +381,45 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_chil
 				Path: []*SubstitutionPathItem{
 					{
 						FieldName: "cacheNodes",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 37,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 48,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 					{
 						ArrayIndex: &index,
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 48,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 50,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 					{
 						FieldName: "host",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 50,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 55,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 				},
 				SourceMeta: &source.Meta{
@@ -371,6 +431,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_chil
 						Line:   1,
 						Column: 55,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -382,6 +443,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_chil
 					Line:   1,
 					Column: 55,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -393,6 +455,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_chil
 				Line:   1,
 				Column: 55,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -415,12 +478,45 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_reso
 				Path: []*SubstitutionPathItem{
 					{
 						FieldName: "metadata",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 30,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 39,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 					{
 						FieldName: "annotations",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 39,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 51,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 					{
 						FieldName: "annotationKey.v1",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 51,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 71,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 				},
 				SourceMeta: &source.Meta{
@@ -432,6 +528,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_reso
 						Line:   1,
 						Column: 71,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -443,6 +540,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_reso
 					Line:   1,
 					Column: 71,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -454,6 +552,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_reso
 				Line:   1,
 				Column: 71,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -476,9 +575,31 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_reso
 				Path: []*SubstitutionPathItem{
 					{
 						FieldName: "spec",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 38,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 43,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 					{
 						FieldName: "functionArn",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 43,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 55,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 				},
 				SourceMeta: &source.Meta{
@@ -490,6 +611,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_reso
 						Line:   1,
 						Column: 55,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -501,6 +623,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_reso
 					Line:   1,
 					Column: 55,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -512,6 +635,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_reso
 				Line:   1,
 				Column: 55,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -541,6 +665,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_reso
 						Line:   1,
 						Column: 20,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -552,6 +677,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_reso
 					Line:   1,
 					Column: 20,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -563,6 +689,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_reso
 				Line:   1,
 				Column: 20,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -587,9 +714,31 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_reso
 				Path: []*SubstitutionPathItem{
 					{
 						FieldName: "spec",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 30,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 35,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 					{
 						FieldName: "bucketArn",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 35,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 45,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 				},
 				SourceMeta: &source.Meta{
@@ -601,6 +750,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_reso
 						Line:   1,
 						Column: 45,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -612,6 +762,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_reso
 					Line:   1,
 					Column: 45,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -623,6 +774,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_reso
 				Line:   1,
 				Column: 45,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -646,12 +798,45 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_valu
 				Path: []*SubstitutionPathItem{
 					{
 						FieldName: "info",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 18,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 23,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 					{
 						FieldName: "objectConfig",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 23,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 39,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 					{
 						ArrayIndex: &arrIndex,
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 39,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 42,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 				},
 				SourceMeta: &source.Meta{
@@ -663,6 +848,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_valu
 						Line:   1,
 						Column: 42,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -674,6 +860,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_valu
 					Line:   1,
 					Column: 42,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -685,6 +872,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_valu
 				Line:   1,
 				Column: 42,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -708,9 +896,31 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_valu
 				Path: []*SubstitutionPathItem{
 					{
 						ArrayIndex: &arrIndex,
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 28,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 31,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 					{
 						FieldName: "name",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 31,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 36,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 				},
 				SourceMeta: &source.Meta{
@@ -722,6 +932,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_valu
 						Line:   1,
 						Column: 36,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -733,6 +944,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_valu
 					Line:   1,
 					Column: 36,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -744,6 +956,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_valu
 				Line:   1,
 				Column: 36,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -773,6 +986,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_valu
 						Line:   1,
 						Column: 18,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -784,6 +998,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_valu
 					Line:   1,
 					Column: 18,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -795,6 +1010,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_a_valu
 				Line:   1,
 				Column: 18,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -816,6 +1032,17 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_curren
 				Path: []*SubstitutionPathItem{
 					{
 						FieldName: "queueUrl",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 7,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 16,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 				},
 				SourceMeta: &source.Meta{
@@ -827,6 +1054,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_curren
 						Line:   1,
 						Column: 16,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -838,6 +1066,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_curren
 					Line:   1,
 					Column: 16,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -849,6 +1078,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_curren
 				Line:   1,
 				Column: 16,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -876,6 +1106,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_curren
 						Line:   1,
 						Column: 4,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -887,6 +1118,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_curren
 					Line:   1,
 					Column: 4,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -898,6 +1130,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_string_with_curren
 				Line:   1,
 				Column: 4,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -928,6 +1161,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 					Line:   1,
 					Column: 34,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -939,6 +1173,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 				Line:   1,
 				Column: 40,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -979,6 +1214,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 													Line:   1,
 													Column: 47,
 												},
+												ColumnAccuracy: exactColAccuracy(),
 											},
 										},
 										SourceMeta: &source.Meta{
@@ -990,6 +1226,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 												Line:   1,
 												Column: 47,
 											},
+											ColumnAccuracy: exactColAccuracy(),
 										},
 									},
 								},
@@ -1003,6 +1240,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 										Line:   1,
 										Column: 48,
 									},
+									ColumnAccuracy: exactColAccuracy(),
 								},
 							},
 							SourceMeta: &source.Meta{
@@ -1014,6 +1252,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 									Line:   1,
 									Column: 48,
 								},
+								ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -1025,6 +1264,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 								Line:   1,
 								Column: 48,
 							},
+							ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 					{
@@ -1039,6 +1279,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 									Line:   1,
 									Column: 51,
 								},
+								ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -1050,6 +1291,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 								Line:   1,
 								Column: 51,
 							},
+							ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 					{
@@ -1064,6 +1306,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 									Line:   1,
 									Column: 54,
 								},
+								ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -1075,6 +1318,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 								Line:   1,
 								Column: 54,
 							},
+							ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 				},
@@ -1088,6 +1332,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 						Line:   1,
 						Column: 55,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -1099,6 +1344,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 					Line:   1,
 					Column: 55,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -1110,6 +1356,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 				Line:   1,
 				Column: 59,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -1144,6 +1391,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 									Line:   1,
 									Column: 40,
 								},
+								ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -1155,6 +1403,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 								Line:   1,
 								Column: 40,
 							},
+							ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 					{
@@ -1169,6 +1418,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 									Line:   1,
 									Column: 46,
 								},
+								ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -1180,6 +1430,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 								Line:   1,
 								Column: 46,
 							},
+							ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 				},
@@ -1193,6 +1444,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 						Line:   1,
 						Column: 47,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -1204,6 +1456,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 					Line:   1,
 					Column: 47,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -1215,6 +1468,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 				Line:   1,
 				Column: 51,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -1254,6 +1508,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 									Line:   100,
 									Column: 72,
 								},
+								ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -1265,6 +1520,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 								Line:   100,
 								Column: 72,
 							},
+							ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 				},
@@ -1278,6 +1534,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 						Line:   100,
 						Column: 73,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -1289,6 +1546,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 					Line:   100,
 					Column: 73,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -1300,6 +1558,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 				Line:   100,
 				Column: 77,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -1342,6 +1601,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 									Line:   100,
 									Column: 80,
 								},
+								ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -1353,6 +1613,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 								Line:   100,
 								Column: 80,
 							},
+							ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 					{
@@ -1368,6 +1629,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 									Line:   100,
 									Column: 94,
 								},
+								ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -1379,6 +1641,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 								Line:   100,
 								Column: 94,
 							},
+							ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 					{
@@ -1394,6 +1657,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 									Line:   100,
 									Column: 111,
 								},
+								ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -1405,6 +1669,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 								Line:   100,
 								Column: 111,
 							},
+							ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 				},
@@ -1418,6 +1683,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 						Line:   100,
 						Column: 112,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -1429,6 +1695,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 					Line:   100,
 					Column: 112,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -1440,6 +1707,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 				Line:   100,
 				Column: 116,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -1474,6 +1742,17 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 								Path: []*SubstitutionPathItem{
 									{
 										FieldName: "spec",
+										SourceMeta: &source.Meta{
+											Position: source.Position{
+												Line:   100,
+												Column: 86,
+											},
+											EndPosition: &source.Position{
+												Line:   100,
+												Column: 91,
+											},
+											ColumnAccuracy: exactColAccuracy(),
+										},
 									},
 								},
 								SourceMeta: &source.Meta{
@@ -1485,6 +1764,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 										Line:   100,
 										Column: 91,
 									},
+									ColumnAccuracy: exactColAccuracy(),
 								},
 							},
 							SourceMeta: &source.Meta{
@@ -1496,6 +1776,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 									Line:   100,
 									Column: 91,
 								},
+								ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -1507,18 +1788,52 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 								Line:   100,
 								Column: 91,
 							},
+							ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 				},
 				Path: []*SubstitutionPathItem{
 					{
 						ArrayIndex: &rootIndex,
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   100,
+								Column: 92,
+							},
+							EndPosition: &source.Position{
+								Line:   100,
+								Column: 95,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 					{
 						FieldName: "details",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   100,
+								Column: 95,
+							},
+							EndPosition: &source.Position{
+								Line:   100,
+								Column: 106,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 					{
 						FieldName: "id",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   100,
+								Column: 106,
+							},
+							EndPosition: &source.Position{
+								Line:   100,
+								Column: 109,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
 					},
 				},
 				SourceMeta: &source.Meta{
@@ -1530,6 +1845,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 						Line:   100,
 						Column: 109,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -1541,6 +1857,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 					Line:   100,
 					Column: 109,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -1552,6 +1869,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 				Line:   100,
 				Column: 112,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -1594,6 +1912,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 									Line:   100,
 									Column: 72,
 								},
+								ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -1605,6 +1924,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 								Line:   100,
 								Column: 72,
 							},
+							ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 					{
@@ -1620,6 +1940,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 									Line:   100,
 									Column: 83,
 								},
+								ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -1631,6 +1952,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 								Line:   100,
 								Column: 83,
 							},
+							ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 					{
@@ -1646,6 +1968,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 									Line:   100,
 									Column: 100,
 								},
+								ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -1657,6 +1980,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 								Line:   100,
 								Column: 100,
 							},
+							ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 				},
@@ -1670,6 +1994,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 						Line:   100,
 						Column: 101,
 					},
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 			SourceMeta: &source.Meta{
@@ -1681,6 +2006,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 					Line:   100,
 					Column: 101,
 				},
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -1692,6 +2018,7 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_a_sub_string_with_a_
 				Line:   100,
 				Column: 105,
 			},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 }
@@ -1801,4 +2128,158 @@ func (s *ParseSubstitutionsTestSuite) Test_fails_to_parse_susbstitution_reportin
 		"lex error at column 99: validation failed due to an unexpected"+
 			" character \"!\" having been encountered in a reference substitution",
 	)
+}
+
+func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_single_quote_bracket_notation(c *C) {
+	// Single-quote bracket notation is useful when the substitution is inside
+	// a double-quoted string to avoid escaping issues.
+	parsed, err := ParseSubstitutionValues(
+		"",
+		`${resources.saveOrderFunction.metadata.annotations['annotationKey.v1']}`,
+		nil,
+		true,
+		false,
+		/* parentContextPrecedingCharCount */ 0,
+	)
+	c.Assert(err, IsNil)
+	c.Assert(len(parsed), Equals, 1)
+	c.Assert(parsed[0], DeepEquals, &StringOrSubstitution{
+		SubstitutionValue: &Substitution{
+			ResourceProperty: &SubstitutionResourceProperty{
+				ResourceName: "saveOrderFunction",
+				Path: []*SubstitutionPathItem{
+					{
+						FieldName: "metadata",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 30,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 39,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
+					},
+					{
+						FieldName: "annotations",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 39,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 51,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
+					},
+					{
+						FieldName: "annotationKey.v1",
+						SourceMeta: &source.Meta{
+							Position: source.Position{
+								Line:   1,
+								Column: 51,
+							},
+							EndPosition: &source.Position{
+								Line:   1,
+								Column: 71,
+							},
+							ColumnAccuracy: exactColAccuracy(),
+						},
+					},
+				},
+				SourceMeta: &source.Meta{
+					Position: source.Position{
+						Line:   1,
+						Column: 3,
+					},
+					EndPosition: &source.Position{
+						Line:   1,
+						Column: 71,
+					},
+					ColumnAccuracy: exactColAccuracy(),
+				},
+			},
+			SourceMeta: &source.Meta{
+				Position: source.Position{
+					Line:   1,
+					Column: 3,
+				},
+				EndPosition: &source.Position{
+					Line:   1,
+					Column: 71,
+				},
+				ColumnAccuracy: exactColAccuracy(),
+			},
+		},
+		SourceMeta: &source.Meta{
+			Position: source.Position{
+				Line:   1,
+				Column: 3,
+			},
+			EndPosition: &source.Position{
+				Line:   1,
+				Column: 71,
+			},
+			ColumnAccuracy: exactColAccuracy(),
+		},
+	})
+}
+
+func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_mixed_quote_bracket_notation(c *C) {
+	// Mix of single and double quote bracket notation in the same substitution.
+	parsed, err := ParseSubstitutionValues(
+		"",
+		`${datasources['coreInfra.v1']["topic.v2"]}`,
+		nil,
+		true,
+		false,
+		/* parentContextPrecedingCharCount */ 0,
+	)
+	c.Assert(err, IsNil)
+	c.Assert(len(parsed), Equals, 1)
+	c.Assert(parsed[0], DeepEquals, &StringOrSubstitution{
+		SubstitutionValue: &Substitution{
+			DataSourceProperty: &SubstitutionDataSourceProperty{
+				DataSourceName: "coreInfra.v1",
+				FieldName:      "topic.v2",
+				SourceMeta: &source.Meta{
+					Position: source.Position{
+						Line:   1,
+						Column: 3,
+					},
+					EndPosition: &source.Position{
+						Line:   1,
+						Column: 42,
+					},
+					ColumnAccuracy: exactColAccuracy(),
+				},
+			},
+			SourceMeta: &source.Meta{
+				Position: source.Position{
+					Line:   1,
+					Column: 3,
+				},
+				EndPosition: &source.Position{
+					Line:   1,
+					Column: 42,
+				},
+				ColumnAccuracy: exactColAccuracy(),
+			},
+		},
+		SourceMeta: &source.Meta{
+			Position: source.Position{
+				Line:   1,
+				Column: 3,
+			},
+			EndPosition: &source.Position{
+				Line:   1,
+				Column: 42,
+			},
+			ColumnAccuracy: exactColAccuracy(),
+		},
+	})
 }

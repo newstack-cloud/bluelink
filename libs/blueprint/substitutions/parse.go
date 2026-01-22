@@ -263,9 +263,17 @@ func (p *Parser) valueReference() (*SubstitutionValueReference, error) {
 		)
 	}
 
+	// Capture start token before parsing first path item for source position tracking
+	firstPathItemStartToken := p.currentToken()
 	firstPropName := p.nameAccessor()
+	var firstPathItemSourceMeta *source.Meta
+	if firstPropName != nil {
+		firstPathItemSourceMeta = p.sourceMeta(firstPathItemStartToken)
+	}
+
 	var firstIndex *int64
 	if firstPropName == nil {
+		firstPathItemStartToken = p.currentToken()
 		firstIndex, err = p.indexAccessor()
 		if err != nil {
 			return nil, err
@@ -280,14 +288,15 @@ func (p *Parser) valueReference() (*SubstitutionValueReference, error) {
 				SourceMeta: p.sourceMeta(valuesKeywordToken),
 			}, nil
 		}
+		firstPathItemSourceMeta = p.sourceMeta(firstPathItemStartToken)
 	}
 
 	var errors []error
 	var path []*SubstitutionPathItem
 	if firstPropName != nil {
-		path, errors = p.propertyPath(firstPropName)
+		path, errors = p.propertyPath(firstPropName, firstPathItemSourceMeta)
 	} else {
-		path, errors = p.propertyPathIndexParent(firstIndex)
+		path, errors = p.propertyPathIndexParent(firstIndex, firstPathItemSourceMeta)
 	}
 	if len(errors) > 0 {
 		return nil, errParseErrorMultiple("failed to parse value reference", errors)
@@ -402,6 +411,8 @@ func (p *Parser) childReference() (*SubstitutionChild, error) {
 		)
 	}
 
+	// Capture start token before parsing first path item for source position tracking
+	firstPathItemStartToken := p.currentToken()
 	exportedFieldName := p.nameAccessor()
 	if exportedFieldName == nil {
 		return nil, p.error(
@@ -411,7 +422,7 @@ func (p *Parser) childReference() (*SubstitutionChild, error) {
 		)
 	}
 
-	path, errors := p.propertyPath(exportedFieldName)
+	path, errors := p.propertyPath(exportedFieldName, p.sourceMeta(firstPathItemStartToken))
 	if len(errors) > 0 {
 		return nil, errParseErrorMultiple("failed to parse child reference", errors)
 	}
@@ -439,6 +450,8 @@ func (p *Parser) resourceReference() (*SubstitutionResourceProperty, error) {
 		return nil, err
 	}
 
+	// Capture start token before parsing first path item for source position tracking
+	firstPathItemStartToken := p.currentToken()
 	propName := p.nameAccessor()
 	if propName == nil {
 		return &SubstitutionResourceProperty{
@@ -449,7 +462,7 @@ func (p *Parser) resourceReference() (*SubstitutionResourceProperty, error) {
 		}, nil
 	}
 
-	path, errors := p.propertyPath(propName)
+	path, errors := p.propertyPath(propName, p.sourceMeta(firstPathItemStartToken))
 	if len(errors) > 0 {
 		return nil, errParseErrorMultiple("failed to parse resource reference", errors)
 	}
@@ -480,11 +493,15 @@ func (p *Parser) resourceName() (*string, error) {
 	return p.name(), nil
 }
 
-func (p *Parser) propertyPathIndexParent(topLevelIndex *int64) ([]*SubstitutionPathItem, []error) {
+func (p *Parser) propertyPathIndexParent(
+	topLevelIndex *int64,
+	topLevelSourceMeta *source.Meta,
+) ([]*SubstitutionPathItem, []error) {
 	path := []*SubstitutionPathItem{}
 	if topLevelIndex != nil {
 		path = append(path, &SubstitutionPathItem{
 			ArrayIndex: topLevelIndex,
+			SourceMeta: topLevelSourceMeta,
 		})
 	}
 
@@ -492,11 +509,15 @@ func (p *Parser) propertyPathIndexParent(topLevelIndex *int64) ([]*SubstitutionP
 	return path, errors
 }
 
-func (p *Parser) propertyPath(topLevelName *string) ([]*SubstitutionPathItem, []error) {
+func (p *Parser) propertyPath(
+	topLevelName *string,
+	topLevelSourceMeta *source.Meta,
+) ([]*SubstitutionPathItem, []error) {
 	path := []*SubstitutionPathItem{}
 	if topLevelName != nil {
 		path = append(path, &SubstitutionPathItem{
-			FieldName: *topLevelName,
+			FieldName:  *topLevelName,
+			SourceMeta: topLevelSourceMeta,
 		})
 	}
 
@@ -508,10 +529,13 @@ func (p *Parser) restOfPropertyPath(targetPath *[]*SubstitutionPathItem) []error
 	errors := []error{}
 	isValidPathItem := true
 	for isValidPathItem && !p.isAtEnd() {
+		startToken := p.currentToken()
+
 		name := p.nameAccessor()
 		if name != nil {
 			*targetPath = append(*targetPath, &SubstitutionPathItem{
-				FieldName: *name,
+				FieldName:  *name,
+				SourceMeta: p.sourceMeta(startToken),
 			})
 			continue
 		}
@@ -523,6 +547,7 @@ func (p *Parser) restOfPropertyPath(targetPath *[]*SubstitutionPathItem) []error
 		if index != nil {
 			*targetPath = append(*targetPath, &SubstitutionPathItem{
 				ArrayIndex: index,
+				SourceMeta: p.sourceMeta(startToken),
 			})
 		} else {
 			isValidPathItem = false
@@ -889,6 +914,7 @@ func (p *Parser) sourceMeta(tkn *token) *source.Meta {
 	endToken := p.peek()
 	endLine, endCol := p.getOutputLineAndColumn(endToken)
 
+	colAccuracy := p.determineColumnAccuracy()
 	return &source.Meta{
 		Position: source.Position{
 			Line:   line,
@@ -898,6 +924,7 @@ func (p *Parser) sourceMeta(tkn *token) *source.Meta {
 			Line:   endLine,
 			Column: endCol,
 		},
+		ColumnAccuracy: &colAccuracy,
 	}
 }
 

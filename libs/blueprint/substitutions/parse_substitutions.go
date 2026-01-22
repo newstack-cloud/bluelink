@@ -209,6 +209,7 @@ func createStringValSourceMeta(state *interpolationParseState, stringVal string)
 		state.ignoreParentColumn,
 	)
 
+	colAccuracy := determineStateColumnAccuracy(state)
 	return &source.Meta{
 		Position: source.Position{
 			Line:   toAbsLine(parentLine, state.relativeLineInfo.Line),
@@ -226,6 +227,7 @@ func createStringValSourceMeta(state *interpolationParseState, stringVal string)
 				state.ignoreParentColumn,
 			),
 		},
+		ColumnAccuracy: &colAccuracy,
 	}
 }
 
@@ -284,6 +286,7 @@ func createSubstitutionSourceMeta(state *interpolationParseState) *source.Meta {
 		state.parentSourceStart,
 	)
 
+	colAccuracy := determineStateColumnAccuracy(state)
 	return &source.Meta{
 		Position: source.Position{
 			Line: toAbsLine(parentLine, state.relativeSubStart.Line),
@@ -303,6 +306,7 @@ func createSubstitutionSourceMeta(state *interpolationParseState) *source.Meta {
 				state.ignoreParentColumn,
 			),
 		},
+		ColumnAccuracy: &colAccuracy,
 	}
 }
 
@@ -377,6 +381,13 @@ func toAbsColumn(
 
 func toAbsLine(parentLine, relativeLine int) int {
 	return parentLine + relativeLine
+}
+
+func determineStateColumnAccuracy(state *interpolationParseState) source.ColumnAccuracy {
+	if state.ignoreParentColumn {
+		return source.ColumnAccuracyApproximate
+	}
+	return source.ColumnAccuracyExact
 }
 
 // ParseSubstitution parses a string that represents a substitution
