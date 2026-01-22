@@ -1,0 +1,26 @@
+version: 2024-07-20
+
+resources:
+  ordersTable:
+    type: aws/dynamodb/table
+    description: "Orders table for storing order data"
+    metadata:
+      displayName: Orders Table
+      labels:
+        application: orders
+        team: platform
+      annotations:
+        environment.v1: production
+        cost-center.v1: engineering
+
+  getOrderHandler:
+    type: celerity/handler
+    description: "Handler for getting order data"
+    spec:
+      handlerName: get-order
+
+metadata:
+  annotationRef: "${resources.ordersTable.metadata.annotations['environment.v1']}"
+  metadataRef: "${resources.ordersTable.metadata}"
+  allAnnotations: "${resources.ordersTable.metadata.annotations}"
+  allLabels: "${resources.ordersTable.metadata.labels}"

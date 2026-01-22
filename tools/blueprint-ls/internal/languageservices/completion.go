@@ -2,7 +2,6 @@ package languageservices
 
 import (
 	"fmt"
-	"regexp"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -12,6 +11,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
 	"github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"go.uber.org/zap"
@@ -24,72 +24,6 @@ const (
 	// as "." is not a change that leads to succesfully parsing the source,
 	// meaning the range end positions in the schema tree are not updated.
 	CompletionColumnLeeway = 2
-)
-
-var (
-	// Pattern for matching "type:" before the cursor position
-	// in determining the type of completion items to provide.
-	typePattern = regexp.MustCompile(`type:\s*$`)
-
-	// Pattern for matching "field:" before the cursor position
-	// in determining the type of completion items to provide.
-	fieldPattern = regexp.MustCompile(`field:\s*$`)
-
-	// Pattern for matching "operator:" before the cursor position
-	// in determining the type of completion items to provide.
-	operatorPattern = regexp.MustCompile(`operator:\s*$`)
-
-	// Pattern for matching "variables." before the cursor position
-	// in determining the type of completion items to provide.
-	variableRefPattern = regexp.MustCompile(`variables\.$`)
-
-	// Pattern for matching "resources." before the cursor position
-	// in determining the type of completion items to provide.
-	resourceRefPattern = regexp.MustCompile(`resources\.$`)
-
-	// Pattern for matching resource property references before the
-	// cursor position in determining the type of completion items to provide.
-	resourcePropertyPattern = regexp.MustCompile(`resources\.([A-Za-z0-9_-]|"|\.|\[|\])+\.$`)
-
-	// Pattern for matching resource property references without the "resources" namespace
-	// before the cursor position in determining the type of completion items to provide.
-	resourceWithoutNamespacePropPattern = regexp.MustCompile(`([A-Za-z0-9_-]|"|\.|\[|\])+\.$`)
-
-	// Pattern for matching "datasources." before the cursor position
-	// in determining the type of completion items to provide.
-	dataSourceRefPattern = regexp.MustCompile(`datasources\.$`)
-
-	// Pattern for matching data source property references before the
-	// cursor position in determining the type of completion items to provide.
-	dataSourcePropertyPattern = regexp.MustCompile(`datasources\.(([A-Za-z0-9_-]|"|\.|\[|\])+)\.$`)
-
-	// Pattern for matching "values." before the cursor position
-	// in determining the type of completion items to provide.
-	valueRefPattern = regexp.MustCompile(`values\.$`)
-
-	// Pattern for matching "children." before the cursor position
-	// in determining the type of completion items to provide.
-	childRefPattern = regexp.MustCompile(`children\.$`)
-
-	// Pattern for matching "elem." before the cursor position
-	// in determining the type of completion items to provide.
-	elemRefPattern = regexp.MustCompile(`elem\.$`)
-
-	// Pattern for matching "${" before the cursor position
-	// in determining the type of completion items to provide.
-	subOpenPattern = regexp.MustCompile(`\${$`)
-
-	// Pattern for matching for a cursor position inside a string substitution.
-	inSubPattern = regexp.MustCompile(`\${[^\}]*$`)
-)
-
-var (
-	// String path types in a tree node path that may contain "${" indicating
-	// the intention of adding a substitution.
-	stringPathTypes = []string{
-		"scalar",
-		"string",
-	}
 )
 
 // CompletionService is a service that provides functionality
@@ -122,552 +56,140 @@ func NewCompletionService(
 	}
 }
 
-// GetCompletionItems returns completion items for a given position in a document.
-func (s *CompletionService) GetCompletionItems(
-	ctx *common.LSPContext,
-	content string,
-	tree *schema.TreeNode,
-	blueprint *schema.Blueprint,
-	params *lsp.TextDocumentPositionParams,
-) ([]*lsp.CompletionItem, error) {
-
-	accuratePosition := true
-	// The last element in the collected list is the element with the shortest
-	// range that contains the position.
-	collected := []*schema.TreeNode{}
-	collectElementsAtPosition(tree, params.Position, s.logger, &collected, CompletionColumnLeeway)
-
-	// If no elements are collected other than the root node,
-	// collect elements on the line of the cursor position.
-	if len(collected) == 1 {
-		accuratePosition = false
-		collected = []*schema.TreeNode{}
-		collectElementsOnLine(tree, params.Position, s.logger, &collected)
-	}
-
-	return s.getCompletionItems(
-		ctx,
-		content,
-		blueprint,
-		&params.Position,
-		collected,
-		accuratePosition,
-	)
+// UpdateRegistries updates the registries used by the completion service.
+// This is called after plugin loading to include plugin-provided types.
+func (s *CompletionService) UpdateRegistries(
+	resourceRegistry resourcehelpers.Registry,
+	dataSourceRegistry provider.DataSourceRegistry,
+	customVarTypeRegistry provider.CustomVariableTypeRegistry,
+	functionRegistry provider.FunctionRegistry,
+) {
+	s.resourceRegistry = resourceRegistry
+	s.dataSourceRegistry = dataSourceRegistry
+	s.customVarTypeRegistry = customVarTypeRegistry
+	s.functionRegistry = functionRegistry
 }
 
-func (s *CompletionService) getCompletionItems(
+// GetCompletionItems returns completion items for a given position in a document.
+// Uses DocumentContext for position resolution with tree-sitter based AST analysis.
+func (s *CompletionService) GetCompletionItems(
 	ctx *common.LSPContext,
-	content string,
-	blueprint *schema.Blueprint,
-	position *lsp.Position,
-	collected []*schema.TreeNode,
-	accuratePosition bool,
+	docCtx *docmodel.DocumentContext,
+	params *lsp.TextDocumentPositionParams,
 ) ([]*lsp.CompletionItem, error) {
-
-	if len(collected) == 0 {
+	if docCtx == nil {
 		return []*lsp.CompletionItem{}, nil
 	}
 
-	// Work backwards through the collected elements to find the first element
-	// of a type that supports completion items.
-	var node *schema.TreeNode
-	var elementType string
-	i := len(collected) - 1
-	for node == nil && i >= 0 {
-		pathParts := strings.Split(collected[i].Path, "/")
-		node, elementType = s.matchCompletionElement(
-			collected,
-			i,
-			pathParts,
-			content,
-			position,
-			accuratePosition,
-		)
-		i -= 1
+	// Convert LSP position to source.Position (1-based)
+	pos := source.Position{
+		Line:   int(params.Position.Line + 1),
+		Column: int(params.Position.Character + 1),
 	}
 
-	switch elementType {
-	case "resourceType":
+	// Get node context using DocumentContext with completion leeway
+	nodeCtx := docCtx.GetNodeContext(pos, CompletionColumnLeeway)
+
+	// Determine completion context using type-safe detection
+	completionCtx := docmodel.DetermineCompletionContext(nodeCtx)
+
+	// Get the effective blueprint for completion items
+	blueprint := docCtx.GetEffectiveSchema()
+	if blueprint == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	return s.getCompletionItemsByContext(ctx, blueprint, &params.Position, completionCtx, nodeCtx, docCtx.Format)
+}
+
+// getCompletionItemsByContext returns completion items based on the detected CompletionContext.
+// This replaces the string-based element type matching with type-safe CompletionContextKind.
+func (s *CompletionService) getCompletionItemsByContext(
+	ctx *common.LSPContext,
+	blueprint *schema.Blueprint,
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+	nodeCtx *docmodel.NodeContext,
+	format docmodel.DocumentFormat,
+) ([]*lsp.CompletionItem, error) {
+	if completionCtx == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	switch completionCtx.Kind {
+	case docmodel.CompletionContextResourceType:
 		return s.getResourceTypeCompletionItems(ctx)
-	case "dataSourceType":
+	case docmodel.CompletionContextDataSourceType:
 		return s.getDataSourceTypeCompletionItems(ctx)
-	case "variableType":
+	case docmodel.CompletionContextVariableType:
 		return s.getVariableTypeCompletionItems(ctx)
-	case "valueType":
+	case docmodel.CompletionContextValueType:
 		return s.getValueTypeCompletionItems()
-	case "dataSourceFieldType":
+	case docmodel.CompletionContextDataSourceFieldType:
 		return s.getDataSourceFieldTypeCompletionItems()
-	case "dataSourceFilterField":
-		return s.getDataSourceFilterFieldCompletionItems(ctx, node, blueprint)
-	case "dataSourceFilterOperator":
-		return s.getDataSourceFilterOperatorCompletionItems(position, content, node)
-	case "exportType":
+	case docmodel.CompletionContextDataSourceFilterField:
+		return s.getDataSourceFilterFieldCompletionItemsFromContext(ctx, nodeCtx, blueprint)
+	case docmodel.CompletionContextDataSourceFilterOperator:
+		return s.getDataSourceFilterOperatorCompletionItemsFromContext(position, nodeCtx)
+	case docmodel.CompletionContextExportType:
 		return s.getExportTypeCompletionItems()
-	case "stringSubVariableRef":
+	case docmodel.CompletionContextResourceSpecField:
+		// Schema-based completions disabled for JSONC
+		if format == docmodel.FormatJSONC {
+			return []*lsp.CompletionItem{}, nil
+		}
+		return s.getResourceSpecFieldCompletionItems(ctx, position, blueprint, completionCtx, format)
+	case docmodel.CompletionContextResourceMetadataField:
+		// Schema-based completions disabled for JSONC
+		if format == docmodel.FormatJSONC {
+			return []*lsp.CompletionItem{}, nil
+		}
+		return s.getResourceMetadataFieldCompletionItems(position, completionCtx)
+	case docmodel.CompletionContextResourceDefinitionField:
+		// Schema-based completions disabled for JSONC - focus on YAML for v0
+		if format == docmodel.FormatJSONC {
+			return []*lsp.CompletionItem{}, nil
+		}
+		return s.getResourceDefinitionFieldCompletionItems(position, completionCtx)
+	case docmodel.CompletionContextStringSubVariableRef:
 		return s.getStringSubVariableCompletionItems(position, blueprint)
-	case "stringSubResourceProperty":
-		return s.getStringSubResourcePropCompletionItems(ctx, position, content, blueprint, node)
-	case "stringSubDataSourceRef":
-		return s.getStringSubDataSourceCompletionItems(position, blueprint)
-	case "stringSubDataSourceProperty":
-		return s.getStringSubDataSourcePropCompletionItems(position, content, blueprint, node)
-	case "stringSubValueRef":
-		return s.getStringSubValueCompletionItems(position, blueprint)
-	case "stringSubChildRef":
-		return s.getStringSubChildCompletionItems(position, blueprint)
-	case "stringSubResourceRef":
+	case docmodel.CompletionContextStringSubResourceRef:
 		return s.getStringSubResourceCompletionItems(position, blueprint)
-	case "stringSub":
+	case docmodel.CompletionContextStringSubResourceProperty:
+		return s.getStringSubResourcePropCompletionItemsFromContext(ctx, position, blueprint, nodeCtx)
+	case docmodel.CompletionContextStringSubDataSourceRef:
+		return s.getStringSubDataSourceCompletionItems(position, blueprint)
+	case docmodel.CompletionContextStringSubDataSourceProperty:
+		return s.getStringSubDataSourcePropCompletionItemsFromContext(position, blueprint, completionCtx)
+	case docmodel.CompletionContextStringSubValueRef:
+		return s.getStringSubValueCompletionItems(position, blueprint)
+	case docmodel.CompletionContextStringSubChildRef:
+		return s.getStringSubChildCompletionItems(position, blueprint)
+	case docmodel.CompletionContextStringSubElemRef:
+		return []*lsp.CompletionItem{}, nil // elem refs don't have completion suggestions
+	case docmodel.CompletionContextStringSubPartialPath:
+		return []*lsp.CompletionItem{}, nil // partial paths don't have completion suggestions
+	case docmodel.CompletionContextStringSubPotentialResourceProp:
+		return s.getStringSubPotentialResourcePropCompletionItems(ctx, position, blueprint, completionCtx, nodeCtx)
+	case docmodel.CompletionContextStringSub:
 		return s.getStringSubCompletionItems(ctx, position, blueprint)
 	default:
 		return []*lsp.CompletionItem{}, nil
 	}
 }
 
-func (s *CompletionService) matchCompletionElement(
-	collected []*schema.TreeNode,
-	index int,
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-	accuratePosition bool,
-) (*schema.TreeNode, string) {
-	if !accuratePosition {
-		return s.matchCompletionElementOnLine(collected, index, pathParts, sourceContent, position)
-	}
-
-	if s.isResourceType(pathParts, sourceContent, position) {
-		return collected[index], "resourceType"
-	}
-
-	if s.isDataSourceType(pathParts, sourceContent, position) {
-		return collected[index], "dataSourceType"
-	}
-
-	if s.isVariableType(pathParts, sourceContent, position) {
-		return collected[index], "variableType"
-	}
-
-	if s.isValueType(pathParts, sourceContent, position) {
-		return collected[index], "valueType"
-	}
-
-	// Check potential new fields first to avoid getting the wrong completion type
-	// in data source filter fields and operators.
-	if s.isNewDataSourceFilterField(pathParts, sourceContent, position) {
-		return collected[index], "dataSourceFilterField"
-	}
-
-	if s.isNewDataSourceFilterOperator(pathParts, sourceContent, position) {
-		return collected[index], "dataSourceFilterOperator"
-	}
-
-	if s.isDataSourceFieldType(pathParts, sourceContent, position) {
-		return collected[index], "dataSourceFieldType"
-	}
-
-	if s.isDataSourceFilterField(pathParts) {
-		return collected[index], "dataSourceFilterField"
-	}
-
-	if s.isDataSourceFilterOperator(pathParts) {
-		return collected[index], "dataSourceFilterOperator"
-	}
-
-	if s.isExportType(pathParts, sourceContent, position) {
-		return collected[index], "exportType"
-	}
-
-	if elementType, isStringSubElem := s.checkStringSubElement(
-		pathParts,
-		sourceContent,
-		position,
-		collected[index],
-	); isStringSubElem {
-		return collected[index], elementType
-	}
-
-	return nil, ""
-}
-
-func (s *CompletionService) checkStringSubElement(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-	node *schema.TreeNode,
-) (string, bool) {
-
-	if s.isStringSubVariable(pathParts, sourceContent, position) {
-		return "stringSubVariableRef", true
-	}
-
-	if s.isStringSubDataSource(pathParts, sourceContent, position) {
-		return "stringSubDataSourceRef", true
-	}
-
-	if s.isStringSubDataSourceProperty(pathParts, sourceContent, position) {
-		return "stringSubDataSourceProperty", true
-	}
-
-	if s.isStringSubValue(pathParts, sourceContent, position) {
-		return "stringSubValueRef", true
-	}
-
-	if s.isStringSubChild(pathParts, sourceContent, position) {
-		return "stringSubChildRef", true
-	}
-
-	if s.isStringSubElem(pathParts, sourceContent, position) {
-		return "elemRef", true
-	}
-
-	// Resource and resource property references should be checked after all other possible references
-	// as a resource reference can match on an identifier pattern which would lead to incorrect completion
-	// suggestions if checked before other references.
-	if s.isStringSubResource(pathParts, sourceContent, position) {
-		return "stringSubResourceRef", true
-	}
-
-	if s.isStringSubResourceProperty(pathParts, sourceContent, position, node) {
-		return "stringSubResourceProperty", true
-	}
-
-	if s.isStringSub(pathParts, sourceContent, position) {
-		return "stringSub", true
-	}
-
-	return "", false
-}
-
-func (s *CompletionService) isResourceType(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	isInExistingResourceType := len(pathParts) == 4 &&
-		pathParts[1] == "resources" &&
-		pathParts[3] == "type"
-
-	isInNewResourceType := len(pathParts) == 3 &&
-		pathParts[1] == "resources" &&
-		s.isPrecededBy(position, typePattern, sourceContent)
-
-	return isInExistingResourceType || isInNewResourceType
-}
-
-func (s *CompletionService) isDataSourceType(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	isInExistingDataSourceType := len(pathParts) == 4 &&
-		pathParts[1] == "datasources" &&
-		pathParts[3] == "type"
-
-	isInNewDataSourceType := len(pathParts) == 3 &&
-		pathParts[1] == "datasources" &&
-		s.isPrecededBy(position, typePattern, sourceContent)
-
-	return isInExistingDataSourceType || isInNewDataSourceType
-}
-
-func (s *CompletionService) isVariableType(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	isInExistingVarType := len(pathParts) == 4 &&
-		pathParts[1] == "variables" &&
-		pathParts[3] == "type"
-
-	isInNewVarType := len(pathParts) == 3 &&
-		pathParts[1] == "variables" &&
-		s.isPrecededBy(position, typePattern, sourceContent)
-
-	return isInExistingVarType || isInNewVarType
-}
-
-func (s *CompletionService) isValueType(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	isInExistingValType := len(pathParts) == 4 &&
-		pathParts[1] == "values" &&
-		pathParts[3] == "type"
-
-	isInNewValType := len(pathParts) == 3 &&
-		pathParts[1] == "values" &&
-		s.isPrecededBy(position, typePattern, sourceContent)
-
-	return isInExistingValType || isInNewValType
-}
-
-func (s *CompletionService) isDataSourceFieldType(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	isInExistingExportType := len(pathParts) == 5 &&
-		pathParts[1] == "datasources" &&
-		pathParts[4] == "type"
-
-	isInNewExportType := len(pathParts) == 4 &&
-		pathParts[1] == "datasources" &&
-		s.isPrecededBy(position, typePattern, sourceContent)
-
-	return isInExistingExportType || isInNewExportType
-}
-
-func (s *CompletionService) isNewDataSourceFilterField(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	return len(pathParts) >= 5 &&
-		pathParts[1] == "datasources" &&
-		pathParts[3] == "filters" &&
-		s.isPrecededBy(position, fieldPattern, sourceContent)
-}
-
-func (s *CompletionService) isDataSourceFilterField(
-	pathParts []string,
-) bool {
-	return len(pathParts) == 7 &&
-		pathParts[1] == "datasources" &&
-		pathParts[3] == "filters" &&
-		pathParts[5] == "filter" &&
-		pathParts[6] == "field"
-}
-
-func (s *CompletionService) isNewDataSourceFilterOperator(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	return len(pathParts) >= 6 &&
-		pathParts[1] == "datasources" &&
-		pathParts[3] == "filters" &&
-		pathParts[5] == "filter" &&
-		s.isPrecededBy(position, operatorPattern, sourceContent)
-}
-
-func (s *CompletionService) isDataSourceFilterOperator(
-	pathParts []string,
-) bool {
-	return len(pathParts) == 7 &&
-		pathParts[1] == "datasources" &&
-		pathParts[3] == "filters" &&
-		pathParts[5] == "filter" &&
-		pathParts[6] == "operator"
-}
-
-func (s *CompletionService) isExportType(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	isInExistingExportType := len(pathParts) == 4 &&
-		pathParts[1] == "exports" &&
-		pathParts[3] == "type"
-
-	isInNewExportType := len(pathParts) == 3 &&
-		pathParts[1] == "exports" &&
-		s.isPrecededBy(position, typePattern, sourceContent)
-
-	return isInExistingExportType || isInNewExportType
-}
-
-func (s *CompletionService) isStringSubVariable(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	return slices.Contains(pathParts, "stringSubs") &&
-		s.isPrecededBy(position, variableRefPattern, sourceContent)
-}
-
-func (s *CompletionService) isStringSubResource(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	return slices.Contains(pathParts, "stringSubs") &&
-		s.isPrecededBy(position, resourceRefPattern, sourceContent)
-}
-
-func (s *CompletionService) isStringSubResourceProperty(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-	node *schema.TreeNode,
-) bool {
-	namespacedResourcePropMatch := slices.Contains(pathParts, "stringSubs") &&
-		s.isPrecededBy(position, resourcePropertyPattern, sourceContent)
-
-	_, isResourceProp := node.SchemaElement.(*substitutions.SubstitutionResourceProperty)
-	resourcePropMatchWithoutNamespace := slices.Contains(pathParts, "stringSubs") &&
-		s.isPrecededBy(position, resourceWithoutNamespacePropPattern, sourceContent) &&
-		isResourceProp
-
-	return namespacedResourcePropMatch || resourcePropMatchWithoutNamespace
-}
-
-func (s *CompletionService) isStringSubDataSource(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	return slices.Contains(pathParts, "stringSubs") &&
-		s.isPrecededBy(position, dataSourceRefPattern, sourceContent)
-}
-
-func (s *CompletionService) isStringSubDataSourceProperty(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	return slices.Contains(pathParts, "stringSubs") &&
-		s.isPrecededBy(position, dataSourcePropertyPattern, sourceContent)
-}
-
-func (s *CompletionService) isStringSubValue(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	return slices.Contains(pathParts, "stringSubs") &&
-		s.isPrecededBy(position, valueRefPattern, sourceContent)
-}
-
-func (s *CompletionService) isStringSubChild(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	return slices.Contains(pathParts, "stringSubs") &&
-		s.isPrecededBy(position, childRefPattern, sourceContent)
-}
-
-func (s *CompletionService) isStringSubElem(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	return slices.Contains(pathParts, "stringSubs") &&
-		s.isPrecededBy(position, elemRefPattern, sourceContent)
-}
-
-func (s *CompletionService) isStringSub(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	return (slices.Contains(pathParts, "stringSubs") &&
-		s.isPrecededBy(position, inSubPattern, sourceContent)) ||
-		(slices.Contains(stringPathTypes, pathParts[len(pathParts)-1]) &&
-			s.isPrecededBy(position, subOpenPattern, sourceContent))
-}
-
-func (s *CompletionService) matchCompletionElementOnLine(
-	collected []*schema.TreeNode,
-	index int,
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) (*schema.TreeNode, string) {
-	if s.isStringSubDataSourcePropertyOnLine(pathParts, sourceContent, position) {
-		return collected[index], "stringSubDataSourceProperty"
-	}
-
-	return nil, ""
-}
-
-func (s *CompletionService) isStringSubDataSourcePropertyOnLine(
-	pathParts []string,
-	sourceContent string,
-	position *lsp.Position,
-) bool {
-	return slices.Contains(pathParts, "stringSubs") &&
-		s.isPrecededBy(position, dataSourcePropertyPattern, sourceContent)
-}
-
-func (s *CompletionService) isPrecededBy(
-	position *lsp.Position,
-	expectedBeforePattern *regexp.Regexp,
-	sourceContent string,
-) bool {
-	if position.Line == 0 {
-		return false
-	}
-
-	index := position.IndexIn(sourceContent, s.state.GetPositionEncodingKind())
-	sourceContentBefore := sourceContent[:index]
-	return expectedBeforePattern.Match([]byte(sourceContentBefore))
-}
-
-func (s *CompletionService) getResourceTypeCompletionItems(
+// getDataSourceFilterFieldCompletionItemsFromContext adapts filter field completion to use NodeContext.
+func (s *CompletionService) getDataSourceFilterFieldCompletionItemsFromContext(
 	ctx *common.LSPContext,
-) ([]*lsp.CompletionItem, error) {
-
-	resourceTypes, err := s.resourceRegistry.ListResourceTypes(ctx.Context)
-	if err != nil {
-		return nil, err
-	}
-
-	completionItems := []*lsp.CompletionItem{}
-	resourceTypeDetail := "Resource type"
-	for _, resourceType := range resourceTypes {
-		enumKind := lsp.CompletionItemKindEnum
-		completionItems = append(completionItems, &lsp.CompletionItem{
-			Label:      resourceType,
-			Detail:     &resourceTypeDetail,
-			Kind:       &enumKind,
-			InsertText: &resourceType,
-			Data:       map[string]interface{}{"completionType": "resourceType"},
-		})
-	}
-
-	return completionItems, nil
-}
-
-func (s *CompletionService) getDataSourceTypeCompletionItems(
-	ctx *common.LSPContext,
-) ([]*lsp.CompletionItem, error) {
-
-	dataSourceTypes, err := s.dataSourceRegistry.ListDataSourceTypes(ctx.Context)
-	if err != nil {
-		return nil, err
-	}
-
-	completionItems := []*lsp.CompletionItem{}
-	dataSourceTypeDetail := "Data source type"
-	for _, dataSourceType := range dataSourceTypes {
-		enumKind := lsp.CompletionItemKindEnum
-		completionItems = append(completionItems, &lsp.CompletionItem{
-			Label:      dataSourceType,
-			Detail:     &dataSourceTypeDetail,
-			Kind:       &enumKind,
-			InsertText: &dataSourceType,
-			Data:       map[string]interface{}{"completionType": "dataSourceType"},
-		})
-	}
-
-	return completionItems, nil
-}
-
-func (s *CompletionService) getDataSourceFilterFieldCompletionItems(
-	ctx *common.LSPContext,
-	node *schema.TreeNode,
+	nodeCtx *docmodel.NodeContext,
 	blueprint *schema.Blueprint,
 ) ([]*lsp.CompletionItem, error) {
-
-	if node == nil || blueprint.DataSources == nil || len(blueprint.DataSources.Values) == 0 {
+	if nodeCtx == nil || blueprint.DataSources == nil || len(blueprint.DataSources.Values) == 0 {
 		return []*lsp.CompletionItem{}, nil
 	}
 
-	dataSourceName := getDataSourceName(node)
-	if dataSourceName == "" {
+	dataSourceName, ok := nodeCtx.GetDataSourceName()
+	if !ok || dataSourceName == "" {
 		return []*lsp.CompletionItem{}, nil
 	}
 
@@ -677,7 +199,7 @@ func (s *CompletionService) getDataSourceFilterFieldCompletionItems(
 	}
 
 	filterFieldsOutput, err := s.dataSourceRegistry.GetFilterFields(
-		ctx.Context,
+		safeContext(ctx),
 		string(dataSource.Type.Value),
 		&provider.DataSourceGetFilterFieldsInput{},
 	)
@@ -694,24 +216,500 @@ func (s *CompletionService) getDataSourceFilterFieldCompletionItems(
 			Detail:     &filterFieldDetail,
 			Kind:       &enumKind,
 			InsertText: &filterField,
-			Data:       map[string]interface{}{"completionType": "dataSourceFilterField"},
+			Data:       map[string]any{"completionType": "dataSourceFilterField"},
 		})
 	}
 
 	return completionItems, nil
 }
 
-func getDataSourceName(node *schema.TreeNode) string {
-	if node == nil {
-		return ""
+// getDataSourceFilterOperatorCompletionItemsFromContext adapts filter operator completion to use NodeContext.
+func (s *CompletionService) getDataSourceFilterOperatorCompletionItemsFromContext(
+	position *lsp.Position,
+	nodeCtx *docmodel.NodeContext,
+) ([]*lsp.CompletionItem, error) {
+	filterOperatorDetail := "Data source filter operator"
+	enumKind := lsp.CompletionItemKindEnum
+
+	// Get operator element position from schema node (preferred) or fallback to current position
+	var operatorElementPosition *source.Position
+	if nodeCtx != nil && nodeCtx.SchemaNode != nil && nodeCtx.SchemaNode.Range != nil {
+		operatorElementPosition = nodeCtx.SchemaNode.Range.Start
+	} else {
+		// Fallback to current position
+		operatorElementPosition = &source.Position{
+			Line:   int(position.Line + 1),
+			Column: int(position.Character + 1),
+		}
 	}
 
-	pathParts := strings.Split(node.Path, "/")
-	if len(pathParts) > 2 && pathParts[1] == "datasources" {
-		return pathParts[2]
+	// Determine if cursor is right after "operator:" field declaration
+	isPrecededByOperator := nodeCtx != nil && nodeCtx.IsPrecededByOperatorField()
+
+	filterOpItems := []*lsp.CompletionItem{}
+	for _, filterOperator := range schema.DataSourceFilterOperators {
+		filterOperatorStr := fmt.Sprintf("\"%s\"", string(filterOperator))
+		edit := lsp.TextEdit{
+			NewText: filterOperatorStr,
+			Range: getOperatorInsertRange(
+				position,
+				filterOperatorStr,
+				isPrecededByOperator,
+				operatorElementPosition,
+			),
+		}
+		filterOpItems = append(
+			filterOpItems,
+			&lsp.CompletionItem{
+				Label:    filterOperatorStr,
+				Detail:   &filterOperatorDetail,
+				Kind:     &enumKind,
+				TextEdit: edit,
+				Data:     map[string]any{"completionType": "dataSourceFilterOperator"},
+			},
+		)
 	}
 
-	return ""
+	return filterOpItems, nil
+}
+
+// getStringSubPotentialResourcePropCompletionItems handles completion for potential standalone
+// resource property patterns like ${myResource. or ${myResource[
+// It validates the potential resource name against the blueprint and delegates to resource property completion.
+func (s *CompletionService) getStringSubPotentialResourcePropCompletionItems(
+	ctx *common.LSPContext,
+	position *lsp.Position,
+	blueprint *schema.Blueprint,
+	completionCtx *docmodel.CompletionContext,
+	nodeCtx *docmodel.NodeContext,
+) ([]*lsp.CompletionItem, error) {
+	potentialName := completionCtx.PotentialResourceName
+	if potentialName == "" {
+		return s.getStringSubCompletionItems(ctx, position, blueprint)
+	}
+
+	if blueprint.Resources == nil || len(blueprint.Resources.Values) == 0 {
+		return s.getStringSubCompletionItems(ctx, position, blueprint)
+	}
+
+	// Validate that the potential name is an actual resource in the blueprint
+	if _, exists := blueprint.Resources.Values[potentialName]; !exists {
+		return s.getStringSubCompletionItems(ctx, position, blueprint)
+	}
+
+	// Delegate to the existing resource property completion logic
+	return s.getStringSubResourcePropCompletionItemsFromContext(ctx, position, blueprint, nodeCtx)
+}
+
+// getStringSubResourcePropCompletionItemsFromContext adapts resource property completion to use NodeContext.
+func (s *CompletionService) getStringSubResourcePropCompletionItemsFromContext(
+	ctx *common.LSPContext,
+	position *lsp.Position,
+	blueprint *schema.Blueprint,
+	nodeCtx *docmodel.NodeContext,
+) ([]*lsp.CompletionItem, error) {
+	if blueprint.Resources == nil || len(blueprint.Resources.Values) == 0 {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	// Get text before cursor for analysis
+	textBefore := ""
+	if nodeCtx != nil {
+		textBefore = nodeCtx.TextBefore
+	}
+
+	// Try to get resource property from schema element first
+	var resourceProp *substitutions.SubstitutionResourceProperty
+	if nodeCtx != nil && nodeCtx.SchemaElement != nil {
+		resourceProp, _ = nodeCtx.SchemaElement.(*substitutions.SubstitutionResourceProperty)
+	}
+
+	// Fallback: parse resource property from text when schema element is unavailable
+	if resourceProp == nil {
+		resourceProp = parseResourcePropertyFromText(textBefore, blueprint)
+	}
+
+	if resourceProp == nil {
+		return getResourceTopLevelPropCompletionItems(position), nil
+	}
+
+	// Check if we're directly after the resource name (need top-level props like spec, metadata)
+	// Handles both: resources.myResource. and ${myResource.
+	if strings.HasSuffix(textBefore, fmt.Sprintf(".%s.", resourceProp.ResourceName)) ||
+		strings.HasSuffix(textBefore, fmt.Sprintf("${%s.", resourceProp.ResourceName)) ||
+		strings.HasSuffix(textBefore, fmt.Sprintf("${%s[", resourceProp.ResourceName)) {
+		return getResourceTopLevelPropCompletionItems(position), nil
+	}
+
+	// Check if we're in the spec path (works for both resources.x.spec. and ${x.spec.)
+	if len(resourceProp.Path) >= 1 && resourceProp.Path[0].FieldName == "spec" {
+		return s.getResourceSpecPropCompletionItems(ctx, position, blueprint, resourceProp)
+	}
+
+	// Check if we're in the metadata path (works for both resources.x.metadata. and ${x.metadata.)
+	if len(resourceProp.Path) >= 1 && resourceProp.Path[0].FieldName == "metadata" {
+		return s.getResourceMetadataPropCompletionItemsForPath(position, blueprint, resourceProp, nodeCtx)
+	}
+
+	return []*lsp.CompletionItem{}, nil
+}
+
+// parseResourcePropertyFromText extracts resource property path from text.
+// Used as fallback when SchemaElement is not available during editing.
+func parseResourcePropertyFromText(
+	textBefore string,
+	blueprint *schema.Blueprint,
+) *substitutions.SubstitutionResourceProperty {
+	// Find the start of the substitution
+	subStart := strings.LastIndex(textBefore, "${")
+	if subStart == -1 {
+		return nil
+	}
+
+	subText := textBefore[subStart+2:] // Text after ${
+
+	// Try parsing with resources. prefix first
+	if strings.HasPrefix(subText, "resources.") {
+		return parseResourcePropertyWithPrefix(subText, blueprint)
+	}
+
+	// Try parsing as standalone resource name (without resources. prefix)
+	return parseStandaloneResourceProperty(subText, blueprint)
+}
+
+func parseResourcePropertyWithPrefix(
+	subText string,
+	blueprint *schema.Blueprint,
+) *substitutions.SubstitutionResourceProperty {
+	// Parse: resources.resourceName.path1.path2.
+	remaining := strings.TrimPrefix(subText, "resources.")
+	return parseResourcePath(remaining, blueprint)
+}
+
+func parseStandaloneResourceProperty(
+	subText string,
+	blueprint *schema.Blueprint,
+) *substitutions.SubstitutionResourceProperty {
+	// For standalone resource names, the first part before . or [ is the resource name
+	// Example: myResource.metadata.annotations[
+	return parseResourcePath(subText, blueprint)
+}
+
+func parseResourcePath(
+	pathText string,
+	blueprint *schema.Blueprint,
+) *substitutions.SubstitutionResourceProperty {
+	if blueprint.Resources == nil {
+		return nil
+	}
+
+	// Split by . but also handle [ for bracket notation
+	// First, replace [ with . to normalize, then split
+	normalized := strings.ReplaceAll(pathText, "[", ".")
+	parts := strings.Split(normalized, ".")
+	if len(parts) == 0 {
+		return nil
+	}
+
+	// Clean up resource name (remove quotes and brackets)
+	resourceName := strings.Trim(parts[0], "\"'[]")
+	if resourceName == "" {
+		return nil
+	}
+
+	// Verify resource exists
+	if blueprint.Resources.Values[resourceName] == nil {
+		return nil
+	}
+
+	// Build path from remaining parts (excluding trailing empty string from ".")
+	var pathItems []*substitutions.SubstitutionPathItem
+	for i := 1; i < len(parts); i++ {
+		fieldName := strings.Trim(parts[i], "\"'[]")
+		if fieldName == "" {
+			continue
+		}
+		pathItems = append(pathItems, &substitutions.SubstitutionPathItem{
+			FieldName: fieldName,
+		})
+	}
+
+	return &substitutions.SubstitutionResourceProperty{
+		ResourceName: resourceName,
+		Path:         pathItems,
+	}
+}
+
+// getStringSubDataSourcePropCompletionItemsFromContext adapts data source property completion to use CompletionContext.
+func (s *CompletionService) getStringSubDataSourcePropCompletionItemsFromContext(
+	position *lsp.Position,
+	blueprint *schema.Blueprint,
+	completionCtx *docmodel.CompletionContext,
+) ([]*lsp.CompletionItem, error) {
+	detail := "Data source exported field"
+	fieldKind := lsp.CompletionItemKindField
+
+	if blueprint.DataSources == nil || len(blueprint.DataSources.Values) == 0 {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	dataSourceItems := []*lsp.CompletionItem{}
+
+	// Get data source name from completion context
+	dataSourceName := completionCtx.DataSourceName
+	if dataSourceName == "" {
+		return dataSourceItems, nil
+	}
+
+	dataSource := getDataSource(blueprint, dataSourceName)
+	if dataSource == nil || dataSource.Exports == nil {
+		return dataSourceItems, nil
+	}
+
+	for exportName := range dataSource.Exports.Values {
+		insertRange := getItemInsertRange(position)
+		edit := lsp.TextEdit{
+			NewText: exportName,
+			Range:   insertRange,
+		}
+		dataSourceItems = append(
+			dataSourceItems,
+			&lsp.CompletionItem{
+				Label:    exportName,
+				Detail:   &detail,
+				Kind:     &fieldKind,
+				TextEdit: edit,
+				Data:     map[string]any{"completionType": "dataSourceProperty"},
+			},
+		)
+	}
+
+	return dataSourceItems, nil
+}
+
+// getResourceSpecFieldCompletionItems returns completion items for resource spec fields
+// when editing directly in the YAML/JSONC definition (not in substitutions).
+func (s *CompletionService) getResourceSpecFieldCompletionItems(
+	ctx *common.LSPContext,
+	position *lsp.Position,
+	blueprint *schema.Blueprint,
+	completionCtx *docmodel.CompletionContext,
+	format docmodel.DocumentFormat,
+) ([]*lsp.CompletionItem, error) {
+	resourceName := completionCtx.ResourceName
+	if resourceName == "" {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	resource := getResource(blueprint, resourceName)
+	if resource == nil || resource.Type == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	specDefOutput, err := s.resourceRegistry.GetSpecDefinition(
+		safeContext(ctx),
+		resource.Type.Value,
+		&provider.ResourceGetSpecDefinitionInput{},
+	)
+	if err != nil {
+		return noCompletionsHint(
+			position,
+			fmt.Sprintf("Resource type '%s' not found - install the provider to enable completions", resource.Type.Value),
+		), nil
+	}
+
+	if specDefOutput.SpecDefinition == nil || specDefOutput.SpecDefinition.Schema == nil {
+		return noCompletionsHint(
+			position,
+			fmt.Sprintf("No spec schema available for resource type '%s'", resource.Type.Value),
+		), nil
+	}
+
+	// Navigate the schema tree based on the spec path depth
+	// Path is like: /resources/{name}/spec/field1/field2/...
+	// GetSpecPath() returns segments after /resources/{name}/spec/
+	specPath := completionCtx.NodeCtx.ASTPath.GetSpecPath()
+	currentSchema := specDefOutput.SpecDefinition.Schema
+
+	// Navigate to the correct schema depth
+	for i := 0; i < len(specPath) && currentSchema != nil; i++ {
+		segment := specPath[i]
+		if segment.Kind != docmodel.PathSegmentField {
+			continue
+		}
+		if currentSchema.Type != provider.ResourceDefinitionsSchemaTypeObject {
+			currentSchema = nil
+			break
+		}
+		currentSchema = currentSchema.Attributes[segment.FieldName]
+	}
+
+	if currentSchema == nil || currentSchema.Attributes == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	// Get the typed prefix for filtering completions
+	typedPrefix := ""
+	if completionCtx.NodeCtx != nil {
+		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	}
+
+	return resourceDefAttributesSchemaCompletionItemsWithPrefix(
+		currentSchema.Attributes,
+		position,
+		"Resource spec field",
+		typedPrefix,
+	), nil
+}
+
+// coreResourceDefinitionFieldInfo holds description information for core resource fields.
+type coreResourceDefinitionFieldInfo struct {
+	name        string
+	description string
+}
+
+// Core blueprint resource definition fields with descriptions
+var coreResourceDefinitionFields = []coreResourceDefinitionFieldInfo{
+	{
+		name:        "type",
+		description: "The resource type identifier (e.g., `aws/dynamodb/table`). This determines which provider handles the resource.",
+	},
+	{
+		name:        "description",
+		description: "A human-readable description of the resource's purpose in the blueprint.",
+	},
+	{
+		name:        "spec",
+		description: "The resource specification containing provider-specific configuration fields.",
+	},
+	{
+		name:        "metadata",
+		description: "Optional metadata including `displayName`, `labels`, `annotations`, and `custom` fields.",
+	},
+	{
+		name:        "condition",
+		description: "A condition expression that determines whether this resource should be deployed. Supports `and`, `or`, and `not` operators.",
+	},
+	{
+		name:        "each",
+		description: "Creates multiple instances of this resource from an array or map. Use `elem` to reference the current item.",
+	},
+	{
+		name:        "linkSelector",
+		description: "Defines criteria for automatic link creation with other resources based on labels.",
+	},
+	{
+		name:        "dependsOn",
+		description: "Explicitly declares dependencies on other resources that must be deployed first.",
+	},
+}
+
+// getResourceDefinitionFieldCompletionItems returns completion items for core resource fields
+// like type, description, spec, metadata, etc. when editing at the resource definition level.
+// Note: Only used for YAML - JSONC schema completions are disabled.
+func (s *CompletionService) getResourceDefinitionFieldCompletionItems(
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+) ([]*lsp.CompletionItem, error) {
+	// Get the typed prefix for filtering completions
+	typedPrefix := ""
+	if completionCtx.NodeCtx != nil {
+		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	}
+
+	prefixLower := strings.ToLower(typedPrefix)
+	prefixLen := len(typedPrefix)
+
+	detail := "Resource field"
+	fieldKind := lsp.CompletionItemKindField
+
+	items := make([]*lsp.CompletionItem, 0, len(coreResourceDefinitionFields))
+	for _, fieldInfo := range coreResourceDefinitionFields {
+		// Filter by prefix if one is provided
+		if prefixLen > 0 && !strings.HasPrefix(strings.ToLower(fieldInfo.name), prefixLower) {
+			continue
+		}
+
+		insertRange := getItemInsertRangeWithPrefix(position, prefixLen)
+		insertText := fieldInfo.name + ": "
+		edit := lsp.TextEdit{
+			NewText: insertText,
+			Range:   insertRange,
+		}
+
+		item := &lsp.CompletionItem{
+			Label:      fieldInfo.name,
+			Detail:     &detail,
+			Kind:       &fieldKind,
+			TextEdit:   edit,
+			FilterText: &fieldInfo.name,
+			Data: map[string]any{
+				"completionType": "resourceDefinitionField",
+			},
+		}
+
+		// Add documentation
+		if fieldInfo.description != "" {
+			item.Documentation = lsp.MarkupContent{
+				Kind:  lsp.MarkupKindMarkdown,
+				Value: fieldInfo.description,
+			}
+		}
+
+		items = append(items, item)
+	}
+
+	return items, nil
+}
+
+func (s *CompletionService) getResourceTypeCompletionItems(
+	ctx *common.LSPContext,
+) ([]*lsp.CompletionItem, error) {
+
+	resourceTypes, err := s.resourceRegistry.ListResourceTypes(safeContext(ctx))
+	if err != nil {
+		return nil, err
+	}
+
+	completionItems := []*lsp.CompletionItem{}
+	resourceTypeDetail := "Resource type"
+	for _, resourceType := range resourceTypes {
+		enumKind := lsp.CompletionItemKindEnum
+		completionItems = append(completionItems, &lsp.CompletionItem{
+			Label:      resourceType,
+			Detail:     &resourceTypeDetail,
+			Kind:       &enumKind,
+			InsertText: &resourceType,
+			Data:       map[string]any{"completionType": "resourceType"},
+		})
+	}
+
+	return completionItems, nil
+}
+
+func (s *CompletionService) getDataSourceTypeCompletionItems(
+	ctx *common.LSPContext,
+) ([]*lsp.CompletionItem, error) {
+
+	dataSourceTypes, err := s.dataSourceRegistry.ListDataSourceTypes(safeContext(ctx))
+	if err != nil {
+		return nil, err
+	}
+
+	completionItems := []*lsp.CompletionItem{}
+	dataSourceTypeDetail := "Data source type"
+	for _, dataSourceType := range dataSourceTypes {
+		enumKind := lsp.CompletionItemKindEnum
+		completionItems = append(completionItems, &lsp.CompletionItem{
+			Label:      dataSourceType,
+			Detail:     &dataSourceTypeDetail,
+			Kind:       &enumKind,
+			InsertText: &dataSourceType,
+			Data:       map[string]any{"completionType": "dataSourceType"},
+		})
+	}
+
+	return completionItems, nil
 }
 
 func (s *CompletionService) getVariableTypeCompletionItems(
@@ -730,12 +728,12 @@ func (s *CompletionService) getVariableTypeCompletionItems(
 				Detail:     &variableTypeDetail,
 				Kind:       &enumKind,
 				InsertText: &coreTypeStr,
-				Data:       map[string]interface{}{"completionType": "variableType"},
+				Data:       map[string]any{"completionType": "variableType"},
 			},
 		)
 	}
 
-	customTypes, err := s.customVarTypeRegistry.ListCustomVariableTypes(ctx.Context)
+	customTypes, err := s.customVarTypeRegistry.ListCustomVariableTypes(safeContext(ctx))
 	if err != nil {
 		s.logger.Error("Failed to list custom variable types, returning core types only", zap.Error(err))
 		return typeItems, nil
@@ -747,7 +745,7 @@ func (s *CompletionService) getVariableTypeCompletionItems(
 			Detail:     &variableTypeDetail,
 			Kind:       &enumKind,
 			InsertText: &customType,
-			Data:       map[string]interface{}{"completionType": "variableType"},
+			Data:       map[string]any{"completionType": "variableType"},
 		})
 	}
 
@@ -768,7 +766,7 @@ func (s *CompletionService) getValueTypeCompletionItems() ([]*lsp.CompletionItem
 				Detail:     &valueTypeDetail,
 				Kind:       &enumKind,
 				InsertText: &valueTypeStr,
-				Data:       map[string]interface{}{"completionType": "valueType"},
+				Data:       map[string]any{"completionType": "valueType"},
 			},
 		)
 	}
@@ -790,54 +788,12 @@ func (s *CompletionService) getDataSourceFieldTypeCompletionItems() ([]*lsp.Comp
 				Detail:     &fieldTypeDetail,
 				Kind:       &enumKind,
 				InsertText: &fieldTypeStr,
-				Data:       map[string]interface{}{"completionType": "dataSourceFieldType"},
+				Data:       map[string]any{"completionType": "dataSourceFieldType"},
 			},
 		)
 	}
 
 	return typeItems, nil
-}
-
-func (s *CompletionService) getDataSourceFilterOperatorCompletionItems(
-	position *lsp.Position,
-	sourceContent string,
-	operatorElementNode *schema.TreeNode,
-) ([]*lsp.CompletionItem, error) {
-	filterOperatorDetail := "Data source filter operator"
-	enumKind := lsp.CompletionItemKindEnum
-	positionEncodingKind := s.state.GetPositionEncodingKind()
-
-	operatorElementPosition := operatorElementNode.Range.Start
-
-	filterOpItems := []*lsp.CompletionItem{}
-	for _, filterOperator := range schema.DataSourceFilterOperators {
-		filterOperatorStr := fmt.Sprintf("\"%s\"", string(filterOperator))
-		// Due to filters containing white space characters, which are trigger characters
-		// for completion, we need to do a custom edit instead of the default insertText
-		// approach.
-		edit := lsp.TextEdit{
-			NewText: filterOperatorStr,
-			Range: getOperatorInsertRange(
-				position,
-				filterOperatorStr,
-				sourceContent,
-				positionEncodingKind,
-				operatorElementPosition,
-			),
-		}
-		filterOpItems = append(
-			filterOpItems,
-			&lsp.CompletionItem{
-				Label:    filterOperatorStr,
-				Detail:   &filterOperatorDetail,
-				Kind:     &enumKind,
-				TextEdit: edit,
-				Data:     map[string]any{"completionType": "dataSourceFilterOperator"},
-			},
-		)
-	}
-
-	return filterOpItems, nil
 }
 
 func (s *CompletionService) getExportTypeCompletionItems() ([]*lsp.CompletionItem, error) {
@@ -854,7 +810,7 @@ func (s *CompletionService) getExportTypeCompletionItems() ([]*lsp.CompletionIte
 				Detail:     &exportTypeDetail,
 				Kind:       &enumKind,
 				InsertText: &exportTypeStr,
-				Data:       map[string]interface{}{"completionType": "exportType"},
+				Data:       map[string]any{"completionType": "exportType"},
 			},
 		)
 	}
@@ -889,7 +845,7 @@ func (s *CompletionService) getStringSubVariableCompletionItems(
 				Detail:   &variableDetail,
 				Kind:     &fieldKind,
 				TextEdit: edit,
-				Data:     map[string]interface{}{"completionType": "variable"},
+				Data:     map[string]any{"completionType": "variable"},
 			},
 		)
 	}
@@ -924,49 +880,9 @@ func (s *CompletionService) getStringSubResourceCompletionItems(
 				Detail:   &resourceDetail,
 				Kind:     &fieldKind,
 				TextEdit: edit,
-				Data:     map[string]interface{}{"completionType": "resource"},
+				Data:     map[string]any{"completionType": "resource"},
 			},
 		)
-	}
-
-	return resourceItems, nil
-}
-
-func (s *CompletionService) getStringSubResourcePropCompletionItems(
-	ctx *common.LSPContext,
-	position *lsp.Position,
-	content string,
-	blueprint *schema.Blueprint,
-	node *schema.TreeNode,
-) ([]*lsp.CompletionItem, error) {
-	if blueprint.Resources == nil || len(blueprint.Resources.Values) == 0 {
-		return []*lsp.CompletionItem{}, nil
-	}
-
-	resourceItems := []*lsp.CompletionItem{}
-	s.logger.Debug("Node path", zap.String("path", node.Path))
-	s.logger.Debug("Node schema element", zap.Any("range", node.SchemaElement))
-
-	resourceProp, isResourceProp := node.SchemaElement.(*substitutions.SubstitutionResourceProperty)
-	if !isResourceProp {
-		return getResourceTopLevelPropCompletionItems(position), nil
-	}
-
-	index := position.IndexIn(content, s.state.GetPositionEncodingKind())
-	sourceContentBefore := content[:index]
-
-	if strings.HasSuffix(sourceContentBefore, fmt.Sprintf(".%s.", resourceProp.ResourceName)) {
-		return getResourceTopLevelPropCompletionItems(position), nil
-	}
-
-	if strings.HasSuffix(sourceContentBefore, ".spec.") ||
-		(len(resourceProp.Path) >= 1 && resourceProp.Path[0].FieldName == "spec") {
-		return s.getResourceSpecPropCompletionItems(ctx, position, blueprint, resourceProp)
-	}
-
-	if strings.HasSuffix(sourceContentBefore, ".metadata.") ||
-		(len(resourceProp.Path) >= 1 && resourceProp.Path[0].FieldName == "metadata") {
-		return getResourceMetadataPropCompletionItems(position), nil
 	}
 
 	return resourceItems, nil
@@ -985,16 +901,23 @@ func (s *CompletionService) getResourceSpecPropCompletionItems(
 	}
 
 	specDefOutput, err := s.resourceRegistry.GetSpecDefinition(
-		ctx.Context,
+		safeContext(ctx),
 		resource.Type.Value,
 		&provider.ResourceGetSpecDefinitionInput{},
 	)
 	if err != nil {
-		return nil, err
+		// Return a hint completion item explaining why completions aren't available
+		return noCompletionsHint(
+			position,
+			fmt.Sprintf("Resource type '%s' not found - install the provider to enable completions", resource.Type.Value),
+		), nil
 	}
 
 	if specDefOutput.SpecDefinition == nil || specDefOutput.SpecDefinition.Schema == nil {
-		return []*lsp.CompletionItem{}, nil
+		return noCompletionsHint(
+			position,
+			fmt.Sprintf("No spec schema available for resource type '%s'", resource.Type.Value),
+		), nil
 	}
 
 	currentSchema := specDefOutput.SpecDefinition.Schema
@@ -1009,6 +932,10 @@ func (s *CompletionService) getResourceSpecPropCompletionItems(
 		i += 1
 	}
 
+	if currentSchema == nil || currentSchema.Attributes == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
 	return resourceDefAttributesSchemaCompletionItems(
 		currentSchema.Attributes,
 		position,
@@ -1016,162 +943,417 @@ func (s *CompletionService) getResourceSpecPropCompletionItems(
 	), nil
 }
 
+// noCompletionsHint returns a single completion item that displays a hint message.
+// This is used when completions aren't available (e.g., resource type not found).
+func noCompletionsHint(position *lsp.Position, message string) []*lsp.CompletionItem {
+	hintKind := lsp.CompletionItemKindText
+	detail := "No completions available"
+	return []*lsp.CompletionItem{
+		{
+			Label:  message,
+			Kind:   &hintKind,
+			Detail: &detail,
+			TextEdit: lsp.TextEdit{
+				Range:   getItemInsertRange(position),
+				NewText: "",
+			},
+			Data: map[string]any{
+				"completionType": "hint",
+			},
+		},
+	}
+}
+
+// resourceDefAttributesSchemaCompletionItems creates completion items for resource attributes
+// used in substitution references (inside ${...}). These completions should NOT include
+// colons or quotes since they're property access paths, not key-value definitions.
 func resourceDefAttributesSchemaCompletionItems(
 	attributes map[string]*provider.ResourceDefinitionsSchema,
 	position *lsp.Position,
 	attrDetail string,
 ) []*lsp.CompletionItem {
-	completionItems := []*lsp.CompletionItem{}
-	for attrName := range attributes {
-		fieldKind := lsp.CompletionItemKindField
+	return resourceDefAttributesSchemaCompletionItemsForSubstitution(attributes, position, attrDetail, "")
+}
 
-		edit := lsp.TextEdit{
-			NewText: attrName,
-			Range:   getItemInsertRange(position),
+// resourceDefAttributesSchemaCompletionItemsForSubstitution creates completion items for
+// substitution references (inside ${...}). These completions use just the field name
+// without colons or quotes since they're property access paths.
+func resourceDefAttributesSchemaCompletionItemsForSubstitution(
+	attributes map[string]*provider.ResourceDefinitionsSchema,
+	position *lsp.Position,
+	attrDetail string,
+	typedPrefix string,
+) []*lsp.CompletionItem {
+	completionItems := []*lsp.CompletionItem{}
+	prefixLen := len(typedPrefix)
+	prefixLower := strings.ToLower(typedPrefix)
+
+	for attrName, attrSchema := range attributes {
+		if prefixLen > 0 && !strings.HasPrefix(strings.ToLower(attrName), prefixLower) {
+			continue
 		}
 
-		completionItems = append(
-			completionItems,
-			&lsp.CompletionItem{
-				Label:    attrName,
-				Detail:   &attrDetail,
-				Kind:     &fieldKind,
-				TextEdit: edit,
-				Data: map[string]interface{}{
-					"completionType": "resourceProperty",
-				},
+		fieldKind := lsp.CompletionItemKindField
+		insertRange := getItemInsertRangeWithPrefix(position, prefixLen)
+
+		// For substitutions, just use the field name (no colon or quotes)
+		edit := lsp.TextEdit{
+			NewText: attrName,
+			Range:   insertRange,
+		}
+
+		detail := attrDetail
+		if attrSchema != nil && attrSchema.Type != "" {
+			detail = fmt.Sprintf("%s (%s)", attrDetail, attrSchema.Type)
+		}
+
+		item := &lsp.CompletionItem{
+			Label:      attrName,
+			Detail:     &detail,
+			Kind:       &fieldKind,
+			TextEdit:   edit,
+			FilterText: &attrName,
+			Data: map[string]any{
+				"completionType": "resourceProperty",
 			},
-		)
+		}
+
+		if attrSchema != nil {
+			if attrSchema.FormattedDescription != "" {
+				item.Documentation = lsp.MarkupContent{
+					Kind:  lsp.MarkupKindMarkdown,
+					Value: attrSchema.FormattedDescription,
+				}
+			} else if attrSchema.Description != "" {
+				item.Documentation = attrSchema.Description
+			}
+		}
+
+		completionItems = append(completionItems, item)
 	}
 
 	return completionItems
 }
 
-func getResourceTopLevelPropCompletionItems(position *lsp.Position) []*lsp.CompletionItem {
-	detail := "Resource property"
+// resourceDefAttributesSchemaCompletionItemsWithPrefix creates completion items for resource
+// spec fields based on the provider schema. Note: Only used for YAML - JSONC is disabled.
+func resourceDefAttributesSchemaCompletionItemsWithPrefix(
+	attributes map[string]*provider.ResourceDefinitionsSchema,
+	position *lsp.Position,
+	attrDetail string,
+	typedPrefix string,
+) []*lsp.CompletionItem {
+	completionItems := []*lsp.CompletionItem{}
+	prefixLen := len(typedPrefix)
+	prefixLower := strings.ToLower(typedPrefix)
 
+	for attrName, attrSchema := range attributes {
+		// Filter by prefix if one is provided
+		if prefixLen > 0 && !strings.HasPrefix(strings.ToLower(attrName), prefixLower) {
+			continue
+		}
+
+		fieldKind := lsp.CompletionItemKindField
+		insertRange := getItemInsertRangeWithPrefix(position, prefixLen)
+		insertText := attrName + ": "
+		edit := lsp.TextEdit{
+			NewText: insertText,
+			Range:   insertRange,
+		}
+
+		// Build a detailed label showing the type if available
+		detail := attrDetail
+		if attrSchema != nil && attrSchema.Type != "" {
+			detail = fmt.Sprintf("%s (%s)", attrDetail, attrSchema.Type)
+		}
+
+		item := &lsp.CompletionItem{
+			Label:      attrName,
+			Detail:     &detail,
+			Kind:       &fieldKind,
+			TextEdit:   edit,
+			FilterText: &attrName,
+			Data: map[string]any{
+				"completionType": "resourceProperty",
+			},
+		}
+
+		// Add documentation from the schema if available
+		if attrSchema != nil {
+			if attrSchema.FormattedDescription != "" {
+				item.Documentation = lsp.MarkupContent{
+					Kind:  lsp.MarkupKindMarkdown,
+					Value: attrSchema.FormattedDescription,
+				}
+			} else if attrSchema.Description != "" {
+				item.Documentation = attrSchema.Description
+			}
+		}
+
+		completionItems = append(completionItems, item)
+	}
+
+	return completionItems
+}
+
+// resourcePropInfo holds label and description for resource properties.
+type resourcePropInfo struct {
+	label       string
+	description string
+}
+
+func createResourcePropCompletionItemsWithDescriptions(
+	position *lsp.Position,
+	props []resourcePropInfo,
+	detail string,
+) []*lsp.CompletionItem {
 	insertRange := getItemInsertRange(position)
-
-	metadataText := "metadata"
-	metadataEdit := lsp.TextEdit{
-		NewText: metadataText,
-		Range:   insertRange,
-	}
-
-	specText := "spec"
-	specEdit := lsp.TextEdit{
-		NewText: specText,
-		Range:   insertRange,
-	}
-
-	stateText := "state"
-	stateEdit := lsp.TextEdit{
-		NewText: stateText,
-		Range:   insertRange,
-	}
-
 	fieldKind := lsp.CompletionItemKindField
-	return []*lsp.CompletionItem{
-		{
-			Label:    metadataText,
-			Detail:   &detail,
-			Kind:     &fieldKind,
-			TextEdit: metadataEdit,
-			Data: map[string]interface{}{
+	items := make([]*lsp.CompletionItem, 0, len(props))
+
+	for _, prop := range props {
+		item := &lsp.CompletionItem{
+			Label:  prop.label,
+			Detail: &detail,
+			Kind:   &fieldKind,
+			TextEdit: lsp.TextEdit{
+				NewText: prop.label,
+				Range:   insertRange,
+			},
+			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
+		}
+
+		if prop.description != "" {
+			item.Documentation = lsp.MarkupContent{
+				Kind:  lsp.MarkupKindMarkdown,
+				Value: prop.description,
+			}
+		}
+
+		items = append(items, item)
+	}
+
+	return items
+}
+
+var resourceTopLevelProps = []resourcePropInfo{
+	{label: "metadata", description: "Resource metadata including `displayName`, `labels`, `annotations`, and `custom` fields."},
+	{label: "spec", description: "The resource specification containing provider-specific configuration and computed fields."},
+	{label: "state", description: "The current deployment state of the resource from the external provider."},
+}
+
+func getResourceTopLevelPropCompletionItems(position *lsp.Position) []*lsp.CompletionItem {
+	return createResourcePropCompletionItemsWithDescriptions(position, resourceTopLevelProps, "Resource property")
+}
+
+var resourceMetadataProps = []resourcePropInfo{
+	{label: "displayName", description: "A human-readable name for the resource, used in UI displays."},
+	{label: "labels", description: "Key-value pairs for organizing and selecting resources. Used by `linkSelector`."},
+	{label: "annotations", description: "Key-value pairs for storing additional metadata. Unlike labels, annotations are not used for selection."},
+	{label: "custom", description: "Custom metadata fields specific to your use case."},
+}
+
+func getResourceMetadataPropCompletionItems(position *lsp.Position) []*lsp.CompletionItem {
+	return createResourcePropCompletionItemsWithDescriptions(position, resourceMetadataProps, "Resource metadata property")
+}
+
+// getResourceMetadataFieldCompletionItems returns completion items for metadata fields
+// when editing directly in YAML resource definitions (with colons for key-value syntax).
+func (s *CompletionService) getResourceMetadataFieldCompletionItems(
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+) ([]*lsp.CompletionItem, error) {
+	typedPrefix := ""
+	if completionCtx.NodeCtx != nil {
+		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	}
+
+	prefixLower := strings.ToLower(typedPrefix)
+	prefixLen := len(typedPrefix)
+
+	detail := "Metadata field"
+	fieldKind := lsp.CompletionItemKindField
+
+	items := make([]*lsp.CompletionItem, 0, len(resourceMetadataProps))
+	for _, propInfo := range resourceMetadataProps {
+		if prefixLen > 0 && !strings.HasPrefix(strings.ToLower(propInfo.label), prefixLower) {
+			continue
+		}
+
+		insertRange := getItemInsertRangeWithPrefix(position, prefixLen)
+		insertText := propInfo.label + ": "
+		edit := lsp.TextEdit{
+			NewText: insertText,
+			Range:   insertRange,
+		}
+
+		item := &lsp.CompletionItem{
+			Label:      propInfo.label,
+			Detail:     &detail,
+			Kind:       &fieldKind,
+			TextEdit:   edit,
+			FilterText: &propInfo.label,
+			Data: map[string]any{
+				"completionType": "metadataField",
+			},
+		}
+
+		if propInfo.description != "" {
+			item.Documentation = lsp.MarkupContent{
+				Kind:  lsp.MarkupKindMarkdown,
+				Value: propInfo.description,
+			}
+		}
+
+		items = append(items, item)
+	}
+
+	return items, nil
+}
+
+// getResourceMetadataPropCompletionItemsForPath returns metadata property completions
+// based on the current path depth. At "metadata." it returns top-level metadata props.
+// At deeper paths like "metadata.annotations." it returns the keys from the resource's metadata.
+func (s *CompletionService) getResourceMetadataPropCompletionItemsForPath(
+	position *lsp.Position,
+	blueprint *schema.Blueprint,
+	resourceProp *substitutions.SubstitutionResourceProperty,
+	nodeCtx *docmodel.NodeContext,
+) ([]*lsp.CompletionItem, error) {
+	if len(resourceProp.Path) <= 1 {
+		return getResourceMetadataPropCompletionItems(position), nil
+	}
+
+	resource := getResource(blueprint, resourceProp.ResourceName)
+	if resource == nil || resource.Metadata == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	secondSegment := resourceProp.Path[1].FieldName
+	keys, detail := getMetadataKeysAndDetail(resource.Metadata, secondSegment)
+	if keys == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	quoteType := docmodel.QuoteTypeNone
+	if nodeCtx != nil {
+		quoteType = nodeCtx.GetEnclosingQuoteType()
+	}
+
+	return createMetadataKeyCompletionItems(position, keys, detail, quoteType), nil
+}
+
+// createMetadataKeyCompletionItems creates completion items for metadata keys.
+// Keys containing special characters use bracket notation with contextual quotes:
+// - Inside double-quoted strings: ['key.with.dots'] (single quotes)
+// - Otherwise: ["key.with.dots"] (double quotes)
+func createMetadataKeyCompletionItems(
+	position *lsp.Position,
+	keys []string,
+	detail string,
+	quoteType docmodel.QuoteType,
+) []*lsp.CompletionItem {
+	fieldKind := lsp.CompletionItemKindField
+	items := make([]*lsp.CompletionItem, 0, len(keys))
+
+	for _, key := range keys {
+		var textEdit lsp.TextEdit
+		if needsBracketNotation(key) {
+			// Replace the preceding "." with bracket notation
+			// Use single quotes inside double-quoted strings to avoid escaping
+			bracketNotation := formatBracketNotation(key, quoteType)
+			textEdit = lsp.TextEdit{
+				NewText: bracketNotation,
+				Range:   getBracketNotationInsertRange(position),
+			}
+		} else {
+			textEdit = lsp.TextEdit{
+				NewText: key,
+				Range:   getItemInsertRange(position),
+			}
+		}
+
+		items = append(items, &lsp.CompletionItem{
+			Label:    key,
+			Detail:   &detail,
+			Kind:     &fieldKind,
+			TextEdit: textEdit,
+			Data: map[string]any{
+				"completionType": "resourceProperty",
+			},
+		})
+	}
+
+	return items
+}
+
+// formatBracketNotation formats a key with bracket notation using appropriate quotes.
+// Uses single quotes when inside double-quoted strings to avoid escaping.
+func formatBracketNotation(key string, quoteType docmodel.QuoteType) string {
+	if quoteType == docmodel.QuoteTypeDouble {
+		return fmt.Sprintf(`['%s']`, key)
+	}
+	return fmt.Sprintf(`["%s"]`, key)
+}
+
+// needsBracketNotation returns true if the key contains characters that require
+// bracket notation in substitution paths (e.g., dots, brackets, quotes).
+func needsBracketNotation(key string) bool {
+	for _, c := range key {
+		if c == '.' || c == '[' || c == ']' || c == '"' || c == ' ' {
+			return true
+		}
+	}
+	return false
+}
+
+// getBracketNotationInsertRange returns a range that starts 1 character before
+// the cursor position, to replace the preceding "." with bracket notation.
+func getBracketNotationInsertRange(position *lsp.Position) *lsp.Range {
+	startChar := position.Character
+	if startChar > 0 {
+		startChar--
+	}
+	return &lsp.Range{
+		Start: lsp.Position{
+			Line:      position.Line,
+			Character: startChar,
 		},
-		{
-			Label:    specText,
-			Detail:   &detail,
-			Kind:     &fieldKind,
-			TextEdit: specEdit,
-			Data: map[string]interface{}{
-				"completionType": "resourceProperty",
-			},
-		},
-		{
-			Label:    stateText,
-			Detail:   &detail,
-			Kind:     &fieldKind,
-			TextEdit: stateEdit,
-			Data: map[string]interface{}{
-				"completionType": "resourceProperty",
-			},
+		End: lsp.Position{
+			Line:      position.Line,
+			Character: position.Character,
 		},
 	}
 }
 
-func getResourceMetadataPropCompletionItems(
-	position *lsp.Position,
-) []*lsp.CompletionItem {
-	detail := "Resource metadata property"
-
-	insertRange := getItemInsertRange(position)
-
-	displayNameText := "displayName"
-	displayNameEdit := lsp.TextEdit{
-		NewText: displayNameText,
-		Range:   insertRange,
+func getMetadataKeysAndDetail(
+	metadata *schema.Metadata,
+	segment string,
+) ([]string, string) {
+	switch segment {
+	case "annotations":
+		if metadata.Annotations == nil {
+			return nil, ""
+		}
+		return mapKeys(metadata.Annotations.Values), "Annotation key"
+	case "labels":
+		if metadata.Labels == nil {
+			return nil, ""
+		}
+		return mapKeys(metadata.Labels.Values), "Label key"
+	default:
+		return nil, ""
 	}
+}
 
-	labelsText := "labels"
-	labelsEdit := lsp.TextEdit{
-		NewText: labelsText,
-		Range:   insertRange,
+func mapKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
 	}
-
-	annotationsText := "annotations"
-	annotationsEdit := lsp.TextEdit{
-		NewText: annotationsText,
-		Range:   insertRange,
-	}
-
-	customText := "custom"
-	customEdit := lsp.TextEdit{
-		NewText: customText,
-		Range:   insertRange,
-	}
-
-	fieldKind := lsp.CompletionItemKindField
-	return []*lsp.CompletionItem{
-		{
-			Label:    displayNameText,
-			Detail:   &detail,
-			Kind:     &fieldKind,
-			TextEdit: displayNameEdit,
-			Data: map[string]interface{}{
-				"completionType": "resourceProperty",
-			},
-		},
-		{
-			Label:    labelsText,
-			Detail:   &detail,
-			Kind:     &fieldKind,
-			TextEdit: labelsEdit,
-			Data: map[string]interface{}{
-				"completionType": "resourceProperty",
-			},
-		},
-		{
-			Label:    annotationsText,
-			Detail:   &detail,
-			Kind:     &fieldKind,
-			TextEdit: annotationsEdit,
-			Data: map[string]interface{}{
-				"completionType": "resourceProperty",
-			},
-		},
-		{
-			Label:    customText,
-			Detail:   &detail,
-			Kind:     &fieldKind,
-			TextEdit: customEdit,
-			Data: map[string]interface{}{
-				"completionType": "resourceProperty",
-			},
-		},
-	}
+	return keys
 }
 
 func (s *CompletionService) getStringSubDataSourceCompletionItems(
@@ -1201,83 +1383,12 @@ func (s *CompletionService) getStringSubDataSourceCompletionItems(
 				Detail:   &detail,
 				Kind:     &fieldKind,
 				TextEdit: edit,
-				Data:     map[string]interface{}{"completionType": "dataSource"},
+				Data:     map[string]any{"completionType": "dataSource"},
 			},
 		)
 	}
 
 	return dataSourceItems, nil
-}
-
-func (s *CompletionService) getStringSubDataSourcePropCompletionItems(
-	position *lsp.Position,
-	content string,
-	blueprint *schema.Blueprint,
-	node *schema.TreeNode,
-) ([]*lsp.CompletionItem, error) {
-	detail := "Data source exported field"
-	fieldKind := lsp.CompletionItemKindField
-
-	if blueprint.DataSources == nil || len(blueprint.DataSources.Values) == 0 {
-		return []*lsp.CompletionItem{}, nil
-	}
-
-	dataSourceItems := []*lsp.CompletionItem{}
-
-	dataSourceName, isDataSourceProp := s.deriveDataSourceName(node, position, content)
-	if !isDataSourceProp {
-		return dataSourceItems, nil
-	}
-
-	dataSource := getDataSource(blueprint, dataSourceName)
-	if dataSource == nil || dataSource.Exports == nil {
-		return dataSourceItems, nil
-	}
-
-	for exportName := range dataSource.Exports.Values {
-		insertRange := getItemInsertRange(
-			position,
-		)
-		edit := lsp.TextEdit{
-			NewText: exportName,
-			Range:   insertRange,
-		}
-		dataSourceItems = append(
-			dataSourceItems,
-			&lsp.CompletionItem{
-				Label:    exportName,
-				Detail:   &detail,
-				Kind:     &fieldKind,
-				TextEdit: edit,
-				Data:     map[string]any{"completionType": "dataSourceProperty"},
-			},
-		)
-	}
-
-	return dataSourceItems, nil
-}
-
-func (s *CompletionService) deriveDataSourceName(node *schema.TreeNode, position *lsp.Position, content string) (string, bool) {
-	if node == nil {
-		return "", false
-	}
-
-	dsProp, isDSProp := node.SchemaElement.(*substitutions.SubstitutionDataSourceProperty)
-	if isDSProp {
-		return dsProp.DataSourceName, true
-	}
-
-	// If the node path does not contain the data source name, we need to derive it
-	// from the content.
-	index := position.IndexIn(content, s.state.GetPositionEncodingKind())
-	sourceContentBefore := content[:index]
-	matches := dataSourcePropertyPattern.FindStringSubmatch(sourceContentBefore)
-	if len(matches) >= 2 {
-		// The name is the second capture group.
-		return matches[1], true
-	}
-
-	return "", false
 }
 
 func (s *CompletionService) getStringSubValueCompletionItems(
@@ -1307,7 +1418,7 @@ func (s *CompletionService) getStringSubValueCompletionItems(
 				Detail:   &detail,
 				Kind:     &fieldKind,
 				TextEdit: edit,
-				Data:     map[string]interface{}{"completionType": "value"},
+				Data:     map[string]any{"completionType": "value"},
 			},
 		)
 	}
@@ -1342,7 +1453,7 @@ func (s *CompletionService) getStringSubChildCompletionItems(
 				Detail:   &detail,
 				Kind:     &fieldKind,
 				TextEdit: edit,
-				Data:     map[string]interface{}{"completionType": "child"},
+				Data:     map[string]any{"completionType": "child"},
 			},
 		)
 	}
@@ -1393,6 +1504,7 @@ func (s *CompletionService) getResourceCompletionItems(
 	sortPrefix string,
 ) []*lsp.CompletionItem {
 	resourceDetail := "Resource"
+	standaloneResourceDetail := "Resource (standalone)"
 	resourceKind := lsp.CompletionItemKindValue
 
 	resourceItems := []*lsp.CompletionItem{}
@@ -1401,9 +1513,11 @@ func (s *CompletionService) getResourceCompletionItems(
 		return resourceItems
 	}
 
+	insertRange := getItemInsertRange(position)
+
 	for resourceName := range blueprint.Resources.Values {
+		// Add prefixed version: resources.{name}
 		resourceText := fmt.Sprintf("resources.%s", resourceName)
-		insertRange := getItemInsertRange(position)
 		edit := lsp.TextEdit{
 			NewText: resourceText,
 			Range:   insertRange,
@@ -1417,7 +1531,25 @@ func (s *CompletionService) getResourceCompletionItems(
 				Kind:     &resourceKind,
 				TextEdit: edit,
 				SortText: &sortText,
-				Data:     map[string]interface{}{"completionType": "resource"},
+				Data:     map[string]any{"completionType": "resource"},
+			},
+		)
+
+		// Add standalone version: {name} (without resources. prefix)
+		standaloneEdit := lsp.TextEdit{
+			NewText: resourceName,
+			Range:   insertRange,
+		}
+		standaloneSortText := fmt.Sprintf("%s1-%s", sortPrefix, resourceName)
+		resourceItems = append(
+			resourceItems,
+			&lsp.CompletionItem{
+				Label:    resourceName,
+				Detail:   &standaloneResourceDetail,
+				Kind:     &resourceKind,
+				TextEdit: standaloneEdit,
+				SortText: &standaloneSortText,
+				Data:     map[string]any{"completionType": "resourceStandalone"},
 			},
 		)
 	}
@@ -1455,7 +1587,7 @@ func (s *CompletionService) getVariableCompletionItems(
 				Kind:     &variableKind,
 				TextEdit: edit,
 				SortText: &sortText,
-				Data:     map[string]interface{}{"completionType": "variable"},
+				Data:     map[string]any{"completionType": "variable"},
 			},
 		)
 	}
@@ -1472,7 +1604,7 @@ func (s *CompletionService) getFunctionCompletionItems(
 	functionKind := lsp.CompletionItemKindFunction
 
 	functionItems := []*lsp.CompletionItem{}
-	functions, err := s.functionRegistry.ListFunctions(ctx.Context)
+	functions, err := s.functionRegistry.ListFunctions(safeContext(ctx))
 	if err != nil {
 		s.logger.Error("Failed to list functions", zap.Error(err))
 		return functionItems
@@ -1494,7 +1626,7 @@ func (s *CompletionService) getFunctionCompletionItems(
 				InsertTextFormat: &lsp.InsertTextFormatSnippet,
 				TextEdit:         edit,
 				SortText:         &sortText,
-				Data:             map[string]interface{}{"completionType": "function"},
+				Data:             map[string]any{"completionType": "function"},
 			},
 		)
 	}
@@ -1532,7 +1664,7 @@ func (s *CompletionService) getDataSourceCompletionItems(
 				Kind:     &dataSourceKind,
 				TextEdit: edit,
 				SortText: &sortText,
-				Data:     map[string]interface{}{"completionType": "dataSource"},
+				Data:     map[string]any{"completionType": "dataSource"},
 			},
 		)
 	}
@@ -1570,7 +1702,7 @@ func (s *CompletionService) getValueCompletionItems(
 				Kind:     &valueKind,
 				TextEdit: edit,
 				SortText: &sortText,
-				Data:     map[string]interface{}{"completionType": "value"},
+				Data:     map[string]any{"completionType": "value"},
 			},
 		)
 	}
@@ -1608,7 +1740,7 @@ func (s *CompletionService) getChildCompletionItems(
 				Kind:     &childKind,
 				TextEdit: edit,
 				SortText: &sortText,
-				Data:     map[string]interface{}{"completionType": "child"},
+				Data:     map[string]any{"completionType": "child"},
 			},
 		)
 	}
@@ -1632,18 +1764,36 @@ func getItemInsertRange(
 	}
 }
 
+// getItemInsertRangeWithPrefix returns a range that includes characters already typed.
+// This allows the completion to replace what the user has typed so far.
+func getItemInsertRangeWithPrefix(
+	position *lsp.Position,
+	prefixLen int,
+) *lsp.Range {
+	startChar := position.Character - lsp.UInteger(prefixLen)
+
+	return &lsp.Range{
+		Start: lsp.Position{
+			Line:      position.Line,
+			Character: startChar,
+		},
+		End: lsp.Position{
+			Line:      position.Line,
+			Character: position.Character,
+		},
+	}
+}
+
 func getOperatorInsertRange(
 	position *lsp.Position,
 	insertText string,
-	sourceContent string,
-	positionEncodingKind lsp.PositionEncodingKind,
+	isPrecededByOperator bool,
 	operatorElementPosition *source.Position,
 ) *lsp.Range {
-	index := position.IndexIn(sourceContent, positionEncodingKind)
-	sourceContentBefore := sourceContent[:index]
 	charCount := utf8.RuneCountInString(insertText)
 
-	if operatorPattern.Match([]byte(sourceContentBefore)) {
+	// If cursor is right after "operator:" field, insert at cursor position
+	if isPrecededByOperator {
 		return &lsp.Range{
 			Start: lsp.Position{
 				Line:      position.Line,
@@ -1656,6 +1806,7 @@ func getOperatorInsertRange(
 		}
 	}
 
+	// Otherwise, replace from the operator element's start position
 	start := lsp.Position{
 		Line:      lsp.UInteger(operatorElementPosition.Line) - 1,
 		Character: lsp.UInteger(operatorElementPosition.Column) - 1,
@@ -1697,7 +1848,7 @@ func (s *CompletionService) resolveResourceTypeCompletionItem(
 ) (*lsp.CompletionItem, error) {
 	resourceType := item.Label
 	descriptionOutput, err := s.resourceRegistry.GetTypeDescription(
-		ctx.Context,
+		safeContext(ctx),
 		resourceType,
 		&provider.ResourceGetTypeDescriptionInput{},
 	)
@@ -1723,7 +1874,7 @@ func (s *CompletionService) resolveDataSourceTypeCompletionItem(
 ) (*lsp.CompletionItem, error) {
 	dataSourceType := item.Label
 	descriptionOutput, err := s.dataSourceRegistry.GetTypeDescription(
-		ctx.Context,
+		safeContext(ctx),
 		dataSourceType,
 		&provider.DataSourceGetTypeDescriptionInput{},
 	)
@@ -1753,7 +1904,7 @@ func (s *CompletionService) resolveVariableTypeCompletionItem(
 	}
 
 	descriptionOutput, err := s.customVarTypeRegistry.GetDescription(
-		ctx.Context,
+		safeContext(ctx),
 		variableType,
 		&provider.CustomVariableTypeGetDescriptionInput{},
 	)
@@ -1780,7 +1931,7 @@ func (s *CompletionService) resolveFunctionCompletionItem(
 	functionName := item.Label
 
 	defOutput, err := s.functionRegistry.GetDefinition(
-		ctx.Context,
+		safeContext(ctx),
 		functionName,
 		&provider.FunctionGetDefinitionInput{},
 	)

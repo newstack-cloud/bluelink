@@ -11,7 +11,3 @@
 ### Dependencies
 
 * **blueprint-ls:** update blueprint and common libs ([ff46611](https://github.com/newstack-cloud/bluelink/commit/ff46611212a48e47f22aaacca3cde1288c9f1b01))
-
-## Changelog
-
-All notable changes to this project will be documented in this file.

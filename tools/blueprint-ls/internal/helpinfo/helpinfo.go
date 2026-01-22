@@ -261,3 +261,160 @@ func renderFieldPath(path []*substitutions.SubstitutionPathItem) string {
 
 	return sb.String()
 }
+
+// RenderResourceMetadataFieldInfo renders resource metadata field information
+// for use in help info.
+func RenderResourceMetadataFieldInfo(
+	resourceName string,
+	resource *schema.Resource,
+	resRef *substitutions.SubstitutionResourceProperty,
+) string {
+	resourceInfo := RenderBasicResourceInfo(resourceName, resource)
+	if len(resRef.Path) == 0 {
+		return resourceInfo
+	}
+
+	fieldPath := renderFieldPath(resRef.Path)
+	fieldType, description := getMetadataFieldInfo(resRef.Path)
+
+	return fmt.Sprintf(
+		"`resources.%s.%s`\n\n"+
+			"**field type:** `%s`\n\n%s\n\n"+
+			"### Resource information\n\n%s",
+		resourceName,
+		fieldPath,
+		fieldType,
+		description,
+		resourceInfo,
+	)
+}
+
+// getMetadataFieldInfo returns the type and description for a metadata path.
+func getMetadataFieldInfo(path []*substitutions.SubstitutionPathItem) (string, string) {
+	if len(path) == 0 {
+		return "object", "Resource metadata container"
+	}
+
+	firstField := path[0].FieldName
+	if firstField != "metadata" {
+		return "any", ""
+	}
+
+	if len(path) == 1 {
+		return "object", "Resource metadata containing annotations and labels"
+	}
+
+	secondField := path[1].FieldName
+	switch secondField {
+	case "annotations":
+		if len(path) == 2 {
+			return "map[string]string", "Key-value pairs for storing arbitrary metadata about the resource"
+		}
+		// Specific annotation key
+		return "string", fmt.Sprintf("Annotation value for key `%s`", path[2].FieldName)
+	case "labels":
+		if len(path) == 2 {
+			return "map[string]string", "Key-value pairs for organizing and categorizing resources"
+		}
+		// Specific label key
+		return "string", fmt.Sprintf("Label value for key `%s`", path[2].FieldName)
+	case "displayName":
+		return "string", "Human-readable display name for the resource"
+	case "custom":
+		if len(path) == 2 {
+			return "object", "Custom metadata fields defined by the resource provider"
+		}
+		return "any", "Custom metadata field"
+	}
+
+	return "any", ""
+}
+
+// RenderPathItemFieldInfo renders path item field information from a resource spec schema.
+func RenderPathItemFieldInfo(
+	fieldName string,
+	specFieldSchema *provider.ResourceDefinitionsSchema,
+) string {
+	if specFieldSchema == nil {
+		return fmt.Sprintf("`%s`", fieldName)
+	}
+
+	description := ""
+	if specFieldSchema.FormattedDescription != "" {
+		description = specFieldSchema.FormattedDescription
+	} else if specFieldSchema.Description != "" {
+		description = specFieldSchema.Description
+	}
+
+	return fmt.Sprintf(
+		"`%s`\n\n**type:** `%s`\n\n%s",
+		fieldName,
+		specFieldSchema.Type,
+		description,
+	)
+}
+
+// RenderResourceMetadataPathItemInfo renders path item information for resource metadata fields.
+func RenderResourceMetadataPathItemInfo(
+	fieldName string,
+	resRef *substitutions.SubstitutionResourceProperty,
+	pathItemIndex int,
+) string {
+	if pathItemIndex >= len(resRef.Path) {
+		return fmt.Sprintf("`%s`", fieldName)
+	}
+
+	pathToItem := resRef.Path[:pathItemIndex+1]
+	fieldType, description := getMetadataFieldInfo(pathToItem)
+	fullPath := renderFieldPath(pathToItem)
+
+	return fmt.Sprintf(
+		"`resources.%s.%s`\n\n**field type:** `%s`\n\n%s",
+		resRef.ResourceName,
+		fullPath,
+		fieldType,
+		description,
+	)
+}
+
+// RenderValuePathItemInfo renders path item information for value references.
+func RenderValuePathItemInfo(
+	fieldName string,
+	valRef *substitutions.SubstitutionValueReference,
+	pathItem *substitutions.SubstitutionPathItem,
+) string {
+	if pathItem.ArrayIndex != nil {
+		return fmt.Sprintf(
+			"`[%d]`\n\nArray index access on `values.%s`",
+			*pathItem.ArrayIndex,
+			valRef.ValueName,
+		)
+	}
+
+	return fmt.Sprintf(
+		"`%s`\n\nField access on `values.%s`",
+		fieldName,
+		valRef.ValueName,
+	)
+}
+
+// RenderChildPathItemInfo renders path item information for child references.
+func RenderChildPathItemInfo(
+	fieldName string,
+	childRef *substitutions.SubstitutionChild,
+	pathItem *substitutions.SubstitutionPathItem,
+) string {
+	if pathItem.ArrayIndex != nil {
+		return fmt.Sprintf(
+			"`[%d]`\n\nArray index access on `children.%s`",
+			*pathItem.ArrayIndex,
+			childRef.ChildName,
+		)
+	}
+
+	return fmt.Sprintf(
+		"`%s`\n\nField access on exported value from child blueprint `children.%s`",
+		fieldName,
+		childRef.ChildName,
+	)
+}

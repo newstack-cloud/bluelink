@@ -134,6 +134,15 @@ func (p StructuredPath) IsResourceSpec() bool {
 		p[2].Kind == PathSegmentField && p[2].FieldName == "spec"
 }
 
+// IsResourceDefinition returns true if path is directly inside a resource definition,
+// but not in a nested field like spec or metadata.
+// Pattern: /resources/{name} (exactly 2 segments)
+func (p StructuredPath) IsResourceDefinition() bool {
+	return len(p) == 2 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "resources" &&
+		p[1].Kind == PathSegmentField
+}
+
 // IsResourceMetadata returns true if path points to a resource metadata field.
 // Pattern: /resources/{name}/metadata/...
 func (p StructuredPath) IsResourceMetadata() bool {
@@ -144,34 +153,34 @@ func (p StructuredPath) IsResourceMetadata() bool {
 }
 
 // IsDataSourceFilter returns true if path is in a data source filter.
-// Pattern: /datasources/{name}/filter/...
+// Pattern: /datasources/{name}/filters/... (note: "filters" plural in schema tree)
 func (p StructuredPath) IsDataSourceFilter() bool {
 	return len(p) >= 3 &&
 		p[0].Kind == PathSegmentField && p[0].FieldName == "datasources" &&
 		p[1].Kind == PathSegmentField &&
-		p[2].Kind == PathSegmentField && p[2].FieldName == "filter"
+		p[2].Kind == PathSegmentField && p[2].FieldName == "filters"
 }
 
 // IsDataSourceFilterField returns true if path points to a filter field.
-// Pattern: /datasources/{name}/filter/{index}/field
+// Pattern: /datasources/{name}/filters/{index}/filter/field (6 segments)
 func (p StructuredPath) IsDataSourceFilterField() bool {
-	return len(p) == 5 &&
+	return len(p) == 6 &&
 		p[0].Kind == PathSegmentField && p[0].FieldName == "datasources" &&
 		p[1].Kind == PathSegmentField &&
-		p[2].Kind == PathSegmentField && p[2].FieldName == "filter" &&
-		p[3].Kind == PathSegmentIndex &&
-		p[4].Kind == PathSegmentField && p[4].FieldName == "field"
+		p[2].Kind == PathSegmentField && p[2].FieldName == "filters" &&
+		p[4].Kind == PathSegmentField && p[4].FieldName == "filter" &&
+		p[5].Kind == PathSegmentField && p[5].FieldName == "field"
 }
 
 // IsDataSourceFilterOperator returns true if path points to a filter operator.
-// Pattern: /datasources/{name}/filter/{index}/operator
+// Pattern: /datasources/{name}/filters/{index}/filter/operator (6 segments)
 func (p StructuredPath) IsDataSourceFilterOperator() bool {
-	return len(p) == 5 &&
+	return len(p) == 6 &&
 		p[0].Kind == PathSegmentField && p[0].FieldName == "datasources" &&
 		p[1].Kind == PathSegmentField &&
-		p[2].Kind == PathSegmentField && p[2].FieldName == "filter" &&
-		p[3].Kind == PathSegmentIndex &&
-		p[4].Kind == PathSegmentField && p[4].FieldName == "operator"
+		p[2].Kind == PathSegmentField && p[2].FieldName == "filters" &&
+		p[4].Kind == PathSegmentField && p[4].FieldName == "filter" &&
+		p[5].Kind == PathSegmentField && p[5].FieldName == "operator"
 }
 
 // GetResourceName returns the resource name if path is under a resource.
@@ -211,9 +220,14 @@ func (p StructuredPath) GetValueName() (string, bool) {
 }
 
 // GetSpecPath returns the path segments after /resources/{name}/spec/.
+// Returns an empty slice when at the root of spec (path length == 3),
+// or nil if not in a resource spec path.
 func (p StructuredPath) GetSpecPath() []PathSegment {
-	if !p.IsResourceSpec() || len(p) <= 3 {
+	if !p.IsResourceSpec() {
 		return nil
+	}
+	if len(p) == 3 {
+		return []PathSegment{}
 	}
 	return p[3:]
 }

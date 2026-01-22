@@ -6,8 +6,9 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
 	"github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"go.uber.org/zap"
@@ -31,16 +32,34 @@ func NewSignatureService(
 	}
 }
 
+// UpdateRegistry updates the function registry used by the signature service.
+// This is called after plugin loading to include plugin-provided functions.
+func (s *SignatureService) UpdateRegistry(funcRegistry provider.FunctionRegistry) {
+	s.funcRegistry = funcRegistry
+}
+
 // GetFunctionSignatures returns the function signatures for the given
-// blueprint and signature help parameters including the current position
-// in the source document.
+// document context and signature help parameters including the current position
+// in the source document. Uses DocumentContext for position resolution.
 func (s *SignatureService) GetFunctionSignatures(
 	ctx *common.LSPContext,
-	tree *schema.TreeNode,
+	docCtx *docmodel.DocumentContext,
 	params *lsp.TextDocumentPositionParams,
 ) ([]*lsp.SignatureInformation, error) {
+	if docCtx == nil {
+		return []*lsp.SignatureInformation{}, nil
+	}
+
 	s.logger.Debug("Searching for function at position", zap.Any("position", params.Position))
-	subFunc := findFunctionAtPosition(tree, params.Position, s.logger)
+
+	// Convert LSP position to source.Position (1-based)
+	pos := source.Position{
+		Line:   int(params.Position.Line + 1),
+		Column: int(params.Position.Character + 1),
+	}
+
+	// Find the deepest function at the position using DocumentContext
+	subFunc := docCtx.FindFunctionAtPosition(pos)
 	if subFunc == nil {
 		return []*lsp.SignatureInformation{}, nil
 	}
@@ -53,7 +72,7 @@ func (s *SignatureService) SignatureInfoFromFunction(
 	ctx *common.LSPContext,
 ) ([]*lsp.SignatureInformation, error) {
 	defOutput, err := s.funcRegistry.GetDefinition(
-		ctx.Context,
+		safeContext(ctx),
 		string(subFunc.FunctionName),
 		&provider.FunctionGetDefinitionInput{},
 	)
@@ -80,38 +99,6 @@ func (s *SignatureService) SignatureInfoFromFunction(
 			Parameters:    createLSPParams(paramLabels, defOutput.Definition.Parameters),
 		},
 	}, nil
-}
-
-func findFunctionAtPosition(
-	tree *schema.TreeNode,
-	pos lsp.Position,
-	logger *zap.Logger,
-) *substitutions.SubstitutionFunctionExpr {
-	if tree == nil {
-		return nil
-	}
-
-	subFunc := (*substitutions.SubstitutionFunctionExpr)(nil)
-	if containsLSPPoint(tree.Range, pos, 0 /* columnLeeway */) {
-		var isParentSubFunc bool
-		subFunc, isParentSubFunc = tree.SchemaElement.(*substitutions.SubstitutionFunctionExpr)
-		if isParentSubFunc && len(tree.Children) == 0 {
-			return subFunc
-		}
-
-		i := 0
-		subFuncFromChildren := (*substitutions.SubstitutionFunctionExpr)(nil)
-		for subFuncFromChildren == nil && i < len(tree.Children) {
-			subFuncFromChildren = findFunctionAtPosition(tree.Children[i], pos, logger)
-			i += 1
-		}
-
-		if subFuncFromChildren != nil {
-			subFunc = subFuncFromChildren
-		}
-	}
-
-	return subFunc
 }
 
 func createFuncDocumentation(def *function.Definition) any {

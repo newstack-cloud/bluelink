@@ -1,8 +1,9 @@
 package languageservices
 
 import (
-	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
-	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/blueprint"
+	"strings"
+
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"go.uber.org/zap"
 )
@@ -25,15 +26,26 @@ func NewSymbolService(
 	}
 }
 
-// GetDocumentSymbols returns the symbols in the given blueprint schema.
-func (s *SymbolService) GetDocumentSymbols(
-	docURI lsp.URI,
-	content string,
+// GetDocumentSymbolsFromContext returns symbols using the unified document model.
+func (s *SymbolService) GetDocumentSymbolsFromContext(
+	docCtx *docmodel.DocumentContext,
 ) ([]lsp.DocumentSymbol, error) {
-	format := blueprint.DetermineDocFormat(docURI)
-	if format == schema.JWCCSpecFormat {
-		return s.getJSONDocumentSymbols(docURI, content)
+	if docCtx == nil {
+		return []lsp.DocumentSymbol{}, nil
 	}
 
-	return s.getYAMLDocumentSymbols(docURI, content)
+	ast := docCtx.GetEffectiveAST()
+	if ast == nil {
+		return []lsp.DocumentSymbol{}, nil
+	}
+
+	totalLines := countLines(docCtx.Content)
+	return docmodel.BuildDocumentSymbols(ast, totalLines), nil
+}
+
+func countLines(content string) int {
+	if content == "" {
+		return 0
+	}
+	return len(strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n"))
 }

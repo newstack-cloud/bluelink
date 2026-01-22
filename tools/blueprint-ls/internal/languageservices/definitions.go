@@ -2,23 +2,22 @@ package languageservices
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"go.uber.org/zap"
 )
 
-// GotoDefinitionService is a service that provides the functionality
-// to go to the definition of a symbol in a blueprint.
+// GotoDefinitionService provides go-to-definition functionality for blueprint documents.
 type GotoDefinitionService struct {
 	state  *State
 	logger *zap.Logger
 }
 
-// NewGotoDefinitionService creates a new service for go to definition
-// support.
+// NewGotoDefinitionService creates a new service for go-to-definition support.
 func NewGotoDefinitionService(
 	state *State,
 	logger *zap.Logger,
@@ -29,135 +28,64 @@ func NewGotoDefinitionService(
 	}
 }
 
-// GetDefinitions returns the definition links for the symbol at the given
-// position.
-func (s *GotoDefinitionService) GetDefinitions(
-	content string,
-	tree *schema.TreeNode,
-	blueprint *schema.Blueprint,
+// GetDefinitionsFromContext returns definition links using the DocumentContext.
+func (s *GotoDefinitionService) GetDefinitionsFromContext(
+	docCtx *docmodel.DocumentContext,
 	params *lsp.TextDocumentPositionParams,
 ) ([]lsp.LocationLink, error) {
+	if docCtx == nil || docCtx.SchemaTree == nil || docCtx.Blueprint == nil {
+		return []lsp.LocationLink{}, nil
+	}
 
-	// The last element in the collected list is the element with the shortest
-	// range that contains the position.
-	collected := []*schema.TreeNode{}
-	collectElementsAtPosition(tree, params.Position, s.logger, &collected, CompletionColumnLeeway)
+	pos := source.Position{
+		Line:   int(params.Position.Line + 1),
+		Column: int(params.Position.Character + 1),
+	}
 
-	return s.getDefinitionLinks(
-		params.TextDocument.URI,
-		blueprint,
-		collected,
-		tree,
-	)
-}
-
-func (s *GotoDefinitionService) getDefinitionLinks(
-	docURI lsp.URI,
-	blueprint *schema.Blueprint,
-	collected []*schema.TreeNode,
-	tree *schema.TreeNode,
-) ([]lsp.LocationLink, error) {
-
+	collected := docCtx.CollectSchemaNodesAtPosition(pos, CompletionColumnLeeway)
 	if len(collected) == 0 {
 		return []lsp.LocationLink{}, nil
 	}
 
-	// Work backwards through the collected elements to find the first element
-	// of a type that supports definition links.
-	var node *schema.TreeNode
-	var elementType string
-	i := len(collected) - 1
-	for node == nil && i >= 0 {
-		pathParts := strings.Split(collected[i].Path, "/")
-		node, elementType = s.matchDefinitionElement(
-			collected,
-			i,
-			pathParts,
-		)
-		i -= 1
-	}
-
-	switch elementType {
-	case "resourceRef":
-		return s.getResourceRefLocationLink(docURI, blueprint, node, tree)
-	case "datasourceRef":
-		return s.getDataSourceRefLocationLink(docURI, blueprint, node, tree)
-	case "varRef":
-		return s.getVarRefLocationLink(docURI, blueprint, node, tree)
-	case "valRef":
-		return s.getValRefLocationLink(docURI, blueprint, node, tree)
-	case "childRef":
-		return s.getChildRefLocationLink(docURI, blueprint, node, tree)
-	default:
-		return []lsp.LocationLink{}, nil
-	}
+	return s.findDefinitionLink(
+		params.TextDocument.URI,
+		docCtx.Blueprint,
+		docCtx.SchemaTree,
+		collected,
+	)
 }
 
-func (s *GotoDefinitionService) matchDefinitionElement(
+// findDefinitionLink searches the collected nodes for a definition target.
+func (s *GotoDefinitionService) findDefinitionLink(
+	docURI lsp.URI,
+	blueprint *schema.Blueprint,
+	tree *schema.TreeNode,
 	collected []*schema.TreeNode,
-	index int,
-	pathParts []string,
-) (*schema.TreeNode, string) {
+) ([]lsp.LocationLink, error) {
+	// Work backwards through collected elements to find the first element
+	// of a type that supports definition links.
+	for i := len(collected) - 1; i >= 0; i-- {
+		node := collected[i]
+		kind := docmodel.KindFromSchemaElement(node.SchemaElement)
 
-	if s.isResourceRef(pathParts) {
-		return collected[index], "resourceRef"
+		switch kind {
+		case docmodel.SchemaElementResourceRef:
+			return s.buildResourceRefLink(docURI, blueprint, node, tree)
+		case docmodel.SchemaElementDataSourceRef:
+			return s.buildDataSourceRefLink(docURI, blueprint, node, tree)
+		case docmodel.SchemaElementVariableRef:
+			return s.buildVariableRefLink(docURI, blueprint, node, tree)
+		case docmodel.SchemaElementValueRef:
+			return s.buildValueRefLink(docURI, blueprint, node, tree)
+		case docmodel.SchemaElementChildRef:
+			return s.buildChildRefLink(docURI, blueprint, node, tree)
+		}
 	}
 
-	if s.isDataSourceRef(pathParts) {
-		return collected[index], "datasourceRef"
-	}
-
-	if s.isVariableRef(pathParts) {
-		return collected[index], "varRef"
-	}
-
-	if s.isValueRef(pathParts) {
-		return collected[index], "valRef"
-	}
-
-	if s.isChildRef(pathParts) {
-		return collected[index], "childRef"
-	}
-
-	return nil, ""
+	return []lsp.LocationLink{}, nil
 }
 
-func (s *GotoDefinitionService) isResourceRef(
-	pathParts []string,
-) bool {
-	return len(pathParts) > 2 &&
-		pathParts[len(pathParts)-2] == "resourceRef"
-}
-
-func (s *GotoDefinitionService) isDataSourceRef(
-	pathParts []string,
-) bool {
-	return len(pathParts) > 2 &&
-		pathParts[len(pathParts)-2] == "datasourceRef"
-}
-
-func (s *GotoDefinitionService) isVariableRef(
-	pathParts []string,
-) bool {
-	return len(pathParts) > 2 &&
-		pathParts[len(pathParts)-2] == "varRef"
-}
-
-func (s *GotoDefinitionService) isValueRef(
-	pathParts []string,
-) bool {
-	return len(pathParts) > 2 &&
-		pathParts[len(pathParts)-2] == "valRef"
-}
-
-func (s *GotoDefinitionService) isChildRef(
-	pathParts []string,
-) bool {
-	return len(pathParts) > 2 &&
-		pathParts[len(pathParts)-2] == "childRef"
-}
-
-func (s *GotoDefinitionService) getResourceRefLocationLink(
+func (s *GotoDefinitionService) buildResourceRefLink(
 	docURI lsp.URI,
 	blueprint *schema.Blueprint,
 	node *schema.TreeNode,
@@ -167,35 +95,23 @@ func (s *GotoDefinitionService) getResourceRefLocationLink(
 		return []lsp.LocationLink{}, nil
 	}
 
-	locationLinks := []lsp.LocationLink{}
-
-	resourceProp, isResourceProp := node.SchemaElement.(*substitutions.SubstitutionResourceProperty)
-	if !isResourceProp {
-		return locationLinks, nil
+	resourceProp, ok := node.SchemaElement.(*substitutions.SubstitutionResourceProperty)
+	if !ok {
+		return []lsp.LocationLink{}, nil
 	}
 
-	resourceNode := findNodeByPath(
+	targetNode := findSchemaNodeByPath(
 		rootNode,
 		fmt.Sprintf("/resources/%s", resourceProp.ResourceName),
-		s.logger,
 	)
-	if resourceNode == nil {
-		return locationLinks, nil
+	if targetNode == nil {
+		return []lsp.LocationLink{}, nil
 	}
 
-	targetRange := rangeToLSPRange(resourceNode.Range)
-
-	return []lsp.LocationLink{
-		{
-			OriginSelectionRange: rangeToLSPRange(node.Range),
-			TargetURI:            docURI,
-			TargetRange:          *targetRange,
-			TargetSelectionRange: *targetRange,
-		},
-	}, nil
+	return buildLocationLink(docURI, node.Range, targetNode.Range), nil
 }
 
-func (s *GotoDefinitionService) getDataSourceRefLocationLink(
+func (s *GotoDefinitionService) buildDataSourceRefLink(
 	docURI lsp.URI,
 	blueprint *schema.Blueprint,
 	node *schema.TreeNode,
@@ -205,35 +121,23 @@ func (s *GotoDefinitionService) getDataSourceRefLocationLink(
 		return []lsp.LocationLink{}, nil
 	}
 
-	locationLinks := []lsp.LocationLink{}
-
-	dataSourceProp, isDataSourceProp := node.SchemaElement.(*substitutions.SubstitutionDataSourceProperty)
-	if !isDataSourceProp {
-		return locationLinks, nil
+	dataSourceProp, ok := node.SchemaElement.(*substitutions.SubstitutionDataSourceProperty)
+	if !ok {
+		return []lsp.LocationLink{}, nil
 	}
 
-	dataSourceNode := findNodeByPath(
+	targetNode := findSchemaNodeByPath(
 		rootNode,
 		fmt.Sprintf("/datasources/%s", dataSourceProp.DataSourceName),
-		s.logger,
 	)
-	if dataSourceNode == nil {
-		return locationLinks, nil
+	if targetNode == nil {
+		return []lsp.LocationLink{}, nil
 	}
 
-	targetRange := rangeToLSPRange(dataSourceNode.Range)
-
-	return []lsp.LocationLink{
-		{
-			OriginSelectionRange: rangeToLSPRange(node.Range),
-			TargetURI:            docURI,
-			TargetRange:          *targetRange,
-			TargetSelectionRange: *targetRange,
-		},
-	}, nil
+	return buildLocationLink(docURI, node.Range, targetNode.Range), nil
 }
 
-func (s *GotoDefinitionService) getVarRefLocationLink(
+func (s *GotoDefinitionService) buildVariableRefLink(
 	docURI lsp.URI,
 	blueprint *schema.Blueprint,
 	node *schema.TreeNode,
@@ -243,35 +147,23 @@ func (s *GotoDefinitionService) getVarRefLocationLink(
 		return []lsp.LocationLink{}, nil
 	}
 
-	locationLinks := []lsp.LocationLink{}
-
-	varProp, isVarProp := node.SchemaElement.(*substitutions.SubstitutionVariable)
-	if !isVarProp {
-		return locationLinks, nil
+	varProp, ok := node.SchemaElement.(*substitutions.SubstitutionVariable)
+	if !ok {
+		return []lsp.LocationLink{}, nil
 	}
 
-	varNode := findNodeByPath(
+	targetNode := findSchemaNodeByPath(
 		rootNode,
 		fmt.Sprintf("/variables/%s", varProp.VariableName),
-		s.logger,
 	)
-	if varNode == nil {
-		return locationLinks, nil
+	if targetNode == nil {
+		return []lsp.LocationLink{}, nil
 	}
 
-	targetRange := rangeToLSPRange(varNode.Range)
-
-	return []lsp.LocationLink{
-		{
-			OriginSelectionRange: rangeToLSPRange(node.Range),
-			TargetURI:            docURI,
-			TargetRange:          *targetRange,
-			TargetSelectionRange: *targetRange,
-		},
-	}, nil
+	return buildLocationLink(docURI, node.Range, targetNode.Range), nil
 }
 
-func (s *GotoDefinitionService) getValRefLocationLink(
+func (s *GotoDefinitionService) buildValueRefLink(
 	docURI lsp.URI,
 	blueprint *schema.Blueprint,
 	node *schema.TreeNode,
@@ -281,35 +173,23 @@ func (s *GotoDefinitionService) getValRefLocationLink(
 		return []lsp.LocationLink{}, nil
 	}
 
-	locationLinks := []lsp.LocationLink{}
-
-	valProp, isValProp := node.SchemaElement.(*substitutions.SubstitutionValueReference)
-	if !isValProp {
-		return locationLinks, nil
+	valProp, ok := node.SchemaElement.(*substitutions.SubstitutionValueReference)
+	if !ok {
+		return []lsp.LocationLink{}, nil
 	}
 
-	valNode := findNodeByPath(
+	targetNode := findSchemaNodeByPath(
 		rootNode,
 		fmt.Sprintf("/values/%s", valProp.ValueName),
-		s.logger,
 	)
-	if valNode == nil {
-		return locationLinks, nil
+	if targetNode == nil {
+		return []lsp.LocationLink{}, nil
 	}
 
-	targetRange := rangeToLSPRange(valNode.Range)
-
-	return []lsp.LocationLink{
-		{
-			OriginSelectionRange: rangeToLSPRange(node.Range),
-			TargetURI:            docURI,
-			TargetRange:          *targetRange,
-			TargetSelectionRange: *targetRange,
-		},
-	}, nil
+	return buildLocationLink(docURI, node.Range, targetNode.Range), nil
 }
 
-func (s *GotoDefinitionService) getChildRefLocationLink(
+func (s *GotoDefinitionService) buildChildRefLink(
 	docURI lsp.URI,
 	blueprint *schema.Blueprint,
 	node *schema.TreeNode,
@@ -319,30 +199,55 @@ func (s *GotoDefinitionService) getChildRefLocationLink(
 		return []lsp.LocationLink{}, nil
 	}
 
-	locationLinks := []lsp.LocationLink{}
-
-	childProp, isChildProp := node.SchemaElement.(*substitutions.SubstitutionChild)
-	if !isChildProp {
-		return locationLinks, nil
+	childProp, ok := node.SchemaElement.(*substitutions.SubstitutionChild)
+	if !ok {
+		return []lsp.LocationLink{}, nil
 	}
 
-	childNode := findNodeByPath(
+	targetNode := findSchemaNodeByPath(
 		rootNode,
 		fmt.Sprintf("/includes/%s", childProp.ChildName),
-		s.logger,
 	)
-	if childNode == nil {
-		return locationLinks, nil
+	if targetNode == nil {
+		return []lsp.LocationLink{}, nil
 	}
 
-	targetRange := rangeToLSPRange(childNode.Range)
+	return buildLocationLink(docURI, node.Range, targetNode.Range), nil
+}
+
+// findSchemaNodeByPath searches for a schema node by path string.
+func findSchemaNodeByPath(node *schema.TreeNode, targetPath string) *schema.TreeNode {
+	if node == nil {
+		return nil
+	}
+
+	if node.Path == targetPath {
+		return node
+	}
+
+	for _, child := range node.Children {
+		if found := findSchemaNodeByPath(child, targetPath); found != nil {
+			return found
+		}
+	}
+
+	return nil
+}
+
+// buildLocationLink creates a LocationLink slice from origin and target ranges.
+func buildLocationLink(docURI lsp.URI, originRange, targetRange *source.Range) []lsp.LocationLink {
+	origin := rangeToLSPRange(originRange)
+	target := rangeToLSPRange(targetRange)
+	if target == nil {
+		return []lsp.LocationLink{}
+	}
 
 	return []lsp.LocationLink{
 		{
-			OriginSelectionRange: rangeToLSPRange(node.Range),
+			OriginSelectionRange: origin,
 			TargetURI:            docURI,
-			TargetRange:          *targetRange,
-			TargetSelectionRange: *targetRange,
+			TargetRange:          *target,
+			TargetSelectionRange: *target,
 		},
-	}, nil
+	}
 }

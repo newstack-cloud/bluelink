@@ -2,7 +2,6 @@ package languageservices
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -39,7 +38,6 @@ func (s *DiagnosticErrorService) BlueprintErrorToDiagnostics(
 ) []lsp.Diagnostic {
 	diagnostics := []lsp.Diagnostic{}
 
-	s.logger.Debug("blueprintErrorToDiagnostics, err type", zap.String("type", reflect.TypeOf(err).String()))
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	if isLoadErr {
 		s.collectLoadErrors(loadErr, &diagnostics, nil, docURI)
@@ -95,18 +93,14 @@ func (s *DiagnosticErrorService) collectLoadErrors(
 	parentLoadErr *errors.LoadError,
 	docURI lsp.URI,
 ) {
-	s.logger.Debug("load error", zap.String("error", err.Error()), zap.Int("child error count", len(err.ChildErrors)))
 	for _, childErr := range err.ChildErrors {
-		s.logger.Debug("child error type", zap.String("type", reflect.TypeOf(childErr).String()))
 		childLoadErr, isLoadErr := childErr.(*errors.LoadError)
 		if isLoadErr {
-			s.logger.Debug("child load error", zap.String("error", childLoadErr.Error()))
 			s.collectLoadErrors(childLoadErr, diagnostics, err, docURI)
 		}
 
 		childSchemaErr, isSchemaErr := childErr.(*schema.Error)
 		if isSchemaErr {
-			s.logger.Debug("child schema error", zap.String("error", childSchemaErr.Error()))
 			s.collectSchemaError(childSchemaErr, diagnostics, docURI)
 		}
 
@@ -147,7 +141,6 @@ func (s *DiagnosticErrorService) collectLoadErrors(
 	}
 
 	if len(err.ChildErrors) == 0 {
-		s.logger.Debug("adding diagnostics for error", zap.String("error", err.Error()))
 		severity := lsp.DiagnosticSeverityError
 		source := "blueprint-validator"
 
@@ -187,6 +180,27 @@ func formatLoadErrorWithContext(err *errors.LoadError) string {
 
 	sb := strings.Builder{}
 	sb.WriteString(err.Err.Error())
+
+	// Add typo suggestions if available (from schema validation)
+	if err.Context.Metadata != nil {
+		if suggestions, ok := err.Context.Metadata["suggestions"].([]string); ok && len(suggestions) > 0 {
+			sb.WriteString("\n\nDid you mean: ")
+			sb.WriteString(strings.Join(suggestions, ", "))
+			sb.WriteString("?")
+		}
+
+		// Add available fields hint
+		if fields, ok := err.Context.Metadata["availableFields"].([]string); ok && len(fields) > 0 {
+			sb.WriteString("\n\nAvailable fields: ")
+			if len(fields) <= 8 {
+				sb.WriteString(strings.Join(fields, ", "))
+			} else {
+				// Show first 8 fields with ellipsis for large schemas
+				sb.WriteString(strings.Join(fields[:8], ", "))
+				sb.WriteString(fmt.Sprintf(", ... (%d more)", len(fields)-8))
+			}
+		}
+	}
 
 	if len(err.Context.SuggestedActions) > 0 {
 		sb.WriteString("\n\nSuggested Actions:\n")
@@ -239,6 +253,30 @@ func (s *DiagnosticErrorService) rangeFromBlueprintErrorLocation(
 		Line:      lsp.UInteger(startPos.Line - 1),
 		Character: lsp.UInteger(startPos.Column - 1),
 	}
+
+	// Use end position if available for precise diagnostic ranges,
+	// but only when column accuracy is exact. For approximate columns
+	// (e.g., YAML block strings), the start position is unreliable
+	// so we highlight the whole line instead.
+	colAccuracy := location.ColumnAccuracy()
+	hasExactColumn := !location.UseColumnAccuracy() ||
+		(colAccuracy != nil && *colAccuracy == substitutions.ColumnAccuracyExact)
+
+	endLine := location.EndLine()
+	endCol := location.EndColumn()
+
+	if hasExactColumn && endLine != nil && endCol != nil {
+		return lsp.Range{
+			Start: start,
+			End: lsp.Position{
+				Line:      lsp.UInteger(*endLine - 1),
+				Character: lsp.UInteger(*endCol - 1),
+			},
+		}
+	}
+
+	// Fallback: highlight to end of next line when column is approximate
+	// or no end position available.
 	return lsp.Range{
 		Start: start,
 		End: lsp.Position{

@@ -47,6 +47,7 @@ const (
 	SchemaElementChildRef
 	SchemaElementElemRef
 	SchemaElementElemIndexRef
+	SchemaElementPathItem
 
 	// Value nodes
 	SchemaElementScalar
@@ -84,6 +85,8 @@ func KindFromSchemaElement(elem any) SchemaElementKind {
 		return SchemaElementElemRef
 	case *substitutions.SubstitutionElemIndexReference:
 		return SchemaElementElemIndexRef
+	case *substitutions.SubstitutionPathItem:
+		return SchemaElementPathItem
 
 	// Schema structures
 	case *schema.Blueprint:
@@ -151,6 +154,7 @@ var schemaElementKindNames = map[SchemaElementKind]string{
 	SchemaElementChildRef:                 "child_ref",
 	SchemaElementElemRef:                  "elem_ref",
 	SchemaElementElemIndexRef:             "elem_index_ref",
+	SchemaElementPathItem:                 "path_item",
 	SchemaElementScalar:                   "scalar",
 	SchemaElementMapping:                  "mapping",
 	SchemaElementSequence:                 "sequence",
@@ -189,7 +193,8 @@ func (k SchemaElementKind) IsSubstitution() bool {
 		SchemaElementDataSourceRef,
 		SchemaElementChildRef,
 		SchemaElementElemRef,
-		SchemaElementElemIndexRef:
+		SchemaElementElemIndexRef,
+		SchemaElementPathItem:
 		return true
 	}
 	return false

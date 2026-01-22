@@ -3,12 +3,9 @@ package languageservices
 import (
 	"sync"
 
-	"github.com/coreos/go-json"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
-	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/blueprint"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
-	"gopkg.in/yaml.v3"
 )
 
 // State holds the state shared between language server services
@@ -20,30 +17,18 @@ type State struct {
 	hasLinkSupportCapability                bool
 	documentSettings                        map[string]*DocSettings
 	documentContent                         map[string]string
-	documentSchemas                         map[string]*schema.Blueprint
-	// YAML document hierarchy representation to extract document symbols
-	// from.
-	documentYAMLNodes map[string]*yaml.Node
-	// JSON document hierarchy representation to extract document symbols
-	// from.
-	documentJSONNodes    map[string]*json.Node
-	documentPositionMaps map[string]map[string][]*schema.TreeNode
-	documentTrees        map[string]*schema.TreeNode
-	positionEncodingKind lsp.PositionEncodingKind
-	lock                 sync.Mutex
+	documentContexts                        map[string]*docmodel.DocumentContext
+	positionEncodingKind                    lsp.PositionEncodingKind
+	lock                                    sync.Mutex
 }
 
 // NewState creates a new instance of the state service
 // for the language server.
 func NewState() *State {
 	return &State{
-		documentSettings:     make(map[string]*DocSettings),
-		documentContent:      make(map[string]string),
-		documentSchemas:      make(map[string]*schema.Blueprint),
-		documentPositionMaps: make(map[string]map[string][]*schema.TreeNode),
-		documentYAMLNodes:    make(map[string]*yaml.Node),
-		documentJSONNodes:    make(map[string]*json.Node),
-		documentTrees:        make(map[string]*schema.TreeNode),
+		documentSettings: make(map[string]*DocSettings),
+		documentContent:  make(map[string]string),
+		documentContexts: make(map[string]*docmodel.DocumentContext),
 	}
 }
 
@@ -152,127 +137,48 @@ func (s *State) SetDocumentContent(uri string, content string) {
 	s.documentContent[uri] = content
 }
 
+// GetDocumentContext retrieves the DocumentContext for a document by its URI.
+func (s *State) GetDocumentContext(uri string) *docmodel.DocumentContext {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	ctx, ok := s.documentContexts[uri]
+	if !ok {
+		return nil
+	}
+	return ctx
+}
+
+// SetDocumentContext sets the DocumentContext for a document by its URI.
+func (s *State) SetDocumentContext(uri string, ctx *docmodel.DocumentContext) {
+	if ctx == nil {
+		return
+	}
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.documentContexts[uri] = ctx
+}
+
 // GetDocumentSchema retrieves the parsed blueprint schema for a document by its URI.
 func (s *State) GetDocumentSchema(uri string) *schema.Blueprint {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	blueprint, ok := s.documentSchemas[uri]
-	if !ok {
+	ctx, ok := s.documentContexts[uri]
+	if !ok || ctx == nil {
 		return nil
 	}
-	return blueprint
-}
-
-// SetDocumentSchema sets the parsed blueprint schema for a document by its URI.
-func (s *State) SetDocumentSchema(uri string, blueprint *schema.Blueprint) {
-	if blueprint == nil {
-		return
-	}
-
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.documentSchemas[uri] = blueprint
-}
-
-// GetDocumentYAMLNode retrieves the YAML node for a document by its URI.
-func (s *State) GetDocumentYAMLNode(uri string) *yaml.Node {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	node, ok := s.documentYAMLNodes[uri]
-	if !ok {
-		return nil
-	}
-	return node
-}
-
-// SetDocumentYAMLNode sets the YAML node for a document by its URI.
-func (s *State) SetDocumentYAMLNode(uri string, node *yaml.Node) {
-	if node == nil {
-		return
-	}
-
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.documentYAMLNodes[uri] = node
-}
-
-// GetDocumentJSONNode retrieves the JSON node for a document by its URI.
-func (s *State) GetDocumentJSONNode(uri string) *json.Node {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	node, ok := s.documentJSONNodes[uri]
-	if !ok {
-		return nil
-	}
-	return node
-}
-
-// SetDocumentJSONNode sets the JSON node for a document by its URI.
-func (s *State) SetDocumentJSONNode(uri string, node *json.Node) {
-	if node == nil {
-		return
-	}
-
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.documentJSONNodes[uri] = node
-}
-
-// SetDocumentTree sets the document tree for a document by its URI.
-// The tree is ordered in position from left to right with ranges assigned
-// to each node in the tree.
-// This makes it easier to match elements to positions in the document
-// for features such as signature help and hover.
-func (s *State) SetDocumentTree(uri string, tree *schema.TreeNode) {
-	if tree == nil {
-		return
-	}
-
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.documentTrees[uri] = tree
+	return ctx.Blueprint
 }
 
 // GetDocumentTree retrieves the document tree for a document by its URI.
 func (s *State) GetDocumentTree(uri string) *schema.TreeNode {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	tree, ok := s.documentTrees[uri]
-	if !ok {
+	ctx, ok := s.documentContexts[uri]
+	if !ok || ctx == nil {
 		return nil
 	}
-
-	return tree
-}
-
-// SetDocumentPositionMap sets the document position map for a document by its URI.
-// This maps positions in the document to nodes in the document tree.
-func (s *State) SetDocumentPositionMap(uri string, positionMap map[string][]*schema.TreeNode) {
-	if positionMap == nil {
-		return
-	}
-
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.documentPositionMaps[uri] = positionMap
-}
-
-// GetDocumentPositionMapNodes retrieves the nodes in the document tree for a document by its URI
-// at a given position.
-func (s *State) GetDocumentPositionNodes(uri string, position *source.Position) []*schema.TreeNode {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	positionMap, ok := s.documentPositionMaps[uri]
-	if !ok {
-		return nil
-	}
-
-	nodes, ok := positionMap[blueprint.PositionKey(position)]
-	if !ok {
-		return nil
-	}
-
-	return nodes
+	return ctx.SchemaTree
 }
 
 // GetDocumentSettings retrieves the settings for a document by its URI.

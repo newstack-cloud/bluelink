@@ -178,19 +178,138 @@ func (s *PathSuite) TestStructuredPath_IsResourceSpec() {
 	}
 }
 
-func (s *PathSuite) TestStructuredPath_GetSpecPath() {
-	path := StructuredPath{
-		{Kind: PathSegmentField, FieldName: "resources"},
-		{Kind: PathSegmentField, FieldName: "myResource"},
-		{Kind: PathSegmentField, FieldName: "spec"},
-		{Kind: PathSegmentField, FieldName: "tableName"},
-		{Kind: PathSegmentField, FieldName: "value"},
+func (s *PathSuite) TestStructuredPath_IsResourceDefinition() {
+	tests := []struct {
+		name     string
+		path     StructuredPath
+		expected bool
+	}{
+		{
+			name: "at resource definition level",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "myResource"},
+			},
+			expected: true,
+		},
+		{
+			name: "in resource spec",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "myResource"},
+				{Kind: PathSegmentField, FieldName: "spec"},
+			},
+			expected: false,
+		},
+		{
+			name: "in resource type",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "myResource"},
+				{Kind: PathSegmentField, FieldName: "type"},
+			},
+			expected: false,
+		},
+		{
+			name: "at resources level only",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+			},
+			expected: false,
+		},
+		{
+			name: "empty path",
+			path: StructuredPath{},
+			expected: false,
+		},
 	}
 
-	specPath := path.GetSpecPath()
-	s.Assert().Len(specPath, 2)
-	s.Assert().Equal("tableName", specPath[0].FieldName)
-	s.Assert().Equal("value", specPath[1].FieldName)
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			s.Assert().Equal(tt.expected, tt.path.IsResourceDefinition())
+		})
+	}
+}
+
+func (s *PathSuite) TestStructuredPath_GetSpecPath() {
+	tests := []struct {
+		name           string
+		path           StructuredPath
+		expectedLen    int
+		expectedNil    bool
+		expectedFields []string
+	}{
+		{
+			name: "nested spec path returns segments after spec",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "myResource"},
+				{Kind: PathSegmentField, FieldName: "spec"},
+				{Kind: PathSegmentField, FieldName: "tableName"},
+				{Kind: PathSegmentField, FieldName: "value"},
+			},
+			expectedLen:    2,
+			expectedNil:    false,
+			expectedFields: []string{"tableName", "value"},
+		},
+		{
+			name: "at spec root returns empty slice not nil",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "myResource"},
+				{Kind: PathSegmentField, FieldName: "spec"},
+			},
+			expectedLen:    0,
+			expectedNil:    false,
+			expectedFields: []string{},
+		},
+		{
+			name: "one level deep in spec",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "myResource"},
+				{Kind: PathSegmentField, FieldName: "spec"},
+				{Kind: PathSegmentField, FieldName: "handler"},
+			},
+			expectedLen:    1,
+			expectedNil:    false,
+			expectedFields: []string{"handler"},
+		},
+		{
+			name: "not a spec path returns nil",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "myResource"},
+				{Kind: PathSegmentField, FieldName: "type"},
+			},
+			expectedLen: 0,
+			expectedNil: true,
+		},
+		{
+			name: "variables path returns nil",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "variables"},
+				{Kind: PathSegmentField, FieldName: "myVar"},
+			},
+			expectedLen: 0,
+			expectedNil: true,
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			specPath := tt.path.GetSpecPath()
+			if tt.expectedNil {
+				s.Assert().Nil(specPath)
+			} else {
+				s.Assert().NotNil(specPath)
+				s.Assert().Len(specPath, tt.expectedLen)
+				for i, expectedField := range tt.expectedFields {
+					s.Assert().Equal(expectedField, specPath[i].FieldName)
+				}
+			}
+		})
+	}
 }
 
 func (s *PathSuite) TestStructuredPath_String() {
@@ -242,7 +361,7 @@ func (s *PathSuite) TestStructuredPath_IsDataSourceFilter() {
 			path: StructuredPath{
 				{Kind: PathSegmentField, FieldName: "datasources"},
 				{Kind: PathSegmentField, FieldName: "myDS"},
-				{Kind: PathSegmentField, FieldName: "filter"},
+				{Kind: PathSegmentField, FieldName: "filters"},
 				{Kind: PathSegmentIndex, Index: 0},
 			},
 			expected: true,

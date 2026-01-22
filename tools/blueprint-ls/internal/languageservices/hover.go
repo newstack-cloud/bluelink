@@ -6,6 +6,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/helpinfo"
@@ -40,31 +41,52 @@ func NewHoverService(
 	}
 }
 
+// UpdateRegistries updates the registries used by the hover service.
+// This is called after plugin loading to include plugin-provided types.
+func (s *HoverService) UpdateRegistries(
+	funcRegistry provider.FunctionRegistry,
+	resourceRegistry resourcehelpers.Registry,
+	dataSourceRegistry provider.DataSourceRegistry,
+) {
+	s.funcRegistry = funcRegistry
+	s.resourceRegistry = resourceRegistry
+	s.dataSourceRegistry = dataSourceRegistry
+}
+
 // HoverContent represents the content for a hover message.
 type HoverContent struct {
 	Value string
 	Range *lsp.Range
 }
 
-// GetHoverContent returns the hover content for the given position in the
-// source document.
+// GetHoverContent returns hover content using DocumentContext for position resolution.
+// This provides tree-sitter based position resolution with fallback to last-known-good state.
 func (s *HoverService) GetHoverContent(
 	ctx *common.LSPContext,
-	tree *schema.TreeNode,
-	blueprint *schema.Blueprint,
+	docCtx *docmodel.DocumentContext,
 	params *lsp.TextDocumentPositionParams,
 ) (*HoverContent, error) {
+	if docCtx == nil {
+		return &HoverContent{}, nil
+	}
 
-	// The last element in the collected list is the element with the shortest
-	// range that contains the position.
-	collected := []*schema.TreeNode{}
-	collectElementsAtPosition(tree, params.Position, s.logger, &collected, 0 /* columnLeeway */)
+	// Convert LSP position to source.Position (1-based)
+	pos := source.Position{
+		Line:   int(params.Position.Line + 1),
+		Column: int(params.Position.Character + 1),
+	}
 
-	return s.getHoverElementContent(
-		ctx,
-		blueprint,
-		collected,
-	)
+	// Use DocumentContext to collect schema nodes at position
+	// This leverages tree-sitter AST with schema tree correlation
+	collected := docCtx.CollectSchemaNodesAtPosition(pos, 0)
+
+	// Get the effective blueprint (current or last-known-good)
+	blueprint := docCtx.GetEffectiveSchema()
+	if blueprint == nil {
+		return &HoverContent{}, nil
+	}
+
+	return s.getHoverElementContent(ctx, blueprint, collected)
 }
 
 func (s *HoverService) getHoverElementContent(
@@ -106,6 +128,8 @@ func (s *HoverService) getHoverContentByKind(
 		return s.getResourceTypeHoverContent(ctx, hoverCtx.TreeNode)
 	case docmodel.SchemaElementDataSourceType:
 		return s.getDataSourceTypeHoverContent(ctx, hoverCtx.TreeNode)
+	case docmodel.SchemaElementPathItem:
+		return s.getPathItemHoverContent(ctx, hoverCtx, blueprint)
 	default:
 		return &HoverContent{}, nil
 	}
@@ -153,13 +177,16 @@ func (s *HoverService) getResourceRefHoverContent(
 		return getBasicResourceHoverContent(node.Label, resource), nil
 	}
 
-	if len(resRef.Path) > 1 && resRef.Path[0].FieldName == "spec" {
+	firstField := resRef.Path[0].FieldName
+
+	// Handle spec paths with provider-specific schema lookup
+	if len(resRef.Path) > 1 && firstField == "spec" {
 		s.logger.Debug(
 			"Fetching spec definition for hover content",
 			zap.String("resourceType", resource.Type.Value),
 		)
 		specDefOutput, err := s.resourceRegistry.GetSpecDefinition(
-			ctx.Context,
+			safeContext(ctx),
 			resource.Type.Value,
 			&provider.ResourceGetSpecDefinitionInput{},
 		)
@@ -175,7 +202,29 @@ func (s *HoverService) getResourceRefHoverContent(
 		)
 	}
 
+	// Handle metadata paths with built-in descriptions
+	if firstField == "metadata" {
+		return getResourceMetadataHoverContent(node, resource, resRef)
+	}
+
 	return &HoverContent{}, nil
+}
+
+func getResourceMetadataHoverContent(
+	node *schema.TreeNode,
+	resource *schema.Resource,
+	resRef *substitutions.SubstitutionResourceProperty,
+) (*HoverContent, error) {
+	content := helpinfo.RenderResourceMetadataFieldInfo(
+		resRef.ResourceName,
+		resource,
+		resRef,
+	)
+
+	return &HoverContent{
+		Value: content,
+		Range: rangeToLSPRange(node.Range),
+	}, nil
 }
 
 func (s *HoverService) getResourceTypeHoverContent(
@@ -192,7 +241,7 @@ func (s *HoverService) getResourceTypeHoverContent(
 		zap.String("resourceType", resType.Value),
 	)
 	descriptionOutput, err := s.resourceRegistry.GetTypeDescription(
-		ctx.Context,
+		safeContext(ctx),
 		resType.Value,
 		&provider.ResourceGetTypeDescriptionInput{},
 	)
@@ -229,7 +278,7 @@ func (s *HoverService) getDataSourceTypeHoverContent(
 		zap.String("dataSourceType", dataSourceType.Value),
 	)
 	descriptionOutput, err := s.dataSourceRegistry.GetTypeDescription(
-		ctx.Context,
+		safeContext(ctx),
 		dataSourceType.Value,
 		&provider.DataSourceGetTypeDescriptionInput{},
 	)
@@ -252,6 +301,225 @@ func (s *HoverService) getDataSourceTypeHoverContent(
 	}, nil
 }
 
+
+func (s *HoverService) getPathItemHoverContent(
+	ctx *common.LSPContext,
+	hoverCtx *docmodel.HoverContext,
+	blueprint *schema.Blueprint,
+) (*HoverContent, error) {
+	pathItem, isPathItem := hoverCtx.TreeNode.SchemaElement.(*substitutions.SubstitutionPathItem)
+	if !isPathItem {
+		return &HoverContent{}, nil
+	}
+
+	parentNode := findPathItemParentNode(hoverCtx.AncestorNodes)
+	if parentNode == nil {
+		return &HoverContent{}, nil
+	}
+
+	switch parent := parentNode.SchemaElement.(type) {
+	case *substitutions.SubstitutionResourceProperty:
+		return s.getResourcePathItemHoverContent(ctx, hoverCtx.TreeNode, parent, blueprint)
+	case *substitutions.SubstitutionValueReference:
+		return getValuePathItemHoverContent(hoverCtx.TreeNode, parent, pathItem, blueprint)
+	case *substitutions.SubstitutionChild:
+		return getChildPathItemHoverContent(hoverCtx.TreeNode, parent, pathItem, blueprint)
+	case *substitutions.SubstitutionElemReference:
+		return s.getElemPathItemHoverContent(ctx, hoverCtx, parent, blueprint)
+	default:
+		return &HoverContent{}, nil
+	}
+}
+
+func findPathItemParentNode(ancestors []*schema.TreeNode) *schema.TreeNode {
+	for i := len(ancestors) - 1; i >= 0; i-- {
+		node := ancestors[i]
+		switch node.SchemaElement.(type) {
+		case *substitutions.SubstitutionResourceProperty,
+			*substitutions.SubstitutionValueReference,
+			*substitutions.SubstitutionChild,
+			*substitutions.SubstitutionElemReference,
+			*substitutions.SubstitutionFunctionExpr:
+			return node
+		}
+	}
+	return nil
+}
+
+func (s *HoverService) getResourcePathItemHoverContent(
+	ctx *common.LSPContext,
+	node *schema.TreeNode,
+	resRef *substitutions.SubstitutionResourceProperty,
+	blueprint *schema.Blueprint,
+) (*HoverContent, error) {
+	resource := getResource(blueprint, resRef.ResourceName)
+	if resource == nil || resource.Type == nil {
+		return &HoverContent{}, nil
+	}
+
+	pathItemIndex := extractPathItemIndex(node.Path)
+	if pathItemIndex < 0 || pathItemIndex >= len(resRef.Path) {
+		return &HoverContent{}, nil
+	}
+
+	firstField := ""
+	if len(resRef.Path) > 0 {
+		firstField = resRef.Path[0].FieldName
+	}
+
+	if firstField == "spec" && pathItemIndex > 0 {
+		specDefOutput, err := s.resourceRegistry.GetSpecDefinition(
+			safeContext(ctx),
+			resource.Type.Value,
+			&provider.ResourceGetSpecDefinitionInput{},
+		)
+		if err != nil {
+			return &HoverContent{}, nil
+		}
+
+		pathToItem := resRef.Path[1 : pathItemIndex+1]
+		specFieldSchema, err := findResourceFieldSchema(specDefOutput.SpecDefinition.Schema, pathToItem)
+		if err != nil || specFieldSchema == nil {
+			return &HoverContent{}, nil
+		}
+
+		content := helpinfo.RenderPathItemFieldInfo(
+			node.Label,
+			specFieldSchema,
+		)
+
+		return &HoverContent{
+			Value: content,
+			Range: rangeToLSPRange(node.Range),
+		}, nil
+	}
+
+	if firstField == "metadata" {
+		content := helpinfo.RenderResourceMetadataPathItemInfo(
+			node.Label,
+			resRef,
+			pathItemIndex,
+		)
+		return &HoverContent{
+			Value: content,
+			Range: rangeToLSPRange(node.Range),
+		}, nil
+	}
+
+	return &HoverContent{}, nil
+}
+
+func getValuePathItemHoverContent(
+	node *schema.TreeNode,
+	valRef *substitutions.SubstitutionValueReference,
+	pathItem *substitutions.SubstitutionPathItem,
+	blueprint *schema.Blueprint,
+) (*HoverContent, error) {
+	value := getValue(blueprint, valRef.ValueName)
+	if value == nil {
+		return &HoverContent{}, nil
+	}
+
+	content := helpinfo.RenderValuePathItemInfo(node.Label, valRef, pathItem)
+
+	return &HoverContent{
+		Value: content,
+		Range: rangeToLSPRange(node.Range),
+	}, nil
+}
+
+func getChildPathItemHoverContent(
+	node *schema.TreeNode,
+	childRef *substitutions.SubstitutionChild,
+	pathItem *substitutions.SubstitutionPathItem,
+	blueprint *schema.Blueprint,
+) (*HoverContent, error) {
+	child := getChild(blueprint, childRef.ChildName)
+	if child == nil {
+		return &HoverContent{}, nil
+	}
+
+	content := helpinfo.RenderChildPathItemInfo(node.Label, childRef, pathItem)
+
+	return &HoverContent{
+		Value: content,
+		Range: rangeToLSPRange(node.Range),
+	}, nil
+}
+
+func (s *HoverService) getElemPathItemHoverContent(
+	ctx *common.LSPContext,
+	hoverCtx *docmodel.HoverContext,
+	elemRef *substitutions.SubstitutionElemReference,
+	blueprint *schema.Blueprint,
+) (*HoverContent, error) {
+	node := hoverCtx.TreeNode
+	resourceName := extractResourceNameFromAncestors(hoverCtx.AncestorNodes)
+	resource := getResource(blueprint, resourceName)
+	if resource == nil || resource.Type == nil {
+		return &HoverContent{}, nil
+	}
+
+	pathItemIndex := extractPathItemIndex(node.Path)
+	if pathItemIndex < 0 || pathItemIndex >= len(elemRef.Path) {
+		return &HoverContent{}, nil
+	}
+
+	specDefOutput, err := s.resourceRegistry.GetSpecDefinition(
+		safeContext(ctx),
+		resource.Type.Value,
+		&provider.ResourceGetSpecDefinitionInput{},
+	)
+	if err != nil {
+		return &HoverContent{}, nil
+	}
+
+	pathToItem := elemRef.Path[:pathItemIndex+1]
+	specFieldSchema, err := findResourceFieldSchema(specDefOutput.SpecDefinition.Schema, pathToItem)
+	if err != nil || specFieldSchema == nil {
+		return &HoverContent{}, nil
+	}
+
+	content := helpinfo.RenderPathItemFieldInfo(node.Label, specFieldSchema)
+
+	return &HoverContent{
+		Value: content,
+		Range: rangeToLSPRange(node.Range),
+	}, nil
+}
+
+func extractPathItemIndex(nodePath string) int {
+	parts := strings.Split(nodePath, "/")
+	for i := len(parts) - 1; i >= 0; i-- {
+		if parts[i] == "pathItem" && i+1 < len(parts) {
+			var index int
+			_, err := strings.NewReader(parts[i+1]).Read([]byte{})
+			if err != nil {
+				return -1
+			}
+			for _, c := range parts[i+1] {
+				if c < '0' || c > '9' {
+					return -1
+				}
+				index = index*10 + int(c-'0')
+			}
+			return index
+		}
+	}
+	return -1
+}
+
+func extractResourceNameFromAncestors(ancestors []*schema.TreeNode) string {
+	for _, node := range ancestors {
+		if res, isRes := node.SchemaElement.(*schema.Resource); isRes && res != nil {
+			parts := strings.Split(node.Path, "/")
+			if len(parts) >= 3 && parts[1] == "resources" {
+				return parts[2]
+			}
+		}
+	}
+	return ""
+}
 
 func getVarRefHoverContent(
 	node *schema.TreeNode,

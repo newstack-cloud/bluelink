@@ -321,6 +321,320 @@ func (s *NodeContextSuite) TestGetFieldName() {
 	s.Assert().Equal("myField", ctx.GetFieldName())
 }
 
+func (s *NodeContextSuite) TestGetEnclosingQuoteType() {
+	tests := []struct {
+		name      string
+		ancestors []*UnifiedNode
+		expected  QuoteType
+	}{
+		{
+			name:      "no ancestors",
+			ancestors: nil,
+			expected:  QuoteTypeNone,
+		},
+		{
+			name: "double quote scalar (YAML)",
+			ancestors: []*UnifiedNode{
+				{TSKind: "document"},
+				{TSKind: "block_mapping"},
+				{TSKind: "double_quote_scalar"},
+			},
+			expected: QuoteTypeDouble,
+		},
+		{
+			name: "single quote scalar (YAML)",
+			ancestors: []*UnifiedNode{
+				{TSKind: "document"},
+				{TSKind: "block_mapping"},
+				{TSKind: "single_quote_scalar"},
+			},
+			expected: QuoteTypeSingle,
+		},
+		{
+			name: "plain scalar (YAML)",
+			ancestors: []*UnifiedNode{
+				{TSKind: "document"},
+				{TSKind: "block_mapping"},
+				{TSKind: "plain_scalar"},
+			},
+			expected: QuoteTypeNone,
+		},
+		{
+			name: "block scalar (YAML)",
+			ancestors: []*UnifiedNode{
+				{TSKind: "document"},
+				{TSKind: "block_mapping"},
+				{TSKind: "block_scalar"},
+			},
+			expected: QuoteTypeNone,
+		},
+		{
+			name: "string scalar (JSON)",
+			ancestors: []*UnifiedNode{
+				{TSKind: "document"},
+				{TSKind: "object"},
+				{TSKind: "string_scalar"},
+			},
+			expected: QuoteTypeDouble,
+		},
+		{
+			name: "string content (JSON)",
+			ancestors: []*UnifiedNode{
+				{TSKind: "document"},
+				{TSKind: "object"},
+				{TSKind: "string_content"},
+			},
+			expected: QuoteTypeDouble,
+		},
+		{
+			name: "string (JSONC)",
+			ancestors: []*UnifiedNode{
+				{TSKind: "document"},
+				{TSKind: "object"},
+				{TSKind: "string"},
+			},
+			expected: QuoteTypeDouble,
+		},
+		{
+			name: "nested in double quote",
+			ancestors: []*UnifiedNode{
+				{TSKind: "document"},
+				{TSKind: "block_mapping"},
+				{TSKind: "double_quote_scalar"},
+				{TSKind: "some_inner_node"},
+			},
+			expected: QuoteTypeDouble,
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			ctx := &NodeContext{AncestorNodes: tt.ancestors}
+			s.Assert().Equal(tt.expected, ctx.GetEnclosingQuoteType())
+		})
+	}
+}
+
+func (s *NodeContextSuite) TestIsAtKeyPosition() {
+	tests := []struct {
+		name       string
+		textBefore string
+		expected   bool
+	}{
+		{
+			name:       "empty line",
+			textBefore: "",
+			expected:   true,
+		},
+		{
+			name:       "whitespace only",
+			textBefore: "    ",
+			expected:   true,
+		},
+		{
+			name:       "typing a key name",
+			textBefore: "  run",
+			expected:   true,
+		},
+		{
+			name:       "typing a partial key name",
+			textBefore: "  runt",
+			expected:   true,
+		},
+		{
+			name:       "after colon with no value - value position",
+			textBefore: "fieldName: ",
+			expected:   false,
+		},
+		{
+			name:       "after colon with value - value position",
+			textBefore: "fieldName: someValue",
+			expected:   false,
+		},
+		{
+			name:       "typing in nested value",
+			textBefore: "      ORDERS_TABLE: ${resources.ordersTable",
+			expected:   false,
+		},
+		{
+			name:       "typing value after quoted key",
+			textBefore: `"type": aws/lambda`,
+			expected:   false,
+		},
+		{
+			name:       "with leading indent typing key",
+			textBefore: "      na",
+			expected:   true,
+		},
+		{
+			name:       "colon at end waiting for value",
+			textBefore: "name:",
+			expected:   false,
+		},
+		{
+			name:       "colon with space waiting for value",
+			textBefore: "name: ",
+			expected:   false,
+		},
+		// Multi-line cases
+		{
+			name:       "new line after mapping - key position",
+			textBefore: "spec:\n    ",
+			expected:   true,
+		},
+		{
+			name:       "new line with content - typing key",
+			textBefore: "spec:\n    run",
+			expected:   true,
+		},
+		{
+			name:       "new line after value - key position",
+			textBefore: "spec:\n  name: test\n    ",
+			expected:   true,
+		},
+		// JSONC cases
+		{
+			name:       "after opening brace - key position",
+			textBefore: `"spec": { `,
+			expected:   true,
+		},
+		{
+			name:       "after comma - key position",
+			textBefore: `"name": "test", `,
+			expected:   true,
+		},
+		{
+			name:       "after opening brace on new line",
+			textBefore: "\"spec\": {\n    ",
+			expected:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			ctx := &NodeContext{TextBefore: tt.textBefore}
+			s.Assert().Equal(tt.expected, ctx.IsAtKeyPosition(), "textBefore: %q", tt.textBefore)
+		})
+	}
+}
+
+func (s *NodeContextSuite) TestIsAtValuePosition() {
+	tests := []struct {
+		name       string
+		textBefore string
+		expected   bool
+	}{
+		{
+			name:       "empty line",
+			textBefore: "",
+			expected:   false,
+		},
+		{
+			name:       "whitespace only",
+			textBefore: "    ",
+			expected:   false,
+		},
+		{
+			name:       "typing a key name",
+			textBefore: "  run",
+			expected:   false,
+		},
+		{
+			name:       "after colon with no value",
+			textBefore: "fieldName: ",
+			expected:   true,
+		},
+		{
+			name:       "after colon typing value",
+			textBefore: "fieldName: some",
+			expected:   true,
+		},
+		{
+			name:       "after colon with full value",
+			textBefore: "fieldName: someValue",
+			expected:   true,
+		},
+		{
+			name:       "typing in nested value with substitution",
+			textBefore: "      ORDERS_TABLE: ${resources.ordersTable",
+			expected:   true,
+		},
+		{
+			name:       "colon at end",
+			textBefore: "name:",
+			expected:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			ctx := &NodeContext{TextBefore: tt.textBefore}
+			s.Assert().Equal(tt.expected, ctx.IsAtValuePosition(), "textBefore: %q", tt.textBefore)
+		})
+	}
+}
+
+func (s *NodeContextSuite) TestGetTypedPrefix() {
+	tests := []struct {
+		name        string
+		textBefore  string
+		currentWord string
+		expected    string
+	}{
+		{
+			name:       "empty line",
+			textBefore: "",
+			expected:   "",
+		},
+		{
+			name:       "whitespace only",
+			textBefore: "    ",
+			expected:   "",
+		},
+		{
+			name:       "typing a key name",
+			textBefore: "  run",
+			expected:   "run",
+		},
+		{
+			name:       "typing longer key name",
+			textBefore: "  runtime",
+			expected:   "runtime",
+		},
+		{
+			name:       "typing key name with hyphen",
+			textBefore: "  my-field",
+			expected:   "my-field",
+		},
+		{
+			name:       "after colon typing value",
+			textBefore: "fieldName: val",
+			expected:   "val",
+		},
+		{
+			name:       "after colon no value yet",
+			textBefore: "fieldName: ",
+			expected:   "",
+		},
+		{
+			name:        "fallback to current word",
+			textBefore:  "some: thing: else",
+			currentWord: "else",
+			expected:    "else",
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			ctx := &NodeContext{
+				TextBefore:  tt.textBefore,
+				CurrentWord: tt.currentWord,
+			}
+			s.Assert().Equal(tt.expected, ctx.GetTypedPrefix(), "textBefore: %q", tt.textBefore)
+		})
+	}
+}
+
 func TestNodeContextSuite(t *testing.T) {
 	suite.Run(t, new(NodeContextSuite))
 }

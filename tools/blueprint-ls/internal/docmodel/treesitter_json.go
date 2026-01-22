@@ -234,6 +234,9 @@ func processJSONPair(node *UnifiedNode) {
 		case "string":
 			if keyNode == nil {
 				keyNode = child
+			} else if valueNode == nil {
+				// Second string is the value (e.g., "type": "value")
+				valueNode = child
 			}
 		case ":", ",":
 			continue

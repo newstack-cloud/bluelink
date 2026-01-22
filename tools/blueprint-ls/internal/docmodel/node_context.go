@@ -7,6 +7,15 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 )
 
+// QuoteType represents the enclosing string quote style.
+type QuoteType int
+
+const (
+	QuoteTypeNone   QuoteType = iota // Plain scalar or not in a string
+	QuoteTypeSingle                  // Single-quoted string
+	QuoteTypeDouble                  // Double-quoted string
+)
+
 // NodeContext provides rich context information for a specific position.
 // It combines AST-level and schema-level information for language features.
 type NodeContext struct {
@@ -169,6 +178,107 @@ func (ctx *NodeContext) HasError() bool {
 	return ctx.UnifiedNode.IsError
 }
 
+// IsAtKeyPosition returns true if the cursor is at a position where a new
+// mapping key (field name) should be entered, rather than a value.
+// For YAML: detects if we're at whitespace-only start of line or after a completed key-value pair
+// For JSONC: detects if we're after { or , expecting a new property name
+func (ctx *NodeContext) IsAtKeyPosition() bool {
+	// Only consider the current line (text after the last newline)
+	// This handles multi-line cases where previous lines have colons
+	currentLineText := ctx.TextBefore
+	if lastNewline := strings.LastIndex(ctx.TextBefore, "\n"); lastNewline >= 0 {
+		currentLineText = ctx.TextBefore[lastNewline+1:]
+	}
+
+	trimmed := strings.TrimLeft(currentLineText, " \t")
+
+	// Empty or whitespace-only before cursor on current line - potential key position
+	if trimmed == "" {
+		return true
+	}
+
+	// JSONC/JSON: After { or , we're at a key position
+	// e.g., `"spec": { ` -> key position (after opening brace)
+	// e.g., `"field": "value", ` -> key position (after comma)
+	trimmedEnd := strings.TrimRight(trimmed, " \t")
+	if strings.HasSuffix(trimmedEnd, "{") || strings.HasSuffix(trimmedEnd, ",") {
+		return true
+	}
+
+	// If there's a colon followed only by whitespace, we're at a value position
+	// e.g., "fieldName: " -> value position
+	if strings.Contains(trimmed, ":") {
+		afterColon := strings.TrimSpace(trimmed[strings.LastIndex(trimmed, ":")+1:])
+		if afterColon == "" {
+			return false // Value position after colon
+		}
+	}
+
+	// If text before doesn't contain a colon and is just a word being typed,
+	// we're typing a key name
+	// e.g., "  run" -> typing key "run"
+	if !strings.Contains(trimmed, ":") {
+		return true
+	}
+
+	return false
+}
+
+// IsAtValuePosition returns true if the cursor is at a position where a
+// value should be entered (after a colon in YAML, after : in JSON).
+func (ctx *NodeContext) IsAtValuePosition() bool {
+	// Only consider the current line (text after the last newline)
+	currentLineText := ctx.TextBefore
+	if lastNewline := strings.LastIndex(ctx.TextBefore, "\n"); lastNewline >= 0 {
+		currentLineText = ctx.TextBefore[lastNewline+1:]
+	}
+
+	trimmed := strings.TrimLeft(currentLineText, " \t")
+
+	// Check for "key: " pattern (value position)
+	if strings.Contains(trimmed, ":") {
+		afterColon := strings.TrimSpace(trimmed[strings.LastIndex(trimmed, ":")+1:])
+		// If nothing or just typing after colon, it's a value position
+		return afterColon == "" || !strings.Contains(afterColon, ":")
+	}
+
+	return false
+}
+
+// GetTypedPrefix returns the text being typed at the current position.
+// This is used for filtering completion suggestions.
+func (ctx *NodeContext) GetTypedPrefix() string {
+	// Only consider the current line (text after the last newline)
+	currentLineText := ctx.TextBefore
+	if lastNewline := strings.LastIndex(ctx.TextBefore, "\n"); lastNewline >= 0 {
+		currentLineText = ctx.TextBefore[lastNewline+1:]
+	}
+
+	// For key positions, return the current word being typed
+	if ctx.IsAtKeyPosition() {
+		trimmed := strings.TrimLeft(currentLineText, " \t")
+		// Extract just the identifier being typed (no colon or other punctuation)
+		prefix := ""
+		for _, c := range trimmed {
+			if isWordChar(byte(c)) {
+				prefix += string(c)
+			} else {
+				prefix = "" // Reset on non-word chars, keep only trailing word
+			}
+		}
+		return prefix
+	}
+
+	// For value positions, return what's after the colon on the current line
+	if ctx.IsAtValuePosition() {
+		if idx := strings.LastIndex(currentLineText, ":"); idx >= 0 {
+			return strings.TrimSpace(currentLineText[idx+1:])
+		}
+	}
+
+	return ctx.CurrentWord
+}
+
 // IsEmpty returns true if no node was found at the position.
 func (ctx *NodeContext) IsEmpty() bool {
 	return ctx.UnifiedNode == nil
@@ -204,4 +314,28 @@ func (ctx *NodeContext) GetFieldName() string {
 		return ""
 	}
 	return ctx.UnifiedNode.FieldName
+}
+
+// IsPrecededByOperatorField returns true if the cursor is right after "operator:" or "operator":
+// This is used for determining text edit ranges in completion.
+func (ctx *NodeContext) IsPrecededByOperatorField() bool {
+	return operatorFieldPattern.MatchString(ctx.TextBefore)
+}
+
+// GetEnclosingQuoteType returns the quote type of the enclosing string node.
+// This is used to determine the appropriate quote style for bracket notation completions.
+func (ctx *NodeContext) GetEnclosingQuoteType() QuoteType {
+	for _, ancestor := range ctx.AncestorNodes {
+		switch ancestor.TSKind {
+		case "double_quote_scalar": // YAML
+			return QuoteTypeDouble
+		case "single_quote_scalar": // YAML
+			return QuoteTypeSingle
+		case "string_scalar", "string_content", "string": // JSON/JSONC - always double quoted
+			return QuoteTypeDouble
+		case "plain_scalar", "block_scalar":
+			return QuoteTypeNone
+		}
+	}
+	return QuoteTypeNone
 }

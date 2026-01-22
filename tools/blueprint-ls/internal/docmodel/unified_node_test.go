@@ -29,7 +29,9 @@ func (s *UnifiedNodeSuite) TestContainsPosition_SingleLine() {
 		{"at end", source.Position{Line: 5, Column: 20}, 0, true},
 		{"after range", source.Position{Line: 5, Column: 25}, 0, false},
 		{"before with leeway", source.Position{Line: 5, Column: 8}, 2, true},
-		{"after with leeway", source.Position{Line: 5, Column: 22}, 2, true},
+		// Leeway only extends the START boundary, not the END.
+		// Positions after the node's end are clearly outside the node.
+		{"after with leeway", source.Position{Line: 5, Column: 22}, 2, false},
 	}
 
 	for _, tt := range tests {

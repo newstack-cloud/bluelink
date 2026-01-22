@@ -1014,7 +1014,7 @@
                   (lsp.DocumentSymbol) {
                     Name: (string) (len=6) "secret",
                     Detail: (*string)(<nil>),
-                    Kind: (int32) 17,
+                    Kind: (int32) 15,
                     Tags: ([]int32) <nil>,
                     Deprecated: (*bool)(<nil>),
                     Range: (lsp.Range) {
@@ -1618,7 +1618,7 @@
                           },
                           End: (lsp.Position) {
                             Line: (uint32) 63,
-                            Character: (uint32) 39
+                            Character: (uint32) 28
                           }
                         },
                         SelectionRange: (lsp.Range) {
@@ -1628,7 +1628,7 @@
                           },
                           End: (lsp.Position) {
                             Line: (uint32) 63,
-                            Character: (uint32) 39
+                            Character: (uint32) 28
                           }
                         },
                         Children: ([]lsp.DocumentSymbol) (len=3) {
@@ -1701,7 +1701,7 @@
                               },
                               End: (lsp.Position) {
                                 Line: (uint32) 63,
-                                Character: (uint32) 39
+                                Character: (uint32) 28
                               }
                             },
                             SelectionRange: (lsp.Range) {
@@ -1711,7 +1711,7 @@
                               },
                               End: (lsp.Position) {
                                 Line: (uint32) 63,
-                                Character: (uint32) 39
+                                Character: (uint32) 28
                               }
                             },
                             Children: ([]lsp.DocumentSymbol) <nil>
@@ -2403,7 +2403,7 @@
                           (lsp.DocumentSymbol) {
                             Name: (string) (len=16) "allowCredentials",
                             Detail: (*string)(<nil>),
-                            Kind: (int32) 17,
+                            Kind: (int32) 15,
                             Tags: ([]int32) <nil>,
                             Deprecated: (*bool)(<nil>),
                             Range: (lsp.Range) {
@@ -2743,7 +2743,7 @@
                           (lsp.DocumentSymbol) {
                             Name: (string) (len=6) "maxAge",
                             Detail: (*string)(<nil>),
-                            Kind: (int32) 16,
+                            Kind: (int32) 15,
                             Tags: ([]int32) <nil>,
                             Deprecated: (*bool)(<nil>),
                             Range: (lsp.Range) {
@@ -2885,7 +2885,7 @@
                           (lsp.DocumentSymbol) {
                             Name: (string) (len=17) "normalizeBasePath",
                             Detail: (*string)(<nil>),
-                            Kind: (int32) 17,
+                            Kind: (int32) 15,
                             Tags: ([]int32) <nil>,
                             Deprecated: (*bool)(<nil>),
                             Range: (lsp.Range) {
@@ -2971,7 +2971,7 @@
                       (lsp.DocumentSymbol) {
                         Name: (string) (len=14) "tracingEnabled",
                         Detail: (*string)(<nil>),
-                        Kind: (int32) 17,
+                        Kind: (int32) 15,
                         Tags: ([]int32) <nil>,
                         Deprecated: (*bool)(<nil>),
                         Range: (lsp.Range) {
@@ -3595,7 +3595,7 @@
                           (lsp.DocumentSymbol) {
                             Name: (string) (len=21) "celerity.handler.http",
                             Detail: (*string)(<nil>),
-                            Kind: (int32) 17,
+                            Kind: (int32) 15,
                             Tags: ([]int32) <nil>,
                             Deprecated: (*bool)(<nil>),
                             Range: (lsp.Range) {
@@ -3822,7 +3822,7 @@
                       (lsp.DocumentSymbol) {
                         Name: (string) (len=6) "memory",
                         Detail: (*string)(<nil>),
-                        Kind: (int32) 16,
+                        Kind: (int32) 15,
                         Tags: ([]int32) <nil>,
                         Deprecated: (*bool)(<nil>),
                         Range: (lsp.Range) {
@@ -3850,7 +3850,7 @@
                       (lsp.DocumentSymbol) {
                         Name: (string) (len=7) "timeout",
                         Detail: (*string)(<nil>),
-                        Kind: (int32) 16,
+                        Kind: (int32) 15,
                         Tags: ([]int32) <nil>,
                         Deprecated: (*bool)(<nil>),
                         Range: (lsp.Range) {
@@ -3878,7 +3878,7 @@
                       (lsp.DocumentSymbol) {
                         Name: (string) (len=14) "tracingEnabled",
                         Detail: (*string)(<nil>),
-                        Kind: (int32) 17,
+                        Kind: (int32) 15,
                         Tags: ([]int32) <nil>,
                         Deprecated: (*bool)(<nil>),
                         Range: (lsp.Range) {

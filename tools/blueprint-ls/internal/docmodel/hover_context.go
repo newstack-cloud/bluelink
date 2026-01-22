@@ -55,6 +55,7 @@ func (k SchemaElementKind) SupportsHover() bool {
 		SchemaElementDataSourceRef,
 		SchemaElementElemRef,
 		SchemaElementElemIndexRef,
+		SchemaElementPathItem,
 		SchemaElementResourceType,
 		SchemaElementDataSourceType:
 		return true

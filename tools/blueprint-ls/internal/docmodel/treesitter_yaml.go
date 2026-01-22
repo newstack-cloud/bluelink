@@ -61,6 +61,8 @@ func ParseYAMLToUnified(content string) (*UnifiedNode, error) {
 }
 
 // convertYAMLTreeSitterNode converts a tree-sitter YAML node to UnifiedNode.
+// This function flattens the tree-sitter structure to produce a cleaner tree
+// where mappings directly contain their key-value entries with fieldNames set.
 func convertYAMLTreeSitterNode(
 	tsNode *tree_sitter.Node,
 	parent *UnifiedNode,
@@ -70,13 +72,20 @@ func convertYAMLTreeSitterNode(
 		return nil
 	}
 
+	kind := tsNode.Kind()
+
+	// Handle structural passthrough nodes by unwrapping them
+	if isPassthroughNode(kind) {
+		return unwrapPassthroughNode(tsNode, parent, content)
+	}
+
 	startPoint := tsNode.StartPosition()
 	endPoint := tsNode.EndPosition()
 
 	unified := &UnifiedNode{
-		Kind:    mapYAMLNodeKind(tsNode.Kind()),
+		Kind:    mapYAMLNodeKind(kind),
 		IsError: tsNode.IsError() || tsNode.IsMissing(),
-		TSKind:  tsNode.Kind(),
+		TSKind:  kind,
 		Parent:  parent,
 		Index:   -1,
 		Range: source.Range{
@@ -91,16 +100,252 @@ func convertYAMLTreeSitterNode(
 		},
 	}
 
-	// Extract scalar values
-	if unified.Kind == NodeKindScalar && content != nil {
-		unified.Value = tsNode.Utf8Text(content)
+	// Extract tag for scalar type detection
+	if isScalarNode(kind) {
+		unified.Tag = scalarKindToTag(kind)
+		if content != nil {
+			unified.Value = tsNode.Utf8Text(content)
+		}
 	}
 
 	// Process children based on node type
+	switch kind {
+	case "block_mapping", "flow_mapping":
+		processYAMLMappingChildren(tsNode, unified, content)
+	case "block_sequence", "flow_sequence":
+		processYAMLSequenceChildren(tsNode, unified, content)
+	default:
+		processYAMLDefaultChildren(tsNode, unified, content)
+	}
+
+	return unified
+}
+
+// isPassthroughNode returns true for nodes that should be unwrapped.
+func isPassthroughNode(kind string) bool {
+	switch kind {
+	case "stream", "block_node", "flow_node":
+		return true
+	}
+	return false
+}
+
+// isScalarNode returns true for scalar value nodes.
+func isScalarNode(kind string) bool {
+	switch kind {
+	case "plain_scalar", "single_quote_scalar", "double_quote_scalar",
+		"block_scalar", "string_scalar", "integer_scalar", "float_scalar",
+		"boolean_scalar", "null_scalar":
+		return true
+	}
+	return false
+}
+
+// scalarKindToTag maps tree-sitter scalar kinds to type tags.
+func scalarKindToTag(kind string) string {
+	switch kind {
+	case "integer_scalar":
+		return "!!int"
+	case "float_scalar":
+		return "!!float"
+	case "boolean_scalar":
+		return "!!bool"
+	case "null_scalar":
+		return "!!null"
+	default:
+		return "!!str"
+	}
+}
+
+// unwrapPassthroughNode recursively unwraps passthrough nodes to find the
+// meaningful child node.
+func unwrapPassthroughNode(
+	tsNode *tree_sitter.Node,
+	parent *UnifiedNode,
+	content []byte,
+) *UnifiedNode {
 	childCount := tsNode.ChildCount()
 	for i := range childCount {
 		child := tsNode.Child(i)
 		if child == nil {
+			continue
+		}
+		childKind := child.Kind()
+		// Skip tokens like colons, dashes
+		if childKind == ":" || childKind == "-" {
+			continue
+		}
+		return convertYAMLTreeSitterNode(child, parent, content)
+	}
+	return nil
+}
+
+// processYAMLMappingChildren processes children of a mapping node.
+// Extracts key-value pairs and sets fieldNames on value nodes.
+func processYAMLMappingChildren(
+	tsNode *tree_sitter.Node,
+	unified *UnifiedNode,
+	content []byte,
+) {
+	childCount := tsNode.ChildCount()
+	for i := range childCount {
+		child := tsNode.Child(i)
+		if child == nil {
+			continue
+		}
+		childKind := child.Kind()
+
+		if childKind == "block_mapping_pair" || childKind == "flow_pair" {
+			processMappingPair(child, unified, content)
+		}
+	}
+}
+
+// processMappingPair extracts key and value from a mapping pair and adds
+// the value as a child of the parent mapping with the key as fieldName.
+func processMappingPair(
+	pairNode *tree_sitter.Node,
+	parentMapping *UnifiedNode,
+	content []byte,
+) {
+	var keyNode, valueNode *tree_sitter.Node
+
+	childCount := pairNode.ChildCount()
+	foundColon := false
+	for i := range childCount {
+		child := pairNode.Child(i)
+		if child == nil {
+			continue
+		}
+		childKind := child.Kind()
+
+		if childKind == ":" {
+			foundColon = true
+			continue
+		}
+
+		if !foundColon {
+			// Before colon = key
+			if keyNode == nil {
+				keyNode = child
+			}
+		} else {
+			// After colon = value
+			if valueNode == nil {
+				valueNode = child
+			}
+		}
+	}
+
+	if keyNode == nil || valueNode == nil {
+		return
+	}
+
+	// Extract key string
+	keyStr := extractScalarText(keyNode, content)
+
+	// Convert value node
+	valueUnified := convertYAMLTreeSitterNode(valueNode, parentMapping, content)
+	if valueUnified == nil {
+		return
+	}
+
+	// Set field name and key range
+	valueUnified.FieldName = keyStr
+	keyStart := keyNode.StartPosition()
+	keyEnd := keyNode.EndPosition()
+	valueUnified.KeyRange = &source.Range{
+		Start: &source.Position{
+			Line:   int(keyStart.Row) + 1,
+			Column: int(keyStart.Column) + 1,
+		},
+		End: &source.Position{
+			Line:   int(keyEnd.Row) + 1,
+			Column: int(keyEnd.Column) + 1,
+		},
+	}
+
+	// Update range to include key
+	if valueUnified.Range.Start != nil {
+		valueUnified.Range.Start = &source.Position{
+			Line:   int(keyStart.Row) + 1,
+			Column: int(keyStart.Column) + 1,
+		}
+	}
+
+	parentMapping.Children = append(parentMapping.Children, valueUnified)
+}
+
+// processYAMLSequenceChildren processes children of a sequence node.
+func processYAMLSequenceChildren(
+	tsNode *tree_sitter.Node,
+	unified *UnifiedNode,
+	content []byte,
+) {
+	childCount := tsNode.ChildCount()
+	index := 0
+	for i := range childCount {
+		child := tsNode.Child(i)
+		if child == nil {
+			continue
+		}
+		childKind := child.Kind()
+
+		if childKind == "block_sequence_item" || childKind == "flow_sequence_item" {
+			// Extract the value from the sequence item
+			itemValue := extractSequenceItemValue(child)
+			if itemValue != nil {
+				childUnified := convertYAMLTreeSitterNode(itemValue, unified, content)
+				if childUnified != nil {
+					childUnified.Index = index
+					unified.Children = append(unified.Children, childUnified)
+					index++
+				}
+			}
+		} else if childKind != "-" && childKind != "," && childKind != "[" && childKind != "]" {
+			// Direct children in flow sequences
+			childUnified := convertYAMLTreeSitterNode(child, unified, content)
+			if childUnified != nil {
+				childUnified.Index = index
+				unified.Children = append(unified.Children, childUnified)
+				index++
+			}
+		}
+	}
+}
+
+// extractSequenceItemValue extracts the value node from a sequence item.
+func extractSequenceItemValue(itemNode *tree_sitter.Node) *tree_sitter.Node {
+	childCount := itemNode.ChildCount()
+	for i := range childCount {
+		child := itemNode.Child(i)
+		if child == nil {
+			continue
+		}
+		childKind := child.Kind()
+		if childKind != "-" && childKind != "," {
+			return child
+		}
+	}
+	return nil
+}
+
+// processYAMLDefaultChildren processes children for other node types.
+func processYAMLDefaultChildren(
+	tsNode *tree_sitter.Node,
+	unified *UnifiedNode,
+	content []byte,
+) {
+	childCount := tsNode.ChildCount()
+	for i := range childCount {
+		child := tsNode.Child(i)
+		if child == nil {
+			continue
+		}
+		childKind := child.Kind()
+		// Skip tokens
+		if childKind == ":" || childKind == "-" || childKind == "," ||
+			childKind == "[" || childKind == "]" || childKind == "{" || childKind == "}" {
 			continue
 		}
 
@@ -109,11 +354,33 @@ func convertYAMLTreeSitterNode(
 			unified.Children = append(unified.Children, childUnified)
 		}
 	}
+}
 
-	// Post-process to extract field names and indices from YAML structure
-	postProcessYAMLNode(unified)
+// extractScalarText extracts the text value from a scalar node.
+func extractScalarText(node *tree_sitter.Node, content []byte) string {
+	if node == nil {
+		return ""
+	}
 
-	return unified
+	kind := node.Kind()
+	if isScalarNode(kind) {
+		return node.Utf8Text(content)
+	}
+
+	// For wrapper nodes, recurse into children
+	childCount := node.ChildCount()
+	for i := range childCount {
+		child := node.Child(i)
+		if child == nil {
+			continue
+		}
+		text := extractScalarText(child, content)
+		if text != "" {
+			return text
+		}
+	}
+
+	return ""
 }
 
 // mapYAMLNodeKind maps tree-sitter YAML node kinds to UnifiedNode kinds.
@@ -125,132 +392,16 @@ func mapYAMLNodeKind(kind string) NodeKind {
 		return NodeKindMapping
 	case "block_sequence", "flow_sequence":
 		return NodeKindSequence
-	case "block_mapping_pair", "flow_pair":
-		return NodeKindMapping
 	case "plain_scalar", "single_quote_scalar", "double_quote_scalar",
 		"block_scalar", "string_scalar", "integer_scalar", "float_scalar",
 		"boolean_scalar", "null_scalar":
 		return NodeKindScalar
-	case "flow_node", "block_node":
-		return NodeKindScalar
 	case "ERROR":
 		return NodeKindError
 	default:
+		// Most structural nodes (flow_node, block_node, block_mapping_pair, etc.)
+		// are passthrough nodes that should be flattened during conversion
 		return NodeKindScalar
 	}
 }
 
-// postProcessYAMLNode extracts field names and indices from YAML AST structure.
-func postProcessYAMLNode(node *UnifiedNode) {
-	if node == nil {
-		return
-	}
-
-	switch node.TSKind {
-	case "block_mapping", "flow_mapping":
-		processYAMLMapping(node)
-	case "block_sequence", "flow_sequence":
-		processYAMLSequence(node)
-	case "block_mapping_pair", "flow_pair":
-		processYAMLPair(node)
-	}
-}
-
-// processYAMLMapping processes a mapping node to extract key-value pairs.
-func processYAMLMapping(node *UnifiedNode) {
-	for _, child := range node.Children {
-		if child.TSKind == "block_mapping_pair" || child.TSKind == "flow_pair" {
-			processYAMLPair(child)
-		}
-	}
-}
-
-// processYAMLSequence sets indices on sequence children.
-func processYAMLSequence(node *UnifiedNode) {
-	index := 0
-	for _, child := range node.Children {
-		if child.TSKind != "comment" && child.TSKind != "-" {
-			child.Index = index
-			index++
-		}
-	}
-}
-
-// processYAMLPair extracts the key and value from a mapping pair.
-func processYAMLPair(node *UnifiedNode) {
-	if len(node.Children) < 2 {
-		return
-	}
-
-	// First child is typically the key, second is the value
-	keyNode := findYAMLKeyNode(node)
-	valueNode := findYAMLValueNode(node)
-
-	if keyNode != nil && valueNode != nil {
-		valueNode.FieldName = extractYAMLScalarValue(keyNode)
-		valueNode.KeyRange = &source.Range{
-			Start: keyNode.Range.Start,
-			End:   keyNode.Range.End,
-		}
-	}
-}
-
-// findYAMLKeyNode finds the key node in a mapping pair.
-func findYAMLKeyNode(pair *UnifiedNode) *UnifiedNode {
-	for _, child := range pair.Children {
-		if isYAMLKeyNode(child.TSKind) {
-			return child
-		}
-	}
-	return nil
-}
-
-// findYAMLValueNode finds the value node in a mapping pair.
-func findYAMLValueNode(pair *UnifiedNode) *UnifiedNode {
-	foundKey := false
-	for _, child := range pair.Children {
-		if isYAMLKeyNode(child.TSKind) {
-			foundKey = true
-			continue
-		}
-		if foundKey && child.TSKind != ":" {
-			return child
-		}
-	}
-	return nil
-}
-
-// isYAMLKeyNode returns true if the kind represents a key node.
-func isYAMLKeyNode(kind string) bool {
-	switch kind {
-	case "plain_scalar", "single_quote_scalar", "double_quote_scalar",
-		"flow_node", "block_node":
-		return true
-	}
-	return false
-}
-
-// extractYAMLScalarValue extracts the string value from a scalar node.
-func extractYAMLScalarValue(node *UnifiedNode) string {
-	if node == nil {
-		return ""
-	}
-
-	if node.Value != "" {
-		return node.Value
-	}
-
-	// Look for scalar value in children
-	for _, child := range node.Children {
-		if child.Kind == NodeKindScalar && child.Value != "" {
-			return child.Value
-		}
-		// Recursively check nested nodes
-		val := extractYAMLScalarValue(child)
-		if val != "" {
-			return val
-		}
-	}
-
-	return ""
-}

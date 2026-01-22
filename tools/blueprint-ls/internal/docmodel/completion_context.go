@@ -26,8 +26,17 @@ const (
 	CompletionContextDataSourceFilterField
 	CompletionContextDataSourceFilterOperator
 
+	// Resource spec field (editing directly in YAML/JSONC definition)
+	CompletionContextResourceSpecField
+
+	// Resource metadata field (displayName, labels, annotations, custom)
+	CompletionContextResourceMetadataField
+
+	// Resource definition field (type, description, spec, metadata, etc.)
+	CompletionContextResourceDefinitionField
+
 	// Substitution references
-	CompletionContextStringSub           // Inside ${...} but no specific reference
+	CompletionContextStringSub // Inside ${...} but no specific reference
 	CompletionContextStringSubVariableRef
 	CompletionContextStringSubResourceRef
 	CompletionContextStringSubResourceProperty
@@ -36,6 +45,8 @@ const (
 	CompletionContextStringSubValueRef
 	CompletionContextStringSubChildRef
 	CompletionContextStringSubElemRef
+	CompletionContextStringSubPartialPath           // Typing a partial path (no completions)
+	CompletionContextStringSubPotentialResourceProp // Potential standalone resource property (needs blueprint validation)
 )
 
 var (
@@ -46,17 +57,34 @@ var (
 	operatorFieldPattern = regexp.MustCompile(`("operator"|operator):\s*$`)
 
 	// Substitution reference patterns.
-	variableRefTextPattern             = regexp.MustCompile(`variables\.$`)
-	resourceRefTextPattern             = regexp.MustCompile(`resources\.$`)
-	resourcePropertyTextPattern        = regexp.MustCompile(`resources\.([A-Za-z0-9_-]|"|\.|\[|\])+\.$`)
-	resourceWithoutNamespacePropTextPattern = regexp.MustCompile(`([A-Za-z0-9_-]|"|\.|\[|\])+\.$`)
-	dataSourceRefTextPattern           = regexp.MustCompile(`datasources\.$`)
-	dataSourcePropertyTextPattern      = regexp.MustCompile(`datasources\.(([A-Za-z0-9_-]|"|\.|\[|\])+)\.$`)
-	valueRefTextPattern                = regexp.MustCompile(`values\.$`)
-	childRefTextPattern                = regexp.MustCompile(`children\.$`)
-	elemRefTextPattern                 = regexp.MustCompile(`elem\.$`)
-	subOpenTextPattern                 = regexp.MustCompile(`\${$`)
-	inSubTextPattern                   = regexp.MustCompile(`\${[^\}]*$`)
+	variableRefTextPattern = regexp.MustCompile(`variables\.$`)
+	// resources. or resources[
+	resourceRefTextPattern = regexp.MustCompile(`resources(\.$|\[$)`)
+	// resources.{name}. or resources.{name}[ or resources.{name}.{prop}. or resources.{name}.{prop}[
+	resourcePropertyTextPattern                    = regexp.MustCompile(`resources\.([A-Za-z0-9_-]|"|'|\.|\[|\])+\.$`)
+	resourcePropertyBracketTextPattern             = regexp.MustCompile(`resources\.([A-Za-z0-9_-]|"|'|\.|\[|\])*\[$`)
+	resourcePropertyPartialTextPattern             = regexp.MustCompile(`resources\.[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)+$`)
+	resourceWithoutNamespacePropTextPattern        = regexp.MustCompile(`([A-Za-z0-9_-]|"|'|\.|\[|\])+\.$`)
+	resourceWithoutNamespacePropBracketTextPattern = regexp.MustCompile(`([A-Za-z0-9_-]|"|'|\.|\[|\])+\[$`)
+	// datasources. or datasources[
+	dataSourceRefTextPattern = regexp.MustCompile(`datasources(\.$|\[$)`)
+	// datasources.{name}. or datasources.{name}.{prop}. or datasources.{name}[
+	// Capture group 1 is just the name (up to first . or [)
+	dataSourcePropertyTextPattern        = regexp.MustCompile(`datasources\.([A-Za-z0-9_-]+)([A-Za-z0-9_-]|"|'|\.|\[|\])*\.$`)
+	dataSourcePropertyBracketTextPattern = regexp.MustCompile(`datasources\.([A-Za-z0-9_-]+)([A-Za-z0-9_-]|"|'|\.|\[|\])*\[$`)
+	valueRefTextPattern                  = regexp.MustCompile(`values\.$`)
+	childRefTextPattern                  = regexp.MustCompile(`children\.$`)
+	elemRefTextPattern                   = regexp.MustCompile(`elem\.$`)
+	subOpenTextPattern                   = regexp.MustCompile(`\${$`)
+	inSubTextPattern                     = regexp.MustCompile(`\${[^\}]*$`)
+
+	// Pattern for potential standalone resource property (e.g., ${myResource. or ${myResource[)
+	// Matches: word characters followed by property access (. or [) that's NOT a reserved namespace
+	// Captures: group 1 = the potential resource name
+	potentialStandaloneResourcePropPattern = regexp.MustCompile(`\${([A-Za-z][A-Za-z0-9_-]*)([A-Za-z0-9_\-\.\[\]"']+)?[\.\[]$`)
+
+	// Reserved namespace prefixes that are NOT standalone resources
+	reservedNamespaces = []string{"resources", "datasources", "variables", "values", "children", "elem"}
 )
 
 // CompletionContext provides rich context for completion suggestions.
@@ -67,8 +95,9 @@ type CompletionContext struct {
 	NodeCtx *NodeContext
 
 	// Extracted names when applicable
-	ResourceName   string
-	DataSourceName string
+	ResourceName          string
+	DataSourceName        string
+	PotentialResourceName string // For standalone resource detection (needs blueprint validation)
 
 	// Text analysis results
 	TextBefore string
@@ -98,10 +127,19 @@ func DetermineCompletionContext(nodeCtx *NodeContext) *CompletionContext {
 	}
 
 	// Check substitution contexts
-	if kind, resourceName, dsName := determineSubstitutionContext(nodeCtx); kind != CompletionContextUnknown {
-		ctx.Kind = kind
-		ctx.ResourceName = resourceName
-		ctx.DataSourceName = dsName
+	result := determineSubstitutionContext(nodeCtx)
+	if result.kind != CompletionContextUnknown {
+		ctx.Kind = result.kind
+		ctx.ResourceName = result.resourceName
+		ctx.DataSourceName = result.dataSourceName
+		ctx.PotentialResourceName = result.potentialResourceName
+		return ctx
+	}
+
+	// Check resource spec field context (for editing directly in definition)
+	if result := determineResourceSpecContext(nodeCtx); result.kind != CompletionContextUnknown {
+		ctx.Kind = result.kind
+		ctx.ResourceName = result.resourceName
 		return ctx
 	}
 
@@ -143,11 +181,11 @@ func determineTypeFieldContext(nodeCtx *NodeContext) CompletionContextKind {
 }
 
 func isDataSourceFieldTypePath(path StructuredPath) bool {
-	// Pattern: /datasources/{name}/exports/{exportName}/type
-	return len(path) == 5 &&
+	// Pattern: /datasources/{name}/{exportName}/type
+	// Note: The schema tree doesn't include "exports" in the path
+	return len(path) == 4 &&
 		path.At(0).FieldName == "datasources" &&
-		path.At(2).FieldName == "exports" &&
-		path.At(4).FieldName == "type"
+		path.At(3).FieldName == "type"
 }
 
 var sectionToTypeFieldContext = map[string]CompletionContextKind{
@@ -165,8 +203,10 @@ func determineNewTypeFieldContext(path StructuredPath) CompletionContextKind {
 	section := path.At(0).FieldName
 
 	// Data sources require special handling due to nested field types
+	// Path /datasources/{name}/{exportName} (3 segments) means we're in an export
+	// Path /datasources/{name} (2 segments) means we're at the data source level
 	if section == "datasources" {
-		if len(path) >= 4 {
+		if len(path) >= 3 {
 			return CompletionContextDataSourceFieldType
 		}
 		return CompletionContextDataSourceType
@@ -205,98 +245,188 @@ func determineDataSourceFilterContext(nodeCtx *NodeContext) CompletionContextKin
 }
 
 func isInDataSourceFilters(path StructuredPath) bool {
-	return len(path) >= 4 &&
+	return len(path) >= 3 &&
 		path.At(0).FieldName == "datasources" &&
 		path.At(2).FieldName == "filters"
 }
 
-func determineSubstitutionContext(nodeCtx *NodeContext) (CompletionContextKind, string, string) {
+type resourceSpecContextResult struct {
+	kind         CompletionContextKind
+	resourceName string
+}
+
+func determineResourceSpecContext(nodeCtx *NodeContext) resourceSpecContextResult {
+	path := nodeCtx.ASTPath
+
+	// Don't trigger for substitution contexts - those are handled separately
+	if nodeCtx.InSubstitution() {
+		return resourceSpecContextResult{kind: CompletionContextUnknown}
+	}
+
+	// Only suggest field names when at a key position, not when typing values
+	if !nodeCtx.IsAtKeyPosition() {
+		return resourceSpecContextResult{kind: CompletionContextUnknown}
+	}
+
+	// Check if we're at resource definition level: /resources/{name}
+	// This should show core blueprint fields (type, description, spec, metadata, etc.)
+	if path.IsResourceDefinition() {
+		resourceName, ok := path.GetResourceName()
+		if !ok {
+			return resourceSpecContextResult{kind: CompletionContextUnknown}
+		}
+		return resourceSpecContextResult{
+			kind:         CompletionContextResourceDefinitionField,
+			resourceName: resourceName,
+		}
+	}
+
+	// Check if we're inside a resource spec path: /resources/{name}/spec/...
+	if path.IsResourceSpec() {
+		resourceName, ok := path.GetResourceName()
+		if !ok {
+			return resourceSpecContextResult{kind: CompletionContextUnknown}
+		}
+		return resourceSpecContextResult{
+			kind:         CompletionContextResourceSpecField,
+			resourceName: resourceName,
+		}
+	}
+
+	// Check if we're inside a resource metadata path: /resources/{name}/metadata/...
+	if path.IsResourceMetadata() {
+		resourceName, ok := path.GetResourceName()
+		if !ok {
+			return resourceSpecContextResult{kind: CompletionContextUnknown}
+		}
+		return resourceSpecContextResult{
+			kind:         CompletionContextResourceMetadataField,
+			resourceName: resourceName,
+		}
+	}
+
+	return resourceSpecContextResult{kind: CompletionContextUnknown}
+}
+
+type substitutionContextResult struct {
+	kind                  CompletionContextKind
+	resourceName          string
+	dataSourceName        string
+	potentialResourceName string
+}
+
+func determineSubstitutionContext(nodeCtx *NodeContext) substitutionContextResult {
 	textBefore := nodeCtx.TextBefore
 
-	// Must be in a substitution context
-	if !nodeCtx.InSubstitution() && !subOpenTextPattern.MatchString(textBefore) {
-		// Check for opening ${ pattern
-		if subOpenTextPattern.MatchString(textBefore) {
-			return CompletionContextStringSub, "", ""
-		}
-		return CompletionContextUnknown, "", ""
+	// Check for opening ${ pattern first (immediate trigger for completion)
+	if subOpenTextPattern.MatchString(textBefore) {
+		return substitutionContextResult{kind: CompletionContextStringSub}
+	}
+
+	// Must be in a substitution context for other checks
+	if !nodeCtx.InSubstitution() {
+		return substitutionContextResult{kind: CompletionContextUnknown}
 	}
 
 	// Check for variable reference: variables.
 	if variableRefTextPattern.MatchString(textBefore) {
-		return CompletionContextStringSubVariableRef, "", ""
+		return substitutionContextResult{kind: CompletionContextStringSubVariableRef}
 	}
 
-	// Check for data source property reference: datasources.{name}.
+	// Check for data source property reference: datasources.{name}. or datasources.{name}[
 	if matches := dataSourcePropertyTextPattern.FindStringSubmatch(textBefore); len(matches) >= 2 {
-		return CompletionContextStringSubDataSourceProperty, "", matches[1]
+		return substitutionContextResult{kind: CompletionContextStringSubDataSourceProperty, dataSourceName: matches[1]}
+	}
+	if matches := dataSourcePropertyBracketTextPattern.FindStringSubmatch(textBefore); len(matches) >= 2 {
+		return substitutionContextResult{kind: CompletionContextStringSubDataSourceProperty, dataSourceName: matches[1]}
 	}
 
 	// Check for data source reference: datasources.
 	if dataSourceRefTextPattern.MatchString(textBefore) {
-		return CompletionContextStringSubDataSourceRef, "", ""
+		return substitutionContextResult{kind: CompletionContextStringSubDataSourceRef}
 	}
 
 	// Check for value reference: values.
 	if valueRefTextPattern.MatchString(textBefore) {
-		return CompletionContextStringSubValueRef, "", ""
+		return substitutionContextResult{kind: CompletionContextStringSubValueRef}
 	}
 
 	// Check for child reference: children.
 	if childRefTextPattern.MatchString(textBefore) {
-		return CompletionContextStringSubChildRef, "", ""
+		return substitutionContextResult{kind: CompletionContextStringSubChildRef}
 	}
 
 	// Check for elem reference: elem.
 	if elemRefTextPattern.MatchString(textBefore) {
-		return CompletionContextStringSubElemRef, "", ""
+		return substitutionContextResult{kind: CompletionContextStringSubElemRef}
 	}
 
-	// Check for resource property reference: resources.{name}.{prop}.
-	if resourcePropertyTextPattern.MatchString(textBefore) {
+	// Check for resource property reference: resources.{name}.{prop}. or resources.{name}.{prop}[
+	if resourcePropertyTextPattern.MatchString(textBefore) ||
+		resourcePropertyBracketTextPattern.MatchString(textBefore) {
 		resourceName := extractResourceNameFromText(textBefore)
-		return CompletionContextStringSubResourceProperty, resourceName, ""
+		return substitutionContextResult{kind: CompletionContextStringSubResourceProperty, resourceName: resourceName}
+	}
+
+	// Check for partial resource property path (e.g., "resources.myResource.meta")
+	// This is when the user is typing a property name without trailing dot - no completions.
+	if resourcePropertyPartialTextPattern.MatchString(textBefore) {
+		return substitutionContextResult{kind: CompletionContextStringSubPartialPath}
 	}
 
 	// Check for resource reference: resources.
 	if resourceRefTextPattern.MatchString(textBefore) {
-		return CompletionContextStringSubResourceRef, "", ""
+		return substitutionContextResult{kind: CompletionContextStringSubResourceRef}
 	}
 
 	// Check for resource property without namespace (when in resource property context)
 	if nodeCtx.SchemaElement != nil {
 		if _, isResourceProp := nodeCtx.SchemaElement.(*substitutions.SubstitutionResourceProperty); isResourceProp {
-			if resourceWithoutNamespacePropTextPattern.MatchString(textBefore) {
+			if resourceWithoutNamespacePropTextPattern.MatchString(textBefore) ||
+				resourceWithoutNamespacePropBracketTextPattern.MatchString(textBefore) {
 				resourceName := extractResourceNameFromSchemaElement(nodeCtx.SchemaElement)
-				return CompletionContextStringSubResourceProperty, resourceName, ""
+				return substitutionContextResult{kind: CompletionContextStringSubResourceProperty, resourceName: resourceName}
 			}
+		}
+	}
+
+	// Check for potential standalone resource property (e.g., ${myResource. or ${myResource[)
+	// This needs blueprint validation in the completion service
+	if potentialName := extractPotentialStandaloneResourceName(textBefore); potentialName != "" {
+		return substitutionContextResult{
+			kind:                  CompletionContextStringSubPotentialResourceProp,
+			potentialResourceName: potentialName,
 		}
 	}
 
 	// General substitution context (inside ${...})
 	if inSubTextPattern.MatchString(textBefore) || nodeCtx.InSubstitution() {
-		return CompletionContextStringSub, "", ""
+		return substitutionContextResult{kind: CompletionContextStringSub}
 	}
 
-	return CompletionContextUnknown, "", ""
+	return substitutionContextResult{kind: CompletionContextUnknown}
 }
 
 func extractResourceNameFromText(textBefore string) string {
-	// Extract resource name from pattern like "resources.myResource."
+	// Extract resource name from pattern like "resources.myResource." or "resources.myResource["
 	idx := strings.Index(textBefore, "resources.")
 	if idx == -1 {
 		return ""
 	}
 
 	after := textBefore[idx+len("resources."):]
-	// Find the resource name (up to the next .)
-	parts := strings.SplitN(after, ".", 2)
-	if len(parts) == 0 {
-		return ""
+
+	// Find the resource name (up to the next . or [)
+	name := after
+	if dotIdx := strings.Index(after, "."); dotIdx != -1 {
+		name = after[:dotIdx]
+	}
+	if bracketIdx := strings.Index(name, "["); bracketIdx != -1 {
+		name = name[:bracketIdx]
 	}
 
 	// Clean up the name (remove quotes if present)
-	name := strings.Trim(parts[0], "\"")
+	name = strings.Trim(name, "\"'")
 	return name
 }
 
@@ -307,25 +437,51 @@ func extractResourceNameFromSchemaElement(elem any) string {
 	return ""
 }
 
+// extractPotentialStandaloneResourceName extracts a potential resource name from patterns
+// like ${myResource. or ${myResource[ that are NOT reserved namespaces.
+// Returns empty string if not a valid pattern or if it's a reserved namespace.
+func extractPotentialStandaloneResourceName(textBefore string) string {
+	matches := potentialStandaloneResourcePropPattern.FindStringSubmatch(textBefore)
+	if len(matches) < 2 {
+		return ""
+	}
+
+	potentialName := matches[1]
+
+	// Check if this is a reserved namespace
+	for _, reserved := range reservedNamespaces {
+		if potentialName == reserved {
+			return ""
+		}
+	}
+
+	return potentialName
+}
+
 var completionContextKindNames = map[CompletionContextKind]string{
-	CompletionContextUnknown:                    "unknown",
-	CompletionContextResourceType:               "resourceType",
-	CompletionContextDataSourceType:             "dataSourceType",
-	CompletionContextVariableType:               "variableType",
-	CompletionContextValueType:                  "valueType",
-	CompletionContextExportType:                 "exportType",
-	CompletionContextDataSourceFieldType:        "dataSourceFieldType",
-	CompletionContextDataSourceFilterField:      "dataSourceFilterField",
-	CompletionContextDataSourceFilterOperator:   "dataSourceFilterOperator",
-	CompletionContextStringSub:                  "stringSub",
-	CompletionContextStringSubVariableRef:       "stringSubVariableRef",
-	CompletionContextStringSubResourceRef:       "stringSubResourceRef",
-	CompletionContextStringSubResourceProperty:  "stringSubResourceProperty",
-	CompletionContextStringSubDataSourceRef:     "stringSubDataSourceRef",
-	CompletionContextStringSubDataSourceProperty: "stringSubDataSourceProperty",
-	CompletionContextStringSubValueRef:          "stringSubValueRef",
-	CompletionContextStringSubChildRef:          "stringSubChildRef",
-	CompletionContextStringSubElemRef:           "stringSubElemRef",
+	CompletionContextUnknown:                        "unknown",
+	CompletionContextResourceType:                   "resourceType",
+	CompletionContextDataSourceType:                 "dataSourceType",
+	CompletionContextVariableType:                   "variableType",
+	CompletionContextValueType:                      "valueType",
+	CompletionContextExportType:                     "exportType",
+	CompletionContextDataSourceFieldType:            "dataSourceFieldType",
+	CompletionContextDataSourceFilterField:          "dataSourceFilterField",
+	CompletionContextDataSourceFilterOperator:       "dataSourceFilterOperator",
+	CompletionContextResourceSpecField:              "resourceSpecField",
+	CompletionContextResourceMetadataField:          "resourceMetadataField",
+	CompletionContextResourceDefinitionField:        "resourceDefinitionField",
+	CompletionContextStringSub:                      "stringSub",
+	CompletionContextStringSubVariableRef:           "stringSubVariableRef",
+	CompletionContextStringSubResourceRef:           "stringSubResourceRef",
+	CompletionContextStringSubResourceProperty:      "stringSubResourceProperty",
+	CompletionContextStringSubDataSourceRef:         "stringSubDataSourceRef",
+	CompletionContextStringSubDataSourceProperty:    "stringSubDataSourceProperty",
+	CompletionContextStringSubValueRef:              "stringSubValueRef",
+	CompletionContextStringSubChildRef:              "stringSubChildRef",
+	CompletionContextStringSubElemRef:               "stringSubElemRef",
+	CompletionContextStringSubPartialPath:           "stringSubPartialPath",
+	CompletionContextStringSubPotentialResourceProp: "stringSubPotentialResourceProp",
 }
 
 // String returns a string representation of CompletionContextKind.

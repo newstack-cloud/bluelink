@@ -42,13 +42,19 @@ func NewDiagnosticsService(
 	}
 }
 
+// UpdateLoader updates the blueprint loader used by the diagnostics service.
+// This is called after plugin loading to use a loader with plugin providers.
+func (s *DiagnosticsService) UpdateLoader(loader container.Loader) {
+	s.loader = loader
+}
+
 // ValidateTextDocument validates a text document and returns diagnostics.
 func (s *DiagnosticsService) ValidateTextDocument(
-	context *common.LSPContext,
+	lspCtx *common.LSPContext,
 	docURI lsp.URI,
 ) ([]lsp.Diagnostic, *schema.Blueprint, error) {
 	diagnostics := []lsp.Diagnostic{}
-	settings, err := s.settingsService.GetDocumentSettings(context, docURI)
+	settings, err := s.settingsService.GetDocumentSettings(lspCtx, docURI)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -60,7 +66,7 @@ func (s *DiagnosticsService) ValidateTextDocument(
 
 	format := blueprint.DetermineDocFormat(docURI)
 	validationResult, err := s.loader.ValidateString(
-		context.Context,
+		safeContext(lspCtx),
 		*content,
 		format,
 		core.NewDefaultParams(
@@ -87,5 +93,40 @@ func (s *DiagnosticsService) ValidateTextDocument(
 		diagnostics = append(diagnostics, errDiagnostics...)
 	}
 
-	return diagnostics, validationResult.Schema, nil
+	return deduplicateDiagnostics(diagnostics), validationResult.Schema, nil
+}
+
+func deduplicateDiagnostics(diagnostics []lsp.Diagnostic) []lsp.Diagnostic {
+	if len(diagnostics) == 0 {
+		return diagnostics
+	}
+
+	seen := make(map[string]bool)
+	result := make([]lsp.Diagnostic, 0, len(diagnostics))
+
+	for _, diag := range diagnostics {
+		key := diagnosticKey(diag)
+		if !seen[key] {
+			seen[key] = true
+			result = append(result, diag)
+		}
+	}
+
+	return result
+}
+
+func diagnosticKey(diag lsp.Diagnostic) string {
+	severity := 0
+	if diag.Severity != nil {
+		severity = int(*diag.Severity)
+	}
+	return fmt.Sprintf(
+		"%d:%d-%d:%d|%d|%s",
+		diag.Range.Start.Line,
+		diag.Range.Start.Character,
+		diag.Range.End.Line,
+		diag.Range.End.Character,
+		severity,
+		diag.Message,
+	)
 }

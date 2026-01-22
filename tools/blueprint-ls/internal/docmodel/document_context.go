@@ -1,8 +1,11 @@
 package docmodel
 
 import (
+	"strings"
+
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	"go.uber.org/zap"
 )
 
@@ -18,10 +21,10 @@ const (
 type DocumentStatus int
 
 const (
-	StatusValid          DocumentStatus = iota // Document parses and validates successfully
-	StatusParsingErrors                        // Has parse errors but some features work
-	StatusDegraded                             // Using stale data from last valid parse
-	StatusUnavailable                          // No AST available
+	StatusValid         DocumentStatus = iota // Document parses and validates successfully
+	StatusParsingErrors                       // Has parse errors but some features work
+	StatusDegraded                            // Using stale data from last valid parse
+	StatusUnavailable                         // No AST available
 )
 
 // DocumentContext provides unified access to document information for language features.
@@ -33,9 +36,9 @@ type DocumentContext struct {
 	Version int
 
 	// Current state (may be invalid)
-	CurrentAST   *UnifiedNode
-	ParseError   error
-	Status       DocumentStatus
+	CurrentAST *UnifiedNode
+	ParseError error
+	Status     DocumentStatus
 
 	// Last-known-good state (always valid when available)
 	LastValidAST     *UnifiedNode
@@ -159,10 +162,165 @@ func (ctx *DocumentContext) GetNodeContext(pos source.Position, leeway int) *Nod
 		}
 	}
 
+	// If no AST is available, fall back to schema tree directly
+	if nodeCtx.UnifiedNode == nil && ctx.SchemaTree != nil {
+		collected := ctx.CollectSchemaNodesAtPosition(pos, leeway)
+		if len(collected) > 0 {
+			nodeCtx.SchemaNode = collected[len(collected)-1]
+			nodeCtx.SchemaElement = nodeCtx.SchemaNode.SchemaElement
+			nodeCtx.ASTPath = schemaPathToStructuredPath(nodeCtx.SchemaNode.Path)
+		}
+	}
+
 	// Extract text context for completion
 	nodeCtx.extractTextContext(ctx.Content, pos)
 
+	// If still no path found and we have an AST, try position-based detection
+	// For YAML: uses indentation to find parent context on empty lines
+	if len(nodeCtx.ASTPath) == 0 {
+		ctx.tryIndentationBasedContext(nodeCtx, pos)
+	}
+
 	return nodeCtx
+}
+
+// tryIndentationBasedContext attempts to determine context from indentation
+// when no AST node is found at the position. This handles empty lines inside
+// YAML blocks where the cursor position doesn't match any existing node.
+func (ctx *DocumentContext) tryIndentationBasedContext(nodeCtx *NodeContext, pos source.Position) {
+	if ctx.Content == "" {
+		return
+	}
+
+	// Get the indentation level of the current line
+	lines := strings.Split(ctx.Content, "\n")
+	lineIndex := pos.Line - 1
+	if lineIndex < 0 || lineIndex >= len(lines) {
+		return
+	}
+
+	currentIndent := countLeadingSpaces(lines[lineIndex])
+
+	// If cursor is at position 1 (before any indent), use the indent of where
+	// the cursor would naturally be typing (the current line's indent or cursor column)
+	if pos.Column > 1 {
+		currentIndent = pos.Column - 1
+	}
+
+	// Search backwards to find the parent context based on indentation
+	ast := ctx.CurrentAST
+	if ast == nil {
+		ast = ctx.LastValidAST
+	}
+	if ast == nil {
+		return
+	}
+
+	// Find the deepest node on a previous line that could contain this indentation
+	parentNode := ctx.findParentByIndentation(ast, pos.Line, currentIndent)
+	if parentNode == nil {
+		return
+	}
+
+	nodeCtx.ASTPath = StructuredPath(parentNode.AncestorPath())
+	nodeCtx.UnifiedNode = parentNode
+	nodeCtx.IsStale = true
+
+	// Correlate with schema tree
+	if ctx.SchemaTree != nil {
+		nodeCtx.SchemaNode = ctx.findCorrespondingSchemaNode(nodeCtx.ASTPath)
+		if nodeCtx.SchemaNode != nil {
+			nodeCtx.SchemaElement = nodeCtx.SchemaNode.SchemaElement
+		}
+	}
+}
+
+// findParentByIndentation finds the deepest AST node on a previous line
+// that could logically contain content at the given indentation level.
+func (ctx *DocumentContext) findParentByIndentation(root *UnifiedNode, currentLine int, indent int) *UnifiedNode {
+	if root == nil {
+		return nil
+	}
+
+	var bestMatch *UnifiedNode
+	ctx.walkNodesForIndent(root, currentLine, indent, &bestMatch)
+	return bestMatch
+}
+
+// walkNodesForIndent recursively searches for nodes that could contain the indentation.
+func (ctx *DocumentContext) walkNodesForIndent(node *UnifiedNode, currentLine int, indent int, bestMatch **UnifiedNode) {
+	if node == nil || node.Range.Start == nil {
+		return
+	}
+
+	nodeStartLine := node.Range.Start.Line
+	nodeStartCol := node.Range.Start.Column
+	nodeEndLine := currentLine // Default: assume extends to current line if no end
+
+	if node.Range.End != nil {
+		nodeEndLine = node.Range.End.Line
+	}
+
+	// Node must start before the current line and extend to or past it
+	if nodeStartLine >= currentLine {
+		return
+	}
+
+	// For a node to be a valid parent, our indent must be greater than the node's start column
+	// (meaning we're indented inside the node's content)
+	if indent > nodeStartCol && nodeEndLine >= currentLine {
+		// This node could contain our position - check if it's better than current match
+		if *bestMatch == nil || nodeStartLine > (*bestMatch).Range.Start.Line {
+			// Only consider mapping nodes (objects) as valid parents for field completion
+			if node.Kind == NodeKindMapping {
+				*bestMatch = node
+			}
+		}
+	}
+
+	// Recurse into children
+	for _, child := range node.Children {
+		ctx.walkNodesForIndent(child, currentLine, indent, bestMatch)
+	}
+}
+
+// countLeadingSpaces returns the number of leading space characters in a string.
+func countLeadingSpaces(s string) int {
+	count := 0
+	for _, c := range s {
+		if c == ' ' {
+			count += 1
+		} else if c == '\t' {
+			count += 2 // Treat tabs as 2 spaces
+		} else {
+			break
+		}
+	}
+	return count
+}
+
+// schemaPathToStructuredPath converts a schema tree path string to a StructuredPath.
+// Schema paths have the format "/section/name/field" (e.g., "/datasources/network/exports/vpc/type")
+func schemaPathToStructuredPath(schemaPath string) StructuredPath {
+	if schemaPath == "" || schemaPath == "/" {
+		return StructuredPath{}
+	}
+
+	// Remove leading slash and split
+	parts := strings.Split(strings.TrimPrefix(schemaPath, "/"), "/")
+	segments := make([]PathSegment, 0, len(parts))
+
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		segments = append(segments, PathSegment{
+			Kind:      PathSegmentField,
+			FieldName: part,
+		})
+	}
+
+	return StructuredPath(segments)
 }
 
 // findCorrespondingSchemaNode finds the schema tree node that corresponds to a path.
@@ -193,9 +351,109 @@ func findSchemaNodeByPath(node *schema.TreeNode, targetPath string) *schema.Tree
 	return nil
 }
 
+// CollectSchemaNodesAtPosition collects all schema tree nodes containing the position.
+// This is used for hover to find the hoverable element in the ancestor chain.
+func (ctx *DocumentContext) CollectSchemaNodesAtPosition(pos source.Position, leeway int) []*schema.TreeNode {
+	if ctx.SchemaTree == nil {
+		return nil
+	}
+
+	var collected []*schema.TreeNode
+	collectSchemaNodes(ctx.SchemaTree, pos, leeway, &collected)
+	return collected
+}
+
+// collectSchemaNodes recursively collects schema nodes containing the position.
+func collectSchemaNodes(node *schema.TreeNode, pos source.Position, leeway int, collected *[]*schema.TreeNode) {
+	if node == nil || node.Range == nil {
+		return
+	}
+
+	if containsSchemaPosition(node.Range, pos, leeway) {
+		*collected = append(*collected, node)
+		for _, child := range node.Children {
+			collectSchemaNodes(child, pos, leeway, collected)
+		}
+	}
+}
+
+// containsSchemaPosition checks if a schema range contains the position.
+func containsSchemaPosition(r *source.Range, pos source.Position, leeway int) bool {
+	if r == nil || r.Start == nil {
+		return false
+	}
+
+	// Handle ranges without end position (open-ended)
+	if r.End == nil {
+		return pos.Line > r.Start.Line ||
+			(pos.Line == r.Start.Line && pos.Column >= r.Start.Column-leeway)
+	}
+
+	// Single line range
+	if pos.Line == r.Start.Line && pos.Line == r.End.Line {
+		return pos.Column >= r.Start.Column-leeway &&
+			pos.Column <= r.End.Column+leeway
+	}
+
+	// Position on start line
+	if pos.Line == r.Start.Line {
+		return pos.Column >= r.Start.Column-leeway
+	}
+
+	// Position on end line
+	if pos.Line == r.End.Line {
+		return pos.Column <= r.End.Column+leeway
+	}
+
+	// Position on middle lines
+	return pos.Line > r.Start.Line && pos.Line < r.End.Line
+}
+
 // HasValidAST returns true if a valid AST is available (current or last-known-good).
 func (ctx *DocumentContext) HasValidAST() bool {
 	return ctx.CurrentAST != nil || ctx.LastValidAST != nil
+}
+
+// FindFunctionAtPosition finds the deepest function expression at the given position.
+// This traverses the schema tree to find nested function calls.
+func (ctx *DocumentContext) FindFunctionAtPosition(pos source.Position) *substitutions.SubstitutionFunctionExpr {
+	if ctx.SchemaTree == nil {
+		return nil
+	}
+	return findFunctionInTree(ctx.SchemaTree, pos)
+}
+
+// findFunctionInTree recursively searches for the deepest function at a position.
+func findFunctionInTree(node *schema.TreeNode, pos source.Position) *substitutions.SubstitutionFunctionExpr {
+	if node == nil {
+		return nil
+	}
+
+	if !containsSchemaPosition(node.Range, pos, 0) {
+		return nil
+	}
+
+	// Check if this node is a function
+	subFunc, isFunc := node.SchemaElement.(*substitutions.SubstitutionFunctionExpr)
+
+	// If this is a function with no children, return it
+	if isFunc && len(node.Children) == 0 {
+		return subFunc
+	}
+
+	// Search children for a deeper function
+	for _, child := range node.Children {
+		if childFunc := findFunctionInTree(child, pos); childFunc != nil {
+			return childFunc
+		}
+	}
+
+	// If we found a function at this level but no deeper one, return it
+	if isFunc {
+		return subFunc
+	}
+
+	return nil
 }
 
 // HasSchema returns true if schema information is available.
@@ -245,4 +503,27 @@ func (s DocumentStatus) String() string {
 	default:
 		return "unknown"
 	}
+}
+
+// NewDocumentContextFromSchema creates a DocumentContext from existing schema
+// information. This is useful for transitioning from the old state management
+// approach where schema and tree are already available.
+func NewDocumentContextFromSchema(
+	uri string,
+	blueprint *schema.Blueprint,
+	tree *schema.TreeNode,
+) *DocumentContext {
+	ctx := &DocumentContext{
+		URI:        uri,
+		Blueprint:  blueprint,
+		SchemaTree: tree,
+		Status:     StatusValid,
+	}
+
+	if blueprint != nil {
+		ctx.LastValidSchema = blueprint
+		ctx.LastValidTree = tree
+	}
+
+	return ctx
 }

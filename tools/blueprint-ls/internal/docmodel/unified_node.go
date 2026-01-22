@@ -58,18 +58,21 @@ func (n *UnifiedNode) Path() string {
 }
 
 // AncestorPath returns the path segments from root to this node.
+// Only segments with meaningful field names or indices are included.
 func (n *UnifiedNode) AncestorPath() []PathSegment {
 	var segments []PathSegment
 	current := n
 
 	for current != nil && current.Parent != nil {
-		var seg PathSegment
+		// Only add segments that have meaningful identifiers
 		if current.Index >= 0 {
-			seg = PathSegment{Kind: PathSegmentIndex, Index: current.Index}
+			seg := PathSegment{Kind: PathSegmentIndex, Index: current.Index}
+			segments = append([]PathSegment{seg}, segments...)
 		} else if current.FieldName != "" {
-			seg = PathSegment{Kind: PathSegmentField, FieldName: current.FieldName}
+			seg := PathSegment{Kind: PathSegmentField, FieldName: current.FieldName}
+			segments = append([]PathSegment{seg}, segments...)
 		}
-		segments = append([]PathSegment{seg}, segments...)
+		// Skip nodes without field names or indices (structural nodes like block_node)
 		current = current.Parent
 	}
 
@@ -111,6 +114,9 @@ func (n *UnifiedNode) IsLeaf() bool {
 }
 
 // containsPosition checks if a range contains a position with optional leeway.
+// Leeway is applied asymmetrically: it extends the START boundary (to catch
+// positions slightly before the node) but NOT the END boundary (positions after
+// a node's end are clearly outside it).
 func containsPosition(r source.Range, pos source.Position, leeway int) bool {
 	if r.Start == nil {
 		return false
@@ -125,7 +131,7 @@ func containsPosition(r source.Range, pos source.Position, leeway int) bool {
 	// Single line range
 	if pos.Line == r.Start.Line && pos.Line == r.End.Line {
 		return pos.Column >= r.Start.Column-leeway &&
-			pos.Column <= r.End.Column+leeway
+			pos.Column <= r.End.Column
 	}
 
 	// Position on start line
@@ -133,9 +139,9 @@ func containsPosition(r source.Range, pos source.Position, leeway int) bool {
 		return pos.Column >= r.Start.Column-leeway
 	}
 
-	// Position on end line
+	// Position on end line - no leeway extension past the end
 	if pos.Line == r.End.Line {
-		return pos.Column <= r.End.Column+leeway
+		return pos.Column <= r.End.Column
 	}
 
 	// Position on middle lines

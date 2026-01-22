@@ -12,6 +12,8 @@ import (
 type blueprintErrorLocation interface {
 	Line() *int
 	Column() *int
+	EndLine() *int
+	EndColumn() *int
 	UseColumnAccuracy() bool
 	ColumnAccuracy() *substitutions.ColumnAccuracy
 }
@@ -25,19 +27,47 @@ type blueprintErrorLocationLoadErr struct {
 }
 
 func (l blueprintErrorLocationLoadErr) Line() *int {
+	if l.err == nil {
+		return nil
+	}
 	return l.err.Line
 }
 
 func (l blueprintErrorLocationLoadErr) Column() *int {
+	if l.err == nil {
+		return nil
+	}
 	return l.err.Column
 }
 
+func (l blueprintErrorLocationLoadErr) EndLine() *int {
+	if l.err == nil {
+		return nil
+	}
+	return l.err.EndLine
+}
+
+func (l blueprintErrorLocationLoadErr) EndColumn() *int {
+	if l.err == nil {
+		return nil
+	}
+	return l.err.EndColumn
+}
+
 func (l blueprintErrorLocationLoadErr) UseColumnAccuracy() bool {
-	return false
+	if l.err == nil {
+		return false
+	}
+	return l.err.ColumnAccuracy != nil
 }
 
 func (l blueprintErrorLocationLoadErr) ColumnAccuracy() *substitutions.ColumnAccuracy {
-	return nil
+	if l.err == nil || l.err.ColumnAccuracy == nil {
+		return nil
+	}
+	// source.ColumnAccuracy and substitutions.ColumnAccuracy are the same type
+	ca := substitutions.ColumnAccuracy(*l.err.ColumnAccuracy)
+	return &ca
 }
 
 //////////////////////////////////////////////////////////
@@ -54,6 +84,14 @@ func (l blueprintErrorLocationSchemaErr) Line() *int {
 
 func (l blueprintErrorLocationSchemaErr) Column() *int {
 	return l.err.SourceColumn
+}
+
+func (l blueprintErrorLocationSchemaErr) EndLine() *int {
+	return nil
+}
+
+func (l blueprintErrorLocationSchemaErr) EndColumn() *int {
+	return nil
 }
 
 func (l blueprintErrorLocationSchemaErr) UseColumnAccuracy() bool {
@@ -80,6 +118,14 @@ func (l blueprintErrorLocationParseErr) Column() *int {
 	return &l.err.Column
 }
 
+func (l blueprintErrorLocationParseErr) EndLine() *int {
+	return nil
+}
+
+func (l blueprintErrorLocationParseErr) EndColumn() *int {
+	return nil
+}
+
 func (l blueprintErrorLocationParseErr) UseColumnAccuracy() bool {
 	return true
 }
@@ -104,6 +150,14 @@ func (l blueprintErrorLocationLexErr) Column() *int {
 	return &l.err.Column
 }
 
+func (l blueprintErrorLocationLexErr) EndLine() *int {
+	return nil
+}
+
+func (l blueprintErrorLocationLexErr) EndColumn() *int {
+	return nil
+}
+
 func (l blueprintErrorLocationLexErr) UseColumnAccuracy() bool {
 	return true
 }
@@ -126,6 +180,14 @@ func (l blueprintErrorLocationCoreErr) Line() *int {
 
 func (l blueprintErrorLocationCoreErr) Column() *int {
 	return l.err.SourceColumn
+}
+
+func (l blueprintErrorLocationCoreErr) EndLine() *int {
+	return nil
+}
+
+func (l blueprintErrorLocationCoreErr) EndColumn() *int {
+	return nil
 }
 
 func (l blueprintErrorLocationCoreErr) UseColumnAccuracy() bool {

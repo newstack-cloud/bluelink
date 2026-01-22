@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
@@ -13,8 +14,7 @@ type GotoDefinitionServiceSuite struct {
 	suite.Suite
 	service          *GotoDefinitionService
 	blueprintContent string
-	blueprint        *schema.Blueprint
-	tree             *schema.TreeNode
+	docCtx           *docmodel.DocumentContext
 }
 
 func (s *GotoDefinitionServiceSuite) SetupTest() {
@@ -31,15 +31,20 @@ func (s *GotoDefinitionServiceSuite) SetupTest() {
 
 	blueprint, err := schema.LoadString(s.blueprintContent, schema.YAMLSpecFormat)
 	s.Require().NoError(err)
-	s.blueprint = blueprint
 
 	tree := schema.SchemaToTree(blueprint)
 	s.Require().NoError(err)
-	s.tree = tree
+
+	s.docCtx = docmodel.NewDocumentContextFromSchema(
+		"file:///blueprint.yaml",
+		blueprint,
+		tree,
+	)
+	s.docCtx.Content = s.blueprintContent
 }
 
 func (s *GotoDefinitionServiceSuite) Test_get_definitions_for_resource_ref() {
-	definitions, err := s.service.GetDefinitions(s.blueprintContent, s.tree, s.blueprint, &lsp.TextDocumentPositionParams{
+	definitions, err := s.service.GetDefinitionsFromContext(s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{
 			URI: "file:///blueprint.yaml",
 		},
@@ -87,7 +92,7 @@ func (s *GotoDefinitionServiceSuite) Test_get_definitions_for_resource_ref() {
 }
 
 func (s *GotoDefinitionServiceSuite) Test_get_definitions_for_datasource_ref() {
-	definitions, err := s.service.GetDefinitions(s.blueprintContent, s.tree, s.blueprint, &lsp.TextDocumentPositionParams{
+	definitions, err := s.service.GetDefinitionsFromContext(s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{
 			URI: "file:///blueprint.yaml",
 		},
@@ -135,7 +140,7 @@ func (s *GotoDefinitionServiceSuite) Test_get_definitions_for_datasource_ref() {
 }
 
 func (s *GotoDefinitionServiceSuite) Test_get_definitions_for_var_ref() {
-	definitions, err := s.service.GetDefinitions(s.blueprintContent, s.tree, s.blueprint, &lsp.TextDocumentPositionParams{
+	definitions, err := s.service.GetDefinitionsFromContext(s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{
 			URI: "file:///blueprint.yaml",
 		},
@@ -183,7 +188,7 @@ func (s *GotoDefinitionServiceSuite) Test_get_definitions_for_var_ref() {
 }
 
 func (s *GotoDefinitionServiceSuite) Test_get_definitions_for_val_ref() {
-	definitions, err := s.service.GetDefinitions(s.blueprintContent, s.tree, s.blueprint, &lsp.TextDocumentPositionParams{
+	definitions, err := s.service.GetDefinitionsFromContext(s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{
 			URI: "file:///blueprint.yaml",
 		},
@@ -231,7 +236,7 @@ func (s *GotoDefinitionServiceSuite) Test_get_definitions_for_val_ref() {
 }
 
 func (s *GotoDefinitionServiceSuite) Test_get_definitions_for_child_ref() {
-	definitions, err := s.service.GetDefinitions(s.blueprintContent, s.tree, s.blueprint, &lsp.TextDocumentPositionParams{
+	definitions, err := s.service.GetDefinitionsFromContext(s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{
 			URI: "file:///blueprint.yaml",
 		},
@@ -279,7 +284,7 @@ func (s *GotoDefinitionServiceSuite) Test_get_definitions_for_child_ref() {
 }
 
 func (s *GotoDefinitionServiceSuite) Test_get_definitions_returns_empty_list_for_a_non_ref_position() {
-	definitions, err := s.service.GetDefinitions(s.blueprintContent, s.tree, s.blueprint, &lsp.TextDocumentPositionParams{
+	definitions, err := s.service.GetDefinitionsFromContext(s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{
 			URI: "file:///blueprint.yaml",
 		},

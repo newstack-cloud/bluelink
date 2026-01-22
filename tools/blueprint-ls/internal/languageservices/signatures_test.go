@@ -6,6 +6,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/corefunctions"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/testutils"
 	"github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
@@ -16,7 +17,7 @@ import (
 type SignatureServiceSuite struct {
 	suite.Suite
 	service *SignatureService
-	tree    *schema.TreeNode
+	docCtx  *docmodel.DocumentContext
 }
 
 func (s *SignatureServiceSuite) SetupTest() {
@@ -41,12 +42,13 @@ func (s *SignatureServiceSuite) SetupTest() {
 	s.Require().NoError(err)
 	blueprint, err := schema.LoadString(content, schema.YAMLSpecFormat)
 	s.Require().NoError(err)
-	s.tree = schema.SchemaToTree(blueprint)
+	tree := schema.SchemaToTree(blueprint)
+	s.docCtx = docmodel.NewDocumentContextFromSchema(string(blueprintURI), blueprint, tree)
 }
 
 func (s *SignatureServiceSuite) Test_produces_function_signature_definition_with_scalar_types() {
 	lspCtx := &common.LSPContext{}
-	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, s.tree, &lsp.TextDocumentPositionParams{
+	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{
 			URI: blueprintURI,
 		},
@@ -86,7 +88,7 @@ func (s *SignatureServiceSuite) Test_produces_function_signature_definition_with
 
 func (s *SignatureServiceSuite) Test_produces_function_signature_definition_with_function_return_type() {
 	lspCtx := &common.LSPContext{}
-	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, s.tree, &lsp.TextDocumentPositionParams{
+	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{
 			URI: blueprintURI,
 		},
@@ -122,7 +124,7 @@ func (s *SignatureServiceSuite) Test_produces_function_signature_definition_with
 
 func (s *SignatureServiceSuite) Test_produces_function_signature_definition_with_function_parameter() {
 	lspCtx := &common.LSPContext{}
-	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, s.tree, &lsp.TextDocumentPositionParams{
+	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{
 			URI: blueprintURI,
 		},
@@ -157,7 +159,7 @@ func (s *SignatureServiceSuite) Test_produces_function_signature_definition_with
 
 func (s *SignatureServiceSuite) Test_produces_function_signature_definition_with_any_return_type() {
 	lspCtx := &common.LSPContext{}
-	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, s.tree, &lsp.TextDocumentPositionParams{
+	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{
 			URI: blueprintURI,
 		},
@@ -188,7 +190,7 @@ func (s *SignatureServiceSuite) Test_produces_function_signature_definition_with
 
 func (s *SignatureServiceSuite) Test_produces_function_signature_definition_with_list_parameter() {
 	lspCtx := &common.LSPContext{}
-	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, s.tree, &lsp.TextDocumentPositionParams{
+	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{
 			URI: blueprintURI,
 		},
@@ -223,7 +225,7 @@ func (s *SignatureServiceSuite) Test_produces_function_signature_definition_with
 
 func (s *SignatureServiceSuite) Test_produces_function_signature_definition_with_variadic_params() {
 	lspCtx := &common.LSPContext{}
-	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, s.tree, &lsp.TextDocumentPositionParams{
+	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{
 			URI: blueprintURI,
 		},
@@ -255,7 +257,7 @@ func (s *SignatureServiceSuite) Test_produces_function_signature_definition_with
 
 func (s *SignatureServiceSuite) Test_produces_function_signature_definition_with_list_return_type() {
 	lspCtx := &common.LSPContext{}
-	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, s.tree, &lsp.TextDocumentPositionParams{
+	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{
 			URI: blueprintURI,
 		},
