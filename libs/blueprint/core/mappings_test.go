@@ -15,6 +15,14 @@ var (
 	testStringValPart = "Test string value for "
 )
 
+func exactColAccuracy() *source.ColumnAccuracy {
+	ca := source.ColumnAccuracyExact
+	return &ca
+}
+
+var (
+)
+
 type MappingNodeTestSuite struct {
 	specParseFixtures     map[string][]byte
 	specSerialiseFixtures map[string]*MappingNode
@@ -56,6 +64,7 @@ func (s *MappingNodeTestSuite) Test_parse_string_with_subs_yaml() {
 					SourceMeta: &source.Meta{
 						Position:    source.Position{Line: 1, Column: 1},
 						EndPosition: &source.Position{Line: 1, Column: 23},
+					ColumnAccuracy: exactColAccuracy(),
 					},
 				},
 				{
@@ -65,22 +74,26 @@ func (s *MappingNodeTestSuite) Test_parse_string_with_subs_yaml() {
 							SourceMeta: &source.Meta{
 								Position:    source.Position{Line: 1, Column: 25},
 								EndPosition: &source.Position{Line: 1, Column: 46},
+							ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
 							Position:    source.Position{Line: 1, Column: 25},
 							EndPosition: &source.Position{Line: 1, Column: 46},
+						ColumnAccuracy: exactColAccuracy(),
 						},
 					},
 					SourceMeta: &source.Meta{
 						Position:    source.Position{Line: 1, Column: 23},
 						EndPosition: &source.Position{Line: 1, Column: 47},
+					ColumnAccuracy: exactColAccuracy(),
 					},
 				},
 			},
 			SourceMeta: &source.Meta{
 				Position:    source.Position{Line: 1, Column: 1},
 				EndPosition: &source.Position{Line: 1, Column: 47},
+			ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -143,6 +156,7 @@ func (s *MappingNodeTestSuite) assertFieldsNodeYAML(actual *MappingNode) {
 					SourceMeta: &source.Meta{
 						Position:    source.Position{Line: 2, Column: 15},
 						EndPosition: &source.Position{Line: 2, Column: 23},
+					ColumnAccuracy: exactColAccuracy(),
 					},
 				},
 				SourceMeta: &source.Meta{Position: source.Position{Line: 2, Column: 15}},
@@ -155,6 +169,7 @@ func (s *MappingNodeTestSuite) assertFieldsNodeYAML(actual *MappingNode) {
 							SourceMeta: &source.Meta{
 								Position:    source.Position{Line: 3, Column: 15},
 								EndPosition: &source.Position{Line: 3, Column: 30},
+							ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						{
@@ -164,22 +179,26 @@ func (s *MappingNodeTestSuite) assertFieldsNodeYAML(actual *MappingNode) {
 									SourceMeta: &source.Meta{
 										Position:    source.Position{Line: 3, Column: 33},
 										EndPosition: &source.Position{Line: 3, Column: 54},
+									ColumnAccuracy: exactColAccuracy(),
 									},
 								},
 								SourceMeta: &source.Meta{
 									Position:    source.Position{Line: 3, Column: 33},
 									EndPosition: &source.Position{Line: 3, Column: 54},
+								ColumnAccuracy: exactColAccuracy(),
 								},
 							},
 							SourceMeta: &source.Meta{
 								Position:    source.Position{Line: 3, Column: 30},
 								EndPosition: &source.Position{Line: 3, Column: 54},
+							ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 					},
 					SourceMeta: &source.Meta{
 						Position:    source.Position{Line: 3, Column: 15},
 						EndPosition: &source.Position{Line: 3, Column: 56},
+					ColumnAccuracy: exactColAccuracy(),
 					},
 				},
 				SourceMeta: &source.Meta{Position: source.Position{Line: 3, Column: 15}},
@@ -190,6 +209,7 @@ func (s *MappingNodeTestSuite) assertFieldsNodeYAML(actual *MappingNode) {
 					SourceMeta: &source.Meta{
 						Position:    source.Position{Line: 4, Column: 15},
 						EndPosition: &source.Position{Line: 4, Column: 23},
+					ColumnAccuracy: exactColAccuracy(),
 					},
 				},
 				SourceMeta: &source.Meta{Position: source.Position{Line: 4, Column: 15}},
@@ -260,6 +280,7 @@ func (s *MappingNodeTestSuite) assertItemsNodeYAML(actual *MappingNode) {
 					SourceMeta: &source.Meta{
 						Position:    source.Position{Line: 2, Column: 11},
 						EndPosition: &source.Position{Line: 2, Column: 19},
+					ColumnAccuracy: exactColAccuracy(),
 					},
 				},
 				SourceMeta: &source.Meta{Position: source.Position{Line: 2, Column: 11}},
@@ -272,6 +293,7 @@ func (s *MappingNodeTestSuite) assertItemsNodeYAML(actual *MappingNode) {
 							SourceMeta: &source.Meta{
 								Position:    source.Position{Line: 3, Column: 11},
 								EndPosition: &source.Position{Line: 3, Column: 26},
+							ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						{
@@ -281,22 +303,26 @@ func (s *MappingNodeTestSuite) assertItemsNodeYAML(actual *MappingNode) {
 									SourceMeta: &source.Meta{
 										Position:    source.Position{Line: 3, Column: 29},
 										EndPosition: &source.Position{Line: 3, Column: 50},
+									ColumnAccuracy: exactColAccuracy(),
 									},
 								},
 								SourceMeta: &source.Meta{
 									Position:    source.Position{Line: 3, Column: 29},
 									EndPosition: &source.Position{Line: 3, Column: 50},
+								ColumnAccuracy: exactColAccuracy(),
 								},
 							},
 							SourceMeta: &source.Meta{
 								Position:    source.Position{Line: 3, Column: 26},
 								EndPosition: &source.Position{Line: 3, Column: 50},
+							ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 					},
 					SourceMeta: &source.Meta{
 						Position:    source.Position{Line: 3, Column: 11},
 						EndPosition: &source.Position{Line: 3, Column: 52},
+					ColumnAccuracy: exactColAccuracy(),
 					},
 				},
 				SourceMeta: &source.Meta{Position: source.Position{Line: 3, Column: 11}},
@@ -307,6 +333,7 @@ func (s *MappingNodeTestSuite) assertItemsNodeYAML(actual *MappingNode) {
 					SourceMeta: &source.Meta{
 						Position:    source.Position{Line: 4, Column: 11},
 						EndPosition: &source.Position{Line: 4, Column: 19},
+					ColumnAccuracy: exactColAccuracy(),
 					},
 				},
 				SourceMeta: &source.Meta{Position: source.Position{Line: 4, Column: 11}},
@@ -424,6 +451,7 @@ func (s *MappingNodeTestSuite) assertNestedNodeYAML(actual *MappingNode) {
 					SourceMeta: &source.Meta{
 						Position:    source.Position{Line: 2, Column: 17},
 						EndPosition: &source.Position{Line: 2, Column: 26},
+					ColumnAccuracy: exactColAccuracy(),
 					},
 				},
 				SourceMeta: &source.Meta{
@@ -438,6 +466,7 @@ func (s *MappingNodeTestSuite) assertNestedNodeYAML(actual *MappingNode) {
 							SourceMeta: &source.Meta{
 								Position:    source.Position{Line: 4, Column: 19},
 								EndPosition: &source.Position{Line: 4, Column: 28},
+							ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{Position: source.Position{Line: 4, Column: 19}},
@@ -456,6 +485,7 @@ func (s *MappingNodeTestSuite) assertNestedNodeYAML(actual *MappingNode) {
 							SourceMeta: &source.Meta{
 								Position:    source.Position{Line: 6, Column: 14},
 								EndPosition: &source.Position{Line: 6, Column: 23},
+							ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -470,6 +500,7 @@ func (s *MappingNodeTestSuite) assertNestedNodeYAML(actual *MappingNode) {
 									SourceMeta: &source.Meta{
 										Position:    source.Position{Line: 7, Column: 14},
 										EndPosition: &source.Position{Line: 7, Column: 31},
+									ColumnAccuracy: exactColAccuracy(),
 									},
 								},
 								{
@@ -479,22 +510,26 @@ func (s *MappingNodeTestSuite) assertNestedNodeYAML(actual *MappingNode) {
 											SourceMeta: &source.Meta{
 												Position:    source.Position{Line: 7, Column: 34},
 												EndPosition: &source.Position{Line: 7, Column: 55},
+											ColumnAccuracy: exactColAccuracy(),
 											},
 										},
 										SourceMeta: &source.Meta{
 											Position:    source.Position{Line: 7, Column: 34},
 											EndPosition: &source.Position{Line: 7, Column: 55},
+										ColumnAccuracy: exactColAccuracy(),
 										},
 									},
 									SourceMeta: &source.Meta{
 										Position:    source.Position{Line: 7, Column: 31},
 										EndPosition: &source.Position{Line: 7, Column: 55},
+									ColumnAccuracy: exactColAccuracy(),
 									},
 								},
 							},
 							SourceMeta: &source.Meta{
 								Position:    source.Position{Line: 7, Column: 14},
 								EndPosition: &source.Position{Line: 7, Column: 57},
+							ColumnAccuracy: exactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{Position: source.Position{Line: 7, Column: 14}},
@@ -508,6 +543,7 @@ func (s *MappingNodeTestSuite) assertNestedNodeYAML(actual *MappingNode) {
 					SourceMeta: &source.Meta{
 						Position:    source.Position{Line: 8, Column: 17},
 						EndPosition: &source.Position{Line: 8, Column: 26},
+					ColumnAccuracy: exactColAccuracy(),
 					},
 				},
 				SourceMeta: &source.Meta{

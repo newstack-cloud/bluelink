@@ -7,6 +7,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/common/strsim"
 )
 
 // createResourceDefErrorContext creates a standardized error context for resource definition validation errors
@@ -122,9 +123,27 @@ func errResourceDefUnknownField(
 	path string,
 	resourceType string,
 	field string,
+	availableFields []string,
 	location *source.Meta,
 ) error {
 	line, col := source.PositionFromSourceMeta(location)
+
+	// Find similar field names for typo suggestions (max 3 results, default threshold)
+	suggestions := strsim.FindSimilar(field, availableFields, 3, 0)
+
+	metadata := map[string]any{
+		"path":         path,
+		"unknownField": field,
+	}
+
+	// Include available fields and suggestions in metadata for LSP to use
+	if len(availableFields) > 0 {
+		metadata["availableFields"] = availableFields
+	}
+	if len(suggestions) > 0 {
+		metadata["suggestions"] = suggestions
+	}
+
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeResourceDefUnknownField,
 		Err: fmt.Errorf(
@@ -136,10 +155,7 @@ func errResourceDefUnknownField(
 		Context: createResourceDefErrorContext(
 			ErrorReasonCodeResourceDefUnknownField,
 			resourceType,
-			map[string]any{
-				"path":         path,
-				"unknownField": field,
-			},
+			metadata,
 		),
 		Line:   line,
 		Column: col,

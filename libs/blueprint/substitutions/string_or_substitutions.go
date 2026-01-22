@@ -33,15 +33,20 @@ func (s *StringOrSubstitutions) MarshalYAML() (any, error) {
 // to unmarshal a string that could contain interpolated
 // references.
 func (s *StringOrSubstitutions) UnmarshalYAML(node *yaml.Node) error {
+	isBlockStyle := node.Style == yaml.LiteralStyle || node.Style == yaml.FoldedStyle
+	colAccuracy := source.ColumnAccuracyExact
+	if isBlockStyle {
+		colAccuracy = source.ColumnAccuracyApproximate
+	}
+
 	s.SourceMeta = &source.Meta{
 		Position: source.Position{
 			Line:   node.Line,
 			Column: node.Column,
 		},
-		EndPosition: source.EndSourcePositionFromYAMLScalarNode(node),
+		EndPosition:    source.EndSourcePositionFromYAMLScalarNode(node),
+		ColumnAccuracy: &colAccuracy,
 	}
-
-	isBlockStyle := node.Style == yaml.LiteralStyle || node.Style == yaml.FoldedStyle
 	sourceStartMeta := DetermineYAMLSourceStartMeta(node, s.SourceMeta)
 	// During deserialisation, there is no way of knowing the context
 	// (i.e. the key or field name) in which the substitutions are being used.

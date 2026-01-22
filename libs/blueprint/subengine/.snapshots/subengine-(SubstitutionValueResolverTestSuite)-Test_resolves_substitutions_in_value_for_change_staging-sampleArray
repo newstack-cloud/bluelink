@@ -10,7 +10,8 @@
         EndPosition: (*source.Position)({
           Line: (int) 44,
           Column: (int) 16
-        })
+        }),
+        ColumnAccuracy: (*source.ColumnAccuracy)(1)
       })
     }),
     Value: (*core.MappingNode)({
@@ -33,7 +34,8 @@
               EndPosition: (*source.Position)({
                 Line: (int) 45,
                 Column: (int) 20
-              })
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(1)
             })
           }),
           Fields: (map[string]*core.MappingNode) <nil>,
@@ -44,7 +46,8 @@
               Line: (int) 45,
               Column: (int) 13
             },
-            EndPosition: (*source.Position)(<nil>)
+            EndPosition: (*source.Position)(<nil>),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
           }),
           FieldsSourceMeta: (map[string]*source.Meta) <nil>
         }),
@@ -64,7 +67,8 @@
               EndPosition: (*source.Position)({
                 Line: (int) 45,
                 Column: (int) 29
-              })
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(1)
             })
           }),
           Fields: (map[string]*core.MappingNode) <nil>,
@@ -75,7 +79,8 @@
               Line: (int) 45,
               Column: (int) 22
             },
-            EndPosition: (*source.Position)(<nil>)
+            EndPosition: (*source.Position)(<nil>),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
           }),
           FieldsSourceMeta: (map[string]*source.Meta) <nil>
         }),
@@ -95,7 +100,8 @@
               EndPosition: (*source.Position)({
                 Line: (int) 45,
                 Column: (int) 38
-              })
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(1)
             })
           }),
           Fields: (map[string]*core.MappingNode) <nil>,
@@ -106,7 +112,8 @@
               Line: (int) 45,
               Column: (int) 31
             },
-            EndPosition: (*source.Position)(<nil>)
+            EndPosition: (*source.Position)(<nil>),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
           }),
           FieldsSourceMeta: (map[string]*source.Meta) <nil>
         })

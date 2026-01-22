@@ -10,7 +10,8 @@
         EndPosition: (*source.Position)({
           Line: (int) 29,
           Column: (int) 18
-        })
+        }),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       })
     }),
     DataSourceMetadata: (*provider.ResolvedDataSourceMetadata)({
@@ -51,7 +52,8 @@
               EndPosition: (*source.Position)({
                 Line: (int) 32,
                 Column: (int) 18
-              })
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(1)
             })
           }),
           Operator: (*schema.DataSourceFilterOperatorWrapper)({
@@ -64,7 +66,8 @@
               EndPosition: (*source.Position)({
                 Line: (int) 33,
                 Column: (int) 31
-              })
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
             })
           }),
           Search: (*provider.ResolvedDataSourceFilterSearch)({

@@ -309,7 +309,7 @@ func errMappingNameContainsSubstitution(
 	reasonCode errors.ErrorReasonCode,
 	varSourceMeta *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(varSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: reasonCode,
 		Err: fmt.Errorf(
@@ -318,8 +318,11 @@ func errMappingNameContainsSubstitution(
 			mappingType,
 			mappingName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -331,12 +334,15 @@ func errVariableInvalidDefaultValue(
 ) error {
 	defaultVarType := deriveVarType(defaultValue)
 
-	line, col := positionFromScalarValue(defaultValue, varSourceMeta)
+	posRange := positionFromScalarValue(defaultValue, varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeVariableInvalidDefaultValue,
 		Err:        fmt.Errorf("variable %q: expected %s, got %s", varName, varType, defaultVarType),
-		Line:       line,
-		Column:     col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
 			ReasonCode: ErrorReasonCodeVariableInvalidDefaultValue,
@@ -358,7 +364,7 @@ func errVariableInvalidDefaultValue(
 }
 
 func errVariableEmptyDefaultValue(varType schema.VariableType, varName string, varSourceMeta *source.Meta) error {
-	line, col := source.PositionFromSourceMeta(varSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeVariableEmptyDefaultValue,
 		Err: fmt.Errorf(
@@ -366,8 +372,11 @@ func errVariableEmptyDefaultValue(varType schema.VariableType, varName string, v
 			varType,
 			varName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
 			ReasonCode: ErrorReasonCodeVariableEmptyDefaultValue,
@@ -395,7 +404,7 @@ func errVariableInvalidOrMissing(
 ) error {
 	actualVarType := deriveOptionalVarType(value)
 	if actualVarType == nil {
-		line, col := source.PositionFromSourceMeta(varSourceMeta)
+		posRange := source.PositionRangeFromSourceMeta(varSourceMeta)
 		return &errors.LoadError{
 			ReasonCode: ErrorReasonCodeVariableInvalidOrMissing,
 			Err: fmt.Errorf(
@@ -403,8 +412,11 @@ func errVariableInvalidOrMissing(
 				varName,
 				varType,
 			),
-			Line:   line,
-			Column: col,
+			Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+			Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 			Context: &errors.ErrorContext{
 				Category:   errors.ErrorCategoryVariableType,
 				ReasonCode: ErrorReasonCodeVariableInvalidOrMissing,
@@ -424,7 +436,7 @@ func errVariableInvalidOrMissing(
 		}
 	}
 
-	line, col := source.PositionFromSourceMeta(varSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeVariableInvalidOrMissing,
 		Err: fmt.Errorf(
@@ -434,8 +446,11 @@ func errVariableInvalidOrMissing(
 			varType,
 			*actualVarType,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
 			ReasonCode: ErrorReasonCodeVariableInvalidOrMissing,
@@ -461,7 +476,7 @@ func errVariableEmptyValue(
 	varName string,
 	varSourceMeta *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(varSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeVariableEmptyValue,
 		Err: fmt.Errorf(
@@ -470,8 +485,11 @@ func errVariableEmptyValue(
 			varName,
 			varType,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
 			ReasonCode: ErrorReasonCodeVariableEmptyValue,
@@ -499,7 +517,7 @@ func errVariableInvalidAllowedValue(
 	allowedValueVarType := deriveVarType(allowedValue)
 	scalarValueStr := deriveScalarValueAsString(allowedValue)
 
-	line, col := positionFromScalarValue(allowedValue, varSourceMeta)
+	posRange := positionFromScalarValue(allowedValue, varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeVariableInvalidAllowedValue,
 		Err: fmt.Errorf(
@@ -508,8 +526,11 @@ func errVariableInvalidAllowedValue(
 			scalarValueStr,
 			varType,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
 			ReasonCode: ErrorReasonCodeVariableInvalidAllowedValue,
@@ -535,15 +556,18 @@ func errVariableNullAllowedValue(
 	allowedValue *bpcore.ScalarValue,
 	varSourceMeta *source.Meta,
 ) error {
-	line, col := positionFromScalarValue(allowedValue, varSourceMeta)
+	posRange := positionFromScalarValue(allowedValue, varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeVariableNullAllowedValue,
 		Err: fmt.Errorf(
 			"null was provided for an allowed value, a valid %s must be provided",
 			varType,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
 			ReasonCode: ErrorReasonCodeVariableNullAllowedValue,
@@ -581,7 +605,7 @@ func errVariableInvalidAllowedValuesNotSupported(
 	varName string,
 	varSourceMeta *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(varSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeVariableInvalidAllowedValuesNotSupported,
 		Err: fmt.Errorf(
@@ -591,8 +615,11 @@ func errVariableInvalidAllowedValuesNotSupported(
 			varName,
 			varType,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
 			ReasonCode: ErrorReasonCodeVariableInvalidAllowedValuesNotSupported,
@@ -621,7 +648,7 @@ func errVariableValueNotAllowed(
 	usingDefault bool,
 ) error {
 	valueLabel := deriveValueLabel(usingDefault)
-	line, col := positionFromScalarValue(value, varSourceMeta)
+	posRange := positionFromScalarValue(value, varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeVariableValueNotAllowed,
 		Err: fmt.Errorf(
@@ -632,8 +659,11 @@ func errVariableValueNotAllowed(
 			varName,
 			scalarListToString(allowedValues),
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
 			ReasonCode: ErrorReasonCodeVariableValueNotAllowed,
@@ -663,7 +693,7 @@ func errCustomVariableValueNotInOptions(
 	usingDefault bool,
 ) error {
 	valueLabel := deriveValueLabel(usingDefault)
-	line, col := positionFromScalarValue(value, varSourceMeta)
+	posRange := positionFromScalarValue(value, varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeCustomVarValueNotInOptions,
 		Err: fmt.Errorf(
@@ -690,18 +720,24 @@ func errCustomVariableValueNotInOptions(
 				"variableType": varType,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
 func errRequiredVariableMissing(varName string, varSourceMeta *source.Meta) error {
-	line, col := source.PositionFromSourceMeta(varSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeRequiredVariableMissing,
 		Err:        fmt.Errorf("required variable %q has no value", varName),
-		Line:       line,
-		Column:     col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
 			ReasonCode: ErrorReasonCodeRequiredVariableMissing,
@@ -732,7 +768,7 @@ func errCustomVariableOptions(
 	varSourceMeta *source.Meta,
 	err error,
 ) error {
-	line, col := source.PositionFromSourceMeta(varSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidVariable,
 		Err: fmt.Errorf(
@@ -741,8 +777,11 @@ func errCustomVariableOptions(
 			varSchema.Type.Value,
 		),
 		ChildErrors: []error{err},
-		Line:        line,
-		Column:      col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -751,7 +790,7 @@ func errCustomVariableMixedTypes(
 	varSchema *schema.Variable,
 	varSourceMeta *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(varSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeMixedVariableTypes,
 		Err: fmt.Errorf(
@@ -776,8 +815,11 @@ func errCustomVariableMixedTypes(
 				"variableType": varSchema.Type.Value,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -788,7 +830,7 @@ func errCustomVariableInvalidDefaultValueType(
 	varSourceMeta *source.Meta,
 ) error {
 	defaultVarType := deriveVarType(defaultValue)
-	line, col := positionFromScalarValue(defaultValue, varSourceMeta)
+	posRange := positionFromScalarValue(defaultValue, varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeVariableInvalidDefaultValue,
 		Err: fmt.Errorf(
@@ -815,8 +857,11 @@ func errCustomVariableInvalidDefaultValueType(
 				"actualType":   defaultVarType,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -826,7 +871,7 @@ func errCustomVariableAllowedValuesNotInOptions(
 	invalidOptions []string,
 	varSourceMeta *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(varSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeCustomVarAllowedValuesNotInOptions,
 		Err: fmt.Errorf(
@@ -852,8 +897,11 @@ func errCustomVariableAllowedValuesNotInOptions(
 				"variableType": varType,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -863,7 +911,7 @@ func errCustomVariableDefaultValueNotInOptions(
 	defaultValue string,
 	varSourceMeta *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(varSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeCustomVarDefaultValueNotInOptions,
 		Err: fmt.Errorf(
@@ -889,21 +937,27 @@ func errCustomVariableDefaultValueNotInOptions(
 				"variableType": varType,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
 func errMissingExportType(exportName string, exportSourceMeta *source.Meta) error {
-	line, col := source.PositionFromSourceMeta(exportSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(exportSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeMissingExportType,
 		Err: fmt.Errorf(
 			"validation failed due to a missing export type for export \"%s\"",
 			exportName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryExport,
 			ReasonCode: ErrorReasonCodeMissingExportType,
@@ -932,7 +986,7 @@ func errInvalidExportType(exportType schema.ExportType, exportName string, expor
 		),
 		", ",
 	)
-	line, col := source.PositionFromSourceMeta(exportSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(exportSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidExportType,
 		Err: fmt.Errorf(
@@ -942,8 +996,11 @@ func errInvalidExportType(exportType schema.ExportType, exportName string, expor
 			exportName,
 			validExportTypes,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryExport,
 			ReasonCode: ErrorReasonCodeInvalidExportType,
@@ -965,15 +1022,18 @@ func errInvalidExportType(exportType schema.ExportType, exportName string, expor
 }
 
 func errEmptyExportField(exportName string, exportSourceMeta *source.Meta) error {
-	line, col := source.PositionFromSourceMeta(exportSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(exportSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeEmptyExportField,
 		Err: fmt.Errorf(
 			"validation failed due to an empty field string being provided for export \"%s\"",
 			exportName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryExport,
 			ReasonCode: ErrorReasonCodeEmptyExportField,
@@ -994,7 +1054,7 @@ func errEmptyExportField(exportName string, exportSourceMeta *source.Meta) error
 
 func errReferenceContextAccess(reference string, context string, referenceableType Referenceable, location *source.Meta) error {
 	referencedObjectLabel := referenceableLabel(referenceableType)
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidReference,
 		Err: fmt.Errorf(
@@ -1005,8 +1065,11 @@ func errReferenceContextAccess(reference string, context string, referenceableTy
 			context,
 			referencedObjectLabel,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1016,7 +1079,7 @@ func errInvalidReferencePattern(
 	referenceableType Referenceable,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidReference,
 		Err: fmt.Errorf(
@@ -1026,26 +1089,32 @@ func errInvalidReferencePattern(
 			reference,
 			context,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
 func errIncludeEmptyPath(includeName string, varSourceMeta *source.Meta) error {
-	line, col := source.PositionFromSourceMeta(varSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidInclude,
 		Err: fmt.Errorf(
 			"validation failed due to an empty path being provided for include \"%s\"",
 			includeName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
 func errDataSourceMissingFilter(dataSourceName string, dataSourceMeta *source.Meta) error {
-	line, col := source.PositionFromSourceMeta(dataSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(dataSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeDataSourceMissingFilter,
 		Err: fmt.Errorf(
@@ -1068,13 +1137,16 @@ func errDataSourceMissingFilter(dataSourceName string, dataSourceMeta *source.Me
 				"dataSourceName": dataSourceName,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
 func errDataSourceEmptyFilter(dataSourceName string, dataSourceMeta *source.Meta) error {
-	line, col := source.PositionFromSourceMeta(dataSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(dataSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeDataSourceEmptyFilter,
 		Err: fmt.Errorf(
@@ -1097,13 +1169,16 @@ func errDataSourceEmptyFilter(dataSourceName string, dataSourceMeta *source.Meta
 				"dataSourceName": dataSourceName,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
 func errDataSourceMissingFilterField(dataSourceName string, dataSourceMeta *source.Meta) error {
-	line, col := source.PositionFromSourceMeta(dataSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(dataSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeDataSourceMissingFilterField,
 		Err: fmt.Errorf(
@@ -1126,13 +1201,16 @@ func errDataSourceMissingFilterField(dataSourceName string, dataSourceMeta *sour
 				"dataSourceName": dataSourceName,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
 func errDataSourceMissingFilterSearch(dataSourceName string, dataSourceMeta *source.Meta) error {
-	line, col := source.PositionFromSourceMeta(dataSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(dataSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeDataSourceMissingFilterSearch,
 		Err: fmt.Errorf(
@@ -1155,13 +1233,16 @@ func errDataSourceMissingFilterSearch(dataSourceName string, dataSourceMeta *sou
 				"dataSourceName": dataSourceName,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
 func errDataSourceMissingExports(dataSourceName string, dataSourceMeta *source.Meta) error {
-	line, col := source.PositionFromSourceMeta(dataSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(dataSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeDataSourceMissingExports,
 		Err: fmt.Errorf(
@@ -1184,8 +1265,11 @@ func errDataSourceMissingExports(dataSourceName string, dataSourceMeta *source.M
 				"dataSourceName": dataSourceName,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1195,7 +1279,7 @@ func errDataSourceFilterFieldConflict(
 	otherField string,
 	filterLocation *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(filterLocation)
+	posRange := source.PositionRangeFromSourceMeta(filterLocation)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeDataSourceFilterConflict,
 		Err: fmt.Errorf(
@@ -1222,8 +1306,11 @@ func errDataSourceFilterFieldConflict(
 				"otherFieldName": otherField,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1231,7 +1318,7 @@ func errInvalidDataSourceFilterOperator(
 	dataSourceName string,
 	dataSourceFilterOperator *schema.DataSourceFilterOperatorWrapper,
 ) error {
-	line, col := source.PositionFromSourceMeta(dataSourceFilterOperator.SourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(dataSourceFilterOperator.SourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidDataSourceFilterOperator,
 		Err: fmt.Errorf(
@@ -1261,8 +1348,11 @@ func errInvalidDataSourceFilterOperator(
 				"filterOperator": dataSourceFilterOperator.Value,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1273,7 +1363,7 @@ func errDataSourceFilterOperatorNotSupported(
 	supportedOperators []schema.DataSourceFilterOperator,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeUnsupportedDataSourceFilterOperator,
 		Err: fmt.Errorf(
@@ -1306,13 +1396,16 @@ func errDataSourceFilterOperatorNotSupported(
 				"filterFieldName": filterFieldName,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
 func errDataSourceMissingFilterOperator(dataSourceName string, location *source.Meta) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidDataSourceFilterOperator,
 		Err: fmt.Errorf(
@@ -1340,8 +1433,11 @@ func errDataSourceMissingFilterOperator(dataSourceName string, location *source.
 				"dataSourceName": dataSourceName,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1350,7 +1446,7 @@ func errInvalidDataSourceFieldType(
 	exportName string,
 	dataSourceFieldType *schema.DataSourceFieldTypeWrapper,
 ) error {
-	line, col := source.PositionFromSourceMeta(dataSourceFieldType.SourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(dataSourceFieldType.SourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidDataSourceFieldType,
 		Err: fmt.Errorf(
@@ -1376,13 +1472,16 @@ func errInvalidDataSourceFieldType(
 				"exportName":     exportName,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
 func errResourceSpecPreValidationFailed(errs []error, resourceName string, resourceSourceMeta *source.Meta) error {
-	line, col := source.PositionFromSourceMeta(resourceSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(resourceSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidResource,
 		Err: fmt.Errorf(
@@ -1390,8 +1489,11 @@ func errResourceSpecPreValidationFailed(errs []error, resourceName string, resou
 			resourceName,
 		),
 		ChildErrors: errs,
-		Line:        line,
-		Column:      col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1412,7 +1514,7 @@ func errMappingNodeKeyContainsSubstitution(
 	nodeParentName string,
 	nodeSourceMeta *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(nodeSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(nodeSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidMapKey,
 		Err: fmt.Errorf(
@@ -1422,8 +1524,11 @@ func errMappingNodeKeyContainsSubstitution(
 			nodeParentType,
 			nodeParentName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1432,7 +1537,7 @@ func errSubFuncInvalidNumberOfArgs(
 	passedArgCount int,
 	subFunc *substitutions.SubstitutionFunctionExpr,
 ) error {
-	line, col := source.PositionFromSourceMeta(subFunc.SourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(subFunc.SourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -1442,8 +1547,11 @@ func errSubFuncInvalidNumberOfArgs(
 			expectedParamCount,
 			passedArgCount,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1454,7 +1562,7 @@ func errSubFuncArgTypeMismatch(
 	funcName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -1465,8 +1573,11 @@ func errSubFuncArgTypeMismatch(
 			expectedType,
 			actualType,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1477,7 +1588,7 @@ func errSubFuncArgInvalidStringChoice(
 	funcName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -1488,8 +1599,11 @@ func errSubFuncArgInvalidStringChoice(
 			strings.Join(expectedChoices, ", "),
 			actualValue,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1498,7 +1612,7 @@ func errSubFuncNamedArgsNotAllowed(
 	funcName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -1508,8 +1622,11 @@ func errSubFuncNamedArgsNotAllowed(
 			argName,
 			substitutions.SubstitutionFunctionObject,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1518,7 +1635,7 @@ func errSubFailedToLoadFunctionDefintion(
 	location *source.Meta,
 	errInfo string,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -1526,8 +1643,11 @@ func errSubFailedToLoadFunctionDefintion(
 			funcName,
 			errInfo,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1535,15 +1655,18 @@ func errSubVarNotFound(
 	varName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
 			"validation failed due to the variable \"%s\" not existing in the blueprint",
 			varName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1551,15 +1674,18 @@ func errSubValSelfReference(
 	valName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
 			"validation failed due to the value \"%s\" referencing itself",
 			valName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1567,15 +1693,18 @@ func errSubValNotFound(
 	valName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
 			"validation failed due to the value \"%s\" not existing in the blueprint",
 			valName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1584,15 +1713,18 @@ func errSubElemRefNotInResource(
 	location *source.Meta,
 ) error {
 	elemRefTypeLabel := deriveElemRefTypeLabel(elemRefType)
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
 			"validation failed due to an %s reference being used outside of a resource",
 			elemRefTypeLabel,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1602,7 +1734,7 @@ func errSubElemRefResourceNotFound(
 	location *source.Meta,
 ) error {
 	elemRefTypeLabel := deriveElemRefTypeLabel(elemRefType)
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -1610,8 +1742,11 @@ func errSubElemRefResourceNotFound(
 			resourceName,
 			elemRefTypeLabel,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1621,7 +1756,7 @@ func errSubElemRefResourceNotEach(
 	location *source.Meta,
 ) error {
 	elemRefTypeLabel := deriveElemRefTypeLabel(elemRefType)
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -1630,8 +1765,11 @@ func errSubElemRefResourceNotEach(
 			resourceName,
 			elemRefTypeLabel,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1639,15 +1777,18 @@ func errSubResourceNotFound(
 	resourceName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
 			"validation failed due to the resource \"%s\" not existing in the blueprint",
 			resourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1655,15 +1796,18 @@ func errSubResourceSelfReference(
 	resourceName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
 			"validation failed due to the resource \"%s\" referencing itself",
 			resourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1671,15 +1815,18 @@ func errSubDataSourceNotFound(
 	dataSourceName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
 			"validation failed due to the data source \"%s\" not existing in the blueprint",
 			dataSourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1687,15 +1834,18 @@ func errSubDataSourceSelfReference(
 	dataSourceName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
 			"validation failed due to the data source \"%s\" referencing itself",
 			dataSourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1703,15 +1853,18 @@ func errSubChildBlueprintNotFound(
 	childName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
 			"validation failed due to the child blueprint \"%s\" not existing in the blueprint",
 			childName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1719,15 +1872,18 @@ func errSubChildBlueprintSelfReference(
 	childName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
 			"validation failed due to the child blueprint \"%s\" referencing itself",
 			childName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1736,7 +1892,7 @@ func errSubResourceNotEach(
 	indexAccessed *int64,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -1746,8 +1902,11 @@ func errSubResourceNotEach(
 			*indexAccessed,
 			resourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1755,7 +1914,7 @@ func errSubDataSourceNoExportedFields(
 	dataSourceName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -1763,8 +1922,11 @@ func errSubDataSourceNoExportedFields(
 				"referenced in substitution",
 			dataSourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1773,7 +1935,7 @@ func errSubDataSourceFieldNotExported(
 	field string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -1782,8 +1944,11 @@ func errSubDataSourceFieldNotExported(
 			field,
 			dataSourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1792,7 +1957,7 @@ func errSubDataSourceFieldMissingType(
 	field string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -1801,8 +1966,11 @@ func errSubDataSourceFieldMissingType(
 			field,
 			dataSourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1812,7 +1980,7 @@ func errSubDataSourceFieldNotArray(
 	indexAccessed int64,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -1822,18 +1990,24 @@ func errSubDataSourceFieldNotArray(
 			indexAccessed,
 			dataSourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
 func errResourceMissingType(resourceName string, location *source.Meta) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidResource,
 		Err:        fmt.Errorf("resource %q missing type", resourceName),
-		Line:       line,
-		Column:     col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryResourceType,
 			ReasonCode: ErrorReasonCodeInvalidResource,
@@ -1876,7 +2050,7 @@ func WrapInSubstitution() wrapRegistryErrorOption {
 // This is needed because the language server only handles LoadError types for diagnostics
 // and errors such as a missing provider or resource type should appear in diagnostics.
 func wrapRegistryError(err error, location *source.Meta, opts ...wrapRegistryErrorOption) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 
 	options := &wrapRegistryErrorOptions{}
 	for _, opt := range opts {
@@ -1892,8 +2066,11 @@ func wrapRegistryError(err error, location *source.Meta, opts ...wrapRegistryErr
 	if !isRunErr {
 		return &errors.LoadError{
 			Err:    fmt.Errorf("%s%s", err.Error(), contextSuffix),
-			Line:   line,
-			Column: col,
+			Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+			Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 		}
 	}
 
@@ -1905,8 +2082,11 @@ func wrapRegistryError(err error, location *source.Meta, opts ...wrapRegistryErr
 				ReasonCode: firstChild.ReasonCode,
 				Err:        fmt.Errorf("%s%s", firstChild.Err.Error(), contextSuffix),
 				Context:    firstChild.Context,
-				Line:       line,
-				Column:     col,
+				Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+				Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 			}
 		}
 	}
@@ -1915,8 +2095,11 @@ func wrapRegistryError(err error, location *source.Meta, opts ...wrapRegistryErr
 		ReasonCode: runErr.ReasonCode,
 		Err:        fmt.Errorf("%s%s", runErr.Err.Error(), contextSuffix),
 		Context:    runErr.Context,
-		Line:       line,
-		Column:     col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1927,7 +2110,7 @@ func errResourceTypeMissingSpecDefinition(
 	resourceSourceMeta *source.Meta,
 	extraDetails string,
 ) error {
-	line, col := source.PositionFromSourceMeta(resourceSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(resourceSourceMeta)
 	contextInfo := ""
 	if inSubstitution {
 		contextInfo = " referenced in substitution"
@@ -1958,8 +2141,11 @@ func errResourceTypeMissingSpecDefinition(
 				"resourceType": resourceType,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -1969,7 +2155,7 @@ func errResourceTypeSpecDefMissingSchema(
 	inSubstitution bool,
 	resourceSourceMeta *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(resourceSourceMeta)
+	posRange := source.PositionRangeFromSourceMeta(resourceSourceMeta)
 	contextInfo := ""
 	if inSubstitution {
 		contextInfo = " referenced in substitution"
@@ -1999,8 +2185,11 @@ func errResourceTypeSpecDefMissingSchema(
 				"resourceType": resourceType,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2011,7 +2200,7 @@ func errDataSourceTypeMissingSpecDefinition(
 	dataSourceLocation *source.Meta,
 	extraDetails string,
 ) error {
-	line, col := source.PositionFromSourceMeta(dataSourceLocation)
+	posRange := source.PositionRangeFromSourceMeta(dataSourceLocation)
 	contextInfo := ""
 	if inSubstitution {
 		contextInfo = " referenced in substitution"
@@ -2043,8 +2232,11 @@ func errDataSourceTypeMissingSpecDefinition(
 				"dataSourceType": dataSourceType,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2053,7 +2245,7 @@ func errDataSourceTypeMissingFields(
 	dataSourceType string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeDataSourceSpecDefMissing,
 		Err: fmt.Errorf(
@@ -2074,8 +2266,11 @@ func errDataSourceTypeMissingFields(
 				},
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2084,7 +2279,7 @@ func errDataSourceFilterFieldNotSupported(
 	field string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeDataSourceFilterFieldNotSupported,
 		Err: fmt.Errorf(
@@ -2109,13 +2304,16 @@ func errDataSourceFilterFieldNotSupported(
 				"fieldName":      field,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
 func errDataSourceMissingType(dataSourceName string, location *source.Meta) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeDataSourceMissingType,
 		Err: fmt.Errorf(
@@ -2137,8 +2335,11 @@ func errDataSourceMissingType(dataSourceName string, location *source.Meta) erro
 				"dataSourceName": dataSourceName,
 			},
 		},
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2146,15 +2347,18 @@ func errSubResourceSpecInvalidRef(
 	resourceName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
 			"validation failed as the spec reference for resource \"%s\" is not valid",
 			resourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2162,15 +2366,18 @@ func errSubResourceMetadataInvalidRef(
 	resourceName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
 			"validation failed as the metadata reference for resource \"%s\" is not valid",
 			resourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2179,7 +2386,7 @@ func errSubResourceMetadataInvalidProperty(
 	property string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -2187,8 +2394,11 @@ func errSubResourceMetadataInvalidProperty(
 			property,
 			resourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2196,7 +2406,7 @@ func errSubResourceMetadataInvalidDisplayNameRef(
 	resourceName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -2204,8 +2414,11 @@ func errSubResourceMetadataInvalidDisplayNameRef(
 				"resource \"%s\" provided can not have children",
 			resourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2213,7 +2426,7 @@ func errSubResourceMetadataInvalidAnnotationsRef(
 	resourceName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -2222,8 +2435,11 @@ func errSubResourceMetadataInvalidAnnotationsRef(
 				"`metadata.annotations.<key>` or `metadata.annotations[\"<key>\"]`",
 			resourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2232,7 +2448,7 @@ func errSubResourceMetadataMissingAnnotation(
 	annotationKey string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -2241,8 +2457,11 @@ func errSubResourceMetadataMissingAnnotation(
 			annotationKey,
 			resourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2250,7 +2469,7 @@ func errSubResourceMetadataInvalidLabelsRef(
 	resourceName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -2259,8 +2478,11 @@ func errSubResourceMetadataInvalidLabelsRef(
 				"`metadata.labels.<key>` or `metadata.labels[\"<key>\"]`",
 			resourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2269,7 +2491,7 @@ func errSubResourceMetadataMissingLabel(
 	labelKey string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -2278,8 +2500,11 @@ func errSubResourceMetadataMissingLabel(
 			labelKey,
 			resourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2288,7 +2513,7 @@ func errSubResourcePropertyNotFound(
 	path []*substitutions.SubstitutionPathItem,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -2296,8 +2521,11 @@ func errSubResourcePropertyNotFound(
 			subPathToString(path),
 			resourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2306,7 +2534,7 @@ func errInvalidDescriptionSubType(
 	resolvedType string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -2316,8 +2544,11 @@ func errInvalidDescriptionSubType(
 			usedIn,
 			resolvedType,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2326,7 +2557,7 @@ func errInvalidIncludePathSubType(
 	resolvedType string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -2336,8 +2567,11 @@ func errInvalidIncludePathSubType(
 			usedIn,
 			resolvedType,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2346,7 +2580,7 @@ func errInvalidDisplayNameSubType(
 	resolvedType string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -2356,8 +2590,11 @@ func errInvalidDisplayNameSubType(
 			usedIn,
 			resolvedType,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2367,7 +2604,7 @@ func errInvalidSubType(
 	resolvedType string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -2378,8 +2615,11 @@ func errInvalidSubType(
 			resolvedType,
 			valueContext,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2389,7 +2629,7 @@ func errInvalidSubTypeNotBoolean(
 	resolvedType string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -2400,8 +2640,11 @@ func errInvalidSubTypeNotBoolean(
 			resolvedType,
 			valueContext,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2411,7 +2654,7 @@ func errInvalidSubTypeNotArray(
 	resolvedType string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -2422,8 +2665,11 @@ func errInvalidSubTypeNotArray(
 			resolvedType,
 			valueContext,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2432,7 +2678,7 @@ func errEmptyEachSubstitution(
 	valueContext string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidSubstitution,
 		Err: fmt.Errorf(
@@ -2441,8 +2687,11 @@ func errEmptyEachSubstitution(
 			valueContext,
 			usedIn,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2450,7 +2699,7 @@ func errMissingValueContent(
 	valueID string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidValue,
 		Err: fmt.Errorf(
@@ -2458,8 +2707,11 @@ func errMissingValueContent(
 				"values must be populated with a value that resolves to the defined value type",
 			valueID,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2468,7 +2720,7 @@ func errValueIncorrectTypeInterpolatedString(
 	valueType string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidValue,
 		Err: fmt.Errorf(
@@ -2477,8 +2729,11 @@ func errValueIncorrectTypeInterpolatedString(
 			usedIn,
 			valueType,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2488,7 +2743,7 @@ func errInvalidValueSubType(
 	expectedResolvedType string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidValue,
 		Err: fmt.Errorf(
@@ -2498,8 +2753,11 @@ func errInvalidValueSubType(
 			resolvedType,
 			expectedResolvedType,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2509,7 +2767,7 @@ func errInvalidValueContentType(
 	expectedResolveType string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidValue,
 		Err: fmt.Errorf(
@@ -2519,8 +2777,11 @@ func errInvalidValueContentType(
 			resolvedSubType,
 			expectedResolveType,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2528,7 +2789,7 @@ func errMissingValueType(
 	valName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidValue,
 		Err: fmt.Errorf(
@@ -2536,8 +2797,11 @@ func errMissingValueType(
 				"all values must have a type defined",
 			valName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2546,7 +2810,7 @@ func errInvalidValueType(
 	valType *schema.ValueTypeWrapper,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidValueType,
 		Err: fmt.Errorf(
@@ -2555,8 +2819,11 @@ func errInvalidValueType(
 			valType.Value,
 			valName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2586,7 +2853,7 @@ func errDataSourceExportFieldNotSupported(
 	exportedSourceField string,
 	wrapperLocation *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(wrapperLocation)
+	posRange := source.PositionRangeFromSourceMeta(wrapperLocation)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidDataSource,
 		Err: fmt.Errorf(
@@ -2597,8 +2864,11 @@ func errDataSourceExportFieldNotSupported(
 			exportedSourceField,
 			dataSourceType,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2610,7 +2880,7 @@ func errDataSourceExportFieldTypeMismatch(
 	exportedFieldType string,
 	wrapperLocation *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(wrapperLocation)
+	posRange := source.PositionRangeFromSourceMeta(wrapperLocation)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidDataSource,
 		Err: fmt.Errorf(
@@ -2622,8 +2892,11 @@ func errDataSourceExportFieldTypeMismatch(
 			dataSourceFieldType,
 			exportedFieldType,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2632,7 +2905,7 @@ func errDataSourceExportEmpty(
 	exportName string,
 	wrapperLocation *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(wrapperLocation)
+	posRange := source.PositionRangeFromSourceMeta(wrapperLocation)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidDataSource,
 		Err: fmt.Errorf(
@@ -2640,8 +2913,11 @@ func errDataSourceExportEmpty(
 			exportName,
 			dataSourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2650,7 +2926,7 @@ func errDataSourceExportTypeMissing(
 	exportName string,
 	wrapperLocation *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(wrapperLocation)
+	posRange := source.PositionRangeFromSourceMeta(wrapperLocation)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidDataSource,
 		Err: fmt.Errorf(
@@ -2658,8 +2934,11 @@ func errDataSourceExportTypeMissing(
 			exportName,
 			dataSourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2668,7 +2947,7 @@ func errDataSourceTypeNotSupported(
 	dataSourceType string,
 	wrapperLocation *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(wrapperLocation)
+	posRange := source.PositionRangeFromSourceMeta(wrapperLocation)
 	providerNamespace := provider.ExtractProviderFromItemType(dataSourceType)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidDataSource,
@@ -2678,8 +2957,11 @@ func errDataSourceTypeNotSupported(
 			dataSourceName,
 			dataSourceType,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryDataSourceType,
 			ReasonCode: ErrorReasonCodeInvalidDataSource,
@@ -2711,7 +2993,7 @@ func errDataSourceAnnotationKeyContainsSubstitution(
 	annotationKey string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidDataSource,
 		Err: fmt.Errorf(
@@ -2720,8 +3002,11 @@ func errDataSourceAnnotationKeyContainsSubstitution(
 			dataSourceName,
 			annotationKey,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2730,7 +3015,7 @@ func errResourceTypeNotSupported(
 	resourceType string,
 	wrapperLocation *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(wrapperLocation)
+	posRange := source.PositionRangeFromSourceMeta(wrapperLocation)
 	pluginNamespace := provider.ExtractProviderFromItemType(resourceType)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidResource,
@@ -2740,8 +3025,11 @@ func errResourceTypeNotSupported(
 			resourceName,
 			resourceType,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryResourceType,
 			ReasonCode: ErrorReasonCodeInvalidResource,
@@ -2774,7 +3062,7 @@ func errLabelKeyContainsSubstitution(
 	labelKey string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidResource,
 		Err: fmt.Errorf(
@@ -2783,8 +3071,11 @@ func errLabelKeyContainsSubstitution(
 			resourceName,
 			labelKey,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2794,7 +3085,7 @@ func errLabelValueContainsSubstitution(
 	labelValue string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidResource,
 		Err: fmt.Errorf(
@@ -2804,8 +3095,11 @@ func errLabelValueContainsSubstitution(
 			labelKey,
 			labelValue,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2814,7 +3108,7 @@ func errLinkSelectorKeyContainsSubstitution(
 	linkSelectorKey string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidResource,
 		Err: fmt.Errorf(
@@ -2824,8 +3118,11 @@ func errLinkSelectorKeyContainsSubstitution(
 			resourceName,
 			linkSelectorKey,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2835,7 +3132,7 @@ func errLinkSelectorValueContainsSubstitution(
 	linkSelectorValue string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidResource,
 		Err: fmt.Errorf(
@@ -2846,8 +3143,11 @@ func errLinkSelectorValueContainsSubstitution(
 			linkSelectorKey,
 			linkSelectorValue,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2856,7 +3156,7 @@ func errAnnotationKeyContainsSubstitution(
 	annotationKey string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidResource,
 		Err: fmt.Errorf(
@@ -2865,8 +3165,11 @@ func errAnnotationKeyContainsSubstitution(
 			resourceName,
 			annotationKey,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2874,7 +3177,7 @@ func errNestedResourceConditionEmpty(
 	resourceName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidResource,
 		Err: fmt.Errorf(
@@ -2882,8 +3185,11 @@ func errNestedResourceConditionEmpty(
 				"all nested conditions must have a value defined",
 			resourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2894,7 +3200,7 @@ func errExportTypeMismatch(
 	field string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidExport,
 		Err: fmt.Errorf(
@@ -2905,8 +3211,11 @@ func errExportTypeMismatch(
 			resolvedType,
 			field,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2915,7 +3224,7 @@ func errResourceDependencyMissing(
 	dependencyName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeMissingResourceDependency,
 		Err: fmt.Errorf(
@@ -2923,8 +3232,11 @@ func errResourceDependencyMissing(
 			dependencyName,
 			resourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2933,7 +3245,7 @@ func errResourceDependencyContainsSubstitution(
 	dependencyName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidResource,
 		Err: fmt.Errorf(
@@ -2943,8 +3255,11 @@ func errResourceDependencyContainsSubstitution(
 			resourceName,
 			dependencyName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2952,15 +3267,18 @@ func errSelfReferencingResourceDependency(
 	resourceName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidResource,
 		Err: fmt.Errorf(
 			"validation failed due to a self-referencing dependency in resource %q",
 			resourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2969,7 +3287,7 @@ func errComputedFieldDefinedInBlueprint(
 	resourceName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeComputedFieldInBlueprint,
 		Err: fmt.Errorf(
@@ -2978,8 +3296,11 @@ func errComputedFieldDefinedInBlueprint(
 			path,
 			resourceName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -2988,7 +3309,7 @@ func errEachResourceDependencyDetected(
 	dependencyName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeEachResourceDependency,
 		Err: fmt.Errorf(
@@ -2997,8 +3318,11 @@ func errEachResourceDependencyDetected(
 			resourceIDWithEachProp,
 			dependencyName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -3007,7 +3331,7 @@ func errEachChildDependencyDetected(
 	dependencyName string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeEachChildDependency,
 		Err: fmt.Errorf(
@@ -3017,8 +3341,11 @@ func errEachChildDependencyDetected(
 			resourceIDWithEachProp,
 			dependencyName,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -3028,7 +3355,7 @@ func errSubFuncLinkArgResourceNotFound(
 	usedIn string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeSubFuncLinkArgResourceNotFound,
 		Err: fmt.Errorf(
@@ -3038,8 +3365,11 @@ func errSubFuncLinkArgResourceNotFound(
 			argIndex,
 			usedIn,
 		),
-		Line:   line,
-		Column: col,
+		Line:   posRange.Line,
+		EndLine:   posRange.EndLine,
+		Column: posRange.Column,
+		EndColumn: posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
 
@@ -3093,15 +3423,18 @@ func deriveValueLabel(usingDefault bool) string {
 	return "value"
 }
 
-func positionFromScalarValue(value *bpcore.ScalarValue, parentSourceMeta *source.Meta) (line, col *int) {
+func positionFromScalarValue(
+	value *bpcore.ScalarValue,
+	parentSourceMeta *source.Meta,
+) *source.PositionRange {
 	if value == nil {
 		if parentSourceMeta != nil {
-			return source.PositionFromSourceMeta(parentSourceMeta)
+			return source.PositionRangeFromSourceMeta(parentSourceMeta)
 		}
-		return nil, nil
+		return nil
 	}
 
-	return source.PositionFromSourceMeta(value.SourceMeta)
+	return source.PositionRangeFromSourceMeta(value.SourceMeta)
 }
 
 func subPathToString(path []*substitutions.SubstitutionPathItem) string {

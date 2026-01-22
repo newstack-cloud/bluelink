@@ -118,12 +118,14 @@ func (t *ExportTypeWrapper) MarshalYAML() (interface{}, error) {
 }
 
 func (t *ExportTypeWrapper) UnmarshalYAML(value *yaml.Node) error {
+	colAccuracy := source.ColumnAccuracyExact
 	t.SourceMeta = &source.Meta{
 		Position: source.Position{
 			Line:   value.Line,
 			Column: value.Column,
 		},
-		EndPosition: source.EndSourcePositionFromYAMLScalarNode(value),
+		EndPosition:    source.EndSourcePositionFromYAMLScalarNode(value),
+		ColumnAccuracy: &colAccuracy,
 	}
 
 	t.Value = ExportType(value.Value)

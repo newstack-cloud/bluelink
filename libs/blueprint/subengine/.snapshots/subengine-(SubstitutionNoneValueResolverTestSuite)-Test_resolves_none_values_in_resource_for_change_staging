@@ -10,7 +10,8 @@
         EndPosition: (*source.Position)({
           Line: (int) 8,
           Column: (int) 29
-        })
+        }),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       })
     }),
     Description: (*core.MappingNode)({
@@ -97,7 +98,8 @@
               Line: (int) 16,
               Column: (int) 9
             },
-            EndPosition: (*source.Position)(<nil>)
+            EndPosition: (*source.Position)(<nil>),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
           })
         }
       }),
@@ -124,7 +126,8 @@
               EndPosition: (*source.Position)({
                 Line: (int) 19,
                 Column: (int) 24
-              })
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(1)
             })
           }),
           Fields: (map[string]*core.MappingNode) <nil>,
@@ -135,7 +138,8 @@
               Line: (int) 19,
               Column: (int) 15
             },
-            EndPosition: (*source.Position)(<nil>)
+            EndPosition: (*source.Position)(<nil>),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
           }),
           FieldsSourceMeta: (map[string]*source.Meta) <nil>
         }),
@@ -158,7 +162,8 @@
                   EndPosition: (*source.Position)({
                     Line: (int) 24,
                     Column: (int) 19
-                  })
+                  }),
+                  ColumnAccuracy: (*source.ColumnAccuracy)(1)
                 })
               }),
               Fields: (map[string]*core.MappingNode) <nil>,
@@ -169,7 +174,8 @@
                   Line: (int) 24,
                   Column: (int) 18
                 },
-                EndPosition: (*source.Position)(<nil>)
+                EndPosition: (*source.Position)(<nil>),
+                ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
               }),
               FieldsSourceMeta: (map[string]*source.Meta) <nil>
             }),
@@ -189,7 +195,8 @@
                   EndPosition: (*source.Position)({
                     Line: (int) 22,
                     Column: (int) 20
-                  })
+                  }),
+                  ColumnAccuracy: (*source.ColumnAccuracy)(1)
                 })
               }),
               Fields: (map[string]*core.MappingNode) <nil>,
@@ -200,7 +207,8 @@
                   Line: (int) 22,
                   Column: (int) 18
                 },
-                EndPosition: (*source.Position)(<nil>)
+                EndPosition: (*source.Position)(<nil>),
+                ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
               }),
               FieldsSourceMeta: (map[string]*source.Meta) <nil>
             })
@@ -226,7 +234,8 @@
               EndPosition: (*source.Position)({
                 Line: (int) 18,
                 Column: (int) 28
-              })
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(1)
             })
           }),
           Fields: (map[string]*core.MappingNode) <nil>,
@@ -237,7 +246,8 @@
               Line: (int) 18,
               Column: (int) 18
             },
-            EndPosition: (*source.Position)(<nil>)
+            EndPosition: (*source.Position)(<nil>),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
           }),
           FieldsSourceMeta: (map[string]*source.Meta) <nil>
         }),
@@ -261,7 +271,8 @@
                   EndPosition: (*source.Position)({
                     Line: (int) 26,
                     Column: (int) 15
-                  })
+                  }),
+                  ColumnAccuracy: (*source.ColumnAccuracy)(1)
                 })
               }),
               Fields: (map[string]*core.MappingNode) <nil>,
@@ -272,7 +283,8 @@
                   Line: (int) 26,
                   Column: (int) 11
                 },
-                EndPosition: (*source.Position)(<nil>)
+                EndPosition: (*source.Position)(<nil>),
+                ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
               }),
               FieldsSourceMeta: (map[string]*source.Meta) <nil>
             }),
@@ -292,7 +304,8 @@
                   EndPosition: (*source.Position)({
                     Line: (int) 28,
                     Column: (int) 15
-                  })
+                  }),
+                  ColumnAccuracy: (*source.ColumnAccuracy)(1)
                 })
               }),
               Fields: (map[string]*core.MappingNode) <nil>,
@@ -303,7 +316,8 @@
                   Line: (int) 28,
                   Column: (int) 11
                 },
-                EndPosition: (*source.Position)(<nil>)
+                EndPosition: (*source.Position)(<nil>),
+                ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
               }),
               FieldsSourceMeta: (map[string]*source.Meta) <nil>
             })

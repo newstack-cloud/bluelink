@@ -11,7 +11,8 @@
           EndPosition: (*source.Position)({
             Line: (int) 32,
             Column: (int) 17
-          })
+          }),
+          ColumnAccuracy: (*source.ColumnAccuracy)(1)
         })
       }),
       Field: (*core.ScalarValue)({
@@ -29,7 +30,8 @@
           EndPosition: (*source.Position)({
             Line: (int) 33,
             Column: (int) 33
-          })
+          }),
+          ColumnAccuracy: (*source.ColumnAccuracy)(1)
         })
       }),
       Description: (*core.MappingNode)(<nil>)
@@ -49,7 +51,8 @@
           EndPosition: (*source.Position)({
             Line: (int) 35,
             Column: (int) 17
-          })
+          }),
+          ColumnAccuracy: (*source.ColumnAccuracy)(1)
         })
       }),
       Field: (*core.ScalarValue)(<nil>),
@@ -70,7 +73,8 @@
           EndPosition: (*source.Position)({
             Line: (int) 38,
             Column: (int) 17
-          })
+          }),
+          ColumnAccuracy: (*source.ColumnAccuracy)(1)
         })
       }),
       Field: (*core.ScalarValue)(<nil>),

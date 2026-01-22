@@ -164,13 +164,17 @@ func validateMappingNodeFields(
 	diagnostics := []*bpcore.Diagnostic{}
 	var errs []error
 	for key, field := range mappingNodeFields {
+		var wrapperLocation *source.Meta
+		if mappingNodeFieldsSourceMeta != nil {
+			wrapperLocation = mappingNodeFieldsSourceMeta[key]
+		}
 		fieldDiagnostics, err := validateMappingNode(
 			ctx,
 			usedIn,
 			usedInResourceDerivedFromTemplate,
 			attributePath,
 			field,
-			/* wrapperLocation */ mappingNodeFieldsSourceMeta[key],
+			wrapperLocation,
 			depth+1,
 			bpSchema,
 			params,

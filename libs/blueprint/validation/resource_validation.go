@@ -164,7 +164,9 @@ func ValidateResource(
 		errs = append(errs, validateLSErr)
 	}
 
-	if resource.Type != nil {
+	// Only validate spec if type validation passed - there's no point validating
+	// the spec when we can't look up the spec definition for an unknown resource type.
+	if resource.Type != nil && validateTypeErr == nil {
 		logger.Debug("Validating resource spec")
 		validationParams := ResourceValidationParams{
 			ResourceName:                name,

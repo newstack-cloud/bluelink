@@ -129,12 +129,14 @@ func (t *ValueTypeWrapper) MarshalYAML() (any, error) {
 }
 
 func (t *ValueTypeWrapper) UnmarshalYAML(value *yaml.Node) error {
+	colAccuracy := source.ColumnAccuracyExact
 	t.SourceMeta = &source.Meta{
 		Position: source.Position{
 			Line:   value.Line,
 			Column: value.Column,
 		},
-		EndPosition: source.EndSourcePositionFromYAMLScalarNode(value),
+		EndPosition:    source.EndSourcePositionFromYAMLScalarNode(value),
+		ColumnAccuracy: &colAccuracy,
 	}
 	valueType := ValueType(value.Value)
 	t.Value = valueType

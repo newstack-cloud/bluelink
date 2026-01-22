@@ -145,15 +145,20 @@ func YAMLNodeToPosInfo(node *yaml.Node) source.PositionInfo {
 }
 
 func (m *MappingNode) parseYAMLSubstitutionsOrScalar(node *yaml.Node) error {
+	isBlockStyle := node.Style == yaml.LiteralStyle || node.Style == yaml.FoldedStyle
+	colAccuracy := source.ColumnAccuracyExact
+	if isBlockStyle {
+		colAccuracy = source.ColumnAccuracyApproximate
+	}
+
 	sourceMeta := &source.Meta{
 		Position: source.Position{
 			Line:   node.Line,
 			Column: node.Column,
 		},
-		EndPosition: source.EndSourcePositionFromYAMLScalarNode(node),
+		EndPosition:    source.EndSourcePositionFromYAMLScalarNode(node),
+		ColumnAccuracy: &colAccuracy,
 	}
-
-	isBlockStyle := node.Style == yaml.LiteralStyle || node.Style == yaml.FoldedStyle
 	precedingCharCount := substitutions.GetYAMLNodePrecedingCharCount(node)
 	sourceStartMeta := substitutions.DetermineYAMLSourceStartMeta(node, sourceMeta)
 	strSubs, err := substitutions.ParseSubstitutionValues(

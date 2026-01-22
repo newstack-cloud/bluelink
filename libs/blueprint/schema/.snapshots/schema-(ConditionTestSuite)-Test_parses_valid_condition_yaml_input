@@ -33,7 +33,18 @@
                               Path: ([]*substitutions.SubstitutionPathItem) (len=1) {
                                 (*substitutions.SubstitutionPathItem)({
                                   FieldName: (string) (len=10) "bucketName",
-                                  ArrayIndex: (*int64)(<nil>)
+                                  ArrayIndex: (*int64)(<nil>),
+                                  SourceMeta: (*source.Meta)({
+                                    Position: (source.Position) {
+                                      Line: (int) 3,
+                                      Column: (int) 46
+                                    },
+                                    EndPosition: (*source.Position)({
+                                      Line: (int) 3,
+                                      Column: (int) 57
+                                    }),
+                                    ColumnAccuracy: (*source.ColumnAccuracy)(1)
+                                  })
                                 })
                               },
                               SourceMeta: (*source.Meta)({
@@ -44,7 +55,8 @@
                                 EndPosition: (*source.Position)({
                                   Line: (int) 3,
                                   Column: (int) 57
-                                })
+                                }),
+                                ColumnAccuracy: (*source.ColumnAccuracy)(1)
                               })
                             }),
                             Child: (*substitutions.SubstitutionChild)(<nil>),
@@ -61,7 +73,8 @@
                               EndPosition: (*source.Position)({
                                 Line: (int) 3,
                                 Column: (int) 57
-                              })
+                              }),
+                              ColumnAccuracy: (*source.ColumnAccuracy)(1)
                             })
                           }),
                           SourceMeta: (*source.Meta)({
@@ -72,7 +85,8 @@
                             EndPosition: (*source.Position)({
                               Line: (int) 3,
                               Column: (int) 57
-                            })
+                            }),
+                            ColumnAccuracy: (*source.ColumnAccuracy)(1)
                           })
                         }),
                         (*substitutions.SubstitutionFunctionArg)({
@@ -99,7 +113,8 @@
                               EndPosition: (*source.Position)({
                                 Line: (int) 3,
                                 Column: (int) 75
-                              })
+                              }),
+                              ColumnAccuracy: (*source.ColumnAccuracy)(1)
                             })
                           }),
                           SourceMeta: (*source.Meta)({
@@ -110,7 +125,8 @@
                             EndPosition: (*source.Position)({
                               Line: (int) 3,
                               Column: (int) 75
-                            })
+                            }),
+                            ColumnAccuracy: (*source.ColumnAccuracy)(1)
                           })
                         })
                       },
@@ -124,7 +140,8 @@
                         EndPosition: (*source.Position)({
                           Line: (int) 3,
                           Column: (int) 76
-                        })
+                        }),
+                        ColumnAccuracy: (*source.ColumnAccuracy)(1)
                       })
                     }),
                     Variable: (*substitutions.SubstitutionVariable)(<nil>),
@@ -147,7 +164,8 @@
                       EndPosition: (*source.Position)({
                         Line: (int) 3,
                         Column: (int) 76
-                      })
+                      }),
+                      ColumnAccuracy: (*source.ColumnAccuracy)(1)
                     })
                   }),
                   SourceMeta: (*source.Meta)({
@@ -158,7 +176,8 @@
                     EndPosition: (*source.Position)({
                       Line: (int) 3,
                       Column: (int) 76
-                    })
+                    }),
+                    ColumnAccuracy: (*source.ColumnAccuracy)(1)
                   })
                 })
               },
@@ -170,7 +189,8 @@
                 EndPosition: (*source.Position)({
                   Line: (int) 3,
                   Column: (int) 78
-                })
+                }),
+                ColumnAccuracy: (*source.ColumnAccuracy)(1)
               })
             }),
             SourceMeta: (*source.Meta)({
@@ -178,7 +198,8 @@
                 Line: (int) 3,
                 Column: (int) 14
               },
-              EndPosition: (*source.Position)(<nil>)
+              EndPosition: (*source.Position)(<nil>),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
             })
           }),
           StringValue: (*substitutions.StringOrSubstitutions)(<nil>),
@@ -187,7 +208,8 @@
               Line: (int) 3,
               Column: (int) 9
             },
-            EndPosition: (*source.Position)(<nil>)
+            EndPosition: (*source.Position)(<nil>),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
           })
         }),
         (*schema.Condition)({
@@ -217,7 +239,18 @@
                             Path: ([]*substitutions.SubstitutionPathItem) (len=1) {
                               (*substitutions.SubstitutionPathItem)({
                                 FieldName: (string) (len=10) "bucketName",
-                                ArrayIndex: (*int64)(<nil>)
+                                ArrayIndex: (*int64)(<nil>),
+                                SourceMeta: (*source.Meta)({
+                                  Position: (source.Position) {
+                                    Line: (int) 4,
+                                    Column: (int) 33
+                                  },
+                                  EndPosition: (*source.Position)({
+                                    Line: (int) 4,
+                                    Column: (int) 44
+                                  }),
+                                  ColumnAccuracy: (*source.ColumnAccuracy)(1)
+                                })
                               })
                             },
                             SourceMeta: (*source.Meta)({
@@ -228,7 +261,8 @@
                               EndPosition: (*source.Position)({
                                 Line: (int) 4,
                                 Column: (int) 44
-                              })
+                              }),
+                              ColumnAccuracy: (*source.ColumnAccuracy)(1)
                             })
                           }),
                           Child: (*substitutions.SubstitutionChild)(<nil>),
@@ -245,7 +279,8 @@
                             EndPosition: (*source.Position)({
                               Line: (int) 4,
                               Column: (int) 44
-                            })
+                            }),
+                            ColumnAccuracy: (*source.ColumnAccuracy)(1)
                           })
                         }),
                         SourceMeta: (*source.Meta)({
@@ -256,7 +291,8 @@
                           EndPosition: (*source.Position)({
                             Line: (int) 4,
                             Column: (int) 44
-                          })
+                          }),
+                          ColumnAccuracy: (*source.ColumnAccuracy)(1)
                         })
                       }),
                       (*substitutions.SubstitutionFunctionArg)({
@@ -283,7 +319,8 @@
                             EndPosition: (*source.Position)({
                               Line: (int) 4,
                               Column: (int) 64
-                            })
+                            }),
+                            ColumnAccuracy: (*source.ColumnAccuracy)(1)
                           })
                         }),
                         SourceMeta: (*source.Meta)({
@@ -294,7 +331,8 @@
                           EndPosition: (*source.Position)({
                             Line: (int) 4,
                             Column: (int) 64
-                          })
+                          }),
+                          ColumnAccuracy: (*source.ColumnAccuracy)(1)
                         })
                       })
                     },
@@ -308,7 +346,8 @@
                       EndPosition: (*source.Position)({
                         Line: (int) 4,
                         Column: (int) 65
-                      })
+                      }),
+                      ColumnAccuracy: (*source.ColumnAccuracy)(1)
                     })
                   }),
                   Variable: (*substitutions.SubstitutionVariable)(<nil>),
@@ -331,7 +370,8 @@
                     EndPosition: (*source.Position)({
                       Line: (int) 4,
                       Column: (int) 65
-                    })
+                    }),
+                    ColumnAccuracy: (*source.ColumnAccuracy)(1)
                   })
                 }),
                 SourceMeta: (*source.Meta)({
@@ -342,7 +382,8 @@
                   EndPosition: (*source.Position)({
                     Line: (int) 4,
                     Column: (int) 65
-                  })
+                  }),
+                  ColumnAccuracy: (*source.ColumnAccuracy)(1)
                 })
               })
             },
@@ -354,7 +395,8 @@
               EndPosition: (*source.Position)({
                 Line: (int) 4,
                 Column: (int) 67
-              })
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(1)
             })
           }),
           SourceMeta: (*source.Meta)({
@@ -362,7 +404,8 @@
               Line: (int) 4,
               Column: (int) 9
             },
-            EndPosition: (*source.Position)(<nil>)
+            EndPosition: (*source.Position)(<nil>),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
           })
         })
       },
@@ -373,7 +416,8 @@
           Line: (int) 2,
           Column: (int) 5
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       })
     }),
     (*schema.Condition)({
@@ -402,7 +446,8 @@
                           EndPosition: (*source.Position)({
                             Line: (int) 5,
                             Column: (int) 32
-                          })
+                          }),
+                          ColumnAccuracy: (*source.ColumnAccuracy)(1)
                         })
                       }),
                       ValueReference: (*substitutions.SubstitutionValueReference)(<nil>),
@@ -424,7 +469,8 @@
                         EndPosition: (*source.Position)({
                           Line: (int) 5,
                           Column: (int) 32
-                        })
+                        }),
+                        ColumnAccuracy: (*source.ColumnAccuracy)(1)
                       })
                     }),
                     SourceMeta: (*source.Meta)({
@@ -435,7 +481,8 @@
                       EndPosition: (*source.Position)({
                         Line: (int) 5,
                         Column: (int) 32
-                      })
+                      }),
+                      ColumnAccuracy: (*source.ColumnAccuracy)(1)
                     })
                   }),
                   (*substitutions.SubstitutionFunctionArg)({
@@ -462,7 +509,8 @@
                         EndPosition: (*source.Position)({
                           Line: (int) 5,
                           Column: (int) 46
-                        })
+                        }),
+                        ColumnAccuracy: (*source.ColumnAccuracy)(1)
                       })
                     }),
                     SourceMeta: (*source.Meta)({
@@ -473,7 +521,8 @@
                       EndPosition: (*source.Position)({
                         Line: (int) 5,
                         Column: (int) 46
-                      })
+                      }),
+                      ColumnAccuracy: (*source.ColumnAccuracy)(1)
                     })
                   })
                 },
@@ -487,7 +536,8 @@
                   EndPosition: (*source.Position)({
                     Line: (int) 5,
                     Column: (int) 47
-                  })
+                  }),
+                  ColumnAccuracy: (*source.ColumnAccuracy)(1)
                 })
               }),
               Variable: (*substitutions.SubstitutionVariable)(<nil>),
@@ -510,7 +560,8 @@
                 EndPosition: (*source.Position)({
                   Line: (int) 5,
                   Column: (int) 47
-                })
+                }),
+                ColumnAccuracy: (*source.ColumnAccuracy)(1)
               })
             }),
             SourceMeta: (*source.Meta)({
@@ -521,7 +572,8 @@
               EndPosition: (*source.Position)({
                 Line: (int) 5,
                 Column: (int) 47
-              })
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(1)
             })
           })
         },
@@ -533,7 +585,8 @@
           EndPosition: (*source.Position)({
             Line: (int) 5,
             Column: (int) 49
-          })
+          }),
+          ColumnAccuracy: (*source.ColumnAccuracy)(1)
         })
       }),
       SourceMeta: (*source.Meta)({
@@ -541,7 +594,8 @@
           Line: (int) 5,
           Column: (int) 5
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       })
     })
   },
@@ -553,6 +607,7 @@
       Line: (int) 1,
       Column: (int) 1
     },
-    EndPosition: (*source.Position)(<nil>)
+    EndPosition: (*source.Position)(<nil>),
+    ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
   })
 })

@@ -64,9 +64,15 @@ type SubstitutionResourceProperty struct {
 	SourceMeta                *source.Meta
 }
 
+// SubstitutionPathItem represents a single segment in a property path
+// such as .fieldName, ["fieldName"], or [0].
 type SubstitutionPathItem struct {
 	FieldName  string
 	ArrayIndex *int64
+	// SourceMeta contains position information for this path item
+	// in the original source. This is used for hover and other
+	// location-based language server features.
+	SourceMeta *source.Meta
 }
 
 type SubstitutionChild struct {

@@ -188,20 +188,26 @@ func validateResourceDefinitionObject(
 		attrNode, hasAttr := node.Fields[attrName]
 		if !hasAttr {
 			if slices.Contains(validateAgainstSchema.Required, attrName) {
+				// For missing required fields, use parentLocation (the parent object's key)
+				// rather than node.SourceMeta (which points to the first field in the object).
+				// This provides better error positioning by highlighting the parent object
+				// where the missing field should be added.
 				errs = append(errs, errResourceDefMissingRequiredField(
 					attrPath,
 					params.ResourceType,
 					attrName,
 					attrSchema.Type,
-					selectMappingNodeLocation(node, parentLocation),
+					parentLocation,
 				))
 			}
 		} else {
+			// Use the field's key location as the parent for better error positioning
+			attrParentLocation := selectFieldLocation(node.FieldsSourceMeta, attrName, parentLocation)
 			attrDiagnostics, err := validateResourceDefinition(
 				ctx,
 				params,
 				attrNode,
-				parentLocation,
+				attrParentLocation,
 				attrSchema,
 				attrPath,
 				depth+1,
@@ -213,14 +219,18 @@ func validateResourceDefinitionObject(
 		}
 	}
 
-	for fieldName, fieldNode := range node.Fields {
+	for fieldName := range node.Fields {
 		fieldPath := fmt.Sprintf("%s.%s", path, fieldName)
 		if _, hasAttr := validateAgainstSchema.Attributes[fieldName]; !hasAttr {
+			availableFields := getAttributeNames(validateAgainstSchema.Attributes)
+			// Use the field's key location for better error positioning
+			fieldKeyLocation := selectFieldLocation(node.FieldsSourceMeta, fieldName, parentLocation)
 			errs = append(errs, errResourceDefUnknownField(
 				fieldPath,
 				params.ResourceType,
 				fieldName,
-				selectMappingNodeLocation(fieldNode, parentLocation),
+				availableFields,
+				fieldKeyLocation,
 			))
 		}
 	}
@@ -302,11 +312,13 @@ func validateResourceDefinitionMap(
 
 	for fieldName, fieldNode := range node.Fields {
 		fieldPath := fmt.Sprintf("%s.%s", path, fieldName)
+		// Use the field's key location as the parent for better error positioning
+		fieldParentLocation := selectFieldLocation(node.FieldsSourceMeta, fieldName, parentLocation)
 		fieldDiagnostics, err := validateResourceDefinition(
 			ctx,
 			params,
 			fieldNode,
-			parentLocation,
+			fieldParentLocation,
 			validateAgainstSchema.MapValues,
 			fieldPath,
 			depth+1,
@@ -395,11 +407,13 @@ func validateResourceDefinitionArray(
 
 	for itemIndex, itemNode := range node.Items {
 		itemPath := fmt.Sprintf("%s[%d]", path, itemIndex)
+		// Use the item's own location as the parent for better error positioning
+		itemParentLocation := selectMappingNodeLocation(itemNode, parentLocation)
 		fieldDiagnostics, err := validateResourceDefinition(
 			ctx,
 			params,
 			itemNode,
-			parentLocation,
+			itemParentLocation,
 			validateAgainstSchema.Items,
 			itemPath,
 			depth+1,
@@ -1525,4 +1539,32 @@ func selectMappingNodeLocation(node *core.MappingNode, parentLocation *source.Me
 	}
 
 	return parentLocation
+}
+
+// selectFieldLocation returns the source location for a field name from FieldsSourceMeta,
+// or falls back to parentLocation if not available. This provides better error positioning
+// by using the field's key location rather than its value location.
+func selectFieldLocation(
+	fieldsSourceMeta map[string]*source.Meta,
+	fieldName string,
+	parentLocation *source.Meta,
+) *source.Meta {
+	if fieldsSourceMeta != nil {
+		if fieldMeta, ok := fieldsSourceMeta[fieldName]; ok && fieldMeta != nil {
+			return fieldMeta
+		}
+	}
+	return parentLocation
+}
+
+// getAttributeNames returns a sorted slice of attribute names from a schema attributes map.
+func getAttributeNames(attributes map[string]*provider.ResourceDefinitionsSchema) []string {
+	if len(attributes) == 0 {
+		return nil
+	}
+	names := make([]string, 0, len(attributes))
+	for name := range attributes {
+		names = append(names, name)
+	}
+	return names
 }

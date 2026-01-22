@@ -376,7 +376,7 @@ func (s *RegistryTestSuite) Test_produces_error_for_missing_provider(c *C) {
 	runErr, isRunErr := err.(*errors.RunError)
 	c.Assert(isRunErr, Equals, true)
 	c.Assert(runErr.ReasonCode, Equals, provider.ErrorReasonCodeItemTypeProviderNotFound)
-	c.Assert(runErr.Error(), Equals, "run error: provider \"otherProvider\" not found for resource type \"otherProvider/otherResource\"")
+	c.Assert(runErr.Error(), Equals, "run error: provider or transformer \"otherProvider\" not found for resource type \"otherProvider/otherResource\"")
 }
 
 func (s *RegistryTestSuite) Test_resource_locking_behaviour(c *C) {

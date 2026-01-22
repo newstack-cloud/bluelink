@@ -64,6 +64,16 @@ func (n *TreeNode) SetRangeEnd(end *source.Meta) {
 	}
 }
 
+// setRangeEndFromChildren sets the range end of a tree node from the last child's range end.
+// If there are no children, the range end is set to the range start.
+func setRangeEndFromChildren(node *TreeNode, children []*TreeNode) {
+	if len(children) > 0 {
+		node.Range.End = children[len(children)-1].Range.End
+	} else {
+		node.Range.End = node.Range.Start
+	}
+}
+
 // TreeNodeType is the type of a tree node.
 type TreeNodeType int
 
@@ -199,7 +209,7 @@ func transformToTreeNode(transform *TransformValueWrapper, parentPath string) *T
 	}
 	sortTreeNodes(children)
 	transformNode.Children = children
-	transformNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(transformNode, children)
 
 	return transformNode
 }
@@ -233,7 +243,7 @@ func variablesToTreeNode(variables *VariableMap, parentPath string) *TreeNode {
 	}
 	sortTreeNodes(children)
 	variablesNode.Children = children
-	variablesNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(variablesNode, children)
 
 	return variablesNode
 }
@@ -294,7 +304,7 @@ func variableToTreeNode(varName string, variable *Variable, parentPath string, l
 
 	sortTreeNodes(children)
 	variableNode.Children = children
-	variableNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(variableNode, children)
 
 	return variableNode
 }
@@ -345,7 +355,7 @@ func valuesToTreeNode(values *ValueMap, parentPath string) *TreeNode {
 	}
 	sortTreeNodes(children)
 	valuesNode.Children = children
-	valuesNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(valuesNode, children)
 
 	return valuesNode
 }
@@ -398,7 +408,7 @@ func valueToTreeNode(valName string, value *Value, parentPath string, location *
 
 	sortTreeNodes(children)
 	valueNode.Children = children
-	valueNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(valueNode, children)
 
 	return valueNode
 }
@@ -449,7 +459,7 @@ func includesToTreeNode(includes *IncludeMap, parentPath string) *TreeNode {
 	}
 	sortTreeNodes(children)
 	includesNode.Children = children
-	includesNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(includesNode, children)
 
 	return includesNode
 }
@@ -489,7 +499,7 @@ func includeToTreeNode(includeName string, include *Include, parentPath string, 
 
 	sortTreeNodes(children)
 	includeNode.Children = children
-	includeNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(includeNode, children)
 
 	return includeNode
 }
@@ -523,7 +533,7 @@ func resourcesToTreeNode(resources *ResourceMap, parentPath string) *TreeNode {
 	}
 	sortTreeNodes(children)
 	resourcesNode.Children = children
-	resourcesNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(resourcesNode, children)
 
 	return resourcesNode
 }
@@ -578,7 +588,7 @@ func resourceToTreeNode(resourceName string, resource *Resource, parentPath stri
 
 	sortTreeNodes(children)
 	resourceNode.Children = children
-	resourceNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(resourceNode, children)
 
 	return resourceNode
 }
@@ -661,7 +671,7 @@ func resourceConditionToTreeNode(label string, condition *Condition, parentPath 
 
 	sortTreeNodes(children)
 	conditionNode.Children = children
-	conditionNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(conditionNode, children)
 
 	return conditionNode
 }
@@ -691,7 +701,7 @@ func conditionsListToTreeNode(label string, conditions []*Condition, parentPath 
 
 	sortTreeNodes(children)
 	condListNode.Children = children
-	condListNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(condListNode, children)
 
 	return condListNode
 }
@@ -781,7 +791,7 @@ func resourceMetadataToTreeNode(metadata *Metadata, parentPath string) *TreeNode
 
 	sortTreeNodes(children)
 	metadataNode.Children = children
-	metadataNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(metadataNode, children)
 
 	return metadataNode
 }
@@ -815,7 +825,7 @@ func dataSourcesToTreeNode(dataSources *DataSourceMap, parentPath string) *TreeN
 	}
 	sortTreeNodes(children)
 	dataSourcesNode.Children = children
-	dataSourcesNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(dataSourcesNode, children)
 
 	return dataSourcesNode
 }
@@ -860,7 +870,7 @@ func dataSourceToTreeNode(dataSourceName string, dataSource *DataSource, parentP
 
 	sortTreeNodes(children)
 	dataSourceNode.Children = children
-	dataSourceNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(dataSourceNode, children)
 
 	return dataSourceNode
 }
@@ -921,7 +931,7 @@ func dataSourceMetadataToTreeNode(metadata *DataSourceMetadata, parentPath strin
 
 	sortTreeNodes(children)
 	metadataNode.Children = children
-	metadataNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(metadataNode, children)
 
 	return metadataNode
 }
@@ -952,7 +962,7 @@ func dataSourceFiltersToTreeNode(filters *DataSourceFilters, parentPath string) 
 
 	sortTreeNodes(children)
 	filtersNode.Children = children
-	filtersNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(filtersNode, children)
 
 	return filtersNode
 }
@@ -991,7 +1001,7 @@ func dataSourceFilterToTreeNode(filter *DataSourceFilter, parentPath string) *Tr
 
 	sortTreeNodes(children)
 	filterNode.Children = children
-	filterNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(filterNode, children)
 
 	return filterNode
 }
@@ -1057,7 +1067,7 @@ func filterSearchToTreeNode(search *DataSourceFilterSearch, parentPath string) *
 
 	sortTreeNodes(children)
 	searchNode.Children = children
-	searchNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(searchNode, children)
 
 	return searchNode
 }
@@ -1092,7 +1102,7 @@ func dataSourceFieldExportsToTreeNode(exports *DataSourceFieldExportMap, parentP
 
 	sortTreeNodes(children)
 	exportsNode.Children = children
-	exportsNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(exportsNode, children)
 
 	return exportsNode
 }
@@ -1131,7 +1141,7 @@ func dataSourceFieldExportToTreeNode(exportName string, export *DataSourceFieldE
 
 	sortTreeNodes(children)
 	fieldExportNode.Children = children
-	fieldExportNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(fieldExportNode, children)
 
 	return fieldExportNode
 }
@@ -1182,7 +1192,7 @@ func exportsToTreeNode(exports *ExportMap, parentPath string) *TreeNode {
 	}
 	sortTreeNodes(children)
 	exportsNode.Children = children
-	exportsNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(exportsNode, children)
 
 	return exportsNode
 }
@@ -1217,7 +1227,7 @@ func exportToTreeNode(exportName string, export *Export, parentPath string, loca
 
 	sortTreeNodes(children)
 	exportNode.Children = children
-	exportNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(exportNode, children)
 
 	return exportNode
 }
@@ -1268,7 +1278,7 @@ func stringSubsMapToTreeNode(label string, subsMap *StringOrSubstitutionsMap, pa
 
 	sortTreeNodes(children)
 	subsMapNode.Children = children
-	subsMapNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(subsMapNode, children)
 
 	return subsMapNode
 }
@@ -1302,7 +1312,7 @@ func stringMapToTreeNode(label string, stringMap *StringMap, parentPath string) 
 
 	sortTreeNodes(children)
 	subsMapNode.Children = children
-	subsMapNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(subsMapNode, children)
 
 	return subsMapNode
 }
@@ -1358,8 +1368,12 @@ func mappingNodeToTreeNode(
 	if mappingNode.Fields != nil {
 		children := []*TreeNode{}
 		for key, value := range mappingNode.Fields {
+			var fieldSourceMeta *source.Meta
+			if mappingNode.FieldsSourceMeta != nil {
+				fieldSourceMeta = mappingNode.FieldsSourceMeta[key]
+			}
 			node := mappingNodeToTreeNode(
-				key, value, mappingNodePath, mappingNode.FieldsSourceMeta[key],
+				key, value, mappingNodePath, fieldSourceMeta,
 			)
 			if node != nil {
 				children = append(children, node)
@@ -1368,7 +1382,7 @@ func mappingNodeToTreeNode(
 
 		sortTreeNodes(children)
 		mappingTreeNode.Children = children
-		mappingTreeNode.Range.End = children[len(children)-1].Range.End
+		setRangeEndFromChildren(mappingTreeNode, children)
 	}
 
 	if mappingNode.Items != nil {
@@ -1384,7 +1398,7 @@ func mappingNodeToTreeNode(
 
 		sortTreeNodes(children)
 		mappingTreeNode.Children = children
-		mappingTreeNode.Range.End = children[len(children)-1].Range.End
+		setRangeEndFromChildren(mappingTreeNode, children)
 	}
 
 	return mappingTreeNode
@@ -1428,9 +1442,13 @@ func scalarsToTreeNode(label string, scalars []*bpcore.ScalarValue, parentPath s
 
 	sortTreeNodes(children)
 	scalarsNode.Children = children
-	lastChild := children[len(children)-1]
-	if lastChild != nil {
-		scalarsNode.Range.End = lastChild.Range.End
+	if len(children) > 0 {
+		lastChild := children[len(children)-1]
+		if lastChild != nil {
+			scalarsNode.Range.End = lastChild.Range.End
+		}
+	} else {
+		scalarsNode.Range.End = scalarsNode.Range.Start
 	}
 
 	return scalarsNode
@@ -1469,7 +1487,7 @@ func stringSubsToTreeNode(label string, subs *substitutions.StringOrSubstitution
 
 	sortTreeNodes(children)
 	stringSubsNode.Children = children
-	stringSubsNode.Range.End = children[len(children)-1].Range.End
+	setRangeEndFromChildren(stringSubsNode, children)
 
 	return stringSubsNode
 }
@@ -1568,15 +1586,16 @@ func substitutionToTreeNode(value *substitutions.Substitution, parentPath string
 }
 
 func subFunctionToTreeNode(value *substitutions.SubstitutionFunctionExpr, parentPath string) *TreeNode {
+	rootPath := fmt.Sprintf("%s/functionCall/%s", parentPath, value.FunctionName)
 
 	treeNodeType := TreeNodeTypeNonTerminal
-	if len(value.Arguments) == 0 {
+	if len(value.Arguments) == 0 && len(value.Path) == 0 {
 		treeNodeType = TreeNodeTypeLeaf
 	}
 
 	root := &TreeNode{
 		Label:         string(value.FunctionName),
-		Path:          fmt.Sprintf("%s/functionCall/%s", parentPath, value.FunctionName),
+		Path:          rootPath,
 		Type:          treeNodeType,
 		SchemaElement: value,
 		Range: &source.Range{
@@ -1585,15 +1604,17 @@ func subFunctionToTreeNode(value *substitutions.SubstitutionFunctionExpr, parent
 		},
 	}
 
-	children := make([]*TreeNode, len(value.Arguments))
+	children := make([]*TreeNode, 0, len(value.Arguments)+len(value.Path))
 	for i, arg := range value.Arguments {
-		child := subFunctionArgToTreeNode(arg, i, root.Path)
+		child := subFunctionArgToTreeNode(arg, i, rootPath)
 		if child != nil {
-			children[i] = child
+			children = append(children, child)
 		}
 	}
 
-	// Args are already in order so sorting is not needed.
+	pathChildren := pathItemsToTreeNodes(value.Path, rootPath)
+	children = append(children, pathChildren...)
+
 	root.Children = children
 
 	return root
@@ -1620,16 +1641,24 @@ func subFunctionArgToTreeNode(value *substitutions.SubstitutionFunctionArg, inde
 }
 
 func subChildToTreeNode(value *substitutions.SubstitutionChild, parentPath string) *TreeNode {
+	rootPath := fmt.Sprintf("%s/childRef/%s", parentPath, value.ChildName)
+	children := pathItemsToTreeNodes(value.Path, rootPath)
+
+	nodeType := TreeNodeTypeLeaf
+	if len(children) > 0 {
+		nodeType = TreeNodeTypeNonTerminal
+	}
 
 	return &TreeNode{
 		Label:         value.ChildName,
-		Path:          fmt.Sprintf("%s/childRef/%s", parentPath, value.ChildName),
-		Type:          TreeNodeTypeLeaf,
+		Path:          rootPath,
+		Type:          nodeType,
 		SchemaElement: value,
 		Range: &source.Range{
 			Start: &value.SourceMeta.Position,
 			End:   value.SourceMeta.EndPosition,
 		},
+		Children: children,
 	}
 }
 
@@ -1651,16 +1680,24 @@ func subValueRefToTreeNode(
 	value *substitutions.SubstitutionValueReference,
 	parentPath string,
 ) *TreeNode {
+	rootPath := fmt.Sprintf("%s/valRef/%s", parentPath, value.ValueName)
+	children := pathItemsToTreeNodes(value.Path, rootPath)
+
+	nodeType := TreeNodeTypeLeaf
+	if len(children) > 0 {
+		nodeType = TreeNodeTypeNonTerminal
+	}
 
 	return &TreeNode{
 		Label:         value.ValueName,
-		Path:          fmt.Sprintf("%s/valRef/%s", parentPath, value.ValueName),
-		Type:          TreeNodeTypeLeaf,
+		Path:          rootPath,
+		Type:          nodeType,
 		SchemaElement: value,
 		Range: &source.Range{
 			Start: &value.SourceMeta.Position,
 			End:   value.SourceMeta.EndPosition,
 		},
+		Children: children,
 	}
 }
 
@@ -1668,16 +1705,24 @@ func subResourcePropToTreeNode(
 	value *substitutions.SubstitutionResourceProperty,
 	parentPath string,
 ) *TreeNode {
+	rootPath := fmt.Sprintf("%s/resourceRef/%s", parentPath, value.ResourceName)
+	children := pathItemsToTreeNodes(value.Path, rootPath)
+
+	nodeType := TreeNodeTypeLeaf
+	if len(children) > 0 {
+		nodeType = TreeNodeTypeNonTerminal
+	}
 
 	return &TreeNode{
 		Label:         value.ResourceName,
-		Path:          fmt.Sprintf("%s/resourceRef/%s", parentPath, value.ResourceName),
-		Type:          TreeNodeTypeLeaf,
+		Path:          rootPath,
+		Type:          nodeType,
 		SchemaElement: value,
 		Range: &source.Range{
 			Start: &value.SourceMeta.Position,
 			End:   value.SourceMeta.EndPosition,
 		},
+		Children: children,
 	}
 }
 
@@ -1702,16 +1747,24 @@ func subElemRefToTreeNode(
 	value *substitutions.SubstitutionElemReference,
 	parentPath string,
 ) *TreeNode {
+	rootPath := fmt.Sprintf("%s/elemRef", parentPath)
+	children := pathItemsToTreeNodes(value.Path, rootPath)
+
+	nodeType := TreeNodeTypeLeaf
+	if len(children) > 0 {
+		nodeType = TreeNodeTypeNonTerminal
+	}
 
 	return &TreeNode{
 		Label:         "elemRef",
-		Path:          fmt.Sprintf("%s/elemRef", parentPath),
-		Type:          TreeNodeTypeLeaf,
+		Path:          rootPath,
+		Type:          nodeType,
 		SchemaElement: value,
 		Range: &source.Range{
 			Start: &value.SourceMeta.Position,
 			End:   value.SourceMeta.EndPosition,
 		},
+		Children: children,
 	}
 }
 
@@ -1803,6 +1856,40 @@ func scalarToTreeNode(label string, scalar *bpcore.ScalarValue, parentPath strin
 			End:   scalar.SourceMeta.EndPosition,
 		},
 	}
+}
+
+func pathItemsToTreeNodes(
+	pathItems []*substitutions.SubstitutionPathItem,
+	parentPath string,
+) []*TreeNode {
+	if len(pathItems) == 0 {
+		return nil
+	}
+
+	var children []*TreeNode
+	for i, pathItem := range pathItems {
+		if pathItem == nil || pathItem.SourceMeta == nil {
+			continue
+		}
+
+		label := pathItem.FieldName
+		if pathItem.ArrayIndex != nil {
+			label = fmt.Sprintf("[%d]", *pathItem.ArrayIndex)
+		}
+
+		child := &TreeNode{
+			Label:         label,
+			Path:          fmt.Sprintf("%s/pathItem/%d", parentPath, i),
+			Type:          TreeNodeTypeLeaf,
+			SchemaElement: pathItem,
+			Range: &source.Range{
+				Start: &pathItem.SourceMeta.Position,
+				End:   pathItem.SourceMeta.EndPosition,
+			},
+		}
+		children = append(children, child)
+	}
+	return children
 }
 
 func sortTreeNodes(nodes []*TreeNode) {

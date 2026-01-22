@@ -24,7 +24,8 @@
                         EndPosition: (*source.Position)({
                           Line: (int) 100,
                           Column: (int) 80
-                        })
+                        }),
+                        ColumnAccuracy: (*source.ColumnAccuracy)(1)
                       })
                     }),
                     ValueReference: (*substitutions.SubstitutionValueReference)(<nil>),
@@ -46,7 +47,8 @@
                       EndPosition: (*source.Position)({
                         Line: (int) 100,
                         Column: (int) 80
-                      })
+                      }),
+                      ColumnAccuracy: (*source.ColumnAccuracy)(1)
                     })
                   }),
                   SourceMeta: (*source.Meta)({
@@ -57,7 +59,8 @@
                     EndPosition: (*source.Position)({
                       Line: (int) 100,
                       Column: (int) 80
-                    })
+                    }),
+                    ColumnAccuracy: (*source.ColumnAccuracy)(1)
                   })
                 }),
                 (*substitutions.SubstitutionFunctionArg)({
@@ -84,7 +87,8 @@
                       EndPosition: (*source.Position)({
                         Line: (int) 100,
                         Column: (int) 88
-                      })
+                      }),
+                      ColumnAccuracy: (*source.ColumnAccuracy)(1)
                     })
                   }),
                   SourceMeta: (*source.Meta)({
@@ -95,7 +99,8 @@
                     EndPosition: (*source.Position)({
                       Line: (int) 100,
                       Column: (int) 88
-                    })
+                    }),
+                    ColumnAccuracy: (*source.ColumnAccuracy)(1)
                   })
                 })
               },
@@ -109,7 +114,8 @@
                 EndPosition: (*source.Position)({
                   Line: (int) 100,
                   Column: (int) 89
-                })
+                }),
+                ColumnAccuracy: (*source.ColumnAccuracy)(1)
               })
             }),
             Variable: (*substitutions.SubstitutionVariable)(<nil>),
@@ -132,7 +138,8 @@
               EndPosition: (*source.Position)({
                 Line: (int) 100,
                 Column: (int) 89
-              })
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(1)
             })
           }),
           SourceMeta: (*source.Meta)({
@@ -143,7 +150,8 @@
             EndPosition: (*source.Position)({
               Line: (int) 100,
               Column: (int) 89
-            })
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(1)
           })
         }),
         (*substitutions.SubstitutionFunctionArg)({
@@ -170,7 +178,8 @@
               EndPosition: (*source.Position)({
                 Line: (int) 100,
                 Column: (int) 98
-              })
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(1)
             })
           }),
           SourceMeta: (*source.Meta)({
@@ -181,7 +190,8 @@
             EndPosition: (*source.Position)({
               Line: (int) 100,
               Column: (int) 98
-            })
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(1)
           })
         }),
         (*substitutions.SubstitutionFunctionArg)({
@@ -208,7 +218,8 @@
               EndPosition: (*source.Position)({
                 Line: (int) 100,
                 Column: (int) 104
-              })
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(1)
             })
           }),
           SourceMeta: (*source.Meta)({
@@ -219,7 +230,8 @@
             EndPosition: (*source.Position)({
               Line: (int) 100,
               Column: (int) 104
-            })
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(1)
           })
         })
       },
@@ -233,7 +245,8 @@
         EndPosition: (*source.Position)({
           Line: (int) 100,
           Column: (int) 105
-        })
+        }),
+        ColumnAccuracy: (*source.ColumnAccuracy)(1)
       })
     }),
     Variable: (*substitutions.SubstitutionVariable)(<nil>),
@@ -256,7 +269,8 @@
       EndPosition: (*source.Position)({
         Line: (int) 100,
         Column: (int) 105
-      })
+      }),
+      ColumnAccuracy: (*source.ColumnAccuracy)(1)
     })
   }),
   SourceMeta: (*source.Meta)({
@@ -267,6 +281,7 @@
     EndPosition: (*source.Position)({
       Line: (int) 100,
       Column: (int) 107
-    })
+    }),
+    ColumnAccuracy: (*source.ColumnAccuracy)(1)
   })
 })

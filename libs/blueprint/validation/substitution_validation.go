@@ -1076,6 +1076,9 @@ func checkSubFuncArgType(
 	funcName string,
 	location *source.Meta,
 ) error {
+	if len(definition.Parameters) == 0 {
+		return nil
+	}
 	paramIndex := int(math.Min(float64(argIndex), float64(len(definition.Parameters)-1)))
 	param := definition.Parameters[paramIndex]
 

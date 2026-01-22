@@ -3,6 +3,8 @@ package errors
 import (
 	"fmt"
 	"strings"
+
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 )
 
 type ErrorReasonCode string
@@ -70,12 +72,15 @@ const (
 )
 
 type LoadError struct {
-	ReasonCode  ErrorReasonCode
-	Err         error
-	ChildErrors []error
-	Line        *int
-	Column      *int
-	Context     *ErrorContext `json:"context,omitempty"`
+	ReasonCode     ErrorReasonCode
+	Err            error
+	ChildErrors    []error
+	Line           *int
+	Column         *int
+	EndLine        *int
+	EndColumn      *int
+	ColumnAccuracy *source.ColumnAccuracy
+	Context        *ErrorContext `json:"context,omitempty"`
 }
 
 func (e *LoadError) Error() string {

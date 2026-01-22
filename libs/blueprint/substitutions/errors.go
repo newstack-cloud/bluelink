@@ -357,15 +357,12 @@ func errLexError(message string, line int, col int, colAccuracy ColumnAccuracy) 
 	}
 }
 
-// ColumnAccuracy is an enum that describes the accuracy of column numbers
-// in a host document that contains reference substitutions.
-// This is used to give a hint to the user as to how accurate the column numbers
-// are likely to be in a host document for diagnostics that will be displayed to a user.
-type ColumnAccuracy int
+// ColumnAccuracy is re-exported from source package for backwards compatibility.
+type ColumnAccuracy = source.ColumnAccuracy
 
 const (
 	// ColumnAccuracyExact indicates that column numbers are accurate.
-	ColumnAccuracyExact ColumnAccuracy = 1
+	ColumnAccuracyExact = source.ColumnAccuracyExact
 	// ColumnAccuracyApproximate indicates that column numbers are approximate.
-	ColumnAccuracyApproximate ColumnAccuracy = 2
+	ColumnAccuracyApproximate = source.ColumnAccuracyApproximate
 )

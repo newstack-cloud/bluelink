@@ -18,6 +18,11 @@ type ExportTestSuite struct {
 
 var _ = Suite(&ExportTestSuite{})
 
+func exportExactColAccuracy() *source.ColumnAccuracy {
+	ca := source.ColumnAccuracyExact
+	return &ca
+}
+
 func (s *ExportTestSuite) SetUpSuite(c *C) {
 	s.specFixtures = make(map[string][]byte)
 	fixturesToLoad := map[string]string{
@@ -59,6 +64,7 @@ func (s *ExportTestSuite) Test_parses_valid_string_export_yaml_input(c *C) {
 					Line:   1,
 					Column: 13,
 				},
+			ColumnAccuracy: exportExactColAccuracy(),
 			},
 		},
 		Description: &substitutions.StringOrSubstitutions{
@@ -74,6 +80,7 @@ func (s *ExportTestSuite) Test_parses_valid_string_export_yaml_input(c *C) {
 							Line:   2,
 							Column: 66,
 						},
+					ColumnAccuracy: exportExactColAccuracy(),
 					},
 				},
 			},
@@ -86,6 +93,7 @@ func (s *ExportTestSuite) Test_parses_valid_string_export_yaml_input(c *C) {
 					Line:   2,
 					Column: 66,
 				},
+			ColumnAccuracy: exportExactColAccuracy(),
 			},
 		},
 		Field: &core.ScalarValue{
@@ -99,6 +107,7 @@ func (s *ExportTestSuite) Test_parses_valid_string_export_yaml_input(c *C) {
 					Line:   3,
 					Column: 37,
 				},
+			ColumnAccuracy: exportExactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{

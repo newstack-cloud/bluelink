@@ -393,6 +393,14 @@ func NormaliseSubstitution(substitution *substitutions.Substitution) {
 		NormaliseSubstitutionChild(substitution.Child)
 	}
 
+	if substitution.ValueReference != nil {
+		NormaliseSubstitutionValueReference(substitution.ValueReference)
+	}
+
+	if substitution.ElemReference != nil {
+		NormaliseSubstitutionElemReference(substitution.ElemReference)
+	}
+
 	substitution.SourceMeta = nil
 }
 
@@ -407,6 +415,7 @@ func NormaliseSubstitutionFunction(substitutionFunction *substitutions.Substitut
 		NormaliseSubstitution(argument.Value)
 		argument.SourceMeta = nil
 	}
+	NormaliseSubstitutionPathItems(substitutionFunction.Path)
 	substitutionFunction.SourceMeta = nil
 }
 
@@ -442,6 +451,7 @@ func NormaliseSubstitutionResourceProperty(
 		return
 	}
 
+	NormaliseSubstitutionPathItems(resourceProperty.Path)
 	resourceProperty.SourceMeta = nil
 }
 
@@ -452,7 +462,40 @@ func NormaliseSubstitutionChild(substitutionChild *substitutions.SubstitutionChi
 		return
 	}
 
+	NormaliseSubstitutionPathItems(substitutionChild.Path)
 	substitutionChild.SourceMeta = nil
+}
+
+// NormaliseSubstitutionPathItems strips the source meta information from path items
+// to make them comparable in a way that ignores line and column numbers.
+func NormaliseSubstitutionPathItems(pathItems []*substitutions.SubstitutionPathItem) {
+	for _, pathItem := range pathItems {
+		if pathItem != nil {
+			pathItem.SourceMeta = nil
+		}
+	}
+}
+
+// NormaliseSubstitutionValueReference strips the source meta information from a value reference
+// to make it comparable in a way that ignores line and column numbers.
+func NormaliseSubstitutionValueReference(valueRef *substitutions.SubstitutionValueReference) {
+	if valueRef == nil {
+		return
+	}
+
+	NormaliseSubstitutionPathItems(valueRef.Path)
+	valueRef.SourceMeta = nil
+}
+
+// NormaliseSubstitutionElemReference strips the source meta information from an elem reference
+// to make it comparable in a way that ignores line and column numbers.
+func NormaliseSubstitutionElemReference(elemRef *substitutions.SubstitutionElemReference) {
+	if elemRef == nil {
+		return
+	}
+
+	NormaliseSubstitutionPathItems(elemRef.Path)
+	elemRef.SourceMeta = nil
 }
 
 // NormaliseScalarValue strips the source meta information from a scalar value

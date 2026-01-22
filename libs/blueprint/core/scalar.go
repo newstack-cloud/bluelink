@@ -155,12 +155,15 @@ func (v *ScalarValue) UnmarshalYAML(value *yaml.Node) error {
 		return errMustBeScalar(posInfo)
 	}
 
+	// Scalar values from regular YAML (non-block) have exact column positions.
+	colAccuracy := source.ColumnAccuracyExact
 	v.SourceMeta = &source.Meta{
 		Position: source.Position{
 			Line:   value.Line,
 			Column: value.Column,
 		},
-		EndPosition: source.EndSourcePositionFromYAMLScalarNode(value),
+		EndPosition:    source.EndSourcePositionFromYAMLScalarNode(value),
+		ColumnAccuracy: &colAccuracy,
 	}
 
 	// Decode will read floating point numbers as integers

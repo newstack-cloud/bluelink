@@ -10,7 +10,8 @@
         EndPosition: (*source.Position)({
           Line: (int) 27,
           Column: (int) 16
-        })
+        }),
+        ColumnAccuracy: (*source.ColumnAccuracy)(1)
       })
     }),
     Value: (*core.MappingNode)({

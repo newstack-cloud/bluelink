@@ -8,6 +8,17 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// ColumnAccuracy indicates how accurate the column position is.
+type ColumnAccuracy int
+
+const (
+	// ColumnAccuracyExact indicates that column numbers are accurate.
+	ColumnAccuracyExact ColumnAccuracy = 1
+	// ColumnAccuracyApproximate indicates that column numbers are approximate.
+	// This is the case for YAML block literals where the column cannot be precisely determined.
+	ColumnAccuracyApproximate ColumnAccuracy = 2
+)
+
 // Meta represents information about the deserialised source of
 // a blueprint value including the line and column
 // where a blueprint element begins that can be used by tools such
@@ -15,7 +26,8 @@ import (
 // blueprints from source in some supported formats.
 type Meta struct {
 	Position
-	EndPosition *Position `json:"endPosition,omitempty"`
+	EndPosition    *Position       `json:"endPosition,omitempty"`
+	ColumnAccuracy *ColumnAccuracy `json:"columnAccuracy,omitempty"`
 }
 
 // Position represents a position in the source code of a blueprint.
@@ -40,6 +52,36 @@ func PositionFromSourceMeta(sourceMeta *Meta) (line *int, column *int) {
 	}
 
 	return &sourceMeta.Line, &sourceMeta.Column
+}
+
+// PositionRange holds start and end positions with column accuracy information.
+type PositionRange struct {
+	Line           *int
+	Column         *int
+	EndLine        *int
+	EndColumn      *int
+	ColumnAccuracy *ColumnAccuracy
+}
+
+// PositionRangeFromSourceMeta extracts position range info from source meta.
+// Returns an empty PositionRange (with nil fields) if sourceMeta is nil.
+func PositionRangeFromSourceMeta(sourceMeta *Meta) *PositionRange {
+	if sourceMeta == nil {
+		return &PositionRange{}
+	}
+
+	pr := &PositionRange{
+		Line:           &sourceMeta.Line,
+		Column:         &sourceMeta.Column,
+		ColumnAccuracy: sourceMeta.ColumnAccuracy,
+	}
+
+	if sourceMeta.EndPosition != nil {
+		pr.EndLine = &sourceMeta.EndPosition.Line
+		pr.EndColumn = &sourceMeta.EndPosition.Column
+	}
+
+	return pr
 }
 
 // EndSourcePositionFromYAMLScalarNode returns the precise
