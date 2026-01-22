@@ -53,6 +53,10 @@ func FromPBConfigDefinitionResponse(
 	resp *sharedtypesv1.ConfigDefinitionResponse,
 	pluginAction errorsv1.PluginAction,
 ) (*core.ConfigDefinition, error) {
+	if resp == nil {
+		return nil, nil
+	}
+
 	switch result := resp.Response.(type) {
 	case *sharedtypesv1.ConfigDefinitionResponse_ConfigDefinition:
 		return fromPBConfigDefinition(result.ConfigDefinition)
@@ -96,6 +100,10 @@ func fromPBConfigDefinition(
 func fromPBConfigFieldDefinition(
 	pbFieldDefinition *sharedtypesv1.ConfigFieldDefinition,
 ) (*core.ConfigFieldDefinition, error) {
+	if pbFieldDefinition == nil {
+		return nil, nil
+	}
+
 	defaultValue, err := serialisation.FromScalarValuePB(
 		pbFieldDefinition.DefaultValue,
 		/* optional */ true,
@@ -148,6 +156,10 @@ func FromPBScalarType(
 func FromPBFunctionDefinitionRequest(
 	req *sharedtypesv1.FunctionDefinitionRequest,
 ) (*provider.FunctionGetDefinitionInput, error) {
+	if req == nil {
+		return nil, errors.New("function definition request cannot be nil")
+	}
+
 	params, err := fromPBBlueprintParams(req.Params)
 	if err != nil {
 		return nil, err
@@ -164,6 +176,10 @@ func FromPBFunctionCallRequest(
 	req *sharedtypesv1.FunctionCallRequest,
 	functionRegistry provider.FunctionRegistry,
 ) (*provider.FunctionCallInput, error) {
+	if req == nil {
+		return nil, errors.New("function call request cannot be nil")
+	}
+
 	deserialisedArgs, err := fromPBFunctionCallArgs(req.Args)
 	if err != nil {
 		return nil, err
@@ -291,6 +307,10 @@ func fromPBFunctionParams(
 func fromPBFunctionParameter(
 	paramPB *sharedtypesv1.FunctionParameter,
 ) (function.Parameter, error) {
+	if paramPB == nil {
+		return nil, nil
+	}
+
 	switch concreteParamType := paramPB.Parameter.(type) {
 	case *sharedtypesv1.FunctionParameter_ScalarParameter:
 		return fromPBScalarParameter(concreteParamType.ScalarParameter)
@@ -323,6 +343,10 @@ func fromPBFunctionParameter(
 func fromPBScalarParameter(
 	paramPB *sharedtypesv1.FunctionScalarParameter,
 ) (*function.ScalarParameter, error) {
+	if paramPB == nil {
+		return nil, nil
+	}
+
 	valueTypeDef, err := fromPBFunctionValueTypeDefinition(paramPB.Type)
 	if err != nil {
 		return nil, err
@@ -342,6 +366,10 @@ func fromPBScalarParameter(
 func fromPBListParameter(
 	paramPB *sharedtypesv1.FunctionListParameter,
 ) (*function.ListParameter, error) {
+	if paramPB == nil {
+		return nil, nil
+	}
+
 	elementTypeDef, err := fromPBFunctionValueTypeDefinition(paramPB.ElementType)
 	if err != nil {
 		return nil, err
@@ -361,6 +389,10 @@ func fromPBListParameter(
 func fromPBMapParameter(
 	paramPB *sharedtypesv1.FunctionMapParameter,
 ) (*function.MapParameter, error) {
+	if paramPB == nil {
+		return nil, nil
+	}
+
 	valueTypeDef, err := fromPBFunctionValueTypeDefinition(paramPB.ElementType)
 	if err != nil {
 		return nil, err
@@ -380,6 +412,10 @@ func fromPBMapParameter(
 func fromPBObjectParameter(
 	paramPB *sharedtypesv1.FunctionObjectParameter,
 ) (*function.ObjectParameter, error) {
+	if paramPB == nil {
+		return nil, nil
+	}
+
 	objectValueType, err := fromPBFunctionValueTypeDefinition(paramPB.ObjectValueType)
 	if err != nil {
 		return nil, err
@@ -399,6 +435,10 @@ func fromPBObjectParameter(
 func fromPBFunctionTypeParameter(
 	paramPB *sharedtypesv1.FunctionTypeParameter,
 ) (*function.FunctionParameter, error) {
+	if paramPB == nil {
+		return nil, nil
+	}
+
 	functionTypeDef, err := fromPBFunctionValueTypeDefinition(paramPB.FunctionType)
 	if err != nil {
 		return nil, err
@@ -418,6 +458,10 @@ func fromPBFunctionTypeParameter(
 func fromPBVariadicParameter(
 	paramPB *sharedtypesv1.FunctionVariadicParameter,
 ) (*function.VariadicParameter, error) {
+	if paramPB == nil {
+		return nil, nil
+	}
+
 	valueTypeDef, err := fromPBFunctionValueTypeDefinition(paramPB.Type)
 	if err != nil {
 		return nil, err
@@ -437,6 +481,10 @@ func fromPBVariadicParameter(
 func fromPBAnyParameter(
 	paramPB *sharedtypesv1.FunctionAnyParameter,
 ) (*function.AnyParameter, error) {
+	if paramPB == nil {
+		return nil, nil
+	}
+
 	unionTypes, err := fromPBUnionValueTypeDefinitions(paramPB.UnionTypes)
 	if err != nil {
 		return nil, err
@@ -456,6 +504,10 @@ func fromPBAnyParameter(
 func fromPBFunctionReturn(
 	returnTypePB *sharedtypesv1.FunctionReturn,
 ) (function.Return, error) {
+	if returnTypePB == nil {
+		return nil, nil
+	}
+
 	switch concreteReturnType := returnTypePB.Return.(type) {
 	case *sharedtypesv1.FunctionReturn_ScalarReturn:
 		return fromPBFunctionScalarReturn(
@@ -611,6 +663,10 @@ func fromPBAnyReturn(
 func fromPBFunctionValueTypeDefinition(
 	valueTypePB *sharedtypesv1.FunctionValueTypeDefinition,
 ) (function.ValueTypeDefinition, error) {
+	if valueTypePB == nil {
+		return nil, nil
+	}
+
 	switch concreteValueType := valueTypePB.ValueTypeDefinition.(type) {
 	case *sharedtypesv1.FunctionValueTypeDefinition_ScalarValueType:
 		return fromPBFunctionScalarValueTypeDefinition(
@@ -852,6 +908,10 @@ func fromPBFunctionValueType(
 func FromPBDeployResourceRequest(
 	req *sharedtypesv1.DeployResourceRequest,
 ) (*provider.ResourceDeployInput, error) {
+	if req == nil {
+		return nil, errors.New("deploy resource request cannot be nil")
+	}
+
 	changes, err := FromPBResourceChanges(req.Changes)
 	if err != nil {
 		return nil, err
@@ -876,6 +936,10 @@ func FromPBDeployResourceRequest(
 func FromPBResourceSpecDefinition(
 	pbSpecDef *sharedtypesv1.ResourceSpecDefinition,
 ) (*provider.ResourceSpecDefinition, error) {
+	if pbSpecDef == nil {
+		return nil, nil
+	}
+
 	resourceDefinitionSchema, err := fromPBResourceDefinitionsSchema(pbSpecDef.Schema)
 	if err != nil {
 		return nil, err
@@ -1405,6 +1469,10 @@ func FromPBLinkChanges(
 func FromPBResourceHasStabilisedRequest(
 	req *sharedtypesv1.ResourceHasStabilisedRequest,
 ) (*provider.ResourceHasStabilisedInput, error) {
+	if req == nil {
+		return nil, errors.New("resource has stabilised request cannot be nil")
+	}
+
 	providerCtx, err := FromPBProviderContext(req.Context)
 	if err != nil {
 		return nil, err
@@ -1433,6 +1501,10 @@ func FromPBResourceHasStabilisedRequest(
 // FromPBProviderContext converts a ProviderContext from a protobuf message to a core type
 // compatible with the blueprint framework.
 func FromPBProviderContext(pbProviderCtx *sharedtypesv1.ProviderContext) (provider.Context, error) {
+	if pbProviderCtx == nil {
+		return nil, nil
+	}
+
 	providerConfigVars, err := FromPBScalarMap(pbProviderCtx.ProviderConfigVariables)
 	if err != nil {
 		return nil, err
@@ -1521,6 +1593,10 @@ func ResourceTypeToString(resourceType *sharedtypesv1.ResourceType) string {
 func FromPBDestroyResourceRequest(
 	req *sharedtypesv1.DestroyResourceRequest,
 ) (*provider.ResourceDestroyInput, error) {
+	if req == nil {
+		return nil, errors.New("destroy resource request cannot be nil")
+	}
+
 	providerCtx, err := FromPBProviderContext(req.Context)
 	if err != nil {
 		return nil, err
@@ -1578,8 +1654,15 @@ func fromPBFunctionCallContext(
 func fromPBFunctionCallStack(
 	reqStack []*sharedtypesv1.FunctionCall,
 ) (function.Stack, error) {
+	if reqStack == nil {
+		return function.NewStack(), nil
+	}
+
 	stack := function.NewStack()
 	for _, call := range reqStack {
+		if call == nil {
+			continue
+		}
 		location, err := fromPBSourceMeta(call.Location)
 		if err != nil {
 			return nil, err
@@ -1766,6 +1849,10 @@ func FromPBFunctionDefinitionResponse(
 	response *sharedtypesv1.FunctionDefinition,
 	action errorsv1.PluginAction,
 ) (*provider.FunctionGetDefinitionOutput, error) {
+	if response == nil {
+		return nil, nil
+	}
+
 	definition, err := FromPBFunctionDefinition(response)
 	if err != nil {
 		return nil, errorsv1.CreateGeneralError(

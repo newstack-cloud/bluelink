@@ -2,6 +2,7 @@ package convertv1
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -57,6 +58,14 @@ func ToPBConfigDefinitionErrorResponse(
 // ToPBFunctionCallResponse converts the output from a function call to a
 // FunctionCallResponse protobuf message that can be sent over gRPC.
 func ToPBFunctionCallResponse(output *provider.FunctionCallOutput) (*sharedtypesv1.FunctionCallResponse, error) {
+	if output == nil {
+		return &sharedtypesv1.FunctionCallResponse{
+			Response: &sharedtypesv1.FunctionCallResponse_ErrorResponse{
+				ErrorResponse: sharedtypesv1.NoResponsePBError(),
+			},
+		}, nil
+	}
+
 	responseData, err := pbutils.ConvertInterfaceToProtobuf(output.ResponseData)
 	if err != nil {
 		return nil, err
@@ -124,6 +133,10 @@ func ToPBDeployResourceRequest(
 	resourceType string,
 	input *provider.ResourceDeployInput,
 ) (*sharedtypesv1.DeployResourceRequest, error) {
+	if input == nil {
+		return nil, errors.New("deploy resource input cannot be nil")
+	}
+
 	providerContext, err := ToPBProviderContext(input.ProviderContext)
 	if err != nil {
 		return nil, err
@@ -188,6 +201,10 @@ func ToPBDestroyResourceRequest(
 	resourceType string,
 	input *provider.ResourceDestroyInput,
 ) (*sharedtypesv1.DestroyResourceRequest, error) {
+	if input == nil {
+		return nil, errors.New("destroy resource input cannot be nil")
+	}
+
 	providerContext, err := ToPBProviderContext(input.ProviderContext)
 	if err != nil {
 		return nil, err
@@ -288,6 +305,10 @@ func ToPBFunctionCallRequest(
 	input *provider.FunctionCallInput,
 	hostID string,
 ) (*sharedtypesv1.FunctionCallRequest, error) {
+	if input == nil {
+		return nil, errors.New("function call input cannot be nil")
+	}
+
 	args, err := toPBFunctionCallArguments(ctx, input.Arguments)
 	if err != nil {
 		return nil, err
@@ -313,6 +334,10 @@ func ToPBFunctionDefinitionRequest(
 	input *provider.FunctionGetDefinitionInput,
 	hostID string,
 ) (*sharedtypesv1.FunctionDefinitionRequest, error) {
+	if input == nil {
+		return nil, errors.New("function definition input cannot be nil")
+	}
+
 	params, err := toPBBlueprintParams(input.Params)
 	if err != nil {
 		return nil, err
@@ -944,8 +969,11 @@ func ToPBMappingNodeSlice(
 }
 
 // ToPBProviderContext converts a provider.Context to a ProviderContext protobuf message
-// that can be sent over gRPC.
+// that can be sent over gRPC. Returns nil if providerCtx is nil.
 func ToPBProviderContext(providerCtx provider.Context) (*sharedtypesv1.ProviderContext, error) {
+	if providerCtx == nil {
+		return nil, nil
+	}
 	providerConfigVars, err := ToPBScalarMap(providerCtx.ProviderConfigVariables())
 	if err != nil {
 		return nil, err
@@ -1054,6 +1082,10 @@ func ToPBScalarSlice(slice []*core.ScalarValue) ([]*schemapb.ScalarValue, error)
 func toPBFunctionDefinition(
 	definition *function.Definition,
 ) (*sharedtypesv1.FunctionDefinition, error) {
+	if definition == nil {
+		return nil, nil
+	}
+
 	pbParams, err := toPBFunctionParams(definition.Parameters)
 	if err != nil {
 		return nil, err
@@ -1100,6 +1132,10 @@ func toPBFunctionReturn(
 func toPBFunctionScalarReturn(
 	returnType *function.ScalarReturn,
 ) (*sharedtypesv1.FunctionReturn, error) {
+	if returnType == nil {
+		return nil, nil
+	}
+
 	valueTypeDef, err := toPBFunctionValueTypeDefinition(returnType.Type)
 	if err != nil {
 		return nil, err
@@ -1119,6 +1155,10 @@ func toPBFunctionScalarReturn(
 func toPBFunctionListReturn(
 	returnType *function.ListReturn,
 ) (*sharedtypesv1.FunctionReturn, error) {
+	if returnType == nil {
+		return nil, nil
+	}
+
 	elementTypeDef, err := toPBFunctionValueTypeDefinition(returnType.ElementType)
 	if err != nil {
 		return nil, err
@@ -1138,6 +1178,10 @@ func toPBFunctionListReturn(
 func toPBFunctionMapReturn(
 	returnType *function.MapReturn,
 ) (*sharedtypesv1.FunctionReturn, error) {
+	if returnType == nil {
+		return nil, nil
+	}
+
 	elementTypeDef, err := toPBFunctionValueTypeDefinition(returnType.ElementType)
 	if err != nil {
 		return nil, err
@@ -1157,6 +1201,10 @@ func toPBFunctionMapReturn(
 func toPBFunctionObjectReturn(
 	returnType *function.ObjectReturn,
 ) (*sharedtypesv1.FunctionReturn, error) {
+	if returnType == nil {
+		return nil, nil
+	}
+
 	objectValueType, err := toPBFunctionValueTypeDefinition(returnType.ObjectValueType)
 	if err != nil {
 		return nil, err
@@ -1176,6 +1224,10 @@ func toPBFunctionObjectReturn(
 func toPBFunctionTypeReturn(
 	returnType *function.FunctionReturn,
 ) (*sharedtypesv1.FunctionReturn, error) {
+	if returnType == nil {
+		return nil, nil
+	}
+
 	functionTypeDef, err := toPBFunctionValueTypeDefinition(returnType.FunctionType)
 	if err != nil {
 		return nil, err
@@ -1195,6 +1247,10 @@ func toPBFunctionTypeReturn(
 func toPBFunctionAnyReturn(
 	returnType *function.AnyReturn,
 ) (*sharedtypesv1.FunctionReturn, error) {
+	if returnType == nil {
+		return nil, nil
+	}
+
 	unionTypes, err := toPBUnionValueTypeDefinitions(returnType.UnionTypes)
 	if err != nil {
 		return nil, err
@@ -1252,6 +1308,10 @@ func toPBFunctionParameter(
 func toPBFunctionScalarParam(
 	param *function.ScalarParameter,
 ) (*sharedtypesv1.FunctionParameter, error) {
+	if param == nil {
+		return nil, nil
+	}
+
 	valueTypeDef, err := toPBFunctionValueTypeDefinition(param.Type)
 	if err != nil {
 		return nil, err
@@ -1275,6 +1335,10 @@ func toPBFunctionScalarParam(
 func toPBFunctionListParam(
 	param *function.ListParameter,
 ) (*sharedtypesv1.FunctionParameter, error) {
+	if param == nil {
+		return nil, nil
+	}
+
 	valueTypeDef, err := toPBFunctionValueTypeDefinition(param.ElementType)
 	if err != nil {
 		return nil, err
@@ -1298,6 +1362,10 @@ func toPBFunctionListParam(
 func toPBFunctionMapParam(
 	param *function.MapParameter,
 ) (*sharedtypesv1.FunctionParameter, error) {
+	if param == nil {
+		return nil, nil
+	}
+
 	elementTypeDef, err := toPBFunctionValueTypeDefinition(param.ElementType)
 	if err != nil {
 		return nil, err
@@ -1321,6 +1389,10 @@ func toPBFunctionMapParam(
 func toPBFunctionObjectParam(
 	param *function.ObjectParameter,
 ) (*sharedtypesv1.FunctionParameter, error) {
+	if param == nil {
+		return nil, nil
+	}
+
 	objectValueType, err := toPBFunctionValueTypeDefinition(param.ObjectValueType)
 	if err != nil {
 		return nil, err
@@ -1362,6 +1434,10 @@ func toPBFunctionObjectAttributeTypes(
 func toPBFunctionTypeParam(
 	param *function.FunctionParameter,
 ) (*sharedtypesv1.FunctionParameter, error) {
+	if param == nil {
+		return nil, nil
+	}
+
 	functionTypeDef, err := toPBFunctionValueTypeDefinition(param.FunctionType)
 	if err != nil {
 		return nil, err
@@ -1385,6 +1461,10 @@ func toPBFunctionTypeParam(
 func toPBFunctionVariadicParam(
 	param *function.VariadicParameter,
 ) (*sharedtypesv1.FunctionParameter, error) {
+	if param == nil {
+		return nil, nil
+	}
+
 	valueTypeDef, err := toPBFunctionValueTypeDefinition(param.Type)
 	if err != nil {
 		return nil, err
@@ -1408,6 +1488,10 @@ func toPBFunctionVariadicParam(
 func toPBFunctionAnyParam(
 	param *function.AnyParameter,
 ) (*sharedtypesv1.FunctionParameter, error) {
+	if param == nil {
+		return nil, nil
+	}
+
 	unionTypes, err := toPBUnionValueTypeDefinitions(param.UnionTypes)
 	if err != nil {
 		return nil, err
@@ -1466,6 +1550,10 @@ func toPBFunctionValueTypeDefinition(
 func toPBFunctionScalarValueTypeDefinition(
 	valueTypeDef *function.ValueTypeDefinitionScalar,
 ) (*sharedtypesv1.FunctionValueTypeDefinition, error) {
+	if valueTypeDef == nil {
+		return nil, nil
+	}
+
 	return &sharedtypesv1.FunctionValueTypeDefinition{
 		ValueTypeDefinition: &sharedtypesv1.FunctionValueTypeDefinition_ScalarValueType{
 			ScalarValueType: &sharedtypesv1.FunctionScalarValueTypeDefinition{
@@ -1482,6 +1570,10 @@ func toPBFunctionScalarValueTypeDefinition(
 func toPBFunctionListValueTypeDefinition(
 	valueTypeDef *function.ValueTypeDefinitionList,
 ) (*sharedtypesv1.FunctionValueTypeDefinition, error) {
+	if valueTypeDef == nil {
+		return nil, nil
+	}
+
 	elementTypeDef, err := toPBFunctionValueTypeDefinition(valueTypeDef.ElementType)
 	if err != nil {
 		return nil, err
@@ -1502,6 +1594,10 @@ func toPBFunctionListValueTypeDefinition(
 func toPBFunctionMapValueTypeDefinition(
 	valueTypeDef *function.ValueTypeDefinitionMap,
 ) (*sharedtypesv1.FunctionValueTypeDefinition, error) {
+	if valueTypeDef == nil {
+		return nil, nil
+	}
+
 	elementTypeDef, err := toPBFunctionValueTypeDefinition(valueTypeDef.ElementType)
 	if err != nil {
 		return nil, err
@@ -1522,6 +1618,10 @@ func toPBFunctionMapValueTypeDefinition(
 func toPBFunctionObjectValueTypeDefinition(
 	valueTypeDef *function.ValueTypeDefinitionObject,
 ) (*sharedtypesv1.FunctionValueTypeDefinition, error) {
+	if valueTypeDef == nil {
+		return nil, nil
+	}
+
 	attributeTypes, err := toPBFunctionObjectAttributeTypes(valueTypeDef.AttributeTypes)
 	if err != nil {
 		return nil, err
@@ -1542,6 +1642,10 @@ func toPBFunctionObjectValueTypeDefinition(
 func toPBFunctionTypeValueTypeDefinition(
 	valueTypeDef *function.ValueTypeDefinitionFunction,
 ) (*sharedtypesv1.FunctionValueTypeDefinition, error) {
+	if valueTypeDef == nil {
+		return nil, nil
+	}
+
 	functionDef, err := toPBFunctionDefinition(&valueTypeDef.Definition)
 	if err != nil {
 		return nil, err
@@ -1562,6 +1666,10 @@ func toPBFunctionTypeValueTypeDefinition(
 func toPBFunctionAnyValueTypeDefinition(
 	valueTypeDef *function.ValueTypeDefinitionAny,
 ) (*sharedtypesv1.FunctionValueTypeDefinition, error) {
+	if valueTypeDef == nil {
+		return nil, nil
+	}
+
 	unionTypes, err := toPBUnionValueTypeDefinitions(valueTypeDef.UnionTypes)
 	if err != nil {
 		return nil, err
@@ -1638,6 +1746,10 @@ func toPBFunctionRuntimeInfo(
 func toPBConfigDefinition(
 	definition *core.ConfigDefinition,
 ) (*sharedtypesv1.ConfigDefinition, error) {
+	if definition == nil {
+		return nil, nil
+	}
+
 	pbConfigDef := &sharedtypesv1.ConfigDefinition{
 		Fields:                map[string]*sharedtypesv1.ConfigFieldDefinition{},
 		AllowAdditionalFields: definition.AllowAdditionalFields,
@@ -1657,6 +1769,10 @@ func toPBConfigDefinition(
 func toPBConfigFieldDefinition(
 	fieldDefinition *core.ConfigFieldDefinition,
 ) (*sharedtypesv1.ConfigFieldDefinition, error) {
+	if fieldDefinition == nil {
+		return nil, nil
+	}
+
 	defaultValue, err := serialisation.ToScalarValuePB(
 		fieldDefinition.DefaultValue,
 		/* optional */ true,

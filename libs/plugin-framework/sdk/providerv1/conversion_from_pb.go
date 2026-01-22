@@ -612,6 +612,10 @@ func fromPBResolvedDataSourceFieldExport(
 func fromPBLinkContext(
 	pbLinkContext *providerserverv1.LinkContext,
 ) (provider.LinkContext, error) {
+	if pbLinkContext == nil {
+		return nil, nil
+	}
+
 	providerConfigVars, err := convertv1.FromPBScalarMap(pbLinkContext.ProviderConfigVariables)
 	if err != nil {
 		return nil, err
@@ -626,11 +630,17 @@ func fromPBLinkContext(
 }
 
 func dataSourceTypeToString(dataSourceType *providerserverv1.DataSourceType) string {
+	if dataSourceType == nil {
+		return ""
+	}
 	return dataSourceType.Type
 }
 
 func customVariableTypeToString(
 	customVariableType *providerserverv1.CustomVariableType,
 ) string {
+	if customVariableType == nil {
+		return ""
+	}
 	return customVariableType.Type
 }
