@@ -572,6 +572,10 @@ func toPBLinkIntermediaryResourceStates(
 func toPBLinkIntermediaryResourceState(
 	intermediaryResourceState *state.LinkIntermediaryResourceState,
 ) (*providerserverv1.LinkIntermediaryResourceState, error) {
+	if intermediaryResourceState == nil {
+		return nil, nil
+	}
+
 	resourceSpecData, err := serialisation.ToMappingNodePB(
 		intermediaryResourceState.ResourceSpecData,
 		/* optional */ true,
@@ -703,6 +707,10 @@ func toPBGetLinkAnnotationDefinitionsResponse(
 func toPBLinkAnnotationDefinition(
 	definition *provider.LinkAnnotationDefinition,
 ) (*providerserverv1.LinkAnnotationDefinition, error) {
+	if definition == nil {
+		return nil, nil
+	}
+
 	defaultValue, err := serialisation.ToScalarValuePB(
 		definition.DefaultValue,
 		/* optional */ true,

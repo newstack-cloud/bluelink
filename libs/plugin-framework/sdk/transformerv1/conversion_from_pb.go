@@ -34,6 +34,10 @@ func fromPBCustomValidateAbstractResourceRequest(
 func fromPBTransformerContext(
 	pbTransformerCtx *transformerserverv1.TransformerContext,
 ) (transform.Context, error) {
+	if pbTransformerCtx == nil {
+		return nil, nil
+	}
+
 	transformerConfigVars, err := convertv1.FromPBScalarMap(
 		pbTransformerCtx.TransformerConfigVariables,
 	)

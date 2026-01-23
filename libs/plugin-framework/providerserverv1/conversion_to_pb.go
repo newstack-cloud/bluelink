@@ -111,6 +111,10 @@ func toPBLinkIntermediaryResourceStates(
 func toPBLinkIntermediaryResourceState(
 	intermediaryResourceState *state.LinkIntermediaryResourceState,
 ) (*LinkIntermediaryResourceState, error) {
+	if intermediaryResourceState == nil {
+		return nil, nil
+	}
+
 	pbResourceSpecData, err := serialisation.ToMappingNodePB(
 		intermediaryResourceState.ResourceSpecData,
 		/* optional */ true,
@@ -240,6 +244,9 @@ func toPBResolvedDataSource(
 func toPBResolvedDataSourceMetadata(
 	dataSourceMetadata *provider.ResolvedDataSourceMetadata,
 ) (*ResolvedDataSourceMetadata, error) {
+	if dataSourceMetadata == nil {
+		return nil, nil
+	}
 
 	displayNamePB, err := serialisation.ToMappingNodePB(
 		dataSourceMetadata.DisplayName,

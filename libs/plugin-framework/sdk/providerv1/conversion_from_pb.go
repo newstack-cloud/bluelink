@@ -157,6 +157,10 @@ func fromPBLinkIntermediaryResourceStates(
 func fromPBLinkIntermediaryResourceState(
 	pbIntermediaryResourceState *providerserverv1.LinkIntermediaryResourceState,
 ) (*state.LinkIntermediaryResourceState, error) {
+	if pbIntermediaryResourceState == nil {
+		return nil, nil
+	}
+
 	resourceSpecData, err := serialisation.FromMappingNodePB(
 		pbIntermediaryResourceState.ResourceSpecData,
 		/* optional */ true,
