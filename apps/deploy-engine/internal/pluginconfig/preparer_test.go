@@ -466,6 +466,18 @@ func (m *testPluginManager) GetPlugins(
 	return instances
 }
 
+func (m *testPluginManager) SetPluginProcess(
+	pluginType pluginservicev1.PluginType,
+	id string,
+	killProcess func() error,
+) {
+	// No-op for tests
+}
+
+func (m *testPluginManager) Close() {
+	// No-op for tests
+}
+
 func TestPrepareSuite(t *testing.T) {
 	suite.Run(t, new(PreparerSuite))
 }

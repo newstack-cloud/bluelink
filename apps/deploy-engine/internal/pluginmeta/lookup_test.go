@@ -52,6 +52,18 @@ func (m *mockPluginManager) GetPlugins(
 	return m.plugins[pluginType]
 }
 
+func (m *mockPluginManager) SetPluginProcess(
+	pluginType pluginservicev1.PluginType,
+	id string,
+	killProcess func() error,
+) {
+	// No-op for tests
+}
+
+func (m *mockPluginManager) Close() {
+	// No-op for tests
+}
+
 func (m *mockPluginManager) addProviderMetadata(id string, metadata *pluginservicev1.PluginExtendedMetadata) {
 	pluginType := pluginservicev1.PluginType_PLUGIN_TYPE_PROVIDER
 
