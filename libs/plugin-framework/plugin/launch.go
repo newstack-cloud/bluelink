@@ -222,19 +222,23 @@ func (l *Launcher) waitForPluginRegistration(
 	stop func() error,
 ) error {
 	startTime := time.Now()
+	pluginType := pluginservicev1.PluginTypeFromString(plugin.PluginType)
 	for time.Since(startTime) < l.launchWaitTimeout {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 			pluginInstance := l.manager.GetPlugin(
-				pluginservicev1.PluginTypeFromString(plugin.PluginType),
+				pluginType,
 				plugin.ID,
 			)
 			if pluginInstance != nil {
 				pluginLogger.Debug(
 					"plugin has been succsefully registered",
 				)
+				// Associate the kill function with the registered plugin
+				// so it can be terminated when the manager is closed.
+				l.manager.SetPluginProcess(pluginType, plugin.ID, stop)
 				return nil
 			}
 			time.Sleep(l.checkRegisteredInterval)

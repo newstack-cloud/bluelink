@@ -28,6 +28,11 @@ type Manager interface {
 	GetPluginMetadata(pluginType PluginType, id string) *PluginExtendedMetadata
 	// GetPlugins retrieves all plugin instances for a given plugin type.
 	GetPlugins(pluginType PluginType) []*PluginInstance
+	// SetPluginProcess sets the kill function for a registered plugin's OS process.
+	// This should be called by the launcher after a plugin has registered.
+	SetPluginProcess(pluginType PluginType, id string, killProcess func() error)
+	// Close terminates all plugin processes and closes their connections.
+	Close()
 }
 
 type managerImpl struct {
@@ -213,6 +218,45 @@ func (m *managerImpl) GetPlugins(pluginType PluginType) []*PluginInstance {
 	return instances
 }
 
+func (m *managerImpl) SetPluginProcess(
+	pluginType PluginType,
+	id string,
+	killProcess func() error,
+) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	instancesForType, hasPluginType := m.pluginInstances[pluginType]
+	if !hasPluginType {
+		return
+	}
+
+	instance, hasInstance := instancesForType[id]
+	if !hasInstance {
+		return
+	}
+
+	instance.KillProcess = killProcess
+}
+
+func (m *managerImpl) Close() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for _, instancesForType := range m.pluginInstances {
+		for _, instance := range instancesForType {
+			if instance.CloseConn != nil {
+				instance.CloseConn()
+			}
+			if instance.KillProcess != nil {
+				// Ignore errors from killing processes as they may have
+				// already exited.
+				_ = instance.KillProcess()
+			}
+		}
+	}
+}
+
 type PluginFactory func(*PluginInstanceInfo, string) (any, func(), error)
 
 // PluginInstance represents an instance of a plugin
@@ -223,6 +267,9 @@ type PluginInstance struct {
 	// to derive the actual client interface based on the plugin type.
 	Client    any
 	CloseConn func()
+	// KillProcess terminates the OS process for this plugin.
+	// This is set by the launcher after the plugin has registered.
+	KillProcess func() error
 }
 
 // PluginInstanceInfo represents the information about a plugin instance

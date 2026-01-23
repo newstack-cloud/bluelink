@@ -137,6 +137,37 @@ func (m *mockPluginManager) DeregisterPlugin(
 	return nil
 }
 
+func (m *mockPluginManager) SetPluginProcess(
+	pluginType pluginservicev1.PluginType,
+	id string,
+	killProcess func() error,
+) {
+	instancesForType, hasPluginType := m.pluginMap[pluginType]
+	if !hasPluginType {
+		return
+	}
+
+	instance, hasInstance := instancesForType[id]
+	if !hasInstance {
+		return
+	}
+
+	instance.KillProcess = killProcess
+}
+
+func (m *mockPluginManager) Close() {
+	for _, instancesForType := range m.pluginMap {
+		for _, instance := range instancesForType {
+			if instance.CloseConn != nil {
+				instance.CloseConn()
+			}
+			if instance.KillProcess != nil {
+				_ = instance.KillProcess()
+			}
+		}
+	}
+}
+
 type mockPluginExecutor struct {
 	pluginManager pluginservicev1.Manager
 	// A mapping of plugin paths to the number of times they should be
