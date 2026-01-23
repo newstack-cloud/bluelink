@@ -215,7 +215,7 @@ func subTypeFromExportType(exportType schema.ExportType) string {
 }
 
 func populateSubSourceMeta(sub *substitutions.Substitution, sourceMeta *source.Meta) {
-	if sourceMeta == nil {
+	if sub == nil || sourceMeta == nil {
 		return
 	}
 

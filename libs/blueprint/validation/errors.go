@@ -202,6 +202,9 @@ const (
 	// ErrorReasonCodeVariableValueNotAllowed is provided when the reason
 	// for a blueprint spec load error is due to a variable value not being in the allowed values.
 	ErrorReasonCodeVariableValueNotAllowed errors.ErrorReasonCode = "variable_value_not_allowed"
+	// ErrorReasonCodeVariableInvalidSecretValue is provided when the reason
+	// for a blueprint spec load error is due to an invalid secret field value for a variable.
+	ErrorReasonCodeVariableInvalidSecretValue errors.ErrorReasonCode = "variable_invalid_secret_value"
 	// ErrorReasonCodeRequiredVariableMissing is provided when the reason
 	// for a blueprint spec load error is due to a required variable being missing.
 	ErrorReasonCodeRequiredVariableMissing errors.ErrorReasonCode = "required_variable_missing"
@@ -504,6 +507,45 @@ func errVariableEmptyValue(
 			Metadata: map[string]any{
 				"variableName": varName,
 				"variableType": varType,
+			},
+		},
+	}
+}
+
+func errVariableInvalidSecretValue(
+	varName string,
+	secretValue *bpcore.ScalarValue,
+	varSourceMeta *source.Meta,
+) error {
+	actualType := deriveVarType(secretValue)
+	posRange := positionFromScalarValue(secretValue, varSourceMeta)
+	return &errors.LoadError{
+		ReasonCode: ErrorReasonCodeVariableInvalidSecretValue,
+		Err: fmt.Errorf(
+			"validation failed due to an invalid secret field value for variable %q, "+
+				"expected a boolean but got %s",
+			varName,
+			actualType,
+		),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
+		Context: &errors.ErrorContext{
+			Category:   errors.ErrorCategoryVariableType,
+			ReasonCode: ErrorReasonCodeVariableInvalidSecretValue,
+			SuggestedActions: []errors.SuggestedAction{
+				{
+					Type:        string(errors.ActionTypeFixVariableType),
+					Title:       "Fix Secret Field Value",
+					Description: "The secret field must be a boolean value (true or false).",
+					Priority:    1,
+				},
+			},
+			Metadata: map[string]any{
+				"variableName": varName,
+				"actualType":   string(actualType),
 			},
 		},
 	}

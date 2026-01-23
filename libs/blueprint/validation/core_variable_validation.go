@@ -38,6 +38,12 @@ func ValidateCoreVariable(
 	validateRuntimeParams bool,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
+
+	// Validate secret field if present - it must be a boolean
+	if err := validateVariableSecretField(varName, varSchema, varMap); err != nil {
+		return diagnostics, err
+	}
+
 	if varSchema.Type.Value == schema.VariableTypeString {
 		return validateCoreStringVariable(
 			ctx, varName, varSchema, varMap, params, validateRuntimeParams,
@@ -507,4 +513,26 @@ func checkVarDescription(
 			Range: bpcore.DiagnosticRangeFromSourceMeta(varMap.SourceMeta[varName], nil),
 		})
 	}
+}
+
+func validateVariableSecretField(
+	varName string,
+	varSchema *schema.Variable,
+	varMap *schema.VariableMap,
+) error {
+	// Secret field is optional, so nil is valid
+	if varSchema.Secret == nil || bpcore.IsScalarNil(varSchema.Secret) {
+		return nil
+	}
+
+	// If secret is provided, it must be a boolean
+	if !bpcore.IsScalarBool(varSchema.Secret) {
+		return errVariableInvalidSecretValue(
+			varName,
+			varSchema.Secret,
+			getVarSourceMeta(varMap, varName),
+		)
+	}
+
+	return nil
 }

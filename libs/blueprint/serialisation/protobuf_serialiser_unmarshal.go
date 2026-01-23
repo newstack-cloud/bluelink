@@ -273,6 +273,10 @@ func FromDataSourcePB(dataSourcePB *schemapb.DataSource) (*schema.DataSource, er
 }
 
 func fromDataSourceMetadataPB(metadataPB *schemapb.DataSourceMetadata) (*schema.DataSourceMetadata, error) {
+	if metadataPB == nil {
+		return nil, nil
+	}
+
 	displayName, err := fromStringOrSubstitutionsPB(metadataPB.DisplayName, true)
 	if err != nil {
 		return nil, err
@@ -316,6 +320,10 @@ func fromDataSourceFiltersPB(
 }
 
 func fromDataSourceFilterPB(filterPB *schemapb.DataSourceFilter) (*schema.DataSourceFilter, error) {
+	if filterPB == nil {
+		return nil, nil
+	}
+
 	search, err := fromDataSourceFilterSearchPB(filterPB.Search)
 	if err != nil {
 		return nil, err
@@ -326,18 +334,27 @@ func fromDataSourceFilterPB(filterPB *schemapb.DataSourceFilter) (*schema.DataSo
 		return nil, err
 	}
 
-	return &schema.DataSourceFilter{
-		Field: field,
-		Operator: &schema.DataSourceFilterOperatorWrapper{
+	var operator *schema.DataSourceFilterOperatorWrapper
+	if filterPB.Operator != "" {
+		operator = &schema.DataSourceFilterOperatorWrapper{
 			Value: schema.DataSourceFilterOperator(filterPB.Operator),
-		},
-		Search: search,
+		}
+	}
+
+	return &schema.DataSourceFilter{
+		Field:    field,
+		Operator: operator,
+		Search:   search,
 	}, nil
 }
 
 func fromDataSourceFilterSearchPB(
 	searchPB *schemapb.DataSourceFilterSearch,
 ) (*schema.DataSourceFilterSearch, error) {
+	if searchPB == nil {
+		return nil, nil
+	}
+
 	values := make([]*substitutions.StringOrSubstitutions, len(searchPB.Values))
 	for i, v := range searchPB.Values {
 		value, err := fromStringOrSubstitutionsPB(v, false)
@@ -384,6 +401,10 @@ func fromDataSourceFieldExports(
 func fromDataSourceFieldExportPB(
 	exportPB *schemapb.DataSourceFieldExport,
 ) (*schema.DataSourceFieldExport, error) {
+	if exportPB == nil {
+		return nil, nil
+	}
+
 	description, err := fromStringOrSubstitutionsPB(exportPB.Description, true)
 	if err != nil {
 		return nil, err
@@ -589,6 +610,10 @@ func FromLinkSelectorPB(linkSelectorPB *schemapb.LinkSelector) *schema.LinkSelec
 }
 
 func fromExportPB(exportPB *schemapb.Export) (*schema.Export, error) {
+	if exportPB == nil {
+		return nil, nil
+	}
+
 	description, err := fromStringOrSubstitutionsPB(exportPB.Description, true)
 	if err != nil {
 		return nil, err
@@ -710,6 +735,10 @@ func fromStringOrSubstitutionsPB(
 func fromStringOrSubstitutionPB(
 	stringOrSubstitutionPB *schemapb.StringOrSubstitution,
 ) (*substitutions.StringOrSubstitution, error) {
+	if stringOrSubstitutionPB == nil {
+		return nil, nil
+	}
+
 	if strVal, isStr := stringOrSubstitutionPB.Value.(*schemapb.StringOrSubstitution_StringValue); isStr {
 		return &substitutions.StringOrSubstitution{
 			StringValue: &strVal.StringValue,
@@ -731,6 +760,10 @@ func fromStringOrSubstitutionPB(
 }
 
 func fromSubstitutionPB(substitution *schemapb.Substitution) (*substitutions.Substitution, error) {
+	if substitution == nil {
+		return nil, nil
+	}
+
 	if funcVal, isFunc := substitution.Sub.(*schemapb.Substitution_FunctionExpr); isFunc {
 		return fromSubstitutionFunctionPB(funcVal.FunctionExpr)
 	}
@@ -906,6 +939,10 @@ func fromSubstitutionPathItemsPB(
 func fromSubstitutionPathItemPB(
 	pathItemPB *schemapb.SubstitutionPathItem,
 ) (*substitutions.SubstitutionPathItem, error) {
+	if pathItemPB == nil {
+		return nil, nil
+	}
+
 	if fieldNameVal, isFieldName := pathItemPB.Item.(*schemapb.SubstitutionPathItem_FieldName); isFieldName {
 		return &substitutions.SubstitutionPathItem{
 			FieldName: fieldNameVal.FieldName,

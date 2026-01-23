@@ -104,8 +104,13 @@ func toVariablesPB(variables *schema.VariableMap) (map[string]*schemapb.Variable
 			return nil, err
 		}
 
+		var varType string
+		if v.Type != nil {
+			varType = string(v.Type.Value)
+		}
+
 		variablesPB[k] = &schemapb.Variable{
-			Type:          string(v.Type.Value),
+			Type:          varType,
 			Description:   description,
 			Secret:        secret,
 			Default:       defaultValue,
@@ -138,8 +143,13 @@ func toValuesPB(values *schema.ValueMap) (map[string]*schemapb.Value, error) {
 			return nil, err
 		}
 
+		var valType string
+		if v.Type != nil {
+			valType = string(v.Type.Value)
+		}
+
 		valuesPB[k] = &schemapb.Value{
-			Type:        string(v.Type.Value),
+			Type:        valType,
 			Value:       valuePB,
 			Description: descriptionPB,
 			Secret:      secretPB,
@@ -244,8 +254,13 @@ func ToDataSourcePB(dataSource *schema.DataSource) (*schemapb.DataSource, error)
 		return nil, err
 	}
 
+	var dsType string
+	if dataSource.Type != nil {
+		dsType = string(dataSource.Type.Value)
+	}
+
 	return &schemapb.DataSource{
-		Type:            string(dataSource.Type.Value),
+		Type:            dsType,
 		Metadata:        metadataPB,
 		Filter:          filtersPB,
 		ExportAllFields: getDataSourceExportAll(dataSource),
@@ -263,6 +278,10 @@ func getDataSourceExportAll(dataSource *schema.DataSource) bool {
 }
 
 func toDataSourceMetadataPB(metadata *schema.DataSourceMetadata) (*schemapb.DataSourceMetadata, error) {
+	if metadata == nil {
+		return nil, nil
+	}
+
 	displayNamePB, err := toStringOrSubstitutionsPB(metadata.DisplayName, true)
 	if err != nil {
 		return nil, err
@@ -304,6 +323,10 @@ func toDataSourceFiltersPB(filters *schema.DataSourceFilters) ([]*schemapb.DataS
 }
 
 func toDataSourceFilterPB(filter *schema.DataSourceFilter) (*schemapb.DataSourceFilter, error) {
+	if filter == nil {
+		return nil, nil
+	}
+
 	searchPB, err := toDataSourceFilterSearchPB(filter.Search)
 	if err != nil {
 		return nil, err
@@ -314,9 +337,14 @@ func toDataSourceFilterPB(filter *schema.DataSourceFilter) (*schemapb.DataSource
 		return nil, err
 	}
 
+	operator := ""
+	if filter.Operator != nil {
+		operator = string(filter.Operator.Value)
+	}
+
 	return &schemapb.DataSourceFilter{
 		Field:    fieldPB,
-		Operator: string(filter.Operator.Value),
+		Operator: operator,
 		Search:   searchPB,
 	}, nil
 }
@@ -324,6 +352,10 @@ func toDataSourceFilterPB(filter *schema.DataSourceFilter) (*schemapb.DataSource
 func toDataSourceFilterSearchPB(
 	search *schema.DataSourceFilterSearch,
 ) (*schemapb.DataSourceFilterSearch, error) {
+	if search == nil {
+		return nil, nil
+	}
+
 	valuesPB := make([]*schemapb.StringOrSubstitutions, len(search.Values))
 	for i, v := range search.Values {
 		valuePB, err := toStringOrSubstitutionsPB(v, false)
@@ -362,6 +394,10 @@ func toDataSourceFieldExports(
 func toDataSourceFieldExportPB(
 	export *schema.DataSourceFieldExport,
 ) (*schemapb.DataSourceFieldExport, error) {
+	if export == nil {
+		return nil, nil
+	}
+
 	descriptionPB, err := toStringOrSubstitutionsPB(export.Description, true)
 	if err != nil {
 		return nil, err
@@ -372,8 +408,13 @@ func toDataSourceFieldExportPB(
 		return nil, err
 	}
 
+	var exportType string
+	if export.Type != nil {
+		exportType = string(export.Type.Value)
+	}
+
 	return &schemapb.DataSourceFieldExport{
-		Type:        string(export.Type.Value),
+		Type:        exportType,
 		AliasFor:    aliasForPB,
 		Description: descriptionPB,
 	}, nil
@@ -412,8 +453,13 @@ func ToResourcePB(resource *schema.Resource) (*schemapb.Resource, error) {
 		return nil, err
 	}
 
+	var resType string
+	if resource.Type != nil {
+		resType = string(resource.Type.Value)
+	}
+
 	return &schemapb.Resource{
-		Type:         string(resource.Type.Value),
+		Type:         resType,
 		Description:  descriptionPB,
 		Condition:    conditionPB,
 		Each:         eachPB,
@@ -443,6 +489,10 @@ func toExportsPB(exports *schema.ExportMap) (map[string]*schemapb.Export, error)
 }
 
 func toExportPB(export *schema.Export) (*schemapb.Export, error) {
+	if export == nil {
+		return nil, nil
+	}
+
 	descriptionPB, err := toStringOrSubstitutionsPB(export.Description, true)
 	if err != nil {
 		return nil, err
@@ -453,8 +503,13 @@ func toExportPB(export *schema.Export) (*schemapb.Export, error) {
 		return nil, err
 	}
 
+	var expType string
+	if export.Type != nil {
+		expType = string(export.Type.Value)
+	}
+
 	return &schemapb.Export{
-		Type:        string(export.Type.Value),
+		Type:        expType,
 		Field:       field,
 		Description: descriptionPB,
 	}, nil
@@ -680,6 +735,10 @@ func toStringOrSubstitutionsPB(
 func toStringOrSubstitutionPB(
 	stringOrSubstitution *substitutions.StringOrSubstitution,
 ) (*schemapb.StringOrSubstitution, error) {
+	if stringOrSubstitution == nil {
+		return nil, nil
+	}
+
 	if stringOrSubstitution.StringValue != nil {
 		return &schemapb.StringOrSubstitution{
 			Value: &schemapb.StringOrSubstitution_StringValue{
@@ -705,6 +764,10 @@ func toStringOrSubstitutionPB(
 }
 
 func toSubstitutionPB(substitution *substitutions.Substitution) (*schemapb.Substitution, error) {
+	if substitution == nil {
+		return nil, nil
+	}
+
 	if substitution.Function != nil {
 		return toSubstitutionFunctionPB(substitution.Function)
 	}
@@ -874,6 +937,10 @@ func toSubstitutionPathItemsPB(
 func toSubstitutionPathItemPB(
 	pathItem *substitutions.SubstitutionPathItem,
 ) (*schemapb.SubstitutionPathItem, error) {
+	if pathItem == nil {
+		return nil, nil
+	}
+
 	if pathItem.FieldName != "" {
 		return &schemapb.SubstitutionPathItem{
 			Item: &schemapb.SubstitutionPathItem_FieldName{
@@ -961,6 +1028,10 @@ func toSubstitutionFunctionArgsPB(
 func toSubstitutionFunctionArgPB(
 	substitutionFunctionArg *substitutions.SubstitutionFunctionArg,
 ) (*schemapb.SubstitutionFunctionArg, error) {
+	if substitutionFunctionArg == nil {
+		return nil, nil
+	}
+
 	valuePB, err := toSubstitutionPB(substitutionFunctionArg.Value)
 	if err != nil {
 		return nil, err
@@ -990,6 +1061,10 @@ func toScalarValuesPB(scalarValues []*core.ScalarValue) ([]*schemapb.ScalarValue
 func ToScalarValuePB(scalarValue *core.ScalarValue, optional bool) (*schemapb.ScalarValue, error) {
 	if optional && scalarValue == nil {
 		return nil, nil
+	}
+
+	if !optional && scalarValue == nil {
+		return nil, errScalarValueIsNil()
 	}
 
 	if scalarValue.StringValue != nil {

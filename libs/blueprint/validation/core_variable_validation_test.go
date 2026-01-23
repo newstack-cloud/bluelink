@@ -1349,6 +1349,151 @@ func (s *CoreVariableValidationTestSuite) Test_reports_error_when_boolean_variab
 	)
 }
 
+func (s *CoreVariableValidationTestSuite) Test_succeeds_with_valid_boolean_secret_field(c *C) {
+	region := "us-east-1"
+	params := &core.ParamsImpl{
+		BlueprintVariables: map[string]*core.ScalarValue{
+			"apiKey": {
+				StringValue: &region,
+			},
+		},
+	}
+
+	secretValue := true
+	description := "The API key for the service."
+	variableSchema := &schema.Variable{
+		Type:        &schema.VariableTypeWrapper{Value: schema.VariableTypeString},
+		Description: &core.ScalarValue{StringValue: &description},
+		Secret:      &core.ScalarValue{BoolValue: &secretValue},
+	}
+	varMap := &schema.VariableMap{
+		Values: map[string]*schema.Variable{
+			"apiKey": variableSchema,
+		},
+		SourceMeta: map[string]*source.Meta{
+			"apiKey": {Position: source.Position{
+				Line:   1,
+				Column: 1,
+			}},
+		},
+	}
+	_, err := ValidateCoreVariable(context.Background(), "apiKey", variableSchema, varMap, params, true)
+	c.Assert(err, IsNil)
+}
+
+func (s *CoreVariableValidationTestSuite) Test_succeeds_with_nil_secret_field(c *C) {
+	region := "us-east-1"
+	params := &core.ParamsImpl{
+		BlueprintVariables: map[string]*core.ScalarValue{
+			"region": {
+				StringValue: &region,
+			},
+		},
+	}
+
+	description := "The region to deploy to."
+	variableSchema := &schema.Variable{
+		Type:        &schema.VariableTypeWrapper{Value: schema.VariableTypeString},
+		Description: &core.ScalarValue{StringValue: &description},
+		Secret:      nil,
+	}
+	varMap := &schema.VariableMap{
+		Values: map[string]*schema.Variable{
+			"region": variableSchema,
+		},
+		SourceMeta: map[string]*source.Meta{
+			"region": {Position: source.Position{
+				Line:   1,
+				Column: 1,
+			}},
+		},
+	}
+	_, err := ValidateCoreVariable(context.Background(), "region", variableSchema, varMap, params, true)
+	c.Assert(err, IsNil)
+}
+
+func (s *CoreVariableValidationTestSuite) Test_reports_error_when_secret_field_is_string(c *C) {
+	region := "us-east-1"
+	params := &core.ParamsImpl{
+		BlueprintVariables: map[string]*core.ScalarValue{
+			"apiKey": {
+				StringValue: &region,
+			},
+		},
+	}
+
+	invalidSecretValue := "yes"
+	description := "The API key for the service."
+	variableSchema := &schema.Variable{
+		Type:        &schema.VariableTypeWrapper{Value: schema.VariableTypeString},
+		Description: &core.ScalarValue{StringValue: &description},
+		Secret:      &core.ScalarValue{StringValue: &invalidSecretValue},
+	}
+	varMap := &schema.VariableMap{
+		Values: map[string]*schema.Variable{
+			"apiKey": variableSchema,
+		},
+		SourceMeta: map[string]*source.Meta{
+			"apiKey": {Position: source.Position{
+				Line:   1,
+				Column: 1,
+			}},
+		},
+	}
+	_, err := ValidateCoreVariable(context.Background(), "apiKey", variableSchema, varMap, params, true)
+	c.Assert(err, NotNil)
+	loadErr, isLoadErr := err.(*errors.LoadError)
+	c.Assert(isLoadErr, Equals, true)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeVariableInvalidSecretValue)
+	c.Assert(
+		loadErr.Error(),
+		Equals,
+		"blueprint load error: validation failed due to an invalid secret field value for variable \"apiKey\", "+
+			"expected a boolean but got string",
+	)
+}
+
+func (s *CoreVariableValidationTestSuite) Test_reports_error_when_secret_field_is_integer(c *C) {
+	maxRetries := 5
+	params := &core.ParamsImpl{
+		BlueprintVariables: map[string]*core.ScalarValue{
+			"maxRetries": {
+				IntValue: &maxRetries,
+			},
+		},
+	}
+
+	invalidSecretValue := 1
+	description := "Maximum number of retries."
+	variableSchema := &schema.Variable{
+		Type:        &schema.VariableTypeWrapper{Value: schema.VariableTypeInteger},
+		Description: &core.ScalarValue{StringValue: &description},
+		Secret:      &core.ScalarValue{IntValue: &invalidSecretValue},
+	}
+	varMap := &schema.VariableMap{
+		Values: map[string]*schema.Variable{
+			"maxRetries": variableSchema,
+		},
+		SourceMeta: map[string]*source.Meta{
+			"maxRetries": {Position: source.Position{
+				Line:   1,
+				Column: 1,
+			}},
+		},
+	}
+	_, err := ValidateCoreVariable(context.Background(), "maxRetries", variableSchema, varMap, params, true)
+	c.Assert(err, NotNil)
+	loadErr, isLoadErr := err.(*errors.LoadError)
+	c.Assert(isLoadErr, Equals, true)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeVariableInvalidSecretValue)
+	c.Assert(
+		loadErr.Error(),
+		Equals,
+		"blueprint load error: validation failed due to an invalid secret field value for variable \"maxRetries\", "+
+			"expected a boolean but got integer",
+	)
+}
+
 func errorsToStrings(errs []error) []string {
 	var result []string
 	for _, err := range errs {
