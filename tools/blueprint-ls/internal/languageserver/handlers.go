@@ -275,11 +275,18 @@ func (a *Application) storeDocumentAndDerivedStructures(
 		a.logger,
 	)
 
-	// Preserve last-known-good schema from existing context if parsing failed
-	if existingDocCtx != nil && existingDocCtx.LastValidSchema != nil {
-		docCtx.LastValidSchema = existingDocCtx.LastValidSchema
-		docCtx.LastValidTree = existingDocCtx.LastValidTree
-		docCtx.LastValidVersion = existingDocCtx.LastValidVersion
+	// Preserve last-known-good state from existing context if current parsing failed
+	if existingDocCtx != nil {
+		// Preserve last valid AST for indentation-based context detection
+		if existingDocCtx.LastValidAST != nil && docCtx.LastValidAST == nil {
+			docCtx.LastValidAST = existingDocCtx.LastValidAST
+		}
+		// Preserve last valid schema for completion items
+		if existingDocCtx.LastValidSchema != nil && docCtx.LastValidSchema == nil {
+			docCtx.LastValidSchema = existingDocCtx.LastValidSchema
+			docCtx.LastValidTree = existingDocCtx.LastValidTree
+			docCtx.LastValidVersion = existingDocCtx.LastValidVersion
+		}
 	}
 
 	// Add schema information if parsing succeeded

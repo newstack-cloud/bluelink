@@ -203,6 +203,8 @@ func processYAMLMappingChildren(
 
 // processMappingPair extracts key and value from a mapping pair and adds
 // the value as a child of the parent mapping with the key as fieldName.
+// If the mapping pair has a key but no value (e.g., "spec:"), an empty mapping
+// node is created to allow indentation-based lookups to find it as a parent.
 func processMappingPair(
 	pairNode *tree_sitter.Node,
 	parentMapping *UnifiedNode,
@@ -237,12 +239,54 @@ func processMappingPair(
 		}
 	}
 
-	if keyNode == nil || valueNode == nil {
+	if keyNode == nil {
 		return
 	}
 
 	// Extract key string
 	keyStr := extractScalarText(keyNode, content)
+
+	// Handle case where there's a key but no value (e.g., "spec:")
+	// Create an empty mapping node to represent the key, allowing
+	// indentation-based lookups to find it as a potential parent.
+	if valueNode == nil {
+		pairStart := pairNode.StartPosition()
+		pairEnd := pairNode.EndPosition()
+		keyStart := keyNode.StartPosition()
+		keyEnd := keyNode.EndPosition()
+
+		emptyMapping := &UnifiedNode{
+			Kind:      NodeKindMapping,
+			TSKind:    "empty_mapping",
+			Parent:    parentMapping,
+			Index:     -1,
+			FieldName: keyStr,
+			Range: source.Range{
+				Start: &source.Position{
+					Line:   int(pairStart.Row) + 1,
+					Column: int(pairStart.Column) + 1,
+				},
+				End: &source.Position{
+					Line:   int(pairEnd.Row) + 1,
+					Column: int(pairEnd.Column) + 1,
+				},
+			},
+			KeyRange: &source.Range{
+				Start: &source.Position{
+					Line:   int(keyStart.Row) + 1,
+					Column: int(keyStart.Column) + 1,
+				},
+				End: &source.Position{
+					Line:   int(keyEnd.Row) + 1,
+					Column: int(keyEnd.Column) + 1,
+				},
+			},
+			Children: []*UnifiedNode{},
+		}
+
+		parentMapping.Children = append(parentMapping.Children, emptyMapping)
+		return
+	}
 
 	// Convert value node
 	valueUnified := convertYAMLTreeSitterNode(valueNode, parentMapping, content)

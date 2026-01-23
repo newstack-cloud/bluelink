@@ -173,6 +173,51 @@ func (s *CompletionService) getCompletionItemsByContext(
 		return s.getStringSubPotentialResourcePropCompletionItems(ctx, position, blueprint, completionCtx, nodeCtx)
 	case docmodel.CompletionContextStringSub:
 		return s.getStringSubCompletionItems(ctx, position, blueprint)
+	case docmodel.CompletionContextVariableDefinitionField:
+		if format == docmodel.FormatJSONC {
+			return []*lsp.CompletionItem{}, nil
+		}
+		return s.getVariableDefinitionFieldCompletionItems(position, completionCtx)
+	case docmodel.CompletionContextValueDefinitionField:
+		if format == docmodel.FormatJSONC {
+			return []*lsp.CompletionItem{}, nil
+		}
+		return s.getValueDefinitionFieldCompletionItems(position, completionCtx)
+	case docmodel.CompletionContextDataSourceDefinitionField:
+		if format == docmodel.FormatJSONC {
+			return []*lsp.CompletionItem{}, nil
+		}
+		return s.getDataSourceDefinitionFieldCompletionItems(position, completionCtx)
+	case docmodel.CompletionContextDataSourceFilterDefinitionField:
+		if format == docmodel.FormatJSONC {
+			return []*lsp.CompletionItem{}, nil
+		}
+		return s.getDataSourceFilterDefinitionFieldCompletionItems(position, completionCtx)
+	case docmodel.CompletionContextDataSourceExportDefinitionField:
+		if format == docmodel.FormatJSONC {
+			return []*lsp.CompletionItem{}, nil
+		}
+		return s.getDataSourceExportDefinitionFieldCompletionItems(position, completionCtx)
+	case docmodel.CompletionContextDataSourceMetadataField:
+		if format == docmodel.FormatJSONC {
+			return []*lsp.CompletionItem{}, nil
+		}
+		return s.getDataSourceMetadataFieldCompletionItems(position, completionCtx)
+	case docmodel.CompletionContextIncludeDefinitionField:
+		if format == docmodel.FormatJSONC {
+			return []*lsp.CompletionItem{}, nil
+		}
+		return s.getIncludeDefinitionFieldCompletionItems(position, completionCtx)
+	case docmodel.CompletionContextExportDefinitionField:
+		if format == docmodel.FormatJSONC {
+			return []*lsp.CompletionItem{}, nil
+		}
+		return s.getExportDefinitionFieldCompletionItems(position, completionCtx)
+	case docmodel.CompletionContextBlueprintTopLevelField:
+		if format == docmodel.FormatJSONC {
+			return []*lsp.CompletionItem{}, nil
+		}
+		return s.getBlueprintTopLevelFieldCompletionItems(position, completionCtx)
 	default:
 		return []*lsp.CompletionItem{}, nil
 	}
@@ -604,6 +649,81 @@ var coreResourceDefinitionFields = []coreResourceDefinitionFieldInfo{
 	},
 }
 
+// Variable definition fields
+var coreVariableDefinitionFields = []coreResourceDefinitionFieldInfo{
+	{name: "type", description: "The variable type (string, integer, float, boolean, or a custom type)."},
+	{name: "description", description: "A human-readable description of the variable's purpose."},
+	{name: "secret", description: "When true, the variable value is treated as sensitive and masked in logs."},
+	{name: "default", description: "The default value used when no value is provided."},
+	{name: "allowedValues", description: "An array of valid values that constrain input validation."},
+}
+
+// Value definition fields
+var coreValueDefinitionFields = []coreResourceDefinitionFieldInfo{
+	{name: "type", description: "The value type (string, integer, float, boolean, array, object)."},
+	{name: "value", description: "The computed value, which may include substitutions."},
+	{name: "description", description: "A human-readable description of the value's purpose."},
+	{name: "secret", description: "When true, the value is treated as sensitive and masked in logs."},
+}
+
+// DataSource definition fields
+var coreDataSourceDefinitionFields = []coreResourceDefinitionFieldInfo{
+	{name: "type", description: "The data source type identifier (e.g., `aws/vpc`)."},
+	{name: "metadata", description: "Metadata including `displayName`, `annotations`, and `custom` fields."},
+	{name: "filter", description: "Filter criteria to select specific data source instances."},
+	{name: "exports", description: "Field definitions for data exported from this data source."},
+	{name: "description", description: "A human-readable description of the data source's purpose."},
+}
+
+// DataSource filter definition fields (inside filter)
+var coreDataSourceFilterDefinitionFields = []coreResourceDefinitionFieldInfo{
+	{name: "field", description: "The name of the data source field to filter on."},
+	{name: "operator", description: "The comparison operator (=, !=, in, not in, contains, starts with, etc.)."},
+	{name: "search", description: "The value(s) to search for, which may include substitutions."},
+}
+
+// DataSource export definition fields (inside exports/{name})
+var coreDataSourceExportDefinitionFields = []coreResourceDefinitionFieldInfo{
+	{name: "type", description: "The export field type (string, integer, float, boolean, array)."},
+	{name: "aliasFor", description: "The original field name from the provider if different from the export name."},
+	{name: "description", description: "A human-readable description of the exported field."},
+}
+
+// DataSource metadata fields (inside metadata)
+var coreDataSourceMetadataFields = []coreResourceDefinitionFieldInfo{
+	{name: "displayName", description: "A human-readable name for the data source."},
+	{name: "annotations", description: "Key-value pairs for configuring data source behavior."},
+	{name: "custom", description: "Custom metadata fields for provider-specific configuration."},
+}
+
+// Include definition fields
+var coreIncludeDefinitionFields = []coreResourceDefinitionFieldInfo{
+	{name: "path", description: "The path to the child blueprint (local file or remote URL)."},
+	{name: "variables", description: "Variables to pass to the child blueprint."},
+	{name: "metadata", description: "Extra metadata for include resolver plugins."},
+	{name: "description", description: "A human-readable description of the included blueprint."},
+}
+
+// Export definition fields
+var coreExportDefinitionFields = []coreResourceDefinitionFieldInfo{
+	{name: "type", description: "The export type (string, integer, float, boolean, array, object)."},
+	{name: "field", description: "A substitution reference to the value being exported."},
+	{name: "description", description: "A human-readable description of the exported value."},
+}
+
+// Blueprint top-level fields
+var coreBlueprintTopLevelFields = []coreResourceDefinitionFieldInfo{
+	{name: "version", description: "The blueprint specification version (e.g., `2021-12-18`)."},
+	{name: "transform", description: "One or more transforms to apply to the blueprint."},
+	{name: "variables", description: "Input variables that parameterize the blueprint."},
+	{name: "values", description: "Computed values derived from variables and other sources."},
+	{name: "include", description: "Child blueprints to include in this blueprint."},
+	{name: "resources", description: "The infrastructure resources defined in this blueprint."},
+	{name: "datasources", description: "External data sources to look up existing infrastructure."},
+	{name: "exports", description: "Values exported from this blueprint for external access."},
+	{name: "metadata", description: "Blueprint-level metadata for organization and documentation."},
+}
+
 // getResourceDefinitionFieldCompletionItems returns completion items for core resource fields
 // like type, description, spec, metadata, etc. when editing at the resource definition level.
 // Note: Only used for YAML - JSONC schema completions are disabled.
@@ -660,6 +780,216 @@ func (s *CompletionService) getResourceDefinitionFieldCompletionItems(
 	}
 
 	return items, nil
+}
+
+// createDefinitionFieldCompletionItems is a reusable helper for generating
+// definition field completion items with YAML syntax.
+func createDefinitionFieldCompletionItems(
+	fields []coreResourceDefinitionFieldInfo,
+	position *lsp.Position,
+	typedPrefix string,
+	detailText string,
+	completionType string,
+) []*lsp.CompletionItem {
+	prefixLower := strings.ToLower(typedPrefix)
+	prefixLen := len(typedPrefix)
+	fieldKind := lsp.CompletionItemKindField
+
+	items := make([]*lsp.CompletionItem, 0, len(fields))
+	for _, fieldInfo := range fields {
+		if prefixLen > 0 && !strings.HasPrefix(strings.ToLower(fieldInfo.name), prefixLower) {
+			continue
+		}
+
+		insertRange := getItemInsertRangeWithPrefix(position, prefixLen)
+		insertText := fieldInfo.name + ": "
+		edit := lsp.TextEdit{
+			NewText: insertText,
+			Range:   insertRange,
+		}
+
+		item := &lsp.CompletionItem{
+			Label:      fieldInfo.name,
+			Detail:     &detailText,
+			Kind:       &fieldKind,
+			TextEdit:   edit,
+			FilterText: &fieldInfo.name,
+			Data:       map[string]any{"completionType": completionType},
+		}
+
+		if fieldInfo.description != "" {
+			item.Documentation = lsp.MarkupContent{
+				Kind:  lsp.MarkupKindMarkdown,
+				Value: fieldInfo.description,
+			}
+		}
+
+		items = append(items, item)
+	}
+
+	return items
+}
+
+// getVariableDefinitionFieldCompletionItems returns completion items for variable definition fields.
+func (s *CompletionService) getVariableDefinitionFieldCompletionItems(
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+) ([]*lsp.CompletionItem, error) {
+	typedPrefix := ""
+	if completionCtx.NodeCtx != nil {
+		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	}
+	return createDefinitionFieldCompletionItems(
+		coreVariableDefinitionFields,
+		position,
+		typedPrefix,
+		"Variable field",
+		"variableDefinitionField",
+	), nil
+}
+
+// getValueDefinitionFieldCompletionItems returns completion items for value definition fields.
+func (s *CompletionService) getValueDefinitionFieldCompletionItems(
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+) ([]*lsp.CompletionItem, error) {
+	typedPrefix := ""
+	if completionCtx.NodeCtx != nil {
+		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	}
+	return createDefinitionFieldCompletionItems(
+		coreValueDefinitionFields,
+		position,
+		typedPrefix,
+		"Value field",
+		"valueDefinitionField",
+	), nil
+}
+
+// getDataSourceDefinitionFieldCompletionItems returns completion items for data source definition fields.
+func (s *CompletionService) getDataSourceDefinitionFieldCompletionItems(
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+) ([]*lsp.CompletionItem, error) {
+	typedPrefix := ""
+	if completionCtx.NodeCtx != nil {
+		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	}
+	return createDefinitionFieldCompletionItems(
+		coreDataSourceDefinitionFields,
+		position,
+		typedPrefix,
+		"Data source field",
+		"dataSourceDefinitionField",
+	), nil
+}
+
+// getDataSourceFilterDefinitionFieldCompletionItems returns completion items for fields inside a data source filter.
+func (s *CompletionService) getDataSourceFilterDefinitionFieldCompletionItems(
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+) ([]*lsp.CompletionItem, error) {
+	typedPrefix := ""
+	if completionCtx.NodeCtx != nil {
+		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	}
+	return createDefinitionFieldCompletionItems(
+		coreDataSourceFilterDefinitionFields,
+		position,
+		typedPrefix,
+		"Filter field",
+		"dataSourceFilterDefinitionField",
+	), nil
+}
+
+// getDataSourceExportDefinitionFieldCompletionItems returns completion items for fields inside a data source export.
+func (s *CompletionService) getDataSourceExportDefinitionFieldCompletionItems(
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+) ([]*lsp.CompletionItem, error) {
+	typedPrefix := ""
+	if completionCtx.NodeCtx != nil {
+		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	}
+	return createDefinitionFieldCompletionItems(
+		coreDataSourceExportDefinitionFields,
+		position,
+		typedPrefix,
+		"Export field",
+		"dataSourceExportDefinitionField",
+	), nil
+}
+
+// getDataSourceMetadataFieldCompletionItems returns completion items for fields inside data source metadata.
+func (s *CompletionService) getDataSourceMetadataFieldCompletionItems(
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+) ([]*lsp.CompletionItem, error) {
+	typedPrefix := ""
+	if completionCtx.NodeCtx != nil {
+		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	}
+	return createDefinitionFieldCompletionItems(
+		coreDataSourceMetadataFields,
+		position,
+		typedPrefix,
+		"Metadata field",
+		"dataSourceMetadataField",
+	), nil
+}
+
+// getIncludeDefinitionFieldCompletionItems returns completion items for include definition fields.
+func (s *CompletionService) getIncludeDefinitionFieldCompletionItems(
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+) ([]*lsp.CompletionItem, error) {
+	typedPrefix := ""
+	if completionCtx.NodeCtx != nil {
+		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	}
+	return createDefinitionFieldCompletionItems(
+		coreIncludeDefinitionFields,
+		position,
+		typedPrefix,
+		"Include field",
+		"includeDefinitionField",
+	), nil
+}
+
+// getExportDefinitionFieldCompletionItems returns completion items for export definition fields.
+func (s *CompletionService) getExportDefinitionFieldCompletionItems(
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+) ([]*lsp.CompletionItem, error) {
+	typedPrefix := ""
+	if completionCtx.NodeCtx != nil {
+		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	}
+	return createDefinitionFieldCompletionItems(
+		coreExportDefinitionFields,
+		position,
+		typedPrefix,
+		"Export field",
+		"exportDefinitionField",
+	), nil
+}
+
+// getBlueprintTopLevelFieldCompletionItems returns completion items for blueprint top-level fields.
+func (s *CompletionService) getBlueprintTopLevelFieldCompletionItems(
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+) ([]*lsp.CompletionItem, error) {
+	typedPrefix := ""
+	if completionCtx.NodeCtx != nil {
+		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	}
+	return createDefinitionFieldCompletionItems(
+		coreBlueprintTopLevelFields,
+		position,
+		typedPrefix,
+		"Blueprint field",
+		"blueprintTopLevelField",
+	), nil
 }
 
 func (s *CompletionService) getResourceTypeCompletionItems(

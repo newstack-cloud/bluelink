@@ -34,6 +34,11 @@ func (p StructuredPath) Len() int {
 	return len(p)
 }
 
+// IsEmpty returns true if the path has no segments.
+func (p StructuredPath) IsEmpty() bool {
+	return len(p) == 0
+}
+
 // At returns the segment at the given index, or an empty segment if out of bounds.
 func (p StructuredPath) At(index int) PathSegment {
 	if index < 0 || index >= len(p) {
@@ -230,6 +235,137 @@ func (p StructuredPath) GetSpecPath() []PathSegment {
 		return []PathSegment{}
 	}
 	return p[3:]
+}
+
+// IsVariableDefinition returns true if path is directly inside a variable definition.
+// Pattern: /variables/{name} (exactly 2 segments)
+func (p StructuredPath) IsVariableDefinition() bool {
+	return len(p) == 2 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "variables" &&
+		p[1].Kind == PathSegmentField
+}
+
+// IsValueDefinition returns true if path is directly inside a value definition.
+// Pattern: /values/{name} (exactly 2 segments)
+func (p StructuredPath) IsValueDefinition() bool {
+	return len(p) == 2 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "values" &&
+		p[1].Kind == PathSegmentField
+}
+
+// IsDataSourceDefinition returns true if path is directly inside a data source definition,
+// but not in a nested field like metadata, filter, or exports.
+// Pattern: /datasources/{name} (exactly 2 segments)
+func (p StructuredPath) IsDataSourceDefinition() bool {
+	return len(p) == 2 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "datasources" &&
+		p[1].Kind == PathSegmentField
+}
+
+// IsDataSourceMetadata returns true if path is inside a data source metadata field.
+// Pattern: /datasources/{name}/metadata/...
+func (p StructuredPath) IsDataSourceMetadata() bool {
+	return len(p) >= 3 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "datasources" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "metadata"
+}
+
+// IsDataSourceExports returns true if path is inside a data source exports field.
+// Pattern: /datasources/{name}/exports/...
+func (p StructuredPath) IsDataSourceExports() bool {
+	return len(p) >= 3 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "datasources" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "exports"
+}
+
+// IsDataSourceExportDefinition returns true if path is at a specific export definition.
+// Pattern: /datasources/{name}/exports/{exportName} (exactly 4 segments)
+func (p StructuredPath) IsDataSourceExportDefinition() bool {
+	return len(p) == 4 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "datasources" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "exports" &&
+		p[3].Kind == PathSegmentField
+}
+
+// IsDataSourceFilterDefinition returns true if path is at a filter definition level.
+// Pattern: /datasources/{name}/filter or /datasources/{name}/filter/{index}
+// Note: The singular "filter" is used in the schema tree.
+func (p StructuredPath) IsDataSourceFilterDefinition() bool {
+	if len(p) < 3 {
+		return false
+	}
+	if p[0].Kind != PathSegmentField || p[0].FieldName != "datasources" {
+		return false
+	}
+	if p[1].Kind != PathSegmentField {
+		return false
+	}
+	// Check for either "filter" (singular, from schema) or "filters" (from validation)
+	if p[2].Kind != PathSegmentField || (p[2].FieldName != "filter" && p[2].FieldName != "filters") {
+		return false
+	}
+	// At /datasources/{name}/filter level OR /datasources/{name}/filter/{index}
+	return len(p) == 3 || (len(p) == 4 && p[3].Kind == PathSegmentIndex)
+}
+
+// IsIncludeDefinition returns true if path is directly inside an include definition.
+// Pattern: /include/{name} (exactly 2 segments)
+func (p StructuredPath) IsIncludeDefinition() bool {
+	return len(p) == 2 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "include" &&
+		p[1].Kind == PathSegmentField
+}
+
+// IsExportDefinition returns true if path is directly inside an export definition.
+// Pattern: /exports/{name} (exactly 2 segments)
+func (p StructuredPath) IsExportDefinition() bool {
+	return len(p) == 2 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "exports" &&
+		p[1].Kind == PathSegmentField
+}
+
+// IsBlueprintTopLevel returns true if path is at the blueprint root level.
+// Pattern: /{field} (single segment that is a known top-level field)
+// Note: Empty paths are not considered top-level as they indicate no parsed structure.
+func (p StructuredPath) IsBlueprintTopLevel() bool {
+	if len(p) != 1 || p[0].Kind != PathSegmentField {
+		return false
+	}
+	// Check if it's a known top-level section
+	switch p[0].FieldName {
+	case "version", "transform", "variables", "values", "include",
+		"resources", "datasources", "exports", "metadata":
+		return true
+	}
+	return false
+}
+
+// IsBlueprintMetadata returns true if path is in blueprint-level metadata.
+// Pattern: /metadata or /metadata/...
+func (p StructuredPath) IsBlueprintMetadata() bool {
+	return len(p) >= 1 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "metadata"
+}
+
+// GetIncludeName returns the include name if path is under an include.
+func (p StructuredPath) GetIncludeName() (string, bool) {
+	if len(p) >= 2 && p[0].Kind == PathSegmentField && p[0].FieldName == "include" &&
+		p[1].Kind == PathSegmentField {
+		return p[1].FieldName, true
+	}
+	return "", false
+}
+
+// GetExportName returns the export name if path is under an export.
+func (p StructuredPath) GetExportName() (string, bool) {
+	if len(p) >= 2 && p[0].Kind == PathSegmentField && p[0].FieldName == "exports" &&
+		p[1].Kind == PathSegmentField {
+		return p[1].FieldName, true
+	}
+	return "", false
 }
 
 // String returns the full path as a string.

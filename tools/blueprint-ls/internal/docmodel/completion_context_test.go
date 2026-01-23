@@ -344,13 +344,27 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubOpen() 
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_Unknown() {
+	// Test case: at a value position (after colon) with no specific context
+	// This should return Unknown because we're not at a key position
 	nodeCtx := &NodeContext{
 		ASTPath:    StructuredPath{},
-		TextBefore: "some random text",
+		TextBefore: "someKey: someValue",
 	}
 
 	ctx := DetermineCompletionContext(nodeCtx)
 	s.Assert().Equal(CompletionContextUnknown, ctx.Kind)
+}
+
+func (s *CompletionContextSuite) TestDetermineCompletionContext_BlueprintTopLevel_EmptyPath() {
+	// Test case: at document root level with empty path (typing new top-level field)
+	nodeCtx := &NodeContext{
+		ASTPath:    StructuredPath{},
+		TextBefore: "res",
+		Position:   source.Position{Line: 1, Column: 4},
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextBlueprintTopLevelField, ctx.Kind)
 }
 
 func (s *CompletionContextSuite) TestCompletionContextKind_String() {
@@ -837,6 +851,157 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceDefiniti
 	ctx := DetermineCompletionContext(nodeCtx)
 	s.Assert().Equal(CompletionContextResourceDefinitionField, ctx.Kind)
 	s.Assert().Equal("myHandler", ctx.ResourceName)
+}
+
+// TestDetermineCompletionContext_DataSourceFilterDefinitionField tests detection of
+// data source filter definition field completion (for fields like field, operator, search).
+func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilterDefinitionField_YAML() {
+	nodeCtx := &NodeContext{
+		ASTPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "datasources"},
+			{Kind: PathSegmentField, FieldName: "myDS"},
+			{Kind: PathSegmentField, FieldName: "filter"},
+		},
+		TextBefore: "    filter:\n      ",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextDataSourceFilterDefinitionField, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_DataSourceFilterDefinitionField_AtIndex tests detection
+// at a specific filter array index.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilterDefinitionField_AtIndex() {
+	nodeCtx := &NodeContext{
+		ASTPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "datasources"},
+			{Kind: PathSegmentField, FieldName: "myDS"},
+			{Kind: PathSegmentField, FieldName: "filter"},
+			{Kind: PathSegmentIndex, Index: 0},
+		},
+		TextBefore: "      - ",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextDataSourceFilterDefinitionField, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_DataSourceFilterDefinitionField_Plural tests detection
+// with plural "filters" field name (from validation paths).
+func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilterDefinitionField_Plural() {
+	nodeCtx := &NodeContext{
+		ASTPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "datasources"},
+			{Kind: PathSegmentField, FieldName: "myDS"},
+			{Kind: PathSegmentField, FieldName: "filters"},
+		},
+		TextBefore: "    filters:\n      ",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextDataSourceFilterDefinitionField, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_DataSourceExportDefinitionField tests detection of
+// data source export definition field completion (for fields like type, aliasFor, description).
+func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceExportDefinitionField_YAML() {
+	nodeCtx := &NodeContext{
+		ASTPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "datasources"},
+			{Kind: PathSegmentField, FieldName: "myDS"},
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "vpcId"},
+		},
+		TextBefore: "      vpcId:\n        ",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextDataSourceExportDefinitionField, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_DataSourceExportDefinitionField_JSONC tests export definition
+// field completion in JSONC format.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceExportDefinitionField_JSONC() {
+	nodeCtx := &NodeContext{
+		ASTPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "datasources"},
+			{Kind: PathSegmentField, FieldName: "myDS"},
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "vpcId"},
+		},
+		TextBefore: `        "vpcId": { `,
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextDataSourceExportDefinitionField, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_DataSourceMetadataField tests detection of
+// data source metadata field completion (for fields like displayName, annotations, custom).
+func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceMetadataField_YAML() {
+	nodeCtx := &NodeContext{
+		ASTPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "datasources"},
+			{Kind: PathSegmentField, FieldName: "myDS"},
+			{Kind: PathSegmentField, FieldName: "metadata"},
+		},
+		TextBefore: "    metadata:\n      ",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextDataSourceMetadataField, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_DataSourceMetadataField_JSONC tests metadata field
+// completion in JSONC format.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceMetadataField_JSONC() {
+	nodeCtx := &NodeContext{
+		ASTPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "datasources"},
+			{Kind: PathSegmentField, FieldName: "myDS"},
+			{Kind: PathSegmentField, FieldName: "metadata"},
+		},
+		TextBefore: `      "metadata": { `,
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextDataSourceMetadataField, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_DataSourceMetadataField_Nested tests detection when
+// inside nested metadata like annotations.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceMetadataField_Nested() {
+	nodeCtx := &NodeContext{
+		ASTPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "datasources"},
+			{Kind: PathSegmentField, FieldName: "myDS"},
+			{Kind: PathSegmentField, FieldName: "metadata"},
+			{Kind: PathSegmentField, FieldName: "annotations"},
+		},
+		TextBefore: "      annotations:\n        ",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextDataSourceMetadataField, ctx.Kind)
+}
+
+// TestCompletionContextKind_String_NewDataSourceContexts tests the string representation
+// of the new data source completion context kinds.
+func (s *CompletionContextSuite) TestCompletionContextKind_String_NewDataSourceContexts() {
+	tests := []struct {
+		kind     CompletionContextKind
+		expected string
+	}{
+		{CompletionContextDataSourceFilterDefinitionField, "dataSourceFilterDefinitionField"},
+		{CompletionContextDataSourceExportDefinitionField, "dataSourceExportDefinitionField"},
+		{CompletionContextDataSourceMetadataField, "dataSourceMetadataField"},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.expected, func() {
+			s.Assert().Equal(tt.expected, tt.kind.String())
+		})
+	}
 }
 
 func TestCompletionContextSuite(t *testing.T) {

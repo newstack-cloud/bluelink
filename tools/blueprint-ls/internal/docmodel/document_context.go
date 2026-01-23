@@ -93,11 +93,19 @@ func (ctx *DocumentContext) parseContent() {
 
 	if ast != nil {
 		ctx.PositionIndex = NewPositionIndex(ast)
-		ctx.Status = StatusValid
 
-		// Update last-known-good state
-		ctx.LastValidAST = ast
-		ctx.LastValidVersion = ctx.Version
+		// Only update last-known-good state if the AST is not an error node.
+		// Tree-sitter produces partial ASTs even on parse errors, but these
+		// shouldn't replace our last-known-good state.
+		if !ast.IsError {
+			ctx.Status = StatusValid
+			ctx.LastValidAST = ast
+			ctx.LastValidVersion = ctx.Version
+		} else if ctx.LastValidAST != nil {
+			ctx.Status = StatusParsingErrors
+		} else {
+			ctx.Status = StatusUnavailable
+		}
 	} else if ctx.LastValidAST != nil {
 		ctx.Status = StatusDegraded
 	} else {
@@ -175,18 +183,27 @@ func (ctx *DocumentContext) GetNodeContext(pos source.Position, leeway int) *Nod
 	// Extract text context for completion
 	nodeCtx.extractTextContext(ctx.Content, pos)
 
-	// If still no path found and we have an AST, try position-based detection
-	// For YAML: uses indentation to find parent context on empty lines
-	if len(nodeCtx.ASTPath) == 0 {
+	// For YAML documents, also try indentation-based detection.
+	// This handles cases where:
+	// 1. No path was found via position index
+	// 2. A path was found, but there might be a deeper parent based on indentation
+	//    (e.g., cursor is at child indent level after "spec:" with no value)
+	if ctx.Format == FormatYAML {
+		ctx.tryIndentationBasedContext(nodeCtx, pos)
+	} else if len(nodeCtx.ASTPath) == 0 {
+		// For non-YAML formats, only try if no path found
 		ctx.tryIndentationBasedContext(nodeCtx, pos)
 	}
 
 	return nodeCtx
 }
 
-// tryIndentationBasedContext attempts to determine context from indentation
-// when no AST node is found at the position. This handles empty lines inside
-// YAML blocks where the cursor position doesn't match any existing node.
+// tryIndentationBasedContext attempts to determine context from indentation.
+// This handles cases where:
+// 1. No AST node is found at the position (empty lines inside YAML blocks)
+// 2. A node was found but a deeper parent exists based on indentation
+//    (e.g., cursor at child indent after "spec:" with no value - spec node's
+//    range doesn't extend to the cursor line but it's the correct parent)
 func (ctx *DocumentContext) tryIndentationBasedContext(nodeCtx *NodeContext, pos source.Position) {
 	if ctx.Content == "" {
 		return
@@ -199,17 +216,36 @@ func (ctx *DocumentContext) tryIndentationBasedContext(nodeCtx *NodeContext, pos
 		return
 	}
 
-	currentIndent := countLeadingSpaces(lines[lineIndex])
+	lineContent := lines[lineIndex]
+	leadingSpaces := countLeadingSpaces(lineContent)
 
-	// If cursor is at position 1 (before any indent), use the indent of where
-	// the cursor would naturally be typing (the current line's indent or cursor column)
-	if pos.Column > 1 {
+	// Determine the effective indentation level for parent lookup.
+	// - If the line is empty or only whitespace, use the cursor column position
+	//   (this handles the case where user presses Enter+Tab to add a child field)
+	// - If the line has content, use the line's leading whitespace
+	//   (this handles the case where user is typing a new sibling field)
+	var currentIndent int
+	lineHasContent := len(strings.TrimSpace(lineContent)) > 0
+	if lineHasContent {
+		// Line has content - use the leading whitespace to determine indent level
+		// This ensures typing "export" at indent 4 finds orderTable (indent 2) as parent,
+		// not metadata (which is a sibling at indent 4)
+		currentIndent = leadingSpaces
+	} else {
+		// Empty/whitespace-only line - use cursor position
+		// This handles Enter+Tab scenarios where cursor column indicates desired child level
 		currentIndent = pos.Column - 1
+		if currentIndent < 0 {
+			currentIndent = 0
+		}
 	}
 
-	// Search backwards to find the parent context based on indentation
+	// Search backwards to find the parent context based on indentation.
+	// Prefer LastValidAST if the current AST has parse errors (is an error node),
+	// because the last valid AST has the correct structure while the error AST
+	// may have a broken/flattened structure.
 	ast := ctx.CurrentAST
-	if ast == nil {
+	if ast == nil || ast.IsError {
 		ast = ctx.LastValidAST
 	}
 	if ast == nil {
@@ -222,15 +258,21 @@ func (ctx *DocumentContext) tryIndentationBasedContext(nodeCtx *NodeContext, pos
 		return
 	}
 
-	nodeCtx.ASTPath = StructuredPath(parentNode.AncestorPath())
-	nodeCtx.UnifiedNode = parentNode
-	nodeCtx.IsStale = true
+	newPath := StructuredPath(parentNode.AncestorPath())
 
-	// Correlate with schema tree
-	if ctx.SchemaTree != nil {
-		nodeCtx.SchemaNode = ctx.findCorrespondingSchemaNode(nodeCtx.ASTPath)
-		if nodeCtx.SchemaNode != nil {
-			nodeCtx.SchemaElement = nodeCtx.SchemaNode.SchemaElement
+	// Only update if the indentation-based result is deeper (longer path) than
+	// what we already have. This ensures we find the most specific parent.
+	if len(newPath) > len(nodeCtx.ASTPath) {
+		nodeCtx.ASTPath = newPath
+		nodeCtx.UnifiedNode = parentNode
+		nodeCtx.IsStale = true
+
+		// Correlate with schema tree
+		if ctx.SchemaTree != nil {
+			nodeCtx.SchemaNode = ctx.findCorrespondingSchemaNode(nodeCtx.ASTPath)
+			if nodeCtx.SchemaNode != nil {
+				nodeCtx.SchemaElement = nodeCtx.SchemaNode.SchemaElement
+			}
 		}
 	}
 }
@@ -248,6 +290,7 @@ func (ctx *DocumentContext) findParentByIndentation(root *UnifiedNode, currentLi
 }
 
 // walkNodesForIndent recursively searches for nodes that could contain the indentation.
+// It finds the deepest mapping node that could be the parent of a new field at the given indent.
 func (ctx *DocumentContext) walkNodesForIndent(node *UnifiedNode, currentLine int, indent int, bestMatch **UnifiedNode) {
 	if node == nil || node.Range.Start == nil {
 		return
@@ -255,20 +298,29 @@ func (ctx *DocumentContext) walkNodesForIndent(node *UnifiedNode, currentLine in
 
 	nodeStartLine := node.Range.Start.Line
 	nodeStartCol := node.Range.Start.Column
-	nodeEndLine := currentLine // Default: assume extends to current line if no end
 
-	if node.Range.End != nil {
-		nodeEndLine = node.Range.End.Line
-	}
-
-	// Node must start before the current line and extend to or past it
+	// Node must start before the current line
 	if nodeStartLine >= currentLine {
 		return
 	}
 
-	// For a node to be a valid parent, our indent must be greater than the node's start column
-	// (meaning we're indented inside the node's content)
-	if indent > nodeStartCol && nodeEndLine >= currentLine {
+	// For a node to be a valid parent for adding a new child field:
+	// - The cursor's indent must be strictly greater than the node's start column.
+	// - This ensures we find the PARENT mapping, not sibling fields at the same level.
+	//
+	// Note: nodeStartCol is 1-based (from the AST), while indent is 0-based
+	// (calculated as pos.Column - 1). We need to convert nodeStartCol to 0-based
+	// for an accurate comparison.
+	//
+	// Example: When adding "path:" at indent 4 (cursor at column 5) in:
+	//   include:           (col 1, 0-based: 0)
+	//     myInclude:       (col 3, 0-based: 2)
+	//       metadata:      (col 5, 0-based: 4) <- existing sibling
+	//
+	// We want to find "myInclude" (0-based col 2) as the parent, not "metadata" (0-based col 4).
+	// Since 4 > 2, we match myInclude. Since 4 is not > 4, we don't match metadata.
+	nodeStartColZeroBased := nodeStartCol - 1
+	if indent > nodeStartColZeroBased {
 		// This node could contain our position - check if it's better than current match
 		if *bestMatch == nil || nodeStartLine > (*bestMatch).Range.Start.Line {
 			// Only consider mapping nodes (objects) as valid parents for field completion

@@ -207,4 +207,7 @@ func (s *serviceImpl) Close() {
 	if s.closePluginService != nil {
 		s.closePluginService()
 	}
+	if s.manager != nil {
+		s.manager.Close()
+	}
 }

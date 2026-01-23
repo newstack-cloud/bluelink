@@ -26,6 +26,11 @@ const (
 	CompletionContextDataSourceFilterField
 	CompletionContextDataSourceFilterOperator
 
+	// Data source nested field contexts
+	CompletionContextDataSourceFilterDefinitionField // Fields inside a filter definition (field, operator, search)
+	CompletionContextDataSourceExportDefinitionField // Fields inside an export definition (type, aliasFor, description)
+	CompletionContextDataSourceMetadataField         // Fields inside data source metadata (displayName, annotations, custom)
+
 	// Resource spec field (editing directly in YAML/JSONC definition)
 	CompletionContextResourceSpecField
 
@@ -34,6 +39,14 @@ const (
 
 	// Resource definition field (type, description, spec, metadata, etc.)
 	CompletionContextResourceDefinitionField
+
+	// Definition field contexts for other sections
+	CompletionContextVariableDefinitionField
+	CompletionContextValueDefinitionField
+	CompletionContextDataSourceDefinitionField
+	CompletionContextIncludeDefinitionField
+	CompletionContextExportDefinitionField
+	CompletionContextBlueprintTopLevelField
 
 	// Substitution references
 	CompletionContextStringSub // Inside ${...} but no specific reference
@@ -136,8 +149,8 @@ func DetermineCompletionContext(nodeCtx *NodeContext) *CompletionContext {
 		return ctx
 	}
 
-	// Check resource spec field context (for editing directly in definition)
-	if result := determineResourceSpecContext(nodeCtx); result.kind != CompletionContextUnknown {
+	// Check section definition field contexts (resources, variables, values, etc.)
+	if result := determineSectionDefinitionContext(nodeCtx); result.kind != CompletionContextUnknown {
 		ctx.Kind = result.kind
 		ctx.ResourceName = result.resourceName
 		return ctx
@@ -250,32 +263,69 @@ func isInDataSourceFilters(path StructuredPath) bool {
 		path.At(2).FieldName == "filters"
 }
 
-type resourceSpecContextResult struct {
+// isAtDocumentRootLevel checks if the cursor is at the document root level.
+// This is true when the cursor is at column 1 or at minimal indentation (no leading whitespace).
+func isAtDocumentRootLevel(nodeCtx *NodeContext) bool {
+	// Check if cursor is at column 1 (1-based)
+	if nodeCtx.Position.Column == 1 {
+		return true
+	}
+
+	// Check if the text before cursor on the current line is only whitespace
+	// and starts at column 1 (meaning we're typing at root level)
+	currentLineText := nodeCtx.TextBefore
+	if lastNewline := strings.LastIndex(nodeCtx.TextBefore, "\n"); lastNewline >= 0 {
+		currentLineText = nodeCtx.TextBefore[lastNewline+1:]
+	}
+
+	// If there's no indentation (text starts immediately), we're at root level
+	trimmed := strings.TrimLeft(currentLineText, " \t")
+	leadingWhitespace := len(currentLineText) - len(trimmed)
+
+	// Root level: no leading whitespace, or only typing at the very beginning
+	return leadingWhitespace == 0
+}
+
+type sectionDefinitionContextResult struct {
 	kind         CompletionContextKind
 	resourceName string
 }
 
-func determineResourceSpecContext(nodeCtx *NodeContext) resourceSpecContextResult {
+func determineSectionDefinitionContext(nodeCtx *NodeContext) sectionDefinitionContextResult {
 	path := nodeCtx.ASTPath
 
 	// Don't trigger for substitution contexts - those are handled separately
 	if nodeCtx.InSubstitution() {
-		return resourceSpecContextResult{kind: CompletionContextUnknown}
+		return sectionDefinitionContextResult{kind: CompletionContextUnknown}
 	}
 
 	// Only suggest field names when at a key position, not when typing values
 	if !nodeCtx.IsAtKeyPosition() {
-		return resourceSpecContextResult{kind: CompletionContextUnknown}
+		return sectionDefinitionContextResult{kind: CompletionContextUnknown}
 	}
+
+	// Check for document root level: empty path at root indentation
+	// This handles typing new top-level fields in an empty or partially filled document
+	if path.IsEmpty() && isAtDocumentRootLevel(nodeCtx) {
+		return sectionDefinitionContextResult{kind: CompletionContextBlueprintTopLevelField}
+	}
+
+	// Check blueprint top-level: single segment that is a known top-level field
+	if path.IsBlueprintTopLevel() {
+		return sectionDefinitionContextResult{kind: CompletionContextBlueprintTopLevelField}
+	}
+
+	// Note: Blueprint-level metadata (/metadata/...) is a free-form MappingNode
+	// in the schema, not a structured type, so we don't suggest specific fields.
 
 	// Check if we're at resource definition level: /resources/{name}
 	// This should show core blueprint fields (type, description, spec, metadata, etc.)
 	if path.IsResourceDefinition() {
 		resourceName, ok := path.GetResourceName()
 		if !ok {
-			return resourceSpecContextResult{kind: CompletionContextUnknown}
+			return sectionDefinitionContextResult{kind: CompletionContextUnknown}
 		}
-		return resourceSpecContextResult{
+		return sectionDefinitionContextResult{
 			kind:         CompletionContextResourceDefinitionField,
 			resourceName: resourceName,
 		}
@@ -285,9 +335,9 @@ func determineResourceSpecContext(nodeCtx *NodeContext) resourceSpecContextResul
 	if path.IsResourceSpec() {
 		resourceName, ok := path.GetResourceName()
 		if !ok {
-			return resourceSpecContextResult{kind: CompletionContextUnknown}
+			return sectionDefinitionContextResult{kind: CompletionContextUnknown}
 		}
-		return resourceSpecContextResult{
+		return sectionDefinitionContextResult{
 			kind:         CompletionContextResourceSpecField,
 			resourceName: resourceName,
 		}
@@ -297,15 +347,55 @@ func determineResourceSpecContext(nodeCtx *NodeContext) resourceSpecContextResul
 	if path.IsResourceMetadata() {
 		resourceName, ok := path.GetResourceName()
 		if !ok {
-			return resourceSpecContextResult{kind: CompletionContextUnknown}
+			return sectionDefinitionContextResult{kind: CompletionContextUnknown}
 		}
-		return resourceSpecContextResult{
+		return sectionDefinitionContextResult{
 			kind:         CompletionContextResourceMetadataField,
 			resourceName: resourceName,
 		}
 	}
 
-	return resourceSpecContextResult{kind: CompletionContextUnknown}
+	// Check variable definition: /variables/{name}
+	if path.IsVariableDefinition() {
+		return sectionDefinitionContextResult{kind: CompletionContextVariableDefinitionField}
+	}
+
+	// Check value definition: /values/{name}
+	if path.IsValueDefinition() {
+		return sectionDefinitionContextResult{kind: CompletionContextValueDefinitionField}
+	}
+
+	// Check data source definition: /datasources/{name}
+	if path.IsDataSourceDefinition() {
+		return sectionDefinitionContextResult{kind: CompletionContextDataSourceDefinitionField}
+	}
+
+	// Check data source export definition: /datasources/{name}/exports/{exportName}
+	if path.IsDataSourceExportDefinition() {
+		return sectionDefinitionContextResult{kind: CompletionContextDataSourceExportDefinitionField}
+	}
+
+	// Check data source metadata: /datasources/{name}/metadata/...
+	if path.IsDataSourceMetadata() {
+		return sectionDefinitionContextResult{kind: CompletionContextDataSourceMetadataField}
+	}
+
+	// Check data source filter definition: /datasources/{name}/filter/...
+	if path.IsDataSourceFilterDefinition() {
+		return sectionDefinitionContextResult{kind: CompletionContextDataSourceFilterDefinitionField}
+	}
+
+	// Check include definition: /include/{name}
+	if path.IsIncludeDefinition() {
+		return sectionDefinitionContextResult{kind: CompletionContextIncludeDefinitionField}
+	}
+
+	// Check export definition: /exports/{name}
+	if path.IsExportDefinition() {
+		return sectionDefinitionContextResult{kind: CompletionContextExportDefinitionField}
+	}
+
+	return sectionDefinitionContextResult{kind: CompletionContextUnknown}
 }
 
 type substitutionContextResult struct {
@@ -466,11 +556,20 @@ var completionContextKindNames = map[CompletionContextKind]string{
 	CompletionContextValueType:                      "valueType",
 	CompletionContextExportType:                     "exportType",
 	CompletionContextDataSourceFieldType:            "dataSourceFieldType",
-	CompletionContextDataSourceFilterField:          "dataSourceFilterField",
-	CompletionContextDataSourceFilterOperator:       "dataSourceFilterOperator",
-	CompletionContextResourceSpecField:              "resourceSpecField",
+	CompletionContextDataSourceFilterField:           "dataSourceFilterField",
+	CompletionContextDataSourceFilterOperator:        "dataSourceFilterOperator",
+	CompletionContextDataSourceFilterDefinitionField: "dataSourceFilterDefinitionField",
+	CompletionContextDataSourceExportDefinitionField: "dataSourceExportDefinitionField",
+	CompletionContextDataSourceMetadataField:         "dataSourceMetadataField",
+	CompletionContextResourceSpecField:               "resourceSpecField",
 	CompletionContextResourceMetadataField:          "resourceMetadataField",
 	CompletionContextResourceDefinitionField:        "resourceDefinitionField",
+	CompletionContextVariableDefinitionField:        "variableDefinitionField",
+	CompletionContextValueDefinitionField:           "valueDefinitionField",
+	CompletionContextDataSourceDefinitionField:      "dataSourceDefinitionField",
+	CompletionContextIncludeDefinitionField:         "includeDefinitionField",
+	CompletionContextExportDefinitionField:          "exportDefinitionField",
+	CompletionContextBlueprintTopLevelField:         "blueprintTopLevelField",
 	CompletionContextStringSub:                      "stringSub",
 	CompletionContextStringSubVariableRef:           "stringSubVariableRef",
 	CompletionContextStringSubResourceRef:           "stringSubResourceRef",
