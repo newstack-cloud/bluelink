@@ -244,7 +244,7 @@ func (s *CompletionService) getDataSourceFilterFieldCompletionItemsFromContext(
 	}
 
 	filterFieldsOutput, err := s.dataSourceRegistry.GetFilterFields(
-		safeContext(ctx),
+		ctx.Context,
 		string(dataSource.Type.Value),
 		&provider.DataSourceGetFilterFieldsInput{},
 	)
@@ -552,7 +552,7 @@ func (s *CompletionService) getResourceSpecFieldCompletionItems(
 	}
 
 	specDefOutput, err := s.resourceRegistry.GetSpecDefinition(
-		safeContext(ctx),
+		ctx.Context,
 		resource.Type.Value,
 		&provider.ResourceGetSpecDefinitionInput{},
 	)
@@ -996,7 +996,7 @@ func (s *CompletionService) getResourceTypeCompletionItems(
 	ctx *common.LSPContext,
 ) ([]*lsp.CompletionItem, error) {
 
-	resourceTypes, err := s.resourceRegistry.ListResourceTypes(safeContext(ctx))
+	resourceTypes, err := s.resourceRegistry.ListResourceTypes(ctx.Context)
 	if err != nil {
 		return nil, err
 	}
@@ -1021,7 +1021,7 @@ func (s *CompletionService) getDataSourceTypeCompletionItems(
 	ctx *common.LSPContext,
 ) ([]*lsp.CompletionItem, error) {
 
-	dataSourceTypes, err := s.dataSourceRegistry.ListDataSourceTypes(safeContext(ctx))
+	dataSourceTypes, err := s.dataSourceRegistry.ListDataSourceTypes(ctx.Context)
 	if err != nil {
 		return nil, err
 	}
@@ -1063,7 +1063,7 @@ func (s *CompletionService) getVariableTypeCompletionItems(
 		)
 	}
 
-	customTypes, err := s.customVarTypeRegistry.ListCustomVariableTypes(safeContext(ctx))
+	customTypes, err := s.customVarTypeRegistry.ListCustomVariableTypes(ctx.Context)
 	if err != nil {
 		s.logger.Error("Failed to list custom variable types, returning core types only", zap.Error(err))
 		return typeItems, nil
@@ -1231,7 +1231,7 @@ func (s *CompletionService) getResourceSpecPropCompletionItems(
 	}
 
 	specDefOutput, err := s.resourceRegistry.GetSpecDefinition(
-		safeContext(ctx),
+		ctx.Context,
 		resource.Type.Value,
 		&provider.ResourceGetSpecDefinitionInput{},
 	)
@@ -1934,7 +1934,7 @@ func (s *CompletionService) getFunctionCompletionItems(
 	functionKind := lsp.CompletionItemKindFunction
 
 	functionItems := []*lsp.CompletionItem{}
-	functions, err := s.functionRegistry.ListFunctions(safeContext(ctx))
+	functions, err := s.functionRegistry.ListFunctions(ctx.Context)
 	if err != nil {
 		s.logger.Error("Failed to list functions", zap.Error(err))
 		return functionItems
@@ -2178,7 +2178,7 @@ func (s *CompletionService) resolveResourceTypeCompletionItem(
 ) (*lsp.CompletionItem, error) {
 	resourceType := item.Label
 	descriptionOutput, err := s.resourceRegistry.GetTypeDescription(
-		safeContext(ctx),
+		ctx.Context,
 		resourceType,
 		&provider.ResourceGetTypeDescriptionInput{},
 	)
@@ -2204,7 +2204,7 @@ func (s *CompletionService) resolveDataSourceTypeCompletionItem(
 ) (*lsp.CompletionItem, error) {
 	dataSourceType := item.Label
 	descriptionOutput, err := s.dataSourceRegistry.GetTypeDescription(
-		safeContext(ctx),
+		ctx.Context,
 		dataSourceType,
 		&provider.DataSourceGetTypeDescriptionInput{},
 	)
@@ -2234,7 +2234,7 @@ func (s *CompletionService) resolveVariableTypeCompletionItem(
 	}
 
 	descriptionOutput, err := s.customVarTypeRegistry.GetDescription(
-		safeContext(ctx),
+		ctx.Context,
 		variableType,
 		&provider.CustomVariableTypeGetDescriptionInput{},
 	)
@@ -2261,7 +2261,7 @@ func (s *CompletionService) resolveFunctionCompletionItem(
 	functionName := item.Label
 
 	defOutput, err := s.functionRegistry.GetDefinition(
-		safeContext(ctx),
+		ctx.Context,
 		functionName,
 		&provider.FunctionGetDefinitionInput{},
 	)

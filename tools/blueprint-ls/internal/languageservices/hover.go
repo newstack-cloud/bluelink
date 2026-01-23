@@ -186,7 +186,7 @@ func (s *HoverService) getResourceRefHoverContent(
 			zap.String("resourceType", resource.Type.Value),
 		)
 		specDefOutput, err := s.resourceRegistry.GetSpecDefinition(
-			safeContext(ctx),
+			ctx.Context,
 			resource.Type.Value,
 			&provider.ResourceGetSpecDefinitionInput{},
 		)
@@ -241,7 +241,7 @@ func (s *HoverService) getResourceTypeHoverContent(
 		zap.String("resourceType", resType.Value),
 	)
 	descriptionOutput, err := s.resourceRegistry.GetTypeDescription(
-		safeContext(ctx),
+		ctx.Context,
 		resType.Value,
 		&provider.ResourceGetTypeDescriptionInput{},
 	)
@@ -278,7 +278,7 @@ func (s *HoverService) getDataSourceTypeHoverContent(
 		zap.String("dataSourceType", dataSourceType.Value),
 	)
 	descriptionOutput, err := s.dataSourceRegistry.GetTypeDescription(
-		safeContext(ctx),
+		ctx.Context,
 		dataSourceType.Value,
 		&provider.DataSourceGetTypeDescriptionInput{},
 	)
@@ -369,7 +369,7 @@ func (s *HoverService) getResourcePathItemHoverContent(
 
 	if firstField == "spec" && pathItemIndex > 0 {
 		specDefOutput, err := s.resourceRegistry.GetSpecDefinition(
-			safeContext(ctx),
+			ctx.Context,
 			resource.Type.Value,
 			&provider.ResourceGetSpecDefinitionInput{},
 		)
@@ -466,7 +466,7 @@ func (s *HoverService) getElemPathItemHoverContent(
 	}
 
 	specDefOutput, err := s.resourceRegistry.GetSpecDefinition(
-		safeContext(ctx),
+		ctx.Context,
 		resource.Type.Value,
 		&provider.ResourceGetSpecDefinitionInput{},
 	)

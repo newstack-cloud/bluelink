@@ -72,7 +72,7 @@ func (s *SignatureService) SignatureInfoFromFunction(
 	ctx *common.LSPContext,
 ) ([]*lsp.SignatureInformation, error) {
 	defOutput, err := s.funcRegistry.GetDefinition(
-		safeContext(ctx),
+		ctx.Context,
 		string(subFunc.FunctionName),
 		&provider.FunctionGetDefinitionInput{},
 	)

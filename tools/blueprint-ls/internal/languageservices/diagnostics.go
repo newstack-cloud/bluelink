@@ -66,7 +66,7 @@ func (s *DiagnosticsService) ValidateTextDocument(
 
 	format := blueprint.DetermineDocFormat(docURI)
 	validationResult, err := s.loader.ValidateString(
-		safeContext(lspCtx),
+		lspCtx.Context,
 		*content,
 		format,
 		core.NewDefaultParams(
