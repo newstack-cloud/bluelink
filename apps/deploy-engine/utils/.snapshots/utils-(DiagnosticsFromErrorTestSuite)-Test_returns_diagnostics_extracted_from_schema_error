@@ -8,16 +8,18 @@
           Line: (int) 20,
           Column: (int) 2
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
       End: (*source.Meta)({
         Position: (source.Position) {
           Line: (int) 21,
           Column: (int) 0
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
-      ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
     }),
     Context: (*errors.ErrorContext)(<nil>)
   })

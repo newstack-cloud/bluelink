@@ -8,16 +8,18 @@
           Line: (int) 10,
           Column: (int) 1
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
       End: (*source.Meta)({
         Position: (source.Position) {
           Line: (int) 11,
           Column: (int) 0
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
-      ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
     }),
     Context: (*errors.ErrorContext)(<nil>)
   }),
@@ -30,16 +32,18 @@
           Line: (int) 20,
           Column: (int) 2
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
       End: (*source.Meta)({
         Position: (source.Position) {
           Line: (int) 21,
           Column: (int) 0
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
-      ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
     }),
     Context: (*errors.ErrorContext)(<nil>)
   }),
@@ -52,16 +56,18 @@
           Line: (int) 10,
           Column: (int) 30
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
       End: (*source.Meta)({
         Position: (source.Position) {
           Line: (int) 11,
           Column: (int) 0
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
-      ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
     }),
     Context: (*errors.ErrorContext)(<nil>)
   }),
@@ -74,16 +80,18 @@
           Line: (int) 15,
           Column: (int) 25
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
       End: (*source.Meta)({
         Position: (source.Position) {
           Line: (int) 16,
           Column: (int) 0
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
-      ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
     }),
     Context: (*errors.ErrorContext)(<nil>)
   }),
@@ -96,16 +104,18 @@
           Line: (int) 1,
           Column: (int) 1
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
       End: (*source.Meta)({
         Position: (source.Position) {
           Line: (int) 2,
           Column: (int) 0
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
-      ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
     }),
     Context: (*errors.ErrorContext)(<nil>)
   }),
@@ -118,16 +128,18 @@
           Line: (int) 40,
           Column: (int) 1
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
       End: (*source.Meta)({
         Position: (source.Position) {
           Line: (int) 41,
           Column: (int) 0
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
-      ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
     }),
     Context: (*errors.ErrorContext)(<nil>)
   }),
@@ -140,16 +152,18 @@
           Line: (int) 14,
           Column: (int) 0
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
       End: (*source.Meta)({
         Position: (source.Position) {
           Line: (int) 15,
           Column: (int) 0
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
-      ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
     }),
     Context: (*errors.ErrorContext)(<nil>)
   }),
@@ -162,16 +176,18 @@
           Line: (int) 320,
           Column: (int) 0
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
       End: (*source.Meta)({
         Position: (source.Position) {
           Line: (int) 321,
           Column: (int) 0
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
-      ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
     }),
     Context: (*errors.ErrorContext)(<nil>)
   }),
@@ -184,16 +200,18 @@
           Line: (int) 1,
           Column: (int) 1
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
       End: (*source.Meta)({
         Position: (source.Position) {
           Line: (int) 2,
           Column: (int) 0
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
-      ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
     }),
     Context: (*errors.ErrorContext)(<nil>)
   }),
@@ -206,16 +224,18 @@
           Line: (int) 1,
           Column: (int) 1
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
       End: (*source.Meta)({
         Position: (source.Position) {
           Line: (int) 2,
           Column: (int) 0
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
-      ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
     }),
     Context: (*errors.ErrorContext)(<nil>)
   }),
@@ -228,16 +248,18 @@
           Line: (int) 0,
           Column: (int) 0
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
       End: (*source.Meta)({
         Position: (source.Position) {
           Line: (int) 1,
           Column: (int) 0
         },
-        EndPosition: (*source.Position)(<nil>)
+        EndPosition: (*source.Position)(<nil>),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
       }),
-      ColumnAccuracy: (*substitutions.ColumnAccuracy)(<nil>)
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
     }),
     Context: (*errors.ErrorContext)(<nil>)
   })
