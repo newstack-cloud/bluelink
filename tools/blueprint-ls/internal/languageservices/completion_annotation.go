@@ -3,6 +3,7 @@ package languageservices
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -57,6 +58,13 @@ type linkedResourceInfo struct {
 	currentIsA bool
 }
 
+// annotationDefWithContext wraps an annotation definition with the target resource type
+// that should be used when expanding <resourceName> placeholders.
+type annotationDefWithContext struct {
+	definition         *provider.LinkAnnotationDefinition
+	targetResourceType string // The "other" resource type for placeholder expansion
+}
+
 // findLinkedResources finds all resources that could be linked to/from the given resource.
 func (s *CompletionService) findLinkedResources(
 	ctx context.Context,
@@ -73,7 +81,6 @@ func (s *CompletionService) findLinkedResources(
 		return nil
 	}
 
-	currentLabels := getResourceLabels(currentResource)
 	var linkedResources []linkedResourceInfo
 
 	for otherName, otherResource := range blueprint.Resources.Values {
@@ -83,58 +90,59 @@ func (s *CompletionService) findLinkedResources(
 
 		otherType := otherResource.Type.Value
 		registeredCurrentIsA, linked := s.getLinkDirection(ctx, resourceType, otherType)
-		if linked {
-			currentIsA := determineCurrentIsA(
-				currentResource, otherResource,
-				resourceType, otherType,
-				registeredCurrentIsA,
-			)
-			linkedResources = append(linkedResources, linkedResourceInfo{
-				name:         otherName,
-				resourceType: otherType,
-				currentIsA:   currentIsA,
-			})
+		if !linked {
 			continue
 		}
 
-		if hasMatchingLabels(otherResource, currentLabels) ||
-			hasMatchingSelector(currentResource, otherResource) {
-			currentIsA := hasMatchingSelector(currentResource, otherResource)
-			linkedResources = append(linkedResources, linkedResourceInfo{
-				name:         otherName,
-				resourceType: otherType,
-				currentIsA:   currentIsA,
-			})
+		// Check if there's an actual link relationship via selectors/labels.
+		// A registered link type alone isn't enough - there must be a selector/label match.
+		// A link requires one resource to have a linkSelector matching another's labels.
+		currentSelectsOther := hasMatchingSelector(currentResource, otherResource, otherName)
+		otherSelectsCurrent := hasMatchingSelector(otherResource, currentResource, resourceName)
+
+		if !currentSelectsOther && !otherSelectsCurrent {
+			continue
 		}
+
+		currentIsA := determineCurrentIsA(
+			currentResource, otherResource,
+			resourceName, otherName,
+			registeredCurrentIsA,
+		)
+		linkedResources = append(linkedResources, linkedResourceInfo{
+			name:         otherName,
+			resourceType: otherType,
+			currentIsA:   currentIsA,
+		})
 	}
 
 	return linkedResources
 }
 
 // determineCurrentIsA determines whether the current resource is A in the link relationship.
-// For different-type links, uses the registered link direction.
-// For same-type links, uses the selector/selected relationship to determine direction.
+// The selector/selected relationship takes precedence for determining direction.
+// Falls back to the registered link direction when no explicit selector relationship exists.
 func determineCurrentIsA(
 	currentResource, otherResource *schema.Resource,
-	currentType, otherType string,
+	currentName, otherName string,
 	registeredCurrentIsA bool,
 ) bool {
-	// For different-type links, use the registered link direction
-	if currentType != otherType {
-		return registeredCurrentIsA
-	}
+	// Check selector relationships for ALL links (not just same-type)
+	// The resource with the linkSelector is A, the selected resource is B
+	currentSelectsOther := hasMatchingSelector(currentResource, otherResource, otherName)
+	otherSelectsCurrent := hasMatchingSelector(otherResource, currentResource, currentName)
 
-	// For same-type links, determine based on selector relationship
-	if hasMatchingSelector(currentResource, otherResource) {
-		// Current is selecting other, so current is A
+	if currentSelectsOther && !otherSelectsCurrent {
+		// Only current selects other, so current is A
 		return true
 	}
-	if hasMatchingSelector(otherResource, currentResource) {
-		// Other is selecting current, so current is B
+	if otherSelectsCurrent && !currentSelectsOther {
+		// Only other selects current, so current is B
 		return false
 	}
 
-	// No clear direction from selectors, default based on registration order
+	// Both select each other, or neither explicitly selects (e.g., label matching only)
+	// Fall back to the registered link direction
 	return registeredCurrentIsA
 }
 
@@ -155,26 +163,35 @@ func (s *CompletionService) getLinkDirection(ctx context.Context, currentType, o
 	return false, false
 }
 
-// collectAnnotationDefinitions collects all annotation definitions relevant to the resource type.
+// collectAnnotationDefinitions collects all annotation definitions relevant to the resource type,
+// along with the target resource type for placeholder expansion.
 func (s *CompletionService) collectAnnotationDefinitions(
 	ctx context.Context,
 	blueprint *schema.Blueprint,
 	currentResourceType string,
 	linkedResources []linkedResourceInfo,
-) map[string]*provider.LinkAnnotationDefinition {
-	allDefs := make(map[string]*provider.LinkAnnotationDefinition)
+) map[string]*annotationDefWithContext {
+	allDefs := make(map[string]*annotationDefWithContext)
 
 	if blueprint.Resources == nil {
 		return allDefs
 	}
 
 	for _, linked := range linkedResources {
-		s.collectDefsFromLinkPair(ctx, currentResourceType, linked.resourceType, currentResourceType, linked.currentIsA, allDefs)
-		// Only try the reverse ordering when types differ - when types are the same,
-		// both calls would find the same link and we already have the correct currentIsA.
-		if currentResourceType != linked.resourceType {
-			s.collectDefsFromLinkPair(ctx, linked.resourceType, currentResourceType, currentResourceType, !linked.currentIsA, allDefs)
+		// Determine the link lookup order based on currentIsA.
+		// If current is A, the link should be Link(currentType, linkedType).
+		// If current is B, the link should be Link(linkedType, currentType).
+		// We only look up the link that matches our actual position in the relationship,
+		// not both directions.
+		var typeA, typeB string
+		if linked.currentIsA {
+			typeA = currentResourceType
+			typeB = linked.resourceType
+		} else {
+			typeA = linked.resourceType
+			typeB = currentResourceType
 		}
+		s.collectDefsFromLinkPair(ctx, typeA, typeB, currentResourceType, linked.currentIsA, allDefs)
 	}
 
 	return allDefs
@@ -188,7 +205,7 @@ func (s *CompletionService) collectDefsFromLinkPair(
 	typeA, typeB string,
 	currentResourceType string,
 	currentIsA bool,
-	allDefs map[string]*provider.LinkAnnotationDefinition,
+	allDefs map[string]*annotationDefWithContext,
 ) {
 	link, err := s.linkRegistry.Link(ctx, typeA, typeB)
 	if err != nil || link == nil {
@@ -200,24 +217,36 @@ func (s *CompletionService) collectDefsFromLinkPair(
 		return
 	}
 
+	// Determine the "other" resource type for placeholder expansion
+	// If current is typeA, the target for <resourceName> is typeB, and vice versa
+	targetResourceType := typeB
+	if currentResourceType == typeB {
+		targetResourceType = typeA
+	}
+
 	for key, def := range defs {
 		if _, exists := allDefs[key]; exists {
 			continue
 		}
-		if !annotationAppliesToCurrentResource(key, def, currentResourceType, currentIsA) {
+		if !annotationAppliesToCurrentResource(key, def, currentIsA, typeA, typeB) {
 			continue
 		}
-		allDefs[key] = def
+		allDefs[key] = &annotationDefWithContext{
+			definition:         def,
+			targetResourceType: targetResourceType,
+		}
 	}
 }
 
 // annotationAppliesToCurrentResource determines if an annotation definition applies
 // to the current resource based on AppliesTo and the resource type in the key.
+// When AppliesTo is ResourceAny (the default), the function infers the target position
+// from the annotation key's resource type prefix and the link registration order.
 func annotationAppliesToCurrentResource(
 	key string,
 	def *provider.LinkAnnotationDefinition,
-	currentResourceType string,
 	currentIsA bool,
+	typeA, typeB string,
 ) bool {
 	switch def.AppliesTo {
 	case provider.LinkAnnotationResourceA:
@@ -225,8 +254,34 @@ func annotationAppliesToCurrentResource(
 	case provider.LinkAnnotationResourceB:
 		return !currentIsA
 	default: // LinkAnnotationResourceAny
+		// Infer which position the annotation targets from its key prefix.
+		// For example, "aws/lambda/function::someAnnotation" targets the resource
+		// whose type is "aws/lambda/function" in the link relationship.
 		keyResourceType := extractResourceTypeFromKey(key)
-		return keyResourceType == currentResourceType
+		if keyResourceType == "" {
+			// No resource type prefix - allow for any resource
+			return true
+		}
+
+		// For same-type links, we can't infer position from the key prefix
+		// since both A and B have the same type. Allow the annotation for
+		// any resource whose type matches.
+		if typeA == typeB {
+			return keyResourceType == typeA
+		}
+
+		// Determine if the annotation's resource type is A or B in the link
+		if keyResourceType == typeA {
+			// Annotation targets resource A, so current must be A
+			return currentIsA
+		}
+		if keyResourceType == typeB {
+			// Annotation targets resource B, so current must be B
+			return !currentIsA
+		}
+
+		// Key resource type doesn't match either type in this link
+		return false
 	}
 }
 
@@ -272,7 +327,7 @@ func (s *CompletionService) getAnnotationDefinitionsForLink(
 
 // createAnnotationKeyCompletionItems creates completion items for annotation keys.
 func (s *CompletionService) createAnnotationKeyCompletionItems(
-	annotationDefs map[string]*provider.LinkAnnotationDefinition,
+	annotationDefs map[string]*annotationDefWithContext,
 	linkedResources []linkedResourceInfo,
 	position *lsp.Position,
 	typedPrefix string,
@@ -281,16 +336,19 @@ func (s *CompletionService) createAnnotationKeyCompletionItems(
 	prefixLen := len(typedPrefix)
 	fieldKind := lsp.CompletionItemKindField
 
-	linkedNames := make([]string, len(linkedResources))
-	for i, lr := range linkedResources {
-		linkedNames[i] = lr.name
+	// Build a map of resource type -> resource names for filtering
+	linkedNamesByType := make(map[string][]string)
+	for _, lr := range linkedResources {
+		linkedNamesByType[lr.resourceType] = append(linkedNamesByType[lr.resourceType], lr.name)
 	}
 
 	seen := make(map[string]bool)
 	var items []*lsp.CompletionItem
 
-	for _, def := range annotationDefs {
-		expandedNames := expandAnnotationName(def.Name, linkedNames)
+	for _, defCtx := range annotationDefs {
+		// Only use linked resource names that match the target type for this annotation
+		targetNames := linkedNamesByType[defCtx.targetResourceType]
+		expandedNames := expandAnnotationName(defCtx.definition.Name, targetNames)
 
 		for _, annotationName := range expandedNames {
 			if seen[annotationName] {
@@ -302,7 +360,7 @@ func (s *CompletionService) createAnnotationKeyCompletionItems(
 				continue
 			}
 
-			item := createAnnotationCompletionItem(def, annotationName, position, prefixLen, fieldKind)
+			item := createAnnotationCompletionItem(defCtx.definition, annotationName, position, prefixLen, fieldKind)
 			items = append(items, item)
 		}
 	}
@@ -376,29 +434,18 @@ func getResourceLabels(resource *schema.Resource) map[string]string {
 	return resource.Metadata.Labels.Values
 }
 
-// hasMatchingLabels checks if a resource has labels that match any in the given label map.
-func hasMatchingLabels(resource *schema.Resource, labels map[string]string) bool {
-	if len(labels) == 0 {
-		return false
-	}
-
-	resourceLabels := getResourceLabels(resource)
-	if len(resourceLabels) == 0 {
-		return false
-	}
-
-	for key, value := range labels {
-		if resourceValue, ok := resourceLabels[key]; ok && resourceValue == value {
-			return true
-		}
-	}
-	return false
-}
-
 // hasMatchingSelector checks if the first resource has a linkSelector that matches the second.
-func hasMatchingSelector(selector *schema.Resource, candidate *schema.Resource) bool {
+// The candidateName parameter is used to check if the candidate is in the exclude list.
+func hasMatchingSelector(selector *schema.Resource, candidate *schema.Resource, candidateName string) bool {
 	if selector.LinkSelector == nil || selector.LinkSelector.ByLabel == nil {
 		return false
+	}
+
+	// Check if candidate is in exclude list
+	if selector.LinkSelector.Exclude != nil {
+		if slices.Contains(selector.LinkSelector.Exclude.Values, candidateName) {
+			return false
+		}
 	}
 
 	candidateLabels := getResourceLabels(candidate)
@@ -412,4 +459,151 @@ func hasMatchingSelector(selector *schema.Resource, candidate *schema.Resource) 
 		}
 	}
 	return false
+}
+
+// getResourceAnnotationValueCompletionItems returns completion items for annotation values
+// based on AllowedValues in the LinkAnnotationDefinition.
+func (s *CompletionService) getResourceAnnotationValueCompletionItems(
+	ctx *common.LSPContext,
+	position *lsp.Position,
+	blueprint *schema.Blueprint,
+	completionCtx *docmodel.CompletionContext,
+	format docmodel.DocumentFormat,
+) ([]*lsp.CompletionItem, error) {
+	if s.linkRegistry == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	resourceName := completionCtx.ResourceName
+	if resourceName == "" {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	resource := getResource(blueprint, resourceName)
+	if resource == nil || resource.Type == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	// Get the annotation key from the path or extracted field name
+	annotationKey := ""
+	if completionCtx.NodeCtx != nil {
+		if key, ok := completionCtx.NodeCtx.ASTPath.GetAnnotationKey(); ok {
+			annotationKey = key
+		} else if completionCtx.NodeCtx.ExtractedFieldName != "" {
+			annotationKey = completionCtx.NodeCtx.ExtractedFieldName
+		}
+	}
+
+	if annotationKey == "" {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	// Find the annotation definition for this key
+	currentResourceType := resource.Type.Value
+	linkedResources := s.findLinkedResources(ctx.Context, blueprint, resourceName, currentResourceType)
+	annotationDefs := s.collectAnnotationDefinitions(ctx.Context, blueprint, currentResourceType, linkedResources)
+
+	annotationDef := s.findAnnotationDefinitionByKey(annotationDefs, annotationKey, linkedResources)
+	if annotationDef == nil || len(annotationDef.AllowedValues) == 0 {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	// Create completion items from AllowedValues
+	typedPrefix := ""
+	textBefore := ""
+	if completionCtx.NodeCtx != nil {
+		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+		textBefore = completionCtx.NodeCtx.TextBefore
+	}
+
+	return s.createAnnotationValueCompletionItems(
+		annotationDef,
+		position,
+		typedPrefix,
+		textBefore,
+		format,
+	), nil
+}
+
+// findAnnotationDefinitionByKey finds an annotation definition that matches the given key.
+// It handles both static keys and expanded dynamic keys with resource name placeholders.
+func (s *CompletionService) findAnnotationDefinitionByKey(
+	annotationDefs map[string]*annotationDefWithContext,
+	annotationKey string,
+	linkedResources []linkedResourceInfo,
+) *provider.LinkAnnotationDefinition {
+	// Build a map of resource type -> resource names for filtering
+	linkedNamesByType := make(map[string][]string)
+	for _, lr := range linkedResources {
+		linkedNamesByType[lr.resourceType] = append(linkedNamesByType[lr.resourceType], lr.name)
+	}
+
+	for _, defCtx := range annotationDefs {
+		// Only use linked resource names that match the target type for this annotation
+		targetNames := linkedNamesByType[defCtx.targetResourceType]
+		expandedNames := expandAnnotationName(defCtx.definition.Name, targetNames)
+		if slices.Contains(expandedNames, annotationKey) {
+			return defCtx.definition
+		}
+	}
+	return nil
+}
+
+// createAnnotationValueCompletionItems creates completion items from AllowedValues.
+func (s *CompletionService) createAnnotationValueCompletionItems(
+	def *provider.LinkAnnotationDefinition,
+	position *lsp.Position,
+	typedPrefix string,
+	textBefore string,
+	format docmodel.DocumentFormat,
+) []*lsp.CompletionItem {
+	filterPrefix, hasLeadingQuote := stripLeadingQuote(typedPrefix)
+	if format != docmodel.FormatJSONC {
+		hasLeadingQuote = false
+	}
+	prefixLen := len(typedPrefix)
+	hasLeadingSpace := hasLeadingWhitespace(textBefore, prefixLen)
+	prefixLower := strings.ToLower(filterPrefix)
+
+	detail := fmt.Sprintf("Allowed value (%s)", string(def.Type))
+	enumKind := lsp.CompletionItemKindEnumMember
+	items := make([]*lsp.CompletionItem, 0, len(def.AllowedValues))
+
+	for _, allowedValue := range def.AllowedValues {
+		if allowedValue == nil {
+			continue
+		}
+
+		valueStr := allowedValue.ToString()
+		if len(filterPrefix) > 0 && !strings.HasPrefix(strings.ToLower(valueStr), prefixLower) {
+			continue
+		}
+
+		insertText := formatValueForInsert(valueStr, format, hasLeadingQuote, hasLeadingSpace)
+		insertRange := getItemInsertRangeWithPrefix(position, prefixLen)
+		edit := lsp.TextEdit{
+			NewText: insertText,
+			Range:   insertRange,
+		}
+
+		item := &lsp.CompletionItem{
+			Label:      valueStr,
+			Detail:     &detail,
+			Kind:       &enumKind,
+			TextEdit:   edit,
+			FilterText: &valueStr,
+			Data:       map[string]any{"completionType": "annotationValue"},
+		}
+
+		if def.Description != "" {
+			item.Documentation = lsp.MarkupContent{
+				Kind:  lsp.MarkupKindMarkdown,
+				Value: def.Description,
+			}
+		}
+
+		items = append(items, item)
+	}
+
+	return items
 }

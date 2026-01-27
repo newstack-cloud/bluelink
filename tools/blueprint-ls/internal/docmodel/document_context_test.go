@@ -789,6 +789,95 @@ datasources:
 		"Expected DataSourceDefinitionField context, got: %s", completionCtx.Kind.String())
 }
 
+func (s *DocumentContextSuite) TestGetNodeContext_JSONC_AnnotationValue_WithExistingValue() {
+	// Test annotation value detection in JSONC when there's an existing value.
+	// This matches the scenario where a user wants to edit an existing annotation value.
+	content := `{
+  "version": "2025-11-02",
+  "resources": {
+    "processOrders": {
+      "type": "aws/lambda/function",
+      "metadata": {
+        "annotations": {
+          "aws.dynamodb.lambda.stream.startingPosition": "TRIM_HORIZON"
+        }
+      }
+    }
+  }
+}`
+
+	ctx := NewDocumentContext("file:///test.jsonc", content, FormatJSONC, nil)
+	s.Require().NotNil(ctx.CurrentAST, "Content should parse")
+
+	// Line 8 (1-indexed): '          "aws.dynamodb.lambda.stream.startingPosition": "TRIM_HORIZON"'
+	// Let's find the position inside the value string
+	// 10 spaces + key with quotes (47 chars) + ": " (2 chars) + opening quote = 60 chars
+	// Position 61 (1-indexed) would be at 'T' in TRIM_HORIZON
+	nodeCtx := ctx.GetNodeContext(source.Position{Line: 8, Column: 61}, 2)
+
+	s.Require().NotNil(nodeCtx)
+
+	// The path should be 5 segments: resources/processOrders/metadata/annotations/annotationKey
+	s.Assert().Equal(5, len(nodeCtx.ASTPath),
+		"Expected 5 path segments for annotation value, got: %s", nodeCtx.ASTPath.String())
+
+	// Check path conditions
+	s.Assert().True(nodeCtx.ASTPath.IsResourceMetadataAnnotationValue(),
+		"Expected IsResourceMetadataAnnotationValue to be true, path: %s", nodeCtx.ASTPath.String())
+
+	// Check IsAtValuePosition
+	s.Assert().True(nodeCtx.IsAtValuePosition(),
+		"Should be at value position. TextBefore: %q", nodeCtx.TextBefore)
+
+	// Verify completion context
+	completionCtx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextResourceAnnotationValue, completionCtx.Kind,
+		"Expected ResourceAnnotationValue context, got: %s", completionCtx.Kind.String())
+	s.Assert().Equal("processOrders", completionCtx.ResourceName,
+		"Expected resource name to be processOrders")
+}
+
+func (s *DocumentContextSuite) TestGetNodeContext_JSONC_AnnotationValue_EmptyString() {
+	// Test annotation value detection in JSONC when the value is empty.
+	content := `{
+  "version": "2025-11-02",
+  "resources": {
+    "saveOrderFunction": {
+      "type": "aws/lambda/function",
+      "metadata": {
+        "annotations": {
+          "aws.lambda.dynamodb.accessType": ""
+        }
+      }
+    }
+  }
+}`
+
+	ctx := NewDocumentContext("file:///test.jsonc", content, FormatJSONC, nil)
+	s.Require().NotNil(ctx.CurrentAST, "Content should parse")
+
+	// Line 8 (1-indexed): '          "aws.lambda.dynamodb.accessType": ""'
+	// 10 spaces + key with quotes (34 chars) + ": " (2 chars) + first quote = 47 chars
+	// Position 47 (1-indexed) would be at the first quote of empty value
+	// Position 48 would be between the two quotes
+	nodeCtx := ctx.GetNodeContext(source.Position{Line: 8, Column: 47}, 2)
+
+	s.Require().NotNil(nodeCtx)
+
+	// The path should be 5 segments
+	s.Assert().Equal(5, len(nodeCtx.ASTPath),
+		"Expected 5 path segments for annotation value, got: %s", nodeCtx.ASTPath.String())
+
+	// Check path conditions
+	s.Assert().True(nodeCtx.ASTPath.IsResourceMetadataAnnotationValue(),
+		"Expected IsResourceMetadataAnnotationValue to be true, path: %s", nodeCtx.ASTPath.String())
+
+	// Verify completion context
+	completionCtx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextResourceAnnotationValue, completionCtx.Kind,
+		"Expected ResourceAnnotationValue context, got: %s", completionCtx.Kind.String())
+}
+
 func TestDocumentContextSuite(t *testing.T) {
 	suite.Run(t, new(DocumentContextSuite))
 }

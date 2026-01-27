@@ -116,6 +116,12 @@ var coreExportDefinitionFields = []coreResourceDefinitionFieldInfo{
 	{name: "description", description: "A human-readable description of the exported value."},
 }
 
+// LinkSelector definition fields.
+var coreLinkSelectorDefinitionFields = []coreResourceDefinitionFieldInfo{
+	{name: "byLabel", description: "Map of label key-value pairs to match resources for linking."},
+	{name: "exclude", description: "List of resource names to exclude from link matching."},
+}
+
 // Blueprint top-level fields.
 var coreBlueprintTopLevelFields = []coreResourceDefinitionFieldInfo{
 	{name: "version", description: "The blueprint specification version (e.g., `2025-11-02`)."},
@@ -528,6 +534,75 @@ func (s *CompletionService) getExportDefinitionFieldCompletionItems(
 		"Export field",
 		"exportDefinitionField",
 	), nil
+}
+
+// getLinkSelectorFieldCompletionItems returns completion items for linkSelector fields.
+func (s *CompletionService) getLinkSelectorFieldCompletionItems(
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+) ([]*lsp.CompletionItem, error) {
+	typedPrefix := ""
+	if completionCtx.NodeCtx != nil {
+		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	}
+	return createDefinitionFieldCompletionItems(
+		coreLinkSelectorDefinitionFields,
+		position,
+		typedPrefix,
+		"LinkSelector field",
+		"linkSelectorField",
+	), nil
+}
+
+// getLinkSelectorExcludeValueCompletionItems returns resource names as completions
+// for values in the linkSelector.exclude list.
+func (s *CompletionService) getLinkSelectorExcludeValueCompletionItems(
+	position *lsp.Position,
+	blueprint *schema.Blueprint,
+	completionCtx *docmodel.CompletionContext,
+) ([]*lsp.CompletionItem, error) {
+	if blueprint.Resources == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	currentResourceName := completionCtx.ResourceName
+	typedPrefix := ""
+	if completionCtx.NodeCtx != nil {
+		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	}
+
+	prefixLower := strings.ToLower(typedPrefix)
+	prefixLen := len(typedPrefix)
+	detail := "Resource name"
+	valueKind := lsp.CompletionItemKindValue
+
+	var items []*lsp.CompletionItem
+	for resourceName := range blueprint.Resources.Values {
+		if resourceName == currentResourceName {
+			continue
+		}
+		if prefixLen > 0 && !strings.HasPrefix(strings.ToLower(resourceName), prefixLower) {
+			continue
+		}
+
+		insertRange := getItemInsertRangeWithPrefix(position, prefixLen)
+		item := &lsp.CompletionItem{
+			Label:  resourceName,
+			Detail: &detail,
+			Kind:   &valueKind,
+			TextEdit: lsp.TextEdit{
+				NewText: resourceName,
+				Range:   insertRange,
+			},
+			FilterText: &resourceName,
+			Data: map[string]any{
+				"completionType": "linkSelectorExcludeValue",
+			},
+		}
+		items = append(items, item)
+	}
+
+	return items, nil
 }
 
 // getBlueprintTopLevelFieldCompletionItems returns completion items for blueprint top-level fields.

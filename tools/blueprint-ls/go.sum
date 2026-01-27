@@ -26,12 +26,12 @@ github.com/matoous/go-nanoid/v2 v2.1.0 h1:P64+dmq21hhWdtvZfEAofnvJULaRR1Yib0+PnU
 github.com/matoous/go-nanoid/v2 v2.1.0/go.mod h1:KlbGNQ+FhrUNIHUxZdL63t7tl4LaPkZNpUULS8H4uVM=
 github.com/mattn/go-pointer v0.0.1 h1:n+XhsuGeVO6MEAp7xyEukFINEa+Quek5psIR/ylA6o0=
 github.com/mattn/go-pointer v0.0.1/go.mod h1:2zXcozF6qYGgmsG+SeTZz3oAbFLdD3OWqnUbNvJZAlc=
-github.com/newstack-cloud/bluelink/libs/blueprint v0.39.0 h1:xJmKHBm8rbwyom1LVunHVW+9W1ANjSP3y4XbVHUaIGk=
-github.com/newstack-cloud/bluelink/libs/blueprint v0.39.0/go.mod h1:BMnMYG+/C14VN46QjtwMLS2umagVaRvE5kfoji896yM=
+github.com/newstack-cloud/bluelink/libs/blueprint v0.40.0 h1:JdQNUi4jUZ4RIUAZU+IalBPApi97JJzIw7iJVcAgXrY=
+github.com/newstack-cloud/bluelink/libs/blueprint v0.40.0/go.mod h1:tliJuuYMQSlQ2q8o/bowk8NePUx4V179fjfVhxpgobI=
 github.com/newstack-cloud/bluelink/libs/common v0.4.0 h1:E72YAjex+VydpaYJXaAwlqeII7jVugEKsfVjHFLaJJY=
 github.com/newstack-cloud/bluelink/libs/common v0.4.0/go.mod h1:09jWAU7PMDJSW0zokebgDZCr59Gg4JpqgF0Yq6kQ8gY=
-github.com/newstack-cloud/bluelink/libs/plugin-framework v0.3.0 h1:jmxG2/DZURK971HgkYC9YoWDdxZSnri65/4qc/hjL5c=
-github.com/newstack-cloud/bluelink/libs/plugin-framework v0.3.0/go.mod h1:MZGVLwyjvn8JPoisS7ivKz0B627k9sojBUqbK3WmN5A=
+github.com/newstack-cloud/bluelink/libs/plugin-framework v0.4.0 h1:QyAuzkvdq+dufpNccJcECE828dnqZI/Hgsfgm1yQsAg=
+github.com/newstack-cloud/bluelink/libs/plugin-framework v0.4.0/go.mod h1:OqPw8vWq8G3Hn0onWK1ePC1U+oVeFwvnFWlxrtpKjAc=
 github.com/newstack-cloud/ls-builder v0.2.5 h1:v+UAtfL+ooRMpJx7z6O+ljcLNHUE1YwQ2YgrGpx+3Jw=
 github.com/newstack-cloud/ls-builder v0.2.5/go.mod h1:NUhPBdxcQ4Zh8lMJdEqNotkmuVLs6xEUoO05eVG40e8=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=

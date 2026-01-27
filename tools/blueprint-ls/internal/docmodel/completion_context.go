@@ -53,8 +53,17 @@ const (
 	// Resource annotation key (inside metadata.annotations, suggests link annotation keys)
 	CompletionContextResourceAnnotationKey
 
+	// Resource annotation value (value for a resource annotation with AllowedValues)
+	CompletionContextResourceAnnotationValue
+
 	// Resource definition field (type, description, spec, metadata, etc.)
 	CompletionContextResourceDefinitionField
+
+	// Resource linkSelector field (byLabel, exclude)
+	CompletionContextLinkSelectorField
+
+	// Resource linkSelector exclude value (resource names)
+	CompletionContextLinkSelectorExcludeValue
 
 	// Definition field contexts for other sections
 	CompletionContextVariableDefinitionField
@@ -121,6 +130,12 @@ var (
 	// Matches: fieldName: or "fieldName": at the end (with optional trailing space)
 	// Captures: group 1 = the field name (without quotes)
 	valuePositionFieldPattern = regexp.MustCompile(`(?:"([A-Za-z][A-Za-z0-9_-]*)"|([A-Za-z][A-Za-z0-9_-]*)):\s*$`)
+
+	// Pattern to extract annotation key from TextBefore when at a value position
+	// Annotation keys can contain dots (e.g., aws.lambda.dynamodb.accessType)
+	// Matches: annotationKey: or "annotationKey": at the end (with optional trailing space)
+	// Captures: group 1 = the quoted annotation key, group 2 = the unquoted annotation key
+	annotationKeyFieldPattern = regexp.MustCompile(`(?:"([A-Za-z][A-Za-z0-9_.\-<>]*)"|([A-Za-z][A-Za-z0-9_.\-<>]*)):\s*$`)
 )
 
 // CompletionContext provides rich context for completion suggestions.
@@ -483,6 +498,31 @@ func determineSectionDefinitionContext(nodeCtx *NodeContext) sectionDefinitionCo
 		}
 	}
 
+	// Check if we're inside resource linkSelector exclude: /resources/{name}/linkSelector/exclude
+	// This must come before the general IsResourceLinkSelector check (more specific path first)
+	if path.IsResourceLinkSelectorExclude() {
+		resourceName, ok := path.GetResourceName()
+		if !ok {
+			return sectionDefinitionContextResult{kind: CompletionContextUnknown}
+		}
+		return sectionDefinitionContextResult{
+			kind:         CompletionContextLinkSelectorExcludeValue,
+			resourceName: resourceName,
+		}
+	}
+
+	// Check if we're inside resource linkSelector: /resources/{name}/linkSelector
+	if path.IsResourceLinkSelector() {
+		resourceName, ok := path.GetResourceName()
+		if !ok {
+			return sectionDefinitionContextResult{kind: CompletionContextUnknown}
+		}
+		return sectionDefinitionContextResult{
+			kind:         CompletionContextLinkSelectorField,
+			resourceName: resourceName,
+		}
+	}
+
 	// Check variable definition: /variables/{name}
 	if path.IsVariableDefinition() {
 		return sectionDefinitionContextResult{kind: CompletionContextVariableDefinitionField}
@@ -544,6 +584,37 @@ func determineValuePositionContext(nodeCtx *NodeContext, path StructuredPath) se
 	// This provides completions for available field names from the data source spec
 	if path.IsDataSourceExportAliasFor() {
 		return sectionDefinitionContextResult{kind: CompletionContextDataSourceExportAliasForValue}
+	}
+
+	// Check for resource annotation value: /resources/{name}/metadata/annotations/{key}
+	// When at value position inside an annotation, suggest AllowedValues from link definitions
+	if path.IsResourceMetadataAnnotationValue() {
+		resourceName, ok := path.GetResourceName()
+		if ok {
+			return sectionDefinitionContextResult{
+				kind:         CompletionContextResourceAnnotationValue,
+				resourceName: resourceName,
+			}
+		}
+	}
+
+	// Fallback: If path is at annotations level (len == 4) but we're at a value position,
+	// try to extract the annotation key from TextBefore. This handles the case where
+	// the cursor is positioned after "annotationKey: " but outside the AST node's range.
+	// Use the annotation-specific pattern since annotation keys can contain dots.
+	if path.IsResourceMetadataAnnotations() && len(path) == 4 {
+		annotationKey := extractAnnotationKeyFromTextBefore(nodeCtx.TextBefore)
+		if annotationKey != "" {
+			resourceName, ok := path.GetResourceName()
+			if ok {
+				// Store the extracted field name in the node context for later use
+				nodeCtx.ExtractedFieldName = annotationKey
+				return sectionDefinitionContextResult{
+					kind:         CompletionContextResourceAnnotationValue,
+					resourceName: resourceName,
+				}
+			}
+		}
 	}
 
 	// Check for resource spec field value: /resources/{name}/spec/...
@@ -776,9 +847,12 @@ var completionContextKindNames = map[CompletionContextKind]string{
 	CompletionContextVersionField:                    "versionField",
 	CompletionContextTransformField:                  "transformField",
 	CompletionContextCustomVariableTypeValue:         "customVariableTypeValue",
-	CompletionContextResourceMetadataField:           "resourceMetadataField",
-	CompletionContextResourceAnnotationKey:           "resourceAnnotationKey",
-	CompletionContextResourceDefinitionField:         "resourceDefinitionField",
+	CompletionContextResourceMetadataField:            "resourceMetadataField",
+	CompletionContextResourceAnnotationKey:            "resourceAnnotationKey",
+	CompletionContextResourceAnnotationValue:          "resourceAnnotationValue",
+	CompletionContextResourceDefinitionField:          "resourceDefinitionField",
+	CompletionContextLinkSelectorField:               "linkSelectorField",
+	CompletionContextLinkSelectorExcludeValue:        "linkSelectorExcludeValue",
 	CompletionContextVariableDefinitionField:         "variableDefinitionField",
 	CompletionContextValueDefinitionField:            "valueDefinitionField",
 	CompletionContextDataSourceDefinitionField:       "dataSourceDefinitionField",
@@ -852,6 +926,21 @@ func extractFieldNameFromTextBefore(textBefore string) string {
 		return ""
 	}
 	// matches[1] is the quoted field name (group 1), matches[2] is the unquoted field name (group 2)
+	if matches[1] != "" {
+		return matches[1]
+	}
+	return matches[2]
+}
+
+// extractAnnotationKeyFromTextBefore extracts an annotation key from TextBefore when at a value position.
+// Annotation keys can contain dots (e.g., aws.lambda.dynamodb.accessType).
+// Returns the annotation key without quotes, or empty string if no match.
+func extractAnnotationKeyFromTextBefore(textBefore string) string {
+	matches := annotationKeyFieldPattern.FindStringSubmatch(textBefore)
+	if matches == nil {
+		return ""
+	}
+	// matches[1] is the quoted annotation key (group 1), matches[2] is the unquoted annotation key (group 2)
 	if matches[1] != "" {
 		return matches[1]
 	}

@@ -422,6 +422,50 @@ func (p StructuredPath) IsResourceMetadataAnnotations() bool {
 		p[3].Kind == PathSegmentField && p[3].FieldName == "annotations"
 }
 
+// IsResourceMetadataAnnotationValue returns true if path is at an annotation value position.
+// Pattern: /resources/{name}/metadata/annotations/{annotationKey} (exactly 5 segments)
+func (p StructuredPath) IsResourceMetadataAnnotationValue() bool {
+	return len(p) == 5 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "resources" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "metadata" &&
+		p[3].Kind == PathSegmentField && p[3].FieldName == "annotations" &&
+		p[4].Kind == PathSegmentField
+}
+
+// GetAnnotationKey returns the annotation key name if path is at an annotation value position.
+// Pattern: /resources/{name}/metadata/annotations/{annotationKey}
+func (p StructuredPath) GetAnnotationKey() (string, bool) {
+	if len(p) >= 5 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "resources" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "metadata" &&
+		p[3].Kind == PathSegmentField && p[3].FieldName == "annotations" &&
+		p[4].Kind == PathSegmentField {
+		return p[4].FieldName, true
+	}
+	return "", false
+}
+
+// IsResourceLinkSelector returns true if path points to a resource linkSelector field.
+// Pattern: /resources/{name}/linkSelector (exactly 3 segments)
+func (p StructuredPath) IsResourceLinkSelector() bool {
+	return len(p) == 3 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "resources" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "linkSelector"
+}
+
+// IsResourceLinkSelectorExclude returns true if path is inside a linkSelector exclude list.
+// Pattern: /resources/{name}/linkSelector/exclude or /resources/{name}/linkSelector/exclude/{index}
+func (p StructuredPath) IsResourceLinkSelectorExclude() bool {
+	return len(p) >= 4 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "resources" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "linkSelector" &&
+		p[3].Kind == PathSegmentField && p[3].FieldName == "exclude"
+}
+
 // String returns the full path as a string.
 func (p StructuredPath) String() string {
 	if len(p) == 0 {

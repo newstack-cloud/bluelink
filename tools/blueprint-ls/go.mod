@@ -7,9 +7,9 @@ toolchain go1.24.4
 require (
 	github.com/coreos/go-json v0.0.0-20231102161613-e49c8866685a
 	github.com/davecgh/go-spew v1.1.1
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.39.0
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.40.0
 	github.com/newstack-cloud/bluelink/libs/common v0.4.0
-	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.3.0
+	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.4.0
 	github.com/newstack-cloud/ls-builder v0.2.5
 	github.com/sourcegraph/jsonrpc2 v0.2.1
 	github.com/spf13/afero v1.15.0

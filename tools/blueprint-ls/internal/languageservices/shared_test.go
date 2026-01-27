@@ -38,10 +38,16 @@ func (info *testBlueprintInfo) toDocumentContext() *docmodel.DocumentContext {
 // toDocumentContextWithTreeSitter creates a DocumentContext with tree-sitter parsing
 // for more accurate AST path detection at value positions.
 func (info *testBlueprintInfo) toDocumentContextWithTreeSitter() *docmodel.DocumentContext {
+	return info.toDocumentContextWithTreeSitterAndFormat(docmodel.FormatYAML)
+}
+
+// toDocumentContextWithTreeSitterAndFormat creates a DocumentContext with tree-sitter parsing
+// using the specified format.
+func (info *testBlueprintInfo) toDocumentContextWithTreeSitterAndFormat(format docmodel.DocumentFormat) *docmodel.DocumentContext {
 	docCtx := docmodel.NewDocumentContext(
 		blueprintURI,
 		info.content,
-		docmodel.FormatYAML,
+		format,
 		nil,
 	)
 	docCtx.UpdateSchema(info.blueprint, info.tree)
@@ -49,17 +55,29 @@ func (info *testBlueprintInfo) toDocumentContextWithTreeSitter() *docmodel.Docum
 }
 
 func loadCompletionBlueprintAndTree(name string) (*testBlueprintInfo, error) {
+	return loadCompletionBlueprintAndTreeWithFormat(name, "yaml", schema.YAMLSpecFormat)
+}
+
+func loadCompletionBlueprintAndTreeJSONC(name string) (*testBlueprintInfo, error) {
+	return loadCompletionBlueprintAndTreeWithFormat(name, "jsonc", schema.JWCCSpecFormat)
+}
+
+func loadCompletionBlueprintAndTreeWithFormat(
+	name string,
+	fileExt string,
+	format schema.SpecFormat,
+) (*testBlueprintInfo, error) {
 	// Load and parse the blueprint content before the completion trigger character.
 	// This is required as when a completion trigger character is entered, the current
 	// state of the document will not be successfully parsed and the completion service
 	// will be working with the parsed version of the document before the trigger character
 	// was entered.
-	contentBefore, err := loadTestBlueprintContent(path.Join(name, "before-completion-trigger.yaml"))
+	contentBefore, err := loadTestBlueprintContent(path.Join(name, "before-completion-trigger."+fileExt))
 	if err != nil {
 		return nil, err
 	}
 
-	blueprint, err := schema.LoadString(contentBefore, schema.YAMLSpecFormat)
+	blueprint, err := schema.LoadString(contentBefore, format)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +85,7 @@ func loadCompletionBlueprintAndTree(name string) (*testBlueprintInfo, error) {
 	tree := schema.SchemaToTree(blueprint)
 
 	// Load the content after the completion trigger character.
-	afterTriggerContent, err := loadTestBlueprintContent(path.Join(name, "after-completion-trigger.yaml"))
+	afterTriggerContent, err := loadTestBlueprintContent(path.Join(name, "after-completion-trigger."+fileExt))
 	if err != nil {
 		return nil, err
 	}

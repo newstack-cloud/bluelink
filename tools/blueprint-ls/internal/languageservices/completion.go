@@ -162,6 +162,8 @@ func (s *CompletionService) getCompletionItemsByContext(
 			return []*lsp.CompletionItem{}, nil
 		}
 		return s.getResourceAnnotationKeyCompletionItems(ctx, position, blueprint, completionCtx)
+	case docmodel.CompletionContextResourceAnnotationValue:
+		return s.getResourceAnnotationValueCompletionItems(ctx, position, blueprint, completionCtx, format)
 	case docmodel.CompletionContextResourceDefinitionField:
 		if format == docmodel.FormatJSONC {
 			return []*lsp.CompletionItem{}, nil
@@ -207,6 +209,13 @@ func (s *CompletionService) getCompletionItemsByContext(
 			return []*lsp.CompletionItem{}, nil
 		}
 		return s.getExportDefinitionFieldCompletionItems(position, completionCtx)
+	case docmodel.CompletionContextLinkSelectorField:
+		if format == docmodel.FormatJSONC {
+			return []*lsp.CompletionItem{}, nil
+		}
+		return s.getLinkSelectorFieldCompletionItems(position, completionCtx)
+	case docmodel.CompletionContextLinkSelectorExcludeValue:
+		return s.getLinkSelectorExcludeValueCompletionItems(position, blueprint, completionCtx)
 	case docmodel.CompletionContextBlueprintTopLevelField:
 		if format == docmodel.FormatJSONC {
 			return []*lsp.CompletionItem{}, nil
