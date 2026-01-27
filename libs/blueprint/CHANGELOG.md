@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.40.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.39.0...blueprint/v0.40.0) (2026-01-27)
+
+
+### Features
+
+* **blueprint:** add link selector exclude list and annotation value validation ([b9c366a](https://github.com/newstack-cloud/bluelink/commit/b9c366abee6ab22d5a6c0a2e0948188dffbcdd14))
+
+
+### Dependencies
+
+* **blueprint:** update common lib to version with similar string checks ([d4de9d4](https://github.com/newstack-cloud/bluelink/commit/d4de9d47534d0739c09cec7ad70cce979ef63b8b))
+
 ## [0.39.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.38.0...blueprint/v0.39.0) (2026-01-27)
 
 
