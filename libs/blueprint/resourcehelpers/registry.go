@@ -126,6 +126,9 @@ type Registry interface {
 	WithParams(
 		params core.BlueprintParams,
 	) Registry
+
+	// ListTransformers returns a list of all transformer names available in the registry.
+	ListTransformers(ctx context.Context) ([]string, error)
 }
 
 type resourceLock struct {
@@ -698,6 +701,14 @@ func (r *registryFromProviders) WithParams(
 		mu:              r.mu,
 		resourceLocksMu: r.resourceLocksMu,
 	}
+}
+
+func (r *registryFromProviders) ListTransformers(ctx context.Context) ([]string, error) {
+	transformerNames := make([]string, 0, len(r.transformers))
+	for name := range r.transformers {
+		transformerNames = append(transformerNames, name)
+	}
+	return transformerNames, nil
 }
 
 func (r *registryFromProviders) getResourceType(ctx context.Context, resourceType string) (provider.Resource, error) {

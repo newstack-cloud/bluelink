@@ -97,7 +97,8 @@ func (s *MappingNodeTestSuite) Test_parse_string_with_subs_yaml() {
 			},
 		},
 		SourceMeta: &source.Meta{
-			Position: source.Position{Line: 1, Column: 1},
+			Position:    source.Position{Line: 1, Column: 1},
+			EndPosition: &source.Position{Line: 1, Column: 47},
 		},
 	}, targetMappingNode)
 }
@@ -159,7 +160,7 @@ func (s *MappingNodeTestSuite) assertFieldsNodeYAML(actual *MappingNode) {
 					ColumnAccuracy: exactColAccuracy(),
 					},
 				},
-				SourceMeta: &source.Meta{Position: source.Position{Line: 2, Column: 15}},
+				SourceMeta: &source.Meta{Position: source.Position{Line: 2, Column: 15}, EndPosition: &source.Position{Line: 2, Column: 23}},
 			},
 			"key2": {
 				StringWithSubstitutions: &substitutions.StringOrSubstitutions{
@@ -201,7 +202,7 @@ func (s *MappingNodeTestSuite) assertFieldsNodeYAML(actual *MappingNode) {
 					ColumnAccuracy: exactColAccuracy(),
 					},
 				},
-				SourceMeta: &source.Meta{Position: source.Position{Line: 3, Column: 15}},
+				SourceMeta: &source.Meta{Position: source.Position{Line: 3, Column: 15}, EndPosition: &source.Position{Line: 3, Column: 56}},
 			},
 			"key3": {
 				Scalar: &ScalarValue{
@@ -212,14 +213,14 @@ func (s *MappingNodeTestSuite) assertFieldsNodeYAML(actual *MappingNode) {
 					ColumnAccuracy: exactColAccuracy(),
 					},
 				},
-				SourceMeta: &source.Meta{Position: source.Position{Line: 4, Column: 15}},
+				SourceMeta: &source.Meta{Position: source.Position{Line: 4, Column: 15}, EndPosition: &source.Position{Line: 4, Column: 23}},
 			},
 		},
 		SourceMeta: &source.Meta{Position: source.Position{Line: 2, Column: 9}},
 		FieldsSourceMeta: map[string]*source.Meta{
-			"key1": {Position: source.Position{Line: 2, Column: 9}},
-			"key2": {Position: source.Position{Line: 3, Column: 9}},
-			"key3": {Position: source.Position{Line: 4, Column: 9}},
+			"key1": {Position: source.Position{Line: 2, Column: 9}, EndPosition: &source.Position{Line: 2, Column: 13}},
+			"key2": {Position: source.Position{Line: 3, Column: 9}, EndPosition: &source.Position{Line: 3, Column: 13}},
+			"key3": {Position: source.Position{Line: 4, Column: 9}, EndPosition: &source.Position{Line: 4, Column: 13}},
 		},
 	}, actual)
 }
@@ -283,7 +284,7 @@ func (s *MappingNodeTestSuite) assertItemsNodeYAML(actual *MappingNode) {
 					ColumnAccuracy: exactColAccuracy(),
 					},
 				},
-				SourceMeta: &source.Meta{Position: source.Position{Line: 2, Column: 11}},
+				SourceMeta: &source.Meta{Position: source.Position{Line: 2, Column: 11}, EndPosition: &source.Position{Line: 2, Column: 19}},
 			},
 			{
 				StringWithSubstitutions: &substitutions.StringOrSubstitutions{
@@ -325,7 +326,7 @@ func (s *MappingNodeTestSuite) assertItemsNodeYAML(actual *MappingNode) {
 					ColumnAccuracy: exactColAccuracy(),
 					},
 				},
-				SourceMeta: &source.Meta{Position: source.Position{Line: 3, Column: 11}},
+				SourceMeta: &source.Meta{Position: source.Position{Line: 3, Column: 11}, EndPosition: &source.Position{Line: 3, Column: 52}},
 			},
 			{
 				Scalar: &ScalarValue{
@@ -336,7 +337,7 @@ func (s *MappingNodeTestSuite) assertItemsNodeYAML(actual *MappingNode) {
 					ColumnAccuracy: exactColAccuracy(),
 					},
 				},
-				SourceMeta: &source.Meta{Position: source.Position{Line: 4, Column: 11}},
+				SourceMeta: &source.Meta{Position: source.Position{Line: 4, Column: 11}, EndPosition: &source.Position{Line: 4, Column: 19}},
 			},
 		},
 		SourceMeta: &source.Meta{Position: source.Position{Line: 2, Column: 9}},
@@ -455,7 +456,8 @@ func (s *MappingNodeTestSuite) assertNestedNodeYAML(actual *MappingNode) {
 					},
 				},
 				SourceMeta: &source.Meta{
-					Position: source.Position{Line: 2, Column: 17},
+					Position:    source.Position{Line: 2, Column: 17},
+					EndPosition: &source.Position{Line: 2, Column: 26},
 				},
 			},
 			"key2": {
@@ -469,12 +471,12 @@ func (s *MappingNodeTestSuite) assertNestedNodeYAML(actual *MappingNode) {
 							ColumnAccuracy: exactColAccuracy(),
 							},
 						},
-						SourceMeta: &source.Meta{Position: source.Position{Line: 4, Column: 19}},
+						SourceMeta: &source.Meta{Position: source.Position{Line: 4, Column: 19}, EndPosition: &source.Position{Line: 4, Column: 28}},
 					},
 				},
 				SourceMeta: &source.Meta{Position: source.Position{Line: 4, Column: 13}},
 				FieldsSourceMeta: map[string]*source.Meta{
-					"key3": {Position: source.Position{Line: 4, Column: 13}},
+					"key3": {Position: source.Position{Line: 4, Column: 13}, EndPosition: &source.Position{Line: 4, Column: 17}},
 				},
 			},
 			"key4": {
@@ -489,7 +491,8 @@ func (s *MappingNodeTestSuite) assertNestedNodeYAML(actual *MappingNode) {
 							},
 						},
 						SourceMeta: &source.Meta{
-							Position: source.Position{Line: 6, Column: 14},
+							Position:    source.Position{Line: 6, Column: 14},
+							EndPosition: &source.Position{Line: 6, Column: 23},
 						},
 					},
 					{
@@ -532,7 +535,7 @@ func (s *MappingNodeTestSuite) assertNestedNodeYAML(actual *MappingNode) {
 							ColumnAccuracy: exactColAccuracy(),
 							},
 						},
-						SourceMeta: &source.Meta{Position: source.Position{Line: 7, Column: 14}},
+						SourceMeta: &source.Meta{Position: source.Position{Line: 7, Column: 14}, EndPosition: &source.Position{Line: 7, Column: 57}},
 					},
 				},
 				SourceMeta: &source.Meta{Position: source.Position{Line: 6, Column: 12}},
@@ -547,16 +550,17 @@ func (s *MappingNodeTestSuite) assertNestedNodeYAML(actual *MappingNode) {
 					},
 				},
 				SourceMeta: &source.Meta{
-					Position: source.Position{Line: 8, Column: 17},
+					Position:    source.Position{Line: 8, Column: 17},
+					EndPosition: &source.Position{Line: 8, Column: 26},
 				},
 			},
 		},
 		SourceMeta: &source.Meta{Position: source.Position{Line: 2, Column: 11}},
 		FieldsSourceMeta: map[string]*source.Meta{
-			"key1": {Position: source.Position{Line: 2, Column: 11}},
-			"key2": {Position: source.Position{Line: 3, Column: 11}},
-			"key4": {Position: source.Position{Line: 5, Column: 11}},
-			"key5": {Position: source.Position{Line: 8, Column: 11}},
+			"key1": {Position: source.Position{Line: 2, Column: 11}, EndPosition: &source.Position{Line: 2, Column: 15}},
+			"key2": {Position: source.Position{Line: 3, Column: 11}, EndPosition: &source.Position{Line: 3, Column: 15}},
+			"key4": {Position: source.Position{Line: 5, Column: 11}, EndPosition: &source.Position{Line: 5, Column: 15}},
+			"key5": {Position: source.Position{Line: 8, Column: 11}, EndPosition: &source.Position{Line: 8, Column: 15}},
 		},
 	}, actual)
 }

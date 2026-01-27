@@ -145,6 +145,14 @@ func NewResourceRegistryMock(
 	return registry
 }
 
+func (r *ResourceRegistryMock) ListTransformers(ctx context.Context) ([]string, error) {
+	transformerTypes := make([]string, 0, len(r.Resources))
+	for resourceType := range r.Resources {
+		transformerTypes = append(transformerTypes, resourceType)
+	}
+	return transformerTypes, nil
+}
+
 func (r *ResourceRegistryMock) HasResourceType(ctx context.Context, resourceType string) (bool, error) {
 	_, ok := r.Resources[resourceType]
 	return ok, nil

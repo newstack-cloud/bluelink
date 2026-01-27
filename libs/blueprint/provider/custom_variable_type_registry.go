@@ -17,6 +17,14 @@ type CustomVariableTypeRegistry interface {
 		input *CustomVariableTypeGetDescriptionInput,
 	) (*CustomVariableTypeGetDescriptionOutput, error)
 
+	// GetOptions returns the available options for a custom variable type.
+	// Options are a fixed set of allowed values that behave like a runtime enum.
+	GetOptions(
+		ctx context.Context,
+		customVariableType string,
+		input *CustomVariableTypeOptionsInput,
+	) (*CustomVariableTypeOptionsOutput, error)
+
 	// HasCustomVariableType checks if a custom variable type is available in the registry.
 	HasCustomVariableType(ctx context.Context, customVariableType string) (bool, error)
 
@@ -52,6 +60,19 @@ func (r *customVarTypeRegistryFromProviders) GetDescription(
 	}
 
 	return customVarTypeImpl.GetDescription(ctx, input)
+}
+
+func (r *customVarTypeRegistryFromProviders) GetOptions(
+	ctx context.Context,
+	customVariableType string,
+	input *CustomVariableTypeOptionsInput,
+) (*CustomVariableTypeOptionsOutput, error) {
+	customVarTypeImpl, err := r.getCustomVariableType(ctx, customVariableType)
+	if err != nil {
+		return nil, err
+	}
+
+	return customVarTypeImpl.Options(ctx, input)
 }
 
 func (r *customVarTypeRegistryFromProviders) HasCustomVariableType(

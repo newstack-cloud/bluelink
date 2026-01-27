@@ -148,15 +148,17 @@ func ExtractSourcePositionFromJSONNode(
 }
 
 // ExtractSourcePositionForJSONNodeMapField extracts the position
-// in source document from a given JSON node and line positions.
+// in source document for a map field's KEY (not value) from a given JSON node.
+// This is useful for error reporting where we want to highlight the field name.
 func ExtractSourcePositionForJSONNodeMapField(
 	node *json.Node,
 	linePositions []int,
 ) *Meta {
 	position := PositionFromOffset(node.KeyStart, linePositions)
+	// Use KeyEnd for the end position to highlight just the key, not the value.
 	// coreos/go-json counts the end offset as the index of the last
-	// character in the node, so we need to add 1 to get the end position.
-	endOffset := node.End + 1
+	// character, so we need to add 1 to get the end position.
+	endOffset := node.KeyEnd
 	endPosition := PositionFromOffset(endOffset, linePositions)
 	return &Meta{
 		Position:    position,
@@ -165,14 +167,10 @@ func ExtractSourcePositionForJSONNodeMapField(
 }
 
 func getJSONNodeStartOffset(node *json.Node) int {
-	startOffset := node.KeyEnd
-	if startOffset == 0 {
-		// Not a value for a map, take the start position of the value
-		// instead of the end of a key in a map.
-		startOffset = node.Start
-	}
-
-	return startOffset
+	// Always use node.Start to get the value's position.
+	// node.KeyEnd points to ':' (after the key), not to the value itself.
+	// node.Start is the correct offset for where the value begins.
+	return node.Start
 }
 
 // PositionFromJSONNode returns the position of a JSON node

@@ -126,7 +126,7 @@ func errResourceDefUnknownField(
 	availableFields []string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 
 	// Find similar field names for typo suggestions (max 3 results, default threshold)
 	suggestions := strsim.FindSimilar(field, availableFields, 3, 0)
@@ -157,8 +157,10 @@ func errResourceDefUnknownField(
 			resourceType,
 			metadata,
 		),
-		Line:   line,
-		Column: col,
+		Line:      posRange.Line,
+		Column:    posRange.Column,
+		EndLine:   posRange.EndLine,
+		EndColumn: posRange.EndColumn,
 	}
 }
 
@@ -257,7 +259,7 @@ func errResourceDefNotAllowedValue(
 	allowedValuesText string,
 	location *source.Meta,
 ) error {
-	line, col := source.PositionFromSourceMeta(location)
+	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeResourceDefNotAllowedValue,
 		Err: fmt.Errorf(
@@ -266,8 +268,10 @@ func errResourceDefNotAllowedValue(
 			path,
 			allowedValuesText,
 		),
-		Line:   line,
-		Column: col,
+		Line:      posRange.Line,
+		Column:    posRange.Column,
+		EndLine:   posRange.EndLine,
+		EndColumn: posRange.EndColumn,
 		Context: createResourceDefErrorContext(
 			ErrorReasonCodeResourceDefNotAllowedValue,
 			resourceType,

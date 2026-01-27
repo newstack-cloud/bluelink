@@ -85,6 +85,8 @@ func (m *MappingNode) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	if node.Kind == yaml.ScalarNode {
+		// For scalar nodes, compute the end position for precise error ranges
+		m.SourceMeta.EndPosition = source.EndSourcePositionFromYAMLScalarNode(node)
 		return m.parseYAMLSubstitutionsOrScalar(node)
 	}
 
@@ -115,6 +117,7 @@ func (m *MappingNode) UnmarshalYAML(node *yaml.Node) error {
 					Line:   key.Line,
 					Column: key.Column,
 				},
+				EndPosition: source.EndSourcePositionFromYAMLScalarNode(key),
 			}
 		}
 		return nil

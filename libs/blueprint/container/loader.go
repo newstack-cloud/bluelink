@@ -1130,7 +1130,10 @@ func (l *defaultLoader) validateVariable(
 	}
 
 	if varSchema.Type == nil {
-		currentVarErrs = append(currentVarErrs, errMissingVariableType(name, varSchema.SourceMeta))
+		// Use the variable key's source location (from SourceMeta map), not the value's source location.
+		// This ensures the diagnostic points to "myVar:" rather than the first property inside the variable.
+		keySourceMeta := bpSchema.Variables.SourceMeta[name]
+		currentVarErrs = append(currentVarErrs, errMissingVariableType(name, keySourceMeta))
 		return currentVarErrs
 	}
 
