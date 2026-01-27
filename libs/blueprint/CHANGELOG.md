@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.39.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.38.0...blueprint/v0.39.0) (2026-01-27)
+
+
+### Features
+
+* **blueprint:** add end position capture for mapping nodes and new registry methods ([36913e6](https://github.com/newstack-cloud/bluelink/commit/36913e6fe77d6cc2cf751d3636f256a8e18e78e5))
+* **blueprint:** add field to more accurately map annotation to resource ([478e984](https://github.com/newstack-cloud/bluelink/commit/478e9841dad47d3a0d2d1b80dc3a1b25baa40142))
+* **blueprint:** add improvements to diagnostics and errors ([a182c6c](https://github.com/newstack-cloud/bluelink/commit/a182c6c655871c287a228a7dae398fbc04b8ed92))
+* **blueprint:** add support for single quotes in name accessors ([b179879](https://github.com/newstack-cloud/bluelink/commit/b179879ec75bf7919b5615f184acac9eee6f12ac))
+
+
+### Bug Fixes
+
+* **blueprint:** add improvements to errors and position tracking for errors ([77186c7](https://github.com/newstack-cloud/bluelink/commit/77186c7e6b38ec9d0fbc87480afaf6b151dbbab3))
+* **blueprint:** add validation improvements and defensive checks ([ab0bea4](https://github.com/newstack-cloud/bluelink/commit/ab0bea421c19020e1a27a09506a99649b328aca3))
+
 ## [0.38.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.37.0...blueprint/v0.38.0) (2026-01-11)
 
 
