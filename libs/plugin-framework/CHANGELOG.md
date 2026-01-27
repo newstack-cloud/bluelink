@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.3.0...plugin-framework/v0.4.0) (2026-01-27)
+
+
+### Features
+
+* **plugin-framework:** add layer to dynamically resolve linkable resource types ([ea1d9e3](https://github.com/newstack-cloud/bluelink/commit/ea1d9e3d7dc8bdbef02d891f37babbbbda053b8a))
+
+
+### Dependencies
+
+* **plugin-framework:** update blueprint and common libs ([67e8ed1](https://github.com/newstack-cloud/bluelink/commit/67e8ed14d239058f9ae577cb849d05b6f35c9ebb))
+
 ## [0.3.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.2.0...plugin-framework/v0.3.0) (2026-01-27)
 
 
