@@ -118,6 +118,7 @@ func validateLinkAnnotationsForResources(
 	annotationDefs := getLinkAnnotationDefinitions(
 		linkAnnotationDefsOutput,
 	)
+	// Validate annotations for resource A (the current link chain node)
 	err := validateResourceLinkAnnotations(
 		linkChainNode.ResourceName,
 		schema.GetResourceType(linkChainNode.Resource),
@@ -125,6 +126,7 @@ func validateLinkAnnotationsForResources(
 		resourceAnnotations,
 		metadataBlockLocation,
 		annotationDefs,
+		provider.LinkAnnotationResourceA,
 		diagnostics,
 	)
 	if err != nil {
@@ -138,6 +140,7 @@ func validateLinkAnnotationsForResources(
 	otherResourceAnnotations := getAnnotations(
 		otherLinkChainNode.Resource,
 	)
+	// Validate annotations for resource B (the linked resource)
 	return validateResourceLinkAnnotations(
 		otherLinkChainNode.ResourceName,
 		schema.GetResourceType(otherLinkChainNode.Resource),
@@ -145,6 +148,7 @@ func validateLinkAnnotationsForResources(
 		otherResourceAnnotations,
 		getMetadataBlockLocation(otherLinkChainNode.Resource),
 		annotationDefs,
+		provider.LinkAnnotationResourceB,
 		diagnostics,
 	)
 }
@@ -170,11 +174,15 @@ func validateResourceLinkAnnotations(
 	// when required annotations are missing.
 	metadataBlockLocation *source.Meta,
 	linkAnnotationDefinitions map[string]*provider.LinkAnnotationDefinition,
+	// resourcePosition indicates whether this is resource A or B in the link relationship.
+	// This is used to filter annotations based on the AppliesTo field.
+	resourcePosition provider.LinkAnnotationResource,
 	diagnostics *[]*core.Diagnostic,
 ) error {
 	linkAnnotationDefinitionsForResourceType := extractAnnotationDefinitionsForResourceType(
 		resourceType,
 		linkAnnotationDefinitions,
+		resourcePosition,
 	)
 	for definitionKey, definition := range linkAnnotationDefinitionsForResourceType {
 		renderedDefAnnotationName := replacePlaceholderWithResourceName(
@@ -383,6 +391,7 @@ func validateAnnotationAllowedValues(
 func extractAnnotationDefinitionsForResourceType(
 	resourceType string,
 	linkAnnotationDefinitions map[string]*provider.LinkAnnotationDefinition,
+	resourcePosition provider.LinkAnnotationResource,
 ) map[string]*provider.LinkAnnotationDefinition {
 	if resourceType == "" {
 		return linkAnnotationDefinitions
@@ -392,12 +401,27 @@ func extractAnnotationDefinitionsForResourceType(
 	resourceTypeAnnotationDefs := make(map[string]*provider.LinkAnnotationDefinition)
 
 	for key, definition := range linkAnnotationDefinitions {
-		if strings.HasPrefix(key, resourceTypePrefix) {
+		if strings.HasPrefix(key, resourceTypePrefix) &&
+			annotationAppliesToResource(definition.AppliesTo, resourcePosition) {
 			resourceTypeAnnotationDefs[key] = definition
 		}
 	}
 
 	return resourceTypeAnnotationDefs
+}
+
+// annotationAppliesToResource checks if an annotation definition applies to the given
+// resource position in the link relationship.
+func annotationAppliesToResource(
+	appliesTo provider.LinkAnnotationResource,
+	resourcePosition provider.LinkAnnotationResource,
+) bool {
+	// LinkAnnotationResourceAny applies to either resource
+	if appliesTo == provider.LinkAnnotationResourceAny {
+		return true
+	}
+	// Otherwise, the annotation must match the specific resource position
+	return appliesTo == resourcePosition
 }
 
 type resourceAnnotationInfo struct {

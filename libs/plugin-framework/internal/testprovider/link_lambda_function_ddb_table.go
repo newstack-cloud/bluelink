@@ -54,6 +54,7 @@ func LinkLambdaFunctionDDBTableAnnotations() map[string]*provider.LinkAnnotation
 			AllowedValues: allowedValues,
 			Examples:      allowedValues,
 			Required:      true,
+			AppliesTo:     provider.LinkAnnotationResourceA,
 		},
 	}
 }

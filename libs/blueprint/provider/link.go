@@ -208,10 +208,10 @@ type LinkUpdateIntermediaryResourcesOutput struct {
 // LinkGetIntermediaryExternalStateInput provides the input for fetching
 // external state of intermediary resources.
 type LinkGetIntermediaryExternalStateInput struct {
-	InstanceID   string
-	InstanceName string
-	LinkID       string
-	LinkName     string
+	InstanceID    string
+	InstanceName  string
+	LinkID        string
+	LinkName      string
 	ResourceAInfo *ResourceInfo
 	ResourceBInfo *ResourceInfo
 	// IntermediaryResourceIDs specifies which intermediary resources to fetch.
@@ -350,6 +350,13 @@ type LinkAnnotationDefinition struct {
 	AllowedValues []*core.ScalarValue `json:"allowedValues,omitempty"`
 	Examples      []*core.ScalarValue `json:"examples,omitempty"`
 	Required      bool                `json:"required"`
+	// AppliesTo determines which resource in the link relationship
+	// the annotation can be applied to.
+	// When not set, the target resource is determined based on the resource type
+	// in the annotation definition key.
+	// However, this field must be set when the link relationship is between
+	// two resources of the same type to avoid ambiguity.
+	AppliesTo LinkAnnotationResource `json:"appliesTo"`
 	// ValidateFunc is a custom validation function that allows for validation
 	// of annotation values when provided as literals.
 	// When substitutions are used as annotation values (e.g. `${variables.myVar}`),
@@ -362,6 +369,21 @@ type LinkAnnotationDefinition struct {
 		annotationValue *core.ScalarValue,
 	) []*core.Diagnostic `json:"-"`
 }
+
+// LinkAnnotationResource determines which resource
+// in the link relationship an annotation applies to.
+type LinkAnnotationResource int
+
+const (
+	// LinkAnnotationResourceAny applies to either resource in the link relationship.
+	// Typically used when AppliesTo is not set, indicating that the resource type
+	// should be derived from the annotation definition key.
+	LinkAnnotationResourceAny LinkAnnotationResource = iota
+	// LinkAnnotationResourceA applies to the first resource in the link relationship.
+	LinkAnnotationResourceA
+	// LinkAnnotationResourceB applies to the second resource in the link relationship.
+	LinkAnnotationResourceB
+)
 
 // LinkKind provides a way to categorise links to help determine the order
 // in which resources need to be deployed when a blueprint instance is being deployed.

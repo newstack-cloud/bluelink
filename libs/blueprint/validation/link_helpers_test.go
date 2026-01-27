@@ -55,19 +55,22 @@ func (l *testResourceTypeAResourceTypeBLink) GetAnnotationDefinitions(
 					core.ScalarFromString("test-value"),
 					core.ScalarFromString("targeted-test-value"),
 				},
-				Required: true,
+				Required:  true,
+				AppliesTo: provider.LinkAnnotationResourceA,
 			},
 			"test/resourceTypeA::test.string.<resourceTypeBName>.annotation": {
 				Name:        "test.string.<resourceTypeBName>.annotation",
 				Label:       "Test String Annotation for Resource Type B",
 				Type:        core.ScalarTypeString,
 				Description: "This is a test string annotation for resource type A that targets resource type B.",
+				AppliesTo:   provider.LinkAnnotationResourceA,
 			},
 			"test/resourceTypeA::test.int.annotation": {
 				Name:        "test.int.annotation",
 				Label:       "Test Integer Annotation",
 				Type:        core.ScalarTypeInteger,
 				Description: "This is a test integer annotation for resource type A.",
+				AppliesTo:   provider.LinkAnnotationResourceA,
 				ValidateFunc: func(key string, annotationValue *core.ScalarValue) []*core.Diagnostic {
 					intVal := core.IntValueFromScalar(annotationValue)
 					if intVal > 800000 {
@@ -90,12 +93,14 @@ func (l *testResourceTypeAResourceTypeBLink) GetAnnotationDefinitions(
 				Label:       "Test Boolean Annotation",
 				Type:        core.ScalarTypeBool,
 				Description: "This is a test boolean annotation for resource type B.",
+				AppliesTo:   provider.LinkAnnotationResourceB,
 			},
 			"test/resourceTypeB::test.float.annotation": {
 				Name:        "test.float.annotation",
 				Label:       "Test Float Annotation",
 				Type:        core.ScalarTypeFloat,
 				Description: "This is a test float annotation for resource type B.",
+				AppliesTo:   provider.LinkAnnotationResourceB,
 			},
 		},
 	}, nil
