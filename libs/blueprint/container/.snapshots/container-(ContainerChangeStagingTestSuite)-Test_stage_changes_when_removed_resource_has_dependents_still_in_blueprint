@@ -346,7 +346,10 @@
                     Line: (int) 119,
                     Column: (int) 16
                   },
-                  EndPosition: (*source.Position)(<nil>),
+                  EndPosition: (*source.Position)({
+                    Line: (int) 119,
+                    Column: (int) 44
+                  }),
                   ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                 }),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -416,7 +419,10 @@
                 Line: (int) 119,
                 Column: (int) 16
               },
-              EndPosition: (*source.Position)(<nil>),
+              EndPosition: (*source.Position)({
+                Line: (int) 119,
+                Column: (int) 44
+              }),
               ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
             }),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -778,7 +784,10 @@
                           Line: (int) 75,
                           Column: (int) 14
                         },
-                        EndPosition: (*source.Position)(<nil>),
+                        EndPosition: (*source.Position)({
+                          Line: (int) 75,
+                          Column: (int) 17
+                        }),
                         ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                       }),
                       FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -811,7 +820,10 @@
                           Line: (int) 76,
                           Column: (int) 14
                         },
-                        EndPosition: (*source.Position)(<nil>),
+                        EndPosition: (*source.Position)({
+                          Line: (int) 76,
+                          Column: (int) 17
+                        }),
                         ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                       }),
                       FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -1073,7 +1085,10 @@
                 Line: (int) 75,
                 Column: (int) 14
               },
-              EndPosition: (*source.Position)(<nil>),
+              EndPosition: (*source.Position)({
+                Line: (int) 75,
+                Column: (int) 17
+              }),
               ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
             }),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -1127,7 +1142,10 @@
                 Line: (int) 76,
                 Column: (int) 14
               },
-              EndPosition: (*source.Position)(<nil>),
+              EndPosition: (*source.Position)({
+                Line: (int) 76,
+                Column: (int) 17
+              }),
               ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
             }),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -1630,7 +1648,10 @@
                           Line: (int) 75,
                           Column: (int) 14
                         },
-                        EndPosition: (*source.Position)(<nil>),
+                        EndPosition: (*source.Position)({
+                          Line: (int) 75,
+                          Column: (int) 17
+                        }),
                         ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                       }),
                       FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -1663,7 +1684,10 @@
                           Line: (int) 76,
                           Column: (int) 14
                         },
-                        EndPosition: (*source.Position)(<nil>),
+                        EndPosition: (*source.Position)({
+                          Line: (int) 76,
+                          Column: (int) 17
+                        }),
                         ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                       }),
                       FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -1925,7 +1949,10 @@
                 Line: (int) 75,
                 Column: (int) 14
               },
-              EndPosition: (*source.Position)(<nil>),
+              EndPosition: (*source.Position)({
+                Line: (int) 75,
+                Column: (int) 17
+              }),
               ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
             }),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -1979,7 +2006,10 @@
                 Line: (int) 76,
                 Column: (int) 14
               },
-              EndPosition: (*source.Position)(<nil>),
+              EndPosition: (*source.Position)({
+                Line: (int) 76,
+                Column: (int) 17
+              }),
               ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
             }),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -2289,7 +2319,10 @@
                     Line: (int) 128,
                     Column: (int) 16
                   },
-                  EndPosition: (*source.Position)(<nil>),
+                  EndPosition: (*source.Position)({
+                    Line: (int) 128,
+                    Column: (int) 39
+                  }),
                   ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                 }),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -2825,7 +2858,10 @@
                                 Line: (int) 20,
                                 Column: (int) 13
                               },
-                              EndPosition: (*source.Position)(<nil>),
+                              EndPosition: (*source.Position)({
+                                Line: (int) 20,
+                                Column: (int) 36
+                              }),
                               ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                             }),
                             FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -2858,7 +2894,10 @@
                                 Line: (int) 21,
                                 Column: (int) 13
                               },
-                              EndPosition: (*source.Position)(<nil>),
+                              EndPosition: (*source.Position)({
+                                Line: (int) 21,
+                                Column: (int) 36
+                              }),
                               ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                             }),
                             FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -2896,7 +2935,10 @@
                             Line: (int) 22,
                             Column: (int) 15
                           },
-                          EndPosition: (*source.Position)(<nil>),
+                          EndPosition: (*source.Position)({
+                            Line: (int) 22,
+                            Column: (int) 19
+                          }),
                           ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                         }),
                         FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -3049,7 +3091,10 @@
                                 Line: (int) 28,
                                 Column: (int) 21
                               },
-                              EndPosition: (*source.Position)(<nil>),
+                              EndPosition: (*source.Position)({
+                                Line: (int) 28,
+                                Column: (int) 40
+                              }),
                               ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                             }),
                             FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -3082,7 +3127,10 @@
                                 Line: (int) 27,
                                 Column: (int) 28
                               },
-                              EndPosition: (*source.Position)(<nil>),
+                              EndPosition: (*source.Position)({
+                                Line: (int) 27,
+                                Column: (int) 54
+                              }),
                               ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                             }),
                             FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -3154,7 +3202,10 @@
                     Line: (int) 20,
                     Column: (int) 13
                   },
-                  EndPosition: (*source.Position)(<nil>),
+                  EndPosition: (*source.Position)({
+                    Line: (int) 20,
+                    Column: (int) 36
+                  }),
                   ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                 }),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -3208,7 +3259,10 @@
                     Line: (int) 21,
                     Column: (int) 13
                   },
-                  EndPosition: (*source.Position)(<nil>),
+                  EndPosition: (*source.Position)({
+                    Line: (int) 21,
+                    Column: (int) 36
+                  }),
                   ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                 }),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -3262,7 +3316,10 @@
                     Line: (int) 22,
                     Column: (int) 15
                   },
-                  EndPosition: (*source.Position)(<nil>),
+                  EndPosition: (*source.Position)({
+                    Line: (int) 22,
+                    Column: (int) 19
+                  }),
                   ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                 }),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -3387,7 +3444,10 @@
                     Line: (int) 28,
                     Column: (int) 21
                   },
-                  EndPosition: (*source.Position)(<nil>),
+                  EndPosition: (*source.Position)({
+                    Line: (int) 28,
+                    Column: (int) 40
+                  }),
                   ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                 }),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -3441,7 +3501,10 @@
                     Line: (int) 27,
                     Column: (int) 28
                   },
-                  EndPosition: (*source.Position)(<nil>),
+                  EndPosition: (*source.Position)({
+                    Line: (int) 27,
+                    Column: (int) 54
+                  }),
                   ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                 }),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -3713,7 +3776,10 @@
                   Line: (int) 41,
                   Column: (int) 10
                 },
-                EndPosition: (*source.Position)(<nil>),
+                EndPosition: (*source.Position)({
+                  Line: (int) 41,
+                  Column: (int) 17
+                }),
                 ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
               }),
               FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -3830,7 +3896,10 @@
               Line: (int) 145,
               Column: (int) 10
             },
-            EndPosition: (*source.Position)(<nil>),
+            EndPosition: (*source.Position)({
+              Line: (int) 145,
+              Column: (int) 17
+            }),
             ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
           }),
           FieldsSourceMeta: (map[string]*source.Meta) <nil>

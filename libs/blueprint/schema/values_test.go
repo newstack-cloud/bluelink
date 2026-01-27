@@ -182,6 +182,10 @@ func (s *ValueTestSuite) Test_parses_valid_value_yaml_input(c *C) {
 				Line:   2,
 				Column: 8,
 			},
+			EndPosition: &source.Position{
+				Line:   2,
+				Column: 49,
+			},
 		},
 	})
 	c.Assert(targetVal.SourceMeta, NotNil)
@@ -291,6 +295,10 @@ func (s *ValueTestSuite) Test_serialise_valid_value_yaml_input(c *C) {
 			Position: source.Position{
 				Line:   2,
 				Column: 8,
+			},
+			EndPosition: &source.Position{
+				Line:   2,
+				Column: 17,
 			},
 		},
 	})

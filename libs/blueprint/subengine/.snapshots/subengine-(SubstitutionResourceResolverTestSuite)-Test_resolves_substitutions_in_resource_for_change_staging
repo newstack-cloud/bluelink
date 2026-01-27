@@ -187,7 +187,10 @@
                     Line: (int) 74,
                     Column: (int) 14
                   },
-                  EndPosition: (*source.Position)(<nil>),
+                  EndPosition: (*source.Position)({
+                    Line: (int) 74,
+                    Column: (int) 17
+                  }),
                   ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                 }),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -220,7 +223,10 @@
                     Line: (int) 75,
                     Column: (int) 14
                   },
-                  EndPosition: (*source.Position)(<nil>),
+                  EndPosition: (*source.Position)({
+                    Line: (int) 75,
+                    Column: (int) 17
+                  }),
                   ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
                 }),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
