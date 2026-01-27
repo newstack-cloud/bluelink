@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.3.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.2.0...plugin-framework/v0.3.0) (2026-01-27)
+
+
+### Features
+
+* **blueprint:** add field to more accurately map annotation to resource ([478e984](https://github.com/newstack-cloud/bluelink/commit/478e9841dad47d3a0d2d1b80dc3a1b25baa40142))
+* **plugin-framework:** add applies to field to link annotation definition protobuf ([1262bf7](https://github.com/newstack-cloud/bluelink/commit/1262bf73d73b82bd08aa455b7f9fe6e7e8a00739))
+* **plugin-framework:** add support for killing plugin processes ([a00c202](https://github.com/newstack-cloud/bluelink/commit/a00c2024e903a90191c21d7b474f3b04fac8b874))
+
+
+### Bug Fixes
+
+* **plugin-framework:** add defensive checks for incomplete inputs ([70484a8](https://github.com/newstack-cloud/bluelink/commit/70484a898fd8aeae9163c835db26e96d2d382608))
+* **plugin-framework:** add defensive checks to support rapid editing ([84ad6ac](https://github.com/newstack-cloud/bluelink/commit/84ad6ac71fe2f31f1072a99f1641da53c8ebf94e))
+* **plugin-framework:** add missing resource schema fields to protobuf serialisation ([1fb4494](https://github.com/newstack-cloud/bluelink/commit/1fb4494282c62f2df4cc84cc3acc0dac03be0f9d))
+
+
+### Dependencies
+
+* **plugin-framework:** update blueprint core lib version ([2557bc3](https://github.com/newstack-cloud/bluelink/commit/2557bc37ae50090e91d180c8202ca19c5ea34cb5))
+
 ## [0.2.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.1.4...plugin-framework/v0.2.0) (2026-01-06)
 
 
