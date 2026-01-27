@@ -738,6 +738,7 @@ func toPBLinkAnnotationDefinition(
 		AllowedValues: allowedValues,
 		Examples:      examples,
 		Required:      definition.Required,
+		AppliesTo:     int32(definition.AppliesTo),
 	}, nil
 }
 

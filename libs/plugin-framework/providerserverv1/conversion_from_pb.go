@@ -162,6 +162,7 @@ func fromPBLinkAnnotationDefinition(
 		AllowedValues: allowedValues,
 		Examples:      examples,
 		Required:      pbDefinition.Required,
+		AppliesTo:     provider.LinkAnnotationResource(pbDefinition.AppliesTo),
 	}, nil
 }
 

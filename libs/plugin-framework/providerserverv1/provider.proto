@@ -1299,6 +1299,10 @@ message LinkAnnotationDefinition {
     repeated schema.ScalarValue allowed_values = 6;
     repeated schema.ScalarValue examples = 7;
     bool required = 8;
+    // AppliesTo determines which resource in the link relationship
+    // the annotation can be applied to.
+    // 0 = Any (default), 1 = ResourceA, 2 = ResourceB
+    int32 applies_to = 9;
 }
 
 // LinkContext holds the environment configuration
