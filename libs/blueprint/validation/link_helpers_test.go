@@ -65,6 +65,13 @@ func (l *testResourceTypeAResourceTypeBLink) GetAnnotationDefinitions(
 				Description: "This is a test string annotation for resource type A that targets resource type B.",
 				AppliesTo:   provider.LinkAnnotationResourceA,
 			},
+			"test/resourceTypeA::test.bool.<resourceTypeBName>.annotation": {
+				Name:        "test.bool.<resourceTypeBName>.annotation",
+				Label:       "Test Boolean Annotation for Resource Type B",
+				Type:        core.ScalarTypeBool,
+				Description: "This is a test boolean annotation for resource type A that targets resource type B.",
+				AppliesTo:   provider.LinkAnnotationResourceA,
+			},
 			"test/resourceTypeA::test.int.annotation": {
 				Name:        "test.int.annotation",
 				Label:       "Test Integer Annotation",

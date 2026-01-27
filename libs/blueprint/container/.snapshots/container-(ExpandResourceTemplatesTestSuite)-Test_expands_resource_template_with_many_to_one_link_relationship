@@ -588,6 +588,7 @@
               },
               SourceMeta: (map[string]*source.Meta) <nil>
             }),
+            Exclude: (*schema.StringList)(<nil>),
             SourceMeta: (*source.Meta)(<nil>)
           }),
           Spec: (*core.MappingNode)({
@@ -784,6 +785,7 @@
               },
               SourceMeta: (map[string]*source.Meta) <nil>
             }),
+            Exclude: (*schema.StringList)(<nil>),
             SourceMeta: (*source.Meta)(<nil>)
           }),
           Spec: (*core.MappingNode)({
@@ -980,6 +982,7 @@
               },
               SourceMeta: (map[string]*source.Meta) <nil>
             }),
+            Exclude: (*schema.StringList)(<nil>),
             SourceMeta: (*source.Meta)(<nil>)
           }),
           Spec: (*core.MappingNode)({

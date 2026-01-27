@@ -1594,6 +1594,7 @@
               })
             }
           }),
+          Exclude: (*schema.StringList)(<nil>),
           SourceMeta: (*source.Meta)({
             Position: (source.Position) {
               Line: (int) 57,
@@ -1967,6 +1968,7 @@
               })
             }
           }),
+          Exclude: (*schema.StringList)(<nil>),
           SourceMeta: (*source.Meta)({
             Position: (source.Position) {
               Line: (int) 172,

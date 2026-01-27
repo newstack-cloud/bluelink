@@ -3,6 +3,7 @@ package validation
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -189,20 +190,21 @@ func validateResourceLinkAnnotations(
 			definition.Name,
 			linksTo,
 		)
-		resourceAnnotationInfo, err := getMatchingAnnotation(
+
+		// Get all annotations that match this definition.
+		// For dynamic definitions (with placeholders), this uses pattern matching
+		// to find all annotations that match the pattern, not just those
+		// that exactly match the rendered definition name.
+		matchingAnnotations, err := getAllMatchingAnnotations(
 			definition.Name,
-			renderedDefAnnotationName,
 			resourceAnnotations,
 		)
 		if err != nil {
 			return err
 		}
 
-		if (!resourceAnnotationInfo.hasResourceAnnotation ||
-			substitutions.IsNilStringSubs(resourceAnnotationInfo.annotation)) && definition.Required {
-			// Collect error diagnostics instead of returning an early error
-			// to allow for multiple annotation diagnostics to be reported
-			// at once.
+		// Check if required annotation is missing
+		if len(matchingAnnotations) == 0 && definition.Required {
 			*diagnostics = append(*diagnostics, &core.Diagnostic{
 				Level: core.DiagnosticLevelError,
 				Message: fmt.Sprintf(
@@ -216,40 +218,40 @@ func validateResourceLinkAnnotations(
 					nil,
 				),
 			})
-
 			return nil
 		}
 
-		// Skip validation for non-required annotations that are not defined.
-		if !resourceAnnotationInfo.hasResourceAnnotation ||
-			substitutions.IsNilStringSubs(resourceAnnotationInfo.annotation) {
-			continue
-		}
+		// Validate each matching annotation
+		for _, resourceAnnotationInfo := range matchingAnnotations {
+			if substitutions.IsNilStringSubs(resourceAnnotationInfo.annotation) {
+				continue
+			}
 
-		parsedValue, isCorrectTypeAndValueKnown := validateAnnotationType(
-			resourceAnnotationInfo,
-			definition,
-			resourceName,
-			diagnostics,
-		)
-
-		if isCorrectTypeAndValueKnown && len(definition.AllowedValues) > 0 {
-			validateAnnotationAllowedValues(
-				parsedValue,
+			parsedValue, isCorrectTypeAndValueKnown := validateAnnotationType(
 				resourceAnnotationInfo,
 				definition,
 				resourceName,
-				definitionKey,
 				diagnostics,
 			)
-		}
 
-		if isCorrectTypeAndValueKnown && definition.ValidateFunc != nil {
-			customValidateDiagnostics := definition.ValidateFunc(
-				renderedDefAnnotationName,
-				parsedValue,
-			)
-			*diagnostics = append(*diagnostics, customValidateDiagnostics...)
+			if isCorrectTypeAndValueKnown && len(definition.AllowedValues) > 0 {
+				validateAnnotationAllowedValues(
+					parsedValue,
+					resourceAnnotationInfo,
+					definition,
+					resourceName,
+					definitionKey,
+					diagnostics,
+				)
+			}
+
+			if isCorrectTypeAndValueKnown && definition.ValidateFunc != nil {
+				customValidateDiagnostics := definition.ValidateFunc(
+					resourceAnnotationInfo.annotationKey,
+					parsedValue,
+				)
+				*diagnostics = append(*diagnostics, customValidateDiagnostics...)
+			}
 		}
 	}
 
@@ -430,50 +432,64 @@ type resourceAnnotationInfo struct {
 	hasResourceAnnotation bool
 }
 
-func getMatchingAnnotation(
+// getAllMatchingAnnotations returns all annotations that match a definition.
+// For static definitions (no placeholders), it returns at most one annotation
+// with an exact key match.
+// For dynamic definitions (with placeholders), it uses pattern matching to find
+// ALL annotations that match the pattern, ensuring that annotations are validated
+// even if the resource name in the annotation doesn't exactly match the linked resource.
+func getAllMatchingAnnotations(
 	definitionKey string,
-	definitionKeyWithResource string,
 	resourceAnnotations *schema.StringOrSubstitutionsMap,
-) (*resourceAnnotationInfo, error) {
+) ([]*resourceAnnotationInfo, error) {
 	if resourceAnnotations == nil || resourceAnnotations.Values == nil {
-		return &resourceAnnotationInfo{
-			hasResourceAnnotation: false,
-		}, nil
+		return nil, nil
 	}
 
-	annotation, exists := resourceAnnotations.Values[definitionKey]
-	if exists {
-		return &resourceAnnotationInfo{
-			annotation:            annotation,
-			annotationKey:         definitionKey,
-			hasResourceAnnotation: true,
-		}, nil
-	}
-
-	if !core.IsDynamicFieldName(definitionKey) {
-		return &resourceAnnotationInfo{
-			annotation:            nil,
-			hasResourceAnnotation: false,
-		}, nil
-	}
-
-	// Check for dynamic annotation key with the "<resourceName>" placeholder.
-	for key, annotation := range resourceAnnotations.Values {
-		if key == definitionKeyWithResource {
-			// On the first match, return the annotation.
-			// Developers should define only one "<resourceName>" placeholder
-			// when defining dynamic annotation keys in their link implementations.
-			return &resourceAnnotationInfo{
+	// Check for exact match with the definition key (literal placeholder in key)
+	if annotation, exists := resourceAnnotations.Values[definitionKey]; exists {
+		return []*resourceAnnotationInfo{
+			{
 				annotation:            annotation,
+				annotationKey:         definitionKey,
 				hasResourceAnnotation: true,
+			},
+		}, nil
+	}
+
+	// For non-dynamic definitions, only look for exact match
+	if !core.IsDynamicFieldName(definitionKey) {
+		return nil, nil
+	}
+
+	// For dynamic definitions, use pattern matching to find ALL matching annotations
+	pattern, err := createPatternForAnnotationKey(definitionKey)
+	if err != nil {
+		return nil, err
+	}
+
+	var matchingAnnotations []*resourceAnnotationInfo
+	for key, annotation := range resourceAnnotations.Values {
+		if pattern.MatchString(key) {
+			matchingAnnotations = append(matchingAnnotations, &resourceAnnotationInfo{
+				annotation:            annotation,
 				annotationKey:         key,
-			}, nil
+				hasResourceAnnotation: true,
+			})
 		}
 	}
 
-	return &resourceAnnotationInfo{
-		hasResourceAnnotation: false,
-	}, nil
+	return matchingAnnotations, nil
+}
+
+// createPatternForAnnotationKey creates a compiled regex pattern from an
+// annotation definition name that may contain placeholders like "<resourceName>".
+// The pattern will match any annotation key that fits the placeholder pattern.
+func createPatternForAnnotationKey(definitionKey string) (*regexp.Regexp, error) {
+	patternString := core.CreatePatternForDynamicFieldName(definitionKey, 1)
+	// Anchor the pattern to match the entire string
+	patternString = "^" + patternString + "$"
+	return regexp.Compile(patternString)
 }
 
 func replacePlaceholderWithResourceName(

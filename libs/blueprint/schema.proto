@@ -67,6 +67,7 @@ message Resource {
 
 message LinkSelector {
     map<string, string> by_label = 1;
+    repeated string exclude = 2;
 }
 
 message ResourceMetadata {

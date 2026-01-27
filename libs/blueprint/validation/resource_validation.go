@@ -991,6 +991,22 @@ func validateResourceLinkSelector(
 		}
 	}
 
+	if linkSelector.Exclude != nil {
+		for i, excludeName := range linkSelector.Exclude.Values {
+			if substitutions.ContainsSubstitution(excludeName) {
+				var sourceMeta *source.Meta
+				if i < len(linkSelector.Exclude.SourceMeta) {
+					sourceMeta = linkSelector.Exclude.SourceMeta[i]
+				}
+				errs = append(errs, errLinkSelectorExcludeContainsSubstitution(
+					resourceName,
+					excludeName,
+					sourceMeta,
+				))
+			}
+		}
+	}
+
 	if len(errs) > 0 {
 		return diagnostics, ErrMultipleValidationErrors(errs)
 	}

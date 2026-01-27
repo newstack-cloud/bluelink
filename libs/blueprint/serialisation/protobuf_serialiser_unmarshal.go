@@ -602,10 +602,18 @@ func FromLinkSelectorPB(linkSelectorPB *schemapb.LinkSelector) *schema.LinkSelec
 		return nil
 	}
 
+	var exclude *schema.StringList
+	if len(linkSelectorPB.Exclude) > 0 {
+		exclude = &schema.StringList{
+			Values: linkSelectorPB.Exclude,
+		}
+	}
+
 	return &schema.LinkSelector{
 		ByLabel: &schema.StringMap{
 			Values: linkSelectorPB.ByLabel,
 		},
+		Exclude: exclude,
 	}
 }
 

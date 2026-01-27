@@ -2315,6 +2315,7 @@
         }),
         LinkSelector: (*schema.LinkSelector)({
           ByLabel: (*schema.StringMap)(<nil>),
+          Exclude: (*schema.StringList)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
         Spec: (*core.MappingNode)({
@@ -2554,6 +2555,7 @@
         }),
         LinkSelector: (*schema.LinkSelector)({
           ByLabel: (*schema.StringMap)(<nil>),
+          Exclude: (*schema.StringList)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
         Spec: (*core.MappingNode)({
@@ -3409,6 +3411,10 @@
               })
             }
           }),
+          Exclude: (*schema.StringList)({
+            Values: ([]string) <nil>,
+            SourceMeta: ([]*source.Meta) <nil>
+          }),
           SourceMeta: (*source.Meta)({
             Position: (source.Position) {
               Line: (int) 137,
@@ -3833,6 +3839,10 @@
               })
             }
           }),
+          Exclude: (*schema.StringList)({
+            Values: ([]string) <nil>,
+            SourceMeta: ([]*source.Meta) <nil>
+          }),
           SourceMeta: (*source.Meta)({
             Position: (source.Position) {
               Line: (int) 276,
@@ -4096,6 +4106,7 @@
         }),
         LinkSelector: (*schema.LinkSelector)({
           ByLabel: (*schema.StringMap)(<nil>),
+          Exclude: (*schema.StringList)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
         Spec: (*core.MappingNode)({
@@ -4413,6 +4424,7 @@
         }),
         LinkSelector: (*schema.LinkSelector)({
           ByLabel: (*schema.StringMap)(<nil>),
+          Exclude: (*schema.StringList)(<nil>),
           SourceMeta: (*source.Meta)(<nil>)
         }),
         Spec: (*core.MappingNode)({

@@ -288,6 +288,7 @@
           })
         }
       }),
+      Exclude: (*schema.StringList)(<nil>),
       SourceMeta: (*source.Meta)({
         Position: (source.Position) {
           Line: (int) 70,

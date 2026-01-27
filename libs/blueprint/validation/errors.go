@@ -3193,6 +3193,29 @@ func errLinkSelectorValueContainsSubstitution(
 	}
 }
 
+func errLinkSelectorExcludeContainsSubstitution(
+	resourceName string,
+	excludeValue string,
+	location *source.Meta,
+) error {
+	posRange := source.PositionRangeFromSourceMeta(location)
+	return &errors.LoadError{
+		ReasonCode: ErrorReasonCodeInvalidResource,
+		Err: fmt.Errorf(
+			"validation failed due to a link selector \"exclude\" value containing a "+
+				"substitution in resource %q, "+
+				"the exclude value %q can not contain substitutions",
+			resourceName,
+			excludeValue,
+		),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
+	}
+}
+
 func errAnnotationKeyContainsSubstitution(
 	resourceName string,
 	annotationKey string,

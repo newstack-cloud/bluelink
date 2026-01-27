@@ -383,6 +383,7 @@ func (m *Metadata) FromJSONNode(
 // to link to by label.
 type LinkSelector struct {
 	ByLabel    *StringMap   `yaml:"byLabel" json:"byLabel"`
+	Exclude    *StringList  `yaml:"exclude,omitempty" json:"exclude,omitempty"`
 	SourceMeta *source.Meta `yaml:"-" json:"-"`
 }
 
@@ -401,6 +402,7 @@ func (s *LinkSelector) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	s.ByLabel = alias.ByLabel
+	s.Exclude = alias.Exclude
 
 	return nil
 }
@@ -425,6 +427,20 @@ func (s *LinkSelector) FromJSONNode(
 		parentPath,
 		/* parentIsRoot */ false,
 		/* required */ true,
+	)
+	if err != nil {
+		return err
+	}
+
+	s.Exclude = &StringList{}
+	err = core.UnpackValueFromJSONMapNode(
+		nodeMap,
+		"exclude",
+		s.Exclude,
+		linePositions,
+		parentPath,
+		/* parentIsRoot */ false,
+		/* required */ false,
 	)
 	if err != nil {
 		return err

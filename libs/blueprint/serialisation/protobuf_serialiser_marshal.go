@@ -522,8 +522,14 @@ func ToLinkSelectorPB(linkSelector *schema.LinkSelector) *schemapb.LinkSelector 
 		return nil
 	}
 
+	var exclude []string
+	if linkSelector.Exclude != nil {
+		exclude = linkSelector.Exclude.Values
+	}
+
 	return &schemapb.LinkSelector{
 		ByLabel: linkSelector.ByLabel.Values,
+		Exclude: exclude,
 	}
 }
 

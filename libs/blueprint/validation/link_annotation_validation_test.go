@@ -143,6 +143,87 @@ func (s *LinkAnnotationValidationTestSuite) Test_reports_errors_for_annotations_
 	)
 }
 
+func (s *LinkAnnotationValidationTestSuite) Test_reports_errors_for_placeholder_annotations_with_invalid_types() {
+	linkChains := createTestLinkChain(
+		&fixtureConfig{
+			invalidPlaceholderTypes: true,
+		},
+	)
+	diagnostics, err := ValidateLinkAnnotations(
+		context.Background(),
+		linkChains,
+		createParams(),
+	)
+	s.Assert().NoError(err)
+	s.Assert().Equal(
+		[]*core.Diagnostic{
+			{
+				Level: core.DiagnosticLevelError,
+				Message: "The value of the \"test.bool.resourceB.annotation\" annotation in the \"resourceA\" " +
+					"resource is not a valid boolean. Expected a value of type boolean, but got string.",
+				Range: &core.DiagnosticRange{
+					Start: &source.Meta{
+						Position: source.Position{
+							Line:   1,
+							Column: 1,
+						},
+					},
+					End: &source.Meta{
+						Position: source.Position{
+							Line:   1,
+							Column: 1,
+						},
+					},
+				},
+			},
+		},
+		diagnostics,
+	)
+}
+
+func (s *LinkAnnotationValidationTestSuite) Test_reports_errors_for_placeholder_annotations_with_unlinked_resource_names() {
+	// This test verifies that annotations matching a placeholder pattern are validated
+	// even when the resource name in the annotation doesn't match the linked resource.
+	// For example, if the definition is "test.bool.<resourceName>.annotation" and
+	// the linked resource is "resourceB", an annotation like "test.bool.nonLinkedResource.annotation"
+	// should still be validated using pattern matching.
+	linkChains := createTestLinkChain(
+		&fixtureConfig{
+			invalidPlaceholderTypesUnlinked: true,
+		},
+	)
+	diagnostics, err := ValidateLinkAnnotations(
+		context.Background(),
+		linkChains,
+		createParams(),
+	)
+	s.Assert().NoError(err)
+	s.Assert().Equal(
+		[]*core.Diagnostic{
+			{
+				Level: core.DiagnosticLevelError,
+				Message: "The value of the \"test.bool.nonLinkedResource.annotation\" annotation in the \"resourceA\" " +
+					"resource is not a valid boolean. Expected a value of type boolean, but got string.",
+				Range: &core.DiagnosticRange{
+					Start: &source.Meta{
+						Position: source.Position{
+							Line:   1,
+							Column: 1,
+						},
+					},
+					End: &source.Meta{
+						Position: source.Position{
+							Line:   1,
+							Column: 1,
+						},
+					},
+				},
+			},
+		},
+		diagnostics,
+	)
+}
+
 func (s *LinkAnnotationValidationTestSuite) Test_reports_errors_for_annotations_with_values_not_in_allowed_list() {
 	linkChains := createTestLinkChain(
 		&fixtureConfig{
@@ -238,12 +319,14 @@ func (s *LinkAnnotationValidationTestSuite) Test_does_not_panic_for_missing_opti
 }
 
 type fixtureConfig struct {
-	includeSubstitutions    bool
-	omitRequiredAnnotations bool
-	omitOptionalAnnotations bool
-	invalidTypes            bool
-	invalidAllowedValues    bool
-	failsCustomValidation   bool
+	includeSubstitutions              bool
+	omitRequiredAnnotations           bool
+	omitOptionalAnnotations           bool
+	invalidTypes                      bool
+	invalidPlaceholderTypes           bool
+	invalidPlaceholderTypesUnlinked   bool
+	invalidAllowedValues              bool
+	failsCustomValidation             bool
 }
 
 func createTestLinkChain(
@@ -251,6 +334,7 @@ func createTestLinkChain(
 ) []*links.ChainLinkNode {
 	stringAnnotationValue := "test-value"
 	targetedStringAnnotationValue := "targeted-test-value"
+	targetedBoolAnnotationValue := "true"
 	intAnnotationValue := "509332"
 
 	resourceANode := &links.ChainLinkNode{
@@ -280,6 +364,13 @@ func createTestLinkChain(
 							Values: []*substitutions.StringOrSubstitution{
 								{
 									StringValue: &intAnnotationValue,
+								},
+							},
+						},
+						"test.bool.resourceB.annotation": {
+							Values: []*substitutions.StringOrSubstitution{
+								{
+									StringValue: &targetedBoolAnnotationValue,
 								},
 							},
 						},
@@ -363,6 +454,33 @@ func createTestLinkChain(
 			}
 	}
 
+	if fixtureConf.invalidPlaceholderTypes {
+		invalidPlaceholderValue := "not-a-boolean" // Invalid type, should be a bool
+		resourceANode.Resource.Metadata.Annotations.Values["test.bool.resourceB.annotation"] =
+			&substitutions.StringOrSubstitutions{
+				Values: []*substitutions.StringOrSubstitution{
+					{
+						StringValue: &invalidPlaceholderValue,
+					},
+				},
+			}
+	}
+
+	if fixtureConf.invalidPlaceholderTypesUnlinked {
+		// This annotation uses a resource name ("nonLinkedResource") that doesn't match
+		// the linked resource ("resourceB"), but still matches the placeholder pattern.
+		// The validation should still catch the type error using pattern matching.
+		invalidPlaceholderValue := "not-a-boolean" // Invalid type, should be a bool
+		resourceANode.Resource.Metadata.Annotations.Values["test.bool.nonLinkedResource.annotation"] =
+			&substitutions.StringOrSubstitutions{
+				Values: []*substitutions.StringOrSubstitution{
+					{
+						StringValue: &invalidPlaceholderValue,
+					},
+				},
+			}
+	}
+
 	if fixtureConf.invalidAllowedValues {
 		invalidStringAnnotationValue := "invalid-value" // Not in the allowed list
 		resourceANode.Resource.Metadata.Annotations.Values["test.string.annotation"] =
@@ -393,6 +511,7 @@ func createTestLinkChain(
 		// to test that validation doesn't panic when optional annotations are missing.
 		delete(resourceANode.Resource.Metadata.Annotations.Values, "test.int.annotation")
 		delete(resourceANode.Resource.Metadata.Annotations.Values, "test.string.resourceB.annotation")
+		delete(resourceANode.Resource.Metadata.Annotations.Values, "test.bool.resourceB.annotation")
 		delete(resourceBNode.Resource.Metadata.Annotations.Values, "test.bool.annotation")
 		delete(resourceBNode.Resource.Metadata.Annotations.Values, "test.float.annotation")
 	}

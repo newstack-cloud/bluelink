@@ -309,11 +309,26 @@ type linkCheckInfo struct {
 	canLinkTo          bool
 }
 
+func isExcludedFromLinking(resource *schema.Resource, candidateName string) bool {
+	if resource.LinkSelector == nil || resource.LinkSelector.Exclude == nil {
+		return false
+	}
+	return core.SliceContainsComparable(resource.LinkSelector.Exclude.Values, candidateName)
+}
+
 func (l *defaultSpecLinkInfo) checkCanLinkTo(
 	ctx context.Context,
 	linkFromResource *ResourceWithNameAndSelectors,
 	linkToResource *ResourceWithNameAndSelectors,
 ) (*linkCheckInfo, error) {
+	// Check if candidate is in the exclude list
+	if isExcludedFromLinking(linkFromResource.Resource, linkToResource.Name) {
+		return &linkCheckInfo{
+			linkImplementation: nil,
+			canLinkTo:          false,
+		}, nil
+	}
+
 	linkFromResourceType := linkFromResource.Resource.Type.Value
 	linkToResourceType := linkToResource.Resource.Type.Value
 	resourceProvider, rpExists := l.resourceProviders[linkFromResourceType]

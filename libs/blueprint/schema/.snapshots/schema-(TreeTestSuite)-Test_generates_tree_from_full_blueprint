@@ -11751,6 +11751,7 @@
                     })
                   }
                 }),
+                Exclude: (*schema.StringList)(<nil>),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {
                     Line: (int) 91,
@@ -13485,6 +13486,7 @@
                   })
                 }
               }),
+              Exclude: (*schema.StringList)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
                   Line: (int) 91,
@@ -19900,6 +19902,7 @@
                     })
                   }
                 }),
+                Exclude: (*schema.StringList)(<nil>),
                 SourceMeta: (*source.Meta)({
                   Position: (source.Position) {
                     Line: (int) 207,
@@ -20357,6 +20360,7 @@
                   })
                 }
               }),
+              Exclude: (*schema.StringList)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
                   Line: (int) 207,
@@ -24536,6 +24540,7 @@
                   })
                 }
               }),
+              Exclude: (*schema.StringList)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
                   Line: (int) 91,
@@ -24909,6 +24914,7 @@
                   })
                 }
               }),
+              Exclude: (*schema.StringList)(<nil>),
               SourceMeta: (*source.Meta)({
                 Position: (source.Position) {
                   Line: (int) 207,
@@ -29792,6 +29798,7 @@
                 })
               }
             }),
+            Exclude: (*schema.StringList)(<nil>),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
                 Line: (int) 91,
@@ -30165,6 +30172,7 @@
                 })
               }
             }),
+            Exclude: (*schema.StringList)(<nil>),
             SourceMeta: (*source.Meta)({
               Position: (source.Position) {
                 Line: (int) 207,
