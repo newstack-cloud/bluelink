@@ -208,7 +208,7 @@ func (a *Application) handleTextDocumentDidChange(ctx *common.LSPContext, params
 	})
 	dispatcher := lsp.NewDispatcher(ctx)
 	existingContent := a.state.GetDocumentContent(params.TextDocument.URI)
-	err := a.saveDocumentContent(params, existingContent)
+	err := a.SaveDocumentContent(params, existingContent)
 	if err != nil {
 		return err
 	}
@@ -221,7 +221,7 @@ func (a *Application) validateAndPublishDiagnostics(
 	uri lsp.URI,
 	dispatcher *lsp.Dispatcher,
 ) error {
-	content := a.getDocumentContent(uri, true)
+	content := a.GetDocumentContent(uri, true)
 	diagnostics, enhanced, blueprint, err := a.diagnosticService.ValidateTextDocument(
 		ctx,
 		uri,
@@ -230,7 +230,7 @@ func (a *Application) validateAndPublishDiagnostics(
 		return err
 	}
 
-	err = a.storeDocumentAndDerivedStructures(uri, blueprint, *content)
+	err = a.StoreDocumentAndDerivedStructures(uri, blueprint, *content)
 	if err != nil {
 		return err
 	}
@@ -250,7 +250,9 @@ func (a *Application) validateAndPublishDiagnostics(
 	return nil
 }
 
-func (a *Application) getDocumentContent(uri lsp.URI, fallbackToEmptyString bool) *string {
+// GetDocumentContent retrieves document content from state, optionally returning
+// an empty string if the document is not found.
+func (a *Application) GetDocumentContent(uri lsp.URI, fallbackToEmptyString bool) *string {
 	content := a.state.GetDocumentContent(uri)
 	if content == nil && fallbackToEmptyString {
 		empty := ""
@@ -259,7 +261,9 @@ func (a *Application) getDocumentContent(uri lsp.URI, fallbackToEmptyString bool
 	return content
 }
 
-func (a *Application) storeDocumentAndDerivedStructures(
+// StoreDocumentAndDerivedStructures stores the document content, parsed blueprint,
+// and derived structures (schema tree, AST) in state.
+func (a *Application) StoreDocumentAndDerivedStructures(
 	uri lsp.URI,
 	parsed *schema.Blueprint,
 	content string,
@@ -307,7 +311,8 @@ func (a *Application) storeDocumentAndDerivedStructures(
 	return nil
 }
 
-func (a *Application) saveDocumentContent(params *lsp.DidChangeTextDocumentParams, existingContent *string) error {
+// SaveDocumentContent processes text document change events and updates document content in state.
+func (a *Application) SaveDocumentContent(params *lsp.DidChangeTextDocumentParams, existingContent *string) error {
 	if len(params.ContentChanges) == 0 {
 		return nil
 	}
@@ -470,7 +475,8 @@ func (a *Application) handleGotoDefinition(
 	return []lsp.Location{}, nil
 }
 
-func (a *Application) handleShutdown(ctx *common.LSPContext) error {
+// HandleShutdown handles the LSP shutdown request, closing the plugin host if active.
+func (a *Application) HandleShutdown(ctx *common.LSPContext) error {
 	a.logger.Info("Shutting down server...")
 	if a.pluginHostService != nil {
 		a.pluginHostService.Close()
@@ -526,10 +532,11 @@ func (a *Application) loadPlugins(ctx context.Context, config pluginhost.Config)
 	maps.Copy(mergedTransformers, pluginMaps.Transformers)
 
 	// Reinitialize registries with merged providers
-	a.reinitialiseRegistries(mergedProviders, mergedTransformers)
+	a.ReinitialiseRegistries(mergedProviders, mergedTransformers)
 }
 
-func (a *Application) reinitialiseRegistries(
+// ReinitialiseRegistries updates all registries and services with new providers and transformers.
+func (a *Application) ReinitialiseRegistries(
 	providers map[string]provider.Provider,
 	transformers map[string]transform.SpecTransformer,
 ) {
@@ -547,6 +554,7 @@ func (a *Application) reinitialiseRegistries(
 		a.frameworkLogger,
 	)
 	a.customVarTypeRegistry = provider.NewCustomVariableTypeRegistry(providers)
+	linkRegistry := provider.NewLinkRegistry(providers)
 
 	// Create a new blueprint loader with merged providers
 	blueprintLoader := container.NewDefaultLoader(
@@ -565,6 +573,7 @@ func (a *Application) reinitialiseRegistries(
 		a.dataSourceRegistry,
 		a.customVarTypeRegistry,
 		a.functionRegistry,
+		linkRegistry,
 	)
 	a.diagnosticService.UpdateLoader(blueprintLoader)
 	a.signatureService.UpdateRegistry(a.functionRegistry)

@@ -50,6 +50,9 @@ const (
 	// Resource metadata field (displayName, labels, annotations, custom)
 	CompletionContextResourceMetadataField
 
+	// Resource annotation key (inside metadata.annotations, suggests link annotation keys)
+	CompletionContextResourceAnnotationKey
+
 	// Resource definition field (type, description, spec, metadata, etc.)
 	CompletionContextResourceDefinitionField
 
@@ -455,6 +458,19 @@ func determineSectionDefinitionContext(nodeCtx *NodeContext) sectionDefinitionCo
 		}
 	}
 
+	// Check if we're inside resource metadata annotations: /resources/{name}/metadata/annotations
+	// This must come before the general IsResourceMetadata() check (more specific path first)
+	if path.IsResourceMetadataAnnotations() {
+		resourceName, ok := path.GetResourceName()
+		if !ok {
+			return sectionDefinitionContextResult{kind: CompletionContextUnknown}
+		}
+		return sectionDefinitionContextResult{
+			kind:         CompletionContextResourceAnnotationKey,
+			resourceName: resourceName,
+		}
+	}
+
 	// Check if we're inside a resource metadata path: /resources/{name}/metadata/...
 	if path.IsResourceMetadata() {
 		resourceName, ok := path.GetResourceName()
@@ -761,6 +777,7 @@ var completionContextKindNames = map[CompletionContextKind]string{
 	CompletionContextTransformField:                  "transformField",
 	CompletionContextCustomVariableTypeValue:         "customVariableTypeValue",
 	CompletionContextResourceMetadataField:           "resourceMetadataField",
+	CompletionContextResourceAnnotationKey:           "resourceAnnotationKey",
 	CompletionContextResourceDefinitionField:         "resourceDefinitionField",
 	CompletionContextVariableDefinitionField:         "variableDefinitionField",
 	CompletionContextValueDefinitionField:            "valueDefinitionField",

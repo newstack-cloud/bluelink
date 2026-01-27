@@ -88,7 +88,7 @@ func (a *Application) Setup() {
 	a.handler = lsp.NewHandler(
 		lsp.WithInitializeHandler(a.handleInitialise),
 		lsp.WithInitializedHandler(a.handleInitialised),
-		lsp.WithShutdownHandler(a.handleShutdown),
+		lsp.WithShutdownHandler(a.HandleShutdown),
 		lsp.WithTextDocumentDidOpenHandler(a.handleTextDocumentDidOpen),
 		lsp.WithTextDocumentDidCloseHandler(a.handleTextDocumentDidClose),
 		lsp.WithTextDocumentDidChangeHandler(a.handleTextDocumentDidChange),

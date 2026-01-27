@@ -412,6 +412,16 @@ func (p StructuredPath) GetExportName() (string, bool) {
 	return "", false
 }
 
+// IsResourceMetadataAnnotations returns true if path is inside resource metadata annotations.
+// Pattern: /resources/{name}/metadata/annotations or /resources/{name}/metadata/annotations/{key}
+func (p StructuredPath) IsResourceMetadataAnnotations() bool {
+	return len(p) >= 4 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "resources" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "metadata" &&
+		p[3].Kind == PathSegmentField && p[3].FieldName == "annotations"
+}
+
 // String returns the full path as a string.
 func (p StructuredPath) String() string {
 	if len(p) == 0 {

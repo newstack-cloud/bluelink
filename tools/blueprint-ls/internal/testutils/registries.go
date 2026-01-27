@@ -390,3 +390,27 @@ func (r *CustomVarTypeRegistryMock) ListCustomVariableTypes(
 	}
 	return customVarTypes, nil
 }
+
+// LinkRegistryMock provides a mock implementation of provider.LinkRegistry for testing.
+type LinkRegistryMock struct {
+	Links map[string]provider.Link // key format: "typeA::typeB"
+}
+
+func (r *LinkRegistryMock) Link(
+	ctx context.Context,
+	resourceTypeA string,
+	resourceTypeB string,
+) (provider.Link, error) {
+	key := fmt.Sprintf("%s::%s", resourceTypeA, resourceTypeB)
+	if link, ok := r.Links[key]; ok {
+		return link, nil
+	}
+	return nil, fmt.Errorf("link not found for %s -> %s", resourceTypeA, resourceTypeB)
+}
+
+func (r *LinkRegistryMock) Provider(
+	resourceTypeA string,
+	resourceTypeB string,
+) (provider.Provider, error) {
+	return nil, nil
+}

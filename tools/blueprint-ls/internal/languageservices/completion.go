@@ -1,6 +1,7 @@
 package languageservices
 
 import (
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
@@ -27,6 +28,8 @@ type CompletionService struct {
 	dataSourceRegistry    provider.DataSourceRegistry
 	customVarTypeRegistry provider.CustomVariableTypeRegistry
 	functionRegistry      provider.FunctionRegistry
+	linkRegistry          provider.LinkRegistry
+	annotationDefCache    *core.Cache[map[string]*provider.LinkAnnotationDefinition]
 	state                 *State
 	logger                *zap.Logger
 }
@@ -45,6 +48,7 @@ func NewCompletionService(
 		dataSourceRegistry:    dataSourceRegistry,
 		customVarTypeRegistry: customVarTypeRegistry,
 		functionRegistry:      functionRegistry,
+		annotationDefCache:    core.NewCache[map[string]*provider.LinkAnnotationDefinition](),
 		state:                 state,
 		logger:                logger,
 	}
@@ -57,11 +61,13 @@ func (s *CompletionService) UpdateRegistries(
 	dataSourceRegistry provider.DataSourceRegistry,
 	customVarTypeRegistry provider.CustomVariableTypeRegistry,
 	functionRegistry provider.FunctionRegistry,
+	linkRegistry provider.LinkRegistry,
 ) {
 	s.resourceRegistry = resourceRegistry
 	s.dataSourceRegistry = dataSourceRegistry
 	s.customVarTypeRegistry = customVarTypeRegistry
 	s.functionRegistry = functionRegistry
+	s.linkRegistry = linkRegistry
 }
 
 // GetCompletionItems returns completion items for a given position in a document.
@@ -151,6 +157,11 @@ func (s *CompletionService) getCompletionItemsByContext(
 			return []*lsp.CompletionItem{}, nil
 		}
 		return s.getResourceMetadataFieldCompletionItems(position, completionCtx)
+	case docmodel.CompletionContextResourceAnnotationKey:
+		if format == docmodel.FormatJSONC {
+			return []*lsp.CompletionItem{}, nil
+		}
+		return s.getResourceAnnotationKeyCompletionItems(ctx, position, blueprint, completionCtx)
 	case docmodel.CompletionContextResourceDefinitionField:
 		if format == docmodel.FormatJSONC {
 			return []*lsp.CompletionItem{}, nil
