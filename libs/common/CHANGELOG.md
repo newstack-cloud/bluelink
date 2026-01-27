@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0](https://github.com/newstack-cloud/bluelink/compare/common/v0.3.2...common/v0.4.0) (2026-01-27)
+
+
+### Features
+
+* **common:** add utils for string similarities ([1a8593c](https://github.com/newstack-cloud/bluelink/commit/1a8593c52cf94febf22e2c87703b0813c37b82f3))
+
+
+### Dependencies
+
+* **common:** bump github.com/stretchr/testify ([37e7135](https://github.com/newstack-cloud/bluelink/commit/37e7135774f242bf6f4f777ff70ecac35de7daaa))
+
 ## [0.3.2] - 2025-06-24
 
 ### Fixed
