@@ -26,14 +26,7 @@ func LoadProviders(ctx context.Context) (map[string]provider.Provider, error) {
 		/* clock */ nil,
 	)
 
-	// Purely for testing purposes, should be removed once some actual
-	// providers have been implemented to test with.
-	bluelinkProvider := NewBluelinkProvider()
-
-	// TODO: load provider plugins through the deploy engine plugin system
-
 	return map[string]provider.Provider{
-		"core":     coreProvider,
-		"bluelink": bluelinkProvider,
+		"core": coreProvider,
 	}, nil
 }

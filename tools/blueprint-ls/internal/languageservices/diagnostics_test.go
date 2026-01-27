@@ -4,183 +4,177 @@ import (
 	"testing"
 
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
+
+type DiagnosticsSuite struct {
+	suite.Suite
+}
 
 func severityPtr(s lsp.DiagnosticSeverity) *lsp.DiagnosticSeverity {
 	return &s
 }
 
-func TestDeduplicateDiagnostics(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    []lsp.Diagnostic
-		expected int
-	}{
-		{
-			name:     "empty list",
-			input:    []lsp.Diagnostic{},
-			expected: 0,
-		},
-		{
-			name: "single diagnostic",
-			input: []lsp.Diagnostic{
-				{
-					Range: lsp.Range{
-						Start: lsp.Position{Line: 1, Character: 0},
-						End:   lsp.Position{Line: 1, Character: 10},
-					},
-					Severity: severityPtr(lsp.DiagnosticSeverityError),
-					Message:  "error message",
-				},
-			},
-			expected: 1,
-		},
-		{
-			name: "two different diagnostics",
-			input: []lsp.Diagnostic{
-				{
-					Range: lsp.Range{
-						Start: lsp.Position{Line: 1, Character: 0},
-						End:   lsp.Position{Line: 1, Character: 10},
-					},
-					Severity: severityPtr(lsp.DiagnosticSeverityError),
-					Message:  "error message 1",
-				},
-				{
-					Range: lsp.Range{
-						Start: lsp.Position{Line: 2, Character: 0},
-						End:   lsp.Position{Line: 2, Character: 10},
-					},
-					Severity: severityPtr(lsp.DiagnosticSeverityError),
-					Message:  "error message 2",
-				},
-			},
-			expected: 2,
-		},
-		{
-			name: "two identical diagnostics",
-			input: []lsp.Diagnostic{
-				{
-					Range: lsp.Range{
-						Start: lsp.Position{Line: 1, Character: 0},
-						End:   lsp.Position{Line: 1, Character: 10},
-					},
-					Severity: severityPtr(lsp.DiagnosticSeverityError),
-					Message:  "error message",
-				},
-				{
-					Range: lsp.Range{
-						Start: lsp.Position{Line: 1, Character: 0},
-						End:   lsp.Position{Line: 1, Character: 10},
-					},
-					Severity: severityPtr(lsp.DiagnosticSeverityError),
-					Message:  "error message",
-				},
-			},
-			expected: 1,
-		},
-		{
-			name: "same message different range",
-			input: []lsp.Diagnostic{
-				{
-					Range: lsp.Range{
-						Start: lsp.Position{Line: 1, Character: 0},
-						End:   lsp.Position{Line: 1, Character: 10},
-					},
-					Severity: severityPtr(lsp.DiagnosticSeverityError),
-					Message:  "error message",
-				},
-				{
-					Range: lsp.Range{
-						Start: lsp.Position{Line: 2, Character: 0},
-						End:   lsp.Position{Line: 2, Character: 10},
-					},
-					Severity: severityPtr(lsp.DiagnosticSeverityError),
-					Message:  "error message",
-				},
-			},
-			expected: 2,
-		},
-		{
-			name: "same range different severity",
-			input: []lsp.Diagnostic{
-				{
-					Range: lsp.Range{
-						Start: lsp.Position{Line: 1, Character: 0},
-						End:   lsp.Position{Line: 1, Character: 10},
-					},
-					Severity: severityPtr(lsp.DiagnosticSeverityError),
-					Message:  "error message",
-				},
-				{
-					Range: lsp.Range{
-						Start: lsp.Position{Line: 1, Character: 0},
-						End:   lsp.Position{Line: 1, Character: 10},
-					},
-					Severity: severityPtr(lsp.DiagnosticSeverityWarning),
-					Message:  "error message",
-				},
-			},
-			expected: 2,
-		},
-		{
-			name: "multiple duplicates",
-			input: []lsp.Diagnostic{
-				{
-					Range: lsp.Range{
-						Start: lsp.Position{Line: 1, Character: 0},
-						End:   lsp.Position{Line: 1, Character: 10},
-					},
-					Severity: severityPtr(lsp.DiagnosticSeverityError),
-					Message:  "error 1",
-				},
-				{
-					Range: lsp.Range{
-						Start: lsp.Position{Line: 1, Character: 0},
-						End:   lsp.Position{Line: 1, Character: 10},
-					},
-					Severity: severityPtr(lsp.DiagnosticSeverityError),
-					Message:  "error 1",
-				},
-				{
-					Range: lsp.Range{
-						Start: lsp.Position{Line: 2, Character: 0},
-						End:   lsp.Position{Line: 2, Character: 10},
-					},
-					Severity: severityPtr(lsp.DiagnosticSeverityError),
-					Message:  "error 2",
-				},
-				{
-					Range: lsp.Range{
-						Start: lsp.Position{Line: 2, Character: 0},
-						End:   lsp.Position{Line: 2, Character: 10},
-					},
-					Severity: severityPtr(lsp.DiagnosticSeverityError),
-					Message:  "error 2",
-				},
-				{
-					Range: lsp.Range{
-						Start: lsp.Position{Line: 2, Character: 0},
-						End:   lsp.Position{Line: 2, Character: 10},
-					},
-					Severity: severityPtr(lsp.DiagnosticSeverityError),
-					Message:  "error 2",
-				},
-			},
-			expected: 2,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := deduplicateDiagnostics(tt.input)
-			assert.Len(t, result, tt.expected)
-		})
-	}
+func (s *DiagnosticsSuite) TestDeduplicateDiagnostics_EmptyList() {
+	result := deduplicateDiagnostics([]lsp.Diagnostic{})
+	s.Len(result, 0)
 }
 
-func TestDiagnosticKey(t *testing.T) {
+func (s *DiagnosticsSuite) TestDeduplicateDiagnostics_SingleDiagnostic() {
+	input := []lsp.Diagnostic{
+		{
+			Range: lsp.Range{
+				Start: lsp.Position{Line: 1, Character: 0},
+				End:   lsp.Position{Line: 1, Character: 10},
+			},
+			Severity: severityPtr(lsp.DiagnosticSeverityError),
+			Message:  "error message",
+		},
+	}
+	result := deduplicateDiagnostics(input)
+	s.Len(result, 1)
+}
+
+func (s *DiagnosticsSuite) TestDeduplicateDiagnostics_TwoDifferentDiagnostics() {
+	input := []lsp.Diagnostic{
+		{
+			Range: lsp.Range{
+				Start: lsp.Position{Line: 1, Character: 0},
+				End:   lsp.Position{Line: 1, Character: 10},
+			},
+			Severity: severityPtr(lsp.DiagnosticSeverityError),
+			Message:  "error message 1",
+		},
+		{
+			Range: lsp.Range{
+				Start: lsp.Position{Line: 2, Character: 0},
+				End:   lsp.Position{Line: 2, Character: 10},
+			},
+			Severity: severityPtr(lsp.DiagnosticSeverityError),
+			Message:  "error message 2",
+		},
+	}
+	result := deduplicateDiagnostics(input)
+	s.Len(result, 2)
+}
+
+func (s *DiagnosticsSuite) TestDeduplicateDiagnostics_TwoIdenticalDiagnostics() {
+	input := []lsp.Diagnostic{
+		{
+			Range: lsp.Range{
+				Start: lsp.Position{Line: 1, Character: 0},
+				End:   lsp.Position{Line: 1, Character: 10},
+			},
+			Severity: severityPtr(lsp.DiagnosticSeverityError),
+			Message:  "error message",
+		},
+		{
+			Range: lsp.Range{
+				Start: lsp.Position{Line: 1, Character: 0},
+				End:   lsp.Position{Line: 1, Character: 10},
+			},
+			Severity: severityPtr(lsp.DiagnosticSeverityError),
+			Message:  "error message",
+		},
+	}
+	result := deduplicateDiagnostics(input)
+	s.Len(result, 1)
+}
+
+func (s *DiagnosticsSuite) TestDeduplicateDiagnostics_SameMessageDifferentRange() {
+	input := []lsp.Diagnostic{
+		{
+			Range: lsp.Range{
+				Start: lsp.Position{Line: 1, Character: 0},
+				End:   lsp.Position{Line: 1, Character: 10},
+			},
+			Severity: severityPtr(lsp.DiagnosticSeverityError),
+			Message:  "error message",
+		},
+		{
+			Range: lsp.Range{
+				Start: lsp.Position{Line: 2, Character: 0},
+				End:   lsp.Position{Line: 2, Character: 10},
+			},
+			Severity: severityPtr(lsp.DiagnosticSeverityError),
+			Message:  "error message",
+		},
+	}
+	result := deduplicateDiagnostics(input)
+	s.Len(result, 2)
+}
+
+func (s *DiagnosticsSuite) TestDeduplicateDiagnostics_SameRangeDifferentSeverity() {
+	input := []lsp.Diagnostic{
+		{
+			Range: lsp.Range{
+				Start: lsp.Position{Line: 1, Character: 0},
+				End:   lsp.Position{Line: 1, Character: 10},
+			},
+			Severity: severityPtr(lsp.DiagnosticSeverityError),
+			Message:  "error message",
+		},
+		{
+			Range: lsp.Range{
+				Start: lsp.Position{Line: 1, Character: 0},
+				End:   lsp.Position{Line: 1, Character: 10},
+			},
+			Severity: severityPtr(lsp.DiagnosticSeverityWarning),
+			Message:  "error message",
+		},
+	}
+	result := deduplicateDiagnostics(input)
+	s.Len(result, 2)
+}
+
+func (s *DiagnosticsSuite) TestDeduplicateDiagnostics_MultipleDuplicates() {
+	input := []lsp.Diagnostic{
+		{
+			Range: lsp.Range{
+				Start: lsp.Position{Line: 1, Character: 0},
+				End:   lsp.Position{Line: 1, Character: 10},
+			},
+			Severity: severityPtr(lsp.DiagnosticSeverityError),
+			Message:  "error 1",
+		},
+		{
+			Range: lsp.Range{
+				Start: lsp.Position{Line: 1, Character: 0},
+				End:   lsp.Position{Line: 1, Character: 10},
+			},
+			Severity: severityPtr(lsp.DiagnosticSeverityError),
+			Message:  "error 1",
+		},
+		{
+			Range: lsp.Range{
+				Start: lsp.Position{Line: 2, Character: 0},
+				End:   lsp.Position{Line: 2, Character: 10},
+			},
+			Severity: severityPtr(lsp.DiagnosticSeverityError),
+			Message:  "error 2",
+		},
+		{
+			Range: lsp.Range{
+				Start: lsp.Position{Line: 2, Character: 0},
+				End:   lsp.Position{Line: 2, Character: 10},
+			},
+			Severity: severityPtr(lsp.DiagnosticSeverityError),
+			Message:  "error 2",
+		},
+		{
+			Range: lsp.Range{
+				Start: lsp.Position{Line: 2, Character: 0},
+				End:   lsp.Position{Line: 2, Character: 10},
+			},
+			Severity: severityPtr(lsp.DiagnosticSeverityError),
+			Message:  "error 2",
+		},
+	}
+	result := deduplicateDiagnostics(input)
+	s.Len(result, 2)
+}
+
+func (s *DiagnosticsSuite) TestDiagnosticKey() {
 	diag := lsp.Diagnostic{
 		Range: lsp.Range{
 			Start: lsp.Position{Line: 5, Character: 10},
@@ -191,5 +185,9 @@ func TestDiagnosticKey(t *testing.T) {
 	}
 
 	key := diagnosticKey(diag)
-	assert.Equal(t, "5:10-5:20|1|test error", key)
+	s.Equal("5:10-5:20|1|test error", key)
+}
+
+func TestDiagnosticsSuite(t *testing.T) {
+	suite.Run(t, new(DiagnosticsSuite))
 }

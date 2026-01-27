@@ -5,18 +5,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestNewDocumentDebouncer(t *testing.T) {
-	d := NewDocumentDebouncer(100 * time.Millisecond)
-	require.NotNil(t, d)
-	assert.NotNil(t, d.timers)
-	assert.Equal(t, 100*time.Millisecond, d.duration)
+type DebounceSuite struct {
+	suite.Suite
 }
 
-func TestDocumentDebouncer_Debounce(t *testing.T) {
+func (s *DebounceSuite) TestNewDocumentDebouncer() {
+	d := NewDocumentDebouncer(100 * time.Millisecond)
+	s.NotNil(d)
+	s.NotNil(d.timers)
+	s.Equal(100*time.Millisecond, d.duration)
+}
+
+func (s *DebounceSuite) TestDebounce() {
 	d := NewDocumentDebouncer(50 * time.Millisecond)
 	var called atomic.Int32
 
@@ -24,17 +27,17 @@ func TestDocumentDebouncer_Debounce(t *testing.T) {
 		called.Add(1)
 	})
 
-	assert.True(t, d.HasPending("test-uri"))
-	assert.Equal(t, 1, d.PendingCount())
+	s.True(d.HasPending("test-uri"))
+	s.Equal(1, d.PendingCount())
 
 	time.Sleep(100 * time.Millisecond)
 
-	assert.Equal(t, int32(1), called.Load())
-	assert.False(t, d.HasPending("test-uri"))
-	assert.Equal(t, 0, d.PendingCount())
+	s.Equal(int32(1), called.Load())
+	s.False(d.HasPending("test-uri"))
+	s.Equal(0, d.PendingCount())
 }
 
-func TestDocumentDebouncer_Debounce_CancelsPrevious(t *testing.T) {
+func (s *DebounceSuite) TestDebounce_CancelsPrevious() {
 	d := NewDocumentDebouncer(50 * time.Millisecond)
 	var firstCalled, secondCalled atomic.Int32
 
@@ -50,11 +53,11 @@ func TestDocumentDebouncer_Debounce_CancelsPrevious(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	assert.Equal(t, int32(0), firstCalled.Load())
-	assert.Equal(t, int32(1), secondCalled.Load())
+	s.Equal(int32(0), firstCalled.Load())
+	s.Equal(int32(1), secondCalled.Load())
 }
 
-func TestDocumentDebouncer_Debounce_MultipleURIs(t *testing.T) {
+func (s *DebounceSuite) TestDebounce_MultipleURIs() {
 	d := NewDocumentDebouncer(50 * time.Millisecond)
 	var uri1Called, uri2Called atomic.Int32
 
@@ -66,15 +69,15 @@ func TestDocumentDebouncer_Debounce_MultipleURIs(t *testing.T) {
 		uri2Called.Add(1)
 	})
 
-	assert.Equal(t, 2, d.PendingCount())
+	s.Equal(2, d.PendingCount())
 
 	time.Sleep(100 * time.Millisecond)
 
-	assert.Equal(t, int32(1), uri1Called.Load())
-	assert.Equal(t, int32(1), uri2Called.Load())
+	s.Equal(int32(1), uri1Called.Load())
+	s.Equal(int32(1), uri2Called.Load())
 }
 
-func TestDocumentDebouncer_Cancel(t *testing.T) {
+func (s *DebounceSuite) TestCancel() {
 	d := NewDocumentDebouncer(50 * time.Millisecond)
 	var called atomic.Int32
 
@@ -86,17 +89,17 @@ func TestDocumentDebouncer_Cancel(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	assert.Equal(t, int32(0), called.Load())
-	assert.False(t, d.HasPending("test-uri"))
+	s.Equal(int32(0), called.Load())
+	s.False(d.HasPending("test-uri"))
 }
 
-func TestDocumentDebouncer_Cancel_NonExistent(t *testing.T) {
+func (s *DebounceSuite) TestCancel_NonExistent() {
 	d := NewDocumentDebouncer(50 * time.Millisecond)
 	d.Cancel("non-existent")
-	assert.Equal(t, 0, d.PendingCount())
+	s.Equal(0, d.PendingCount())
 }
 
-func TestDocumentDebouncer_CancelAll(t *testing.T) {
+func (s *DebounceSuite) TestCancelAll() {
 	d := NewDocumentDebouncer(50 * time.Millisecond)
 	var uri1Called, uri2Called atomic.Int32
 
@@ -107,35 +110,39 @@ func TestDocumentDebouncer_CancelAll(t *testing.T) {
 		uri2Called.Add(1)
 	})
 
-	assert.Equal(t, 2, d.PendingCount())
+	s.Equal(2, d.PendingCount())
 
 	d.CancelAll()
 
-	assert.Equal(t, 0, d.PendingCount())
+	s.Equal(0, d.PendingCount())
 
 	time.Sleep(100 * time.Millisecond)
 
-	assert.Equal(t, int32(0), uri1Called.Load())
-	assert.Equal(t, int32(0), uri2Called.Load())
+	s.Equal(int32(0), uri1Called.Load())
+	s.Equal(int32(0), uri2Called.Load())
 }
 
-func TestDocumentDebouncer_HasPending(t *testing.T) {
+func (s *DebounceSuite) TestHasPending() {
 	d := NewDocumentDebouncer(50 * time.Millisecond)
 
-	assert.False(t, d.HasPending("test-uri"))
+	s.False(d.HasPending("test-uri"))
 
 	d.Debounce("test-uri", func() {})
 
-	assert.True(t, d.HasPending("test-uri"))
-	assert.False(t, d.HasPending("other-uri"))
+	s.True(d.HasPending("test-uri"))
+	s.False(d.HasPending("other-uri"))
 }
 
-func TestDocumentDebouncer_Flush(t *testing.T) {
+func (s *DebounceSuite) TestFlush() {
 	d := NewDocumentDebouncer(50 * time.Millisecond)
 
 	d.Debounce("test-uri", func() {})
 
 	d.Flush("test-uri")
 
-	assert.False(t, d.HasPending("test-uri"))
+	s.False(d.HasPending("test-uri"))
+}
+
+func TestDebounceSuite(t *testing.T) {
+	suite.Run(t, new(DebounceSuite))
 }

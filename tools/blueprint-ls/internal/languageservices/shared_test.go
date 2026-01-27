@@ -35,6 +35,19 @@ func (info *testBlueprintInfo) toDocumentContext() *docmodel.DocumentContext {
 	return docCtx
 }
 
+// toDocumentContextWithTreeSitter creates a DocumentContext with tree-sitter parsing
+// for more accurate AST path detection at value positions.
+func (info *testBlueprintInfo) toDocumentContextWithTreeSitter() *docmodel.DocumentContext {
+	docCtx := docmodel.NewDocumentContext(
+		blueprintURI,
+		info.content,
+		docmodel.FormatYAML,
+		nil,
+	)
+	docCtx.UpdateSchema(info.blueprint, info.tree)
+	return docCtx
+}
+
 func loadCompletionBlueprintAndTree(name string) (*testBlueprintInfo, error) {
 	// Load and parse the blueprint content before the completion trigger character.
 	// This is required as when a completion trigger character is entered, the current
