@@ -47,6 +47,10 @@ const (
 	// when the reason for a blueprint schema load error is due
 	// to an invalid dependsOn field value being provided for a resource.
 	ErrorSchemaReasonCodeInvalidDependencyType ErrorSchemaReasonCode = "invalid_dependency_type"
+	// ErrorSchemaReasonCodeInvalidStringList is provided
+	// when the reason for a blueprint schema load error is due
+	// to an invalid string list value being provided (e.g., linkSelector.exclude).
+	ErrorSchemaReasonCodeInvalidStringList ErrorSchemaReasonCode = "invalid_string_list"
 	// ErrorSchemaReasonCodeInvalidMap is provided when the reason
 	// for a blueprint schema load error is due to an invalid map
 	// being provided.

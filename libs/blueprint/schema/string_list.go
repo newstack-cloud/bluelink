@@ -23,9 +23,28 @@ type StringList struct {
 	SourceMeta []*source.Meta
 }
 
-func (t *StringList) MarshalYAML() (interface{}, error) {
+func (t *StringList) MarshalYAML() (any, error) {
 	// Always marshal as a slice.
 	return t.Values, nil
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface.
+// This allows StringList to be used directly in struct fields
+// (e.g., LinkSelector.Exclude) without requiring a wrapper type.
+func (t *StringList) UnmarshalYAML(value *yaml.Node) error {
+	return t.unmarshalYAML(value, errInvalidStringListType, "string list")
+}
+
+func errInvalidStringListType(underlyingError error, line *int, column *int) error {
+	return &Error{
+		ReasonCode: ErrorSchemaReasonCodeInvalidStringList,
+		Err: fmt.Errorf(
+			"invalid string list value, must be a string or a list of strings: %s",
+			underlyingError.Error(),
+		),
+		SourceLine:   line,
+		SourceColumn: column,
+	}
 }
 
 func (t *StringList) unmarshalYAML(
