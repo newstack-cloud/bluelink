@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.37.0
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.39.0
 	github.com/newstack-cloud/bluelink/libs/common v0.3.2
 	github.com/spf13/afero v1.15.0
 	github.com/stretchr/testify v1.11.1
