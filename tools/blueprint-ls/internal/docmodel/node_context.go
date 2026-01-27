@@ -40,6 +40,9 @@ type NodeContext struct {
 	CurrentWord string // Word at cursor position
 	CurrentLine string // Full current line
 
+	// Extracted context (set during completion context determination)
+	ExtractedFieldName string // Field name extracted from TextBefore when AST path is incomplete
+
 	// State flags
 	IsStale bool // True if using last-known-good data
 }

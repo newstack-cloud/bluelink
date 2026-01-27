@@ -743,31 +743,6 @@ func getChild(blueprint *schema.Blueprint, name string) *schema.Include {
 	return child
 }
 
-func getResource(blueprint *schema.Blueprint, name string) *schema.Resource {
-	if blueprint.Resources == nil || blueprint.Resources.Values == nil {
-		return nil
-	}
-
-	resource, hasResource := blueprint.Resources.Values[name]
-	if !hasResource {
-		return nil
-	}
-
-	return resource
-}
-
-func getDataSource(blueprint *schema.Blueprint, name string) *schema.DataSource {
-	if blueprint.DataSources == nil || blueprint.DataSources.Values == nil {
-		return nil
-	}
-
-	dataSource, hasDataSource := blueprint.DataSources.Values[name]
-	if !hasDataSource {
-		return nil
-	}
-
-	return dataSource
-}
 
 func getDataSourceField(dataSource *schema.DataSource, name string) *schema.DataSourceFieldExport {
 	if dataSource.Exports == nil || dataSource.Exports.Values == nil {

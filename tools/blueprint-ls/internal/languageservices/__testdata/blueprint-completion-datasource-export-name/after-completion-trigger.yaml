@@ -1,0 +1,11 @@
+version: 2024-07-20
+variables:
+  environment:
+    type: string
+
+datasources:
+  network:
+    type: aws/vpc
+    description: "Networking resources for the application."
+    exports:
+

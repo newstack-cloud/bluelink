@@ -936,6 +936,98 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceExport
 	s.Assert().Equal(CompletionContextDataSourceExportDefinitionField, ctx.Kind)
 }
 
+// TestDetermineCompletionContext_DataSourceExportName_AtSiblingIndent tests that
+// when the cursor is at export name indent level (same level as existing exports),
+// we get export NAME completions, not export definition field completions.
+// This handles the case where user wants to add a new export after existing ones.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceExportName_AtSiblingIndent() {
+	// Path is at export definition level (4 segments: /datasources/myDS/exports/vpcId)
+	// But cursor indent is at the export name level (same as vpcId), indicating
+	// user wants to add a new sibling export, not a field inside vpcId.
+	nodeCtx := &NodeContext{
+		ASTPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "datasources"},
+			{Kind: PathSegmentField, FieldName: "myDS"},
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "vpcId"},
+		},
+		TextBefore: "      ", // 6 spaces - same indent as export names
+		UnifiedNode: &UnifiedNode{
+			FieldName: "vpcId",
+			Range: source.Range{
+				Start: &source.Position{Line: 5, Column: 7}, // 1-based, so 0-based indent is 6
+			},
+		},
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextDataSourceExportName, ctx.Kind,
+		"Should return export name context when at sibling indent level")
+}
+
+// TestDetermineCompletionContext_DataSourceExportDefinitionField_AtChildIndent tests that
+// when the cursor is at export definition field indent level (deeper than export name),
+// we get export definition FIELD completions.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceExportDefinitionField_AtChildIndent() {
+	// Path is at export definition level (4 segments: /datasources/myDS/exports/vpcId)
+	// Cursor indent is deeper than the export name level, indicating user wants
+	// to add a field inside vpcId (like type, aliasFor, description).
+	nodeCtx := &NodeContext{
+		ASTPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "datasources"},
+			{Kind: PathSegmentField, FieldName: "myDS"},
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "vpcId"},
+		},
+		TextBefore: "        ", // 8 spaces - deeper than export names (6 spaces)
+		UnifiedNode: &UnifiedNode{
+			FieldName: "vpcId",
+			Range: source.Range{
+				Start: &source.Position{Line: 5, Column: 7}, // 1-based, so 0-based indent is 6
+			},
+		},
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextDataSourceExportDefinitionField, ctx.Kind,
+		"Should return export definition field context when at child indent level")
+}
+
+// TestDetermineCompletionContext_CustomVariableTypeValue_TextBased tests that
+// custom variable type value completions work when cursor is right after "default:"
+// using text-based detection (when path doesn't include "default" segment yet).
+func (s *CompletionContextSuite) TestDetermineCompletionContext_CustomVariableTypeValue_TextBased() {
+	// Path is at variable definition level (2 segments: /variables/instanceType)
+	// But TextBefore ends with "default:", indicating user wants default value completions
+	nodeCtx := &NodeContext{
+		ASTPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "variables"},
+			{Kind: PathSegmentField, FieldName: "instanceType"},
+		},
+		TextBefore: "    default: ",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextCustomVariableTypeValue, ctx.Kind,
+		"Should return custom variable type value context when text ends with 'default:'")
+}
+
+// TestDetermineCompletionContext_CustomVariableTypeValue_TextBased_JSONC tests the
+// text-based fallback for JSONC format.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_CustomVariableTypeValue_TextBased_JSONC() {
+	nodeCtx := &NodeContext{
+		ASTPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "variables"},
+			{Kind: PathSegmentField, FieldName: "instanceType"},
+		},
+		TextBefore: `      "default": `,
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextCustomVariableTypeValue, ctx.Kind,
+		"Should return custom variable type value context for JSONC 'default':  pattern")
+}
+
 // TestDetermineCompletionContext_DataSourceMetadataField tests detection of
 // data source metadata field completion (for fields like displayName, annotations, custom).
 func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceMetadataField_YAML() {
@@ -1000,6 +1092,88 @@ func (s *CompletionContextSuite) TestCompletionContextKind_String_NewDataSourceC
 	for _, tt := range tests {
 		s.Run(tt.expected, func() {
 			s.Assert().Equal(tt.expected, tt.kind.String())
+		})
+	}
+}
+
+// TestDetermineCompletionContext_ResourceSpecFieldValue_FullPath tests detection of resource spec
+// field value completion when the full path includes the field name.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecFieldValue_FullPath() {
+	nodeCtx := &NodeContext{
+		ASTPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "resources"},
+			{Kind: PathSegmentField, FieldName: "myFunction"},
+			{Kind: PathSegmentField, FieldName: "spec"},
+			{Kind: PathSegmentField, FieldName: "architecture"},
+		},
+		TextBefore: "      architecture: ",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextResourceSpecFieldValue, ctx.Kind)
+	s.Assert().Equal("myFunction", ctx.ResourceName)
+}
+
+// TestDetermineCompletionContext_ResourceSpecFieldValue_Fallback tests detection of resource spec
+// field value completion when the path is only at spec level but we can extract the field name
+// from TextBefore. This handles the case where the cursor is positioned after "fieldName: "
+// but outside the AST node's range.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecFieldValue_Fallback() {
+	nodeCtx := &NodeContext{
+		ASTPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "resources"},
+			{Kind: PathSegmentField, FieldName: "myFunction"},
+			{Kind: PathSegmentField, FieldName: "spec"},
+		},
+		TextBefore: "      architecture: ",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextResourceSpecFieldValue, ctx.Kind)
+	s.Assert().Equal("myFunction", ctx.ResourceName)
+	s.Assert().Equal("architecture", ctx.NodeCtx.ExtractedFieldName)
+}
+
+// TestDetermineCompletionContext_ResourceSpecFieldValue_Fallback_JSONC tests the fallback
+// with JSONC syntax (quoted field names).
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecFieldValue_Fallback_JSONC() {
+	nodeCtx := &NodeContext{
+		ASTPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "resources"},
+			{Kind: PathSegmentField, FieldName: "myFunction"},
+			{Kind: PathSegmentField, FieldName: "spec"},
+		},
+		TextBefore: `      "architecture": `,
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextResourceSpecFieldValue, ctx.Kind)
+	s.Assert().Equal("myFunction", ctx.ResourceName)
+	s.Assert().Equal("architecture", ctx.NodeCtx.ExtractedFieldName)
+}
+
+// TestExtractFieldNameFromTextBefore tests the helper function for extracting field names.
+func (s *CompletionContextSuite) TestExtractFieldNameFromTextBefore() {
+	tests := []struct {
+		name       string
+		textBefore string
+		expected   string
+	}{
+		{"YAML with space", "      architecture: ", "architecture"},
+		{"YAML without space", "      architecture:", "architecture"},
+		{"JSONC with space", `      "architecture": `, "architecture"},
+		{"JSONC without space", `      "architecture":`, "architecture"},
+		{"field with underscore", "      my_field: ", "my_field"},
+		{"field with hyphen", "      my-field: ", "my-field"},
+		{"field with numbers", "      field123: ", "field123"},
+		{"no match - key position", "      arch", ""},
+		{"no match - in value", "      architecture: someValue", ""},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			result := extractFieldNameFromTextBefore(tt.textBefore)
+			s.Assert().Equal(tt.expected, result)
 		})
 	}
 }

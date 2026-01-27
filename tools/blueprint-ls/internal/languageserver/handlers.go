@@ -39,6 +39,11 @@ func (a *Application) handleInitialise(ctx *common.LSPContext, params *lsp.Initi
 		TriggerCharacters: []string{"{", ",", "\"", "'", "(", "=", ".", " ", ":", "["},
 		ResolveProvider:   &lsp.True,
 	}
+	capabilities.CodeActionProvider = &lsp.CodeActionOptions{
+		CodeActionKinds: []lsp.CodeActionKind{
+			lsp.CodeActionKindQuickFix,
+		},
+	}
 
 	hasWorkspaceFolderCapability := clientCapabilities.Workspace != nil && clientCapabilities.Workspace.WorkspaceFolders != nil
 	a.state.SetWorkspaceFolderCapability(hasWorkspaceFolderCapability)
@@ -217,7 +222,7 @@ func (a *Application) validateAndPublishDiagnostics(
 	dispatcher *lsp.Dispatcher,
 ) error {
 	content := a.getDocumentContent(uri, true)
-	diagnostics, blueprint, err := a.diagnosticService.ValidateTextDocument(
+	diagnostics, enhanced, blueprint, err := a.diagnosticService.ValidateTextDocument(
 		ctx,
 		uri,
 	)
@@ -229,6 +234,9 @@ func (a *Application) validateAndPublishDiagnostics(
 	if err != nil {
 		return err
 	}
+
+	// Store enhanced diagnostics for code action support
+	a.state.SetEnhancedDiagnostics(uri, enhanced)
 
 	// We must push diagnostics even if there are no errors to clear the existing ones
 	// in the client.
@@ -565,4 +573,23 @@ func (a *Application) reinitialiseRegistries(
 		a.resourceRegistry,
 		a.dataSourceRegistry,
 	)
+}
+
+func (a *Application) handleCodeAction(
+	ctx *common.LSPContext,
+	params *lsp.CodeActionParams,
+) ([]*lsp.CodeActionOrCommand, error) {
+	actions, err := a.codeActionService.GetCodeActions(params)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*lsp.CodeActionOrCommand, len(actions))
+	for i, action := range actions {
+		actionCopy := action
+		result[i] = &lsp.CodeActionOrCommand{
+			CodeAction: &actionCopy,
+		}
+	}
+	return result, nil
 }

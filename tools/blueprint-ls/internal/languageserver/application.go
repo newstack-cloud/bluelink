@@ -26,6 +26,7 @@ type Application struct {
 	hoverService          *languageservices.HoverService
 	symbolService         *languageservices.SymbolService
 	gotoDefinitionService *languageservices.GotoDefinitionService
+	codeActionService     *languageservices.CodeActionService
 	logger                *zap.Logger
 	traceService          *lsp.TraceService
 
@@ -54,6 +55,7 @@ func NewApplication(
 	hoverService *languageservices.HoverService,
 	symbolService *languageservices.SymbolService,
 	gotoDefinitionService *languageservices.GotoDefinitionService,
+	codeActionService *languageservices.CodeActionService,
 	builtInProviders map[string]provider.Provider,
 	builtInTransformers map[string]transform.SpecTransformer,
 	frameworkLogger core.Logger,
@@ -74,6 +76,7 @@ func NewApplication(
 		hoverService:          hoverService,
 		symbolService:         symbolService,
 		gotoDefinitionService: gotoDefinitionService,
+		codeActionService:     codeActionService,
 		builtInProviders:      builtInProviders,
 		builtInTransformers:   builtInTransformers,
 		frameworkLogger:       frameworkLogger,
@@ -96,6 +99,7 @@ func (a *Application) Setup() {
 		lsp.WithCompletionItemResolveHandler(a.handleCompletionItemResolve),
 		lsp.WithDocumentSymbolHandler(a.handleDocumentSymbols),
 		lsp.WithGotoDefinitionHandler(a.handleGotoDefinition),
+		lsp.WithCodeActionHandler(a.handleCodeAction),
 	)
 }
 

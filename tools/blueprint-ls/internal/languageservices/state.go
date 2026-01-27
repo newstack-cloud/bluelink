@@ -18,6 +18,7 @@ type State struct {
 	documentSettings                        map[string]*DocSettings
 	documentContent                         map[string]string
 	documentContexts                        map[string]*docmodel.DocumentContext
+	enhancedDiagnostics                     map[string][]*EnhancedDiagnostic
 	positionEncodingKind                    lsp.PositionEncodingKind
 	lock                                    sync.Mutex
 }
@@ -26,9 +27,10 @@ type State struct {
 // for the language server.
 func NewState() *State {
 	return &State{
-		documentSettings: make(map[string]*DocSettings),
-		documentContent:  make(map[string]string),
-		documentContexts: make(map[string]*docmodel.DocumentContext),
+		documentSettings:    make(map[string]*DocSettings),
+		documentContent:     make(map[string]string),
+		documentContexts:    make(map[string]*docmodel.DocumentContext),
+		enhancedDiagnostics: make(map[string][]*EnhancedDiagnostic),
 	}
 }
 
@@ -208,4 +210,24 @@ func (s *State) ClearDocSettings() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.documentSettings = make(map[string]*DocSettings)
+}
+
+// GetEnhancedDiagnostics retrieves the enhanced diagnostics for a document by its URI.
+// Enhanced diagnostics include the error context metadata needed for code actions.
+func (s *State) GetEnhancedDiagnostics(uri string) []*EnhancedDiagnostic {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	diagnostics, ok := s.enhancedDiagnostics[uri]
+	if !ok {
+		return nil
+	}
+	return diagnostics
+}
+
+// SetEnhancedDiagnostics sets the enhanced diagnostics for a document by its URI.
+// This replaces any existing enhanced diagnostics for the document.
+func (s *State) SetEnhancedDiagnostics(uri string, diagnostics []*EnhancedDiagnostic) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.enhancedDiagnostics[uri] = diagnostics
 }

@@ -109,6 +109,10 @@ func main() {
 		state,
 		logger,
 	)
+	codeActionService := languageservices.NewCodeActionService(
+		state,
+		logger,
+	)
 
 	app := languageserver.NewApplication(
 		state,
@@ -125,6 +129,7 @@ func main() {
 		hoverService,
 		symbolService,
 		gotoDefinitionService,
+		codeActionService,
 		providers,
 		transformers,
 		frameworkLogger,

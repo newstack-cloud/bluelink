@@ -68,6 +68,8 @@ func (r *DynamoDBTableResource) GetSpecDefinition(
 	ctx context.Context,
 	input *provider.ResourceGetSpecDefinitionInput,
 ) (*provider.ResourceGetSpecDefinitionOutput, error) {
+	payPerRequest := "PAY_PER_REQUEST"
+	provisioned := "PROVISIONED"
 	return &provider.ResourceGetSpecDefinitionOutput{
 		SpecDefinition: &provider.ResourceSpecDefinition{
 			Schema: &provider.ResourceDefinitionsSchema{
@@ -79,6 +81,14 @@ func (r *DynamoDBTableResource) GetSpecDefinition(
 					},
 					"tableName": {
 						Type: provider.ResourceDefinitionsSchemaTypeString,
+					},
+					"billingMode": {
+						Type:        provider.ResourceDefinitionsSchemaTypeString,
+						Description: "The billing mode for the table.",
+						AllowedValues: []*core.MappingNode{
+							{Scalar: &core.ScalarValue{StringValue: &payPerRequest}},
+							{Scalar: &core.ScalarValue{StringValue: &provisioned}},
+						},
 					},
 				},
 			},

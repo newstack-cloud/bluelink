@@ -32,28 +32,32 @@ func NewDiagnosticErrorService(
 	}
 }
 
+// BlueprintErrorToDiagnostics converts a blueprint error into LSP diagnostics.
+// It returns both the standard LSP diagnostics and enhanced diagnostics that
+// include error context metadata for use in code actions.
 func (s *DiagnosticErrorService) BlueprintErrorToDiagnostics(
 	err error,
 	docURI lsp.URI,
-) []lsp.Diagnostic {
+) ([]lsp.Diagnostic, []*EnhancedDiagnostic) {
 	diagnostics := []lsp.Diagnostic{}
+	enhanced := []*EnhancedDiagnostic{}
 
 	loadErr, isLoadErr := err.(*errors.LoadError)
 	if isLoadErr {
-		s.collectLoadErrors(loadErr, &diagnostics, nil, docURI)
-		return diagnostics
+		s.collectLoadErrors(loadErr, &diagnostics, &enhanced, nil, docURI)
+		return diagnostics, enhanced
 	}
 
 	schemaErr, isSchemaErr := err.(*schema.Error)
 	if isSchemaErr {
 		s.collectSchemaError(schemaErr, &diagnostics, docURI)
-		return diagnostics
+		return diagnostics, enhanced
 	}
 
 	coreErr, isCoreErr := err.(*core.Error)
 	if isCoreErr {
 		s.collectCoreError(coreErr, &diagnostics, nil, docURI)
-		return diagnostics
+		return diagnostics, enhanced
 	}
 
 	_, isRunErr := err.(*errors.RunError)
@@ -61,10 +65,10 @@ func (s *DiagnosticErrorService) BlueprintErrorToDiagnostics(
 		// Skip capturing run errors during validation,
 		// they are useful at runtime but may appear during validation
 		// in loading provider and transformer plugins.
-		return diagnostics
+		return diagnostics, enhanced
 	}
 
-	return getGeneralErrorDiagnostics(err)
+	return getGeneralErrorDiagnostics(err), enhanced
 }
 
 func getGeneralErrorDiagnostics(err error) []lsp.Diagnostic {
@@ -90,13 +94,14 @@ func getGeneralErrorDiagnostics(err error) []lsp.Diagnostic {
 func (s *DiagnosticErrorService) collectLoadErrors(
 	err *errors.LoadError,
 	diagnostics *[]lsp.Diagnostic,
+	enhanced *[]*EnhancedDiagnostic,
 	parentLoadErr *errors.LoadError,
 	docURI lsp.URI,
 ) {
 	for _, childErr := range err.ChildErrors {
 		childLoadErr, isLoadErr := childErr.(*errors.LoadError)
 		if isLoadErr {
-			s.collectLoadErrors(childLoadErr, diagnostics, err, docURI)
+			s.collectLoadErrors(childLoadErr, diagnostics, enhanced, err, docURI)
 		}
 
 		childSchemaErr, isSchemaErr := childErr.(*schema.Error)
@@ -168,6 +173,31 @@ func (s *DiagnosticErrorService) collectLoadErrors(
 		}
 
 		*diagnostics = append(*diagnostics, diag)
+
+		// Create enhanced diagnostic with error context for code actions
+		if err.Context != nil {
+			*enhanced = append(*enhanced, &EnhancedDiagnostic{
+				Diagnostic:   diag,
+				ErrorContext: err.Context,
+				Line:         err.Line,
+				Column:       err.Column,
+				EndLine:      err.EndLine,
+				EndColumn:    err.EndColumn,
+			})
+		} else if err.ReasonCode != "" {
+			// Create a minimal ErrorContext from the ReasonCode for code actions
+			// that only need the reason code (e.g., missing version)
+			*enhanced = append(*enhanced, &EnhancedDiagnostic{
+				Diagnostic: diag,
+				ErrorContext: &errors.ErrorContext{
+					ReasonCode: err.ReasonCode,
+				},
+				Line:      err.Line,
+				Column:    err.Column,
+				EndLine:   err.EndLine,
+				EndColumn: err.EndColumn,
+			})
+		}
 	}
 }
 

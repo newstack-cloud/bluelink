@@ -49,19 +49,22 @@ func (s *DiagnosticsService) UpdateLoader(loader container.Loader) {
 }
 
 // ValidateTextDocument validates a text document and returns diagnostics.
+// It returns both standard LSP diagnostics and enhanced diagnostics with
+// error context metadata for use in code actions.
 func (s *DiagnosticsService) ValidateTextDocument(
 	lspCtx *common.LSPContext,
 	docURI lsp.URI,
-) ([]lsp.Diagnostic, *schema.Blueprint, error) {
+) ([]lsp.Diagnostic, []*EnhancedDiagnostic, *schema.Blueprint, error) {
 	diagnostics := []lsp.Diagnostic{}
+	enhanced := []*EnhancedDiagnostic{}
 	settings, err := s.settingsService.GetDocumentSettings(lspCtx, docURI)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	s.logger.Debug(fmt.Sprintf("Settings: %v", settings))
 	content := s.state.GetDocumentContent(docURI)
 	if content == nil {
-		return diagnostics, nil, nil
+		return diagnostics, enhanced, nil, nil
 	}
 
 	format := blueprint.DetermineDocFormat(docURI)
@@ -86,14 +89,15 @@ func (s *DiagnosticsService) ValidateTextDocument(
 	)
 	if err != nil {
 		s.logger.Error(fmt.Sprintf("Error loading blueprint: %v", err))
-		errDiagnostics := s.diagnosticErrorService.BlueprintErrorToDiagnostics(
+		errDiagnostics, errEnhanced := s.diagnosticErrorService.BlueprintErrorToDiagnostics(
 			err,
 			docURI,
 		)
 		diagnostics = append(diagnostics, errDiagnostics...)
+		enhanced = append(enhanced, errEnhanced...)
 	}
 
-	return deduplicateDiagnostics(diagnostics), validationResult.Schema, nil
+	return deduplicateDiagnostics(diagnostics), enhanced, validationResult.Schema, nil
 }
 
 func deduplicateDiagnostics(diagnostics []lsp.Diagnostic) []lsp.Diagnostic {

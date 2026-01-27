@@ -17,7 +17,24 @@ func (d *VPCDataSource) GetSpecDefinition(
 		SpecDefinition: &provider.DataSourceSpecDefinition{
 			Fields: map[string]*provider.DataSourceSpecSchema{
 				"instanceConfigId": {
-					Type: provider.DataSourceSpecTypeString,
+					Type:                 provider.DataSourceSpecTypeString,
+					Description:          "The unique identifier for the instance configuration.",
+					FormattedDescription: "The unique identifier for the **instance configuration**.",
+				},
+				"vpcId": {
+					Type:                 provider.DataSourceSpecTypeString,
+					Description:          "The unique identifier of the VPC.",
+					FormattedDescription: "The unique identifier of the **VPC**.",
+				},
+				"subnetIds": {
+					Type:                 provider.DataSourceSpecTypeArray,
+					Description:          "The list of subnet identifiers associated with the VPC.",
+					FormattedDescription: "The list of **subnet identifiers** associated with the VPC.",
+				},
+				"tags": {
+					Type:                 provider.DataSourceSpecTypeString,
+					Description:          "A map of tags associated with the VPC.",
+					FormattedDescription: "A map of **tags** associated with the VPC.",
 				},
 			},
 		},
@@ -59,12 +76,14 @@ func (d *VPCDataSource) GetFilterFields(
 	return &provider.DataSourceGetFilterFieldsOutput{
 		FilterFields: map[string]*provider.DataSourceFilterSchema{
 			"instanceConfigId": {
-				Type:        provider.DataSourceFilterSearchValueTypeString,
-				Description: "The ID of the instance configuration.",
+				Type:                 provider.DataSourceFilterSearchValueTypeString,
+				Description:          "The ID of the instance configuration.",
+				FormattedDescription: "The ID of the **instance configuration**.",
 			},
 			"tags": {
-				Type:        provider.DataSourceFilterSearchValueTypeString,
-				Description: "A map of tags to filter the VPCs.",
+				Type:                 provider.DataSourceFilterSearchValueTypeString,
+				Description:          "A map of tags to filter the VPCs.",
+				FormattedDescription: "A map of **tags** to filter the VPCs.",
 			},
 		},
 	}, nil

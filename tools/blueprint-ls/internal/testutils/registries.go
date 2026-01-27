@@ -234,6 +234,13 @@ func (r *ResourceRegistryMock) ReleaseResourceLocksAcquiredBy(
 ) {
 }
 
+func (r *ResourceRegistryMock) ListTransformers(
+	ctx context.Context,
+) ([]string, error) {
+	// Return empty list for tests - no transformers in mock
+	return []string{}, nil
+}
+
 type DataSourceRegistryMock struct {
 	DataSources map[string]provider.DataSource
 }
@@ -356,6 +363,22 @@ func (r *CustomVarTypeRegistryMock) GetDescription(
 func (r *CustomVarTypeRegistryMock) HasCustomVariableType(ctx context.Context, customVariableType string) (bool, error) {
 	_, ok := r.CustomVarTypes[customVariableType]
 	return ok, nil
+}
+
+func (r *CustomVarTypeRegistryMock) GetOptions(
+	ctx context.Context,
+	customVariableType string,
+	input *provider.CustomVariableTypeOptionsInput,
+) (*provider.CustomVariableTypeOptionsOutput, error) {
+	res, ok := r.CustomVarTypes[customVariableType]
+	if !ok {
+		return nil, fmt.Errorf("custom variable type %s not found", customVariableType)
+	}
+	optionsOutput, err := res.Options(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+	return optionsOutput, nil
 }
 
 func (r *CustomVarTypeRegistryMock) ListCustomVariableTypes(

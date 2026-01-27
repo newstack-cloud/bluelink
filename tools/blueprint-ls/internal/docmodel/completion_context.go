@@ -31,8 +31,21 @@ const (
 	CompletionContextDataSourceExportDefinitionField // Fields inside an export definition (type, aliasFor, description)
 	CompletionContextDataSourceMetadataField         // Fields inside data source metadata (displayName, annotations, custom)
 
+	// Data source export value contexts (aliasFor references data source fields)
+	CompletionContextDataSourceExportAliasForValue // aliasFor: value field referencing data source spec fields
+	CompletionContextDataSourceExportName          // Export name key (suggests data source spec fields)
+
 	// Resource spec field (editing directly in YAML/JSONC definition)
 	CompletionContextResourceSpecField
+	// Resource spec field value (editing a value for a field with AllowedValues)
+	CompletionContextResourceSpecFieldValue
+
+	// Top-level blueprint fields with enum values
+	CompletionContextVersionField   // version: field with known spec versions
+	CompletionContextTransformField // transform: field with available transforms
+
+	// Custom variable type options (default value for custom type variables)
+	CompletionContextCustomVariableTypeValue
 
 	// Resource metadata field (displayName, labels, annotations, custom)
 	CompletionContextResourceMetadataField
@@ -68,6 +81,8 @@ var (
 	typeFieldPattern     = regexp.MustCompile(`("type"|type):\s*$`)
 	fieldFieldPattern    = regexp.MustCompile(`("field"|field):\s*$`)
 	operatorFieldPattern = regexp.MustCompile(`("operator"|operator):\s*$`)
+	aliasForFieldPattern = regexp.MustCompile(`("aliasFor"|aliasFor):\s*$`)
+	defaultFieldPattern  = regexp.MustCompile(`("default"|default):\s*$`)
 
 	// Substitution reference patterns.
 	variableRefTextPattern = regexp.MustCompile(`variables\.$`)
@@ -98,6 +113,11 @@ var (
 
 	// Reserved namespace prefixes that are NOT standalone resources
 	reservedNamespaces = []string{"resources", "datasources", "variables", "values", "children", "elem"}
+
+	// Pattern to extract field name from TextBefore when at a value position
+	// Matches: fieldName: or "fieldName": at the end (with optional trailing space)
+	// Captures: group 1 = the field name (without quotes)
+	valuePositionFieldPattern = regexp.MustCompile(`(?:"([A-Za-z][A-Za-z0-9_-]*)"|([A-Za-z][A-Za-z0-9_-]*)):\s*$`)
 )
 
 // CompletionContext provides rich context for completion suggestions.
@@ -135,6 +155,12 @@ func DetermineCompletionContext(nodeCtx *NodeContext) *CompletionContext {
 
 	// Check data source filter contexts
 	if kind := determineDataSourceFilterContext(nodeCtx); kind != CompletionContextUnknown {
+		ctx.Kind = kind
+		return ctx
+	}
+
+	// Check data source export contexts (aliasFor, export name)
+	if kind := determineDataSourceExportContext(nodeCtx); kind != CompletionContextUnknown {
 		ctx.Kind = kind
 		return ctx
 	}
@@ -258,9 +284,87 @@ func determineDataSourceFilterContext(nodeCtx *NodeContext) CompletionContextKin
 }
 
 func isInDataSourceFilters(path StructuredPath) bool {
-	return len(path) >= 3 &&
-		path.At(0).FieldName == "datasources" &&
-		path.At(2).FieldName == "filters"
+	if len(path) < 3 {
+		return false
+	}
+	if path.At(0).FieldName != "datasources" {
+		return false
+	}
+	// Support both singular "filter" and plural "filters"
+	return path.At(2).FieldName == "filter" || path.At(2).FieldName == "filters"
+}
+
+func determineDataSourceExportContext(nodeCtx *NodeContext) CompletionContextKind {
+	path := nodeCtx.ASTPath
+	textBefore := nodeCtx.TextBefore
+
+	// Check for existing aliasFor field position based on path
+	if path.IsDataSourceExportAliasFor() {
+		return CompletionContextDataSourceExportAliasForValue
+	}
+
+	// Check for text-based aliasFor pattern (handles cursor right after "aliasFor:" or "aliasFor: ")
+	if isInDataSourceExports(path) {
+		if aliasForFieldPattern.MatchString(textBefore) {
+			return CompletionContextDataSourceExportAliasForValue
+		}
+	}
+
+	// Check for export name key position (at exports level, ready to add new export)
+	// This is handled by path-based detection in determineSectionDefinitionContext
+
+	return CompletionContextUnknown
+}
+
+func isInDataSourceExports(path StructuredPath) bool {
+	if len(path) < 3 {
+		return false
+	}
+	if path.At(0).FieldName != "datasources" {
+		return false
+	}
+	return path.At(2).FieldName == "exports"
+}
+
+// Checks if the cursor's indent level matches the export name level.
+// This is used to distinguish between adding a new export sibling vs. adding a field inside an export.
+//
+// When the path is at export definition level (4 segments: /datasources/{name}/exports/{exportName}),
+// but the cursor indent is at the same level as the export name, the user wants to add a new export.
+//
+// Example:
+//
+//	exports:
+//	  vpc:           <- export name at indent level 6 (2 spaces per level * 3)
+//	    type: string <- field at indent level 8
+//	  |              <- cursor at indent 6 = wants new export sibling
+//	    |            <- cursor at indent 8 = wants field inside vpc
+func isAtExportNameIndentLevel(nodeCtx *NodeContext) bool {
+	if nodeCtx == nil || nodeCtx.UnifiedNode == nil {
+		return false
+	}
+
+	// Get the current line's leading whitespace
+	currentLineText := nodeCtx.TextBefore
+	if lastNewline := strings.LastIndex(nodeCtx.TextBefore, "\n"); lastNewline >= 0 {
+		currentLineText = nodeCtx.TextBefore[lastNewline+1:]
+	}
+	trimmed := strings.TrimLeft(currentLineText, " \t")
+	cursorIndent := len(currentLineText) - len(trimmed)
+
+	// The UnifiedNode should be the export definition node (e.g., "vpc")
+	// Its start column indicates the export name indent level
+	node := nodeCtx.UnifiedNode
+	if node.Range.Start == nil {
+		return false
+	}
+
+	// nodeStartCol is 1-based, convert to 0-based for comparison
+	exportNameIndent := node.Range.Start.Column - 1
+
+	// If cursor indent matches the export name indent (not deeper),
+	// user wants to add a new export sibling
+	return cursorIndent <= exportNameIndent
 }
 
 // isAtDocumentRootLevel checks if the cursor is at the document root level.
@@ -297,6 +401,14 @@ func determineSectionDefinitionContext(nodeCtx *NodeContext) sectionDefinitionCo
 	// Don't trigger for substitution contexts - those are handled separately
 	if nodeCtx.InSubstitution() {
 		return sectionDefinitionContextResult{kind: CompletionContextUnknown}
+	}
+
+	// Check for value positions first (AllowedValues completions for resource spec fields)
+	// This must come BEFORE the key position check
+	if nodeCtx.IsAtValuePosition() {
+		if result := determineValuePositionContext(nodeCtx, path); result.kind != CompletionContextUnknown {
+			return result
+		}
 	}
 
 	// Only suggest field names when at a key position, not when typing values
@@ -371,8 +483,19 @@ func determineSectionDefinitionContext(nodeCtx *NodeContext) sectionDefinitionCo
 	}
 
 	// Check data source export definition: /datasources/{name}/exports/{exportName}
+	// However, if we're at the exports sibling level (same indent as existing exports),
+	// this is actually for adding a new export name, not a field inside the export.
 	if path.IsDataSourceExportDefinition() {
+		if isAtExportNameIndentLevel(nodeCtx) {
+			return sectionDefinitionContextResult{kind: CompletionContextDataSourceExportName}
+		}
 		return sectionDefinitionContextResult{kind: CompletionContextDataSourceExportDefinitionField}
+	}
+
+	// Check data source exports section: /datasources/{name}/exports (at key position to add new export)
+	// This suggests field names from the data source spec as potential export names
+	if path.IsDataSourceExports() && len(path) == 3 {
+		return sectionDefinitionContextResult{kind: CompletionContextDataSourceExportName}
 	}
 
 	// Check data source metadata: /datasources/{name}/metadata/...
@@ -393,6 +516,75 @@ func determineSectionDefinitionContext(nodeCtx *NodeContext) sectionDefinitionCo
 	// Check export definition: /exports/{name}
 	if path.IsExportDefinition() {
 		return sectionDefinitionContextResult{kind: CompletionContextExportDefinitionField}
+	}
+
+	return sectionDefinitionContextResult{kind: CompletionContextUnknown}
+}
+
+// determineValuePositionContext checks for contexts where we're at a value position
+// and should provide enum/lookup completions (e.g., AllowedValues for resource spec fields).
+func determineValuePositionContext(nodeCtx *NodeContext, path StructuredPath) sectionDefinitionContextResult {
+	// Check for data source export aliasFor value: /datasources/{name}/exports/{exportName}/aliasFor
+	// This provides completions for available field names from the data source spec
+	if path.IsDataSourceExportAliasFor() {
+		return sectionDefinitionContextResult{kind: CompletionContextDataSourceExportAliasForValue}
+	}
+
+	// Check for resource spec field value: /resources/{name}/spec/...
+	// When at value position inside a resource spec, check for AllowedValues
+	if path.IsResourceSpec() && len(path) > 3 {
+		resourceName, ok := path.GetResourceName()
+		if !ok {
+			return sectionDefinitionContextResult{kind: CompletionContextUnknown}
+		}
+		return sectionDefinitionContextResult{
+			kind:         CompletionContextResourceSpecFieldValue,
+			resourceName: resourceName,
+		}
+	}
+
+	// Fallback: If path is at spec level (len == 3) but we're at a value position,
+	// try to extract the field name from TextBefore. This handles the case where
+	// the cursor is positioned after "fieldName: " but outside the AST node's range.
+	if path.IsResourceSpec() && len(path) == 3 {
+		fieldName := extractFieldNameFromTextBefore(nodeCtx.TextBefore)
+		if fieldName != "" {
+			resourceName, ok := path.GetResourceName()
+			if ok {
+				// Store the extracted field name in the node context for later use
+				nodeCtx.ExtractedFieldName = fieldName
+				return sectionDefinitionContextResult{
+					kind:         CompletionContextResourceSpecFieldValue,
+					resourceName: resourceName,
+				}
+			}
+		}
+	}
+
+	// Check for version field value: /version
+	if len(path) == 1 && path.At(0).FieldName == "version" {
+		return sectionDefinitionContextResult{kind: CompletionContextVersionField}
+	}
+
+	// Check for transform field value: /transform
+	if len(path) == 1 && path.At(0).FieldName == "transform" {
+		return sectionDefinitionContextResult{kind: CompletionContextTransformField}
+	}
+
+	// Check for custom variable type default value: /variables/{name}/default
+	if len(path) == 3 &&
+		path.At(0).FieldName == "variables" &&
+		path.At(2).FieldName == "default" {
+		return sectionDefinitionContextResult{kind: CompletionContextCustomVariableTypeValue}
+	}
+
+	// Fallback: If path is at variable definition level (len == 2) but we're at a value position
+	// and TextBefore ends with "default:", this is the custom variable type default value.
+	// This handles the case where cursor is after "default:" but no value node exists yet.
+	if len(path) == 2 &&
+		path.At(0).FieldName == "variables" &&
+		defaultFieldPattern.MatchString(nodeCtx.TextBefore) {
+		return sectionDefinitionContextResult{kind: CompletionContextCustomVariableTypeValue}
 	}
 
 	return sectionDefinitionContextResult{kind: CompletionContextUnknown}
@@ -549,38 +741,44 @@ func extractPotentialStandaloneResourceName(textBefore string) string {
 }
 
 var completionContextKindNames = map[CompletionContextKind]string{
-	CompletionContextUnknown:                        "unknown",
-	CompletionContextResourceType:                   "resourceType",
-	CompletionContextDataSourceType:                 "dataSourceType",
-	CompletionContextVariableType:                   "variableType",
-	CompletionContextValueType:                      "valueType",
-	CompletionContextExportType:                     "exportType",
-	CompletionContextDataSourceFieldType:            "dataSourceFieldType",
+	CompletionContextUnknown:                         "unknown",
+	CompletionContextResourceType:                    "resourceType",
+	CompletionContextDataSourceType:                  "dataSourceType",
+	CompletionContextVariableType:                    "variableType",
+	CompletionContextValueType:                       "valueType",
+	CompletionContextExportType:                      "exportType",
+	CompletionContextDataSourceFieldType:             "dataSourceFieldType",
 	CompletionContextDataSourceFilterField:           "dataSourceFilterField",
 	CompletionContextDataSourceFilterOperator:        "dataSourceFilterOperator",
 	CompletionContextDataSourceFilterDefinitionField: "dataSourceFilterDefinitionField",
 	CompletionContextDataSourceExportDefinitionField: "dataSourceExportDefinitionField",
 	CompletionContextDataSourceMetadataField:         "dataSourceMetadataField",
+	CompletionContextDataSourceExportAliasForValue:   "dataSourceExportAliasForValue",
+	CompletionContextDataSourceExportName:            "dataSourceExportName",
 	CompletionContextResourceSpecField:               "resourceSpecField",
-	CompletionContextResourceMetadataField:          "resourceMetadataField",
-	CompletionContextResourceDefinitionField:        "resourceDefinitionField",
-	CompletionContextVariableDefinitionField:        "variableDefinitionField",
-	CompletionContextValueDefinitionField:           "valueDefinitionField",
-	CompletionContextDataSourceDefinitionField:      "dataSourceDefinitionField",
-	CompletionContextIncludeDefinitionField:         "includeDefinitionField",
-	CompletionContextExportDefinitionField:          "exportDefinitionField",
-	CompletionContextBlueprintTopLevelField:         "blueprintTopLevelField",
-	CompletionContextStringSub:                      "stringSub",
-	CompletionContextStringSubVariableRef:           "stringSubVariableRef",
-	CompletionContextStringSubResourceRef:           "stringSubResourceRef",
-	CompletionContextStringSubResourceProperty:      "stringSubResourceProperty",
-	CompletionContextStringSubDataSourceRef:         "stringSubDataSourceRef",
-	CompletionContextStringSubDataSourceProperty:    "stringSubDataSourceProperty",
-	CompletionContextStringSubValueRef:              "stringSubValueRef",
-	CompletionContextStringSubChildRef:              "stringSubChildRef",
-	CompletionContextStringSubElemRef:               "stringSubElemRef",
-	CompletionContextStringSubPartialPath:           "stringSubPartialPath",
-	CompletionContextStringSubPotentialResourceProp: "stringSubPotentialResourceProp",
+	CompletionContextResourceSpecFieldValue:          "resourceSpecFieldValue",
+	CompletionContextVersionField:                    "versionField",
+	CompletionContextTransformField:                  "transformField",
+	CompletionContextCustomVariableTypeValue:         "customVariableTypeValue",
+	CompletionContextResourceMetadataField:           "resourceMetadataField",
+	CompletionContextResourceDefinitionField:         "resourceDefinitionField",
+	CompletionContextVariableDefinitionField:         "variableDefinitionField",
+	CompletionContextValueDefinitionField:            "valueDefinitionField",
+	CompletionContextDataSourceDefinitionField:       "dataSourceDefinitionField",
+	CompletionContextIncludeDefinitionField:          "includeDefinitionField",
+	CompletionContextExportDefinitionField:           "exportDefinitionField",
+	CompletionContextBlueprintTopLevelField:          "blueprintTopLevelField",
+	CompletionContextStringSub:                       "stringSub",
+	CompletionContextStringSubVariableRef:            "stringSubVariableRef",
+	CompletionContextStringSubResourceRef:            "stringSubResourceRef",
+	CompletionContextStringSubResourceProperty:       "stringSubResourceProperty",
+	CompletionContextStringSubDataSourceRef:          "stringSubDataSourceRef",
+	CompletionContextStringSubDataSourceProperty:     "stringSubDataSourceProperty",
+	CompletionContextStringSubValueRef:               "stringSubValueRef",
+	CompletionContextStringSubChildRef:               "stringSubChildRef",
+	CompletionContextStringSubElemRef:                "stringSubElemRef",
+	CompletionContextStringSubPartialPath:            "stringSubPartialPath",
+	CompletionContextStringSubPotentialResourceProp:  "stringSubPotentialResourceProp",
 }
 
 // String returns a string representation of CompletionContextKind.
@@ -626,4 +824,19 @@ func (k CompletionContextKind) IsSubstitution() bool {
 func (k CompletionContextKind) IsDataSourceFilter() bool {
 	return k == CompletionContextDataSourceFilterField ||
 		k == CompletionContextDataSourceFilterOperator
+}
+
+// Extracts a field name from TextBefore when at a value position.
+// This handles cases like "architecture: " or "\"architecture\": " where the cursor is after the colon.
+// Returns the field name without quotes, or empty string if no match.
+func extractFieldNameFromTextBefore(textBefore string) string {
+	matches := valuePositionFieldPattern.FindStringSubmatch(textBefore)
+	if matches == nil {
+		return ""
+	}
+	// matches[1] is the quoted field name (group 1), matches[2] is the unquoted field name (group 2)
+	if matches[1] != "" {
+		return matches[1]
+	}
+	return matches[2]
 }

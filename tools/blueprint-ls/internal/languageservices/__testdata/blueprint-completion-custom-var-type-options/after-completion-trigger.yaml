@@ -1,0 +1,10 @@
+version: 2024-07-20
+variables:
+  instanceType:
+    type: aws/ec2/instanceType
+    description: "The EC2 instance type"
+    default:
+
+resources:
+  ordersTable:
+    type: aws/dynamodb/table

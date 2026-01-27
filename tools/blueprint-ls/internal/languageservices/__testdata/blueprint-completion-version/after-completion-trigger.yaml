@@ -1,0 +1,4 @@
+version:
+resources:
+  ordersTable:
+    type: aws/dynamodb/table

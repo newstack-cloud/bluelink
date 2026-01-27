@@ -167,8 +167,18 @@ func (p StructuredPath) IsDataSourceFilter() bool {
 }
 
 // IsDataSourceFilterField returns true if path points to a filter field.
-// Pattern: /datasources/{name}/filters/{index}/filter/field (6 segments)
+// Pattern 1: /datasources/{name}/filter/field (4 segments, singular filter)
+// Pattern 2: /datasources/{name}/filters/{index}/filter/field (6 segments, plural filters with index)
 func (p StructuredPath) IsDataSourceFilterField() bool {
+	// Pattern 1: singular filter (common case)
+	if len(p) == 4 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "datasources" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "filter" &&
+		p[3].Kind == PathSegmentField && p[3].FieldName == "field" {
+		return true
+	}
+	// Pattern 2: plural filters with index
 	return len(p) == 6 &&
 		p[0].Kind == PathSegmentField && p[0].FieldName == "datasources" &&
 		p[1].Kind == PathSegmentField &&
@@ -178,8 +188,18 @@ func (p StructuredPath) IsDataSourceFilterField() bool {
 }
 
 // IsDataSourceFilterOperator returns true if path points to a filter operator.
-// Pattern: /datasources/{name}/filters/{index}/filter/operator (6 segments)
+// Pattern 1: /datasources/{name}/filter/operator (4 segments, singular filter)
+// Pattern 2: /datasources/{name}/filters/{index}/filter/operator (6 segments, plural filters with index)
 func (p StructuredPath) IsDataSourceFilterOperator() bool {
+	// Pattern 1: singular filter (common case)
+	if len(p) == 4 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "datasources" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "filter" &&
+		p[3].Kind == PathSegmentField && p[3].FieldName == "operator" {
+		return true
+	}
+	// Pattern 2: plural filters with index
 	return len(p) == 6 &&
 		p[0].Kind == PathSegmentField && p[0].FieldName == "datasources" &&
 		p[1].Kind == PathSegmentField &&
@@ -288,6 +308,30 @@ func (p StructuredPath) IsDataSourceExportDefinition() bool {
 		p[1].Kind == PathSegmentField &&
 		p[2].Kind == PathSegmentField && p[2].FieldName == "exports" &&
 		p[3].Kind == PathSegmentField
+}
+
+// IsDataSourceExportAliasFor returns true if path points to a data source export aliasFor field.
+// Pattern: /datasources/{name}/exports/{exportName}/aliasFor (5 segments)
+func (p StructuredPath) IsDataSourceExportAliasFor() bool {
+	return len(p) == 5 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "datasources" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "exports" &&
+		p[3].Kind == PathSegmentField &&
+		p[4].Kind == PathSegmentField && p[4].FieldName == "aliasFor"
+}
+
+// GetDataSourceExportName returns the export name if path is under a data source export.
+// Pattern: /datasources/{name}/exports/{exportName}/...
+func (p StructuredPath) GetDataSourceExportName() (string, bool) {
+	if len(p) >= 4 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "datasources" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "exports" &&
+		p[3].Kind == PathSegmentField {
+		return p[3].FieldName, true
+	}
+	return "", false
 }
 
 // IsDataSourceFilterDefinition returns true if path is at a filter definition level.

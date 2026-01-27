@@ -49,7 +49,7 @@ func (s *DiagnosticErrorServiceSuite) Test_load_error_with_exact_end_position() 
 		ColumnAccuracy: &colAccuracy,
 	}
 
-	diagnostics := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
 
 	s.Require().Len(diagnostics, 1)
 	diag := diagnostics[0]
@@ -79,7 +79,7 @@ func (s *DiagnosticErrorServiceSuite) Test_load_error_with_approximate_column_hi
 		ColumnAccuracy: &colAccuracy,
 	}
 
-	diagnostics := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
 
 	s.Require().Len(diagnostics, 1)
 	diag := diagnostics[0]
@@ -106,7 +106,7 @@ func (s *DiagnosticErrorServiceSuite) Test_load_error_without_end_position_falls
 		ColumnAccuracy: &colAccuracy,
 	}
 
-	diagnostics := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
 
 	s.Require().Len(diagnostics, 1)
 	diag := diagnostics[0]
@@ -133,7 +133,7 @@ func (s *DiagnosticErrorServiceSuite) Test_parse_error_with_exact_column() {
 		ChildErrors: []error{parseErr},
 	}
 
-	diagnostics := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
 
 	s.Require().Len(diagnostics, 1)
 	diag := diagnostics[0]
@@ -156,7 +156,7 @@ func (s *DiagnosticErrorServiceSuite) Test_parse_error_with_approximate_column()
 		ChildErrors: []error{parseErr},
 	}
 
-	diagnostics := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
 
 	s.Require().Len(diagnostics, 1)
 	diag := diagnostics[0]
@@ -181,7 +181,7 @@ func (s *DiagnosticErrorServiceSuite) Test_lex_error_with_exact_column() {
 		ChildErrors: []error{lexErr},
 	}
 
-	diagnostics := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
 
 	s.Require().Len(diagnostics, 1)
 	diag := diagnostics[0]
@@ -202,7 +202,7 @@ func (s *DiagnosticErrorServiceSuite) Test_lex_error_with_approximate_column() {
 		ChildErrors: []error{lexErr},
 	}
 
-	diagnostics := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
 
 	s.Require().Len(diagnostics, 1)
 	diag := diagnostics[0]
@@ -218,7 +218,7 @@ func (s *DiagnosticErrorServiceSuite) Test_error_without_location_uses_default_r
 		Err: fmt.Errorf("some error without location"),
 	}
 
-	diagnostics := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
 
 	s.Require().Len(diagnostics, 1)
 	diag := diagnostics[0]
@@ -256,7 +256,7 @@ func (s *DiagnosticErrorServiceSuite) Test_nested_load_errors_collect_all_diagno
 		ChildErrors: []error{childErr1, childErr2},
 	}
 
-	diagnostics := s.service.BlueprintErrorToDiagnostics(parentErr, "file:///test.yaml")
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(parentErr, "file:///test.yaml")
 
 	s.Require().Len(diagnostics, 2)
 
@@ -286,7 +286,7 @@ func (s *DiagnosticErrorServiceSuite) Test_error_with_suggestions_includes_did_y
 		},
 	}
 
-	diagnostics := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
 
 	s.Require().Len(diagnostics, 1)
 	s.Assert().Contains(diagnostics[0].Message, "Did you mean: handlerName?")
@@ -309,7 +309,7 @@ func (s *DiagnosticErrorServiceSuite) Test_error_with_available_fields_lists_the
 		},
 	}
 
-	diagnostics := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
 
 	s.Require().Len(diagnostics, 1)
 	s.Assert().Contains(diagnostics[0].Message, "Available fields: code, runtime, timeout")
@@ -334,7 +334,7 @@ func (s *DiagnosticErrorServiceSuite) Test_error_with_many_available_fields_trun
 		},
 	}
 
-	diagnostics := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
 
 	s.Require().Len(diagnostics, 1)
 	s.Assert().Contains(diagnostics[0].Message, "Available fields: a, b, c, d, e, f, g, h, ... (4 more)")
@@ -358,10 +358,59 @@ func (s *DiagnosticErrorServiceSuite) Test_error_with_suggestions_and_available_
 		},
 	}
 
-	diagnostics := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
 
 	s.Require().Len(diagnostics, 1)
 	// Both suggestions and available fields should be present
 	s.Assert().Contains(diagnostics[0].Message, "Did you mean: timeout?")
 	s.Assert().Contains(diagnostics[0].Message, "Available fields: code, runtime, timeout")
+}
+
+func (s *DiagnosticErrorServiceSuite) Test_error_with_reason_code_but_no_context_creates_enhanced_diagnostic() {
+	// When a LoadError has a ReasonCode but no Context, we should still
+	// create an EnhancedDiagnostic with a synthesized ErrorContext for code actions.
+	loadErr := &errors.LoadError{
+		ReasonCode: "missing_version",
+		Err:        fmt.Errorf("validation failed due to a version not being provided"),
+	}
+
+	diagnostics, enhanced := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
+
+	s.Require().Len(diagnostics, 1)
+	s.Require().Len(enhanced, 1)
+
+	// The enhanced diagnostic should have an ErrorContext with the ReasonCode
+	s.Require().NotNil(enhanced[0].ErrorContext)
+	s.Assert().Equal(errors.ErrorReasonCode("missing_version"), enhanced[0].ErrorContext.ReasonCode)
+}
+
+func (s *DiagnosticErrorServiceSuite) Test_error_with_context_uses_existing_context() {
+	// When a LoadError has both ReasonCode and Context, the existing Context should be used.
+	line := 10
+	col := 5
+	colAccuracy := source.ColumnAccuracyExact
+
+	loadErr := &errors.LoadError{
+		ReasonCode:     "some_reason",
+		Err:            fmt.Errorf("some error"),
+		Line:           &line,
+		Column:         &col,
+		ColumnAccuracy: &colAccuracy,
+		Context: &errors.ErrorContext{
+			ReasonCode: "context_reason",
+			Metadata: map[string]any{
+				"key": "value",
+			},
+		},
+	}
+
+	diagnostics, enhanced := s.service.BlueprintErrorToDiagnostics(loadErr, "file:///test.yaml")
+
+	s.Require().Len(diagnostics, 1)
+	s.Require().Len(enhanced, 1)
+
+	// The enhanced diagnostic should use the existing Context, not a synthesized one
+	s.Require().NotNil(enhanced[0].ErrorContext)
+	s.Assert().Equal(errors.ErrorReasonCode("context_reason"), enhanced[0].ErrorContext.ReasonCode)
+	s.Assert().Equal("value", enhanced[0].ErrorContext.Metadata["key"])
 }

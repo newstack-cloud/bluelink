@@ -1,58 +1,15 @@
 package languageservices
 
 import (
-	"path"
 	"slices"
 	"strings"
-	"testing"
 
-	"github.com/newstack-cloud/bluelink/libs/blueprint/corefunctions"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
-	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/testutils"
 	"github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
-	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 )
-
-type CompletionServiceGetItemsSuite struct {
-	suite.Suite
-	service *CompletionService
-}
-
-func (s *CompletionServiceGetItemsSuite) SetupTest() {
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		s.FailNow(err.Error())
-	}
-
-	state := NewState()
-	state.SetLinkSupportCapability(true)
-	resourceRegistry := &testutils.ResourceRegistryMock{
-		Resources: map[string]provider.Resource{
-			"aws/dynamodb/table": &testutils.DynamoDBTableResource{},
-		},
-	}
-	dataSourceRegistry := &testutils.DataSourceRegistryMock{
-		DataSources: map[string]provider.DataSource{
-			"aws/vpc": &testutils.VPCDataSource{},
-		},
-	}
-	customVarTypeRegistry := &testutils.CustomVarTypeRegistryMock{
-		CustomVarTypes: map[string]provider.CustomVariableType{
-			"aws/ec2/instanceType": &testutils.InstanceTypeCustomVariableType{},
-		},
-	}
-	functionRegistry := &testutils.FunctionRegistryMock{
-		Functions: map[string]provider.Function{
-			"len": corefunctions.NewLenFunction(),
-		},
-	}
-	s.service = NewCompletionService(resourceRegistry, dataSourceRegistry, customVarTypeRegistry, functionRegistry, state, logger)
-}
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_variable_ref() {
 	blueprintInfo, err := loadCompletionBlueprintAndTree("blueprint-completion-variable-ref")
@@ -499,6 +456,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 	itemKind := lsp.CompletionItemKindField
 	tableNameFilter := "tableName"
 	idFilter := "id"
+	billingModeFilter := "billingMode"
+	billingModeDoc := "The billing mode for the table."
 	s.Assert().Equal(sortCompletionItems([]*lsp.CompletionItem{
 		{
 			Kind:       &itemKind,
@@ -539,6 +498,29 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 					},
 				},
 				NewText: "id",
+			},
+			Data: map[string]any{
+				"completionType": "resourceProperty",
+			},
+		},
+		{
+			Kind:          &itemKind,
+			Label:         "billingMode",
+			Detail:        &detail,
+			Documentation: billingModeDoc,
+			FilterText:    &billingModeFilter,
+			TextEdit: lsp.TextEdit{
+				Range: &lsp.Range{
+					Start: lsp.Position{
+						Line:      46,
+						Character: 53,
+					},
+					End: lsp.Position{
+						Line:      46,
+						Character: 53,
+					},
+				},
+				NewText: "billingMode",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
@@ -1093,85 +1075,6 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_export_ty
 	}), sortCompletionItems(completionItems))
 }
 
-type testBlueprintInfo struct {
-	blueprint *schema.Blueprint
-	tree      *schema.TreeNode
-	content   string
-}
-
-// toDocumentContext converts testBlueprintInfo to a DocumentContext for testing.
-func (info *testBlueprintInfo) toDocumentContext() *docmodel.DocumentContext {
-	docCtx := docmodel.NewDocumentContextFromSchema(
-		blueprintURI,
-		info.blueprint,
-		info.tree,
-	)
-	docCtx.Content = info.content
-	return docCtx
-}
-
-func loadCompletionBlueprintAndTree(name string) (*testBlueprintInfo, error) {
-	// Load and parse the blueprint content before the completion trigger character.
-	// This is required as when a completion trigger character is entered, the current
-	// state of the document will not be successfully parsed and the completion service
-	// will be working with the parsed version of the document before the trigger character
-	// was entered.
-	// There will often be multiple characters between the last valid state of the document
-	// and the completion trigger. For example, in the case of a variable reference completion,
-	// the last valid state would be "${variable}" as it will match an identifier token in the
-	// substitution language.
-	// The sequence before the completion trigger in this case would be:
-	// "${variable}" (valid) -> "${variables}" (invalid) -> "${variables.}"
-	// "variables" is a keyword that must be followed by ".<variableName>" to be valid.
-	contentBefore, err := loadTestBlueprintContent(path.Join(name, "before-completion-trigger.yaml"))
-	if err != nil {
-		return nil, err
-	}
-
-	blueprint, err := schema.LoadString(contentBefore, schema.YAMLSpecFormat)
-	if err != nil {
-		return nil, err
-	}
-
-	tree := schema.SchemaToTree(blueprint)
-
-	// Load the content after the completion trigger character.
-	afterTriggerContent, err := loadTestBlueprintContent(path.Join(name, "after-completion-trigger.yaml"))
-	if err != nil {
-		return nil, err
-	}
-
-	return &testBlueprintInfo{
-		blueprint: blueprint,
-		tree:      tree,
-		content:   afterTriggerContent,
-	}, nil
-}
-
-func completionItemLabels(completionItems []*lsp.CompletionItem) []string {
-	labels := make([]string, len(completionItems))
-	for i, item := range completionItems {
-		labels[i] = item.Label
-	}
-	slices.Sort(labels)
-	return labels
-}
-
-func sortCompletionItems(completionItems []*lsp.CompletionItem) []*lsp.CompletionItem {
-	items := make([]*lsp.CompletionItem, len(completionItems))
-	copy(items, completionItems)
-	slices.SortFunc(items, func(a, b *lsp.CompletionItem) int {
-		if a.Label < b.Label {
-			return -1
-		} else if a.Label > b.Label {
-			return 1
-		} else {
-			return 0
-		}
-	})
-	return items
-}
-
 func expectedDataSourceFilterOperatorItems() []*lsp.CompletionItem {
 	detail := "Data source filter operator"
 	itemKind := lsp.CompletionItemKindEnum
@@ -1563,6 +1466,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 	itemKind := lsp.CompletionItemKindField
 	tableNameFilter := "tableName"
 	idFilter := "id"
+	billingModeFilter := "billingMode"
+	billingModeDoc := "The billing mode for the table."
 	s.Assert().Equal(sortCompletionItems([]*lsp.CompletionItem{
 		{
 			Kind:       &itemKind,
@@ -1603,6 +1508,29 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 					},
 				},
 				NewText: "id",
+			},
+			Data: map[string]any{
+				"completionType": "resourceProperty",
+			},
+		},
+		{
+			Kind:          &itemKind,
+			Label:         "billingMode",
+			Detail:        &detail,
+			Documentation: billingModeDoc,
+			FilterText:    &billingModeFilter,
+			TextEdit: lsp.TextEdit{
+				Range: &lsp.Range{
+					Start: lsp.Position{
+						Line:      2,
+						Character: 44,
+					},
+					End: lsp.Position{
+						Line:      2,
+						Character: 44,
+					},
+				},
+				NewText: "billingMode",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
@@ -1805,10 +1733,6 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_metadata_
 	// Range should be at cursor position
 	s.Assert().Equal(uint32(60), simpleTextEdit.Range.Start.Character)
 	s.Assert().Equal(uint32(60), simpleTextEdit.Range.End.Character)
-}
-
-func strPtr(s string) *string {
-	return &s
 }
 
 // Test_get_completion_items_for_resource_spec_field_yaml tests spec field completion
@@ -2219,8 +2143,4 @@ resources:
 
 	// Schema-based completions are disabled for JSONC - should return empty
 	s.Assert().Empty(completionItems, "JSONC resource spec completions should be disabled for v0")
-}
-
-func TestCompletionServiceGetItemsSuite(t *testing.T) {
-	suite.Run(t, new(CompletionServiceGetItemsSuite))
 }

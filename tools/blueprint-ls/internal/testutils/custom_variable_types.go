@@ -22,40 +22,61 @@ func (t *InstanceTypeCustomVariableType) Options(
 	t22xlarge := "t2.2xlarge"
 	return &provider.CustomVariableTypeOptionsOutput{
 		Options: map[string]*provider.CustomVariableTypeOption{
-			t2nano: {
+			"T2 Nano": {
 				Value: &core.ScalarValue{
 					StringValue: &t2nano,
 				},
+				Label:               "T2 Nano",
+				Description:         "Burstable instance with 1 vCPU and 0.5 GiB memory.",
+				MarkdownDescription: "Burstable instance with **1 vCPU** and **0.5 GiB** memory.",
 			},
-			t2micro: {
+			"T2 Micro": {
 				Value: &core.ScalarValue{
 					StringValue: &t2micro,
 				},
+				Label:               "T2 Micro",
+				Description:         "Burstable instance with 1 vCPU and 1 GiB memory.",
+				MarkdownDescription: "Burstable instance with **1 vCPU** and **1 GiB** memory.",
 			},
-			t2small: {
+			"T2 Small": {
 				Value: &core.ScalarValue{
 					StringValue: &t2small,
 				},
+				Label:               "T2 Small",
+				Description:         "Burstable instance with 1 vCPU and 2 GiB memory.",
+				MarkdownDescription: "Burstable instance with **1 vCPU** and **2 GiB** memory.",
 			},
-			t2medium: {
+			"T2 Medium": {
 				Value: &core.ScalarValue{
 					StringValue: &t2medium,
 				},
+				Label:               "T2 Medium",
+				Description:         "Burstable instance with 2 vCPUs and 4 GiB memory.",
+				MarkdownDescription: "Burstable instance with **2 vCPUs** and **4 GiB** memory.",
 			},
-			t2large: {
+			"T2 Large": {
 				Value: &core.ScalarValue{
 					StringValue: &t2large,
 				},
+				Label:               "T2 Large",
+				Description:         "Burstable instance with 2 vCPUs and 8 GiB memory.",
+				MarkdownDescription: "Burstable instance with **2 vCPUs** and **8 GiB** memory.",
 			},
-			t2xlarge: {
+			"T2 XLarge": {
 				Value: &core.ScalarValue{
 					StringValue: &t2xlarge,
 				},
+				Label:               "T2 XLarge",
+				Description:         "Burstable instance with 4 vCPUs and 16 GiB memory.",
+				MarkdownDescription: "Burstable instance with **4 vCPUs** and **16 GiB** memory.",
 			},
-			t22xlarge: {
+			"T2 2XLarge": {
 				Value: &core.ScalarValue{
 					StringValue: &t22xlarge,
 				},
+				Label:               "T2 2XLarge",
+				Description:         "Burstable instance with 8 vCPUs and 32 GiB memory.",
+				MarkdownDescription: "Burstable instance with **8 vCPUs** and **32 GiB** memory.",
 			},
 		},
 	}, nil
