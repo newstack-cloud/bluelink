@@ -993,6 +993,27 @@ func fromPBResourceDefinitionsSchema(
 		return nil, err
 	}
 
+	allowedValues, err := FromPBMappingNodeSlice(pbSchema.AllowedValues)
+	if err != nil {
+		return nil, err
+	}
+
+	minimum, err := serialisation.FromScalarValuePB(
+		pbSchema.Minimum,
+		/* optional */ true,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	maximum, err := serialisation.FromScalarValuePB(
+		pbSchema.Maximum,
+		/* optional */ true,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	return &provider.ResourceDefinitionsSchema{
 		Type:                 provider.ResourceDefinitionsSchemaType(pbSchema.Type),
 		Label:                pbSchema.Label,
@@ -1006,6 +1027,12 @@ func fromPBResourceDefinitionsSchema(
 		Nullable:             pbSchema.Nullable,
 		Default:              defaultValue,
 		Examples:             examples,
+		AllowedValues:        allowedValues,
+		Minimum:              minimum,
+		Maximum:              maximum,
+		MinLength:            int(pbSchema.MinLength),
+		MaxLength:            int(pbSchema.MaxLength),
+		Pattern:              pbSchema.Pattern,
 		Computed:             pbSchema.Computed,
 		MustRecreate:         pbSchema.MustRecreate,
 		Sensitive:            pbSchema.Sensitive,

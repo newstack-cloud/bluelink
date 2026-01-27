@@ -1319,6 +1319,31 @@ message ResourceDefinitionsSchema {
     // Example: For tags like [{key: "env", value: "prod"}, {key: "name", value: "foo"}],
     // setting sort_array_by_field to "key" ensures consistent comparison regardless of order.
     string sort_array_by_field = 18;
+    // Holds a list of allowed values for a resource definition schema.
+    // This is useful for enum-like values and can be used with the "string",
+    // "integer" and "float" types.
+    // Unions and enums are mutually exclusive, when designing your schemas,
+    // you should use either unions for type constraints or allowed values for
+    // value constraints.
+    repeated schema.MappingNode allowed_values = 19;
+    // Holds the minimum value that can be used for an element in a resource spec.
+    // This is only used for "integer" and "float" types.
+    schema.ScalarValue minimum = 20;
+    // Holds the maximum value that can be used for an element in a resource spec.
+    // This is only used for "integer" and "float" types.
+    schema.ScalarValue maximum = 21;
+    // Provides a minimum length for a string value, minimum amount of items
+    // in an array or minimum number of keys in a map.
+    // This is only used for "string", "array" and "map" types.
+    int32 min_length = 22;
+    // Provides a maximum length for a string value, maximum amount of items
+    // in an array or maximum number of keys in a map.
+    // This is only used for "string", "array" and "map" types.
+    int32 max_length = 23;
+    // Holds a regular expression pattern that can be used to validate
+    // a string value in a resource spec that uses this schema.
+    // This is only used for "string" types.
+    string pattern = 24;
 }
 
 // CanLinkTo holds a list of resource types that a given resource type

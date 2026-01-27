@@ -52,6 +52,29 @@ func ToPBResourceDefinitionsSchema(
 		return nil, err
 	}
 
+	allowedValues, err := ToPBMappingNodeSlice(
+		schema.AllowedValues,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	minimum, err := serialisation.ToScalarValuePB(
+		schema.Minimum,
+		/* optional */ true,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	maximum, err := serialisation.ToScalarValuePB(
+		schema.Maximum,
+		/* optional */ true,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	return &sharedtypesv1.ResourceDefinitionsSchema{
 		Type:                 string(schema.Type),
 		Label:                schema.Label,
@@ -65,6 +88,12 @@ func ToPBResourceDefinitionsSchema(
 		Nullable:             schema.Nullable,
 		DefaultValue:         schemaDefaultValue,
 		Examples:             examples,
+		AllowedValues:        allowedValues,
+		Minimum:              minimum,
+		Maximum:              maximum,
+		MinLength:            int32(schema.MinLength),
+		MaxLength:            int32(schema.MaxLength),
+		Pattern:              schema.Pattern,
 		Computed:             schema.Computed,
 		MustRecreate:         schema.MustRecreate,
 		Sensitive:            schema.Sensitive,
