@@ -667,13 +667,21 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 	s.Require().NoError(err)
 	detail := "Resource type"
 	itemKind := lsp.CompletionItemKindEnum
-	insertText := "aws/dynamodb/table"
+	filterText := "aws/dynamodb/table"
+	// Range starts at 10 because there's a 1-character prefix typed
 	s.Assert().Equal(sortCompletionItems([]*lsp.CompletionItem{
 		{
 			Kind:       &itemKind,
 			Label:      "aws/dynamodb/table",
 			Detail:     &detail,
-			InsertText: &insertText,
+			FilterText: &filterText,
+			TextEdit: lsp.TextEdit{
+				Range: &lsp.Range{
+					Start: lsp.Position{Line: 35, Character: 10},
+					End:   lsp.Position{Line: 35, Character: 11},
+				},
+				NewText: "aws/dynamodb/table",
+			},
 			Data: map[string]any{
 				"completionType": "resourceType",
 			},
@@ -698,13 +706,21 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 	s.Require().NoError(err)
 	detail := "Data source type"
 	itemKind := lsp.CompletionItemKindEnum
-	insertText := "aws/vpc"
+	filterText := "aws/vpc"
+	// Range starts at 10 because there's a 1-character prefix typed
 	s.Assert().Equal(sortCompletionItems([]*lsp.CompletionItem{
 		{
 			Kind:       &itemKind,
 			Label:      "aws/vpc",
 			Detail:     &detail,
-			InsertText: &insertText,
+			FilterText: &filterText,
+			TextEdit: lsp.TextEdit{
+				Range: &lsp.Range{
+					Start: lsp.Position{Line: 15, Character: 10},
+					End:   lsp.Position{Line: 15, Character: 11},
+				},
+				NewText: "aws/vpc",
+			},
 			Data: map[string]any{
 				"completionType": "dataSourceType",
 			},
@@ -729,17 +745,23 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_variable_
 	s.Require().NoError(err)
 	detail := "Variable type"
 	itemKind := lsp.CompletionItemKindEnum
-	insertTextInstanceType := "aws/ec2/instanceType"
-	insertTextBool := "boolean"
-	insertTextFloat := "float"
-	insertTextInteger := "integer"
-	insertTextString := "string"
+	filterTextInstanceType := "aws/ec2/instanceType"
+	filterTextBool := "boolean"
+	filterTextFloat := "float"
+	filterTextInteger := "integer"
+	filterTextString := "string"
+	// Range starts at 10 because there's a 1-character prefix typed
+	insertRange := &lsp.Range{
+		Start: lsp.Position{Line: 3, Character: 10},
+		End:   lsp.Position{Line: 3, Character: 11},
+	}
 	s.Assert().Equal(sortCompletionItems([]*lsp.CompletionItem{
 		{
 			Kind:       &itemKind,
 			Label:      "aws/ec2/instanceType",
 			Detail:     &detail,
-			InsertText: &insertTextInstanceType,
+			FilterText: &filterTextInstanceType,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "aws/ec2/instanceType"},
 			Data: map[string]any{
 				"completionType": "variableType",
 			},
@@ -748,7 +770,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_variable_
 			Kind:       &itemKind,
 			Label:      "boolean",
 			Detail:     &detail,
-			InsertText: &insertTextBool,
+			FilterText: &filterTextBool,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "boolean"},
 			Data: map[string]any{
 				"completionType": "variableType",
 			},
@@ -757,7 +780,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_variable_
 			Kind:       &itemKind,
 			Label:      "float",
 			Detail:     &detail,
-			InsertText: &insertTextFloat,
+			FilterText: &filterTextFloat,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "float"},
 			Data: map[string]any{
 				"completionType": "variableType",
 			},
@@ -766,7 +790,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_variable_
 			Kind:       &itemKind,
 			Label:      "integer",
 			Detail:     &detail,
-			InsertText: &insertTextInteger,
+			FilterText: &filterTextInteger,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "integer"},
 			Data: map[string]any{
 				"completionType": "variableType",
 			},
@@ -775,7 +800,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_variable_
 			Kind:       &itemKind,
 			Label:      "string",
 			Detail:     &detail,
-			InsertText: &insertTextString,
+			FilterText: &filterTextString,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "string"},
 			Data: map[string]any{
 				"completionType": "variableType",
 			},
@@ -800,18 +826,24 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_typ
 	s.Require().NoError(err)
 	detail := "Value type"
 	itemKind := lsp.CompletionItemKindEnum
-	insertTextBool := "boolean"
-	insertTextFloat := "float"
-	insertTextInteger := "integer"
-	insertTextString := "string"
-	insertTextArray := "array"
-	insertTextObject := "object"
+	filterTextBool := "boolean"
+	filterTextFloat := "float"
+	filterTextInteger := "integer"
+	filterTextString := "string"
+	filterTextArray := "array"
+	filterTextObject := "object"
+	// Range starts at 10 because there's a 1-character prefix typed
+	insertRange := &lsp.Range{
+		Start: lsp.Position{Line: 10, Character: 10},
+		End:   lsp.Position{Line: 10, Character: 11},
+	}
 	s.Assert().Equal(sortCompletionItems([]*lsp.CompletionItem{
 		{
 			Kind:       &itemKind,
 			Label:      "boolean",
 			Detail:     &detail,
-			InsertText: &insertTextBool,
+			FilterText: &filterTextBool,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "boolean"},
 			Data: map[string]any{
 				"completionType": "valueType",
 			},
@@ -820,7 +852,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_typ
 			Kind:       &itemKind,
 			Label:      "float",
 			Detail:     &detail,
-			InsertText: &insertTextFloat,
+			FilterText: &filterTextFloat,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "float"},
 			Data: map[string]any{
 				"completionType": "valueType",
 			},
@@ -829,7 +862,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_typ
 			Kind:       &itemKind,
 			Label:      "integer",
 			Detail:     &detail,
-			InsertText: &insertTextInteger,
+			FilterText: &filterTextInteger,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "integer"},
 			Data: map[string]any{
 				"completionType": "valueType",
 			},
@@ -838,7 +872,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_typ
 			Kind:       &itemKind,
 			Label:      "string",
 			Detail:     &detail,
-			InsertText: &insertTextString,
+			FilterText: &filterTextString,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "string"},
 			Data: map[string]any{
 				"completionType": "valueType",
 			},
@@ -847,7 +882,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_typ
 			Kind:       &itemKind,
 			Label:      "array",
 			Detail:     &detail,
-			InsertText: &insertTextArray,
+			FilterText: &filterTextArray,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "array"},
 			Data: map[string]any{
 				"completionType": "valueType",
 			},
@@ -856,7 +892,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_typ
 			Kind:       &itemKind,
 			Label:      "object",
 			Detail:     &detail,
-			InsertText: &insertTextObject,
+			FilterText: &filterTextObject,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "object"},
 			Data: map[string]any{
 				"completionType": "valueType",
 			},
@@ -881,17 +918,23 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 	s.Require().NoError(err)
 	detail := "Data source field type"
 	itemKind := lsp.CompletionItemKindEnum
-	insertTextBool := "boolean"
-	insertTextFloat := "float"
-	insertTextInteger := "integer"
-	insertTextString := "string"
-	insertTextArray := "array"
+	filterTextBool := "boolean"
+	filterTextFloat := "float"
+	filterTextInteger := "integer"
+	filterTextString := "string"
+	filterTextArray := "array"
+	// Range starts at 14 because there's a 1-character prefix typed
+	insertRange := &lsp.Range{
+		Start: lsp.Position{Line: 25, Character: 14},
+		End:   lsp.Position{Line: 25, Character: 15},
+	}
 	s.Assert().Equal(sortCompletionItems([]*lsp.CompletionItem{
 		{
 			Kind:       &itemKind,
 			Label:      "boolean",
 			Detail:     &detail,
-			InsertText: &insertTextBool,
+			FilterText: &filterTextBool,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "boolean"},
 			Data: map[string]any{
 				"completionType": "dataSourceFieldType",
 			},
@@ -900,7 +943,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 			Kind:       &itemKind,
 			Label:      "float",
 			Detail:     &detail,
-			InsertText: &insertTextFloat,
+			FilterText: &filterTextFloat,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "float"},
 			Data: map[string]any{
 				"completionType": "dataSourceFieldType",
 			},
@@ -909,7 +953,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 			Kind:       &itemKind,
 			Label:      "integer",
 			Detail:     &detail,
-			InsertText: &insertTextInteger,
+			FilterText: &filterTextInteger,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "integer"},
 			Data: map[string]any{
 				"completionType": "dataSourceFieldType",
 			},
@@ -918,7 +963,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 			Kind:       &itemKind,
 			Label:      "string",
 			Detail:     &detail,
-			InsertText: &insertTextString,
+			FilterText: &filterTextString,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "string"},
 			Data: map[string]any{
 				"completionType": "dataSourceFieldType",
 			},
@@ -927,7 +973,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 			Kind:       &itemKind,
 			Label:      "array",
 			Detail:     &detail,
-			InsertText: &insertTextArray,
+			FilterText: &filterTextArray,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "array"},
 			Data: map[string]any{
 				"completionType": "dataSourceFieldType",
 			},
@@ -952,14 +999,20 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 	s.Require().NoError(err)
 	detail := "Data source filter field"
 	itemKind := lsp.CompletionItemKindEnum
-	insertTextInstanceConfigId := "instanceConfigId"
-	insertTextTags := "tags"
+	filterTextInstanceConfigId := "instanceConfigId"
+	filterTextTags := "tags"
+	// Range starts at 13 because there's a 1-character prefix typed
+	insertRange := &lsp.Range{
+		Start: lsp.Position{Line: 18, Character: 13},
+		End:   lsp.Position{Line: 18, Character: 14},
+	}
 	s.Assert().Equal(sortCompletionItems([]*lsp.CompletionItem{
 		{
 			Kind:       &itemKind,
 			Label:      "instanceConfigId",
 			Detail:     &detail,
-			InsertText: &insertTextInstanceConfigId,
+			FilterText: &filterTextInstanceConfigId,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "instanceConfigId"},
 			Data: map[string]any{
 				"completionType": "dataSourceFilterField",
 			},
@@ -968,7 +1021,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 			Kind:       &itemKind,
 			Label:      "tags",
 			Detail:     &detail,
-			InsertText: &insertTextTags,
+			FilterText: &filterTextTags,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "tags"},
 			Data: map[string]any{
 				"completionType": "dataSourceFilterField",
 			},
@@ -1011,18 +1065,24 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_export_ty
 	s.Require().NoError(err)
 	detail := "Export type"
 	itemKind := lsp.CompletionItemKindEnum
-	insertTextBool := "boolean"
-	insertTextFloat := "float"
-	insertTextInteger := "integer"
-	insertTextString := "string"
-	insertTextArray := "array"
-	insertTextObject := "object"
+	filterTextBool := "boolean"
+	filterTextFloat := "float"
+	filterTextInteger := "integer"
+	filterTextString := "string"
+	filterTextArray := "array"
+	filterTextObject := "object"
+	// Range starts at 10 because there's a 1-character prefix typed
+	insertRange := &lsp.Range{
+		Start: lsp.Position{Line: 47, Character: 10},
+		End:   lsp.Position{Line: 47, Character: 11},
+	}
 	s.Assert().Equal(sortCompletionItems([]*lsp.CompletionItem{
 		{
 			Kind:       &itemKind,
 			Label:      "boolean",
 			Detail:     &detail,
-			InsertText: &insertTextBool,
+			FilterText: &filterTextBool,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "boolean"},
 			Data: map[string]any{
 				"completionType": "exportType",
 			},
@@ -1031,7 +1091,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_export_ty
 			Kind:       &itemKind,
 			Label:      "float",
 			Detail:     &detail,
-			InsertText: &insertTextFloat,
+			FilterText: &filterTextFloat,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "float"},
 			Data: map[string]any{
 				"completionType": "exportType",
 			},
@@ -1040,7 +1101,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_export_ty
 			Kind:       &itemKind,
 			Label:      "integer",
 			Detail:     &detail,
-			InsertText: &insertTextInteger,
+			FilterText: &filterTextInteger,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "integer"},
 			Data: map[string]any{
 				"completionType": "exportType",
 			},
@@ -1049,7 +1111,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_export_ty
 			Kind:       &itemKind,
 			Label:      "string",
 			Detail:     &detail,
-			InsertText: &insertTextString,
+			FilterText: &filterTextString,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "string"},
 			Data: map[string]any{
 				"completionType": "exportType",
 			},
@@ -1058,7 +1121,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_export_ty
 			Kind:       &itemKind,
 			Label:      "array",
 			Detail:     &detail,
-			InsertText: &insertTextArray,
+			FilterText: &filterTextArray,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "array"},
 			Data: map[string]any{
 				"completionType": "exportType",
 			},
@@ -1067,7 +1131,8 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_export_ty
 			Kind:       &itemKind,
 			Label:      "object",
 			Detail:     &detail,
-			InsertText: &insertTextObject,
+			FilterText: &filterTextObject,
+			TextEdit:   lsp.TextEdit{Range: insertRange, NewText: "object"},
 			Data: map[string]any{
 				"completionType": "exportType",
 			},

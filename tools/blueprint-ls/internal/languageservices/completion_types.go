@@ -21,22 +21,38 @@ var knownBlueprintVersions = []string{
 
 func (s *CompletionService) getResourceTypeCompletionItems(
 	ctx *common.LSPContext,
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+	format docmodel.DocumentFormat,
 ) ([]*lsp.CompletionItem, error) {
 	resourceTypes, err := s.resourceRegistry.ListResourceTypes(ctx.Context)
 	if err != nil {
 		return nil, err
 	}
 
+	prefixInfo := extractCompletionPrefix(completionCtx, format)
 	completionItems := []*lsp.CompletionItem{}
 	resourceTypeDetail := "Resource type"
 
 	for _, resourceType := range resourceTypes {
+		if !filterByPrefix(resourceType, prefixInfo) {
+			continue
+		}
+
+		insertText := formatValueForInsert(resourceType, format, prefixInfo.HasLeadingQuote, prefixInfo.HasLeadingSpace)
+		insertRange := getItemInsertRangeWithPrefix(position, prefixInfo.PrefixLen)
+		edit := lsp.TextEdit{
+			NewText: insertText,
+			Range:   insertRange,
+		}
+
 		enumKind := lsp.CompletionItemKindEnum
 		completionItems = append(completionItems, &lsp.CompletionItem{
 			Label:      resourceType,
 			Detail:     &resourceTypeDetail,
 			Kind:       &enumKind,
-			InsertText: &resourceType,
+			TextEdit:   edit,
+			FilterText: &resourceType,
 			Data:       map[string]any{"completionType": "resourceType"},
 		})
 	}
@@ -46,22 +62,38 @@ func (s *CompletionService) getResourceTypeCompletionItems(
 
 func (s *CompletionService) getDataSourceTypeCompletionItems(
 	ctx *common.LSPContext,
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+	format docmodel.DocumentFormat,
 ) ([]*lsp.CompletionItem, error) {
 	dataSourceTypes, err := s.dataSourceRegistry.ListDataSourceTypes(ctx.Context)
 	if err != nil {
 		return nil, err
 	}
 
+	prefixInfo := extractCompletionPrefix(completionCtx, format)
 	completionItems := []*lsp.CompletionItem{}
 	dataSourceTypeDetail := "Data source type"
 
 	for _, dataSourceType := range dataSourceTypes {
+		if !filterByPrefix(dataSourceType, prefixInfo) {
+			continue
+		}
+
+		insertText := formatValueForInsert(dataSourceType, format, prefixInfo.HasLeadingQuote, prefixInfo.HasLeadingSpace)
+		insertRange := getItemInsertRangeWithPrefix(position, prefixInfo.PrefixLen)
+		edit := lsp.TextEdit{
+			NewText: insertText,
+			Range:   insertRange,
+		}
+
 		enumKind := lsp.CompletionItemKindEnum
 		completionItems = append(completionItems, &lsp.CompletionItem{
 			Label:      dataSourceType,
 			Detail:     &dataSourceTypeDetail,
 			Kind:       &enumKind,
-			InsertText: &dataSourceType,
+			TextEdit:   edit,
+			FilterText: &dataSourceType,
 			Data:       map[string]any{"completionType": "dataSourceType"},
 		})
 	}
@@ -71,7 +103,11 @@ func (s *CompletionService) getDataSourceTypeCompletionItems(
 
 func (s *CompletionService) getVariableTypeCompletionItems(
 	ctx *common.LSPContext,
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+	format docmodel.DocumentFormat,
 ) ([]*lsp.CompletionItem, error) {
+	prefixInfo := extractCompletionPrefix(completionCtx, format)
 	variableTypeDetail := "Variable type"
 	enumKind := lsp.CompletionItemKindEnum
 	typeItems := []*lsp.CompletionItem{}
@@ -79,11 +115,23 @@ func (s *CompletionService) getVariableTypeCompletionItems(
 	// Add core variable types
 	for _, coreType := range schema.CoreVariableTypes {
 		coreTypeStr := string(coreType)
+		if !filterByPrefix(coreTypeStr, prefixInfo) {
+			continue
+		}
+
+		insertText := formatValueForInsert(coreTypeStr, format, prefixInfo.HasLeadingQuote, prefixInfo.HasLeadingSpace)
+		insertRange := getItemInsertRangeWithPrefix(position, prefixInfo.PrefixLen)
+		edit := lsp.TextEdit{
+			NewText: insertText,
+			Range:   insertRange,
+		}
+
 		typeItems = append(typeItems, &lsp.CompletionItem{
 			Label:      coreTypeStr,
 			Detail:     &variableTypeDetail,
 			Kind:       &enumKind,
-			InsertText: &coreTypeStr,
+			TextEdit:   edit,
+			FilterText: &coreTypeStr,
 			Data:       map[string]any{"completionType": "variableType"},
 		})
 	}
@@ -96,11 +144,23 @@ func (s *CompletionService) getVariableTypeCompletionItems(
 	}
 
 	for _, customType := range customTypes {
+		if !filterByPrefix(customType, prefixInfo) {
+			continue
+		}
+
+		insertText := formatValueForInsert(customType, format, prefixInfo.HasLeadingQuote, prefixInfo.HasLeadingSpace)
+		insertRange := getItemInsertRangeWithPrefix(position, prefixInfo.PrefixLen)
+		edit := lsp.TextEdit{
+			NewText: insertText,
+			Range:   insertRange,
+		}
+
 		typeItems = append(typeItems, &lsp.CompletionItem{
 			Label:      customType,
 			Detail:     &variableTypeDetail,
 			Kind:       &enumKind,
-			InsertText: &customType,
+			TextEdit:   edit,
+			FilterText: &customType,
 			Data:       map[string]any{"completionType": "variableType"},
 		})
 	}
@@ -108,18 +168,35 @@ func (s *CompletionService) getVariableTypeCompletionItems(
 	return typeItems, nil
 }
 
-func (s *CompletionService) getValueTypeCompletionItems() ([]*lsp.CompletionItem, error) {
+func (s *CompletionService) getValueTypeCompletionItems(
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+	format docmodel.DocumentFormat,
+) ([]*lsp.CompletionItem, error) {
+	prefixInfo := extractCompletionPrefix(completionCtx, format)
 	valueTypeDetail := "Value type"
 	enumKind := lsp.CompletionItemKindEnum
 	typeItems := []*lsp.CompletionItem{}
 
 	for _, valueType := range schema.ValueTypes {
 		valueTypeStr := string(valueType)
+		if !filterByPrefix(valueTypeStr, prefixInfo) {
+			continue
+		}
+
+		insertText := formatValueForInsert(valueTypeStr, format, prefixInfo.HasLeadingQuote, prefixInfo.HasLeadingSpace)
+		insertRange := getItemInsertRangeWithPrefix(position, prefixInfo.PrefixLen)
+		edit := lsp.TextEdit{
+			NewText: insertText,
+			Range:   insertRange,
+		}
+
 		typeItems = append(typeItems, &lsp.CompletionItem{
 			Label:      valueTypeStr,
 			Detail:     &valueTypeDetail,
 			Kind:       &enumKind,
-			InsertText: &valueTypeStr,
+			TextEdit:   edit,
+			FilterText: &valueTypeStr,
 			Data:       map[string]any{"completionType": "valueType"},
 		})
 	}
@@ -127,18 +204,35 @@ func (s *CompletionService) getValueTypeCompletionItems() ([]*lsp.CompletionItem
 	return typeItems, nil
 }
 
-func (s *CompletionService) getDataSourceFieldTypeCompletionItems() ([]*lsp.CompletionItem, error) {
+func (s *CompletionService) getDataSourceFieldTypeCompletionItems(
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+	format docmodel.DocumentFormat,
+) ([]*lsp.CompletionItem, error) {
+	prefixInfo := extractCompletionPrefix(completionCtx, format)
 	fieldTypeDetail := "Data source field type"
 	enumKind := lsp.CompletionItemKindEnum
 	typeItems := []*lsp.CompletionItem{}
 
 	for _, fieldType := range schema.DataSourceFieldTypes {
 		fieldTypeStr := string(fieldType)
+		if !filterByPrefix(fieldTypeStr, prefixInfo) {
+			continue
+		}
+
+		insertText := formatValueForInsert(fieldTypeStr, format, prefixInfo.HasLeadingQuote, prefixInfo.HasLeadingSpace)
+		insertRange := getItemInsertRangeWithPrefix(position, prefixInfo.PrefixLen)
+		edit := lsp.TextEdit{
+			NewText: insertText,
+			Range:   insertRange,
+		}
+
 		typeItems = append(typeItems, &lsp.CompletionItem{
 			Label:      fieldTypeStr,
 			Detail:     &fieldTypeDetail,
 			Kind:       &enumKind,
-			InsertText: &fieldTypeStr,
+			TextEdit:   edit,
+			FilterText: &fieldTypeStr,
 			Data:       map[string]any{"completionType": "dataSourceFieldType"},
 		})
 	}
@@ -146,18 +240,35 @@ func (s *CompletionService) getDataSourceFieldTypeCompletionItems() ([]*lsp.Comp
 	return typeItems, nil
 }
 
-func (s *CompletionService) getExportTypeCompletionItems() ([]*lsp.CompletionItem, error) {
+func (s *CompletionService) getExportTypeCompletionItems(
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+	format docmodel.DocumentFormat,
+) ([]*lsp.CompletionItem, error) {
+	prefixInfo := extractCompletionPrefix(completionCtx, format)
 	exportTypeDetail := "Export type"
 	enumKind := lsp.CompletionItemKindEnum
 	typeItems := []*lsp.CompletionItem{}
 
 	for _, exportType := range schema.ExportTypes {
 		exportTypeStr := string(exportType)
+		if !filterByPrefix(exportTypeStr, prefixInfo) {
+			continue
+		}
+
+		insertText := formatValueForInsert(exportTypeStr, format, prefixInfo.HasLeadingQuote, prefixInfo.HasLeadingSpace)
+		insertRange := getItemInsertRangeWithPrefix(position, prefixInfo.PrefixLen)
+		edit := lsp.TextEdit{
+			NewText: insertText,
+			Range:   insertRange,
+		}
+
 		typeItems = append(typeItems, &lsp.CompletionItem{
 			Label:      exportTypeStr,
 			Detail:     &exportTypeDetail,
 			Kind:       &enumKind,
-			InsertText: &exportTypeStr,
+			TextEdit:   edit,
+			FilterText: &exportTypeStr,
 			Data:       map[string]any{"completionType": "exportType"},
 		})
 	}

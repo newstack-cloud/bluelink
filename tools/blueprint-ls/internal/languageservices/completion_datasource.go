@@ -17,6 +17,9 @@ func (s *CompletionService) getDataSourceFilterFieldCompletionItemsFromContext(
 	ctx *common.LSPContext,
 	nodeCtx *docmodel.NodeContext,
 	blueprint *schema.Blueprint,
+	position *lsp.Position,
+	completionCtx *docmodel.CompletionContext,
+	format docmodel.DocumentFormat,
 ) ([]*lsp.CompletionItem, error) {
 	if nodeCtx == nil {
 		return []*lsp.CompletionItem{}, nil
@@ -42,16 +45,29 @@ func (s *CompletionService) getDataSourceFilterFieldCompletionItemsFromContext(
 		return nil, err
 	}
 
+	prefixInfo := extractCompletionPrefix(completionCtx, format)
 	completionItems := []*lsp.CompletionItem{}
 	filterFieldDetail := "Data source filter field"
 	enumKind := lsp.CompletionItemKindEnum
 
 	for filterField := range filterFieldsOutput.FilterFields {
+		if !filterByPrefix(filterField, prefixInfo) {
+			continue
+		}
+
+		insertText := formatValueForInsert(filterField, format, prefixInfo.HasLeadingQuote, prefixInfo.HasLeadingSpace)
+		insertRange := getItemInsertRangeWithPrefix(position, prefixInfo.PrefixLen)
+		edit := lsp.TextEdit{
+			NewText: insertText,
+			Range:   insertRange,
+		}
+
 		item := &lsp.CompletionItem{
 			Label:      filterField,
 			Detail:     &filterFieldDetail,
 			Kind:       &enumKind,
-			InsertText: &filterField,
+			TextEdit:   edit,
+			FilterText: &filterField,
 			Data:       map[string]any{"completionType": "dataSourceFilterField"},
 		}
 		completionItems = append(completionItems, item)

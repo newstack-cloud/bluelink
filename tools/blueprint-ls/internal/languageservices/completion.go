@@ -107,17 +107,17 @@ func (s *CompletionService) getCompletionItemsByContext(
 	switch completionCtx.Kind {
 	// Registry-based type completions (completion_types.go)
 	case docmodel.CompletionContextResourceType:
-		return s.getResourceTypeCompletionItems(ctx)
+		return s.getResourceTypeCompletionItems(ctx, position, completionCtx, format)
 	case docmodel.CompletionContextDataSourceType:
-		return s.getDataSourceTypeCompletionItems(ctx)
+		return s.getDataSourceTypeCompletionItems(ctx, position, completionCtx, format)
 	case docmodel.CompletionContextVariableType:
-		return s.getVariableTypeCompletionItems(ctx)
+		return s.getVariableTypeCompletionItems(ctx, position, completionCtx, format)
 	case docmodel.CompletionContextValueType:
-		return s.getValueTypeCompletionItems()
+		return s.getValueTypeCompletionItems(position, completionCtx, format)
 	case docmodel.CompletionContextDataSourceFieldType:
-		return s.getDataSourceFieldTypeCompletionItems()
+		return s.getDataSourceFieldTypeCompletionItems(position, completionCtx, format)
 	case docmodel.CompletionContextExportType:
-		return s.getExportTypeCompletionItems()
+		return s.getExportTypeCompletionItems(position, completionCtx, format)
 	case docmodel.CompletionContextVersionField:
 		return s.getVersionCompletionItems(position, completionCtx, format)
 	case docmodel.CompletionContextTransformField:
@@ -127,7 +127,7 @@ func (s *CompletionService) getCompletionItemsByContext(
 
 	// Data source completions (completion_datasource.go)
 	case docmodel.CompletionContextDataSourceFilterField:
-		return s.getDataSourceFilterFieldCompletionItemsFromContext(ctx, nodeCtx, blueprint)
+		return s.getDataSourceFilterFieldCompletionItemsFromContext(ctx, nodeCtx, blueprint, position, completionCtx, format)
 	case docmodel.CompletionContextDataSourceFilterOperator:
 		return s.getDataSourceFilterOperatorCompletionItemsFromContext(position, nodeCtx, format)
 	case docmodel.CompletionContextDataSourceExportAliasForValue:
