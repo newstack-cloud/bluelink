@@ -170,9 +170,10 @@ func (s *TransformerPluginV1Suite) Test_abstract_resource_can_link_to() {
 		},
 	)
 	s.Require().NoError(err)
+	// The SDK returns an empty list; the host-side wrapper derives CanLinkTo from registered links.
 	s.Assert().Equal(
 		&transform.AbstractResourceCanLinkToOutput{
-			CanLinkTo: []string{"celerity/datastore"},
+			CanLinkTo: []string{},
 		},
 		output,
 	)

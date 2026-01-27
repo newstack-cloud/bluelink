@@ -83,17 +83,6 @@ type AbstractResourceDefinition struct {
 		input *transform.AbstractResourceIsCommonTerminalInput,
 	) (*transform.AbstractResourceIsCommonTerminalOutput, error)
 
-	// A static list of abstract resource types that this abstract resource can link to.
-	// If ResourceCanLinkToFunc is provided, this static list will not be used.
-	ResourceCanLinkTo []string
-
-	// A function that can be used to dynamically determine what
-	// abstract resource types this resource can link to.
-	ResourceCanLinkToFunc func(
-		ctx context.Context,
-		input *transform.AbstractResourceCanLinkToInput,
-	) (*transform.AbstractResourceCanLinkToOutput, error)
-
 	// A function to apply custom validation for an abstract resource
 	// that goes beyond validating against the resource spec schema which
 	// the blueprint framework takes care of.
@@ -134,12 +123,10 @@ func (r *AbstractResourceDefinition) CanLinkTo(
 	ctx context.Context,
 	input *transform.AbstractResourceCanLinkToInput,
 ) (*transform.AbstractResourceCanLinkToOutput, error) {
-	if r.ResourceCanLinkToFunc != nil {
-		return r.ResourceCanLinkToFunc(ctx, input)
-	}
-
+	// The host-side wrapper derives this from registered links.
+	// This method exists only to satisfy the transform.AbstractResource interface.
 	return &transform.AbstractResourceCanLinkToOutput{
-		CanLinkTo: r.ResourceCanLinkTo,
+		CanLinkTo: []string{},
 	}, nil
 }
 

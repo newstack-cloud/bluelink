@@ -24,7 +24,6 @@ func resourceLambdaFunction() provider.Resource {
 		PlainTextExamples:      examples.PlainTextExamples,
 		FormattedExamples:      examples.MarkdownExamples,
 		IDField:                "arn",
-		ResourceCanLinkTo:      []string{"aws/dynamodb/table"},
 		StabilisedDependencies: []string{"aws/sqs/queue"},
 		CreateFunc: providerv1.RetryableReturnValue(
 			deployLambdaFunction,

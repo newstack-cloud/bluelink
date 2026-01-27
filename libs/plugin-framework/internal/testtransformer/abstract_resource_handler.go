@@ -22,12 +22,11 @@ func abstractResourceHandler() transform.AbstractResource {
 		FormattedDescription: descriptionInfo.MarkdownDescription,
 		PlainTextSummary:     descriptionInfo.PlainTextSummary,
 		FormattedSummary:     descriptionInfo.MarkdownSummary,
-		PlainTextExamples:    examples.PlainTextExamples,
-		FormattedExamples:    examples.MarkdownExamples,
-		IDField:              "id",
-		ResourceCanLinkTo:    []string{"celerity/datastore"},
-		CustomValidateFunc:   customValidateHandler,
-		CommonTerminal:       true,
+		PlainTextExamples:  examples.PlainTextExamples,
+		FormattedExamples:  examples.MarkdownExamples,
+		IDField:            "id",
+		CustomValidateFunc: customValidateHandler,
+		CommonTerminal:     true,
 	}
 }
 

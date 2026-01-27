@@ -100,17 +100,6 @@ type ResourceDefinition struct {
 		input *provider.ResourceIsCommonTerminalInput,
 	) (*provider.ResourceIsCommonTerminalOutput, error)
 
-	// A static list of resource types that this resource can link to.
-	// If ResourceCanLinkToFunc is provided, this static list will not be used.
-	ResourceCanLinkTo []string
-
-	// A function that can be used to dynamically determine what resource types this resource
-	// can link to.
-	ResourceCanLinkToFunc func(
-		ctx context.Context,
-		input *provider.ResourceCanLinkToInput,
-	) (*provider.ResourceCanLinkToOutput, error)
-
 	// A static list of resource types that must be stabilised
 	// before this resource can be deployed when they are dependencies
 	// of this resource.
@@ -201,12 +190,10 @@ func (r *ResourceDefinition) CanLinkTo(
 	ctx context.Context,
 	input *provider.ResourceCanLinkToInput,
 ) (*provider.ResourceCanLinkToOutput, error) {
-	if r.ResourceCanLinkToFunc != nil {
-		return r.ResourceCanLinkToFunc(ctx, input)
-	}
-
+	// The host-side wrapper derives this from registered links.
+	// This method exists only to satisfy the provider.Resource interface.
 	return &provider.ResourceCanLinkToOutput{
-		CanLinkTo: r.ResourceCanLinkTo,
+		CanLinkTo: []string{},
 	}, nil
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginservicev1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/providerserverv1"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/utils"
 	"github.com/spf13/afero"
 )
@@ -155,6 +156,11 @@ func (l *Launcher) Launch(ctx context.Context) (*PluginMaps, error) {
 
 	providerPlugins := l.manager.GetPlugins(pluginservicev1.PluginType_PLUGIN_TYPE_PROVIDER)
 	providerPluginMap, err := createProviderPluginAdaptors(providerPlugins)
+	if err != nil {
+		return nil, err
+	}
+
+	providerPluginMap, err = wrapProvidersWithDerivedCanLinkTo(ctx, providerPluginMap)
 	if err != nil {
 		return nil, err
 	}
@@ -319,4 +325,42 @@ func getTransformerKey(
 	// This is useful for blueprint loading as the only reference to a transformer
 	// in a blueprint is the transform name string.
 	return transformerPlugin.GetTransformName(ctx)
+}
+
+func wrapProvidersWithDerivedCanLinkTo(
+	ctx context.Context,
+	providers map[string]provider.Provider,
+) (map[string]provider.Provider, error) {
+	allLinkTypes, err := collectAllLinkTypes(ctx, providers)
+	if err != nil {
+		return nil, err
+	}
+
+	return wrapProviders(providers, allLinkTypes), nil
+}
+
+func collectAllLinkTypes(
+	ctx context.Context,
+	providers map[string]provider.Provider,
+) ([]string, error) {
+	var allLinkTypes []string
+	for _, p := range providers {
+		linkTypes, err := p.ListLinkTypes(ctx)
+		if err != nil {
+			return nil, err
+		}
+		allLinkTypes = append(allLinkTypes, linkTypes...)
+	}
+	return allLinkTypes, nil
+}
+
+func wrapProviders(
+	providers map[string]provider.Provider,
+	allLinkTypes []string,
+) map[string]provider.Provider {
+	wrapped := make(map[string]provider.Provider, len(providers))
+	for namespace, p := range providers {
+		wrapped[namespace] = providerserverv1.WrapProviderWithDerivedCanLinkTo(p, allLinkTypes)
+	}
+	return wrapped
 }

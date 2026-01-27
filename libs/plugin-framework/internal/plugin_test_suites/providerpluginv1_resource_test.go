@@ -193,9 +193,10 @@ func (s *ProviderPluginV1Suite) Test_resource_can_link_to() {
 		},
 	)
 	s.Require().NoError(err)
+	// The SDK returns an empty list; the host-side wrapper derives CanLinkTo from registered links.
 	s.Assert().Equal(
 		&provider.ResourceCanLinkToOutput{
-			CanLinkTo: []string{"aws/dynamodb/table"},
+			CanLinkTo: []string{},
 		},
 		output,
 	)

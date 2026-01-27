@@ -274,7 +274,6 @@ func newMockResource(
 		Type:                   "aws/lambda/function",
 		Label:                  "AWS Lambda Function",
 		IDField:                "arn",
-		ResourceCanLinkTo:      []string{"aws/dynamodb/table"},
 		StabilisedDependencies: []string{"aws/sqs/queue"},
 		CreateFunc:             actions.createMockResource,
 		UpdateFunc:             actions.updateMockResource,
