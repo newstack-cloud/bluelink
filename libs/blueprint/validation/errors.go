@@ -3216,6 +3216,29 @@ func errLinkSelectorExcludeContainsSubstitution(
 	}
 }
 
+func errLinkSelectorExcludeResourceNotFound(
+	resourceName string,
+	excludeValue string,
+	location *source.Meta,
+) error {
+	posRange := source.PositionRangeFromSourceMeta(location)
+	return &errors.LoadError{
+		ReasonCode: ErrorReasonCodeInvalidResource,
+		Err: fmt.Errorf(
+			"validation failed due to a link selector \"exclude\" value referencing "+
+				"a resource that does not exist in resource %q, "+
+				"the exclude value %q is not a valid resource name in this blueprint",
+			resourceName,
+			excludeValue,
+		),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
+	}
+}
+
 func errAnnotationKeyContainsSubstitution(
 	resourceName string,
 	annotationKey string,

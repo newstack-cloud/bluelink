@@ -158,6 +158,7 @@ func ValidateResource(
 	validateLSDiagnostics, validateLSErr := validateResourceLinkSelector(
 		name,
 		resource.LinkSelector,
+		bpSchema,
 	)
 	diagnostics = append(diagnostics, validateLSDiagnostics...)
 	if validateLSErr != nil {
@@ -965,6 +966,7 @@ func checkEachResourceOrChildDependencies(
 func validateResourceLinkSelector(
 	resourceName string,
 	linkSelector *schema.LinkSelector,
+	bpSchema *schema.Blueprint,
 ) ([]*bpcore.Diagnostic, error) {
 	if linkSelector == nil || linkSelector.ByLabel == nil {
 		return []*bpcore.Diagnostic{}, nil
@@ -993,16 +995,29 @@ func validateResourceLinkSelector(
 
 	if linkSelector.Exclude != nil {
 		for i, excludeName := range linkSelector.Exclude.Values {
+			var sourceMeta *source.Meta
+			if i < len(linkSelector.Exclude.SourceMeta) {
+				sourceMeta = linkSelector.Exclude.SourceMeta[i]
+			}
+
 			if substitutions.ContainsSubstitution(excludeName) {
-				var sourceMeta *source.Meta
-				if i < len(linkSelector.Exclude.SourceMeta) {
-					sourceMeta = linkSelector.Exclude.SourceMeta[i]
-				}
 				errs = append(errs, errLinkSelectorExcludeContainsSubstitution(
 					resourceName,
 					excludeName,
 					sourceMeta,
 				))
+				continue
+			}
+
+			// Check that the exclude value references a valid resource
+			if bpSchema != nil && bpSchema.Resources != nil {
+				if _, exists := bpSchema.Resources.Values[excludeName]; !exists {
+					errs = append(errs, errLinkSelectorExcludeResourceNotFound(
+						resourceName,
+						excludeName,
+						sourceMeta,
+					))
+				}
 			}
 		}
 	}
