@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.41.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.40.0...blueprint/v0.41.0) (2026-01-28)
+
+
+### Features
+
+* **blueprint:** add validation for link selector exclude list ([a16af10](https://github.com/newstack-cloud/bluelink/commit/a16af1003a9ad11654a5858072664cfdba18a73a))
+
+
+### Bug Fixes
+
+* **blueprint:** add unmarshal yaml support for string lists ([591daa7](https://github.com/newstack-cloud/bluelink/commit/591daa744d3182de6a6c25bfe2ceca64bfbc69c4))
+* **blueprint:** relax json string list parsing by skipping non-string values ([8e95b77](https://github.com/newstack-cloud/bluelink/commit/8e95b773b1bdbfb9805df172fdfc4f1e9e2a8579))
+
 ## [0.40.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.39.0...blueprint/v0.40.0) (2026-01-27)
 
 
