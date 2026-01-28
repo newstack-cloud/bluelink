@@ -2,6 +2,7 @@ package languageserver
 
 import (
 	"testing"
+	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
@@ -415,6 +416,7 @@ func (s *HandlersSuite) createTestApplication(state *languageservices.State) *Ap
 		make(map[string]transform.SpecTransformer),
 		nil,
 		s.logger,
+		NewDocumentDebouncer(300*time.Millisecond),
 	)
 }
 

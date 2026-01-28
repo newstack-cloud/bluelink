@@ -102,6 +102,8 @@ func (s *ApplicationSuite) createTestApplication() *Application {
 	gotoDefinitionService := languageservices.NewGotoDefinitionService(state, s.logger)
 	codeActionService := languageservices.NewCodeActionService(state, s.logger)
 
+	debouncer := NewDocumentDebouncer(300 * time.Millisecond)
+
 	return NewApplication(
 		state, settingsService, traceService,
 		functionRegistry, resourceRegistry, dataSourceRegistry, customVarTypeRegistry,
@@ -110,6 +112,7 @@ func (s *ApplicationSuite) createTestApplication() *Application {
 		symbolService, gotoDefinitionService, codeActionService,
 		make(map[string]provider.Provider), make(map[string]transform.SpecTransformer),
 		nil, s.logger,
+		debouncer,
 	)
 }
 

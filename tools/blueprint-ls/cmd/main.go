@@ -114,6 +114,8 @@ func main() {
 		logger,
 	)
 
+	debouncer := languageserver.NewDocumentDebouncer(300 * time.Millisecond)
+
 	app := languageserver.NewApplication(
 		state,
 		settingsService,
@@ -134,6 +136,7 @@ func main() {
 		transformers,
 		frameworkLogger,
 		logger,
+		debouncer,
 	)
 	app.Setup()
 

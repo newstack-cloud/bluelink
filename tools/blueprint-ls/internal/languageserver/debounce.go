@@ -8,16 +8,18 @@ import (
 // DocumentDebouncer provides debouncing for document change events.
 // This reduces redundant parsing during rapid typing.
 type DocumentDebouncer struct {
-	timers   map[string]*time.Timer
-	duration time.Duration
-	mu       sync.Mutex
+	timers    map[string]*time.Timer
+	callbacks map[string]func()
+	duration  time.Duration
+	mu        sync.Mutex
 }
 
 // NewDocumentDebouncer creates a new debouncer with the specified duration.
 func NewDocumentDebouncer(duration time.Duration) *DocumentDebouncer {
 	return &DocumentDebouncer{
-		timers:   make(map[string]*time.Timer),
-		duration: duration,
+		timers:    make(map[string]*time.Timer),
+		callbacks: make(map[string]func()),
+		duration:  duration,
 	}
 }
 
@@ -33,10 +35,14 @@ func (d *DocumentDebouncer) Debounce(uri string, fn func()) {
 		timer.Stop()
 	}
 
+	// Store the callback for potential Flush() calls
+	d.callbacks[uri] = fn
+
 	// Schedule new timer
 	d.timers[uri] = time.AfterFunc(d.duration, func() {
 		d.mu.Lock()
 		delete(d.timers, uri)
+		delete(d.callbacks, uri)
 		d.mu.Unlock()
 		fn()
 	})
@@ -50,6 +56,7 @@ func (d *DocumentDebouncer) Cancel(uri string) {
 	if timer, exists := d.timers[uri]; exists {
 		timer.Stop()
 		delete(d.timers, uri)
+		delete(d.callbacks, uri)
 	}
 }
 
@@ -61,6 +68,7 @@ func (d *DocumentDebouncer) CancelAll() {
 	for uri, timer := range d.timers {
 		timer.Stop()
 		delete(d.timers, uri)
+		delete(d.callbacks, uri)
 	}
 }
 
@@ -68,15 +76,17 @@ func (d *DocumentDebouncer) CancelAll() {
 func (d *DocumentDebouncer) Flush(uri string) {
 	d.mu.Lock()
 	timer, exists := d.timers[uri]
+	callback := d.callbacks[uri]
 	if exists {
 		timer.Stop()
 		delete(d.timers, uri)
+		delete(d.callbacks, uri)
 	}
 	d.mu.Unlock()
 
-	// Note: The function has already been scheduled, but we can't easily
-	// retrieve it from the timer. For a full flush implementation,
-	// we would need to store the function separately.
+	if callback != nil {
+		callback()
+	}
 }
 
 // HasPending returns true if there's a pending debounced call for the given URI.

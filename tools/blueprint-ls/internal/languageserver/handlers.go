@@ -116,29 +116,16 @@ func (a *Application) handleWorkspaceDidChangeConfiguration(ctx *common.LSPConte
 }
 
 func (a *Application) handleHover(ctx *common.LSPContext, params *lsp.HoverParams) (*lsp.Hover, error) {
-	dispatcher := lsp.NewDispatcher(ctx)
-
 	docCtx := a.state.GetDocumentContext(params.TextDocument.URI)
-	if docCtx == nil || docCtx.SchemaTree == nil {
-		err := a.validateAndPublishDiagnostics(ctx, params.TextDocument.URI, dispatcher)
-		if err != nil {
-			return nil, err
-		}
-		docCtx = a.state.GetDocumentContext(params.TextDocument.URI)
-	}
-
-	if docCtx == nil || docCtx.Blueprint == nil {
-		a.logger.Error(
-			"no schema found for document, current document is not a valid blueprint",
-		)
+	if docCtx == nil {
 		return nil, nil
 	}
 
-	content, err := a.hoverService.GetHoverContent(
-		ctx,
-		docCtx,
-		&params.TextDocumentPositionParams,
-	)
+	if docCtx.GetEffectiveSchema() == nil {
+		return nil, nil
+	}
+
+	content, err := a.hoverService.GetHoverContent(ctx, docCtx, &params.TextDocumentPositionParams)
 	if err != nil {
 		return nil, err
 	}
@@ -157,15 +144,9 @@ func (a *Application) handleHover(ctx *common.LSPContext, params *lsp.HoverParam
 }
 
 func (a *Application) handleSignatureHelp(ctx *common.LSPContext, params *lsp.SignatureHelpParams) (*lsp.SignatureHelp, error) {
-	dispatcher := lsp.NewDispatcher(ctx)
-
 	docCtx := a.state.GetDocumentContext(params.TextDocument.URI)
-	if docCtx == nil || docCtx.SchemaTree == nil {
-		err := a.validateAndPublishDiagnostics(ctx, params.TextDocument.URI, dispatcher)
-		if err != nil {
-			return nil, err
-		}
-		docCtx = a.state.GetDocumentContext(params.TextDocument.URI)
+	if docCtx == nil {
+		return nil, nil
 	}
 
 	signatures, err := a.signatureService.GetFunctionSignatures(
@@ -198,6 +179,13 @@ func (a *Application) handleTextDocumentDidClose(ctx *common.LSPContext, params 
 		Type:    lsp.MessageTypeInfo,
 		Message: "Text document closed (server received)",
 	})
+	a.debouncer.Cancel(string(params.TextDocument.URI))
+	return nil
+}
+
+func (a *Application) handleTextDocumentDidSave(ctx *common.LSPContext, params *lsp.DidSaveTextDocumentParams) error {
+	// Flush any pending diagnostics immediately on save
+	a.debouncer.Flush(string(params.TextDocument.URI))
 	return nil
 }
 
@@ -206,14 +194,22 @@ func (a *Application) handleTextDocumentDidChange(ctx *common.LSPContext, params
 		Type:    lsp.MessageTypeInfo,
 		Message: "Text document changed (server received)",
 	})
-	dispatcher := lsp.NewDispatcher(ctx)
 	existingContent := a.state.GetDocumentContent(params.TextDocument.URI)
 	err := a.SaveDocumentContent(params, existingContent)
 	if err != nil {
 		return err
 	}
-	err = a.validateAndPublishDiagnostics(ctx, params.TextDocument.URI, dispatcher)
-	return err
+
+	// Update document context immediately for hover/completion to use fresh content
+	a.updateDocumentContextOnly(params.TextDocument.URI)
+
+	// Debounce diagnostic publishing to reduce error flicker during rapid typing
+	uri := string(params.TextDocument.URI)
+	a.debouncer.Debounce(uri, func() {
+		a.publishDiagnosticsForURI(ctx, params.TextDocument.URI)
+	})
+
+	return nil
 }
 
 func (a *Application) validateAndPublishDiagnostics(
@@ -248,6 +244,69 @@ func (a *Application) validateAndPublishDiagnostics(
 		return err
 	}
 	return nil
+}
+
+// updateDocumentContextOnly updates the DocumentContext (AST, position index) without
+// publishing diagnostics. This allows hover/completion to work with fresh content
+// during the debounce period.
+func (a *Application) updateDocumentContextOnly(uri lsp.URI) {
+	content := a.GetDocumentContent(uri, true)
+	if content == nil {
+		return
+	}
+
+	specFormat := blueprint.DetermineDocFormat(uri)
+	var docFormat docmodel.DocumentFormat
+	if specFormat == schema.JWCCSpecFormat {
+		docFormat = docmodel.FormatJSONC
+	} else {
+		docFormat = docmodel.FormatYAML
+	}
+
+	existingDocCtx := a.state.GetDocumentContext(uri)
+	docCtx := docmodel.NewDocumentContext(string(uri), *content, docFormat, a.logger)
+
+	// Preserve last-known-good state from existing context
+	if existingDocCtx != nil {
+		if existingDocCtx.LastValidAST != nil && docCtx.LastValidAST == nil {
+			docCtx.LastValidAST = existingDocCtx.LastValidAST
+		}
+		if existingDocCtx.LastValidSchema != nil && docCtx.LastValidSchema == nil {
+			docCtx.LastValidSchema = existingDocCtx.LastValidSchema
+			docCtx.LastValidTree = existingDocCtx.LastValidTree
+			docCtx.LastValidVersion = existingDocCtx.LastValidVersion
+		}
+	}
+
+	a.state.SetDocumentContext(uri, docCtx)
+}
+
+// publishDiagnosticsForURI validates and publishes diagnostics for a document.
+// This is called by the debouncer after the debounce delay.
+func (a *Application) publishDiagnosticsForURI(ctx *common.LSPContext, uri lsp.URI) {
+	content := a.GetDocumentContent(uri, true)
+	diagnostics, enhanced, blueprint, err := a.diagnosticService.ValidateTextDocument(ctx, uri)
+	if err != nil {
+		a.logger.Error("failed to validate document", zap.String("uri", string(uri)), zap.Error(err))
+		return
+	}
+
+	err = a.StoreDocumentAndDerivedStructures(uri, blueprint, *content)
+	if err != nil {
+		a.logger.Error("failed to store document structures", zap.String("uri", string(uri)), zap.Error(err))
+		return
+	}
+
+	a.state.SetEnhancedDiagnostics(uri, enhanced)
+
+	dispatcher := lsp.NewDispatcher(ctx)
+	err = dispatcher.PublishDiagnostics(lsp.PublishDiagnosticsParams{
+		URI:         uri,
+		Diagnostics: diagnostics,
+	})
+	if err != nil {
+		a.logger.Error("failed to publish diagnostics", zap.String("uri", string(uri)), zap.Error(err))
+	}
 }
 
 // GetDocumentContent retrieves document content from state, optionally returning
@@ -355,26 +414,16 @@ func (a *Application) handleCompletion(
 	ctx *common.LSPContext,
 	params *lsp.CompletionParams,
 ) (any, error) {
-	dispatcher := lsp.NewDispatcher(ctx)
-
 	docCtx := a.state.GetDocumentContext(params.TextDocument.URI)
-	// Try to validate if we don't have any schema (current or last-known-good)
-	if docCtx == nil || (docCtx.SchemaTree == nil && docCtx.LastValidTree == nil) {
-		err := a.validateAndPublishDiagnostics(ctx, params.TextDocument.URI, dispatcher)
-		if err != nil {
-			return nil, err
-		}
-		docCtx = a.state.GetDocumentContext(params.TextDocument.URI)
+	if docCtx == nil {
+		return []*lsp.CompletionItem{}, nil
 	}
 
-	// Use GetEffectiveSchema() to fall back to last-known-good schema during editing
-	if docCtx == nil || docCtx.GetEffectiveSchema() == nil {
-		return nil, errors.New("no parsed blueprint found for document")
+	if docCtx.GetEffectiveSchema() == nil {
+		return []*lsp.CompletionItem{}, nil
 	}
 
-	// Update DocumentContext with the latest content from state.
-	// This handles race conditions where completion request arrives before
-	// the didChange notification is fully processed and docCtx is updated.
+	// Sync content in case completion request arrives before didChange is fully processed
 	latestContent := a.state.GetDocumentContent(params.TextDocument.URI)
 	if latestContent != nil && *latestContent != docCtx.Content {
 		docCtx.UpdateContent(*latestContent, docCtx.Version+1)
@@ -450,19 +499,13 @@ func (a *Application) handleGotoDefinition(
 	ctx *common.LSPContext,
 	params *lsp.DefinitionParams,
 ) (any, error) {
-	dispatcher := lsp.NewDispatcher(ctx)
-
 	docCtx := a.state.GetDocumentContext(params.TextDocument.URI)
-	if docCtx == nil || docCtx.SchemaTree == nil {
-		err := a.validateAndPublishDiagnostics(ctx, params.TextDocument.URI, dispatcher)
-		if err != nil {
-			return nil, err
-		}
-		docCtx = a.state.GetDocumentContext(params.TextDocument.URI)
+	if docCtx == nil {
+		return []lsp.Location{}, nil
 	}
 
-	if docCtx == nil || docCtx.Blueprint == nil {
-		return nil, errors.New("no parsed blueprint found for document")
+	if docCtx.GetEffectiveSchema() == nil {
+		return []lsp.Location{}, nil
 	}
 
 	if a.state.HasLinkSupportCapability() {

@@ -38,6 +38,9 @@ type Application struct {
 
 	// Custom variable type registry (used by completion service)
 	customVarTypeRegistry provider.CustomVariableTypeRegistry
+
+	// Debouncer for diagnostic publishing to reduce error flicker during typing
+	debouncer *DocumentDebouncer
 }
 
 func NewApplication(
@@ -60,6 +63,7 @@ func NewApplication(
 	builtInTransformers map[string]transform.SpecTransformer,
 	frameworkLogger core.Logger,
 	logger *zap.Logger,
+	debouncer *DocumentDebouncer,
 ) *Application {
 	return &Application{
 		state:                 state,
@@ -81,6 +85,7 @@ func NewApplication(
 		builtInTransformers:   builtInTransformers,
 		frameworkLogger:       frameworkLogger,
 		logger:                logger,
+		debouncer:             debouncer,
 	}
 }
 
@@ -92,6 +97,7 @@ func (a *Application) Setup() {
 		lsp.WithTextDocumentDidOpenHandler(a.handleTextDocumentDidOpen),
 		lsp.WithTextDocumentDidCloseHandler(a.handleTextDocumentDidClose),
 		lsp.WithTextDocumentDidChangeHandler(a.handleTextDocumentDidChange),
+		lsp.WithTextDocumentDidSaveHandler(a.handleTextDocumentDidSave),
 		lsp.WithSetTraceHandler(a.traceService.CreateSetTraceHandler()),
 		lsp.WithHoverHandler(a.handleHover),
 		lsp.WithSignatureHelpHandler(a.handleSignatureHelp),
