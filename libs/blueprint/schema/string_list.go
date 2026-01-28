@@ -129,14 +129,20 @@ func (t *StringList) FromJSONNode(
 		transformStringNodes = []json.Node{*node}
 	}
 
-	t.Values = make([]string, len(transformStringNodes))
-	t.SourceMeta = make([]*source.Meta, len(transformStringNodes))
-	for i, stringNode := range transformStringNodes {
-		t.SourceMeta[i] = source.ExtractSourcePositionFromJSONNode(
+	t.Values = make([]string, 0, len(transformStringNodes))
+	t.SourceMeta = make([]*source.Meta, 0, len(transformStringNodes))
+	for _, stringNode := range transformStringNodes {
+		// Only process string values, skip non-string values
+		// (e.g., nested arrays from malformed JSON during editing)
+		strValue, ok := stringNode.Value.(string)
+		if !ok {
+			continue
+		}
+		t.SourceMeta = append(t.SourceMeta, source.ExtractSourcePositionFromJSONNode(
 			&stringNode,
 			linePositions,
-		)
-		t.Values[i] = stringNode.Value.(string)
+		))
+		t.Values = append(t.Values, strValue)
 	}
 
 	return nil
