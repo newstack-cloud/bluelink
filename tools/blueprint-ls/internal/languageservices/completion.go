@@ -86,14 +86,14 @@ func (s *CompletionService) GetCompletionItems(
 		Column: int(params.Position.Character + 1),
 	}
 
-	nodeCtx := docCtx.GetNodeContext(pos, CompletionColumnLeeway)
-	completionCtx := docmodel.DetermineCompletionContext(nodeCtx)
+	cursorCtx := docCtx.GetCursorContext(pos, CompletionColumnLeeway)
+	completionCtx := docmodel.DetermineCompletionContext(cursorCtx)
 	blueprint := docCtx.GetEffectiveSchema()
 	if blueprint == nil {
 		return []*lsp.CompletionItem{}, nil
 	}
 
-	return s.getCompletionItemsByContext(ctx, blueprint, &params.Position, completionCtx, nodeCtx, docCtx.Format)
+	return s.getCompletionItemsByContext(ctx, blueprint, &params.Position, completionCtx, cursorCtx, docCtx.Format)
 }
 
 // getCompletionItemsByContext returns completion items based on the detected CompletionContext.
@@ -103,10 +103,17 @@ func (s *CompletionService) getCompletionItemsByContext(
 	blueprint *schema.Blueprint,
 	position *lsp.Position,
 	completionCtx *docmodel.CompletionContext,
-	nodeCtx *docmodel.NodeContext,
+	cursorCtx *docmodel.CursorContext,
 	format docmodel.DocumentFormat,
 ) ([]*lsp.CompletionItem, error) {
 	if completionCtx == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	// Centralized format capability check.
+	// Key completions (field names) are disabled for JSONC because editors handle them.
+	// Value completions work for all formats.
+	if !completionCtx.Kind.IsEnabledForFormat(format) {
 		return []*lsp.CompletionItem{}, nil
 	}
 
@@ -133,93 +140,48 @@ func (s *CompletionService) getCompletionItemsByContext(
 
 	// Data source completions (completion_datasource.go)
 	case docmodel.CompletionContextDataSourceFilterField:
-		return s.getDataSourceFilterFieldCompletionItemsFromContext(ctx, nodeCtx, blueprint, position, completionCtx, format)
+		return s.getDataSourceFilterFieldCompletionItemsFromContext(ctx, cursorCtx, blueprint, position, completionCtx, format)
 	case docmodel.CompletionContextDataSourceFilterOperator:
-		return s.getDataSourceFilterOperatorCompletionItemsFromContext(position, nodeCtx, format)
+		return s.getDataSourceFilterOperatorCompletionItemsFromContext(position, cursorCtx, format)
 	case docmodel.CompletionContextDataSourceExportAliasForValue:
-		return s.getDataSourceExportAliasForCompletionItems(ctx, nodeCtx, blueprint, position, completionCtx, format)
+		return s.getDataSourceExportAliasForCompletionItems(ctx, cursorCtx, blueprint, position, completionCtx, format)
 	case docmodel.CompletionContextDataSourceExportName:
-		if format == docmodel.FormatJSONC {
-			return []*lsp.CompletionItem{}, nil
-		}
-		return s.getDataSourceExportNameCompletionItems(ctx, nodeCtx, blueprint, position, completionCtx, format)
+		return s.getDataSourceExportNameCompletionItems(ctx, cursorCtx, blueprint, position, completionCtx, format)
 
 	// Schema/definition field completions (completion_schema.go)
 	case docmodel.CompletionContextResourceSpecField:
-		if format == docmodel.FormatJSONC {
-			return []*lsp.CompletionItem{}, nil
-		}
 		return s.getResourceSpecFieldCompletionItems(ctx, position, blueprint, completionCtx, format)
 	case docmodel.CompletionContextResourceSpecFieldValue:
 		return s.getResourceSpecFieldValueCompletionItems(ctx, position, blueprint, completionCtx, format)
 	case docmodel.CompletionContextResourceMetadataField:
-		if format == docmodel.FormatJSONC {
-			return []*lsp.CompletionItem{}, nil
-		}
 		return s.getResourceMetadataFieldCompletionItems(position, completionCtx)
 	case docmodel.CompletionContextResourceAnnotationKey:
-		if format == docmodel.FormatJSONC {
-			return []*lsp.CompletionItem{}, nil
-		}
 		return s.getResourceAnnotationKeyCompletionItems(ctx, position, blueprint, completionCtx)
 	case docmodel.CompletionContextResourceAnnotationValue:
 		return s.getResourceAnnotationValueCompletionItems(ctx, position, blueprint, completionCtx, format)
 	case docmodel.CompletionContextResourceDefinitionField:
-		if format == docmodel.FormatJSONC {
-			return []*lsp.CompletionItem{}, nil
-		}
 		return s.getResourceDefinitionFieldCompletionItems(position, completionCtx)
 	case docmodel.CompletionContextVariableDefinitionField:
-		if format == docmodel.FormatJSONC {
-			return []*lsp.CompletionItem{}, nil
-		}
 		return s.getVariableDefinitionFieldCompletionItems(position, completionCtx)
 	case docmodel.CompletionContextValueDefinitionField:
-		if format == docmodel.FormatJSONC {
-			return []*lsp.CompletionItem{}, nil
-		}
 		return s.getValueDefinitionFieldCompletionItems(position, completionCtx)
 	case docmodel.CompletionContextDataSourceDefinitionField:
-		if format == docmodel.FormatJSONC {
-			return []*lsp.CompletionItem{}, nil
-		}
 		return s.getDataSourceDefinitionFieldCompletionItems(position, completionCtx)
 	case docmodel.CompletionContextDataSourceFilterDefinitionField:
-		if format == docmodel.FormatJSONC {
-			return []*lsp.CompletionItem{}, nil
-		}
 		return s.getDataSourceFilterDefinitionFieldCompletionItems(position, completionCtx)
 	case docmodel.CompletionContextDataSourceExportDefinitionField:
-		if format == docmodel.FormatJSONC {
-			return []*lsp.CompletionItem{}, nil
-		}
 		return s.getDataSourceExportDefinitionFieldCompletionItems(position, completionCtx)
 	case docmodel.CompletionContextDataSourceMetadataField:
-		if format == docmodel.FormatJSONC {
-			return []*lsp.CompletionItem{}, nil
-		}
 		return s.getDataSourceMetadataFieldCompletionItems(position, completionCtx)
 	case docmodel.CompletionContextIncludeDefinitionField:
-		if format == docmodel.FormatJSONC {
-			return []*lsp.CompletionItem{}, nil
-		}
 		return s.getIncludeDefinitionFieldCompletionItems(position, completionCtx)
 	case docmodel.CompletionContextExportDefinitionField:
-		if format == docmodel.FormatJSONC {
-			return []*lsp.CompletionItem{}, nil
-		}
 		return s.getExportDefinitionFieldCompletionItems(position, completionCtx)
 	case docmodel.CompletionContextLinkSelectorField:
-		if format == docmodel.FormatJSONC {
-			return []*lsp.CompletionItem{}, nil
-		}
 		return s.getLinkSelectorFieldCompletionItems(position, completionCtx)
 	case docmodel.CompletionContextLinkSelectorExcludeValue:
-		return s.getLinkSelectorExcludeValueCompletionItems(position, blueprint, completionCtx)
+		return s.getLinkSelectorExcludeValueCompletionItems(position, blueprint, completionCtx, format)
 	case docmodel.CompletionContextBlueprintTopLevelField:
-		if format == docmodel.FormatJSONC {
-			return []*lsp.CompletionItem{}, nil
-		}
 		return s.getBlueprintTopLevelFieldCompletionItems(position, completionCtx)
 
 	// String substitution completions (completion_stringsub.go)
@@ -228,7 +190,7 @@ func (s *CompletionService) getCompletionItemsByContext(
 	case docmodel.CompletionContextStringSubResourceRef:
 		return s.getStringSubResourceCompletionItems(position, blueprint)
 	case docmodel.CompletionContextStringSubResourceProperty:
-		return s.getStringSubResourcePropCompletionItemsFromContext(ctx, position, blueprint, nodeCtx)
+		return s.getStringSubResourcePropCompletionItemsFromContext(ctx, position, blueprint, cursorCtx)
 	case docmodel.CompletionContextStringSubDataSourceRef:
 		return s.getStringSubDataSourceCompletionItems(position, blueprint)
 	case docmodel.CompletionContextStringSubDataSourceProperty:
@@ -242,7 +204,7 @@ func (s *CompletionService) getCompletionItemsByContext(
 	case docmodel.CompletionContextStringSubPartialPath:
 		return []*lsp.CompletionItem{}, nil
 	case docmodel.CompletionContextStringSubPotentialResourceProp:
-		return s.getStringSubPotentialResourcePropCompletionItems(ctx, position, blueprint, completionCtx, nodeCtx)
+		return s.getStringSubPotentialResourcePropCompletionItems(ctx, position, blueprint, completionCtx, cursorCtx)
 	case docmodel.CompletionContextStringSub:
 		return s.getStringSubCompletionItems(ctx, position, blueprint)
 

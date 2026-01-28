@@ -1,0 +1,34 @@
+{
+  "version": "2025-11-02",
+  "resources": {
+    "newOrderTable": {
+      "type": "aws/dynamodb/table",
+      "linkSelector": {
+        "byLabel": {
+          "subsystem": "eventProcessing"
+        },
+        "exclude": []
+      },
+      "spec": {
+        "tableName": "NewOrdersTable2025"
+      }
+    },
+    "processOrders": {
+      "type": "aws/lambda/function",
+      "metadata": {
+        "labels": {
+          "subsystem": "eventProcessing"
+        }
+      },
+      "spec": {
+        "functionName": "ProcessOrdersFunction2025"
+      }
+    },
+    "cacheTable": {
+      "type": "aws/dynamodb/table",
+      "spec": {
+        "tableName": "cache"
+      }
+    }
+  }
+}

@@ -12,26 +12,26 @@ import (
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 )
 
-// getDataSourceFilterFieldCompletionItemsFromContext adapts filter field completion to use NodeContext.
+// getDataSourceFilterFieldCompletionItemsFromContext adapts filter field completion to use CursorContext.
 func (s *CompletionService) getDataSourceFilterFieldCompletionItemsFromContext(
 	ctx *common.LSPContext,
-	nodeCtx *docmodel.NodeContext,
+	cursorCtx *docmodel.CursorContext,
 	blueprint *schema.Blueprint,
 	position *lsp.Position,
 	completionCtx *docmodel.CompletionContext,
 	format docmodel.DocumentFormat,
 ) ([]*lsp.CompletionItem, error) {
-	if nodeCtx == nil {
+	if cursorCtx == nil {
 		return []*lsp.CompletionItem{}, nil
 	}
 
-	dataSourceName, ok := nodeCtx.GetDataSourceName()
+	dataSourceName, ok := cursorCtx.GetDataSourceName()
 	if !ok || dataSourceName == "" {
 		return []*lsp.CompletionItem{}, nil
 	}
 
 	// Try to find the data source type from the current blueprint or fall back to last valid schema.
-	dataSourceType := getDataSourceTypeForCompletion(blueprint, nodeCtx.DocumentCtx, dataSourceName)
+	dataSourceType := getDataSourceTypeForCompletion(blueprint, cursorCtx.DocumentCtx, dataSourceName)
 	if dataSourceType == "" {
 		return []*lsp.CompletionItem{}, nil
 	}
@@ -76,10 +76,10 @@ func (s *CompletionService) getDataSourceFilterFieldCompletionItemsFromContext(
 	return completionItems, nil
 }
 
-// getDataSourceFilterOperatorCompletionItemsFromContext adapts filter operator completion to use NodeContext.
+// getDataSourceFilterOperatorCompletionItemsFromContext adapts filter operator completion to use CursorContext.
 func (s *CompletionService) getDataSourceFilterOperatorCompletionItemsFromContext(
 	position *lsp.Position,
-	nodeCtx *docmodel.NodeContext,
+	cursorCtx *docmodel.CursorContext,
 	format docmodel.DocumentFormat,
 ) ([]*lsp.CompletionItem, error) {
 	filterOperatorDetail := "Data source filter operator"
@@ -87,8 +87,8 @@ func (s *CompletionService) getDataSourceFilterOperatorCompletionItemsFromContex
 
 	// Get operator element position from schema node (preferred) or fallback to current position
 	var operatorElementPosition *source.Position
-	if nodeCtx != nil && nodeCtx.SchemaNode != nil && nodeCtx.SchemaNode.Range != nil {
-		operatorElementPosition = nodeCtx.SchemaNode.Range.Start
+	if cursorCtx != nil && cursorCtx.SchemaNode != nil && cursorCtx.SchemaNode.Range != nil {
+		operatorElementPosition = cursorCtx.SchemaNode.Range.Start
 	} else {
 		operatorElementPosition = &source.Position{
 			Line:   int(position.Line + 1),
@@ -97,12 +97,12 @@ func (s *CompletionService) getDataSourceFilterOperatorCompletionItemsFromContex
 	}
 
 	// Determine if cursor is right after "operator:" field declaration
-	isPrecededByOperator := nodeCtx != nil && nodeCtx.IsPrecededByOperatorField()
+	isPrecededByOperator := cursorCtx != nil && cursorCtx.IsPrecededByOperatorField()
 
 	// Check if user has already typed a leading quote (only relevant for JSONC)
 	hasLeadingQuote := false
-	if format == docmodel.FormatJSONC && nodeCtx != nil {
-		typedPrefix := nodeCtx.GetTypedPrefix()
+	if format == docmodel.FormatJSONC && cursorCtx != nil {
+		typedPrefix := cursorCtx.GetTypedPrefix()
 		_, hasLeadingQuote = stripLeadingQuote(typedPrefix)
 	}
 
@@ -147,22 +147,22 @@ func formatFilterOperator(op string, format docmodel.DocumentFormat, hasLeadingQ
 // in data source exports. The aliasFor value references a field name from the data source's spec definition.
 func (s *CompletionService) getDataSourceExportAliasForCompletionItems(
 	ctx *common.LSPContext,
-	nodeCtx *docmodel.NodeContext,
+	cursorCtx *docmodel.CursorContext,
 	blueprint *schema.Blueprint,
 	position *lsp.Position,
 	completionCtx *docmodel.CompletionContext,
 	format docmodel.DocumentFormat,
 ) ([]*lsp.CompletionItem, error) {
-	if nodeCtx == nil {
+	if cursorCtx == nil {
 		return []*lsp.CompletionItem{}, nil
 	}
 
-	dataSourceName, ok := nodeCtx.GetDataSourceName()
+	dataSourceName, ok := cursorCtx.GetDataSourceName()
 	if !ok || dataSourceName == "" {
 		return []*lsp.CompletionItem{}, nil
 	}
 
-	dataSourceType := getDataSourceTypeForCompletion(blueprint, nodeCtx.DocumentCtx, dataSourceName)
+	dataSourceType := getDataSourceTypeForCompletion(blueprint, cursorCtx.DocumentCtx, dataSourceName)
 	if dataSourceType == "" {
 		return []*lsp.CompletionItem{}, nil
 	}
@@ -226,22 +226,22 @@ func (s *CompletionService) getDataSourceExportAliasForCompletionItems(
 // YAML-only as JSONC key completions are disabled.
 func (s *CompletionService) getDataSourceExportNameCompletionItems(
 	ctx *common.LSPContext,
-	nodeCtx *docmodel.NodeContext,
+	cursorCtx *docmodel.CursorContext,
 	blueprint *schema.Blueprint,
 	_ *lsp.Position,
 	completionCtx *docmodel.CompletionContext,
 	_ docmodel.DocumentFormat,
 ) ([]*lsp.CompletionItem, error) {
-	if nodeCtx == nil {
+	if cursorCtx == nil {
 		return []*lsp.CompletionItem{}, nil
 	}
 
-	dataSourceName, ok := nodeCtx.GetDataSourceName()
+	dataSourceName, ok := cursorCtx.GetDataSourceName()
 	if !ok || dataSourceName == "" {
 		return []*lsp.CompletionItem{}, nil
 	}
 
-	dataSourceType := getDataSourceTypeForCompletion(blueprint, nodeCtx.DocumentCtx, dataSourceName)
+	dataSourceType := getDataSourceTypeForCompletion(blueprint, cursorCtx.DocumentCtx, dataSourceName)
 	if dataSourceType == "" {
 		return []*lsp.CompletionItem{}, nil
 	}
@@ -260,8 +260,8 @@ func (s *CompletionService) getDataSourceExportNameCompletionItems(
 	}
 
 	typedPrefix := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 	}
 	prefixLower := strings.ToLower(typedPrefix)
 

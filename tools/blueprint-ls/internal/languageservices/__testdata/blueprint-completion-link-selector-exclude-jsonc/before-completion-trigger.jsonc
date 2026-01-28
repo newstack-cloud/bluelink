@@ -1,0 +1,46 @@
+{
+  "version": "2025-11-02",
+  "resources": {
+    "saveOrderFunction": {
+      "type": "aws/lambda/function",
+      "metadata": {
+        "labels": {
+          "app": "orders"
+        }
+      },
+      "linkSelector": {
+        "byLabel": {
+          "app": "orders"
+        },
+        "exclude": [
+          "ordersTable"
+        ]
+      },
+      "spec": {
+        "functionName": "saveOrder"
+      }
+    },
+    "ordersTable": {
+      "type": "aws/dynamodb/table",
+      "metadata": {
+        "labels": {
+          "app": "orders"
+        }
+      },
+      "spec": {
+        "tableName": "orders"
+      }
+    },
+    "cacheTable": {
+      "type": "aws/dynamodb/table",
+      "metadata": {
+        "labels": {
+          "app": "orders"
+        }
+      },
+      "spec": {
+        "tableName": "cache"
+      }
+    }
+  }
+}

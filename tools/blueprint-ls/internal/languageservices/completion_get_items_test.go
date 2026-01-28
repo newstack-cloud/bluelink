@@ -2209,3 +2209,146 @@ resources:
 	// Schema-based completions are disabled for JSONC - should return empty
 	s.Assert().Empty(completionItems, "JSONC resource spec completions should be disabled for v0")
 }
+
+// Test_get_completion_items_for_link_selector_exclude_yaml tests completion
+// for values in the linkSelector.exclude list in YAML format.
+func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_link_selector_exclude_yaml() {
+	blueprintInfo, err := loadCompletionBlueprintAndTree("blueprint-completion-link-selector-exclude-yaml")
+	s.Require().NoError(err)
+
+	lspCtx := &common.LSPContext{}
+	// Line 14 (1-indexed) is the line with "        -" (empty sequence item)
+	// LSP Position is 0-indexed: Line 13, Character 10
+	completionItems, err := s.service.GetCompletionItems(
+		lspCtx,
+		blueprintInfo.toDocumentContextWithTreeSitter(),
+		&lsp.TextDocumentPositionParams{
+			TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+			Position:     lsp.Position{Line: 13, Character: 10},
+		},
+	)
+	s.Require().NoError(err)
+
+	// Should get resource names as completions, excluding saveOrderFunction (the current resource)
+	labels := completionItemLabels(completionItems)
+	s.Assert().Contains(labels, "cacheTable", "Should include cacheTable as completion")
+	s.Assert().Contains(labels, "ordersTable", "Should include ordersTable as completion")
+	s.Assert().NotContains(labels, "saveOrderFunction", "Should not include the current resource")
+}
+
+// Test_get_completion_items_for_link_selector_exclude_jsonc tests completion
+// for values in the linkSelector.exclude list in JSONC format.
+func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_link_selector_exclude_jsonc() {
+	blueprintInfo, err := loadCompletionBlueprintAndTreeJSONC("blueprint-completion-link-selector-exclude-jsonc")
+	s.Require().NoError(err)
+
+	lspCtx := &common.LSPContext{}
+	// Line 17 (1-indexed) has: `          ""`  (10 spaces + "")
+	// Position 11 is inside the empty string (after opening quote)
+	// LSP Position is 0-indexed: Line 16, Character 11
+	completionItems, err := s.service.GetCompletionItems(
+		lspCtx,
+		blueprintInfo.toDocumentContextWithTreeSitterAndFormat(docmodel.FormatJSONC),
+		&lsp.TextDocumentPositionParams{
+			TextDocument: lsp.TextDocumentIdentifier{URI: "file:///blueprint.jsonc"},
+			Position:     lsp.Position{Line: 16, Character: 11},
+		},
+	)
+	s.Require().NoError(err)
+
+	// Should get resource names as completions, excluding saveOrderFunction (the current resource)
+	labels := completionItemLabels(completionItems)
+	s.Assert().Contains(labels, "cacheTable", "Should include cacheTable as completion")
+	s.Assert().Contains(labels, "ordersTable", "Should include ordersTable as completion")
+	s.Assert().NotContains(labels, "saveOrderFunction", "Should not include the current resource")
+
+	// Verify JSONC formatting - values should include closing quote (opening quote is replaced)
+	for _, item := range completionItems {
+		if te, ok := item.TextEdit.(lsp.TextEdit); ok {
+			s.Assert().True(strings.HasSuffix(te.NewText, `"`), "JSONC insert text should end with closing quote")
+			s.Assert().False(strings.HasPrefix(te.NewText, `"`), "JSONC insert text should not have opening quote (it replaces existing)")
+		}
+	}
+}
+
+// Test_get_completion_items_for_link_selector_exclude_jsonc_inline tests completion
+// for values in the linkSelector.exclude list in JSONC format when the array is inline.
+// This tests the scenario: "exclude": [""]  with cursor inside the empty string.
+func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_link_selector_exclude_jsonc_inline() {
+	blueprintInfo, err := loadCompletionBlueprintAndTreeJSONC("blueprint-completion-link-selector-exclude-jsonc-inline")
+	s.Require().NoError(err)
+
+	lspCtx := &common.LSPContext{}
+	// Line 10 (1-indexed) has: `        "exclude": [""]`
+	// Position 21 is inside the empty string (after opening quote, before closing quote)
+	// LSP Position is 0-indexed: Line 9, Character 21
+	completionItems, err := s.service.GetCompletionItems(
+		lspCtx,
+		blueprintInfo.toDocumentContextWithTreeSitterAndFormat(docmodel.FormatJSONC),
+		&lsp.TextDocumentPositionParams{
+			TextDocument: lsp.TextDocumentIdentifier{URI: "file:///blueprint.jsonc"},
+			Position:     lsp.Position{Line: 9, Character: 21},
+		},
+	)
+	s.Require().NoError(err)
+
+	// Should get resource names as completions, excluding newOrderTable (the current resource)
+	labels := completionItemLabels(completionItems)
+	s.Assert().Contains(labels, "cacheTable", "Should include cacheTable as completion")
+	s.Assert().Contains(labels, "processOrders", "Should include processOrders as completion")
+	s.Assert().NotContains(labels, "newOrderTable", "Should not include the current resource")
+}
+
+func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_link_selector_exclude_jsonc_empty_array() {
+	blueprintInfo, err := loadCompletionBlueprintAndTreeJSONC("blueprint-completion-link-selector-exclude-jsonc-empty-array")
+	s.Require().NoError(err)
+
+	lspCtx := &common.LSPContext{}
+	// Line 10 (1-indexed) has: `        "exclude": []`
+	// Position 20 is right after the opening bracket (inside empty array)
+	// LSP Position is 0-indexed: Line 9, Character 20
+	completionItems, err := s.service.GetCompletionItems(
+		lspCtx,
+		blueprintInfo.toDocumentContextWithTreeSitterAndFormat(docmodel.FormatJSONC),
+		&lsp.TextDocumentPositionParams{
+			TextDocument: lsp.TextDocumentIdentifier{URI: "file:///blueprint.jsonc"},
+			Position:     lsp.Position{Line: 9, Character: 20},
+		},
+	)
+	s.Require().NoError(err)
+
+	// Should get resource names as completions, excluding newOrderTable (the current resource)
+	labels := completionItemLabels(completionItems)
+	s.Assert().Contains(labels, "cacheTable", "Should include cacheTable as completion")
+	s.Assert().Contains(labels, "processOrders", "Should include processOrders as completion")
+	s.Assert().NotContains(labels, "newOrderTable", "Should not include the current resource")
+}
+
+// Test_get_completion_items_for_link_selector_exclude_jsonc_after_comma tests completion
+// for values in the linkSelector.exclude list in JSONC format after a comma.
+// This tests the scenario: "exclude": ["existingTable", ] with cursor after the comma and space.
+func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_link_selector_exclude_jsonc_after_comma() {
+	blueprintInfo, err := loadCompletionBlueprintAndTreeJSONC("blueprint-completion-link-selector-exclude-jsonc-after-comma")
+	s.Require().NoError(err)
+
+	lspCtx := &common.LSPContext{}
+	// Line 10 (1-indexed) has: `        "exclude": ["existingTable", ]`
+	// Position 37 is after the comma and space, right before the closing bracket
+	// LSP Position is 0-indexed: Line 9, Character 37
+	completionItems, err := s.service.GetCompletionItems(
+		lspCtx,
+		blueprintInfo.toDocumentContextWithTreeSitterAndFormat(docmodel.FormatJSONC),
+		&lsp.TextDocumentPositionParams{
+			TextDocument: lsp.TextDocumentIdentifier{URI: "file:///blueprint.jsonc"},
+			Position:     lsp.Position{Line: 9, Character: 37},
+		},
+	)
+	s.Require().NoError(err)
+
+	// Should get resource names as completions, excluding orderFunction (the current resource)
+	labels := completionItemLabels(completionItems)
+	s.Assert().Contains(labels, "newTable", "Should include newTable as completion")
+	s.Assert().NotContains(labels, "orderFunction", "Should not include the current resource")
+	// existingTable is already in the exclude list but completion service doesn't filter already-excluded items
+	s.Assert().Contains(labels, "existingTable", "existingTable should still be suggested (filtering is done by the user)")
+}

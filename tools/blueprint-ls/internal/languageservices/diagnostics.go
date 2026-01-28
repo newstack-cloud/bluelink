@@ -67,6 +67,13 @@ func (s *DiagnosticsService) ValidateTextDocument(
 		return diagnostics, enhanced, nil, nil
 	}
 
+	// Check for duplicate keys from the DocumentContext (parsed AST)
+	docCtx := s.state.GetDocumentContext(string(docURI))
+	if docCtx != nil && docCtx.DuplicateKeys != nil {
+		duplicateDiags := DuplicateKeysToDiagnostics(docCtx.DuplicateKeys)
+		diagnostics = append(diagnostics, duplicateDiags...)
+	}
+
 	format := blueprint.DetermineDocFormat(docURI)
 	validationResult, err := s.loader.ValidateString(
 		lspCtx.Context,

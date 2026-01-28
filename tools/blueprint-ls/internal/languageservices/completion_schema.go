@@ -192,7 +192,7 @@ func (s *CompletionService) getResourceSpecFieldCompletionItems(
 		), nil
 	}
 
-	specPath := completionCtx.NodeCtx.ASTPath.GetSpecPath()
+	specPath := completionCtx.CursorCtx.StructuralPath.GetSpecPath()
 	currentSchema := specDefOutput.SpecDefinition.Schema
 
 	for i := 0; i < len(specPath) && currentSchema != nil; i++ {
@@ -212,8 +212,8 @@ func (s *CompletionService) getResourceSpecFieldCompletionItems(
 	}
 
 	typedPrefix := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 	}
 
 	return resourceDefAttributesSchemaCompletionItemsWithPrefix(
@@ -256,14 +256,14 @@ func (s *CompletionService) getResourceSpecFieldValueCompletionItems(
 		return []*lsp.CompletionItem{}, nil
 	}
 
-	specPath := completionCtx.NodeCtx.ASTPath.GetSpecPath()
+	specPath := completionCtx.CursorCtx.StructuralPath.GetSpecPath()
 
 	// If specPath is empty but we have an extracted field name from TextBefore,
 	// use that instead. This handles the case where the cursor is after "fieldName: "
 	// but outside the AST node's range.
-	if len(specPath) == 0 && completionCtx.NodeCtx.ExtractedFieldName != "" {
+	if len(specPath) == 0 && completionCtx.CursorCtx.ExtractedFieldName != "" {
 		specPath = []docmodel.PathSegment{
-			{Kind: docmodel.PathSegmentField, FieldName: completionCtx.NodeCtx.ExtractedFieldName},
+			{Kind: docmodel.PathSegmentField, FieldName: completionCtx.CursorCtx.ExtractedFieldName},
 		}
 	}
 
@@ -282,9 +282,9 @@ func (s *CompletionService) getResourceSpecFieldValueCompletionItems(
 
 	typedPrefix := ""
 	textBefore := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
-		textBefore = completionCtx.NodeCtx.TextBefore
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
+		textBefore = completionCtx.CursorCtx.TextBefore
 	}
 
 	return allowedValuesCompletionItems(fieldSchema, position, typedPrefix, textBefore, format), nil
@@ -297,8 +297,8 @@ func (s *CompletionService) getResourceDefinitionFieldCompletionItems(
 	completionCtx *docmodel.CompletionContext,
 ) ([]*lsp.CompletionItem, error) {
 	typedPrefix := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 	}
 
 	prefixLower := strings.ToLower(typedPrefix)
@@ -398,8 +398,8 @@ func (s *CompletionService) getVariableDefinitionFieldCompletionItems(
 	completionCtx *docmodel.CompletionContext,
 ) ([]*lsp.CompletionItem, error) {
 	typedPrefix := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 	}
 	return createDefinitionFieldCompletionItems(
 		coreVariableDefinitionFields,
@@ -416,8 +416,8 @@ func (s *CompletionService) getValueDefinitionFieldCompletionItems(
 	completionCtx *docmodel.CompletionContext,
 ) ([]*lsp.CompletionItem, error) {
 	typedPrefix := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 	}
 	return createDefinitionFieldCompletionItems(
 		coreValueDefinitionFields,
@@ -434,8 +434,8 @@ func (s *CompletionService) getDataSourceDefinitionFieldCompletionItems(
 	completionCtx *docmodel.CompletionContext,
 ) ([]*lsp.CompletionItem, error) {
 	typedPrefix := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 	}
 	return createDefinitionFieldCompletionItems(
 		coreDataSourceDefinitionFields,
@@ -452,8 +452,8 @@ func (s *CompletionService) getDataSourceFilterDefinitionFieldCompletionItems(
 	completionCtx *docmodel.CompletionContext,
 ) ([]*lsp.CompletionItem, error) {
 	typedPrefix := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 	}
 	return createDefinitionFieldCompletionItems(
 		coreDataSourceFilterDefinitionFields,
@@ -470,8 +470,8 @@ func (s *CompletionService) getDataSourceExportDefinitionFieldCompletionItems(
 	completionCtx *docmodel.CompletionContext,
 ) ([]*lsp.CompletionItem, error) {
 	typedPrefix := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 	}
 	return createDefinitionFieldCompletionItems(
 		coreDataSourceExportDefinitionFields,
@@ -488,8 +488,8 @@ func (s *CompletionService) getDataSourceMetadataFieldCompletionItems(
 	completionCtx *docmodel.CompletionContext,
 ) ([]*lsp.CompletionItem, error) {
 	typedPrefix := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 	}
 	return createDefinitionFieldCompletionItems(
 		coreDataSourceMetadataFields,
@@ -506,8 +506,8 @@ func (s *CompletionService) getIncludeDefinitionFieldCompletionItems(
 	completionCtx *docmodel.CompletionContext,
 ) ([]*lsp.CompletionItem, error) {
 	typedPrefix := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 	}
 	return createDefinitionFieldCompletionItems(
 		coreIncludeDefinitionFields,
@@ -524,8 +524,8 @@ func (s *CompletionService) getExportDefinitionFieldCompletionItems(
 	completionCtx *docmodel.CompletionContext,
 ) ([]*lsp.CompletionItem, error) {
 	typedPrefix := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 	}
 	return createDefinitionFieldCompletionItems(
 		coreExportDefinitionFields,
@@ -542,8 +542,8 @@ func (s *CompletionService) getLinkSelectorFieldCompletionItems(
 	completionCtx *docmodel.CompletionContext,
 ) ([]*lsp.CompletionItem, error) {
 	typedPrefix := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 	}
 	return createDefinitionFieldCompletionItems(
 		coreLinkSelectorDefinitionFields,
@@ -560,6 +560,7 @@ func (s *CompletionService) getLinkSelectorExcludeValueCompletionItems(
 	position *lsp.Position,
 	blueprint *schema.Blueprint,
 	completionCtx *docmodel.CompletionContext,
+	format docmodel.DocumentFormat,
 ) ([]*lsp.CompletionItem, error) {
 	if blueprint.Resources == nil {
 		return []*lsp.CompletionItem{}, nil
@@ -567,12 +568,29 @@ func (s *CompletionService) getLinkSelectorExcludeValueCompletionItems(
 
 	currentResourceName := completionCtx.ResourceName
 	typedPrefix := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	textBefore := ""
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
+		textBefore = completionCtx.CursorCtx.TextBefore
 	}
 
-	prefixLower := strings.ToLower(typedPrefix)
+	// For JSONC, handle the case where cursor is inside a quoted string
+	filterPrefix := typedPrefix
+	hasLeadingQuote := false
 	prefixLen := len(typedPrefix)
+
+	if format == docmodel.FormatJSONC {
+		filterPrefix, hasLeadingQuote = stripLeadingQuote(typedPrefix)
+		// If typedPrefix is empty but textBefore ends with a quote,
+		// we're inside an empty or partially typed string in a JSONC array
+		if typedPrefix == "" && len(textBefore) > 0 && textBefore[len(textBefore)-1] == '"' {
+			hasLeadingQuote = true
+			prefixLen = 1 // Include the opening quote in the replacement range
+		}
+	}
+
+	hasLeadingSpace := hasLeadingWhitespace(textBefore, prefixLen)
+	prefixLower := strings.ToLower(filterPrefix)
 	detail := "Resource name"
 	valueKind := lsp.CompletionItemKindValue
 
@@ -581,17 +599,18 @@ func (s *CompletionService) getLinkSelectorExcludeValueCompletionItems(
 		if resourceName == currentResourceName {
 			continue
 		}
-		if prefixLen > 0 && !strings.HasPrefix(strings.ToLower(resourceName), prefixLower) {
+		if len(filterPrefix) > 0 && !strings.HasPrefix(strings.ToLower(resourceName), prefixLower) {
 			continue
 		}
 
+		insertText := formatValueForInsert(resourceName, format, hasLeadingQuote, hasLeadingSpace)
 		insertRange := getItemInsertRangeWithPrefix(position, prefixLen)
 		item := &lsp.CompletionItem{
 			Label:  resourceName,
 			Detail: &detail,
 			Kind:   &valueKind,
 			TextEdit: lsp.TextEdit{
-				NewText: resourceName,
+				NewText: insertText,
 				Range:   insertRange,
 			},
 			FilterText: &resourceName,
@@ -611,8 +630,8 @@ func (s *CompletionService) getBlueprintTopLevelFieldCompletionItems(
 	completionCtx *docmodel.CompletionContext,
 ) ([]*lsp.CompletionItem, error) {
 	typedPrefix := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 	}
 	return createDefinitionFieldCompletionItems(
 		coreBlueprintTopLevelFields,
@@ -630,8 +649,8 @@ func (s *CompletionService) getResourceMetadataFieldCompletionItems(
 	completionCtx *docmodel.CompletionContext,
 ) ([]*lsp.CompletionItem, error) {
 	typedPrefix := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 	}
 
 	prefixLower := strings.ToLower(typedPrefix)
@@ -684,7 +703,7 @@ func (s *CompletionService) getResourceMetadataPropCompletionItemsForPath(
 	position *lsp.Position,
 	blueprint *schema.Blueprint,
 	resourceProp *substitutions.SubstitutionResourceProperty,
-	nodeCtx *docmodel.NodeContext,
+	cursorCtx *docmodel.CursorContext,
 ) ([]*lsp.CompletionItem, error) {
 	if len(resourceProp.Path) <= 1 {
 		return getResourceMetadataPropCompletionItems(position), nil
@@ -702,8 +721,8 @@ func (s *CompletionService) getResourceMetadataPropCompletionItemsForPath(
 	}
 
 	quoteType := docmodel.QuoteTypeNone
-	if nodeCtx != nil {
-		quoteType = nodeCtx.GetEnclosingQuoteType()
+	if cursorCtx != nil {
+		quoteType = cursorCtx.GetEnclosingQuoteType()
 	}
 
 	return createMetadataKeyCompletionItems(position, keys, detail, quoteType), nil

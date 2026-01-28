@@ -13,8 +13,8 @@ type CompletionContextSuite struct {
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceType_ExistingPath() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "resources"},
 			{Kind: PathSegmentField, FieldName: "myTable"},
 			{Kind: PathSegmentField, FieldName: "type"},
@@ -27,8 +27,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceType_Exi
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceType_NewField() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "resources"},
 			{Kind: PathSegmentField, FieldName: "myTable"},
 		},
@@ -40,8 +40,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceType_New
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceType() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "type"},
@@ -54,8 +54,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceType()
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_VariableType() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "variables"},
 			{Kind: PathSegmentField, FieldName: "myVar"},
 			{Kind: PathSegmentField, FieldName: "type"},
@@ -68,8 +68,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_VariableType() {
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_ValueType() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "values"},
 			{Kind: PathSegmentField, FieldName: "myValue"},
 			{Kind: PathSegmentField, FieldName: "type"},
@@ -82,8 +82,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_ValueType() {
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportType() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "exports"},
 			{Kind: PathSegmentField, FieldName: "myExport"},
 			{Kind: PathSegmentField, FieldName: "type"},
@@ -96,8 +96,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportType() {
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilterField() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "filters"},
@@ -113,8 +113,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilter
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilterOperator() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "filters"},
@@ -130,8 +130,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilter
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_NewFilterField() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "filters"},
@@ -145,8 +145,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_NewFilterField()
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_NewFilterOperator() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "filters"},
@@ -160,8 +160,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_NewFilterOperato
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubVariableRef() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${variables.",
 	}
 
@@ -170,8 +170,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubVariabl
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourceRef() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${resources.",
 	}
 
@@ -180,8 +180,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourc
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourceProperty() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${resources.myTable.",
 	}
 
@@ -191,8 +191,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourc
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourceProperty_WithSchemaElement() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${myTable.spec.",
 		SchemaElement: &substitutions.SubstitutionResourceProperty{
 			ResourceName: "myTable",
@@ -209,8 +209,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourc
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourceProperty_WithSchemaElement_BracketNotation() {
 	// Standalone resource name with bracket notation: ${myTable.metadata.annotations[
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${myTable.metadata.annotations[",
 		SchemaElement: &substitutions.SubstitutionResourceProperty{
 			ResourceName: "myTable",
@@ -227,8 +227,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourc
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourceProperty_BracketNotation() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${resources.myTable.metadata.annotations[",
 	}
 
@@ -239,8 +239,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourc
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourceProperty_BracketOnResource() {
 	// resources.myTable[ - bracket directly on resource name (for array access)
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${resources.myTable[",
 	}
 
@@ -251,8 +251,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourc
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourceRef_BracketNotation() {
 	// resources[ - bracket on resources namespace
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${resources[",
 	}
 
@@ -261,8 +261,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourc
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubDataSourceProperty_BracketNotation() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${datasources.myDS.exports[",
 	}
 
@@ -273,8 +273,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubDataSou
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubDataSourceRef_BracketNotation() {
 	// datasources[ - bracket on datasources namespace
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${datasources[",
 	}
 
@@ -283,8 +283,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubDataSou
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubDataSourceRef() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${datasources.",
 	}
 
@@ -293,8 +293,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubDataSou
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubDataSourceProperty() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${datasources.myDS.",
 	}
 
@@ -304,8 +304,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubDataSou
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubValueRef() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${values.",
 	}
 
@@ -314,8 +314,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubValueRe
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubChildRef() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${children.",
 	}
 
@@ -324,8 +324,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubChildRe
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubElemRef() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${elem.",
 	}
 
@@ -334,8 +334,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubElemRef
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubOpen() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${",
 	}
 
@@ -346,8 +346,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubOpen() 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_Unknown() {
 	// Test case: at a value position (after colon) with no specific context
 	// This should return Unknown because we're not at a key position
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "someKey: someValue",
 	}
 
@@ -357,8 +357,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_Unknown() {
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_BlueprintTopLevel_EmptyPath() {
 	// Test case: at document root level with empty path (typing new top-level field)
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "res",
 		Position:   source.Position{Line: 1, Column: 4},
 	}
@@ -455,19 +455,19 @@ resources:
 
 	// Position at "type: aws/dynamodb/table" - on the value
 	pos := source.Position{Line: 4, Column: 15}
-	nodeCtx := docCtx.GetNodeContext(pos, 2)
+	cursorCtx := docCtx.GetCursorContext(pos, 2)
 
 	// Verify the context was created
-	s.Require().NotNil(nodeCtx)
-	s.Assert().NotNil(nodeCtx.DocumentCtx)
+	s.Require().NotNil(cursorCtx)
+	s.Assert().NotNil(cursorCtx.DocumentCtx)
 
 	// The text context should be extracted
-	s.Assert().Contains(nodeCtx.TextBefore, "type:")
+	s.Assert().Contains(cursorCtx.TextBefore, "type:")
 
 	// The CompletionContext detection should work
-	ctx := DetermineCompletionContext(nodeCtx)
+	ctx := DetermineCompletionContext(cursorCtx)
 	s.Assert().NotNil(ctx)
-	s.Assert().NotNil(ctx.NodeCtx)
+	s.Assert().NotNil(ctx.CursorCtx)
 
 	// Note: The integration between tree-sitter AST paths and schema-style paths
 	// requires additional work in Phase 5/6 to fully map YAML structure to
@@ -476,8 +476,8 @@ resources:
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceType_JSON() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "resources"},
 			{Kind: PathSegmentField, FieldName: "myTable"},
 		},
@@ -489,8 +489,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceType_JSO
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilterField_JSON() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "filters"},
@@ -504,8 +504,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilter
 }
 
 func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilterOperator_JSON() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "filters"},
@@ -522,8 +522,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilter
 // completion in JSONC format where text is wrapped in quotes.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourceProperty_JSONC() {
 	// Simulates cursor after typing . in "${resources.myTable.spec.}"
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: `"${resources.myTable.spec.`,
 	}
 
@@ -536,8 +536,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourc
 // property completion for top-level properties in JSONC format.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourceProperty_JSONC_TopLevel() {
 	// Simulates cursor after typing . in "${resources.myTable.}"
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: `"${resources.myTable.`,
 	}
 
@@ -549,8 +549,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourc
 // TestDetermineCompletionContext_StringSubOpen_JSONC tests completion trigger at ${
 // in JSONC format.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubOpen_JSONC() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: `"${`,
 	}
 
@@ -561,8 +561,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubOpen_JS
 // TestDetermineCompletionContext_StringSubResourceRef_JSONC tests resource reference
 // completion in JSONC format.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourceRef_JSONC() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: `"${resources.`,
 	}
 
@@ -573,8 +573,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourc
 // TestDetermineCompletionContext_StringSubPartialPath tests that typing a partial property
 // name without trailing dot returns no completions.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubPartialPath() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: `${resources.myTable.metadata`,
 	}
 
@@ -584,8 +584,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubPartial
 
 // TestDetermineCompletionContext_StringSubPartialPath_JSONC tests partial path in JSONC.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubPartialPath_JSONC() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: `"${resources.myTable.spec`,
 	}
 
@@ -595,8 +595,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubPartial
 
 // TestDetermineCompletionContext_StringSubPartialPath_Deeper tests partial path deeper in path.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubPartialPath_Deeper() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: `${resources.myTable.metadata.annotations`,
 	}
 
@@ -607,8 +607,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubPartial
 // TestDetermineCompletionContext_PotentialStandaloneResourceProp_DotNotation tests detection of
 // potential standalone resource property patterns like ${myResource.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandaloneResourceProp_DotNotation() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${myResource.",
 	}
 
@@ -620,8 +620,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandal
 // TestDetermineCompletionContext_PotentialStandaloneResourceProp_BracketNotation tests detection of
 // potential standalone resource property patterns like ${myResource[
 func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandaloneResourceProp_BracketNotation() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${myResource[",
 	}
 
@@ -633,8 +633,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandal
 // TestDetermineCompletionContext_PotentialStandaloneResourceProp_NestedPath tests detection of
 // potential standalone resource property patterns with nested paths like ${myResource.metadata.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandaloneResourceProp_NestedPath() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${myResource.metadata.",
 	}
 
@@ -646,8 +646,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandal
 // TestDetermineCompletionContext_PotentialStandaloneResourceProp_NestedBracket tests detection of
 // potential standalone resource property patterns with nested bracket notation like ${myResource.metadata[
 func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandaloneResourceProp_NestedBracket() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${myResource.metadata.annotations[",
 	}
 
@@ -659,8 +659,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandal
 // TestDetermineCompletionContext_PotentialStandaloneResourceProp_NotReserved_Resources tests that
 // reserved namespaces like 'resources' are not detected as potential standalone resources.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandaloneResourceProp_NotReserved_Resources() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${resources.",
 	}
 
@@ -673,8 +673,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandal
 // TestDetermineCompletionContext_PotentialStandaloneResourceProp_NotReserved_Variables tests that
 // reserved namespaces like 'variables' are not detected as potential standalone resources.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandaloneResourceProp_NotReserved_Variables() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${variables.",
 	}
 
@@ -687,8 +687,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandal
 // TestDetermineCompletionContext_PotentialStandaloneResourceProp_NotReserved_Values tests that
 // reserved namespaces like 'values' are not detected as potential standalone resources.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandaloneResourceProp_NotReserved_Values() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${values.",
 	}
 
@@ -700,8 +700,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandal
 
 // TestDetermineCompletionContext_PotentialStandaloneResourceProp_JSONC tests detection in JSONC format.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandaloneResourceProp_JSONC() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: `"${myTable.`,
 	}
 
@@ -712,8 +712,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandal
 
 // TestDetermineCompletionContext_PotentialStandaloneResourceProp_WithHyphen tests resource names with hyphens.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandaloneResourceProp_WithHyphen() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${my-resource.",
 	}
 
@@ -724,8 +724,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandal
 
 // TestDetermineCompletionContext_PotentialStandaloneResourceProp_WithUnderscore tests resource names with underscores.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandaloneResourceProp_WithUnderscore() {
-	nodeCtx := &NodeContext{
-		ASTPath:    StructuredPath{},
+	nodeCtx := &CursorContext{
+		StructuralPath:    StructuredPath{},
 		TextBefore: "${my_resource.",
 	}
 
@@ -737,8 +737,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_PotentialStandal
 // TestDetermineCompletionContext_ResourceSpecField_TopLevel tests detection of resource spec
 // field completion at the top level of spec (e.g., /resources/{name}/spec/).
 func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecField_TopLevel() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "resources"},
 			{Kind: PathSegmentField, FieldName: "myHandler"},
 			{Kind: PathSegmentField, FieldName: "spec"},
@@ -754,8 +754,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecFiel
 // TestDetermineCompletionContext_ResourceSpecField_Nested tests detection of resource spec
 // field completion in nested spec paths (e.g., /resources/{name}/spec/nested/).
 func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecField_Nested() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "resources"},
 			{Kind: PathSegmentField, FieldName: "myHandler"},
 			{Kind: PathSegmentField, FieldName: "spec"},
@@ -772,8 +772,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecFiel
 // TestDetermineCompletionContext_ResourceSpecField_NotInSubstitution tests that resource spec
 // field detection is skipped when inside a substitution.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecField_NotInSubstitution() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "resources"},
 			{Kind: PathSegmentField, FieldName: "myHandler"},
 			{Kind: PathSegmentField, FieldName: "spec"},
@@ -791,8 +791,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecFiel
 
 // TestDetermineCompletionContext_ResourceSpecField_JSONC tests resource spec field detection in JSONC.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecField_JSONC() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "resources"},
 			{Kind: PathSegmentField, FieldName: "myHandler"},
 			{Kind: PathSegmentField, FieldName: "spec"},
@@ -808,8 +808,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecFiel
 // TestDetermineCompletionContext_ResourceDefinitionField_YAML tests detection of resource
 // definition field completion at the resource level (for fields like type, description, spec, etc.).
 func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceDefinitionField_YAML() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "resources"},
 			{Kind: PathSegmentField, FieldName: "myHandler"},
 		},
@@ -824,8 +824,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceDefiniti
 // TestDetermineCompletionContext_ResourceDefinitionField_JSONC tests resource definition
 // field completion in JSONC.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceDefinitionField_JSONC() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "resources"},
 			{Kind: PathSegmentField, FieldName: "myHandler"},
 		},
@@ -840,8 +840,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceDefiniti
 // TestDetermineCompletionContext_ResourceDefinitionField_WithPrefix tests resource definition
 // field completion when user is typing a field name.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceDefinitionField_WithPrefix() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "resources"},
 			{Kind: PathSegmentField, FieldName: "myHandler"},
 		},
@@ -856,8 +856,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceDefiniti
 // TestDetermineCompletionContext_DataSourceFilterDefinitionField tests detection of
 // data source filter definition field completion (for fields like field, operator, search).
 func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilterDefinitionField_YAML() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "filter"},
@@ -872,8 +872,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilter
 // TestDetermineCompletionContext_DataSourceFilterDefinitionField_AtIndex tests detection
 // at a specific filter array index.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilterDefinitionField_AtIndex() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "filter"},
@@ -889,8 +889,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilter
 // TestDetermineCompletionContext_DataSourceFilterDefinitionField_Plural tests detection
 // with plural "filters" field name (from validation paths).
 func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilterDefinitionField_Plural() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "filters"},
@@ -905,8 +905,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceFilter
 // TestDetermineCompletionContext_DataSourceExportDefinitionField tests detection of
 // data source export definition field completion (for fields like type, aliasFor, description).
 func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceExportDefinitionField_YAML() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "exports"},
@@ -922,8 +922,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceExport
 // TestDetermineCompletionContext_DataSourceExportDefinitionField_JSONC tests export definition
 // field completion in JSONC format.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceExportDefinitionField_JSONC() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "exports"},
@@ -944,8 +944,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceExport
 	// Path is at export definition level (4 segments: /datasources/myDS/exports/vpcId)
 	// But cursor indent is at the export name level (same as vpcId), indicating
 	// user wants to add a new sibling export, not a field inside vpcId.
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "exports"},
@@ -972,8 +972,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceExport
 	// Path is at export definition level (4 segments: /datasources/myDS/exports/vpcId)
 	// Cursor indent is deeper than the export name level, indicating user wants
 	// to add a field inside vpcId (like type, aliasFor, description).
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "exports"},
@@ -999,8 +999,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceExport
 func (s *CompletionContextSuite) TestDetermineCompletionContext_CustomVariableTypeValue_TextBased() {
 	// Path is at variable definition level (2 segments: /variables/instanceType)
 	// But TextBefore ends with "default:", indicating user wants default value completions
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "variables"},
 			{Kind: PathSegmentField, FieldName: "instanceType"},
 		},
@@ -1015,8 +1015,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_CustomVariableTy
 // TestDetermineCompletionContext_CustomVariableTypeValue_TextBased_JSONC tests the
 // text-based fallback for JSONC format.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_CustomVariableTypeValue_TextBased_JSONC() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "variables"},
 			{Kind: PathSegmentField, FieldName: "instanceType"},
 		},
@@ -1031,8 +1031,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_CustomVariableTy
 // TestDetermineCompletionContext_DataSourceMetadataField tests detection of
 // data source metadata field completion (for fields like displayName, annotations, custom).
 func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceMetadataField_YAML() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "metadata"},
@@ -1047,8 +1047,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceMetada
 // TestDetermineCompletionContext_DataSourceMetadataField_JSONC tests metadata field
 // completion in JSONC format.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceMetadataField_JSONC() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "metadata"},
@@ -1063,8 +1063,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceMetada
 // TestDetermineCompletionContext_DataSourceMetadataField_Nested tests detection when
 // inside nested metadata like annotations.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceMetadataField_Nested() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
 			{Kind: PathSegmentField, FieldName: "myDS"},
 			{Kind: PathSegmentField, FieldName: "metadata"},
@@ -1099,8 +1099,8 @@ func (s *CompletionContextSuite) TestCompletionContextKind_String_NewDataSourceC
 // TestDetermineCompletionContext_ResourceSpecFieldValue_FullPath tests detection of resource spec
 // field value completion when the full path includes the field name.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecFieldValue_FullPath() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "resources"},
 			{Kind: PathSegmentField, FieldName: "myFunction"},
 			{Kind: PathSegmentField, FieldName: "spec"},
@@ -1119,8 +1119,8 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecFiel
 // from TextBefore. This handles the case where the cursor is positioned after "fieldName: "
 // but outside the AST node's range.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecFieldValue_Fallback() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "resources"},
 			{Kind: PathSegmentField, FieldName: "myFunction"},
 			{Kind: PathSegmentField, FieldName: "spec"},
@@ -1131,14 +1131,14 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecFiel
 	ctx := DetermineCompletionContext(nodeCtx)
 	s.Assert().Equal(CompletionContextResourceSpecFieldValue, ctx.Kind)
 	s.Assert().Equal("myFunction", ctx.ResourceName)
-	s.Assert().Equal("architecture", ctx.NodeCtx.ExtractedFieldName)
+	s.Assert().Equal("architecture", ctx.CursorCtx.ExtractedFieldName)
 }
 
 // TestDetermineCompletionContext_ResourceSpecFieldValue_Fallback_JSONC tests the fallback
 // with JSONC syntax (quoted field names).
 func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecFieldValue_Fallback_JSONC() {
-	nodeCtx := &NodeContext{
-		ASTPath: StructuredPath{
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "resources"},
 			{Kind: PathSegmentField, FieldName: "myFunction"},
 			{Kind: PathSegmentField, FieldName: "spec"},
@@ -1149,7 +1149,7 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_ResourceSpecFiel
 	ctx := DetermineCompletionContext(nodeCtx)
 	s.Assert().Equal(CompletionContextResourceSpecFieldValue, ctx.Kind)
 	s.Assert().Equal("myFunction", ctx.ResourceName)
-	s.Assert().Equal("architecture", ctx.NodeCtx.ExtractedFieldName)
+	s.Assert().Equal("architecture", ctx.CursorCtx.ExtractedFieldName)
 }
 
 // TestExtractFieldNameFromTextBefore tests the helper function for extracting field names.

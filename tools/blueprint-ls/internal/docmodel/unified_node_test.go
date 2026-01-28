@@ -143,6 +143,145 @@ func (s *UnifiedNodeSuite) TestNodeKind_String() {
 	s.Assert().Equal("error", NodeKindError.String())
 }
 
+// TestInlineJSONCArrayPathDetection verifies that path detection works correctly
+// for inline JSONC arrays (arrays on a single line like `"exclude": [""]`).
+func (s *UnifiedNodeSuite) TestInlineJSONCArrayPathDetection() {
+	content := `{
+  "version": "2025-11-02",
+  "resources": {
+    "newOrderTable": {
+      "type": "aws/dynamodb/table",
+      "linkSelector": {
+        "byLabel": {
+          "subsystem": "eventProcessing"
+        },
+        "exclude": [""]
+      },
+      "spec": {
+        "tableName": "NewOrdersTable2025"
+      }
+    }
+  }
+}`
+
+	docCtx := NewDocumentContext(
+		"file:///test.jsonc",
+		content,
+		FormatJSONC,
+		nil,
+	)
+
+	// Line 10 (1-indexed), character 22 (inside the empty string)
+	// Line 10 contains: `        "exclude": [""]`
+	pos := source.Position{Line: 10, Column: 22}
+	nodeCtx := docCtx.GetCursorContext(pos, 2)
+
+	// Verify path is correctly detected
+	s.Assert().True(nodeCtx.StructuralPath.IsResourceLinkSelectorExclude(), "Path should be detected as linkSelector.exclude")
+
+	// Verify completion context is correct
+	completionCtx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextLinkSelectorExcludeValue, completionCtx.Kind, "Completion context should be LinkSelectorExcludeValue")
+	s.Assert().Equal("newOrderTable", completionCtx.ResourceName, "Resource name should be newOrderTable")
+
+	// Verify GetTypedPrefix returns empty string for empty string in inline array
+	s.Assert().Equal("", nodeCtx.GetTypedPrefix(), "Typed prefix should be empty for empty string in array")
+}
+
+// TestInlineJSONCEmptyArrayPathDetection verifies path detection for empty arrays `[]`.
+// This tests the case where the cursor is inside an empty array without any quotes.
+func (s *UnifiedNodeSuite) TestInlineJSONCEmptyArrayPathDetection() {
+	content := `{
+  "version": "2025-11-02",
+  "resources": {
+    "newOrderTable": {
+      "type": "aws/dynamodb/table",
+      "linkSelector": {
+        "byLabel": {
+          "subsystem": "eventProcessing"
+        },
+        "exclude": []
+      },
+      "spec": {
+        "tableName": "NewOrdersTable2025"
+      }
+    }
+  }
+}`
+
+	docCtx := NewDocumentContext(
+		"file:///test.jsonc",
+		content,
+		FormatJSONC,
+		nil,
+	)
+
+	// Line 10 (1-indexed), character 21 (between the empty brackets [])
+	// Line 10 contains: `        "exclude": []`
+	pos := source.Position{Line: 10, Column: 21}
+	nodeCtx := docCtx.GetCursorContext(pos, 2)
+
+	// Verify path is correctly detected
+	s.Assert().True(nodeCtx.StructuralPath.IsResourceLinkSelectorExclude(), "Path should be detected as linkSelector.exclude")
+
+	// Verify completion context is correct
+	completionCtx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextLinkSelectorExcludeValue, completionCtx.Kind, "Completion context should be LinkSelectorExcludeValue")
+	s.Assert().Equal("newOrderTable", completionCtx.ResourceName, "Resource name should be newOrderTable")
+
+	// Verify GetTypedPrefix returns empty string for empty array
+	s.Assert().Equal("", nodeCtx.GetTypedPrefix(), "Typed prefix should be empty for empty array")
+}
+
+// TestInlineJSONCArrayAfterCommaPathDetection verifies path detection for cursor after comma.
+// This tests the case where the cursor is after a comma following an existing item: ["item", |]
+func (s *UnifiedNodeSuite) TestInlineJSONCArrayAfterCommaPathDetection() {
+	content := `{
+  "version": "2025-11-02",
+  "resources": {
+    "aNewFunction": {
+      "type": "aws/lambda/function",
+      "linkSelector": {
+        "byLabel": {
+          "app": "orders"
+        },
+        "exclude": ["newOrderTable", ]
+      },
+      "spec": {
+        "functionName": "ANewFunction"
+      }
+    },
+    "newOrderTable": {
+      "type": "aws/dynamodb/table",
+      "spec": {
+        "tableName": "NewOrdersTable"
+      }
+    }
+  }
+}`
+
+	docCtx := NewDocumentContext(
+		"file:///test.jsonc",
+		content,
+		FormatJSONC,
+		nil,
+	)
+
+	// Line 10 (1-indexed), character 37 (after the comma and space, before the ])
+	// Line 10 contains: `        "exclude": ["newOrderTable", ]`
+	// The exclude array range is columns 20-39, so position 37 is inside the array
+	pos := source.Position{Line: 10, Column: 37}
+	nodeCtx := docCtx.GetCursorContext(pos, 2)
+
+	// Verify path is correctly detected
+	s.Assert().True(nodeCtx.StructuralPath.IsResourceLinkSelectorExclude(), "Path should be detected as linkSelector.exclude")
+
+	// Verify completion context is correct
+	completionCtx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextLinkSelectorExcludeValue, completionCtx.Kind, "Completion context should be LinkSelectorExcludeValue")
+	s.Assert().Equal("aNewFunction", completionCtx.ResourceName, "Resource name should be aNewFunction")
+}
+
 func TestUnifiedNodeSuite(t *testing.T) {
 	suite.Run(t, new(UnifiedNodeSuite))
 }

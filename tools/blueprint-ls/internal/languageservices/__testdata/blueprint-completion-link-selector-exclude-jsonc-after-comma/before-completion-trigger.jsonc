@@ -1,0 +1,39 @@
+{
+  "version": "2025-11-02",
+  "resources": {
+    "orderFunction": {
+      "type": "aws/lambda/function",
+      "linkSelector": {
+        "byLabel": {
+          "app": "orders"
+        },
+        "exclude": ["existingTable"]
+      },
+      "spec": {
+        "functionName": "OrderFunction"
+      }
+    },
+    "existingTable": {
+      "type": "aws/dynamodb/table",
+      "metadata": {
+        "labels": {
+          "app": "orders"
+        }
+      },
+      "spec": {
+        "tableName": "ExistingTable"
+      }
+    },
+    "newTable": {
+      "type": "aws/dynamodb/table",
+      "metadata": {
+        "labels": {
+          "app": "orders"
+        }
+      },
+      "spec": {
+        "tableName": "NewTable"
+      }
+    }
+  }
+}

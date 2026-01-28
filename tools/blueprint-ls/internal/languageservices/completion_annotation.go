@@ -41,8 +41,8 @@ func (s *CompletionService) getResourceAnnotationKeyCompletionItems(
 	annotationDefs := s.collectAnnotationDefinitions(ctx.Context, blueprint, currentResourceType, linkedResources)
 
 	typedPrefix := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 	}
 
 	return s.createAnnotationKeyCompletionItems(annotationDefs, linkedResources, position, typedPrefix), nil
@@ -486,11 +486,11 @@ func (s *CompletionService) getResourceAnnotationValueCompletionItems(
 
 	// Get the annotation key from the path or extracted field name
 	annotationKey := ""
-	if completionCtx.NodeCtx != nil {
-		if key, ok := completionCtx.NodeCtx.ASTPath.GetAnnotationKey(); ok {
+	if completionCtx.CursorCtx != nil {
+		if key, ok := completionCtx.CursorCtx.StructuralPath.GetAnnotationKey(); ok {
 			annotationKey = key
-		} else if completionCtx.NodeCtx.ExtractedFieldName != "" {
-			annotationKey = completionCtx.NodeCtx.ExtractedFieldName
+		} else if completionCtx.CursorCtx.ExtractedFieldName != "" {
+			annotationKey = completionCtx.CursorCtx.ExtractedFieldName
 		}
 	}
 
@@ -511,9 +511,9 @@ func (s *CompletionService) getResourceAnnotationValueCompletionItems(
 	// Create completion items from AllowedValues
 	typedPrefix := ""
 	textBefore := ""
-	if completionCtx.NodeCtx != nil {
-		typedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
-		textBefore = completionCtx.NodeCtx.TextBefore
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
+		textBefore = completionCtx.CursorCtx.TextBefore
 	}
 
 	return s.createAnnotationValueCompletionItems(

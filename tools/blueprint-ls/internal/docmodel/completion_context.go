@@ -142,8 +142,8 @@ var (
 type CompletionContext struct {
 	Kind CompletionContextKind
 
-	// Node context from position resolution
-	NodeCtx *NodeContext
+	// Cursor context from position resolution (unified structural + syntactic context)
+	CursorCtx *CursorContext
 
 	// Extracted names when applicable
 	ResourceName          string
@@ -155,36 +155,36 @@ type CompletionContext struct {
 	IsInSub    bool
 }
 
-// DetermineCompletionContext analyzes the node context and text to determine
+// DetermineCompletionContext analyzes the cursor context and text to determine
 // what kind of completion should be provided.
-func DetermineCompletionContext(nodeCtx *NodeContext) *CompletionContext {
+func DetermineCompletionContext(cursorCtx *CursorContext) *CompletionContext {
 	ctx := &CompletionContext{
 		Kind:       CompletionContextUnknown,
-		NodeCtx:    nodeCtx,
-		TextBefore: nodeCtx.TextBefore,
-		IsInSub:    nodeCtx.InSubstitution(),
+		CursorCtx:  cursorCtx,
+		TextBefore: cursorCtx.TextBefore,
+		IsInSub:    cursorCtx.InSubstitution(),
 	}
 
 	// Check path-based type fields first (most specific)
-	if kind := determineTypeFieldContext(nodeCtx); kind != CompletionContextUnknown {
+	if kind := determineTypeFieldContext(cursorCtx); kind != CompletionContextUnknown {
 		ctx.Kind = kind
 		return ctx
 	}
 
 	// Check data source filter contexts
-	if kind := determineDataSourceFilterContext(nodeCtx); kind != CompletionContextUnknown {
+	if kind := determineDataSourceFilterContext(cursorCtx); kind != CompletionContextUnknown {
 		ctx.Kind = kind
 		return ctx
 	}
 
 	// Check data source export contexts (aliasFor, export name)
-	if kind := determineDataSourceExportContext(nodeCtx); kind != CompletionContextUnknown {
+	if kind := determineDataSourceExportContext(cursorCtx); kind != CompletionContextUnknown {
 		ctx.Kind = kind
 		return ctx
 	}
 
 	// Check substitution contexts
-	result := determineSubstitutionContext(nodeCtx)
+	result := determineSubstitutionContext(cursorCtx)
 	if result.kind != CompletionContextUnknown {
 		ctx.Kind = result.kind
 		ctx.ResourceName = result.resourceName
@@ -194,7 +194,7 @@ func DetermineCompletionContext(nodeCtx *NodeContext) *CompletionContext {
 	}
 
 	// Check section definition field contexts (resources, variables, values, etc.)
-	if result := determineSectionDefinitionContext(nodeCtx); result.kind != CompletionContextUnknown {
+	if result := determineSectionDefinitionContext(cursorCtx); result.kind != CompletionContextUnknown {
 		ctx.Kind = result.kind
 		ctx.ResourceName = result.resourceName
 		return ctx
@@ -203,9 +203,9 @@ func DetermineCompletionContext(nodeCtx *NodeContext) *CompletionContext {
 	return ctx
 }
 
-func determineTypeFieldContext(nodeCtx *NodeContext) CompletionContextKind {
-	path := nodeCtx.ASTPath
-	textBefore := nodeCtx.TextBefore
+func determineTypeFieldContext(cursorCtx *CursorContext) CompletionContextKind {
+	path := cursorCtx.StructuralPath
+	textBefore := cursorCtx.TextBefore
 
 	// Check for existing type field positions based on path
 	if path.IsResourceType() {
@@ -276,9 +276,9 @@ func determineNewTypeFieldContext(path StructuredPath) CompletionContextKind {
 	return CompletionContextUnknown
 }
 
-func determineDataSourceFilterContext(nodeCtx *NodeContext) CompletionContextKind {
-	path := nodeCtx.ASTPath
-	textBefore := nodeCtx.TextBefore
+func determineDataSourceFilterContext(cursorCtx *CursorContext) CompletionContextKind {
+	path := cursorCtx.StructuralPath
+	textBefore := cursorCtx.TextBefore
 
 	// Check for existing filter field/operator positions
 	if path.IsDataSourceFilterField() {
@@ -312,9 +312,9 @@ func isInDataSourceFilters(path StructuredPath) bool {
 	return path.At(2).FieldName == "filter" || path.At(2).FieldName == "filters"
 }
 
-func determineDataSourceExportContext(nodeCtx *NodeContext) CompletionContextKind {
-	path := nodeCtx.ASTPath
-	textBefore := nodeCtx.TextBefore
+func determineDataSourceExportContext(cursorCtx *CursorContext) CompletionContextKind {
+	path := cursorCtx.StructuralPath
+	textBefore := cursorCtx.TextBefore
 
 	// Check for existing aliasFor field position based on path
 	if path.IsDataSourceExportAliasFor() {
@@ -357,22 +357,22 @@ func isInDataSourceExports(path StructuredPath) bool {
 //	    type: string <- field at indent level 8
 //	  |              <- cursor at indent 6 = wants new export sibling
 //	    |            <- cursor at indent 8 = wants field inside vpc
-func isAtExportNameIndentLevel(nodeCtx *NodeContext) bool {
-	if nodeCtx == nil || nodeCtx.UnifiedNode == nil {
+func isAtExportNameIndentLevel(cursorCtx *CursorContext) bool {
+	if cursorCtx == nil || cursorCtx.UnifiedNode == nil {
 		return false
 	}
 
 	// Get the current line's leading whitespace
-	currentLineText := nodeCtx.TextBefore
-	if lastNewline := strings.LastIndex(nodeCtx.TextBefore, "\n"); lastNewline >= 0 {
-		currentLineText = nodeCtx.TextBefore[lastNewline+1:]
+	currentLineText := cursorCtx.TextBefore
+	if lastNewline := strings.LastIndex(cursorCtx.TextBefore, "\n"); lastNewline >= 0 {
+		currentLineText = cursorCtx.TextBefore[lastNewline+1:]
 	}
 	trimmed := strings.TrimLeft(currentLineText, " \t")
 	cursorIndent := len(currentLineText) - len(trimmed)
 
 	// The UnifiedNode should be the export definition node (e.g., "vpc")
 	// Its start column indicates the export name indent level
-	node := nodeCtx.UnifiedNode
+	node := cursorCtx.UnifiedNode
 	if node.Range.Start == nil {
 		return false
 	}
@@ -387,17 +387,17 @@ func isAtExportNameIndentLevel(nodeCtx *NodeContext) bool {
 
 // isAtDocumentRootLevel checks if the cursor is at the document root level.
 // This is true when the cursor is at column 1 or at minimal indentation (no leading whitespace).
-func isAtDocumentRootLevel(nodeCtx *NodeContext) bool {
+func isAtDocumentRootLevel(cursorCtx *CursorContext) bool {
 	// Check if cursor is at column 1 (1-based)
-	if nodeCtx.Position.Column == 1 {
+	if cursorCtx.Position.Column == 1 {
 		return true
 	}
 
 	// Check if the text before cursor on the current line is only whitespace
 	// and starts at column 1 (meaning we're typing at root level)
-	currentLineText := nodeCtx.TextBefore
-	if lastNewline := strings.LastIndex(nodeCtx.TextBefore, "\n"); lastNewline >= 0 {
-		currentLineText = nodeCtx.TextBefore[lastNewline+1:]
+	currentLineText := cursorCtx.TextBefore
+	if lastNewline := strings.LastIndex(cursorCtx.TextBefore, "\n"); lastNewline >= 0 {
+		currentLineText = cursorCtx.TextBefore[lastNewline+1:]
 	}
 
 	// If there's no indentation (text starts immediately), we're at root level
@@ -413,30 +413,37 @@ type sectionDefinitionContextResult struct {
 	resourceName string
 }
 
-func determineSectionDefinitionContext(nodeCtx *NodeContext) sectionDefinitionContextResult {
-	path := nodeCtx.ASTPath
+func determineSectionDefinitionContext(cursorCtx *CursorContext) sectionDefinitionContextResult {
+	path := cursorCtx.StructuralPath
 
 	// Don't trigger for substitution contexts - those are handled separately
-	if nodeCtx.InSubstitution() {
+	if cursorCtx.InSubstitution() {
 		return sectionDefinitionContextResult{kind: CompletionContextUnknown}
+	}
+
+	// Check for array value contexts first - these don't follow the key/value pattern
+	// and need to be handled before the key position check.
+	// Examples: linkSelector.exclude values, transform list values, etc.
+	if result := determineArrayValueContext(cursorCtx, path); result.kind != CompletionContextUnknown {
+		return result
 	}
 
 	// Check for value positions first (AllowedValues completions for resource spec fields)
 	// This must come BEFORE the key position check
-	if nodeCtx.IsAtValuePosition() {
-		if result := determineValuePositionContext(nodeCtx, path); result.kind != CompletionContextUnknown {
+	if cursorCtx.IsAtValuePosition() {
+		if result := determineValuePositionContext(cursorCtx, path); result.kind != CompletionContextUnknown {
 			return result
 		}
 	}
 
 	// Only suggest field names when at a key position, not when typing values
-	if !nodeCtx.IsAtKeyPosition() {
+	if !cursorCtx.IsAtKeyPosition() {
 		return sectionDefinitionContextResult{kind: CompletionContextUnknown}
 	}
 
 	// Check for document root level: empty path at root indentation
 	// This handles typing new top-level fields in an empty or partially filled document
-	if path.IsEmpty() && isAtDocumentRootLevel(nodeCtx) {
+	if path.IsEmpty() && isAtDocumentRootLevel(cursorCtx) {
 		return sectionDefinitionContextResult{kind: CompletionContextBlueprintTopLevelField}
 	}
 
@@ -498,19 +505,7 @@ func determineSectionDefinitionContext(nodeCtx *NodeContext) sectionDefinitionCo
 		}
 	}
 
-	// Check if we're inside resource linkSelector exclude: /resources/{name}/linkSelector/exclude
-	// This must come before the general IsResourceLinkSelector check (more specific path first)
-	if path.IsResourceLinkSelectorExclude() {
-		resourceName, ok := path.GetResourceName()
-		if !ok {
-			return sectionDefinitionContextResult{kind: CompletionContextUnknown}
-		}
-		return sectionDefinitionContextResult{
-			kind:         CompletionContextLinkSelectorExcludeValue,
-			resourceName: resourceName,
-		}
-	}
-
+	// Note: linkSelector.exclude is handled by determineArrayValueContext before this function.
 	// Check if we're inside resource linkSelector: /resources/{name}/linkSelector
 	if path.IsResourceLinkSelector() {
 		resourceName, ok := path.GetResourceName()
@@ -542,7 +537,7 @@ func determineSectionDefinitionContext(nodeCtx *NodeContext) sectionDefinitionCo
 	// However, if we're at the exports sibling level (same indent as existing exports),
 	// this is actually for adding a new export name, not a field inside the export.
 	if path.IsDataSourceExportDefinition() {
-		if isAtExportNameIndentLevel(nodeCtx) {
+		if isAtExportNameIndentLevel(cursorCtx) {
 			return sectionDefinitionContextResult{kind: CompletionContextDataSourceExportName}
 		}
 		return sectionDefinitionContextResult{kind: CompletionContextDataSourceExportDefinitionField}
@@ -577,9 +572,32 @@ func determineSectionDefinitionContext(nodeCtx *NodeContext) sectionDefinitionCo
 	return sectionDefinitionContextResult{kind: CompletionContextUnknown}
 }
 
+// determineArrayValueContext checks for contexts where we're inside an array/sequence
+// and should provide value completions. These contexts don't follow the key/value pattern
+// and need to be handled separately from key and value position checks.
+// Examples: linkSelector.exclude values, transform list values, etc.
+func determineArrayValueContext(_ *CursorContext, path StructuredPath) sectionDefinitionContextResult {
+	// Check for linkSelector exclude value: /resources/{name}/linkSelector/exclude
+	// This provides completions for resource names to exclude from link matching.
+	// Works for both:
+	// - YAML: "- " sequence items
+	// - JSONC: values inside [""] arrays
+	if path.IsResourceLinkSelectorExclude() {
+		resourceName, ok := path.GetResourceName()
+		if ok {
+			return sectionDefinitionContextResult{
+				kind:         CompletionContextLinkSelectorExcludeValue,
+				resourceName: resourceName,
+			}
+		}
+	}
+
+	return sectionDefinitionContextResult{kind: CompletionContextUnknown}
+}
+
 // determineValuePositionContext checks for contexts where we're at a value position
 // and should provide enum/lookup completions (e.g., AllowedValues for resource spec fields).
-func determineValuePositionContext(nodeCtx *NodeContext, path StructuredPath) sectionDefinitionContextResult {
+func determineValuePositionContext(cursorCtx *CursorContext, path StructuredPath) sectionDefinitionContextResult {
 	// Check for data source export aliasFor value: /datasources/{name}/exports/{exportName}/aliasFor
 	// This provides completions for available field names from the data source spec
 	if path.IsDataSourceExportAliasFor() {
@@ -603,12 +621,12 @@ func determineValuePositionContext(nodeCtx *NodeContext, path StructuredPath) se
 	// the cursor is positioned after "annotationKey: " but outside the AST node's range.
 	// Use the annotation-specific pattern since annotation keys can contain dots.
 	if path.IsResourceMetadataAnnotations() && len(path) == 4 {
-		annotationKey := extractAnnotationKeyFromTextBefore(nodeCtx.TextBefore)
+		annotationKey := extractAnnotationKeyFromTextBefore(cursorCtx.TextBefore)
 		if annotationKey != "" {
 			resourceName, ok := path.GetResourceName()
 			if ok {
-				// Store the extracted field name in the node context for later use
-				nodeCtx.ExtractedFieldName = annotationKey
+				// Store the extracted field name in the cursor context for later use
+				cursorCtx.ExtractedFieldName = annotationKey
 				return sectionDefinitionContextResult{
 					kind:         CompletionContextResourceAnnotationValue,
 					resourceName: resourceName,
@@ -634,12 +652,12 @@ func determineValuePositionContext(nodeCtx *NodeContext, path StructuredPath) se
 	// try to extract the field name from TextBefore. This handles the case where
 	// the cursor is positioned after "fieldName: " but outside the AST node's range.
 	if path.IsResourceSpec() && len(path) == 3 {
-		fieldName := extractFieldNameFromTextBefore(nodeCtx.TextBefore)
+		fieldName := extractFieldNameFromTextBefore(cursorCtx.TextBefore)
 		if fieldName != "" {
 			resourceName, ok := path.GetResourceName()
 			if ok {
-				// Store the extracted field name in the node context for later use
-				nodeCtx.ExtractedFieldName = fieldName
+				// Store the extracted field name in the cursor context for later use
+				cursorCtx.ExtractedFieldName = fieldName
 				return sectionDefinitionContextResult{
 					kind:         CompletionContextResourceSpecFieldValue,
 					resourceName: resourceName,
@@ -670,7 +688,7 @@ func determineValuePositionContext(nodeCtx *NodeContext, path StructuredPath) se
 	// This handles the case where cursor is after "default:" but no value node exists yet.
 	if len(path) == 2 &&
 		path.At(0).FieldName == "variables" &&
-		defaultFieldPattern.MatchString(nodeCtx.TextBefore) {
+		defaultFieldPattern.MatchString(cursorCtx.TextBefore) {
 		return sectionDefinitionContextResult{kind: CompletionContextCustomVariableTypeValue}
 	}
 
@@ -684,8 +702,8 @@ type substitutionContextResult struct {
 	potentialResourceName string
 }
 
-func determineSubstitutionContext(nodeCtx *NodeContext) substitutionContextResult {
-	textBefore := nodeCtx.TextBefore
+func determineSubstitutionContext(cursorCtx *CursorContext) substitutionContextResult {
+	textBefore := cursorCtx.TextBefore
 
 	// Check for opening ${ pattern first (immediate trigger for completion)
 	if subOpenTextPattern.MatchString(textBefore) {
@@ -693,7 +711,7 @@ func determineSubstitutionContext(nodeCtx *NodeContext) substitutionContextResul
 	}
 
 	// Must be in a substitution context for other checks
-	if !nodeCtx.InSubstitution() {
+	if !cursorCtx.InSubstitution() {
 		return substitutionContextResult{kind: CompletionContextUnknown}
 	}
 
@@ -749,11 +767,11 @@ func determineSubstitutionContext(nodeCtx *NodeContext) substitutionContextResul
 	}
 
 	// Check for resource property without namespace (when in resource property context)
-	if nodeCtx.SchemaElement != nil {
-		if _, isResourceProp := nodeCtx.SchemaElement.(*substitutions.SubstitutionResourceProperty); isResourceProp {
+	if cursorCtx.SchemaElement != nil {
+		if _, isResourceProp := cursorCtx.SchemaElement.(*substitutions.SubstitutionResourceProperty); isResourceProp {
 			if resourceWithoutNamespacePropTextPattern.MatchString(textBefore) ||
 				resourceWithoutNamespacePropBracketTextPattern.MatchString(textBefore) {
-				resourceName := extractResourceNameFromSchemaElement(nodeCtx.SchemaElement)
+				resourceName := extractResourceNameFromSchemaElement(cursorCtx.SchemaElement)
 				return substitutionContextResult{kind: CompletionContextStringSubResourceProperty, resourceName: resourceName}
 			}
 		}
@@ -769,7 +787,7 @@ func determineSubstitutionContext(nodeCtx *NodeContext) substitutionContextResul
 	}
 
 	// General substitution context (inside ${...})
-	if inSubTextPattern.MatchString(textBefore) || nodeCtx.InSubstitution() {
+	if inSubTextPattern.MatchString(textBefore) || cursorCtx.InSubstitution() {
 		return substitutionContextResult{kind: CompletionContextStringSub}
 	}
 
@@ -915,6 +933,67 @@ func (k CompletionContextKind) IsSubstitution() bool {
 func (k CompletionContextKind) IsDataSourceFilter() bool {
 	return k == CompletionContextDataSourceFilterField ||
 		k == CompletionContextDataSourceFilterOperator
+}
+
+// CompletionCapability represents the type of completion being provided.
+// This is used to determine format compatibility.
+type CompletionCapability int
+
+const (
+	// CapabilityKeyCompletion suggests field/key names (e.g., spec field names).
+	// These are typically disabled for JSONC because editors handle JSON property completion.
+	CapabilityKeyCompletion CompletionCapability = iota
+
+	// CapabilityValueCompletion suggests values for a field (e.g., types, operators, references).
+	// These work for both YAML and JSONC formats.
+	CapabilityValueCompletion
+)
+
+// GetCompletionCapability returns the capability type for this completion context.
+// Key completions suggest field names, value completions suggest field values.
+func (k CompletionContextKind) GetCompletionCapability() CompletionCapability {
+	switch k {
+	// Key completions - suggest field/property names
+	case CompletionContextResourceSpecField,
+		CompletionContextResourceMetadataField,
+		CompletionContextResourceAnnotationKey,
+		CompletionContextResourceDefinitionField,
+		CompletionContextVariableDefinitionField,
+		CompletionContextValueDefinitionField,
+		CompletionContextDataSourceDefinitionField,
+		CompletionContextDataSourceFilterDefinitionField,
+		CompletionContextDataSourceExportDefinitionField,
+		CompletionContextDataSourceMetadataField,
+		CompletionContextIncludeDefinitionField,
+		CompletionContextExportDefinitionField,
+		CompletionContextLinkSelectorField,
+		CompletionContextBlueprintTopLevelField,
+		CompletionContextDataSourceExportName:
+		return CapabilityKeyCompletion
+
+	// Value completions - suggest values for fields
+	default:
+		return CapabilityValueCompletion
+	}
+}
+
+// IsEnabledForFormat returns true if this completion context is enabled for the given format.
+// Key completions are disabled for JSONC because JSON editors typically handle property completion.
+// Value completions work for both formats.
+func (k CompletionContextKind) IsEnabledForFormat(format DocumentFormat) bool {
+	capability := k.GetCompletionCapability()
+
+	switch format {
+	case FormatJSONC:
+		// JSONC: Disable key completions (editor handles JSON properties)
+		// Enable value completions
+		return capability == CapabilityValueCompletion
+	case FormatYAML:
+		// YAML: Enable all completions
+		return true
+	default:
+		return true
+	}
 }
 
 // Extracts a field name from TextBefore when at a value position.

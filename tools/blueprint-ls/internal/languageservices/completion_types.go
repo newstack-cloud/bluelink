@@ -369,7 +369,7 @@ func (s *CompletionService) getCustomVariableTypeOptionsCompletionItems(
 		return []*lsp.CompletionItem{}, nil
 	}
 
-	variableName, ok := completionCtx.NodeCtx.ASTPath.GetVariableName()
+	variableName, ok := completionCtx.CursorCtx.StructuralPath.GetVariableName()
 	if !ok {
 		return []*lsp.CompletionItem{}, nil
 	}

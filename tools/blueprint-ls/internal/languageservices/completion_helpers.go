@@ -14,30 +14,16 @@ import (
 // For JSONC, values are inserted as quoted strings. If hasLeadingQuote is true (user already
 // typed the opening quote), only the value and closing quote are inserted.
 // If hasLeadingSpace is true (there's already whitespace before cursor), no extra space is added.
+//
+// This function delegates to the CompletionFormatter for the given format.
 func formatValueForInsert(
 	value string,
 	format docmodel.DocumentFormat,
 	hasLeadingQuote bool,
 	hasLeadingSpace bool,
 ) string {
-	if format == docmodel.FormatJSONC {
-		if hasLeadingQuote {
-			// User already typed the opening quote, just insert value + closing quote
-			return value + `"`
-		}
-		if hasLeadingSpace {
-			// There's already whitespace before cursor, just insert quoted value
-			return `"` + value + `"`
-		}
-		// JSONC: insert as quoted string with leading space after the colon
-		return ` "` + value + `"`
-	}
-
-	// YAML: check if value needs quoting
-	if needsYAMLQuoting(value) {
-		return `"` + value + `"`
-	}
-	return value
+	formatter := NewCompletionFormatter(format)
+	return formatter.FormatValue(value, hasLeadingQuote, hasLeadingSpace)
 }
 
 // stripLeadingQuote returns the prefix without a leading quote and whether one was present.
@@ -260,9 +246,9 @@ func extractCompletionPrefix(
 ) completionPrefixInfo {
 	info := completionPrefixInfo{}
 
-	if completionCtx != nil && completionCtx.NodeCtx != nil {
-		info.TypedPrefix = completionCtx.NodeCtx.GetTypedPrefix()
-		info.TextBefore = completionCtx.NodeCtx.TextBefore
+	if completionCtx != nil && completionCtx.CursorCtx != nil {
+		info.TypedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
+		info.TextBefore = completionCtx.CursorCtx.TextBefore
 	}
 
 	info.FilterPrefix, info.HasLeadingQuote = stripLeadingQuote(info.TypedPrefix)

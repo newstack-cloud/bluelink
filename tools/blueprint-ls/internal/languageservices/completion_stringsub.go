@@ -19,7 +19,7 @@ func (s *CompletionService) getStringSubPotentialResourcePropCompletionItems(
 	position *lsp.Position,
 	blueprint *schema.Blueprint,
 	completionCtx *docmodel.CompletionContext,
-	nodeCtx *docmodel.NodeContext,
+	cursorCtx *docmodel.CursorContext,
 ) ([]*lsp.CompletionItem, error) {
 	potentialName := completionCtx.PotentialResourceName
 	if potentialName == "" {
@@ -36,29 +36,29 @@ func (s *CompletionService) getStringSubPotentialResourcePropCompletionItems(
 	}
 
 	// Delegate to resource property completion logic
-	return s.getStringSubResourcePropCompletionItemsFromContext(ctx, position, blueprint, nodeCtx)
+	return s.getStringSubResourcePropCompletionItemsFromContext(ctx, position, blueprint, cursorCtx)
 }
 
-// getStringSubResourcePropCompletionItemsFromContext adapts resource property completion to use NodeContext.
+// getStringSubResourcePropCompletionItemsFromContext adapts resource property completion using CursorContext.
 func (s *CompletionService) getStringSubResourcePropCompletionItemsFromContext(
 	ctx *common.LSPContext,
 	position *lsp.Position,
 	blueprint *schema.Blueprint,
-	nodeCtx *docmodel.NodeContext,
+	cursorCtx *docmodel.CursorContext,
 ) ([]*lsp.CompletionItem, error) {
 	if blueprint.Resources == nil || len(blueprint.Resources.Values) == 0 {
 		return []*lsp.CompletionItem{}, nil
 	}
 
 	textBefore := ""
-	if nodeCtx != nil {
-		textBefore = nodeCtx.TextBefore
+	if cursorCtx != nil {
+		textBefore = cursorCtx.TextBefore
 	}
 
 	// Try to get resource property from schema element first
 	var resourceProp *substitutions.SubstitutionResourceProperty
-	if nodeCtx != nil && nodeCtx.SchemaElement != nil {
-		resourceProp, _ = nodeCtx.SchemaElement.(*substitutions.SubstitutionResourceProperty)
+	if cursorCtx != nil && cursorCtx.SchemaElement != nil {
+		resourceProp, _ = cursorCtx.SchemaElement.(*substitutions.SubstitutionResourceProperty)
 	}
 
 	// Fallback: parse resource property from text
@@ -84,7 +84,7 @@ func (s *CompletionService) getStringSubResourcePropCompletionItemsFromContext(
 
 	// Check if in metadata path
 	if len(resourceProp.Path) >= 1 && resourceProp.Path[0].FieldName == "metadata" {
-		return s.getResourceMetadataPropCompletionItemsForPath(position, blueprint, resourceProp, nodeCtx)
+		return s.getResourceMetadataPropCompletionItemsForPath(position, blueprint, resourceProp, cursorCtx)
 	}
 
 	return []*lsp.CompletionItem{}, nil
