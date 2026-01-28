@@ -50,16 +50,6 @@ func getProviderResourceDocs(
 		return nil, err
 	}
 
-	canLinkToOutput, err := resource.CanLinkTo(
-		ctx,
-		&provider.ResourceCanLinkToInput{
-			ProviderContext: createProviderContext(namespace, params),
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-
 	resourceSpec, err := getProviderResourceSpecDocs(
 		ctx,
 		namespace,
@@ -81,7 +71,6 @@ func getProviderResourceDocs(
 		Examples: getProviderResourceExamples(
 			examplesOutput,
 		),
-		CanLinkTo: canLinkToOutput.CanLinkTo,
 	}, nil
 }
 
@@ -119,6 +108,15 @@ func getProviderResourceExamples(
 	return output.PlainTextExamples
 }
 
+// getSchemaDescription returns the formatted description if available,
+// otherwise falls back to plain text description.
+func getSchemaDescription(formatted, plain string) string {
+	if strings.TrimSpace(formatted) != "" {
+		return formatted
+	}
+	return plain
+}
+
 func getProviderResourceSpecDocs(
 	ctx context.Context,
 	namespace string,
@@ -136,11 +134,25 @@ func getProviderResourceSpecDocs(
 	}
 
 	spec := &PluginDocResourceSpec{
-		Schema:  convertSpecSchema(specDefinitionOutput.SpecDefinition.Schema),
-		IDField: specDefinitionOutput.SpecDefinition.IDField,
+		Schema:              convertSpecSchema(specDefinitionOutput.SpecDefinition.Schema),
+		IDField:             specDefinitionOutput.SpecDefinition.IDField,
+		TaggingSupport:      taggingSupportToString(specDefinitionOutput.SpecDefinition.TaggingSupport),
+		DestroyBeforeCreate: specDefinitionOutput.SpecDefinition.DestroyBeforeCreate,
 	}
 
 	return spec, nil
+}
+
+// taggingSupportToString converts TaggingSupport enum to string representation.
+func taggingSupportToString(ts provider.TaggingSupport) string {
+	switch ts {
+	case provider.TaggingSupportFull:
+		return "full"
+	case provider.TaggingSupportLabels:
+		return "labels"
+	default:
+		return ""
+	}
 }
 
 func convertSpecSchema(
@@ -153,12 +165,24 @@ func convertSpecSchema(
 	convertedSchema := &PluginDocResourceSpecSchema{
 		Type:         string(schema.Type),
 		Label:        schema.Label,
-		Description:  schema.Description,
+		Description:  getSchemaDescription(schema.FormattedDescription, schema.Description),
 		Nullable:     schema.Nullable,
 		Computed:     schema.Computed,
 		MustRecreate: schema.MustRecreate,
 		Default:      schema.Default,
 		Examples:     schema.Examples,
+		// Validation constraints
+		Minimum:       schema.Minimum,
+		Maximum:       schema.Maximum,
+		MinLength:     schema.MinLength,
+		MaxLength:     schema.MaxLength,
+		Pattern:       schema.Pattern,
+		AllowedValues: schema.AllowedValues,
+		// Behavior flags
+		Sensitive:        schema.Sensitive,
+		IgnoreDrift:      schema.IgnoreDrift,
+		TrackDrift:       schema.TrackDrift,
+		SortArrayByField: schema.SortArrayByField,
 	}
 
 	if len(schema.Attributes) > 0 {

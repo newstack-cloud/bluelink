@@ -155,3 +155,16 @@ func assertMappingNodeItemsEqual(
 		)
 	}
 }
+
+func assertScalarValueEqual(
+	expected *core.ScalarValue,
+	actual *core.ScalarValue,
+	testSuite *suite.Suite,
+) {
+	if expected == nil && actual == nil {
+		return
+	}
+	testSuite.NotNil(expected)
+	testSuite.NotNil(actual)
+	testSuite.Equal(expected, actual)
+}

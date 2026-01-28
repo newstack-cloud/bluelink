@@ -19,12 +19,6 @@ func lambdaFunctionResource() provider.Resource {
 			"```yaml\nresources:\n  - type: test/lambda/function\n    name: ProcessOrders\n    properties:\n      functionName: ProcessOrders\n      arn: arn:aws:lambda:us-west-2:123456789012:function:ProcessOrders\n```",
 			"Some example with `inline code`.",
 		},
-		ResourceCanLinkTo: []string{
-			"test/dynamodb/table",
-			"test2/dynamodb/table",
-			"test/s3/bucket",
-			"test/sqs/queue",
-		},
 	}
 }
 

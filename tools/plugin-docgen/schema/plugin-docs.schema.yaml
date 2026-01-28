@@ -1,0 +1,570 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://bluelink.dev/schemas/plugin-docs.json
+title: Plugin Documentation
+description: Documentation schema for Bluelink provider and transformer plugins
+type: object
+required:
+  - id
+  - displayName
+  - version
+  - protocolVersions
+  - description
+  - author
+  - repository
+  - config
+properties:
+  id:
+    type: string
+    description: Unique identifier for the plugin
+  displayName:
+    type: string
+    description: Human-readable name of the plugin
+  version:
+    type: string
+    description: Plugin version
+  protocolVersions:
+    type: array
+    items:
+      type: string
+    description: Supported protocol versions
+  description:
+    type: string
+    description: Plugin description (markdown preferred, plain text fallback)
+  author:
+    type: string
+    description: Plugin author
+  repository:
+    type: string
+    description: Source repository URL
+  config:
+    $ref: "#/$defs/pluginConfig"
+  resources:
+    type: array
+    items:
+      $ref: "#/$defs/resource"
+    description: Provider resources (providers only)
+  links:
+    type: array
+    items:
+      $ref: "#/$defs/link"
+    description: Link definitions (providers only)
+  dataSources:
+    type: array
+    items:
+      $ref: "#/$defs/dataSource"
+    description: Data source definitions (providers only)
+  customVarTypes:
+    type: array
+    items:
+      $ref: "#/$defs/customVarType"
+    description: Custom variable type definitions (providers only)
+  functions:
+    type: array
+    items:
+      $ref: "#/$defs/function"
+    description: Function definitions (providers only)
+  transformName:
+    type: string
+    description: Transform identifier (transformers only)
+  abstractResources:
+    type: array
+    items:
+      $ref: "#/$defs/resource"
+    description: Abstract resource definitions (transformers only)
+
+$defs:
+  pluginConfig:
+    type: object
+    required:
+      - fields
+      - allowAdditionalFields
+    properties:
+      fields:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/configField"
+      allowAdditionalFields:
+        type: boolean
+
+  configField:
+    type: object
+    required:
+      - type
+      - label
+      - description
+      - required
+      - secret
+    properties:
+      type:
+        type: string
+        enum: [string, integer, float, boolean]
+      label:
+        type: string
+      description:
+        type: string
+      required:
+        type: boolean
+      default:
+        $ref: "#/$defs/scalarValue"
+      allowedValues:
+        type: array
+        items:
+          $ref: "#/$defs/scalarValue"
+      secret:
+        type: boolean
+      examples:
+        type: array
+        items:
+          $ref: "#/$defs/scalarValue"
+
+  resource:
+    type: object
+    required:
+      - type
+      - label
+      - summary
+      - description
+      - specification
+      - examples
+    properties:
+      type:
+        type: string
+        description: Namespaced resource type (e.g., aws/lambda/function)
+      label:
+        type: string
+      summary:
+        type: string
+        description: Short summary (markdown preferred)
+      description:
+        type: string
+        description: Full description (markdown preferred)
+      specification:
+        $ref: "#/$defs/resourceSpec"
+      examples:
+        type: array
+        items:
+          type: string
+        description: Usage examples (markdown preferred)
+
+  resourceSpec:
+    type: object
+    required:
+      - schema
+      - idField
+    properties:
+      schema:
+        $ref: "#/$defs/resourceSpecSchema"
+      idField:
+        type: string
+        description: Field name containing the resource ID
+      taggingSupport:
+        type: string
+        enum: ["", labels, full]
+        description: External tagging support level
+      destroyBeforeCreate:
+        type: boolean
+        description: Whether resource must be destroyed before recreation
+
+  resourceSpecSchema:
+    type: object
+    required:
+      - type
+    properties:
+      type:
+        type: string
+        enum: [string, integer, float, boolean, map, object, array, union]
+      label:
+        type: string
+      description:
+        type: string
+        description: Description (markdown preferred, plain text fallback)
+      nullable:
+        type: boolean
+      computed:
+        type: boolean
+        description: Value is computed by provider
+      mustRecreate:
+        type: boolean
+        description: Change triggers resource recreation
+      default:
+        description: Default value
+      examples:
+        type: array
+        description: Example values
+      minimum:
+        $ref: "#/$defs/scalarValue"
+        description: Minimum numeric value (integer/float types)
+      maximum:
+        $ref: "#/$defs/scalarValue"
+        description: Maximum numeric value (integer/float types)
+      minLength:
+        type: integer
+        description: Minimum length (string/array/map types)
+      maxLength:
+        type: integer
+        description: Maximum length (string/array/map types)
+      pattern:
+        type: string
+        description: Regex pattern for validation (string type)
+      allowedValues:
+        type: array
+        description: Enum-like allowed values
+      sensitive:
+        type: boolean
+        description: Value should be hidden from logs
+      ignoreDrift:
+        type: boolean
+        description: Ignore changes for drift detection
+      trackDrift:
+        type: boolean
+        description: Track computed field for drift
+      sortArrayByField:
+        type: string
+        description: Field to sort array items by
+      attributes:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/resourceSpecSchema"
+        description: Object attributes (object type)
+      required:
+        type: array
+        items:
+          type: string
+        description: Required attribute names (object type)
+      mapValues:
+        $ref: "#/$defs/resourceSpecSchema"
+        description: Schema for map values (map type)
+      listValues:
+        $ref: "#/$defs/resourceSpecSchema"
+        description: Schema for array items (array type)
+      oneOf:
+        type: array
+        items:
+          $ref: "#/$defs/resourceSpecSchema"
+        description: Union type options (union type)
+
+  link:
+    type: object
+    required:
+      - type
+      - summary
+      - description
+      - annotationDefinitions
+    properties:
+      type:
+        type: string
+        description: Link type in format resourceTypeA::resourceTypeB
+      summary:
+        type: string
+      description:
+        type: string
+      annotationDefinitions:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/linkAnnotation"
+
+  linkAnnotation:
+    type: object
+    required:
+      - name
+      - label
+      - type
+      - description
+      - required
+    properties:
+      name:
+        type: string
+      label:
+        type: string
+      type:
+        type: string
+        enum: [string, integer, float, boolean]
+      description:
+        type: string
+      default:
+        $ref: "#/$defs/scalarValue"
+      allowedValues:
+        type: array
+        items:
+          $ref: "#/$defs/scalarValue"
+      examples:
+        type: array
+        items:
+          $ref: "#/$defs/scalarValue"
+      required:
+        type: boolean
+      appliesTo:
+        type: string
+        enum: ["", resourceA, resourceB]
+        description: Which resource in the link the annotation applies to
+
+  dataSource:
+    type: object
+    required:
+      - type
+      - label
+      - summary
+      - description
+      - specification
+    properties:
+      type:
+        type: string
+      label:
+        type: string
+      summary:
+        type: string
+      description:
+        type: string
+      specification:
+        $ref: "#/$defs/dataSourceSpec"
+      examples:
+        type: array
+        items:
+          type: string
+
+  dataSourceSpec:
+    type: object
+    required:
+      - fields
+    properties:
+      fields:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/dataSourceField"
+      filterFields:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/dataSourceFilterField"
+        description: Fields available for filtering
+
+  dataSourceField:
+    type: object
+    required:
+      - type
+      - description
+      - nullable
+      - filterable
+    properties:
+      type:
+        type: string
+        enum: [string, integer, float, boolean, array]
+      description:
+        type: string
+      nullable:
+        type: boolean
+      filterable:
+        type: boolean
+        description: Whether field can be used in filters
+      sensitive:
+        type: boolean
+        description: Value should be hidden from logs
+
+  dataSourceFilterField:
+    type: object
+    required:
+      - type
+      - description
+    properties:
+      type:
+        type: string
+        enum: [string, integer, float, boolean]
+      description:
+        type: string
+      supportedOperators:
+        type: array
+        items:
+          type: string
+          enum:
+            - "="
+            - "!="
+            - in
+            - not in
+            - has key
+            - not has key
+            - contains
+            - not contains
+            - starts with
+            - not starts with
+            - ends with
+            - not ends with
+            - ">"
+            - "<"
+            - ">="
+            - "<="
+      conflictsWith:
+        type: array
+        items:
+          type: string
+        description: Other filter fields that conflict with this one
+
+  customVarType:
+    type: object
+    required:
+      - type
+      - label
+      - summary
+      - description
+      - options
+    properties:
+      type:
+        type: string
+      label:
+        type: string
+      summary:
+        type: string
+      description:
+        type: string
+      options:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/customVarTypeOption"
+      examples:
+        type: array
+        items:
+          type: string
+
+  customVarTypeOption:
+    type: object
+    required:
+      - label
+    properties:
+      label:
+        type: string
+      value:
+        type: string
+        description: Option description (note - JSON key is 'value' for legacy reasons)
+
+  function:
+    type: object
+    required:
+      - name
+      - summary
+      - description
+      - parameters
+      - return
+    properties:
+      name:
+        type: string
+      summary:
+        type: string
+      description:
+        type: string
+      internal:
+        type: boolean
+        description: Whether function is internal-only
+      parameters:
+        type: array
+        items:
+          $ref: "#/$defs/functionParameter"
+      return:
+        $ref: "#/$defs/functionReturn"
+
+  functionParameter:
+    type: object
+    required:
+      - paramType
+      - allowNullValue
+      - optional
+    properties:
+      paramType:
+        type: string
+        enum: [scalar, list, map, object, function, variadic, any]
+      name:
+        type: string
+      label:
+        type: string
+      description:
+        type: string
+      allowNullValue:
+        type: boolean
+      optional:
+        type: boolean
+      valueTypeDefinition:
+        $ref: "#/$defs/valueTypeDefinition"
+      elementValueTypeDefinition:
+        $ref: "#/$defs/valueTypeDefinition"
+      mapValueTypeDefinition:
+        $ref: "#/$defs/valueTypeDefinition"
+      unionValueTypeDefinitions:
+        type: array
+        items:
+          $ref: "#/$defs/valueTypeDefinition"
+      singleType:
+        type: boolean
+        description: Variadic single type constraint
+      named:
+        type: boolean
+        description: Variadic named parameters
+
+  functionReturn:
+    type: object
+    required:
+      - returnType
+    properties:
+      returnType:
+        type: string
+        enum: [scalar, list, map, object, function, any]
+      description:
+        type: string
+      valueTypeDefinition:
+        $ref: "#/$defs/valueTypeDefinition"
+      elementValueTypeDefinition:
+        $ref: "#/$defs/valueTypeDefinition"
+      mapValueTypeDefinition:
+        $ref: "#/$defs/valueTypeDefinition"
+      unionValueTypeDefinitions:
+        type: array
+        items:
+          $ref: "#/$defs/valueTypeDefinition"
+
+  valueTypeDefinition:
+    type: object
+    required:
+      - type
+    properties:
+      type:
+        type: string
+        enum: [string, bytes, int32, int64, uint32, uint64, float32, float64, bool, list, map, object, function, any]
+      label:
+        type: string
+      description:
+        type: string
+      stringChoices:
+        type: array
+        items:
+          type: string
+      elementValueTypeDefinition:
+        $ref: "#/$defs/valueTypeDefinition"
+      mapValueTypeDefinition:
+        $ref: "#/$defs/valueTypeDefinition"
+      attributeValueTypeDefinitions:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/attributeType"
+      functionDefinition:
+        type: object
+        properties:
+          parameters:
+            type: array
+            items:
+              $ref: "#/$defs/functionParameter"
+          return:
+            $ref: "#/$defs/functionReturn"
+      unionValueTypeDefinitions:
+        type: array
+        items:
+          $ref: "#/$defs/valueTypeDefinition"
+
+  attributeType:
+    allOf:
+      - $ref: "#/$defs/valueTypeDefinition"
+      - type: object
+        properties:
+          nullable:
+            type: boolean
+
+  scalarValue:
+    oneOf:
+      - type: string
+      - type: number
+      - type: boolean

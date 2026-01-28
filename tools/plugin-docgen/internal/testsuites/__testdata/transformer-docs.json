@@ -198,11 +198,6 @@
         "```yaml\nresources:\n - type: test/celerity/handler\n   name: ProcessOrders\n   properties:\n     functionName: ProcessOrders\n```",
         "```yaml\nresources:\n - type: test/celerity/handler\n   name: ProcessOrders\n   properties:\n     functionName: ProcessOrders\n     id: arn:aws:lambda:us-west-2:123456789012:function:ProcessOrders\n```",
         "Some example with `inline code`."
-      ],
-      "canLinkTo": [
-        "test/celerity/datastore",
-        "test/celerity/bucket",
-        "test/celerity/queue"
       ]
     },
     {
@@ -245,8 +240,7 @@
         "```yaml\nresources:\n - type: test/celerity/datastore\n   name: ProcessOrders\n   properties:\n     tableName: ProcessOrders\n```",
         "```yaml\nresources:\n - type: test/celerity/datastore\n   name: ProcessOrders\n   properties:\n     tableName: ProcessOrders\n     id: arn:aws:dynamodb:us-west-2:123456789012:table/ProcessOrders\n```",
         "Some example with `inline code`."
-      ],
-      "canLinkTo": []
+      ]
     }
   ]
 }

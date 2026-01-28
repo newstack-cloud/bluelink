@@ -7,6 +7,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 )
 
 func getProviderDataSourceDocs(
@@ -115,8 +116,18 @@ func getProviderDataSourceSpecDocs(
 		)
 	}
 
+	// Convert filter fields to docs format
+	filterFieldDocs := make(
+		map[string]*PluginDocsDataSourceFilterFieldSpec,
+		len(filterableFieldsOutput.FilterFields),
+	)
+	for key, filterField := range filterableFieldsOutput.FilterFields {
+		filterFieldDocs[key] = toDocsDataSourceFilterFieldSpec(filterField)
+	}
+
 	return &PluginDocsDataSourceSpec{
-		Fields: dataSourceSpecFieldDocs,
+		Fields:       dataSourceSpecFieldDocs,
+		FilterFields: filterFieldDocs,
 	}, nil
 }
 
@@ -127,10 +138,39 @@ func toDocsDataSourceFieldSpec(
 ) *PluginDocsDataSourceFieldSpec {
 	return &PluginDocsDataSourceFieldSpec{
 		Type:        string(field.Type),
-		Description: field.Description,
+		Description: getDataSourceFieldDescription(field.FormattedDescription, field.Description),
 		Nullable:    field.Nullable,
 		Filterable:  slices.Contains(filterableFields, fieldName),
+		Sensitive:   field.Sensitive,
 	}
+}
+
+// getDataSourceFieldDescription returns the formatted description if available,
+// otherwise falls back to plain text description.
+func getDataSourceFieldDescription(formatted, plain string) string {
+	if strings.TrimSpace(formatted) != "" {
+		return formatted
+	}
+	return plain
+}
+
+func toDocsDataSourceFilterFieldSpec(
+	filterField *provider.DataSourceFilterSchema,
+) *PluginDocsDataSourceFilterFieldSpec {
+	return &PluginDocsDataSourceFilterFieldSpec{
+		Type:               string(filterField.Type),
+		Description:        getDataSourceFieldDescription(filterField.FormattedDescription, filterField.Description),
+		SupportedOperators: toOperatorStrings(filterField.SupportedOperators),
+		ConflictsWith:      filterField.ConflictsWith,
+	}
+}
+
+func toOperatorStrings(ops []schema.DataSourceFilterOperator) []string {
+	result := make([]string, len(ops))
+	for i, op := range ops {
+		result[i] = string(op)
+	}
+	return result
 }
 
 func getProviderDataSourceSummary(

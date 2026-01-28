@@ -54,12 +54,13 @@ type PluginDocsResource struct {
 	Description   string                 `json:"description"`
 	Specification *PluginDocResourceSpec `json:"specification"`
 	Examples      []string               `json:"examples"`
-	CanLinkTo     []string               `json:"canLinkTo"`
 }
 
 type PluginDocResourceSpec struct {
-	Schema  *PluginDocResourceSpecSchema `json:"schema"`
-	IDField string                       `json:"idField"`
+	Schema              *PluginDocResourceSpecSchema `json:"schema"`
+	IDField             string                       `json:"idField"`
+	TaggingSupport      string                       `json:"taggingSupport,omitempty"`
+	DestroyBeforeCreate bool                         `json:"destroyBeforeCreate,omitempty"`
 }
 
 type PluginDocResourceSpecSchema struct {
@@ -71,6 +72,20 @@ type PluginDocResourceSpecSchema struct {
 	MustRecreate bool                `json:"mustRecreate"`
 	Default      *core.MappingNode   `json:"default,omitempty"`
 	Examples     []*core.MappingNode `json:"examples,omitempty"`
+
+	// Validation constraints
+	Minimum       *core.ScalarValue   `json:"minimum,omitempty"`
+	Maximum       *core.ScalarValue   `json:"maximum,omitempty"`
+	MinLength     int                 `json:"minLength,omitempty"`
+	MaxLength     int                 `json:"maxLength,omitempty"`
+	Pattern       string              `json:"pattern,omitempty"`
+	AllowedValues []*core.MappingNode `json:"allowedValues,omitempty"`
+
+	// Behavior flags
+	Sensitive        bool   `json:"sensitive,omitempty"`
+	IgnoreDrift      bool   `json:"ignoreDrift,omitempty"`
+	TrackDrift       bool   `json:"trackDrift,omitempty"`
+	SortArrayByField string `json:"sortArrayByField,omitempty"`
 
 	// Required for "object" types, should be empty for other types.
 	Attributes map[string]*PluginDocResourceSpecSchema `json:"attributes,omitempty"`
@@ -104,6 +119,7 @@ type PluginDocsLinkAnnotationDefinition struct {
 	AllowedValues []*core.ScalarValue `json:"allowedValues,omitempty"`
 	Examples      []*core.ScalarValue `json:"examples,omitempty"`
 	Required      bool                `json:"required"`
+	AppliesTo     string              `json:"appliesTo,omitempty"`
 }
 
 type PluginDocsDataSource struct {
@@ -116,7 +132,8 @@ type PluginDocsDataSource struct {
 }
 
 type PluginDocsDataSourceSpec struct {
-	Fields map[string]*PluginDocsDataSourceFieldSpec `json:"fields"`
+	Fields       map[string]*PluginDocsDataSourceFieldSpec       `json:"fields"`
+	FilterFields map[string]*PluginDocsDataSourceFilterFieldSpec `json:"filterFields,omitempty"`
 }
 
 type PluginDocsDataSourceFieldSpec struct {
@@ -124,6 +141,14 @@ type PluginDocsDataSourceFieldSpec struct {
 	Description string `json:"description"`
 	Nullable    bool   `json:"nullable"`
 	Filterable  bool   `json:"filterable"`
+	Sensitive   bool   `json:"sensitive,omitempty"`
+}
+
+type PluginDocsDataSourceFilterFieldSpec struct {
+	Type               string   `json:"type"`
+	Description        string   `json:"description"`
+	SupportedOperators []string `json:"supportedOperators,omitempty"`
+	ConflictsWith      []string `json:"conflictsWith,omitempty"`
 }
 
 type PluginDocsCustomVarType struct {
@@ -145,4 +170,5 @@ type PluginDocsFunction struct {
 	Name        string `json:"name"`
 	Summary     string `json:"summary"`
 	Description string `json:"description"`
+	Internal    bool   `json:"internal,omitempty"`
 }

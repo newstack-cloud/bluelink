@@ -42,6 +42,5 @@ func dynamodbTableResource() provider.Resource {
 			"```yaml\nresources:\n  - type: test/dynamodb/table\n    name: Orders\n    properties:\n      tableName: Orders\n```",
 			"```yaml\nresources:\n  - type: test/dynamodb/table\n    name: Orders\n    properties:\n      tableName: Orders\n      arn: arn:aws:dynamodb:us-west-2:123456789012:table/Orders\n```",
 		},
-		ResourceCanLinkTo: []string{},
 	}
 }

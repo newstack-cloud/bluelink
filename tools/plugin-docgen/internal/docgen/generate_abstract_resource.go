@@ -50,16 +50,6 @@ func getTransformerAbstractResourceDocs(
 		return nil, err
 	}
 
-	canLinkToOutput, err := abstractResource.CanLinkTo(
-		ctx,
-		&transform.AbstractResourceCanLinkToInput{
-			TransformerContext: createTransformerContext(namespace, params),
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-
 	resourceSpec, err := getTransformerAbstractResourceSpecDocs(
 		ctx,
 		namespace,
@@ -81,7 +71,6 @@ func getTransformerAbstractResourceDocs(
 		Examples: getTransformerAbstractResourceExamples(
 			examplesOutput,
 		),
-		CanLinkTo: canLinkToOutput.CanLinkTo,
 	}, nil
 }
 

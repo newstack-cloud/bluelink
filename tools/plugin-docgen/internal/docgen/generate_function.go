@@ -46,6 +46,7 @@ func getProviderFunctionDocs(
 		Name:        functionName,
 		Summary:     getProviderFunctionSummary(definitionOutput),
 		Description: getProviderFunctionDescription(definitionOutput),
+		Internal:    definitionOutput.Definition.Internal,
 	}, nil
 }
 

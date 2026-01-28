@@ -20,7 +20,6 @@ func datastoreAbstractResource() transform.AbstractResource {
 			"```yaml\nresources:\n - type: test/celerity/datastore\n   name: ProcessOrders\n   properties:\n     tableName: ProcessOrders\n     id: arn:aws:dynamodb:us-west-2:123456789012:table/ProcessOrders\n```",
 			"Some example with `inline code`.",
 		},
-		ResourceCanLinkTo: []string{},
 	}
 }
 

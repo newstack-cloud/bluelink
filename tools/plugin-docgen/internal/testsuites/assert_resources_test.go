@@ -25,7 +25,6 @@ func assertPluginDocResourcesEqual(
 			testSuite,
 		)
 		testSuite.Equal(expectedResource.Examples, actualResource.Examples)
-		testSuite.Equal(expectedResource.CanLinkTo, actualResource.CanLinkTo)
 	}
 }
 
@@ -35,6 +34,8 @@ func assertPluginDocResourceSpecsEqual(
 	testSuite *suite.Suite,
 ) {
 	testSuite.Equal(expected.IDField, actual.IDField)
+	testSuite.Equal(expected.TaggingSupport, actual.TaggingSupport)
+	testSuite.Equal(expected.DestroyBeforeCreate, actual.DestroyBeforeCreate)
 	assertPluginDocResourceSpecSchemasEqual(
 		expected.Schema,
 		actual.Schema,
@@ -70,6 +71,18 @@ func assertPluginDocResourceSpecSchemasEqual(
 		actual.Examples,
 		testSuite,
 	)
+	// Validation constraints
+	assertScalarValueEqual(expected.Minimum, actual.Minimum, testSuite)
+	assertScalarValueEqual(expected.Maximum, actual.Maximum, testSuite)
+	testSuite.Equal(expected.MinLength, actual.MinLength)
+	testSuite.Equal(expected.MaxLength, actual.MaxLength)
+	testSuite.Equal(expected.Pattern, actual.Pattern)
+	assertMappingNodeSlicesEqual(expected.AllowedValues, actual.AllowedValues, testSuite)
+	// Behavior flags
+	testSuite.Equal(expected.Sensitive, actual.Sensitive)
+	testSuite.Equal(expected.IgnoreDrift, actual.IgnoreDrift)
+	testSuite.Equal(expected.TrackDrift, actual.TrackDrift)
+	testSuite.Equal(expected.SortArrayByField, actual.SortArrayByField)
 	assertResourceSpecSchemaAttributesEqual(
 		expected.Attributes,
 		actual.Attributes,

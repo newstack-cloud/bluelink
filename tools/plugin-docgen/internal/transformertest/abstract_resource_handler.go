@@ -20,11 +20,6 @@ func handlerAbstractResource() transform.AbstractResource {
 			"```yaml\nresources:\n - type: test/celerity/handler\n   name: ProcessOrders\n   properties:\n     functionName: ProcessOrders\n     id: arn:aws:lambda:us-west-2:123456789012:function:ProcessOrders\n```",
 			"Some example with `inline code`.",
 		},
-		ResourceCanLinkTo: []string{
-			"test/celerity/datastore",
-			"test/celerity/bucket",
-			"test/celerity/queue",
-		},
 	}
 }
 

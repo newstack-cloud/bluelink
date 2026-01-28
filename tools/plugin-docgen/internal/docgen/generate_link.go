@@ -101,6 +101,19 @@ func toDocsLinkAnnotationDefinition(
 		AllowedValues: annotationDefinition.AllowedValues,
 		Examples:      annotationDefinition.Examples,
 		Required:      annotationDefinition.Required,
+		AppliesTo:     linkAnnotationResourceToString(annotationDefinition.AppliesTo),
+	}
+}
+
+// linkAnnotationResourceToString converts LinkAnnotationResource enum to string.
+func linkAnnotationResourceToString(res provider.LinkAnnotationResource) string {
+	switch res {
+	case provider.LinkAnnotationResourceA:
+		return "resourceA"
+	case provider.LinkAnnotationResourceB:
+		return "resourceB"
+	default:
+		return ""
 	}
 }
 
