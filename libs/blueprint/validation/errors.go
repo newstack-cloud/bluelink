@@ -321,10 +321,10 @@ func errMappingNameContainsSubstitution(
 			mappingType,
 			mappingName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -339,12 +339,12 @@ func errVariableInvalidDefaultValue(
 
 	posRange := positionFromScalarValue(defaultValue, varSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeVariableInvalidDefaultValue,
-		Err:        fmt.Errorf("variable %q: expected %s, got %s", varName, varType, defaultVarType),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		ReasonCode:     ErrorReasonCodeVariableInvalidDefaultValue,
+		Err:            fmt.Errorf("variable %q: expected %s, got %s", varName, varType, defaultVarType),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
@@ -375,10 +375,10 @@ func errVariableEmptyDefaultValue(varType schema.VariableType, varName string, v
 			varType,
 			varName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
@@ -415,11 +415,11 @@ func errVariableInvalidOrMissing(
 				varName,
 				varType,
 			),
-			Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-			Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
-		ColumnAccuracy: posRange.ColumnAccuracy,
+			Line:           posRange.Line,
+			EndLine:        posRange.EndLine,
+			Column:         posRange.Column,
+			EndColumn:      posRange.EndColumn,
+			ColumnAccuracy: posRange.ColumnAccuracy,
 			Context: &errors.ErrorContext{
 				Category:   errors.ErrorCategoryVariableType,
 				ReasonCode: ErrorReasonCodeVariableInvalidOrMissing,
@@ -449,10 +449,10 @@ func errVariableInvalidOrMissing(
 			varType,
 			*actualVarType,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
@@ -488,10 +488,10 @@ func errVariableEmptyValue(
 			varName,
 			varType,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
@@ -568,10 +568,10 @@ func errVariableInvalidAllowedValue(
 			scalarValueStr,
 			varType,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
@@ -605,10 +605,10 @@ func errVariableNullAllowedValue(
 			"null was provided for an allowed value, a valid %s must be provided",
 			varType,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
@@ -657,10 +657,10 @@ func errVariableInvalidAllowedValuesNotSupported(
 			varName,
 			varType,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
@@ -701,10 +701,10 @@ func errVariableValueNotAllowed(
 			varName,
 			scalarListToString(allowedValues),
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
@@ -762,10 +762,10 @@ func errCustomVariableValueNotInOptions(
 				"variableType": varType,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -773,12 +773,12 @@ func errCustomVariableValueNotInOptions(
 func errRequiredVariableMissing(varName string, varSourceMeta *source.Meta) error {
 	posRange := source.PositionRangeFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeRequiredVariableMissing,
-		Err:        fmt.Errorf("required variable %q has no value", varName),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		ReasonCode:     ErrorReasonCodeRequiredVariableMissing,
+		Err:            fmt.Errorf("required variable %q has no value", varName),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
@@ -818,11 +818,11 @@ func errCustomVariableOptions(
 			varName,
 			varSchema.Type.Value,
 		),
-		ChildErrors: []error{err},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		ChildErrors:    []error{err},
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -857,10 +857,10 @@ func errCustomVariableMixedTypes(
 				"variableType": varSchema.Type.Value,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -899,10 +899,10 @@ func errCustomVariableInvalidDefaultValueType(
 				"actualType":   defaultVarType,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -939,10 +939,10 @@ func errCustomVariableAllowedValuesNotInOptions(
 				"variableType": varType,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -979,10 +979,10 @@ func errCustomVariableDefaultValueNotInOptions(
 				"variableType": varType,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -995,10 +995,10 @@ func errMissingExportType(exportName string, exportSourceMeta *source.Meta) erro
 			"validation failed due to a missing export type for export \"%s\"",
 			exportName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryExport,
@@ -1038,10 +1038,10 @@ func errInvalidExportType(exportType schema.ExportType, exportName string, expor
 			exportName,
 			validExportTypes,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryExport,
@@ -1071,10 +1071,10 @@ func errEmptyExportField(exportName string, exportSourceMeta *source.Meta) error
 			"validation failed due to an empty field string being provided for export \"%s\"",
 			exportName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryExport,
@@ -1107,10 +1107,10 @@ func errReferenceContextAccess(reference string, context string, referenceableTy
 			context,
 			referencedObjectLabel,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1131,10 +1131,10 @@ func errInvalidReferencePattern(
 			reference,
 			context,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1147,10 +1147,10 @@ func errIncludeEmptyPath(includeName string, varSourceMeta *source.Meta) error {
 			"validation failed due to an empty path being provided for include \"%s\"",
 			includeName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1179,10 +1179,10 @@ func errDataSourceMissingFilter(dataSourceName string, dataSourceMeta *source.Me
 				"dataSourceName": dataSourceName,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1211,10 +1211,10 @@ func errDataSourceEmptyFilter(dataSourceName string, dataSourceMeta *source.Meta
 				"dataSourceName": dataSourceName,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1243,10 +1243,10 @@ func errDataSourceMissingFilterField(dataSourceName string, dataSourceMeta *sour
 				"dataSourceName": dataSourceName,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1275,10 +1275,10 @@ func errDataSourceMissingFilterSearch(dataSourceName string, dataSourceMeta *sou
 				"dataSourceName": dataSourceName,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1307,10 +1307,10 @@ func errDataSourceMissingExports(dataSourceName string, dataSourceMeta *source.M
 				"dataSourceName": dataSourceName,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1348,10 +1348,10 @@ func errDataSourceFilterFieldConflict(
 				"otherFieldName": otherField,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1390,10 +1390,10 @@ func errInvalidDataSourceFilterOperator(
 				"filterOperator": dataSourceFilterOperator.Value,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1438,10 +1438,10 @@ func errDataSourceFilterOperatorNotSupported(
 				"filterFieldName": filterFieldName,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1475,10 +1475,10 @@ func errDataSourceMissingFilterOperator(dataSourceName string, location *source.
 				"dataSourceName": dataSourceName,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1514,10 +1514,10 @@ func errInvalidDataSourceFieldType(
 				"exportName":     exportName,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1530,11 +1530,11 @@ func errResourceSpecPreValidationFailed(errs []error, resourceName string, resou
 			"validation failed due to errors in the pre-validation of the resource spec for resource \"%s\"",
 			resourceName,
 		),
-		ChildErrors: errs,
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		ChildErrors:    errs,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1566,10 +1566,10 @@ func errMappingNodeKeyContainsSubstitution(
 			nodeParentType,
 			nodeParentName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1589,10 +1589,10 @@ func errSubFuncInvalidNumberOfArgs(
 			expectedParamCount,
 			passedArgCount,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1615,10 +1615,10 @@ func errSubFuncArgTypeMismatch(
 			expectedType,
 			actualType,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1641,10 +1641,10 @@ func errSubFuncArgInvalidStringChoice(
 			strings.Join(expectedChoices, ", "),
 			actualValue,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1664,10 +1664,10 @@ func errSubFuncNamedArgsNotAllowed(
 			argName,
 			substitutions.SubstitutionFunctionObject,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1685,10 +1685,10 @@ func errSubFailedToLoadFunctionDefintion(
 			funcName,
 			errInfo,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1704,10 +1704,10 @@ func errSubVarNotFound(
 			"validation failed due to the variable \"%s\" not existing in the blueprint",
 			varName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1723,10 +1723,10 @@ func errSubValSelfReference(
 			"validation failed due to the value \"%s\" referencing itself",
 			valName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1742,10 +1742,10 @@ func errSubValNotFound(
 			"validation failed due to the value \"%s\" not existing in the blueprint",
 			valName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1762,10 +1762,10 @@ func errSubElemRefNotInResource(
 			"validation failed due to an %s reference being used outside of a resource",
 			elemRefTypeLabel,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1784,10 +1784,10 @@ func errSubElemRefResourceNotFound(
 			resourceName,
 			elemRefTypeLabel,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1807,10 +1807,10 @@ func errSubElemRefResourceNotEach(
 			resourceName,
 			elemRefTypeLabel,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1826,10 +1826,10 @@ func errSubResourceNotFound(
 			"validation failed due to the resource \"%s\" not existing in the blueprint",
 			resourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1845,10 +1845,10 @@ func errSubResourceSelfReference(
 			"validation failed due to the resource \"%s\" referencing itself",
 			resourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1864,10 +1864,10 @@ func errSubDataSourceNotFound(
 			"validation failed due to the data source \"%s\" not existing in the blueprint",
 			dataSourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1883,10 +1883,10 @@ func errSubDataSourceSelfReference(
 			"validation failed due to the data source \"%s\" referencing itself",
 			dataSourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1902,10 +1902,10 @@ func errSubChildBlueprintNotFound(
 			"validation failed due to the child blueprint \"%s\" not existing in the blueprint",
 			childName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1921,10 +1921,10 @@ func errSubChildBlueprintSelfReference(
 			"validation failed due to the child blueprint \"%s\" referencing itself",
 			childName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1944,10 +1944,10 @@ func errSubResourceNotEach(
 			*indexAccessed,
 			resourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1964,10 +1964,10 @@ func errSubDataSourceNoExportedFields(
 				"referenced in substitution",
 			dataSourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -1986,10 +1986,10 @@ func errSubDataSourceFieldNotExported(
 			field,
 			dataSourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2008,10 +2008,10 @@ func errSubDataSourceFieldMissingType(
 			field,
 			dataSourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2032,10 +2032,10 @@ func errSubDataSourceFieldNotArray(
 			indexAccessed,
 			dataSourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2043,12 +2043,12 @@ func errSubDataSourceFieldNotArray(
 func errResourceMissingType(resourceName string, location *source.Meta) error {
 	posRange := source.PositionRangeFromSourceMeta(location)
 	return &errors.LoadError{
-		ReasonCode: ErrorReasonCodeInvalidResource,
-		Err:        fmt.Errorf("resource %q missing type", resourceName),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		ReasonCode:     ErrorReasonCodeInvalidResource,
+		Err:            fmt.Errorf("resource %q missing type", resourceName),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryResourceType,
@@ -2107,12 +2107,12 @@ func wrapRegistryError(err error, location *source.Meta, opts ...wrapRegistryErr
 	runErr, isRunErr := err.(*errors.RunError)
 	if !isRunErr {
 		return &errors.LoadError{
-			Err:    fmt.Errorf("%s%s", err.Error(), contextSuffix),
-			Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-			Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
-		ColumnAccuracy: posRange.ColumnAccuracy,
+			Err:            fmt.Errorf("%s%s", err.Error(), contextSuffix),
+			Line:           posRange.Line,
+			EndLine:        posRange.EndLine,
+			Column:         posRange.Column,
+			EndColumn:      posRange.EndColumn,
+			ColumnAccuracy: posRange.ColumnAccuracy,
 		}
 	}
 
@@ -2121,26 +2121,26 @@ func wrapRegistryError(err error, location *source.Meta, opts ...wrapRegistryErr
 	if len(runErr.ChildErrors) > 0 {
 		if firstChild, ok := runErr.ChildErrors[0].(*errors.RunError); ok {
 			return &errors.LoadError{
-				ReasonCode: firstChild.ReasonCode,
-				Err:        fmt.Errorf("%s%s", firstChild.Err.Error(), contextSuffix),
-				Context:    firstChild.Context,
-				Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-				Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
-		ColumnAccuracy: posRange.ColumnAccuracy,
+				ReasonCode:     firstChild.ReasonCode,
+				Err:            fmt.Errorf("%s%s", firstChild.Err.Error(), contextSuffix),
+				Context:        firstChild.Context,
+				Line:           posRange.Line,
+				EndLine:        posRange.EndLine,
+				Column:         posRange.Column,
+				EndColumn:      posRange.EndColumn,
+				ColumnAccuracy: posRange.ColumnAccuracy,
 			}
 		}
 	}
 
 	return &errors.LoadError{
-		ReasonCode: runErr.ReasonCode,
-		Err:        fmt.Errorf("%s%s", runErr.Err.Error(), contextSuffix),
-		Context:    runErr.Context,
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		ReasonCode:     runErr.ReasonCode,
+		Err:            fmt.Errorf("%s%s", runErr.Err.Error(), contextSuffix),
+		Context:        runErr.Context,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2183,10 +2183,10 @@ func errResourceTypeMissingSpecDefinition(
 				"resourceType": resourceType,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2227,10 +2227,10 @@ func errResourceTypeSpecDefMissingSchema(
 				"resourceType": resourceType,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2274,10 +2274,10 @@ func errDataSourceTypeMissingSpecDefinition(
 				"dataSourceType": dataSourceType,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2308,10 +2308,10 @@ func errDataSourceTypeMissingFields(
 				},
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2346,10 +2346,10 @@ func errDataSourceFilterFieldNotSupported(
 				"fieldName":      field,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2377,10 +2377,10 @@ func errDataSourceMissingType(dataSourceName string, location *source.Meta) erro
 				"dataSourceName": dataSourceName,
 			},
 		},
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2396,10 +2396,10 @@ func errSubResourceSpecInvalidRef(
 			"validation failed as the spec reference for resource \"%s\" is not valid",
 			resourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2415,10 +2415,10 @@ func errSubResourceMetadataInvalidRef(
 			"validation failed as the metadata reference for resource \"%s\" is not valid",
 			resourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2436,10 +2436,10 @@ func errSubResourceMetadataInvalidProperty(
 			property,
 			resourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2456,10 +2456,10 @@ func errSubResourceMetadataInvalidDisplayNameRef(
 				"resource \"%s\" provided can not have children",
 			resourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2477,10 +2477,10 @@ func errSubResourceMetadataInvalidAnnotationsRef(
 				"`metadata.annotations.<key>` or `metadata.annotations[\"<key>\"]`",
 			resourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2499,10 +2499,10 @@ func errSubResourceMetadataMissingAnnotation(
 			annotationKey,
 			resourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2520,10 +2520,10 @@ func errSubResourceMetadataInvalidLabelsRef(
 				"`metadata.labels.<key>` or `metadata.labels[\"<key>\"]`",
 			resourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2542,10 +2542,98 @@ func errSubResourceMetadataMissingLabel(
 			labelKey,
 			resourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
+	}
+}
+
+func errSubResourceMetadataCustomEmpty(
+	resourceName string,
+	location *source.Meta,
+) error {
+	posRange := source.PositionRangeFromSourceMeta(location)
+	return &errors.LoadError{
+		ReasonCode: ErrorReasonCodeInvalidSubstitution,
+		Err: fmt.Errorf(
+			"validation failed as resource \"%s\" has no custom metadata defined",
+			resourceName,
+		),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
+	}
+}
+
+func errSubMappingNodePathNotFound(
+	contextName string,
+	path string,
+	location *source.Meta,
+) error {
+	posRange := source.PositionRangeFromSourceMeta(location)
+	return &errors.LoadError{
+		ReasonCode: ErrorReasonCodeInvalidSubstitution,
+		Err: fmt.Errorf(
+			"validation failed as the path \"%s\" in \"%s\" could not be resolved",
+			path,
+			contextName,
+		),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
+	}
+}
+
+func errSubMappingNodeFieldNotFound(
+	contextName string,
+	path string,
+	fieldName string,
+	location *source.Meta,
+) error {
+	posRange := source.PositionRangeFromSourceMeta(location)
+	return &errors.LoadError{
+		ReasonCode: ErrorReasonCodeInvalidSubstitution,
+		Err: fmt.Errorf(
+			"validation failed as the field \"%s\" in path \"%s\" was not found in \"%s\"",
+			fieldName,
+			path,
+			contextName,
+		),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
+	}
+}
+
+func errSubMappingNodeIndexOutOfBounds(
+	contextName string,
+	path string,
+	index int,
+	length int,
+	location *source.Meta,
+) error {
+	posRange := source.PositionRangeFromSourceMeta(location)
+	return &errors.LoadError{
+		ReasonCode: ErrorReasonCodeInvalidSubstitution,
+		Err: fmt.Errorf(
+			"validation failed as index %d in path \"%s\" is out of bounds (length %d) in \"%s\"",
+			index,
+			path,
+			length,
+			contextName,
+		),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2563,10 +2651,10 @@ func errSubResourcePropertyNotFound(
 			subPathToString(path),
 			resourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2586,10 +2674,10 @@ func errInvalidDescriptionSubType(
 			usedIn,
 			resolvedType,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2609,10 +2697,10 @@ func errInvalidIncludePathSubType(
 			usedIn,
 			resolvedType,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2632,10 +2720,10 @@ func errInvalidDisplayNameSubType(
 			usedIn,
 			resolvedType,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2657,10 +2745,10 @@ func errInvalidSubType(
 			resolvedType,
 			valueContext,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2682,10 +2770,10 @@ func errInvalidSubTypeNotBoolean(
 			resolvedType,
 			valueContext,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2707,10 +2795,10 @@ func errInvalidSubTypeNotArray(
 			resolvedType,
 			valueContext,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2729,10 +2817,10 @@ func errEmptyEachSubstitution(
 			valueContext,
 			usedIn,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2749,10 +2837,10 @@ func errMissingValueContent(
 				"values must be populated with a value that resolves to the defined value type",
 			valueID,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2771,10 +2859,10 @@ func errValueIncorrectTypeInterpolatedString(
 			usedIn,
 			valueType,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2795,10 +2883,10 @@ func errInvalidValueSubType(
 			resolvedType,
 			expectedResolvedType,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2819,10 +2907,10 @@ func errInvalidValueContentType(
 			resolvedSubType,
 			expectedResolveType,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2839,10 +2927,10 @@ func errMissingValueType(
 				"all values must have a type defined",
 			valName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2861,10 +2949,10 @@ func errInvalidValueType(
 			valType.Value,
 			valName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2906,10 +2994,10 @@ func errDataSourceExportFieldNotSupported(
 			exportedSourceField,
 			dataSourceType,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2934,10 +3022,10 @@ func errDataSourceExportFieldTypeMismatch(
 			dataSourceFieldType,
 			exportedFieldType,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2955,10 +3043,10 @@ func errDataSourceExportEmpty(
 			exportName,
 			dataSourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2976,10 +3064,10 @@ func errDataSourceExportTypeMissing(
 			exportName,
 			dataSourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -2999,10 +3087,10 @@ func errDataSourceTypeNotSupported(
 			dataSourceName,
 			dataSourceType,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryDataSourceType,
@@ -3044,10 +3132,10 @@ func errDataSourceAnnotationKeyContainsSubstitution(
 			dataSourceName,
 			annotationKey,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -3067,10 +3155,10 @@ func errResourceTypeNotSupported(
 			resourceName,
 			resourceType,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryResourceType,
@@ -3113,10 +3201,10 @@ func errLabelKeyContainsSubstitution(
 			resourceName,
 			labelKey,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -3137,10 +3225,10 @@ func errLabelValueContainsSubstitution(
 			labelKey,
 			labelValue,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -3160,10 +3248,10 @@ func errLinkSelectorKeyContainsSubstitution(
 			resourceName,
 			linkSelectorKey,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -3185,10 +3273,10 @@ func errLinkSelectorValueContainsSubstitution(
 			linkSelectorKey,
 			linkSelectorValue,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -3253,10 +3341,10 @@ func errAnnotationKeyContainsSubstitution(
 			resourceName,
 			annotationKey,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -3273,10 +3361,10 @@ func errNestedResourceConditionEmpty(
 				"all nested conditions must have a value defined",
 			resourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -3299,10 +3387,10 @@ func errExportTypeMismatch(
 			resolvedType,
 			field,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -3320,10 +3408,10 @@ func errResourceDependencyMissing(
 			dependencyName,
 			resourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -3343,10 +3431,10 @@ func errResourceDependencyContainsSubstitution(
 			resourceName,
 			dependencyName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -3362,10 +3450,10 @@ func errSelfReferencingResourceDependency(
 			"validation failed due to a self-referencing dependency in resource %q",
 			resourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -3384,10 +3472,10 @@ func errComputedFieldDefinedInBlueprint(
 			path,
 			resourceName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -3406,10 +3494,10 @@ func errEachResourceDependencyDetected(
 			resourceIDWithEachProp,
 			dependencyName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -3429,10 +3517,10 @@ func errEachChildDependencyDetected(
 			resourceIDWithEachProp,
 			dependencyName,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }
@@ -3453,10 +3541,10 @@ func errSubFuncLinkArgResourceNotFound(
 			argIndex,
 			usedIn,
 		),
-		Line:   posRange.Line,
-		EndLine:   posRange.EndLine,
-		Column: posRange.Column,
-		EndColumn: posRange.EndColumn,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
 		ColumnAccuracy: posRange.ColumnAccuracy,
 	}
 }

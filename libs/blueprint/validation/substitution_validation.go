@@ -220,11 +220,21 @@ func validateValueSubstitution(
 	)
 
 	if len(subVal.Path) >= 1 {
-		// At this point, we can't know the exact type of the value reference without
-		// inspecting the contents of the value definition, this could be quite an expensive operation
-		// traversing through multiple levels of references and definitions.
-		// When a nested attribute or index is accessed from a value, at validation time
-		// we return any to account for all possible types.
+		// Validate path against the value's MappingNode when available.
+		if valSchema.Value != nil {
+			resolvedType, err := validateMappingNodePath(
+				valSchema.Value,
+				subVal.Path,
+				valName,
+				"values."+valName,
+				subVal.SourceMeta,
+			)
+			if err != nil {
+				return "", diagnostics, err
+			}
+			return resolvedType, diagnostics, nil
+		}
+		// No MappingNode definition - can't validate the path.
 		return string(substitutions.ResolvedSubExprTypeAny), diagnostics, nil
 	}
 
@@ -588,12 +598,137 @@ func validateResourcePropertySubMetadata(
 		return string(substitutions.ResolvedSubExprTypeString), diagnostics, nil
 	}
 
-	// Custom metadata is a free-form object, at the time of implementation,
-	// deep validation wasn't deemed necessary due to the likelihood of `metadata.custom`
-	// being used in substitution references being low.
-	// This judgement was made as custom metadata is primarily used for storing information
-	// to be used by external systems.
+	// Custom metadata: validate path against the MappingNode tree when available.
+	if subResourceProp.Path[1].FieldName == "custom" {
+		return validateMetadataCustomPath(
+			subResourceProp, blueprintResource.Metadata.Custom,
+		)
+	}
+
 	return string(substitutions.ResolvedSubExprTypeAny), diagnostics, nil
+}
+
+// validateMetadataCustomPath validates a path into metadata.custom against the MappingNode tree.
+// Returns the resolved type based on the terminal node, or an error if the path is invalid.
+func validateMetadataCustomPath(
+	subResourceProp *substitutions.SubstitutionResourceProperty,
+	customNode *bpcore.MappingNode,
+) (string, []*bpcore.Diagnostic, error) {
+	diagnostics := []*bpcore.Diagnostic{}
+
+	if customNode == nil {
+		return "", diagnostics, errSubResourceMetadataCustomEmpty(
+			subResourceProp.ResourceName,
+			subResourceProp.SourceMeta,
+		)
+	}
+
+	// Path: [metadata, custom, field1, field2, ...]
+	// Navigate from index 2 onwards.
+	if len(subResourceProp.Path) <= 2 {
+		// Referencing metadata.custom itself - return "any" for the free-form object.
+		return string(substitutions.ResolvedSubExprTypeAny), diagnostics, nil
+	}
+
+	resolvedType, err := validateMappingNodePath(
+		customNode,
+		subResourceProp.Path[2:],
+		subResourceProp.ResourceName,
+		"metadata.custom",
+		subResourceProp.SourceMeta,
+	)
+	return resolvedType, diagnostics, err
+}
+
+// validateMappingNodePath validates a path against a MappingNode tree.
+// Returns the resolved type of the terminal node, or an error if the path is invalid.
+func validateMappingNodePath(
+	node *bpcore.MappingNode,
+	path []*substitutions.SubstitutionPathItem,
+	contextName string,
+	contextPath string,
+	location *source.Meta,
+) (string, error) {
+	current := node
+	fullPath := contextPath
+
+	for _, pathItem := range path {
+		if current == nil {
+			return "", errSubMappingNodePathNotFound(contextName, fullPath, location)
+		}
+
+		if pathItem.ArrayIndex != nil {
+			idx := int(*pathItem.ArrayIndex)
+			fullPath = fmt.Sprintf("%s[%d]", fullPath, idx)
+			if current.Items == nil || idx < 0 || idx >= len(current.Items) {
+				return "", errSubMappingNodeIndexOutOfBounds(
+					contextName, fullPath, idx, len(current.Items), location,
+				)
+			}
+			current = current.Items[idx]
+		} else if pathItem.FieldName != "" {
+			fullPath = fullPath + "." + pathItem.FieldName
+			if current.Fields == nil {
+				return "", errSubMappingNodePathNotFound(contextName, fullPath, location)
+			}
+			next, exists := current.Fields[pathItem.FieldName]
+			if !exists {
+				return "", errSubMappingNodeFieldNotFound(
+					contextName, fullPath, pathItem.FieldName, location,
+				)
+			}
+			current = next
+		}
+	}
+
+	return resolvedTypeForMappingNode(current), nil
+}
+
+// resolvedTypeForMappingNode returns the resolved substitution type for a MappingNode.
+func resolvedTypeForMappingNode(node *bpcore.MappingNode) string {
+	if node == nil {
+		return string(substitutions.ResolvedSubExprTypeAny)
+	}
+
+	if node.Scalar != nil {
+		return resolvedTypeForScalar(node.Scalar)
+	}
+
+	if node.StringWithSubstitutions != nil {
+		return string(substitutions.ResolvedSubExprTypeString)
+	}
+
+	if node.Fields != nil {
+		return string(substitutions.ResolvedSubExprTypeObject)
+	}
+
+	if node.Items != nil {
+		return string(substitutions.ResolvedSubExprTypeArray)
+	}
+
+	return string(substitutions.ResolvedSubExprTypeAny)
+}
+
+// resolvedTypeForScalar returns the resolved type for a scalar value.
+func resolvedTypeForScalar(scalar *bpcore.ScalarValue) string {
+	if scalar == nil {
+		return string(substitutions.ResolvedSubExprTypeAny)
+	}
+
+	if scalar.StringValue != nil {
+		return string(substitutions.ResolvedSubExprTypeString)
+	}
+	if scalar.IntValue != nil {
+		return string(substitutions.ResolvedSubExprTypeInteger)
+	}
+	if scalar.FloatValue != nil {
+		return string(substitutions.ResolvedSubExprTypeFloat)
+	}
+	if scalar.BoolValue != nil {
+		return string(substitutions.ResolvedSubExprTypeBoolean)
+	}
+
+	return string(substitutions.ResolvedSubExprTypeAny)
 }
 
 func validateResourcePropertySubMetadataAnnotations(
