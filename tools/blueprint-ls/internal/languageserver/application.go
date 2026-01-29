@@ -9,6 +9,7 @@ import (
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/languageservices"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/pluginhost"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
+	"github.com/sourcegraph/jsonrpc2"
 	"go.uber.org/zap"
 )
 
@@ -41,6 +42,9 @@ type Application struct {
 
 	// Debouncer for diagnostic publishing to reduce error flicker during typing
 	debouncer *DocumentDebouncer
+
+	// JSON-RPC connection for sending notifications outside of request handlers
+	conn *jsonrpc2.Conn
 }
 
 func NewApplication(
@@ -111,4 +115,10 @@ func (a *Application) Setup() {
 
 func (a *Application) Handler() *lsp.Handler {
 	return a.handler
+}
+
+// SetConnection sets the JSON-RPC connection for sending notifications.
+// This must be called after the connection is established.
+func (a *Application) SetConnection(conn *jsonrpc2.Conn) {
+	a.conn = conn
 }

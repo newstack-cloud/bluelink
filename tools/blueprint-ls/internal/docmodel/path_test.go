@@ -1090,6 +1090,68 @@ func (s *PathSuite) TestStructuredPath_IsDataSourceFilterDefinition() {
 	}
 }
 
+func (s *PathSuite) TestStructuredPath_IsExportField() {
+	tests := []struct {
+		name     string
+		path     StructuredPath
+		expected bool
+	}{
+		{
+			name: "valid export field path",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "exports"},
+				{Kind: PathSegmentField, FieldName: "myExport"},
+				{Kind: PathSegmentField, FieldName: "field"},
+			},
+			expected: true,
+		},
+		{
+			name: "export type path (not field)",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "exports"},
+				{Kind: PathSegmentField, FieldName: "myExport"},
+				{Kind: PathSegmentField, FieldName: "type"},
+			},
+			expected: false,
+		},
+		{
+			name: "export definition level only",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "exports"},
+				{Kind: PathSegmentField, FieldName: "myExport"},
+			},
+			expected: false,
+		},
+		{
+			name: "exports section only",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "exports"},
+			},
+			expected: false,
+		},
+		{
+			name: "resource spec field (not export field)",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "myResource"},
+				{Kind: PathSegmentField, FieldName: "field"},
+			},
+			expected: false,
+		},
+		{
+			name: "empty path",
+			path: StructuredPath{},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			s.Assert().Equal(tt.expected, tt.path.IsExportField())
+		})
+	}
+}
+
 func TestPathSuite(t *testing.T) {
 	suite.Run(t, new(PathSuite))
 }

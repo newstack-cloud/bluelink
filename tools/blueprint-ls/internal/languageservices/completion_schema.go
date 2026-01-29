@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
@@ -161,7 +162,6 @@ func (s *CompletionService) getResourceSpecFieldCompletionItems(
 	position *lsp.Position,
 	blueprint *schema.Blueprint,
 	completionCtx *docmodel.CompletionContext,
-	format docmodel.DocumentFormat,
 ) ([]*lsp.CompletionItem, error) {
 	resourceName := completionCtx.ResourceName
 	if resourceName == "" {
@@ -699,14 +699,16 @@ func (s *CompletionService) getResourceMetadataFieldCompletionItems(
 // getResourceMetadataPropCompletionItemsForPath returns metadata property completions
 // based on the current path depth. At "metadata." it returns top-level metadata props.
 // At deeper paths like "metadata.annotations." it returns the keys from the resource's metadata.
+// For "metadata.custom." and deeper paths, navigates the MappingNode tree.
 func (s *CompletionService) getResourceMetadataPropCompletionItemsForPath(
 	position *lsp.Position,
 	blueprint *schema.Blueprint,
 	resourceProp *substitutions.SubstitutionResourceProperty,
 	cursorCtx *docmodel.CursorContext,
+	partialPrefix string,
 ) ([]*lsp.CompletionItem, error) {
 	if len(resourceProp.Path) <= 1 {
-		return getResourceMetadataPropCompletionItems(position), nil
+		return getResourceMetadataPropCompletionItemsWithPrefix(position, partialPrefix), nil
 	}
 
 	resource := getResource(blueprint, resourceProp.ResourceName)
@@ -715,25 +717,125 @@ func (s *CompletionService) getResourceMetadataPropCompletionItemsForPath(
 	}
 
 	secondSegment := resourceProp.Path[1].FieldName
+
+	// For custom metadata, support deep navigation into the MappingNode tree.
+	if secondSegment == "custom" && len(resourceProp.Path) > 2 {
+		return getCustomMetadataDeepCompletionItems(
+			position, resource.Metadata.Custom, resourceProp.Path[2:], cursorCtx,
+		)
+	}
+
 	keys, detail := getMetadataKeysAndDetail(resource.Metadata, secondSegment)
 	if keys == nil {
 		return []*lsp.CompletionItem{}, nil
 	}
 
 	quoteType := docmodel.QuoteTypeNone
+	isBracketTrigger := false
 	if cursorCtx != nil {
 		quoteType = cursorCtx.GetEnclosingQuoteType()
+		isBracketTrigger = strings.HasSuffix(cursorCtx.TextBefore, "[")
 	}
 
-	return createMetadataKeyCompletionItems(position, keys, detail, quoteType), nil
+	return createMetadataKeyCompletionItems(position, keys, detail, quoteType, isBracketTrigger), nil
+}
+
+// getCustomMetadataDeepCompletionItems navigates into a custom MappingNode tree
+// and returns field keys or array indices at the current depth.
+func getCustomMetadataDeepCompletionItems(
+	position *lsp.Position,
+	customNode *core.MappingNode,
+	remainingPath []*substitutions.SubstitutionPathItem,
+	cursorCtx *docmodel.CursorContext,
+) ([]*lsp.CompletionItem, error) {
+	if customNode == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	// Navigate through the path to reach the target node.
+	current := customNode
+	for _, pathItem := range remainingPath {
+		if current == nil {
+			return []*lsp.CompletionItem{}, nil
+		}
+		if pathItem.ArrayIndex != nil {
+			current = navigateMappingNodeByIndex(current, int(*pathItem.ArrayIndex))
+		} else if pathItem.FieldName != "" {
+			current = navigateMappingNode(current, []string{pathItem.FieldName})
+		}
+	}
+
+	return mappingNodeCompletionItems(position, current, cursorCtx)
+}
+
+// mappingNodeCompletionItems returns field keys or array indices for a MappingNode.
+func mappingNodeCompletionItems(
+	position *lsp.Position,
+	node *core.MappingNode,
+	cursorCtx *docmodel.CursorContext,
+) ([]*lsp.CompletionItem, error) {
+	if node == nil || isMappingNodeTerminal(node) {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	quoteType := docmodel.QuoteTypeNone
+	isBracketTrigger := false
+	if cursorCtx != nil {
+		quoteType = cursorCtx.GetEnclosingQuoteType()
+		isBracketTrigger = strings.HasSuffix(cursorCtx.TextBefore, "[")
+	}
+
+	if isMappingNodeObject(node) {
+		keys := getMappingNodeFieldKeys(node)
+		return createMetadataKeyCompletionItems(position, keys, "Custom metadata field", quoteType, isBracketTrigger), nil
+	}
+
+	if isMappingNodeArray(node) {
+		return createMappingNodeArrayIndexCompletionItems(position, node), nil
+	}
+
+	return []*lsp.CompletionItem{}, nil
+}
+
+// createMappingNodeArrayIndexCompletionItems returns index completions for a MappingNode array.
+func createMappingNodeArrayIndexCompletionItems(
+	position *lsp.Position,
+	node *core.MappingNode,
+) []*lsp.CompletionItem {
+	length := getMappingNodeArrayLength(node)
+	if length == 0 {
+		return []*lsp.CompletionItem{}
+	}
+
+	items := make([]*lsp.CompletionItem, 0, length)
+	fieldKind := lsp.CompletionItemKindValue
+	detail := "Array index"
+	for i := range length {
+		label := fmt.Sprintf("%d", i)
+		items = append(items, &lsp.CompletionItem{
+			Label:  label,
+			Detail: &detail,
+			Kind:   &fieldKind,
+			TextEdit: lsp.TextEdit{
+				NewText: label,
+				Range:   getItemInsertRange(position),
+			},
+			Data: map[string]any{"completionType": "arrayIndex"},
+		})
+	}
+	return items
 }
 
 func getResourceTopLevelPropCompletionItems(position *lsp.Position) []*lsp.CompletionItem {
 	return createResourcePropCompletionItemsWithDescriptions(position, resourceTopLevelProps, "Resource property")
 }
 
-func getResourceMetadataPropCompletionItems(position *lsp.Position) []*lsp.CompletionItem {
-	return createResourcePropCompletionItemsWithDescriptions(position, resourceMetadataProps, "Resource metadata property")
+func getResourceTopLevelPropCompletionItemsWithPrefix(position *lsp.Position, prefix string) []*lsp.CompletionItem {
+	return createResourcePropCompletionItemsWithPrefix(position, resourceTopLevelProps, "Resource property", prefix)
+}
+
+func getResourceMetadataPropCompletionItemsWithPrefix(position *lsp.Position, prefix string) []*lsp.CompletionItem {
+	return createResourcePropCompletionItemsWithPrefix(position, resourceMetadataProps, "Resource metadata property", prefix)
 }
 
 func createResourcePropCompletionItemsWithDescriptions(
@@ -741,15 +843,37 @@ func createResourcePropCompletionItemsWithDescriptions(
 	props []resourcePropInfo,
 	detail string,
 ) []*lsp.CompletionItem {
-	insertRange := getItemInsertRange(position)
+	return createResourcePropCompletionItemsWithPrefix(position, props, detail, "")
+}
+
+// createResourcePropCompletionItemsWithPrefix creates completion items for resource properties.
+// prefix is the partial segment being typed (e.g., "sp") for filtering.
+// pathPrefix is the path typed so far (e.g., "resources.myTable.") for building FilterText.
+func createResourcePropCompletionItemsWithPrefix(
+	position *lsp.Position,
+	props []resourcePropInfo,
+	detail string,
+	prefix string,
+) []*lsp.CompletionItem {
+	prefixLen := len(prefix)
+	prefixLower := strings.ToLower(prefix)
+	insertRange := getItemInsertRangeWithPrefix(position, prefixLen)
 	fieldKind := lsp.CompletionItemKindField
 	items := make([]*lsp.CompletionItem, 0, len(props))
 
 	for _, prop := range props {
+		// Filter by prefix if provided
+		if prefixLen > 0 && !strings.HasPrefix(strings.ToLower(prop.label), prefixLower) {
+			continue
+		}
+
+		filterText := prop.label
+
 		item := &lsp.CompletionItem{
-			Label:  prop.label,
-			Detail: &detail,
-			Kind:   &fieldKind,
+			Label:      prop.label,
+			Detail:     &detail,
+			Kind:       &fieldKind,
+			FilterText: &filterText,
 			TextEdit: lsp.TextEdit{
 				NewText: prop.label,
 				Range:   insertRange,
@@ -776,18 +900,27 @@ func createResourcePropCompletionItemsWithDescriptions(
 // Keys containing special characters use bracket notation with contextual quotes:
 // - Inside double-quoted strings: ['key.with.dots'] (single quotes)
 // - Otherwise: ["key.with.dots"] (double quotes)
+// When isBracketTrigger is true (user typed `[`), all keys are wrapped as `"key"]`.
 func createMetadataKeyCompletionItems(
 	position *lsp.Position,
 	keys []string,
 	detail string,
 	quoteType docmodel.QuoteType,
+	isBracketTrigger bool,
 ) []*lsp.CompletionItem {
 	fieldKind := lsp.CompletionItemKindField
 	items := make([]*lsp.CompletionItem, 0, len(keys))
 
 	for _, key := range keys {
 		var textEdit lsp.TextEdit
-		if needsBracketNotation(key) {
+		if isBracketTrigger {
+			// User typed "[", insert "key"] to complete the bracket access.
+			insertText := formatMapKeyForBracketInsertion(key, quoteType)
+			textEdit = lsp.TextEdit{
+				NewText: insertText,
+				Range:   getItemInsertRange(position),
+			}
+		} else if needsBracketNotation(key) {
 			bracketNotation := formatBracketNotation(key, quoteType)
 			textEdit = lsp.TextEdit{
 				NewText: bracketNotation,
@@ -829,25 +962,21 @@ func getMetadataKeysAndDetail(
 			return nil, ""
 		}
 		return mapKeys(metadata.Labels.Values), "Label key"
+	case "custom":
+		if metadata.Custom == nil {
+			return nil, ""
+		}
+		return getMappingNodeFieldKeys(metadata.Custom), "Custom metadata field"
 	default:
 		return nil, ""
 	}
 }
 
-// resourceDefAttributesSchemaCompletionItems creates completion items for resource attributes
-// used in substitution references (inside ${...}). These completions should NOT include
-// colons or quotes since they're property access paths, not key-value definitions.
-func resourceDefAttributesSchemaCompletionItems(
-	attributes map[string]*provider.ResourceDefinitionsSchema,
-	position *lsp.Position,
-	attrDetail string,
-) []*lsp.CompletionItem {
-	return resourceDefAttributesSchemaCompletionItemsForSubstitution(attributes, position, attrDetail, "")
-}
-
 // resourceDefAttributesSchemaCompletionItemsForSubstitution creates completion items for
 // substitution references (inside ${...}). These completions use just the field name
 // without colons or quotes since they're property access paths.
+// pathPrefix is the path typed so far (e.g., "resources.myTable.spec.") for building FilterText.
+// typedPrefix is the partial segment being typed (e.g., "ar") for filtering and range calculation.
 func resourceDefAttributesSchemaCompletionItemsForSubstitution(
 	attributes map[string]*provider.ResourceDefinitionsSchema,
 	position *lsp.Position,
@@ -876,12 +1005,14 @@ func resourceDefAttributesSchemaCompletionItemsForSubstitution(
 			detail = fmt.Sprintf("%s (%s)", attrDetail, attrSchema.Type)
 		}
 
+		filterText := attrName
+
 		item := &lsp.CompletionItem{
 			Label:      attrName,
 			Detail:     &detail,
 			Kind:       &fieldKind,
 			TextEdit:   edit,
-			FilterText: &attrName,
+			FilterText: &filterText,
 			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},

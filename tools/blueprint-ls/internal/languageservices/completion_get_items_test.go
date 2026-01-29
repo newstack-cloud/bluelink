@@ -28,29 +28,31 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_variable_
 	s.Require().NoError(err)
 	detail := "Variable"
 	itemKind := lsp.CompletionItemKindField
+	filterText := "${variables.instanceType"
 	s.Assert().Equal([]*lsp.CompletionItem{
 		{
-			Kind:   &itemKind,
-			Label:  "instanceType",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "instanceType",
+			Detail:     &detail,
+			FilterText: &filterText,
 			TextEdit: lsp.TextEdit{
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      31,
-						Character: 24,
+						Character: 14,
 					},
 					End: lsp.Position{
 						Line:      31,
 						Character: 24,
 					},
 				},
-				NewText: "instanceType",
+				NewText: "variables.instanceType",
 			},
 			Data: map[string]any{
 				"completionType": "variable",
 			},
 		},
-	}, completionItems)
+	}, completionItems.Items)
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_ref() {
@@ -70,29 +72,31 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_ref
 	s.Require().NoError(err)
 	detail := "Value"
 	itemKind := lsp.CompletionItemKindField
+	filterText := "${values.tableName"
 	s.Assert().Equal([]*lsp.CompletionItem{
 		{
-			Kind:   &itemKind,
-			Label:  "tableName",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "tableName",
+			Detail:     &detail,
+			FilterText: &filterText,
 			TextEdit: lsp.TextEdit{
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      38,
-						Character: 21,
+						Character: 14,
 					},
 					End: lsp.Position{
 						Line:      38,
 						Character: 21,
 					},
 				},
-				NewText: "tableName",
+				NewText: "values.tableName",
 			},
 			Data: map[string]any{
 				"completionType": "value",
 			},
 		},
-	}, completionItems)
+	}, completionItems.Items)
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasource_ref() {
@@ -112,29 +116,31 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 	s.Require().NoError(err)
 	detail := "Data source"
 	itemKind := lsp.CompletionItemKindField
+	filterText := "${datasources.network"
 	s.Assert().Equal([]*lsp.CompletionItem{
 		{
-			Kind:   &itemKind,
-			Label:  "network",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "network",
+			Detail:     &detail,
+			FilterText: &filterText,
 			TextEdit: lsp.TextEdit{
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      38,
-						Character: 26,
+						Character: 14,
 					},
 					End: lsp.Position{
 						Line:      38,
 						Character: 26,
 					},
 				},
-				NewText: "network",
+				NewText: "datasources.network",
 			},
 			Data: map[string]any{
 				"completionType": "dataSource",
 			},
 		},
-	}, completionItems)
+	}, completionItems.Items)
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasource_property_ref() {
@@ -154,50 +160,54 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 	s.Require().NoError(err)
 	detail := "Data source exported field"
 	itemKind := lsp.CompletionItemKindField
+	filterTextVpc := "${datasources.network.vpc"
+	filterTextSubnetIds := "${datasources.network.subnetIds"
 	s.Assert().Equal(sortCompletionItems([]*lsp.CompletionItem{
 		{
-			Kind:   &itemKind,
-			Label:  "vpc",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "vpc",
+			Detail:     &detail,
+			FilterText: &filterTextVpc,
 			TextEdit: lsp.TextEdit{
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      38,
-						Character: 34,
+						Character: 14,
 					},
 					End: lsp.Position{
 						Line:      38,
 						Character: 34,
 					},
 				},
-				NewText: "vpc",
+				NewText: "datasources.network.vpc",
 			},
 			Data: map[string]any{
 				"completionType": "dataSourceProperty",
 			},
 		},
 		{
-			Kind:   &itemKind,
-			Label:  "subnetIds",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "subnetIds",
+			Detail:     &detail,
+			FilterText: &filterTextSubnetIds,
 			TextEdit: lsp.TextEdit{
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      38,
-						Character: 34,
+						Character: 14,
 					},
 					End: lsp.Position{
 						Line:      38,
 						Character: 34,
 					},
 				},
-				NewText: "subnetIds",
+				NewText: "datasources.network.subnetIds",
 			},
 			Data: map[string]any{
 				"completionType": "dataSourceProperty",
 			},
 		},
-	}), sortCompletionItems(completionItems))
+	}), sortCompletionItems(completionItems.Items))
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_child_ref() {
@@ -217,29 +227,31 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_child_ref
 	s.Require().NoError(err)
 	detail := "Child blueprint"
 	itemKind := lsp.CompletionItemKindField
+	filterText := "${children.networking"
 	s.Assert().Equal([]*lsp.CompletionItem{
 		{
-			Kind:   &itemKind,
-			Label:  "networking",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "networking",
+			Detail:     &detail,
+			FilterText: &filterText,
 			TextEdit: lsp.TextEdit{
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      43,
-						Character: 23,
+						Character: 14,
 					},
 					End: lsp.Position{
 						Line:      43,
 						Character: 23,
 					},
 				},
-				NewText: "networking",
+				NewText: "children.networking",
 			},
 			Data: map[string]any{
 				"completionType": "child",
 			},
 		},
-	}, completionItems)
+	}, completionItems.Items)
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_ref_1() {
@@ -273,7 +285,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 		"variables.instanceType",
 	}
 	slices.Sort(expectedLabels)
-	s.Assert().Equal(expectedLabels, completionItemLabels(completionItems))
+	s.Assert().Equal(expectedLabels, completionItemLabels(completionItems.Items))
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_ref_2() {
@@ -295,50 +307,54 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 	// yield resource reference completion items.
 	detail := "Resource"
 	itemKind := lsp.CompletionItemKindField
+	filterTextOrdersTable := "${resources.ordersTable"
+	filterTextSaveOrderHandler := "${resources.saveOrderHandler"
 	s.Assert().Equal(sortCompletionItems([]*lsp.CompletionItem{
 		{
-			Kind:   &itemKind,
-			Label:  "ordersTable",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "ordersTable",
+			Detail:     &detail,
+			FilterText: &filterTextOrdersTable,
 			TextEdit: lsp.TextEdit{
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      46,
-						Character: 36,
+						Character: 26,
 					},
 					End: lsp.Position{
 						Line:      46,
 						Character: 36,
 					},
 				},
-				NewText: "ordersTable",
+				NewText: "resources.ordersTable",
 			},
 			Data: map[string]any{
 				"completionType": "resource",
 			},
 		},
 		{
-			Kind:   &itemKind,
-			Label:  "saveOrderHandler",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "saveOrderHandler",
+			Detail:     &detail,
+			FilterText: &filterTextSaveOrderHandler,
 			TextEdit: lsp.TextEdit{
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      46,
-						Character: 36,
+						Character: 26,
 					},
 					End: lsp.Position{
 						Line:      46,
 						Character: 36,
 					},
 				},
-				NewText: "saveOrderHandler",
+				NewText: "resources.saveOrderHandler",
 			},
 			Data: map[string]any{
 				"completionType": "resource",
 			},
 		},
-	}), sortCompletionItems(completionItems))
+	}), sortCompletionItems(completionItems.Items))
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_property_ref_1() {
@@ -358,11 +374,16 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 	s.Require().NoError(err)
 	detail := "Resource property"
 	itemKind := lsp.CompletionItemKindField
+	// FilterText includes ${pathPrefix + label for VSCode's word detection in strings
+	specFilter := "${resources.ordersTable.spec"
+	stateFilter := "${resources.ordersTable.state"
+	metadataFilter := "${resources.ordersTable.metadata"
 	s.Assert().Equal(sortCompletionItems([]*lsp.CompletionItem{
 		{
-			Kind:   &itemKind,
-			Label:  "spec",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "spec",
+			Detail:     &detail,
+			FilterText: &specFilter,
 			Documentation: lsp.MarkupContent{
 				Kind:  lsp.MarkupKindMarkdown,
 				Value: "The resource specification containing provider-specific configuration and computed fields.",
@@ -371,23 +392,24 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      46,
-						Character: 48,
+						Character: 26,
 					},
 					End: lsp.Position{
 						Line:      46,
 						Character: 48,
 					},
 				},
-				NewText: "spec",
+				NewText: "resources.ordersTable.spec",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
 		{
-			Kind:   &itemKind,
-			Label:  "state",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "state",
+			Detail:     &detail,
+			FilterText: &stateFilter,
 			Documentation: lsp.MarkupContent{
 				Kind:  lsp.MarkupKindMarkdown,
 				Value: "The current deployment state of the resource from the external provider.",
@@ -396,23 +418,24 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      46,
-						Character: 48,
+						Character: 26,
 					},
 					End: lsp.Position{
 						Line:      46,
 						Character: 48,
 					},
 				},
-				NewText: "state",
+				NewText: "resources.ordersTable.state",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
 		{
-			Kind:   &itemKind,
-			Label:  "metadata",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "metadata",
+			Detail:     &detail,
+			FilterText: &metadataFilter,
 			Documentation: lsp.MarkupContent{
 				Kind:  lsp.MarkupKindMarkdown,
 				Value: "Resource metadata including `displayName`, `labels`, `annotations`, and `custom` fields.",
@@ -421,20 +444,20 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      46,
-						Character: 48,
+						Character: 26,
 					},
 					End: lsp.Position{
 						Line:      46,
 						Character: 48,
 					},
 				},
-				NewText: "metadata",
+				NewText: "resources.ordersTable.metadata",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
-	}), sortCompletionItems(completionItems))
+	}), sortCompletionItems(completionItems.Items))
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_property_ref_2() {
@@ -454,9 +477,10 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 	s.Require().NoError(err)
 	detail := "Resource spec property (string)"
 	itemKind := lsp.CompletionItemKindField
-	tableNameFilter := "tableName"
-	idFilter := "id"
-	billingModeFilter := "billingMode"
+	// FilterText includes ${pathPrefix + label for VSCode's word detection in strings
+	tableNameFilter := "${resources.ordersTable.spec.tableName"
+	idFilter := "${resources.ordersTable.spec.id"
+	billingModeFilter := "${resources.ordersTable.spec.billingMode"
 	billingModeDoc := "The billing mode for the table."
 	s.Assert().Equal(sortCompletionItems([]*lsp.CompletionItem{
 		{
@@ -468,14 +492,14 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      46,
-						Character: 53,
+						Character: 26,
 					},
 					End: lsp.Position{
 						Line:      46,
 						Character: 53,
 					},
 				},
-				NewText: "tableName",
+				NewText: "resources.ordersTable.spec.tableName",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
@@ -490,14 +514,14 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      46,
-						Character: 53,
+						Character: 26,
 					},
 					End: lsp.Position{
 						Line:      46,
 						Character: 53,
 					},
 				},
-				NewText: "id",
+				NewText: "resources.ordersTable.spec.id",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
@@ -513,20 +537,20 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      46,
-						Character: 53,
+						Character: 26,
 					},
 					End: lsp.Position{
 						Line:      46,
 						Character: 53,
 					},
 				},
-				NewText: "billingMode",
+				NewText: "resources.ordersTable.spec.billingMode",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
-	}), sortCompletionItems(completionItems))
+	}), sortCompletionItems(completionItems.Items))
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_property_ref_4() {
@@ -546,11 +570,17 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 	s.Require().NoError(err)
 	detail := "Resource metadata property"
 	itemKind := lsp.CompletionItemKindField
+	// FilterText includes ${pathPrefix + label for VSCode's word detection in strings
+	filterTextAnnotations := "${resources.ordersTable.metadata.annotations"
+	filterTextCustom := "${resources.ordersTable.metadata.custom"
+	filterTextDisplayName := "${resources.ordersTable.metadata.displayName"
+	filterTextLabels := "${resources.ordersTable.metadata.labels"
 	s.Assert().Equal(sortCompletionItems([]*lsp.CompletionItem{
 		{
-			Kind:   &itemKind,
-			Label:  "annotations",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "annotations",
+			Detail:     &detail,
+			FilterText: &filterTextAnnotations,
 			Documentation: lsp.MarkupContent{
 				Kind:  lsp.MarkupKindMarkdown,
 				Value: "Key-value pairs for storing additional metadata. Unlike labels, annotations are not used for selection.",
@@ -559,23 +589,24 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      46,
-						Character: 57,
+						Character: 26,
 					},
 					End: lsp.Position{
 						Line:      46,
 						Character: 57,
 					},
 				},
-				NewText: "annotations",
+				NewText: "resources.ordersTable.metadata.annotations",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
 		{
-			Kind:   &itemKind,
-			Label:  "custom",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "custom",
+			Detail:     &detail,
+			FilterText: &filterTextCustom,
 			Documentation: lsp.MarkupContent{
 				Kind:  lsp.MarkupKindMarkdown,
 				Value: "Custom metadata fields specific to your use case.",
@@ -584,23 +615,24 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      46,
-						Character: 57,
+						Character: 26,
 					},
 					End: lsp.Position{
 						Line:      46,
 						Character: 57,
 					},
 				},
-				NewText: "custom",
+				NewText: "resources.ordersTable.metadata.custom",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
 		{
-			Kind:   &itemKind,
-			Label:  "displayName",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "displayName",
+			Detail:     &detail,
+			FilterText: &filterTextDisplayName,
 			Documentation: lsp.MarkupContent{
 				Kind:  lsp.MarkupKindMarkdown,
 				Value: "A human-readable name for the resource, used in UI displays.",
@@ -609,23 +641,24 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      46,
-						Character: 57,
+						Character: 26,
 					},
 					End: lsp.Position{
 						Line:      46,
 						Character: 57,
 					},
 				},
-				NewText: "displayName",
+				NewText: "resources.ordersTable.metadata.displayName",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
 		{
-			Kind:   &itemKind,
-			Label:  "labels",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "labels",
+			Detail:     &detail,
+			FilterText: &filterTextLabels,
 			Documentation: lsp.MarkupContent{
 				Kind:  lsp.MarkupKindMarkdown,
 				Value: "Key-value pairs for organizing and selecting resources. Used by `linkSelector`.",
@@ -634,20 +667,20 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      46,
-						Character: 57,
+						Character: 26,
 					},
 					End: lsp.Position{
 						Line:      46,
 						Character: 57,
 					},
 				},
-				NewText: "labels",
+				NewText: "resources.ordersTable.metadata.labels",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
-	}), sortCompletionItems(completionItems))
+	}), sortCompletionItems(completionItems.Items))
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_type() {
@@ -686,7 +719,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				"completionType": "resourceType",
 			},
 		},
-	}), sortCompletionItems(completionItems))
+	}), sortCompletionItems(completionItems.Items))
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasource_type() {
@@ -725,7 +758,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 				"completionType": "dataSourceType",
 			},
 		},
-	}), sortCompletionItems(completionItems))
+	}), sortCompletionItems(completionItems.Items))
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_variable_type() {
@@ -806,7 +839,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_variable_
 				"completionType": "variableType",
 			},
 		},
-	}), sortCompletionItems(completionItems))
+	}), sortCompletionItems(completionItems.Items))
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_type() {
@@ -898,7 +931,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_value_typ
 				"completionType": "valueType",
 			},
 		},
-	}), sortCompletionItems(completionItems))
+	}), sortCompletionItems(completionItems.Items))
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasource_field_type() {
@@ -979,7 +1012,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 				"completionType": "dataSourceFieldType",
 			},
 		},
-	}), sortCompletionItems(completionItems))
+	}), sortCompletionItems(completionItems.Items))
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasource_filter_field() {
@@ -1027,7 +1060,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 				"completionType": "dataSourceFilterField",
 			},
 		},
-	}), sortCompletionItems(completionItems))
+	}), sortCompletionItems(completionItems.Items))
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasource_filter_operator() {
@@ -1045,7 +1078,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_datasourc
 		},
 	})
 	s.Require().NoError(err)
-	s.Assert().Equal(sortCompletionItems(expectedDataSourceFilterOperatorItems()), sortCompletionItems(completionItems))
+	s.Assert().Equal(sortCompletionItems(expectedDataSourceFilterOperatorItems()), sortCompletionItems(completionItems.Items))
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_export_type() {
@@ -1137,7 +1170,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_export_ty
 				"completionType": "exportType",
 			},
 		},
-	}), sortCompletionItems(completionItems))
+	}), sortCompletionItems(completionItems.Items))
 }
 
 func expectedDataSourceFilterOperatorItems() []*lsp.CompletionItem {
@@ -1529,9 +1562,10 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 	// determine we need spec property completions
 	detail := "Resource spec property (string)"
 	itemKind := lsp.CompletionItemKindField
-	tableNameFilter := "tableName"
-	idFilter := "id"
-	billingModeFilter := "billingMode"
+	// FilterText includes ${pathPrefix + label for VSCode's word detection in strings
+	tableNameFilter := "${resources.ordersTable.spec.tableName"
+	idFilter := "${resources.ordersTable.spec.id"
+	billingModeFilter := "${resources.ordersTable.spec.billingMode"
 	billingModeDoc := "The billing mode for the table."
 	s.Assert().Equal(sortCompletionItems([]*lsp.CompletionItem{
 		{
@@ -1543,14 +1577,14 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      2,
-						Character: 44,
+						Character: 17,
 					},
 					End: lsp.Position{
 						Line:      2,
 						Character: 44,
 					},
 				},
-				NewText: "tableName",
+				NewText: "resources.ordersTable.spec.tableName",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
@@ -1565,14 +1599,14 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      2,
-						Character: 44,
+						Character: 17,
 					},
 					End: lsp.Position{
 						Line:      2,
 						Character: 44,
 					},
 				},
-				NewText: "id",
+				NewText: "resources.ordersTable.spec.id",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
@@ -1588,20 +1622,20 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      2,
-						Character: 44,
+						Character: 17,
 					},
 					End: lsp.Position{
 						Line:      2,
 						Character: 44,
 					},
 				},
-				NewText: "billingMode",
+				NewText: "resources.ordersTable.spec.billingMode",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
-	}), sortCompletionItems(completionItems))
+	}), sortCompletionItems(completionItems.Items))
 }
 
 // Test_get_completion_items_for_resource_top_level_without_schema_element tests that
@@ -1646,11 +1680,16 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 	// Should get top-level property completion items (spec, metadata, state)
 	detail := "Resource property"
 	itemKind := lsp.CompletionItemKindField
+	// FilterText includes ${pathPrefix + label for VSCode's word detection in strings
+	filterTextMetadata := "${resources.ordersTable.metadata"
+	filterTextSpec := "${resources.ordersTable.spec"
+	filterTextState := "${resources.ordersTable.state"
 	s.Assert().Equal(sortCompletionItems([]*lsp.CompletionItem{
 		{
-			Kind:   &itemKind,
-			Label:  "metadata",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "metadata",
+			Detail:     &detail,
+			FilterText: &filterTextMetadata,
 			Documentation: lsp.MarkupContent{
 				Kind:  lsp.MarkupKindMarkdown,
 				Value: "Resource metadata including `displayName`, `labels`, `annotations`, and `custom` fields.",
@@ -1659,23 +1698,24 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      2,
-						Character: 39,
+						Character: 17,
 					},
 					End: lsp.Position{
 						Line:      2,
 						Character: 39,
 					},
 				},
-				NewText: "metadata",
+				NewText: "resources.ordersTable.metadata",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
 		{
-			Kind:   &itemKind,
-			Label:  "spec",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "spec",
+			Detail:     &detail,
+			FilterText: &filterTextSpec,
 			Documentation: lsp.MarkupContent{
 				Kind:  lsp.MarkupKindMarkdown,
 				Value: "The resource specification containing provider-specific configuration and computed fields.",
@@ -1684,23 +1724,24 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      2,
-						Character: 39,
+						Character: 17,
 					},
 					End: lsp.Position{
 						Line:      2,
 						Character: 39,
 					},
 				},
-				NewText: "spec",
+				NewText: "resources.ordersTable.spec",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
 		{
-			Kind:   &itemKind,
-			Label:  "state",
-			Detail: &detail,
+			Kind:       &itemKind,
+			Label:      "state",
+			Detail:     &detail,
+			FilterText: &filterTextState,
 			Documentation: lsp.MarkupContent{
 				Kind:  lsp.MarkupKindMarkdown,
 				Value: "The current deployment state of the resource from the external provider.",
@@ -1709,20 +1750,20 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 				Range: &lsp.Range{
 					Start: lsp.Position{
 						Line:      2,
-						Character: 39,
+						Character: 17,
 					},
 					End: lsp.Position{
 						Line:      2,
 						Character: 39,
 					},
 				},
-				NewText: "state",
+				NewText: "resources.ordersTable.state",
 			},
 			Data: map[string]any{
 				"completionType": "resourceProperty",
 			},
 		},
-	}), sortCompletionItems(completionItems))
+	}), sortCompletionItems(completionItems.Items))
 }
 
 // Test_get_completion_items_for_metadata_annotation_with_dots tests that annotation keys
@@ -1769,35 +1810,42 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_metadata_
 	s.Require().NoError(err)
 
 	// Should get 2 annotation keys
-	s.Require().Len(completionItems, 2)
+	s.Require().Len(completionItems.Items, 2)
 
 	// Find the items by label
 	var dotKeyItem, simpleKeyItem *lsp.CompletionItem
-	for _, item := range completionItems {
-		if item.Label == "environment.v1" {
+	for _, item := range completionItems.Items {
+		switch item.Label {
+		case "environment.v1":
 			dotKeyItem = item
-		} else if item.Label == "simple" {
+		case "simple":
 			simpleKeyItem = item
 		}
 	}
 
-	// Key with dot should use bracket notation
+	// Key with dot should use bracket notation with full path
 	s.Require().NotNil(dotKeyItem, "expected completion item for 'environment.v1'")
 	textEdit, ok := dotKeyItem.TextEdit.(lsp.TextEdit)
 	s.Require().True(ok, "expected TextEdit to be lsp.TextEdit")
-	s.Assert().Equal(`["environment.v1"]`, textEdit.NewText)
-	// Range should start 1 char before cursor (to replace the ".")
-	s.Assert().Equal(uint32(59), textEdit.Range.Start.Character)
+	s.Assert().Equal(`resources.myResource.metadata.annotations["environment.v1"]`, textEdit.NewText)
+	// Range should start right after ${ and end at cursor
+	s.Assert().Equal(uint32(18), textEdit.Range.Start.Character)
 	s.Assert().Equal(uint32(60), textEdit.Range.End.Character)
+	// FilterText should include ${ prefix
+	s.Require().NotNil(dotKeyItem.FilterText)
+	s.Assert().Equal(`${resources.myResource.metadata.annotations["environment.v1"]`, *dotKeyItem.FilterText)
 
-	// Simple key should use normal notation
+	// Simple key should use normal notation with full path
 	s.Require().NotNil(simpleKeyItem, "expected completion item for 'simple'")
 	simpleTextEdit, ok := simpleKeyItem.TextEdit.(lsp.TextEdit)
 	s.Require().True(ok, "expected TextEdit to be lsp.TextEdit")
-	s.Assert().Equal("simple", simpleTextEdit.NewText)
-	// Range should be at cursor position
-	s.Assert().Equal(uint32(60), simpleTextEdit.Range.Start.Character)
+	s.Assert().Equal("resources.myResource.metadata.annotations.simple", simpleTextEdit.NewText)
+	// Range should start right after ${ and end at cursor
+	s.Assert().Equal(uint32(18), simpleTextEdit.Range.Start.Character)
 	s.Assert().Equal(uint32(60), simpleTextEdit.Range.End.Character)
+	// FilterText should include ${ prefix
+	s.Require().NotNil(simpleKeyItem.FilterText)
+	s.Assert().Equal(`${resources.myResource.metadata.annotations.simple`, *simpleKeyItem.FilterText)
 }
 
 // Test_get_completion_items_for_resource_spec_field_yaml tests spec field completion
@@ -1844,7 +1892,7 @@ resources:
 	// because the spec mapping has no children yet. This is expected behavior for YAML.
 	// The user will get resource definition field completions (type, spec, metadata, etc.)
 	// which is acceptable as they could add a "spec:" line again or complete existing fields.
-	labels := completionItemLabels(completionItems)
+	labels := completionItemLabels(completionItems.Items)
 	// Either spec fields or resource definition fields are acceptable
 	hasSpecFields := slices.Contains(labels, "tableName")
 	hasDefinitionFields := slices.Contains(labels, "spec")
@@ -1891,7 +1939,7 @@ resources:
 	s.Require().NoError(err)
 
 	// Should get metadata field completions
-	labels := completionItemLabels(completionItems)
+	labels := completionItemLabels(completionItems.Items)
 	s.Assert().Contains(labels, "labels", "Expected labels field in metadata completions")
 	s.Assert().Contains(labels, "annotations", "Expected annotations field in metadata completions")
 	s.Assert().Contains(labels, "custom", "Expected custom field in metadata completions")
@@ -1945,7 +1993,7 @@ resources:
 	s.Require().NoError(err)
 
 	// Schema-based completions are disabled for JSONC - should return empty
-	s.Assert().Empty(completionItems, "JSONC resource spec completions should be disabled for v0")
+	s.Assert().Empty(completionItems.Items, "JSONC resource spec completions should be disabled for v0")
 }
 
 // Test_get_completion_items_for_resource_spec_field_jsonc_with_content verifies that
@@ -1997,7 +2045,7 @@ resources:
 	s.Require().NoError(err)
 
 	// Schema-based completions are disabled for JSONC - should return empty
-	s.Assert().Empty(completionItems, "JSONC resource spec completions should be disabled for v0")
+	s.Assert().Empty(completionItems.Items, "JSONC resource spec completions should be disabled for v0")
 }
 
 // Test_get_completion_items_jsonc_schema_completions_disabled verifies that
@@ -2045,7 +2093,7 @@ resources:
 	s.Require().NoError(err)
 
 	// Schema-based completions are disabled for JSONC - should return empty
-	s.Assert().Empty(completionItems, "JSONC resource spec completions should be disabled for v0")
+	s.Assert().Empty(completionItems.Items, "JSONC resource spec completions should be disabled for v0")
 }
 
 // Test_get_completion_items_yaml_has_yaml_syntax verifies that YAML completions
@@ -2089,12 +2137,12 @@ resources:
 	// For YAML, completion context detection may return resource definition fields
 	// instead of spec fields due to how the empty spec is parsed.
 	// Either result is acceptable for this test - we just need to verify the format.
-	if len(completionItems) == 0 {
+	if len(completionItems.Items) == 0 {
 		s.T().Skip("No completion items returned - YAML spec detection edge case")
 	}
 
 	// Verify that YAML completions use simple fieldName: format (not JSON)
-	for _, item := range completionItems {
+	for _, item := range completionItems.Items {
 		textEdit, ok := item.TextEdit.(lsp.TextEdit)
 		if !ok {
 			continue
@@ -2152,14 +2200,14 @@ resources:
 			URI: "file:///test.jsonc",
 		},
 		Position: lsp.Position{
-			Line:      6, // Line with `"t`
+			Line:      6,  // Line with `"t`
 			Character: 10, // After the "t" (8 spaces + " + t = position 10)
 		},
 	})
 	s.Require().NoError(err)
 
 	// Schema-based completions are disabled for JSONC - should return empty
-	s.Assert().Empty(completionItems, "JSONC resource spec completions should be disabled for v0")
+	s.Assert().Empty(completionItems.Items, "JSONC resource spec completions should be disabled for v0")
 }
 
 // Test_get_completion_items_jsonc_with_only_quote verifies that schema-based
@@ -2207,7 +2255,7 @@ resources:
 	s.Require().NoError(err)
 
 	// Schema-based completions are disabled for JSONC - should return empty
-	s.Assert().Empty(completionItems, "JSONC resource spec completions should be disabled for v0")
+	s.Assert().Empty(completionItems.Items, "JSONC resource spec completions should be disabled for v0")
 }
 
 // Test_get_completion_items_for_link_selector_exclude_yaml tests completion
@@ -2230,7 +2278,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_link_sele
 	s.Require().NoError(err)
 
 	// Should get resource names as completions, excluding saveOrderFunction (the current resource)
-	labels := completionItemLabels(completionItems)
+	labels := completionItemLabels(completionItems.Items)
 	s.Assert().Contains(labels, "cacheTable", "Should include cacheTable as completion")
 	s.Assert().Contains(labels, "ordersTable", "Should include ordersTable as completion")
 	s.Assert().NotContains(labels, "saveOrderFunction", "Should not include the current resource")
@@ -2257,13 +2305,13 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_link_sele
 	s.Require().NoError(err)
 
 	// Should get resource names as completions, excluding saveOrderFunction (the current resource)
-	labels := completionItemLabels(completionItems)
+	labels := completionItemLabels(completionItems.Items)
 	s.Assert().Contains(labels, "cacheTable", "Should include cacheTable as completion")
 	s.Assert().Contains(labels, "ordersTable", "Should include ordersTable as completion")
 	s.Assert().NotContains(labels, "saveOrderFunction", "Should not include the current resource")
 
 	// Verify JSONC formatting - values should include closing quote (opening quote is replaced)
-	for _, item := range completionItems {
+	for _, item := range completionItems.Items {
 		if te, ok := item.TextEdit.(lsp.TextEdit); ok {
 			s.Assert().True(strings.HasSuffix(te.NewText, `"`), "JSONC insert text should end with closing quote")
 			s.Assert().False(strings.HasPrefix(te.NewText, `"`), "JSONC insert text should not have opening quote (it replaces existing)")
@@ -2293,7 +2341,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_link_sele
 	s.Require().NoError(err)
 
 	// Should get resource names as completions, excluding newOrderTable (the current resource)
-	labels := completionItemLabels(completionItems)
+	labels := completionItemLabels(completionItems.Items)
 	s.Assert().Contains(labels, "cacheTable", "Should include cacheTable as completion")
 	s.Assert().Contains(labels, "processOrders", "Should include processOrders as completion")
 	s.Assert().NotContains(labels, "newOrderTable", "Should not include the current resource")
@@ -2318,7 +2366,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_link_sele
 	s.Require().NoError(err)
 
 	// Should get resource names as completions, excluding newOrderTable (the current resource)
-	labels := completionItemLabels(completionItems)
+	labels := completionItemLabels(completionItems.Items)
 	s.Assert().Contains(labels, "cacheTable", "Should include cacheTable as completion")
 	s.Assert().Contains(labels, "processOrders", "Should include processOrders as completion")
 	s.Assert().NotContains(labels, "newOrderTable", "Should not include the current resource")
@@ -2346,7 +2394,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_link_sele
 	s.Require().NoError(err)
 
 	// Should get resource names as completions, excluding orderFunction (the current resource)
-	labels := completionItemLabels(completionItems)
+	labels := completionItemLabels(completionItems.Items)
 	s.Assert().Contains(labels, "newTable", "Should include newTable as completion")
 	s.Assert().NotContains(labels, "orderFunction", "Should not include the current resource")
 	// existingTable is already in the exclude list but completion service doesn't filter already-excluded items

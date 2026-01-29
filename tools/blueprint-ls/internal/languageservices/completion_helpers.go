@@ -195,6 +195,15 @@ func getBracketNotationInsertRange(position *lsp.Position) *lsp.Range {
 	}
 }
 
+// formatMapKeyForBracketInsertion formats a key for insertion after a `[` trigger.
+// Returns `"key"]` or `'key']` based on the enclosing quote context.
+func formatMapKeyForBracketInsertion(key string, quoteType docmodel.QuoteType) string {
+	if quoteType == docmodel.QuoteTypeSingle {
+		return "'" + key + "']"
+	}
+	return `"` + key + `"]`
+}
+
 // mapKeys returns the keys of a map as a slice.
 func mapKeys[V any](m map[string]V) []string {
 	keys := make([]string, 0, len(m))
@@ -230,13 +239,15 @@ func noCompletionsHint(position *lsp.Position, message string) []*lsp.Completion
 
 // completionPrefixInfo holds extracted prefix information for completion filtering.
 type completionPrefixInfo struct {
-	TypedPrefix     string
-	TextBefore      string
-	FilterPrefix    string
-	HasLeadingQuote bool
-	HasLeadingSpace bool
-	PrefixLen       int
-	PrefixLower     string
+	TypedPrefix      string
+	TextBefore       string
+	TextAfter        string
+	FilterPrefix     string
+	HasLeadingQuote  bool
+	HasLeadingSpace  bool
+	HasTrailingQuote bool
+	PrefixLen        int
+	PrefixLower      string
 }
 
 // extractCompletionPrefix extracts and normalizes prefix information from completion context.
@@ -249,6 +260,7 @@ func extractCompletionPrefix(
 	if completionCtx != nil && completionCtx.CursorCtx != nil {
 		info.TypedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 		info.TextBefore = completionCtx.CursorCtx.TextBefore
+		info.TextAfter = completionCtx.CursorCtx.TextAfter
 	}
 
 	info.FilterPrefix, info.HasLeadingQuote = stripLeadingQuote(info.TypedPrefix)
@@ -258,6 +270,11 @@ func extractCompletionPrefix(
 	info.PrefixLen = len(info.TypedPrefix)
 	info.HasLeadingSpace = hasLeadingWhitespace(info.TextBefore, info.PrefixLen)
 	info.PrefixLower = strings.ToLower(info.FilterPrefix)
+
+	// Detect trailing quote for JSONC (user is inside an existing quoted string)
+	if format == docmodel.FormatJSONC && len(info.TextAfter) > 0 && info.TextAfter[0] == '"' {
+		info.HasTrailingQuote = true
+	}
 
 	return info
 }

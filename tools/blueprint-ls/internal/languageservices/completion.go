@@ -1,6 +1,8 @@
 package languageservices
 
 import (
+	"strings"
+
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
@@ -70,15 +72,25 @@ func (s *CompletionService) UpdateRegistries(
 	s.linkRegistry = linkRegistry
 }
 
+// CompletionResult contains the completion items and metadata for the response.
+type CompletionResult struct {
+	Items []*lsp.CompletionItem
+	// IsIncomplete indicates whether the completion list should be marked as incomplete.
+	// When true, the client will re-request completions on each keystroke for server-side filtering.
+	// This is needed for substitution contexts where client-side filtering doesn't work reliably.
+	IsIncomplete bool
+}
+
 // GetCompletionItems returns completion items for a given position in a document.
 // Uses DocumentContext for position resolution with tree-sitter based AST analysis.
+// Returns a CompletionResult with items and metadata (IsIncomplete flag for substitution contexts).
 func (s *CompletionService) GetCompletionItems(
 	ctx *common.LSPContext,
 	docCtx *docmodel.DocumentContext,
 	params *lsp.TextDocumentPositionParams,
-) ([]*lsp.CompletionItem, error) {
+) (*CompletionResult, error) {
 	if docCtx == nil {
-		return []*lsp.CompletionItem{}, nil
+		return &CompletionResult{Items: []*lsp.CompletionItem{}}, nil
 	}
 
 	pos := source.Position{
@@ -90,10 +102,22 @@ func (s *CompletionService) GetCompletionItems(
 	completionCtx := docmodel.DetermineCompletionContext(cursorCtx)
 	blueprint := docCtx.GetEffectiveSchema()
 	if blueprint == nil {
-		return []*lsp.CompletionItem{}, nil
+		return &CompletionResult{Items: []*lsp.CompletionItem{}}, nil
 	}
 
-	return s.getCompletionItemsByContext(ctx, blueprint, &params.Position, completionCtx, cursorCtx, docCtx.Format)
+	items, err := s.getCompletionItemsByContext(ctx, blueprint, &params.Position, completionCtx, cursorCtx, docCtx.Format)
+	if err != nil {
+		return nil, err
+	}
+
+	if completionCtx.Kind.IsSubstitutionContext() {
+		items = adjustSubstitutionCompletionItems(items, cursorCtx, &params.Position)
+	}
+
+	return &CompletionResult{
+		Items:        items,
+		IsIncomplete: false,
+	}, nil
 }
 
 // getCompletionItemsByContext returns completion items based on the detected CompletionContext.
@@ -150,13 +174,15 @@ func (s *CompletionService) getCompletionItemsByContext(
 
 	// Schema/definition field completions (completion_schema.go)
 	case docmodel.CompletionContextResourceSpecField:
-		return s.getResourceSpecFieldCompletionItems(ctx, position, blueprint, completionCtx, format)
+		return s.getResourceSpecFieldCompletionItems(ctx, position, blueprint, completionCtx)
 	case docmodel.CompletionContextResourceSpecFieldValue:
 		return s.getResourceSpecFieldValueCompletionItems(ctx, position, blueprint, completionCtx, format)
 	case docmodel.CompletionContextResourceMetadataField:
 		return s.getResourceMetadataFieldCompletionItems(position, completionCtx)
 	case docmodel.CompletionContextResourceAnnotationKey:
 		return s.getResourceAnnotationKeyCompletionItems(ctx, position, blueprint, completionCtx)
+	case docmodel.CompletionContextResourceLabelKey:
+		return s.getResourceLabelKeyCompletionItems(position, blueprint, completionCtx)
 	case docmodel.CompletionContextResourceAnnotationValue:
 		return s.getResourceAnnotationValueCompletionItems(ctx, position, blueprint, completionCtx, format)
 	case docmodel.CompletionContextResourceDefinitionField:
@@ -171,6 +197,10 @@ func (s *CompletionService) getCompletionItemsByContext(
 		return s.getDataSourceFilterDefinitionFieldCompletionItems(position, completionCtx)
 	case docmodel.CompletionContextDataSourceExportDefinitionField:
 		return s.getDataSourceExportDefinitionFieldCompletionItems(position, completionCtx)
+	case docmodel.CompletionContextDataSourceAnnotationKey:
+		return s.getDataSourceAnnotationKeyCompletionItems(position, blueprint, completionCtx)
+	case docmodel.CompletionContextDataSourceAnnotationValue:
+		return s.getDataSourceAnnotationValueCompletionItems(position)
 	case docmodel.CompletionContextDataSourceMetadataField:
 		return s.getDataSourceMetadataFieldCompletionItems(position, completionCtx)
 	case docmodel.CompletionContextIncludeDefinitionField:
@@ -197,8 +227,12 @@ func (s *CompletionService) getCompletionItemsByContext(
 		return s.getStringSubDataSourcePropCompletionItemsFromContext(position, blueprint, completionCtx)
 	case docmodel.CompletionContextStringSubValueRef:
 		return s.getStringSubValueCompletionItems(position, blueprint)
+	case docmodel.CompletionContextStringSubValueProperty:
+		return s.getStringSubValuePropertyCompletionItems(position, blueprint, cursorCtx)
 	case docmodel.CompletionContextStringSubChildRef:
 		return s.getStringSubChildCompletionItems(position, blueprint)
+	case docmodel.CompletionContextStringSubChildProperty:
+		return s.getStringSubChildPropertyCompletionItems()
 	case docmodel.CompletionContextStringSubElemRef:
 		return []*lsp.CompletionItem{}, nil
 	case docmodel.CompletionContextStringSubPartialPath:
@@ -208,7 +242,112 @@ func (s *CompletionService) getCompletionItemsByContext(
 	case docmodel.CompletionContextStringSub:
 		return s.getStringSubCompletionItems(ctx, position, blueprint)
 
+	// Export field reference completions (completion_exportfield.go)
+	case docmodel.CompletionContextExportFieldTopLevel:
+		return s.getExportFieldTopLevelCompletionItems(position, blueprint, completionCtx, format)
+	case docmodel.CompletionContextExportFieldResourceRef:
+		return s.getExportFieldResourceRefCompletionItems(position, blueprint, completionCtx, format)
+	case docmodel.CompletionContextExportFieldResourceProperty:
+		return s.getExportFieldResourcePropertyCompletionItems(ctx, position, blueprint, completionCtx, format)
+	case docmodel.CompletionContextExportFieldVariableRef:
+		return s.getExportFieldVariableRefCompletionItems(position, blueprint, completionCtx, format)
+	case docmodel.CompletionContextExportFieldValueRef:
+		return s.getExportFieldValueRefCompletionItems(position, blueprint, completionCtx, format)
+	case docmodel.CompletionContextExportFieldValueProperty:
+		return s.getExportFieldValuePropertyCompletionItems(position, blueprint, completionCtx, format)
+	case docmodel.CompletionContextExportFieldChildRef:
+		return s.getExportFieldChildRefCompletionItems(position, blueprint, completionCtx, format)
+	case docmodel.CompletionContextExportFieldChildProperty:
+		return s.getExportFieldChildPropertyCompletionItems(position, blueprint, completionCtx, format)
+	case docmodel.CompletionContextExportFieldDataSourceRef:
+		return s.getExportFieldDataSourceRefCompletionItems(position, blueprint, completionCtx, format)
+	case docmodel.CompletionContextExportFieldDataSourceProperty:
+		return s.getExportFieldDataSourcePropertyCompletionItems(position, blueprint, completionCtx, format)
+
 	default:
 		return []*lsp.CompletionItem{}, nil
 	}
+}
+
+// adjustSubstitutionCompletionItems rewrites substitution completion items to use
+// full-path TextEdit ranges. This enables reliable client-side filtering by anchoring
+// the TextEdit range from right after "${" to the cursor position, with NewText set
+// to the full path and FilterText set to "${" + full path.
+func adjustSubstitutionCompletionItems(
+	items []*lsp.CompletionItem,
+	cursorCtx *docmodel.CursorContext,
+	position *lsp.Position,
+) []*lsp.CompletionItem {
+	if cursorCtx == nil || len(items) == 0 {
+		return items
+	}
+
+	textBefore := cursorCtx.TextBefore
+	subStart := strings.LastIndex(textBefore, "${")
+	if subStart == -1 {
+		return items
+	}
+
+	subText := textBefore[subStart+2:]
+	subStartCol := position.Character - lsp.UInteger(len(subText))
+
+	fullPathRange := &lsp.Range{
+		Start: lsp.Position{Line: position.Line, Character: subStartCol},
+		End:   lsp.Position{Line: position.Line, Character: position.Character},
+	}
+
+	pathPrefix := substitutionPathPrefix(subText)
+
+	for _, item := range items {
+		originalNewText := extractNewText(item.TextEdit)
+		// For bracket notation (e.g., ["key.with.dots"]), strip trailing dot from prefix
+		// to produce correct paths like annotations["key"] instead of annotations.["key"]
+		itemPrefix := pathPrefix
+		if strings.HasPrefix(originalNewText, "[") && strings.HasSuffix(itemPrefix, ".") {
+			itemPrefix = itemPrefix[:len(itemPrefix)-1]
+		}
+		fullPath := itemPrefix + originalNewText
+		filterText := "${" + fullPath
+		item.TextEdit = lsp.TextEdit{
+			NewText: fullPath,
+			Range:   fullPathRange,
+		}
+		item.FilterText = &filterText
+	}
+
+	return items
+}
+
+// extractNewText extracts the NewText from a CompletionItem's TextEdit field.
+// TextEdit is typed as `any` and can be TextEdit or InsertReplaceEdit.
+func extractNewText(textEdit any) string {
+	if te, ok := textEdit.(lsp.TextEdit); ok {
+		return te.NewText
+	}
+	return ""
+}
+
+// substitutionPathPrefix extracts the path prefix from substitution text.
+// If the text ends with . or [, the entire text is the prefix.
+// Otherwise, text up to and including the last . or [ is the prefix.
+func substitutionPathPrefix(subText string) string {
+	if len(subText) == 0 {
+		return ""
+	}
+
+	lastChar := subText[len(subText)-1]
+	if lastChar == '.' || lastChar == '[' {
+		return subText
+	}
+
+	lastDot := strings.LastIndex(subText, ".")
+	lastBracket := strings.LastIndex(subText, "[")
+
+	lastSep := max(lastBracket, lastDot)
+
+	if lastSep >= 0 {
+		return subText[:lastSep+1]
+	}
+
+	return ""
 }

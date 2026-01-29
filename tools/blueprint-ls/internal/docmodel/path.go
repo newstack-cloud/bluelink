@@ -412,6 +412,15 @@ func (p StructuredPath) GetExportName() (string, bool) {
 	return "", false
 }
 
+// IsExportField returns true if path points to an export field value.
+// Pattern: /exports/{name}/field
+func (p StructuredPath) IsExportField() bool {
+	return len(p) == 3 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "exports" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "field"
+}
+
 // IsResourceMetadataAnnotations returns true if path is inside resource metadata annotations.
 // Pattern: /resources/{name}/metadata/annotations or /resources/{name}/metadata/annotations/{key}
 func (p StructuredPath) IsResourceMetadataAnnotations() bool {
@@ -464,6 +473,51 @@ func (p StructuredPath) IsResourceLinkSelectorExclude() bool {
 		p[1].Kind == PathSegmentField &&
 		p[2].Kind == PathSegmentField && p[2].FieldName == "linkSelector" &&
 		p[3].Kind == PathSegmentField && p[3].FieldName == "exclude"
+}
+
+// IsDataSourceMetadataAnnotations returns true if path is inside data source metadata annotations.
+// Pattern: /datasources/{name}/metadata/annotations or deeper
+func (p StructuredPath) IsDataSourceMetadataAnnotations() bool {
+	return len(p) >= 4 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "datasources" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "metadata" &&
+		p[3].Kind == PathSegmentField && p[3].FieldName == "annotations"
+}
+
+// IsDataSourceMetadataAnnotationValue returns true if path is at a data source annotation value position.
+// Pattern: /datasources/{name}/metadata/annotations/{key} (exactly 5 segments)
+func (p StructuredPath) IsDataSourceMetadataAnnotationValue() bool {
+	return len(p) == 5 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "datasources" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "metadata" &&
+		p[3].Kind == PathSegmentField && p[3].FieldName == "annotations" &&
+		p[4].Kind == PathSegmentField
+}
+
+// GetDataSourceAnnotationKey returns the annotation key from a data source annotation value path.
+// Pattern: /datasources/{name}/metadata/annotations/{key}
+func (p StructuredPath) GetDataSourceAnnotationKey() (string, bool) {
+	if len(p) >= 5 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "datasources" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "metadata" &&
+		p[3].Kind == PathSegmentField && p[3].FieldName == "annotations" &&
+		p[4].Kind == PathSegmentField {
+		return p[4].FieldName, true
+	}
+	return "", false
+}
+
+// IsResourceMetadataLabels returns true if path is inside resource metadata labels.
+// Pattern: /resources/{name}/metadata/labels or deeper
+func (p StructuredPath) IsResourceMetadataLabels() bool {
+	return len(p) >= 4 &&
+		p[0].Kind == PathSegmentField && p[0].FieldName == "resources" &&
+		p[1].Kind == PathSegmentField &&
+		p[2].Kind == PathSegmentField && p[2].FieldName == "metadata" &&
+		p[3].Kind == PathSegmentField && p[3].FieldName == "labels"
 }
 
 // String returns the full path as a string.

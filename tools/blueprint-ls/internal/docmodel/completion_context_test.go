@@ -571,7 +571,7 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubResourc
 }
 
 // TestDetermineCompletionContext_StringSubPartialPath tests that typing a partial property
-// name without trailing dot returns no completions.
+// name returns resource property context for prefix-filtered completions.
 func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubPartialPath() {
 	nodeCtx := &CursorContext{
 		StructuralPath:    StructuredPath{},
@@ -579,7 +579,9 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubPartial
 	}
 
 	ctx := DetermineCompletionContext(nodeCtx)
-	s.Assert().Equal(CompletionContextStringSubPartialPath, ctx.Kind)
+	// Partial paths now return ResourceProperty context to enable filtered completions
+	s.Assert().Equal(CompletionContextStringSubResourceProperty, ctx.Kind)
+	s.Assert().Equal("myTable", ctx.ResourceName)
 }
 
 // TestDetermineCompletionContext_StringSubPartialPath_JSONC tests partial path in JSONC.
@@ -590,7 +592,9 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubPartial
 	}
 
 	ctx := DetermineCompletionContext(nodeCtx)
-	s.Assert().Equal(CompletionContextStringSubPartialPath, ctx.Kind)
+	// Partial paths now return ResourceProperty context to enable filtered completions
+	s.Assert().Equal(CompletionContextStringSubResourceProperty, ctx.Kind)
+	s.Assert().Equal("myTable", ctx.ResourceName)
 }
 
 // TestDetermineCompletionContext_StringSubPartialPath_Deeper tests partial path deeper in path.
@@ -601,7 +605,9 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_StringSubPartial
 	}
 
 	ctx := DetermineCompletionContext(nodeCtx)
-	s.Assert().Equal(CompletionContextStringSubPartialPath, ctx.Kind)
+	// Partial paths now return ResourceProperty context to enable filtered completions
+	s.Assert().Equal(CompletionContextStringSubResourceProperty, ctx.Kind)
+	s.Assert().Equal("myTable", ctx.ResourceName)
 }
 
 // TestDetermineCompletionContext_PotentialStandaloneResourceProp_DotNotation tests detection of
@@ -1060,9 +1066,9 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceMetada
 	s.Assert().Equal(CompletionContextDataSourceMetadataField, ctx.Kind)
 }
 
-// TestDetermineCompletionContext_DataSourceMetadataField_Nested tests detection when
-// inside nested metadata like annotations.
-func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceMetadataField_Nested() {
+// TestDetermineCompletionContext_DataSourceAnnotationKey tests detection when
+// inside data source metadata annotations (should suggest annotation keys).
+func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceAnnotationKey() {
 	nodeCtx := &CursorContext{
 		StructuralPath: StructuredPath{
 			{Kind: PathSegmentField, FieldName: "datasources"},
@@ -1074,7 +1080,7 @@ func (s *CompletionContextSuite) TestDetermineCompletionContext_DataSourceMetada
 	}
 
 	ctx := DetermineCompletionContext(nodeCtx)
-	s.Assert().Equal(CompletionContextDataSourceMetadataField, ctx.Kind)
+	s.Assert().Equal(CompletionContextDataSourceAnnotationKey, ctx.Kind)
 }
 
 // TestCompletionContextKind_String_NewDataSourceContexts tests the string representation
@@ -1176,6 +1182,238 @@ func (s *CompletionContextSuite) TestExtractFieldNameFromTextBefore() {
 			s.Assert().Equal(tt.expected, result)
 		})
 	}
+}
+
+// TestDetermineCompletionContext_ExportFieldTopLevel tests that empty export field
+// value triggers top-level namespace completions.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportFieldTopLevel_YAML() {
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "myExport"},
+			{Kind: PathSegmentField, FieldName: "field"},
+		},
+		TextBefore: "    field: ",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldTopLevel, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_ExportFieldTopLevel_JSONC tests export field completion in JSONC.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportFieldTopLevel_JSONC() {
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "myExport"},
+			{Kind: PathSegmentField, FieldName: "field"},
+		},
+		TextBefore: `    "field": `,
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldTopLevel, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_ExportFieldResourceRef tests "resources." prefix.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportFieldResourceRef() {
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "myExport"},
+			{Kind: PathSegmentField, FieldName: "field"},
+		},
+		TextBefore: "    field: resources.",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldResourceRef, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_ExportFieldResourceProperty tests "resources.{name}." prefix.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportFieldResourceProperty() {
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "myExport"},
+			{Kind: PathSegmentField, FieldName: "field"},
+		},
+		TextBefore: "    field: resources.myResource.",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldResourceProperty, ctx.Kind)
+	s.Assert().Equal("myResource", ctx.ResourceName)
+}
+
+// TestDetermineCompletionContext_ExportFieldTopLevel_PartialPrefix tests partial prefixes.
+// When the user types "res" (partial for "resources"), it should return top level context.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportFieldTopLevel_PartialPrefix() {
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "myExport"},
+			{Kind: PathSegmentField, FieldName: "field"},
+		},
+		TextBefore: "    field: res",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldTopLevel, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_ExportFieldResourceProperty_MultiLevel tests multi-level paths.
+// Paths like "resources.myRes.spec." should match resource property context.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportFieldResourceProperty_MultiLevel() {
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "myExport"},
+			{Kind: PathSegmentField, FieldName: "field"},
+		},
+		TextBefore: "    field: resources.myResource.spec.",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldResourceProperty, ctx.Kind)
+	s.Assert().Equal("myResource", ctx.ResourceName)
+}
+
+// TestDetermineCompletionContext_ExportFieldResourceProperty_DeepPath tests deeply nested paths.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportFieldResourceProperty_DeepPath() {
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "myExport"},
+			{Kind: PathSegmentField, FieldName: "field"},
+		},
+		TextBefore: "    field: resources.myFunction.spec.configuration.environment.",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldResourceProperty, ctx.Kind)
+	s.Assert().Equal("myFunction", ctx.ResourceName)
+}
+
+// TestDetermineCompletionContext_ExportFieldChildProperty_MultiLevel tests multi-level child paths.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportFieldChildProperty_MultiLevel() {
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "myExport"},
+			{Kind: PathSegmentField, FieldName: "field"},
+		},
+		TextBefore: "    field: children.coreInfra.exports.",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldChildProperty, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_ExportFieldVariableRef tests "variables." prefix.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportFieldVariableRef() {
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "myExport"},
+			{Kind: PathSegmentField, FieldName: "field"},
+		},
+		TextBefore: "    field: variables.",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldVariableRef, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_ExportFieldValueRef tests "values." prefix.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportFieldValueRef() {
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "myExport"},
+			{Kind: PathSegmentField, FieldName: "field"},
+		},
+		TextBefore: "    field: values.",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldValueRef, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_ExportFieldChildRef tests "children." prefix.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportFieldChildRef() {
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "myExport"},
+			{Kind: PathSegmentField, FieldName: "field"},
+		},
+		TextBefore: "    field: children.",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldChildRef, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_ExportFieldChildProperty tests "children.{name}." prefix.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportFieldChildProperty() {
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "myExport"},
+			{Kind: PathSegmentField, FieldName: "field"},
+		},
+		TextBefore: "    field: children.coreInfra.",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldChildProperty, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_ExportFieldDataSourceRef tests "datasources." prefix.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportFieldDataSourceRef() {
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "myExport"},
+			{Kind: PathSegmentField, FieldName: "field"},
+		},
+		TextBefore: "    field: datasources.",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldDataSourceRef, ctx.Kind)
+}
+
+// TestDetermineCompletionContext_ExportFieldDataSourceProperty tests "datasources.{name}." prefix.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportFieldDataSourceProperty() {
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "myExport"},
+			{Kind: PathSegmentField, FieldName: "field"},
+		},
+		TextBefore: "    field: datasources.network.",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldDataSourceProperty, ctx.Kind)
+	s.Assert().Equal("network", ctx.DataSourceName)
+}
+
+// TestDetermineCompletionContext_ExportFieldTopLevel_FromExportDefinition tests
+// detection when at export definition level with field: pattern.
+func (s *CompletionContextSuite) TestDetermineCompletionContext_ExportFieldTopLevel_FromExportDefinition() {
+	nodeCtx := &CursorContext{
+		StructuralPath: StructuredPath{
+			{Kind: PathSegmentField, FieldName: "exports"},
+			{Kind: PathSegmentField, FieldName: "myExport"},
+		},
+		TextBefore: "    field: ",
+	}
+
+	ctx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldTopLevel, ctx.Kind)
 }
 
 func TestCompletionContextSuite(t *testing.T) {

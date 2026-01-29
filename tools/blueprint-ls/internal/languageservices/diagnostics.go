@@ -1,10 +1,9 @@
 package languageservices
 
 import (
+	"context"
 	"fmt"
-	"os"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
@@ -86,8 +85,6 @@ func (s *DiagnosticsService) ValidateTextDocument(
 			map[string]*core.ScalarValue{},
 		),
 	)
-	s.logger.Info("Blueprint diagnostics: ")
-	spew.Fdump(os.Stderr, validationResult.Diagnostics)
 	diagnostics = append(
 		diagnostics,
 		diagnostichelpers.BlueprintToLSP(
@@ -140,4 +137,56 @@ func diagnosticKey(diag lsp.Diagnostic) string {
 		severity,
 		diag.Message,
 	)
+}
+
+// ValidateTextDocumentBackground validates a document without requiring an LSPContext.
+// This is used for debounced validation where the original request context may be cancelled.
+// It uses cached settings or defaults instead of making RPC calls to the client.
+func (s *DiagnosticsService) ValidateTextDocumentBackground(
+	docURI lsp.URI,
+) ([]lsp.Diagnostic, []*EnhancedDiagnostic, *schema.Blueprint, error) {
+	diagnostics := []lsp.Diagnostic{}
+	enhanced := []*EnhancedDiagnostic{}
+
+	content := s.state.GetDocumentContent(docURI)
+	if content == nil {
+		return diagnostics, enhanced, nil, nil
+	}
+
+	// Check for duplicate keys from the DocumentContext (parsed AST)
+	docCtx := s.state.GetDocumentContext(string(docURI))
+	if docCtx != nil && docCtx.DuplicateKeys != nil {
+		duplicateDiags := DuplicateKeysToDiagnostics(docCtx.DuplicateKeys)
+		diagnostics = append(diagnostics, duplicateDiags...)
+	}
+
+	format := blueprint.DetermineDocFormat(docURI)
+	validationResult, err := s.loader.ValidateString(
+		context.Background(),
+		*content,
+		format,
+		core.NewDefaultParams(
+			map[string]map[string]*core.ScalarValue{},
+			map[string]map[string]*core.ScalarValue{},
+			map[string]*core.ScalarValue{},
+			map[string]*core.ScalarValue{},
+		),
+	)
+	diagnostics = append(
+		diagnostics,
+		diagnostichelpers.BlueprintToLSP(
+			validationResult.Diagnostics,
+		)...,
+	)
+	if err != nil {
+		s.logger.Error(fmt.Sprintf("Error loading blueprint: %v", err))
+		errDiagnostics, errEnhanced := s.diagnosticErrorService.BlueprintErrorToDiagnostics(
+			err,
+			docURI,
+		)
+		diagnostics = append(diagnostics, errDiagnostics...)
+		enhanced = append(enhanced, errEnhanced...)
+	}
+
+	return deduplicateDiagnostics(diagnostics), enhanced, validationResult.Schema, nil
 }

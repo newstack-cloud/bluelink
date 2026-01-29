@@ -2,6 +2,7 @@ package languageservices
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
@@ -55,39 +56,94 @@ func (s *CompletionService) getStringSubResourcePropCompletionItemsFromContext(
 		textBefore = cursorCtx.TextBefore
 	}
 
-	// Try to get resource property from schema element first
-	var resourceProp *substitutions.SubstitutionResourceProperty
-	if cursorCtx != nil && cursorCtx.SchemaElement != nil {
-		resourceProp, _ = cursorCtx.SchemaElement.(*substitutions.SubstitutionResourceProperty)
-	}
+	// Extract partial segment for filtering (text after last . or [)
+	partialPrefix := extractSubstitutionPartialSegment(textBefore)
 
-	// Fallback: parse resource property from text
-	if resourceProp == nil {
-		resourceProp = parseResourcePropertyFromText(textBefore, blueprint)
-	}
+	// Always use text-based parsing for navigation.
+	// SchemaElement may contain stale data after reaching terminal properties.
+	resourceProp := parseResourcePropertyFromTextForNavigation(textBefore, blueprint)
 
 	if resourceProp == nil {
-		return getResourceTopLevelPropCompletionItems(position), nil
-	}
-
-	// Check if directly after the resource name (need top-level props)
-	if strings.HasSuffix(textBefore, fmt.Sprintf(".%s.", resourceProp.ResourceName)) ||
-		strings.HasSuffix(textBefore, fmt.Sprintf("${%s.", resourceProp.ResourceName)) ||
-		strings.HasSuffix(textBefore, fmt.Sprintf("${%s[", resourceProp.ResourceName)) {
 		return getResourceTopLevelPropCompletionItems(position), nil
 	}
 
 	// Check if in spec path
 	if len(resourceProp.Path) >= 1 && resourceProp.Path[0].FieldName == "spec" {
-		return s.getResourceSpecPropCompletionItems(ctx, position, blueprint, resourceProp)
+		return s.getResourceSpecPropCompletionItemsWithPrefix(ctx, position, blueprint, resourceProp, partialPrefix)
 	}
 
 	// Check if in metadata path
 	if len(resourceProp.Path) >= 1 && resourceProp.Path[0].FieldName == "metadata" {
-		return s.getResourceMetadataPropCompletionItemsForPath(position, blueprint, resourceProp, cursorCtx)
+		return s.getResourceMetadataPropCompletionItemsForPath(position, blueprint, resourceProp, cursorCtx, partialPrefix)
 	}
 
-	return []*lsp.CompletionItem{}, nil
+	// If path is empty, we're at the resource level - return top-level props (spec, metadata, state)
+	// This handles both trailing dot (e.g., "${resources.myTable.") and partial prefix (e.g., "${resources.myTable.sp")
+	return getResourceTopLevelPropCompletionItemsWithPrefix(position, partialPrefix), nil
+}
+
+// extractSubstitutionPartialSegment extracts the partial segment being typed from substitution text.
+// Returns the text after the last '.' or '[', or empty if text ends with '.' or '['.
+func extractSubstitutionPartialSegment(textBefore string) string {
+	// Find the substitution start
+	subStart := strings.LastIndex(textBefore, "${")
+	if subStart == -1 {
+		return ""
+	}
+
+	subText := textBefore[subStart+2:]
+
+	// If text ends with . or [, there's no partial segment
+	if strings.HasSuffix(subText, ".") || strings.HasSuffix(subText, "[") {
+		return ""
+	}
+
+	// Find the last . or [ position
+	lastDot := strings.LastIndex(subText, ".")
+	lastBracket := strings.LastIndex(subText, "[")
+
+	// Use whichever is later
+	lastSep := max(lastBracket, lastDot)
+
+	if lastSep >= 0 {
+		return subText[lastSep+1:]
+	}
+
+	return ""
+}
+
+// parseResourcePropertyFromTextForNavigation parses resource property excluding partial segment.
+// This is used for schema navigation where partial segments would fail.
+func parseResourcePropertyFromTextForNavigation(
+	textBefore string,
+	blueprint *schema.Blueprint,
+) *substitutions.SubstitutionResourceProperty {
+	// If text ends with . or [, parse normally
+	if strings.HasSuffix(textBefore, ".") || strings.HasSuffix(textBefore, "[") {
+		return parseResourcePropertyFromText(textBefore, blueprint)
+	}
+
+	// Otherwise, find the last separator and parse up to that point
+	subStart := strings.LastIndex(textBefore, "${")
+	if subStart == -1 {
+		return nil
+	}
+
+	subText := textBefore[subStart+2:]
+
+	// Find last separator
+	lastDot := strings.LastIndex(subText, ".")
+	lastBracket := strings.LastIndex(subText, "[")
+
+	lastSep := max(lastBracket, lastDot)
+
+	if lastSep < 0 {
+		return nil
+	}
+
+	// Parse text up to and including the separator
+	truncatedText := textBefore[:subStart+2+lastSep+1]
+	return parseResourcePropertyFromText(truncatedText, blueprint)
 }
 
 // parseResourcePropertyFromText extracts resource property path from text.
@@ -134,14 +190,14 @@ func parseResourcePath(
 		return nil
 	}
 
-	// Normalize: replace [ with . then split
-	normalized := strings.ReplaceAll(pathText, "[", ".")
-	parts := strings.Split(normalized, ".")
-	if len(parts) == 0 {
+	// Parse path handling bracket notation for array indices
+	// Only bracket notation [0] creates array indices, not dot-notation numerics
+	segments := parseSubstitutionPathSegments(pathText)
+	if len(segments) == 0 {
 		return nil
 	}
 
-	resourceName := strings.Trim(parts[0], "\"'[]")
+	resourceName := segments[0].value
 	if resourceName == "" {
 		return nil
 	}
@@ -151,20 +207,110 @@ func parseResourcePath(
 	}
 
 	var pathItems []*substitutions.SubstitutionPathItem
-	for i := 1; i < len(parts); i++ {
-		fieldName := strings.Trim(parts[i], "\"'[]")
-		if fieldName == "" {
+	for i := 1; i < len(segments); i += 1 {
+		seg := segments[i]
+		if seg.value == "" {
 			continue
 		}
-		pathItems = append(pathItems, &substitutions.SubstitutionPathItem{
-			FieldName: fieldName,
-		})
+		pathItem := &substitutions.SubstitutionPathItem{}
+		if seg.isIndex {
+			idx := seg.indexValue
+			pathItem.ArrayIndex = &idx
+		} else {
+			pathItem.FieldName = seg.value
+		}
+		pathItems = append(pathItems, pathItem)
 	}
 
 	return &substitutions.SubstitutionResourceProperty{
 		ResourceName: resourceName,
 		Path:         pathItems,
 	}
+}
+
+// substitutionPathSegment represents a parsed segment of a substitution path.
+type substitutionPathSegment struct {
+	value      string
+	isIndex    bool
+	indexValue int64
+}
+
+// parseSubstitutionPathSegments parses a substitution path into segments.
+// Only bracket notation [0] creates array indices.
+func parseSubstitutionPathSegments(path string) []substitutionPathSegment {
+	var segments []substitutionPathSegment
+	i := 0
+	n := len(path)
+
+	for i < n {
+		// Skip dots
+		if path[i] == '.' {
+			i += 1
+			continue
+		}
+
+		// Check for bracket notation
+		if path[i] == '[' {
+			seg := parseSubstitutionBracketSegment(path, &i)
+			segments = append(segments, seg)
+			continue
+		}
+
+		// Regular field name - read until dot or bracket
+		start := i
+		for i < n && path[i] != '.' && path[i] != '[' {
+			i += 1
+		}
+		if start < i {
+			fieldName := path[start:i]
+			segments = append(segments, substitutionPathSegment{value: fieldName, isIndex: false})
+		}
+	}
+
+	return segments
+}
+
+// parseSubstitutionBracketSegment parses a bracket notation segment.
+func parseSubstitutionBracketSegment(path string, i *int) substitutionPathSegment {
+	n := len(path)
+	*i += 1 // Skip opening '['
+
+	if *i >= n {
+		return substitutionPathSegment{}
+	}
+
+	// Check for quoted key
+	if path[*i] == '"' || path[*i] == '\'' {
+		quote := path[*i]
+		*i += 1 // Skip opening quote
+		start := *i
+		for *i < n && path[*i] != quote {
+			*i += 1
+		}
+		value := path[start:*i]
+		if *i < n {
+			*i += 1 // Skip closing quote
+		}
+		if *i < n && path[*i] == ']' {
+			*i += 1 // Skip closing ']'
+		}
+		return substitutionPathSegment{value: value, isIndex: false}
+	}
+
+	// Numeric index
+	start := *i
+	for *i < n && path[*i] != ']' {
+		*i += 1
+	}
+	indexStr := path[start:*i]
+	if *i < n {
+		*i += 1 // Skip closing ']'
+	}
+
+	if idx, err := strconv.ParseInt(indexStr, 10, 64); err == nil {
+		return substitutionPathSegment{value: indexStr, isIndex: true, indexValue: idx}
+	}
+	return substitutionPathSegment{value: indexStr, isIndex: false}
 }
 
 // getStringSubDataSourcePropCompletionItemsFromContext adapts data source property completion.
@@ -327,6 +473,92 @@ func (s *CompletionService) getStringSubValueCompletionItems(
 	}
 
 	return valueItems, nil
+}
+
+// getStringSubValuePropertyCompletionItems returns completion items for value property paths.
+// Navigates the Value.Value MappingNode tree to provide field keys or array indices.
+func (s *CompletionService) getStringSubValuePropertyCompletionItems(
+	position *lsp.Position,
+	blueprint *schema.Blueprint,
+	cursorCtx *docmodel.CursorContext,
+) ([]*lsp.CompletionItem, error) {
+	if blueprint.Values == nil || len(blueprint.Values.Values) == 0 {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	textBefore := ""
+	if cursorCtx != nil {
+		textBefore = cursorCtx.TextBefore
+	}
+
+	valueName, pathSegments := parseValuePropertyPath(textBefore)
+	if valueName == "" {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	valueDef := blueprint.Values.Values[valueName]
+	if valueDef == nil || valueDef.Value == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	current := valueDef.Value
+	for _, seg := range pathSegments {
+		if current == nil {
+			return []*lsp.CompletionItem{}, nil
+		}
+		current = navigateMappingNode(current, []string{seg})
+	}
+
+	return mappingNodeCompletionItems(position, current, cursorCtx)
+}
+
+// parseValuePropertyPath extracts the value name and remaining path segments from substitution text.
+// For "${values.myValue.field1.field2.", returns ("myValue", ["field1", "field2"]).
+func parseValuePropertyPath(textBefore string) (string, []string) {
+	subStart := strings.LastIndex(textBefore, "${")
+	if subStart == -1 {
+		return "", nil
+	}
+
+	subText := textBefore[subStart+2:]
+
+	// Strip "values." prefix
+	if !strings.HasPrefix(subText, "values.") {
+		return "", nil
+	}
+	remaining := subText[len("values."):]
+
+	// Split by dots - first segment is value name, rest are path segments
+	parts := strings.Split(remaining, ".")
+	if len(parts) == 0 {
+		return "", nil
+	}
+
+	valueName := parts[0]
+	if valueName == "" {
+		return "", nil
+	}
+
+	// Remaining parts (excluding empty trailing element from trailing dot and partial segment)
+	var pathSegments []string
+	for i := 1; i < len(parts); i += 1 {
+		if parts[i] != "" {
+			// If this is the last part and text doesn't end with ".", it's a partial segment - skip it
+			if i == len(parts)-1 && !strings.HasSuffix(subText, ".") {
+				continue
+			}
+			pathSegments = append(pathSegments, parts[i])
+		}
+	}
+
+	return valueName, pathSegments
+}
+
+// getStringSubChildPropertyCompletionItems returns completion items for child blueprint property paths.
+// Child blueprint exports require resolving the child blueprint, which is not available
+// in the current context. Returns empty for now to prevent falling through to generic suggestions.
+func (s *CompletionService) getStringSubChildPropertyCompletionItems() ([]*lsp.CompletionItem, error) {
+	return []*lsp.CompletionItem{}, nil
 }
 
 func (s *CompletionService) getStringSubChildCompletionItems(
@@ -623,13 +855,15 @@ func (s *CompletionService) getChildCompletionItems(
 	return childItems
 }
 
-// getResourceSpecPropCompletionItems returns completion items for resource spec properties
-// based on the provider's spec definition schema.
-func (s *CompletionService) getResourceSpecPropCompletionItems(
+// getResourceSpecPropCompletionItemsWithPrefix returns completion items with prefix filtering.
+// prefix is the partial segment being typed (e.g., "ar").
+// pathPrefix is the path typed so far (e.g., "resources.myTable.spec.") for building FilterText.
+func (s *CompletionService) getResourceSpecPropCompletionItemsWithPrefix(
 	ctx *common.LSPContext,
 	position *lsp.Position,
 	blueprint *schema.Blueprint,
 	resourceProp *substitutions.SubstitutionResourceProperty,
+	prefix string,
 ) ([]*lsp.CompletionItem, error) {
 	resource := getResource(blueprint, resourceProp.ResourceName)
 	if resource == nil || resource.Type == nil {
@@ -649,32 +883,159 @@ func (s *CompletionService) getResourceSpecPropCompletionItems(
 		return noCompletionsHint(position, fmt.Sprintf("No spec schema for '%s'", resource.Type.Value)), nil
 	}
 
-	// Navigate to the correct schema depth based on path
-	// Path is like: [{spec} {fieldName} ...]
-	currentSchema := specDefOutput.SpecDefinition.Schema
+	currentSchema, isAtArray := navigateSchemaForSubstitution(specDefOutput.SpecDefinition.Schema, resourceProp)
 
-	// Skip the first "spec" element if present
-	pathStart := 0
-	if len(resourceProp.Path) > 0 && resourceProp.Path[0].FieldName == "spec" {
-		pathStart = 1
-	}
-
-	for i := pathStart; i < len(resourceProp.Path); i++ {
-		pathItem := resourceProp.Path[i]
-		if pathItem.FieldName != "" && currentSchema.Attributes != nil {
-			attrSchema, exists := currentSchema.Attributes[pathItem.FieldName]
-			if !exists {
-				return []*lsp.CompletionItem{}, nil
-			}
-			currentSchema = attrSchema
-		}
+	// If at an array, suggest array indices based on the resource spec
+	if isAtArray {
+		return getSubstitutionArrayIndexCompletionItems(position, resource, resourceProp), nil
 	}
 
 	if currentSchema == nil || currentSchema.Attributes == nil {
 		return []*lsp.CompletionItem{}, nil
 	}
 
-	return resourceDefAttributesSchemaCompletionItems(currentSchema.Attributes, position, "Resource spec property"), nil
+	return resourceDefAttributesSchemaCompletionItemsForSubstitution(
+		currentSchema.Attributes, position, "Resource spec property", prefix,
+	), nil
+}
+
+// navigateSchemaForSubstitution navigates to the correct schema level for substitution completions.
+// Returns (schema, isAtArray) where isAtArray is true if we ended at an array and should show index suggestions.
+func navigateSchemaForSubstitution(
+	schema *provider.ResourceDefinitionsSchema,
+	resourceProp *substitutions.SubstitutionResourceProperty,
+) (*provider.ResourceDefinitionsSchema, bool) {
+	if resourceProp == nil || len(resourceProp.Path) == 0 {
+		return schema, false
+	}
+
+	currentSchema := schema
+
+	// Skip "spec" segment if present
+	pathStart := 0
+	if len(resourceProp.Path) > 0 && resourceProp.Path[0].FieldName == "spec" {
+		pathStart = 1
+	}
+
+	for i := pathStart; i < len(resourceProp.Path); i += 1 {
+		pathItem := resourceProp.Path[i]
+
+		// Handle array index navigation
+		if pathItem.ArrayIndex != nil {
+			if currentSchema.Type == provider.ResourceDefinitionsSchemaTypeArray && currentSchema.Items != nil {
+				currentSchema = currentSchema.Items
+				continue
+			}
+			return nil, false
+		}
+
+		if pathItem.FieldName == "" {
+			break
+		}
+
+		// Handle array types - navigate through Items to get element schema
+		if currentSchema.Type == provider.ResourceDefinitionsSchemaTypeArray && currentSchema.Items != nil {
+			currentSchema = currentSchema.Items
+		}
+
+		// Handle map types - navigate through MapValues to get value schema
+		if currentSchema.Type == provider.ResourceDefinitionsSchemaTypeMap && currentSchema.MapValues != nil {
+			currentSchema = currentSchema.MapValues
+		}
+
+		// Now navigate by field name in attributes
+		if currentSchema.Attributes == nil {
+			return nil, false
+		}
+		attrSchema, exists := currentSchema.Attributes[pathItem.FieldName]
+		if !exists {
+			return nil, false
+		}
+		currentSchema = attrSchema
+	}
+
+	// If we ended on an array, report that we should show index completions
+	if currentSchema.Type == provider.ResourceDefinitionsSchemaTypeArray {
+		if currentSchema.Items != nil {
+			return currentSchema.Items, true
+		}
+		return currentSchema, true
+	}
+
+	return currentSchema, false
+}
+
+// getSubstitutionArrayIndexCompletionItems returns array index suggestions for substitutions.
+func getSubstitutionArrayIndexCompletionItems(
+	position *lsp.Position,
+	resource *schema.Resource,
+	resourceProp *substitutions.SubstitutionResourceProperty,
+) []*lsp.CompletionItem {
+	items := []*lsp.CompletionItem{}
+
+	// Try to determine array length from the resource spec
+	arrayLen := getArrayLengthFromResourceProp(resource, resourceProp)
+
+	if arrayLen == 0 {
+		// If we can't determine the length, offer index 0 as a starting point
+		arrayLen = 1
+	}
+
+	fieldKind := lsp.CompletionItemKindValue
+	for i := 0; i < arrayLen; i += 1 {
+		indexStr := fmt.Sprintf("%d", i)
+		detail := fmt.Sprintf("Array index %d", i)
+		items = append(items, &lsp.CompletionItem{
+			Label:  indexStr,
+			Detail: &detail,
+			Kind:   &fieldKind,
+			TextEdit: lsp.TextEdit{
+				NewText: indexStr,
+				Range:   getItemInsertRange(position),
+			},
+			Data: map[string]any{"completionType": "arrayIndex"},
+		})
+	}
+
+	return items
+}
+
+// getArrayLengthFromResourceProp tries to determine array length from resource spec using path.
+func getArrayLengthFromResourceProp(
+	resource *schema.Resource,
+	resourceProp *substitutions.SubstitutionResourceProperty,
+) int {
+	if resource == nil || resource.Spec == nil || resourceProp == nil {
+		return 0
+	}
+
+	// Navigate through the spec to find the array
+	current := resource.Spec
+	for _, pathItem := range resourceProp.Path {
+		if pathItem.FieldName == "spec" {
+			continue
+		}
+		if pathItem.FieldName == "" {
+			continue
+		}
+
+		if current == nil || current.Fields == nil {
+			return 0
+		}
+
+		next, exists := current.Fields[pathItem.FieldName]
+		if !exists {
+			return 0
+		}
+		current = next
+	}
+
+	// At this point, current should be the array node
+	if current != nil && current.Items != nil {
+		return len(current.Items)
+	}
+
+	return 0
 }
 
 func getDataSource(blueprint *schema.Blueprint, dataSourceName string) *schema.DataSource {

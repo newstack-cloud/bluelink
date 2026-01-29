@@ -56,6 +56,52 @@ func (s *DocumentContextSuite) TestNewDocumentContext_JSONC() {
 	s.Require().NoError(err)
 }
 
+// TestGetCursorContext_JSONC_EmptyStringValue tests cursor position inside an empty string value.
+func (s *DocumentContextSuite) TestGetCursorContext_JSONC_EmptyStringValue() {
+	content := `{
+  "exports": {
+    "myExport": {
+      "field": ""
+    }
+  }
+}`
+	// Line 4 (1-indexed): '      "field": ""'
+	// Character positions (0-indexed):
+	//   0-5:  6 spaces
+	//   6:    "
+	//   7-11: field
+	//   12:   "
+	//   13:   :
+	//   14:   space
+	//   15:   " (opening quote of value)
+	//   16:   " (closing quote - the string is empty so quotes are adjacent)
+	// In 1-indexed columns:
+	//   Column 16 = position of opening quote
+	//   Column 17 = position of closing quote / "inside" empty string
+	// Note: For an empty string "", there's no actual content between quotes.
+	// The cursor at column 17 would be at the position of the closing quote.
+
+	ctx := NewDocumentContext("file:///test.jsonc", content, FormatJSONC, nil)
+	s.Require().NotNil(ctx.CurrentAST, "Content should parse")
+
+	// Position cursor at the opening quote position + 1 (would be "inside" for empty string)
+	pos := source.Position{Line: 4, Column: 17}
+	cursorCtx := ctx.GetCursorContext(pos, 2)
+
+	s.Require().NotNil(cursorCtx, "CursorContext should not be nil")
+
+	// Check completion context
+	completionCtx := DetermineCompletionContext(cursorCtx)
+
+	// The path should include the field name
+	s.Assert().True(cursorCtx.StructuralPath.IsExportField(),
+		"Expected IsExportField() to be true for cursor inside empty string, path: %s", cursorCtx.StructuralPath.String())
+
+	// Completion context should be export field top level
+	s.Assert().Equal(CompletionContextExportFieldTopLevel, completionCtx.Kind,
+		"Expected ExportFieldTopLevel context for empty string value")
+}
+
 func (s *DocumentContextSuite) TestUpdateContent() {
 	content1 := `version: 2021-12-18
 resources: {}`

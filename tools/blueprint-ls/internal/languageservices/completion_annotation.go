@@ -461,6 +461,121 @@ func hasMatchingSelector(selector *schema.Resource, candidate *schema.Resource, 
 	return false
 }
 
+// getDataSourceAnnotationKeyCompletionItems returns completion items for annotation keys
+// on data source definitions. Data source annotations are free-form key-value strings
+// without link-based annotation definitions, so we suggest existing keys.
+func (s *CompletionService) getDataSourceAnnotationKeyCompletionItems(
+	position *lsp.Position,
+	blueprint *schema.Blueprint,
+	completionCtx *docmodel.CompletionContext,
+) ([]*lsp.CompletionItem, error) {
+	dataSourceName := completionCtx.DataSourceName
+	if dataSourceName == "" {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	dataSource := getDataSource(blueprint, dataSourceName)
+	if dataSource == nil || dataSource.DataSourceMetadata == nil || dataSource.DataSourceMetadata.Annotations == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	typedPrefix := ""
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
+	}
+
+	prefixLower := strings.ToLower(typedPrefix)
+	prefixLen := len(typedPrefix)
+	fieldKind := lsp.CompletionItemKindField
+	detail := "Annotation key"
+
+	var items []*lsp.CompletionItem
+	for key := range dataSource.DataSourceMetadata.Annotations.Values {
+		if prefixLen > 0 && !strings.HasPrefix(strings.ToLower(key), prefixLower) {
+			continue
+		}
+
+		insertRange := getItemInsertRangeWithPrefix(position, prefixLen)
+		items = append(items, &lsp.CompletionItem{
+			Label:      key,
+			Detail:     &detail,
+			Kind:       &fieldKind,
+			FilterText: &key,
+			TextEdit: lsp.TextEdit{
+				NewText: key + ": ",
+				Range:   insertRange,
+			},
+			Data: map[string]any{"completionType": "annotationKey"},
+		})
+	}
+
+	return items, nil
+}
+
+// getDataSourceAnnotationValueCompletionItems returns empty completions for data source annotation values.
+// Data source annotations are free-form strings without AllowedValues constraints.
+func (s *CompletionService) getDataSourceAnnotationValueCompletionItems(
+	_ *lsp.Position,
+) ([]*lsp.CompletionItem, error) {
+	return []*lsp.CompletionItem{}, nil
+}
+
+// getResourceLabelKeyCompletionItems returns completion items for label keys.
+// Suggests label keys from other resources' linkSelector.byLabel maps that reference
+// the current resource, so the user knows which labels to define for linking.
+func (s *CompletionService) getResourceLabelKeyCompletionItems(
+	position *lsp.Position,
+	blueprint *schema.Blueprint,
+	completionCtx *docmodel.CompletionContext,
+) ([]*lsp.CompletionItem, error) {
+	resourceName := completionCtx.ResourceName
+	if resourceName == "" || blueprint.Resources == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	typedPrefix := ""
+	if completionCtx.CursorCtx != nil {
+		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
+	}
+
+	prefixLower := strings.ToLower(typedPrefix)
+	prefixLen := len(typedPrefix)
+
+	// Collect label keys from other resources' linkSelectors that could match this resource.
+	seen := make(map[string]bool)
+	for otherName, otherResource := range blueprint.Resources.Values {
+		if otherName == resourceName || otherResource.LinkSelector == nil || otherResource.LinkSelector.ByLabel == nil {
+			continue
+		}
+		for key := range otherResource.LinkSelector.ByLabel.Values {
+			seen[key] = true
+		}
+	}
+
+	fieldKind := lsp.CompletionItemKindField
+	detail := "Label key"
+	var items []*lsp.CompletionItem
+	for key := range seen {
+		if prefixLen > 0 && !strings.HasPrefix(strings.ToLower(key), prefixLower) {
+			continue
+		}
+		insertRange := getItemInsertRangeWithPrefix(position, prefixLen)
+		items = append(items, &lsp.CompletionItem{
+			Label:      key,
+			Detail:     &detail,
+			Kind:       &fieldKind,
+			FilterText: &key,
+			TextEdit: lsp.TextEdit{
+				NewText: key + ": ",
+				Range:   insertRange,
+			},
+			Data: map[string]any{"completionType": "labelKey"},
+		})
+	}
+
+	return items, nil
+}
+
 // getResourceAnnotationValueCompletionItems returns completion items for annotation values
 // based on AllowedValues in the LinkAnnotationDefinition.
 func (s *CompletionService) getResourceAnnotationValueCompletionItems(

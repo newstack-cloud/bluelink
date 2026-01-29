@@ -83,8 +83,29 @@ const (
 	CompletionContextStringSubValueRef
 	CompletionContextStringSubChildRef
 	CompletionContextStringSubElemRef
-	CompletionContextStringSubPartialPath           // Typing a partial path (no completions)
-	CompletionContextStringSubPotentialResourceProp // Potential standalone resource property (needs blueprint validation)
+	CompletionContextStringSubChildProperty         // After children.{name}., suggest child exports
+	CompletionContextStringSubValueProperty          // After values.{name}., suggest value fields/indices
+	CompletionContextStringSubPartialPath            // Typing a partial path (no completions)
+	CompletionContextStringSubPotentialResourceProp  // Potential standalone resource property (needs blueprint validation)
+
+	// Data source annotation contexts
+	CompletionContextDataSourceAnnotationKey   // Inside data source metadata.annotations, suggest annotation keys
+	CompletionContextDataSourceAnnotationValue // Value for a data source annotation
+
+	// Resource label key context
+	CompletionContextResourceLabelKey // Inside metadata.labels, suggest label keys from linked resources
+
+	// Export field reference contexts (field property in blueprint exports)
+	CompletionContextExportFieldTopLevel           // Empty field value, suggest namespaces
+	CompletionContextExportFieldResourceRef        // After "resources.", suggest resource names
+	CompletionContextExportFieldResourceProperty   // After "resources.{name}.", suggest spec/metadata/fields
+	CompletionContextExportFieldVariableRef        // After "variables.", suggest variable names
+	CompletionContextExportFieldValueRef           // After "values.", suggest value names
+	CompletionContextExportFieldValueProperty      // After "values.{name}.", suggest value fields/indices
+	CompletionContextExportFieldChildRef           // After "children.", suggest child names
+	CompletionContextExportFieldChildProperty      // After "children.{name}.", suggest exports
+	CompletionContextExportFieldDataSourceRef      // After "datasources.", suggest data source names
+	CompletionContextExportFieldDataSourceProperty // After "datasources.{name}.", suggest exports
 )
 
 var (
@@ -112,11 +133,29 @@ var (
 	// Capture group 1 is just the name (up to first . or [)
 	dataSourcePropertyTextPattern        = regexp.MustCompile(`datasources\.([A-Za-z0-9_-]+)([A-Za-z0-9_-]|"|'|\.|\[|\])*\.$`)
 	dataSourcePropertyBracketTextPattern = regexp.MustCompile(`datasources\.([A-Za-z0-9_-]+)([A-Za-z0-9_-]|"|'|\.|\[|\])*\[$`)
-	valueRefTextPattern                  = regexp.MustCompile(`values\.$`)
-	childRefTextPattern                  = regexp.MustCompile(`children\.$`)
-	elemRefTextPattern                   = regexp.MustCompile(`elem\.$`)
-	subOpenTextPattern                   = regexp.MustCompile(`\${$`)
-	inSubTextPattern                     = regexp.MustCompile(`\${[^\}]*$`)
+	// datasources.{name}.{partial} - typing a partial export name after a data source name
+	dataSourcePropertyPartialTextPattern = regexp.MustCompile(`datasources\.([A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+$`)
+	// values. or values.{name}. or values.{name}.{partial}
+	valueRefTextPattern             = regexp.MustCompile(`values\.$`)
+	valuePropertyTextPattern        = regexp.MustCompile(`values\.([A-Za-z0-9_-]+)\.$`)
+	valuePropertyPartialTextPattern = regexp.MustCompile(`values\.([A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+$`)
+	// children. or children.{name}. or children.{name}.{partial}
+	childRefTextPattern              = regexp.MustCompile(`children\.$`)
+	childPropertyTextPattern         = regexp.MustCompile(`children\.([A-Za-z0-9_-]+)\.$`)
+	childPropertyPartialTextPattern  = regexp.MustCompile(`children\.([A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+$`)
+	// elem. or elem.{partial}
+	elemRefTextPattern        = regexp.MustCompile(`elem\.$`)
+	elemRefPartialTextPattern = regexp.MustCompile(`elem\.[A-Za-z][A-Za-z0-9_-]*$`)
+	subOpenTextPattern = regexp.MustCompile(`\${$`)
+	inSubTextPattern   = regexp.MustCompile(`\${[^\}]*$`)
+
+	// Partial segment patterns - match when typing a name after a namespace separator
+	// e.g., ${resources.ordersT or ${variables.env (no trailing dot)
+	variableRefPartialTextPattern   = regexp.MustCompile(`variables\.[A-Za-z][A-Za-z0-9_-]*$`)
+	resourceRefPartialTextPattern   = regexp.MustCompile(`resources\.[A-Za-z][A-Za-z0-9_-]*$`)
+	dataSourceRefPartialTextPattern = regexp.MustCompile(`datasources\.[A-Za-z][A-Za-z0-9_-]*$`)
+	valueRefPartialTextPattern      = regexp.MustCompile(`values\.[A-Za-z][A-Za-z0-9_-]*$`)
+	childRefPartialTextPattern      = regexp.MustCompile(`children\.[A-Za-z][A-Za-z0-9_-]*$`)
 
 	// Pattern for potential standalone resource property (e.g., ${myResource. or ${myResource[)
 	// Matches: word characters followed by property access (. or [) that's NOT a reserved namespace
@@ -136,6 +175,27 @@ var (
 	// Matches: annotationKey: or "annotationKey": at the end (with optional trailing space)
 	// Captures: group 1 = the quoted annotation key, group 2 = the unquoted annotation key
 	annotationKeyFieldPattern = regexp.MustCompile(`(?:"([A-Za-z][A-Za-z0-9_.\-<>]*)"|([A-Za-z][A-Za-z0-9_.\-<>]*)):\s*$`)
+
+	// Export field reference patterns (no ${} wrapping, used in blueprint exports field property)
+	// These patterns match paths at any depth, capturing the element name for context.
+	// Supports both dot notation (.field) and bracket notation ([0], ["key"], ['key'])
+	// pathSegment matches: .fieldName or [index] or ["key"] or ['key']
+	// Pattern: resources.name followed by any number of path segments, ending with .
+	exportFieldResourcesPattern      = regexp.MustCompile(`resources\.$`)
+	exportFieldResourcePropPattern   = regexp.MustCompile(`resources\.([A-Za-z0-9_-]+)((\.[A-Za-z0-9_-]+)|(\[[0-9]+\])|(\["[^"]*"\])|(\['[^']*'\]))*\.$`)
+	exportFieldVariablesPattern      = regexp.MustCompile(`variables\.$`)
+	exportFieldValuesPattern         = regexp.MustCompile(`values\.$`)
+	exportFieldChildrenPattern       = regexp.MustCompile(`children\.$`)
+	exportFieldChildPropPattern      = regexp.MustCompile(`children\.([A-Za-z0-9_-]+)((\.[A-Za-z0-9_-]+)|(\[[0-9]+\])|(\["[^"]*"\])|(\['[^']*'\]))*\.$`)
+	exportFieldValuePropPattern      = regexp.MustCompile(`values\.([A-Za-z0-9_-]+)((\.[A-Za-z0-9_-]+)|(\[[0-9]+\])|(\["[^"]*"\])|(\['[^']*'\]))*\.$`)
+	exportFieldDatasourcesPattern    = regexp.MustCompile(`datasources\.$`)
+	exportFieldDatasourcePropPattern = regexp.MustCompile(`datasources\.([A-Za-z0-9_-]+)((\.[A-Za-z0-9_-]+)|(\[[0-9]+\])|(\["[^"]*"\])|(\['[^']*'\]))*\.$`)
+
+	// Export field bracket patterns - match paths ending with "[" for array/map access
+	exportFieldResourcePropBracketPattern   = regexp.MustCompile(`resources\.([A-Za-z0-9_-]+)((\.[A-Za-z0-9_-]+)|(\[[0-9]+\])|(\["[^"]*"\])|(\['[^']*'\]))*\[$`)
+	exportFieldValuePropBracketPattern      = regexp.MustCompile(`values\.([A-Za-z0-9_-]+)((\.[A-Za-z0-9_-]+)|(\[[0-9]+\])|(\["[^"]*"\])|(\['[^']*'\]))*\[$`)
+	exportFieldChildPropBracketPattern      = regexp.MustCompile(`children\.([A-Za-z0-9_-]+)((\.[A-Za-z0-9_-]+)|(\[[0-9]+\])|(\["[^"]*"\])|(\['[^']*'\]))*\[$`)
+	exportFieldDatasourcePropBracketPattern = regexp.MustCompile(`datasources\.([A-Za-z0-9_-]+)((\.[A-Za-z0-9_-]+)|(\[[0-9]+\])|(\["[^"]*"\])|(\['[^']*'\]))*\[$`)
 )
 
 // CompletionContext provides rich context for completion suggestions.
@@ -183,6 +243,14 @@ func DetermineCompletionContext(cursorCtx *CursorContext) *CompletionContext {
 		return ctx
 	}
 
+	// Check export field contexts (blueprint exports field property, before substitution check)
+	if result := determineExportFieldContext(cursorCtx); result.kind != CompletionContextUnknown {
+		ctx.Kind = result.kind
+		ctx.ResourceName = result.resourceName
+		ctx.DataSourceName = result.dataSourceName
+		return ctx
+	}
+
 	// Check substitution contexts
 	result := determineSubstitutionContext(cursorCtx)
 	if result.kind != CompletionContextUnknown {
@@ -197,6 +265,7 @@ func DetermineCompletionContext(cursorCtx *CursorContext) *CompletionContext {
 	if result := determineSectionDefinitionContext(cursorCtx); result.kind != CompletionContextUnknown {
 		ctx.Kind = result.kind
 		ctx.ResourceName = result.resourceName
+		ctx.DataSourceName = result.dataSourceName
 		return ctx
 	}
 
@@ -409,8 +478,9 @@ func isAtDocumentRootLevel(cursorCtx *CursorContext) bool {
 }
 
 type sectionDefinitionContextResult struct {
-	kind         CompletionContextKind
-	resourceName string
+	kind           CompletionContextKind
+	resourceName   string
+	dataSourceName string
 }
 
 func determineSectionDefinitionContext(cursorCtx *CursorContext) sectionDefinitionContextResult {
@@ -493,6 +563,19 @@ func determineSectionDefinitionContext(cursorCtx *CursorContext) sectionDefiniti
 		}
 	}
 
+	// Check if we're inside resource metadata labels: /resources/{name}/metadata/labels
+	// Must come before the general IsResourceMetadata() check.
+	if path.IsResourceMetadataLabels() {
+		resourceName, ok := path.GetResourceName()
+		if !ok {
+			return sectionDefinitionContextResult{kind: CompletionContextUnknown}
+		}
+		return sectionDefinitionContextResult{
+			kind:         CompletionContextResourceLabelKey,
+			resourceName: resourceName,
+		}
+	}
+
 	// Check if we're inside a resource metadata path: /resources/{name}/metadata/...
 	if path.IsResourceMetadata() {
 		resourceName, ok := path.GetResourceName()
@@ -547,6 +630,16 @@ func determineSectionDefinitionContext(cursorCtx *CursorContext) sectionDefiniti
 	// This suggests field names from the data source spec as potential export names
 	if path.IsDataSourceExports() && len(path) == 3 {
 		return sectionDefinitionContextResult{kind: CompletionContextDataSourceExportName}
+	}
+
+	// Check data source metadata annotations: /datasources/{name}/metadata/annotations
+	// Must come before the general IsDataSourceMetadata() check.
+	if path.IsDataSourceMetadataAnnotations() {
+		dsName, _ := path.GetDataSourceName()
+		return sectionDefinitionContextResult{
+			kind:           CompletionContextDataSourceAnnotationKey,
+			dataSourceName: dsName,
+		}
 	}
 
 	// Check data source metadata: /datasources/{name}/metadata/...
@@ -635,6 +728,29 @@ func determineValuePositionContext(cursorCtx *CursorContext, path StructuredPath
 		}
 	}
 
+	// Check for data source annotation value: /datasources/{name}/metadata/annotations/{key}
+	if path.IsDataSourceMetadataAnnotationValue() {
+		dsName, _ := path.GetDataSourceName()
+		return sectionDefinitionContextResult{
+			kind:           CompletionContextDataSourceAnnotationValue,
+			dataSourceName: dsName,
+		}
+	}
+
+	// Fallback: If path is at data source annotations level (len == 4) but at value position,
+	// try to extract the annotation key from TextBefore.
+	if path.IsDataSourceMetadataAnnotations() && len(path) == 4 {
+		annotationKey := extractAnnotationKeyFromTextBefore(cursorCtx.TextBefore)
+		if annotationKey != "" {
+			cursorCtx.ExtractedFieldName = annotationKey
+			dsName, _ := path.GetDataSourceName()
+			return sectionDefinitionContextResult{
+				kind:           CompletionContextDataSourceAnnotationValue,
+				dataSourceName: dsName,
+			}
+		}
+	}
+
 	// Check for resource spec field value: /resources/{name}/spec/...
 	// When at value position inside a resource spec, check for AllowedValues
 	if path.IsResourceSpec() && len(path) > 3 {
@@ -695,6 +811,194 @@ func determineValuePositionContext(cursorCtx *CursorContext, path StructuredPath
 	return sectionDefinitionContextResult{kind: CompletionContextUnknown}
 }
 
+// determineExportFieldContext checks if the cursor is in an export field value position
+// and returns the appropriate completion context based on what has been typed.
+func determineExportFieldContext(cursorCtx *CursorContext) substitutionContextResult {
+	if !isInExportFieldPosition(cursorCtx) {
+		return substitutionContextResult{kind: CompletionContextUnknown}
+	}
+
+	fieldValue := extractExportFieldValue(cursorCtx.TextBefore)
+	if fieldValue == "" {
+		return substitutionContextResult{kind: CompletionContextExportFieldTopLevel}
+	}
+
+	// Try to match a specific pattern (paths ending in dot)
+	result := matchExportFieldPattern(fieldValue)
+	if result.kind != CompletionContextUnknown {
+		return result
+	}
+
+	// If no pattern matched and there's no dot in the value, the user is typing
+	// a partial top-level namespace (e.g., "res" for "resources")
+	if !strings.Contains(fieldValue, ".") {
+		return substitutionContextResult{kind: CompletionContextExportFieldTopLevel}
+	}
+
+	// Value contains a dot but doesn't match any pattern - user is mid-typing a segment
+	// Return unknown to avoid showing irrelevant completions
+	return substitutionContextResult{kind: CompletionContextUnknown}
+}
+
+// isInExportFieldPosition checks if cursor is at an export field value position.
+func isInExportFieldPosition(cursorCtx *CursorContext) bool {
+	path := cursorCtx.StructuralPath
+
+	// Check if path explicitly indicates export field position
+	if path.IsExportField() {
+		return true
+	}
+
+	// Check if we're in exports section and text contains field: pattern.
+	// We check for containment (not just ending with) because the user may have typed
+	// part of the field value (e.g., "field: resources.")
+	if path.IsInExports() && containsExportFieldPattern(cursorCtx.TextBefore) {
+		return true
+	}
+
+	// Check for export definition level with field: pattern in text
+	if path.IsExportDefinition() && containsExportFieldPattern(cursorCtx.TextBefore) {
+		return true
+	}
+
+	return false
+}
+
+// containsExportFieldPattern checks if text contains the field: pattern for export fields.
+// This matches either YAML (field:) or JSONC ("field":) syntax.
+func containsExportFieldPattern(text string) bool {
+	return strings.Contains(text, "field:") || strings.Contains(text, "\"field\":")
+}
+
+// extractExportFieldValue extracts the value portion after "field:" from TextBefore.
+func extractExportFieldValue(textBefore string) string {
+	// Try YAML pattern first: field:
+	idx := strings.LastIndex(textBefore, "field:")
+	if idx != -1 {
+		return strings.TrimSpace(textBefore[idx+len("field:"):])
+	}
+
+	// Try JSONC pattern: "field":
+	idx = strings.LastIndex(textBefore, "\"field\":")
+	if idx != -1 {
+		value := strings.TrimSpace(textBefore[idx+len("\"field\":"):])
+		// Remove leading quote if present
+		value = strings.TrimPrefix(value, "\"")
+		return value
+	}
+
+	return ""
+}
+
+// matchExportFieldPattern determines the context kind based on the typed field value.
+// Handles both complete paths ending with "." or "[" and partial segments being typed.
+func matchExportFieldPattern(fieldValue string) substitutionContextResult {
+	// First try matching exact patterns (paths ending with . or [)
+	if result := matchExactExportFieldPattern(fieldValue); result.kind != CompletionContextUnknown {
+		return result
+	}
+
+	// If no exact match and value contains a dot, try matching with a trailing dot appended
+	// This handles partial segment typing (e.g., "resources.myResource.sp" → match as "resources.myResource.sp.")
+	if strings.Contains(fieldValue, ".") && !strings.HasSuffix(fieldValue, ".") {
+		return matchExactExportFieldPattern(fieldValue + ".")
+	}
+
+	return substitutionContextResult{kind: CompletionContextUnknown}
+}
+
+// matchExactExportFieldPattern matches field values ending with "." or "[".
+func matchExactExportFieldPattern(fieldValue string) substitutionContextResult {
+	// Check for bracket patterns first (more specific)
+	if strings.HasSuffix(fieldValue, "[") {
+		return matchExportFieldBracketPattern(fieldValue)
+	}
+
+	// Check for data source property: datasources.{name}.
+	if matches := exportFieldDatasourcePropPattern.FindStringSubmatch(fieldValue); len(matches) >= 2 {
+		return substitutionContextResult{
+			kind:           CompletionContextExportFieldDataSourceProperty,
+			dataSourceName: matches[1],
+		}
+	}
+
+	// Check for data source reference: datasources.
+	if exportFieldDatasourcesPattern.MatchString(fieldValue) {
+		return substitutionContextResult{kind: CompletionContextExportFieldDataSourceRef}
+	}
+
+	// Check for resource property: resources.{name}.
+	if matches := exportFieldResourcePropPattern.FindStringSubmatch(fieldValue); len(matches) >= 2 {
+		return substitutionContextResult{
+			kind:         CompletionContextExportFieldResourceProperty,
+			resourceName: matches[1],
+		}
+	}
+
+	// Check for resource reference: resources.
+	if exportFieldResourcesPattern.MatchString(fieldValue) {
+		return substitutionContextResult{kind: CompletionContextExportFieldResourceRef}
+	}
+
+	// Check for child property: children.{name}.
+	if matches := exportFieldChildPropPattern.FindStringSubmatch(fieldValue); len(matches) >= 2 {
+		return substitutionContextResult{kind: CompletionContextExportFieldChildProperty}
+	}
+
+	// Check for child reference: children.
+	if exportFieldChildrenPattern.MatchString(fieldValue) {
+		return substitutionContextResult{kind: CompletionContextExportFieldChildRef}
+	}
+
+	// Check for value property: values.{name}.
+	if matches := exportFieldValuePropPattern.FindStringSubmatch(fieldValue); len(matches) >= 2 {
+		return substitutionContextResult{kind: CompletionContextExportFieldValueProperty}
+	}
+
+	// Check for variable reference: variables.
+	if exportFieldVariablesPattern.MatchString(fieldValue) {
+		return substitutionContextResult{kind: CompletionContextExportFieldVariableRef}
+	}
+
+	// Check for value reference: values.
+	if exportFieldValuesPattern.MatchString(fieldValue) {
+		return substitutionContextResult{kind: CompletionContextExportFieldValueRef}
+	}
+
+	return substitutionContextResult{kind: CompletionContextUnknown}
+}
+
+// matchExportFieldBracketPattern matches field values ending with "[" for array/map access.
+func matchExportFieldBracketPattern(fieldValue string) substitutionContextResult {
+	// Check for resource property bracket: resources.{name}...[
+	if matches := exportFieldResourcePropBracketPattern.FindStringSubmatch(fieldValue); len(matches) >= 2 {
+		return substitutionContextResult{
+			kind:         CompletionContextExportFieldResourceProperty,
+			resourceName: matches[1],
+		}
+	}
+
+	// Check for value property bracket: values.{name}...[
+	if matches := exportFieldValuePropBracketPattern.FindStringSubmatch(fieldValue); len(matches) >= 2 {
+		return substitutionContextResult{kind: CompletionContextExportFieldValueProperty}
+	}
+
+	// Check for child property bracket: children.{name}...[
+	if matches := exportFieldChildPropBracketPattern.FindStringSubmatch(fieldValue); len(matches) >= 2 {
+		return substitutionContextResult{kind: CompletionContextExportFieldChildProperty}
+	}
+
+	// Check for data source property bracket: datasources.{name}...[
+	if matches := exportFieldDatasourcePropBracketPattern.FindStringSubmatch(fieldValue); len(matches) >= 2 {
+		return substitutionContextResult{
+			kind:           CompletionContextExportFieldDataSourceProperty,
+			dataSourceName: matches[1],
+		}
+	}
+
+	return substitutionContextResult{kind: CompletionContextUnknown}
+}
+
 type substitutionContextResult struct {
 	kind                  CompletionContextKind
 	resourceName          string
@@ -715,8 +1019,11 @@ func determineSubstitutionContext(cursorCtx *CursorContext) substitutionContextR
 		return substitutionContextResult{kind: CompletionContextUnknown}
 	}
 
-	// Check for variable reference: variables.
+	// Check for variable reference: variables. or variables.partialName
 	if variableRefTextPattern.MatchString(textBefore) {
+		return substitutionContextResult{kind: CompletionContextStringSubVariableRef}
+	}
+	if variableRefPartialTextPattern.MatchString(textBefore) {
 		return substitutionContextResult{kind: CompletionContextStringSubVariableRef}
 	}
 
@@ -727,24 +1034,54 @@ func determineSubstitutionContext(cursorCtx *CursorContext) substitutionContextR
 	if matches := dataSourcePropertyBracketTextPattern.FindStringSubmatch(textBefore); len(matches) >= 2 {
 		return substitutionContextResult{kind: CompletionContextStringSubDataSourceProperty, dataSourceName: matches[1]}
 	}
+	// Check for partial data source property: datasources.{name}.{partial}
+	if matches := dataSourcePropertyPartialTextPattern.FindStringSubmatch(textBefore); len(matches) >= 2 {
+		return substitutionContextResult{kind: CompletionContextStringSubDataSourceProperty, dataSourceName: matches[1]}
+	}
 
-	// Check for data source reference: datasources.
+	// Check for data source reference: datasources. or datasources.partialName
 	if dataSourceRefTextPattern.MatchString(textBefore) {
 		return substitutionContextResult{kind: CompletionContextStringSubDataSourceRef}
 	}
+	if dataSourceRefPartialTextPattern.MatchString(textBefore) {
+		return substitutionContextResult{kind: CompletionContextStringSubDataSourceRef}
+	}
 
-	// Check for value reference: values.
+	// Check for value property reference: values.{name}. or values.{name}.{partial}
+	// Must be checked before value ref to avoid false matches on deeper paths.
+	if valuePropertyTextPattern.MatchString(textBefore) ||
+		valuePropertyPartialTextPattern.MatchString(textBefore) {
+		return substitutionContextResult{kind: CompletionContextStringSubValueProperty}
+	}
+
+	// Check for value reference: values. or values.partialName
 	if valueRefTextPattern.MatchString(textBefore) {
 		return substitutionContextResult{kind: CompletionContextStringSubValueRef}
 	}
+	if valueRefPartialTextPattern.MatchString(textBefore) {
+		return substitutionContextResult{kind: CompletionContextStringSubValueRef}
+	}
 
-	// Check for child reference: children.
+	// Check for child property reference: children.{name}. or children.{name}.{partial}
+	// Must be checked before child ref to avoid false matches on deeper paths.
+	if childPropertyTextPattern.MatchString(textBefore) ||
+		childPropertyPartialTextPattern.MatchString(textBefore) {
+		return substitutionContextResult{kind: CompletionContextStringSubChildProperty}
+	}
+
+	// Check for child reference: children. or children.partialName
 	if childRefTextPattern.MatchString(textBefore) {
 		return substitutionContextResult{kind: CompletionContextStringSubChildRef}
 	}
+	if childRefPartialTextPattern.MatchString(textBefore) {
+		return substitutionContextResult{kind: CompletionContextStringSubChildRef}
+	}
 
-	// Check for elem reference: elem.
+	// Check for elem reference: elem. or elem.partialProperty
 	if elemRefTextPattern.MatchString(textBefore) {
+		return substitutionContextResult{kind: CompletionContextStringSubElemRef}
+	}
+	if elemRefPartialTextPattern.MatchString(textBefore) {
 		return substitutionContextResult{kind: CompletionContextStringSubElemRef}
 	}
 
@@ -755,14 +1092,19 @@ func determineSubstitutionContext(cursorCtx *CursorContext) substitutionContextR
 		return substitutionContextResult{kind: CompletionContextStringSubResourceProperty, resourceName: resourceName}
 	}
 
-	// Check for partial resource property path (e.g., "resources.myResource.meta")
-	// This is when the user is typing a property name without trailing dot - no completions.
+	// Check for partial resource property path (e.g., "resources.myResource.sp")
+	// This is when the user is typing a property name without trailing dot.
+	// Return ResourceProperty context and let prefix filtering handle showing matching completions.
 	if resourcePropertyPartialTextPattern.MatchString(textBefore) {
-		return substitutionContextResult{kind: CompletionContextStringSubPartialPath}
+		resourceName := extractResourceNameFromText(textBefore)
+		return substitutionContextResult{kind: CompletionContextStringSubResourceProperty, resourceName: resourceName}
 	}
 
-	// Check for resource reference: resources.
+	// Check for resource reference: resources. or resources.partialName
 	if resourceRefTextPattern.MatchString(textBefore) {
+		return substitutionContextResult{kind: CompletionContextStringSubResourceRef}
+	}
+	if resourceRefPartialTextPattern.MatchString(textBefore) {
 		return substitutionContextResult{kind: CompletionContextStringSubResourceRef}
 	}
 
@@ -886,8 +1228,23 @@ var completionContextKindNames = map[CompletionContextKind]string{
 	CompletionContextStringSubValueRef:               "stringSubValueRef",
 	CompletionContextStringSubChildRef:               "stringSubChildRef",
 	CompletionContextStringSubElemRef:                "stringSubElemRef",
-	CompletionContextStringSubPartialPath:            "stringSubPartialPath",
+	CompletionContextStringSubChildProperty:          "stringSubChildProperty",
+	CompletionContextStringSubValueProperty:          "stringSubValueProperty",
+	CompletionContextStringSubPartialPath:             "stringSubPartialPath",
 	CompletionContextStringSubPotentialResourceProp:  "stringSubPotentialResourceProp",
+	CompletionContextDataSourceAnnotationKey:         "dataSourceAnnotationKey",
+	CompletionContextDataSourceAnnotationValue:       "dataSourceAnnotationValue",
+	CompletionContextResourceLabelKey:                "resourceLabelKey",
+	CompletionContextExportFieldTopLevel:             "exportFieldTopLevel",
+	CompletionContextExportFieldResourceRef:          "exportFieldResourceRef",
+	CompletionContextExportFieldResourceProperty:     "exportFieldResourceProperty",
+	CompletionContextExportFieldVariableRef:          "exportFieldVariableRef",
+	CompletionContextExportFieldValueRef:             "exportFieldValueRef",
+	CompletionContextExportFieldChildRef:             "exportFieldChildRef",
+	CompletionContextExportFieldChildProperty:        "exportFieldChildProperty",
+	CompletionContextExportFieldValueProperty:        "exportFieldValueProperty",
+	CompletionContextExportFieldDataSourceRef:        "exportFieldDataSourceRef",
+	CompletionContextExportFieldDataSourceProperty:   "exportFieldDataSourceProperty",
 }
 
 // String returns a string representation of CompletionContextKind.
@@ -922,7 +1279,9 @@ func (k CompletionContextKind) IsSubstitution() bool {
 		CompletionContextStringSubDataSourceRef,
 		CompletionContextStringSubDataSourceProperty,
 		CompletionContextStringSubValueRef,
+		CompletionContextStringSubValueProperty,
 		CompletionContextStringSubChildRef,
+		CompletionContextStringSubChildProperty,
 		CompletionContextStringSubElemRef:
 		return true
 	}
@@ -957,6 +1316,7 @@ func (k CompletionContextKind) GetCompletionCapability() CompletionCapability {
 	case CompletionContextResourceSpecField,
 		CompletionContextResourceMetadataField,
 		CompletionContextResourceAnnotationKey,
+		CompletionContextResourceLabelKey,
 		CompletionContextResourceDefinitionField,
 		CompletionContextVariableDefinitionField,
 		CompletionContextValueDefinitionField,
@@ -964,6 +1324,7 @@ func (k CompletionContextKind) GetCompletionCapability() CompletionCapability {
 		CompletionContextDataSourceFilterDefinitionField,
 		CompletionContextDataSourceExportDefinitionField,
 		CompletionContextDataSourceMetadataField,
+		CompletionContextDataSourceAnnotationKey,
 		CompletionContextIncludeDefinitionField,
 		CompletionContextExportDefinitionField,
 		CompletionContextLinkSelectorField,
@@ -993,6 +1354,28 @@ func (k CompletionContextKind) IsEnabledForFormat(format DocumentFormat) bool {
 		return true
 	default:
 		return true
+	}
+}
+
+// IsSubstitutionContext returns true if this context is for completions inside ${...} substitutions.
+func (k CompletionContextKind) IsSubstitutionContext() bool {
+	switch k {
+	case CompletionContextStringSub,
+		CompletionContextStringSubVariableRef,
+		CompletionContextStringSubResourceRef,
+		CompletionContextStringSubResourceProperty,
+		CompletionContextStringSubDataSourceRef,
+		CompletionContextStringSubDataSourceProperty,
+		CompletionContextStringSubValueRef,
+		CompletionContextStringSubValueProperty,
+		CompletionContextStringSubChildRef,
+		CompletionContextStringSubChildProperty,
+		CompletionContextStringSubElemRef,
+		CompletionContextStringSubPartialPath,
+		CompletionContextStringSubPotentialResourceProp:
+		return true
+	default:
+		return false
 	}
 }
 

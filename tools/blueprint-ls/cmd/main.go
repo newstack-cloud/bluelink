@@ -153,6 +153,8 @@ func main() {
 		jsonrpc2.AsyncHandler(srv.NewHandler()),
 		stdio,
 	)
+	// Set the connection on the app for sending notifications from debounced callbacks
+	app.SetConnection(conn)
 	srv.Serve(conn, logger)
 }
 

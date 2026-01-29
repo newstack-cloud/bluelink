@@ -108,7 +108,7 @@ func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_for_annotation_
 	)
 	s.Require().NoError(err)
 
-	labels := completionItemLabels(completionItems)
+	labels := completionItemLabels(completionItems.Items)
 	s.Assert().Contains(labels, "aws.lambda.dynamodb.accessType")
 	s.Assert().Contains(labels, "aws.lambda.dynamodb.ordersTable.accessType")
 }
@@ -130,7 +130,7 @@ func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_for_annotation_
 		},
 	)
 	s.Require().NoError(err)
-	s.Assert().Empty(completionItems, "JSONC annotation key completions should be disabled")
+	s.Assert().Empty(completionItems.Items, "JSONC annotation key completions should be disabled")
 }
 
 func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_for_annotation_key_no_links() {
@@ -164,7 +164,7 @@ func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_for_annotation_
 		},
 	)
 	s.Require().NoError(err)
-	s.Assert().Empty(completionItems, "Should return empty when no link registry")
+	s.Assert().Empty(completionItems.Items, "Should return empty when no link registry")
 }
 
 func (s *AnnotationKeyCompletionSuite) Test_expand_annotation_name_with_placeholder() {
@@ -252,7 +252,7 @@ func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_filters_by_appl
 	)
 	s.Require().NoError(err)
 
-	labels := completionItemLabels(completionItems)
+	labels := completionItemLabels(completionItems.Items)
 	// callerFunction is A in the link (it references targetFunction)
 	// So it should get AppliesTo=A annotations and AppliesTo=Any with matching key type
 	s.Assert().Contains(labels, "aws.lambda.caller.timeout", "Should include AppliesTo=A annotation")
@@ -326,7 +326,7 @@ func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_filters_by_appl
 	)
 	s.Require().NoError(err)
 
-	labels := completionItemLabels(completionItems)
+	labels := completionItemLabels(completionItems.Items)
 	// targetFunction is B in the link (it is selected by callerFunction's linkSelector)
 	// So it should get AppliesTo=B annotations and AppliesTo=Any with matching key type
 	s.Assert().Contains(labels, "aws.lambda.callee.maxConcurrency", "Should include AppliesTo=B annotation")
@@ -351,14 +351,14 @@ func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_for_annotation_
 	)
 	s.Require().NoError(err)
 
-	labels := completionItemLabels(completionItems)
-	s.Assert().Len(completionItems, 3, "Should return 3 allowed values")
+	labels := completionItemLabels(completionItems.Items)
+	s.Assert().Len(completionItems.Items, 3, "Should return 3 allowed values")
 	s.Assert().Contains(labels, "read")
 	s.Assert().Contains(labels, "write")
 	s.Assert().Contains(labels, "readwrite")
 
 	// Verify completion item properties
-	for _, item := range completionItems {
+	for _, item := range completionItems.Items {
 		s.Assert().NotNil(item.Kind)
 		s.Assert().Equal(lsp.CompletionItemKindEnumMember, *item.Kind)
 		s.Assert().NotNil(item.Detail)
@@ -385,14 +385,14 @@ func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_for_annotation_
 	)
 	s.Require().NoError(err)
 
-	labels := completionItemLabels(completionItems)
-	s.Assert().Len(completionItems, 3, "Should return 3 allowed values")
+	labels := completionItemLabels(completionItems.Items)
+	s.Assert().Len(completionItems.Items, 3, "Should return 3 allowed values")
 	s.Assert().Contains(labels, "read")
 	s.Assert().Contains(labels, "write")
 	s.Assert().Contains(labels, "readwrite")
 
 	// Verify completion item properties
-	for _, item := range completionItems {
+	for _, item := range completionItems.Items {
 		s.Assert().NotNil(item.Kind)
 		s.Assert().Equal(lsp.CompletionItemKindEnumMember, *item.Kind)
 		s.Assert().NotNil(item.Detail)
@@ -429,7 +429,7 @@ func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_for_annotation_
 		},
 	)
 	s.Require().NoError(err)
-	s.Assert().Empty(completionItems, "Should return empty when annotation has no AllowedValues")
+	s.Assert().Empty(completionItems.Items, "Should return empty when annotation has no AllowedValues")
 }
 
 func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_for_annotation_value_no_link_registry() {
@@ -464,7 +464,7 @@ func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_for_annotation_
 		},
 	)
 	s.Require().NoError(err)
-	s.Assert().Empty(completionItems, "Should return empty when no link registry")
+	s.Assert().Empty(completionItems.Items, "Should return empty when no link registry")
 }
 
 func (s *AnnotationKeyCompletionSuite) Test_find_annotation_definition_by_key_static() {

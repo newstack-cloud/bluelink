@@ -36,8 +36,18 @@ func (a *Application) handleInitialise(ctx *common.LSPContext, params *lsp.Initi
 		TriggerCharacters: []string{"(", ","},
 	}
 	capabilities.CompletionProvider = &lsp.CompletionOptions{
-		TriggerCharacters: []string{"{", ",", "\"", "'", "(", "=", ".", " ", ":", "["},
-		ResolveProvider:   &lsp.True,
+		// Include all letters as trigger characters to ensure the language server
+		// is called for completions inside strings. Without this, VSCode only shows
+		// word-based suggestions inside quoted strings.
+		// See: https://github.com/microsoft/vscode/issues/24464
+		TriggerCharacters: []string{
+			"{", ",", "\"", "'", "(", "=", ".", " ", ":", "[", "-", "_",
+			"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+			"n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
+			"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
+			"N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
+		},
+		ResolveProvider: &lsp.True,
 	}
 	capabilities.CodeActionProvider = &lsp.CodeActionOptions{
 		CodeActionKinds: []lsp.CodeActionKind{
@@ -203,10 +213,13 @@ func (a *Application) handleTextDocumentDidChange(ctx *common.LSPContext, params
 	// Update document context immediately for hover/completion to use fresh content
 	a.updateDocumentContextOnly(params.TextDocument.URI)
 
-	// Debounce diagnostic publishing to reduce error flicker during rapid typing
+	// Debounce diagnostic publishing to reduce error flicker during rapid typing.
+	// Use publishDiagnosticsBackground which doesn't require an LSPContext, since
+	// the original request context will be cancelled by the time the debouncer fires.
 	uri := string(params.TextDocument.URI)
+	docURI := params.TextDocument.URI
 	a.debouncer.Debounce(uri, func() {
-		a.publishDiagnosticsForURI(ctx, params.TextDocument.URI)
+		a.publishDiagnosticsBackground(docURI)
 	})
 
 	return nil
@@ -281,11 +294,17 @@ func (a *Application) updateDocumentContextOnly(uri lsp.URI) {
 	a.state.SetDocumentContext(uri, docCtx)
 }
 
-// publishDiagnosticsForURI validates and publishes diagnostics for a document.
-// This is called by the debouncer after the debounce delay.
-func (a *Application) publishDiagnosticsForURI(ctx *common.LSPContext, uri lsp.URI) {
+// publishDiagnosticsBackground validates and publishes diagnostics without requiring
+// an LSPContext. This is used for debounced validation where the original request
+// context may be cancelled. It uses the stored JSON-RPC connection to send notifications.
+func (a *Application) publishDiagnosticsBackground(uri lsp.URI) {
+	if a.conn == nil {
+		a.logger.Error("cannot publish diagnostics: connection not set")
+		return
+	}
+
 	content := a.GetDocumentContent(uri, true)
-	diagnostics, enhanced, blueprint, err := a.diagnosticService.ValidateTextDocument(ctx, uri)
+	diagnostics, enhanced, blueprint, err := a.diagnosticService.ValidateTextDocumentBackground(uri)
 	if err != nil {
 		a.logger.Error("failed to validate document", zap.String("uri", string(uri)), zap.Error(err))
 		return
@@ -299,11 +318,15 @@ func (a *Application) publishDiagnosticsForURI(ctx *common.LSPContext, uri lsp.U
 
 	a.state.SetEnhancedDiagnostics(uri, enhanced)
 
-	dispatcher := lsp.NewDispatcher(ctx)
-	err = dispatcher.PublishDiagnostics(lsp.PublishDiagnosticsParams{
-		URI:         uri,
-		Diagnostics: diagnostics,
-	})
+	// Send the notification using the stored connection with a background context
+	err = a.conn.Notify(
+		context.Background(),
+		"textDocument/publishDiagnostics",
+		lsp.PublishDiagnosticsParams{
+			URI:         uri,
+			Diagnostics: diagnostics,
+		},
+	)
 	if err != nil {
 		a.logger.Error("failed to publish diagnostics", zap.String("uri", string(uri)), zap.Error(err))
 	}
@@ -416,11 +439,11 @@ func (a *Application) handleCompletion(
 ) (any, error) {
 	docCtx := a.state.GetDocumentContext(params.TextDocument.URI)
 	if docCtx == nil {
-		return []*lsp.CompletionItem{}, nil
+		return &lsp.CompletionList{IsIncomplete: false, Items: []*lsp.CompletionItem{}}, nil
 	}
 
 	if docCtx.GetEffectiveSchema() == nil {
-		return []*lsp.CompletionItem{}, nil
+		return &lsp.CompletionList{IsIncomplete: false, Items: []*lsp.CompletionItem{}}, nil
 	}
 
 	// Sync content in case completion request arrives before didChange is fully processed
@@ -429,7 +452,7 @@ func (a *Application) handleCompletion(
 		docCtx.UpdateContent(*latestContent, docCtx.Version+1)
 	}
 
-	completionItems, err := a.completionService.GetCompletionItems(
+	result, err := a.completionService.GetCompletionItems(
 		ctx,
 		docCtx,
 		&params.TextDocumentPositionParams,
@@ -438,7 +461,13 @@ func (a *Application) handleCompletion(
 		return nil, err
 	}
 
-	return completionItems, nil
+	// Return the completion items.
+	// IsIncomplete from result: true for substitution contexts (server-side filtering),
+	// false for other contexts (client-side filtering with FilterText).
+	return &lsp.CompletionList{
+		IsIncomplete: result.IsIncomplete,
+		Items:        result.Items,
+	}, nil
 }
 
 func (a *Application) handleCompletionItemResolve(
