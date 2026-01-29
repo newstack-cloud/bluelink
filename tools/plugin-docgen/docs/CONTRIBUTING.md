@@ -25,7 +25,7 @@ bash ./scripts/run-tests.sh
 
 ```bash
 go generate ./...
-go build -o plugin-docgen ./cmd/main.go
+go build -o plugin-docgen ./cmd/bluelink-plugin-docgen/main.go
 ```
 
 For releases, you will need to make sure that the generated code includes the new version number in the generated versions.go file.
