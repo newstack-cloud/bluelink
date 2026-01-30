@@ -44,9 +44,10 @@ func (s *CompletionServiceGetItemsSuite) SetupTest() {
 			"len": corefunctions.NewLenFunction(),
 		},
 	}
-	s.service = NewCompletionService(resourceRegistry, dataSourceRegistry, customVarTypeRegistry, functionRegistry, state, logger)
+	s.service = NewCompletionService(resourceRegistry, dataSourceRegistry, customVarTypeRegistry, functionRegistry, nil, state, logger)
 }
 
 func TestCompletionServiceGetItemsSuite(t *testing.T) {
 	suite.Run(t, new(CompletionServiceGetItemsSuite))
 }
+

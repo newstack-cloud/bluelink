@@ -61,11 +61,13 @@ func main() {
 	dataSourceRegistry := provider.NewDataSourceRegistry(providers, core.SystemClock{}, frameworkLogger)
 	customVarTypeRegistry := provider.NewCustomVariableTypeRegistry(providers)
 
+	childResolver := languageservices.NewChildBlueprintResolver(logger)
 	completionService := languageservices.NewCompletionService(
 		resourceRegistry,
 		dataSourceRegistry,
 		customVarTypeRegistry,
 		functionRegistry,
+		childResolver,
 		state,
 		logger,
 	)
@@ -99,6 +101,7 @@ func main() {
 		resourceRegistry,
 		dataSourceRegistry,
 		signatureService,
+		childResolver,
 		logger,
 	)
 	symbolService := languageservices.NewSymbolService(
@@ -132,6 +135,7 @@ func main() {
 		symbolService,
 		gotoDefinitionService,
 		codeActionService,
+		childResolver,
 		providers,
 		transformers,
 		frameworkLogger,

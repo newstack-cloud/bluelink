@@ -21,6 +21,7 @@ type HoverService struct {
 	resourceRegistry   resourcehelpers.Registry
 	dataSourceRegistry provider.DataSourceRegistry
 	signatureService   *SignatureService
+	childResolver      *ChildBlueprintResolver
 	logger             *zap.Logger
 }
 
@@ -30,6 +31,7 @@ func NewHoverService(
 	resourceRegistry resourcehelpers.Registry,
 	dataSourceRegistry provider.DataSourceRegistry,
 	signatureService *SignatureService,
+	childResolver *ChildBlueprintResolver,
 	logger *zap.Logger,
 ) *HoverService {
 	return &HoverService{
@@ -37,6 +39,7 @@ func NewHoverService(
 		resourceRegistry,
 		dataSourceRegistry,
 		signatureService,
+		childResolver,
 		logger,
 	}
 }
@@ -86,26 +89,28 @@ func (s *HoverService) GetHoverContent(
 		return &HoverContent{}, nil
 	}
 
-	return s.getHoverElementContent(ctx, blueprint, collected)
+	return s.getHoverElementContent(ctx, blueprint, collected, docCtx.URI)
 }
 
 func (s *HoverService) getHoverElementContent(
 	ctx *common.LSPContext,
 	blueprint *schema.Blueprint,
 	collected []*schema.TreeNode,
+	docURI string,
 ) (*HoverContent, error) {
 	hoverCtx := docmodel.DetermineHoverContext(collected)
 	if hoverCtx == nil {
 		return &HoverContent{}, nil
 	}
 
-	return s.getHoverContentByKind(ctx, blueprint, hoverCtx)
+	return s.getHoverContentByKind(ctx, blueprint, hoverCtx, docURI)
 }
 
 func (s *HoverService) getHoverContentByKind(
 	ctx *common.LSPContext,
 	blueprint *schema.Blueprint,
 	hoverCtx *docmodel.HoverContext,
+	docURI string,
 ) (*HoverContent, error) {
 	switch hoverCtx.ElementKind {
 	case docmodel.SchemaElementFunctionCall:
@@ -129,7 +134,7 @@ func (s *HoverService) getHoverContentByKind(
 	case docmodel.SchemaElementDataSourceType:
 		return s.getDataSourceTypeHoverContent(ctx, hoverCtx.TreeNode)
 	case docmodel.SchemaElementPathItem:
-		return s.getPathItemHoverContent(ctx, hoverCtx, blueprint)
+		return s.getPathItemHoverContent(ctx, hoverCtx, blueprint, docURI)
 	default:
 		return &HoverContent{}, nil
 	}
@@ -306,6 +311,7 @@ func (s *HoverService) getPathItemHoverContent(
 	ctx *common.LSPContext,
 	hoverCtx *docmodel.HoverContext,
 	blueprint *schema.Blueprint,
+	docURI string,
 ) (*HoverContent, error) {
 	pathItem, isPathItem := hoverCtx.TreeNode.SchemaElement.(*substitutions.SubstitutionPathItem)
 	if !isPathItem {
@@ -323,7 +329,7 @@ func (s *HoverService) getPathItemHoverContent(
 	case *substitutions.SubstitutionValueReference:
 		return getValuePathItemHoverContent(hoverCtx.TreeNode, parent, pathItem, blueprint)
 	case *substitutions.SubstitutionChild:
-		return getChildPathItemHoverContent(hoverCtx.TreeNode, parent, pathItem, blueprint)
+		return s.getChildPathItemHoverContent(hoverCtx.TreeNode, parent, pathItem, blueprint, docURI)
 	case *substitutions.SubstitutionElemReference:
 		return s.getElemPathItemHoverContent(ctx, hoverCtx, parent, blueprint)
 	default:
@@ -428,23 +434,70 @@ func getValuePathItemHoverContent(
 	}, nil
 }
 
-func getChildPathItemHoverContent(
+func (s *HoverService) getChildPathItemHoverContent(
 	node *schema.TreeNode,
 	childRef *substitutions.SubstitutionChild,
 	pathItem *substitutions.SubstitutionPathItem,
 	blueprint *schema.Blueprint,
+	docURI string,
 ) (*HoverContent, error) {
 	child := getChild(blueprint, childRef.ChildName)
 	if child == nil {
 		return &HoverContent{}, nil
 	}
 
-	content := helpinfo.RenderChildPathItemInfo(node.Label, childRef, pathItem)
+	exportInfo := s.resolveChildExportInfo(blueprint, childRef.ChildName, pathItem.FieldName, docURI)
+	if exportInfo != nil {
+		content := helpinfo.RenderChildExportFieldInfo(
+			node.Label,
+			childRef,
+			string(exportInfo.Type),
+			exportInfo.Field,
+			exportInfo.Description,
+		)
+		return &HoverContent{
+			Value: content,
+			Range: rangeToLSPRange(node.Range),
+		}, nil
+	}
 
+	content := helpinfo.RenderChildPathItemInfo(node.Label, childRef, pathItem)
 	return &HoverContent{
 		Value: content,
 		Range: rangeToLSPRange(node.Range),
 	}, nil
+}
+
+func (s *HoverService) resolveChildExportInfo(
+	blueprint *schema.Blueprint,
+	childName string,
+	exportName string,
+	docURI string,
+) *ChildExportInfo {
+	if s.childResolver == nil || childName == "" || exportName == "" {
+		return nil
+	}
+
+	if blueprint.Include == nil {
+		return nil
+	}
+
+	include, ok := blueprint.Include.Values[childName]
+	if !ok || include == nil {
+		return nil
+	}
+
+	childInfo := s.childResolver.ResolveChildExports(docURI, include)
+	if childInfo == nil {
+		return nil
+	}
+
+	exportInfo, ok := childInfo.Exports[exportName]
+	if !ok {
+		return nil
+	}
+
+	return exportInfo
 }
 
 func (s *HoverService) getElemPathItemHoverContent(

@@ -375,6 +375,7 @@ func (s *HandlersSuite) createTestApplication(state *languageservices.State) *Ap
 		dataSourceRegistry,
 		customVarTypeRegistry,
 		functionRegistry,
+		nil, // childResolver
 		state,
 		s.logger,
 	)
@@ -390,6 +391,7 @@ func (s *HandlersSuite) createTestApplication(state *languageservices.State) *Ap
 		resourceRegistry,
 		dataSourceRegistry,
 		signatureService,
+		nil, // childResolver
 		s.logger,
 	)
 	symbolService := languageservices.NewSymbolService(state, s.logger)
@@ -412,6 +414,7 @@ func (s *HandlersSuite) createTestApplication(state *languageservices.State) *Ap
 		symbolService,
 		gotoDefinitionService,
 		codeActionService,
+		nil, // childResolver
 		make(map[string]provider.Provider),
 		make(map[string]transform.SpecTransformer),
 		nil,

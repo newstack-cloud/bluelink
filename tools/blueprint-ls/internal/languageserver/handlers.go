@@ -194,6 +194,10 @@ func (a *Application) handleTextDocumentDidClose(ctx *common.LSPContext, params 
 }
 
 func (a *Application) handleTextDocumentDidSave(ctx *common.LSPContext, params *lsp.DidSaveTextDocumentParams) error {
+	// Invalidate child blueprint cache on save so completions reflect changes.
+	if a.childResolver != nil {
+		a.childResolver.InvalidateByURI(string(params.TextDocument.URI))
+	}
 	// Flush any pending diagnostics immediately on save
 	a.debouncer.Flush(string(params.TextDocument.URI))
 	return nil

@@ -208,6 +208,7 @@ type CompletionContext struct {
 	// Extracted names when applicable
 	ResourceName          string
 	DataSourceName        string
+	ChildName             string
 	PotentialResourceName string // For standalone resource detection (needs blueprint validation)
 
 	// Text analysis results
@@ -248,6 +249,7 @@ func DetermineCompletionContext(cursorCtx *CursorContext) *CompletionContext {
 		ctx.Kind = result.kind
 		ctx.ResourceName = result.resourceName
 		ctx.DataSourceName = result.dataSourceName
+		ctx.ChildName = result.childName
 		return ctx
 	}
 
@@ -257,6 +259,7 @@ func DetermineCompletionContext(cursorCtx *CursorContext) *CompletionContext {
 		ctx.Kind = result.kind
 		ctx.ResourceName = result.resourceName
 		ctx.DataSourceName = result.dataSourceName
+		ctx.ChildName = result.childName
 		ctx.PotentialResourceName = result.potentialResourceName
 		return ctx
 	}
@@ -942,7 +945,7 @@ func matchExactExportFieldPattern(fieldValue string) substitutionContextResult {
 
 	// Check for child property: children.{name}.
 	if matches := exportFieldChildPropPattern.FindStringSubmatch(fieldValue); len(matches) >= 2 {
-		return substitutionContextResult{kind: CompletionContextExportFieldChildProperty}
+		return substitutionContextResult{kind: CompletionContextExportFieldChildProperty, childName: matches[1]}
 	}
 
 	// Check for child reference: children.
@@ -985,7 +988,7 @@ func matchExportFieldBracketPattern(fieldValue string) substitutionContextResult
 
 	// Check for child property bracket: children.{name}...[
 	if matches := exportFieldChildPropBracketPattern.FindStringSubmatch(fieldValue); len(matches) >= 2 {
-		return substitutionContextResult{kind: CompletionContextExportFieldChildProperty}
+		return substitutionContextResult{kind: CompletionContextExportFieldChildProperty, childName: matches[1]}
 	}
 
 	// Check for data source property bracket: datasources.{name}...[
@@ -1003,6 +1006,7 @@ type substitutionContextResult struct {
 	kind                  CompletionContextKind
 	resourceName          string
 	dataSourceName        string
+	childName             string
 	potentialResourceName string
 }
 
@@ -1064,9 +1068,11 @@ func determineSubstitutionContext(cursorCtx *CursorContext) substitutionContextR
 
 	// Check for child property reference: children.{name}. or children.{name}.{partial}
 	// Must be checked before child ref to avoid false matches on deeper paths.
-	if childPropertyTextPattern.MatchString(textBefore) ||
-		childPropertyPartialTextPattern.MatchString(textBefore) {
-		return substitutionContextResult{kind: CompletionContextStringSubChildProperty}
+	if matches := childPropertyTextPattern.FindStringSubmatch(textBefore); len(matches) >= 2 {
+		return substitutionContextResult{kind: CompletionContextStringSubChildProperty, childName: matches[1]}
+	}
+	if matches := childPropertyPartialTextPattern.FindStringSubmatch(textBefore); len(matches) >= 2 {
+		return substitutionContextResult{kind: CompletionContextStringSubChildProperty, childName: matches[1]}
 	}
 
 	// Check for child reference: children. or children.partialName
@@ -1292,6 +1298,24 @@ func (k CompletionContextKind) IsSubstitution() bool {
 func (k CompletionContextKind) IsDataSourceFilter() bool {
 	return k == CompletionContextDataSourceFilterField ||
 		k == CompletionContextDataSourceFilterOperator
+}
+
+// IsExportFieldContext returns true if this context is for an export field reference.
+func (k CompletionContextKind) IsExportFieldContext() bool {
+	switch k {
+	case CompletionContextExportFieldTopLevel,
+		CompletionContextExportFieldResourceRef,
+		CompletionContextExportFieldResourceProperty,
+		CompletionContextExportFieldVariableRef,
+		CompletionContextExportFieldValueRef,
+		CompletionContextExportFieldValueProperty,
+		CompletionContextExportFieldChildRef,
+		CompletionContextExportFieldChildProperty,
+		CompletionContextExportFieldDataSourceRef,
+		CompletionContextExportFieldDataSourceProperty:
+		return true
+	}
+	return false
 }
 
 // CompletionCapability represents the type of completion being provided.

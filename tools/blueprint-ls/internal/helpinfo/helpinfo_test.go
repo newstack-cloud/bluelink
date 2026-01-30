@@ -443,6 +443,54 @@ func (s *HelpInfoSuite) TestRenderChildPathItemInfo_WithArrayIndex() {
 	s.Contains(result, "Array index access on `children.myChild`")
 }
 
+func (s *HelpInfoSuite) TestRenderChildExportFieldInfo_WithAllFields() {
+	childRef := &substitutions.SubstitutionChild{
+		ChildName: "coreInfra",
+	}
+	result := RenderChildExportFieldInfo(
+		"vpcId",
+		childRef,
+		"string",
+		"resources.vpc.state.id",
+		"The VPC identifier for the core infrastructure",
+	)
+	s.Contains(result, "`children.coreInfra.vpcId`")
+	s.Contains(result, "**type:** `string`")
+	s.Contains(result, "**field:** `resources.vpc.state.id`")
+	s.Contains(result, "The VPC identifier for the core infrastructure")
+}
+
+func (s *HelpInfoSuite) TestRenderChildExportFieldInfo_NoFieldOrDescription() {
+	childRef := &substitutions.SubstitutionChild{
+		ChildName: "coreInfra",
+	}
+	result := RenderChildExportFieldInfo(
+		"vpcId",
+		childRef,
+		"string",
+		"",
+		"",
+	)
+	s.Contains(result, "`children.coreInfra.vpcId`")
+	s.Contains(result, "**type:** `string`")
+	s.NotContains(result, "**field:**")
+}
+
+func (s *HelpInfoSuite) TestRenderChildExportFieldInfo_EmptyType() {
+	childRef := &substitutions.SubstitutionChild{
+		ChildName: "coreInfra",
+	}
+	result := RenderChildExportFieldInfo(
+		"vpcId",
+		childRef,
+		"",
+		"",
+		"Some description",
+	)
+	s.Contains(result, "**type:** `unknown`")
+	s.Contains(result, "Some description")
+}
+
 func TestHelpInfoSuite(t *testing.T) {
 	suite.Run(t, new(HelpInfoSuite))
 }

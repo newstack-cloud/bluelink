@@ -40,6 +40,9 @@ type Application struct {
 	// Custom variable type registry (used by completion service)
 	customVarTypeRegistry provider.CustomVariableTypeRegistry
 
+	// Child blueprint resolver for completion cache invalidation
+	childResolver *languageservices.ChildBlueprintResolver
+
 	// Debouncer for diagnostic publishing to reduce error flicker during typing
 	debouncer *DocumentDebouncer
 
@@ -63,6 +66,7 @@ func NewApplication(
 	symbolService *languageservices.SymbolService,
 	gotoDefinitionService *languageservices.GotoDefinitionService,
 	codeActionService *languageservices.CodeActionService,
+	childResolver *languageservices.ChildBlueprintResolver,
 	builtInProviders map[string]provider.Provider,
 	builtInTransformers map[string]transform.SpecTransformer,
 	frameworkLogger core.Logger,
@@ -85,6 +89,7 @@ func NewApplication(
 		symbolService:         symbolService,
 		gotoDefinitionService: gotoDefinitionService,
 		codeActionService:     codeActionService,
+		childResolver:         childResolver,
 		builtInProviders:      builtInProviders,
 		builtInTransformers:   builtInTransformers,
 		frameworkLogger:       frameworkLogger,

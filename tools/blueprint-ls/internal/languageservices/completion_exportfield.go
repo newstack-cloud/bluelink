@@ -1139,18 +1139,44 @@ func getIncludeDescription(include *schema.Include) string {
 	return getStringOrSubstitutionsValue(include.Description)
 }
 
-// getExportFieldChildPropertyCompletionItems returns child blueprint export names.
-// Note: This requires resolved child blueprint exports, which may not be available.
+// getExportFieldChildPropertyCompletionItems returns child blueprint export names
+// for export field references (e.g., field: children.myChild.).
 func (s *CompletionService) getExportFieldChildPropertyCompletionItems(
-	_ *lsp.Position,
-	_ *schema.Blueprint,
-	_ *docmodel.CompletionContext,
-	_ docmodel.DocumentFormat,
+	position *lsp.Position,
+	blueprint *schema.Blueprint,
+	completionCtx *docmodel.CompletionContext,
+	format docmodel.DocumentFormat,
+	docURI string,
 ) ([]*lsp.CompletionItem, error) {
-	// Child blueprint exports would require resolving the child blueprint,
-	// which is not available in the current context. Return empty for now.
-	// This could be enhanced in the future if child blueprint resolution is available.
-	return []*lsp.CompletionItem{}, nil
+	childInfo := s.resolveChildInfo(blueprint, completionCtx.ChildName, docURI)
+	if childInfo == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	prefixInfo := extractExportFieldPrefixInfo(completionCtx, format)
+	items := make([]*lsp.CompletionItem, 0, len(childInfo.Exports))
+	for _, export := range childInfo.Exports {
+		if !filterByPrefix(export.Name, prefixInfo) {
+			continue
+		}
+		detail := "Child export"
+		if export.Type != "" {
+			detail = string(export.Type)
+		}
+		desc := export.Description
+		item := buildExportFieldCompletionItem(
+			export.Name,
+			export.Name,
+			detail,
+			desc,
+			position,
+			format,
+			prefixInfo,
+		)
+		items = append(items, item)
+	}
+
+	return items, nil
 }
 
 // getExportFieldDataSourceRefCompletionItems returns data source names for export field references.

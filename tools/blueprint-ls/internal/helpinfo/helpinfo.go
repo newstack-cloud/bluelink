@@ -398,6 +398,35 @@ func RenderValuePathItemInfo(
 	)
 }
 
+// RenderChildExportFieldInfo renders enriched hover information for a child
+// blueprint exported field, showing the export's type, field path, and description.
+func RenderChildExportFieldInfo(
+	fieldName string,
+	childRef *substitutions.SubstitutionChild,
+	exportType string,
+	exportField string,
+	exportDescription string,
+) string {
+	if exportType == "" {
+		exportType = "unknown"
+	}
+
+	fieldInfo := ""
+	if exportField != "" {
+		fieldInfo = fmt.Sprintf("**field:** `%s`\n\n", exportField)
+	}
+
+	return fmt.Sprintf(
+		"`children.%s.%s`\n\n"+
+			"**type:** `%s`\n\n%s%s",
+		childRef.ChildName,
+		fieldName,
+		exportType,
+		fieldInfo,
+		exportDescription,
+	)
+}
+
 // RenderChildPathItemInfo renders path item information for child references.
 func RenderChildPathItemInfo(
 	fieldName string,

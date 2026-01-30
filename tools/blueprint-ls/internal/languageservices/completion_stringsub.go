@@ -554,11 +554,44 @@ func parseValuePropertyPath(textBefore string) (string, []string) {
 	return valueName, pathSegments
 }
 
-// getStringSubChildPropertyCompletionItems returns completion items for child blueprint property paths.
-// Child blueprint exports require resolving the child blueprint, which is not available
-// in the current context. Returns empty for now to prevent falling through to generic suggestions.
-func (s *CompletionService) getStringSubChildPropertyCompletionItems() ([]*lsp.CompletionItem, error) {
-	return []*lsp.CompletionItem{}, nil
+// getStringSubChildPropertyCompletionItems returns completion items for child blueprint export names.
+// Resolves the child blueprint from the include definition and suggests its exports.
+func (s *CompletionService) getStringSubChildPropertyCompletionItems(
+	position *lsp.Position,
+	blueprint *schema.Blueprint,
+	completionCtx *docmodel.CompletionContext,
+	docURI string,
+) ([]*lsp.CompletionItem, error) {
+	childInfo := s.resolveChildInfo(blueprint, completionCtx.ChildName, docURI)
+	if childInfo == nil {
+		return []*lsp.CompletionItem{}, nil
+	}
+
+	fieldKind := lsp.CompletionItemKindField
+	items := make([]*lsp.CompletionItem, 0, len(childInfo.Exports))
+	for _, export := range childInfo.Exports {
+		detail := "Child export"
+		if export.Type != "" {
+			detail = string(export.Type)
+		}
+
+		insertRange := getItemInsertRange(position)
+		item := &lsp.CompletionItem{
+			Label:  export.Name,
+			Detail: &detail,
+			Kind:   &fieldKind,
+			TextEdit: lsp.TextEdit{
+				NewText: export.Name,
+				Range:   insertRange,
+			},
+		}
+		if export.Description != "" {
+			item.Documentation = export.Description
+		}
+		items = append(items, item)
+	}
+
+	return items, nil
 }
 
 func (s *CompletionService) getStringSubChildCompletionItems(

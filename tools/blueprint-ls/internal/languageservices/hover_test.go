@@ -36,6 +36,7 @@ func (s *HoverServiceSuite) SetupTest() {
 		resourceRegistry,
 		dataSourceRegistry,
 		signatureService,
+		nil, // childResolver
 		logger,
 	)
 	content, err := loadTestBlueprintContent("blueprint-hover.yaml")

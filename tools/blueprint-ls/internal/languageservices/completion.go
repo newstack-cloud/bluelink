@@ -31,6 +31,7 @@ type CompletionService struct {
 	customVarTypeRegistry provider.CustomVariableTypeRegistry
 	functionRegistry      provider.FunctionRegistry
 	linkRegistry          provider.LinkRegistry
+	childResolver         *ChildBlueprintResolver
 	annotationDefCache    *core.Cache[map[string]*provider.LinkAnnotationDefinition]
 	state                 *State
 	logger                *zap.Logger
@@ -42,6 +43,7 @@ func NewCompletionService(
 	dataSourceRegistry provider.DataSourceRegistry,
 	customVarTypeRegistry provider.CustomVariableTypeRegistry,
 	functionRegistry provider.FunctionRegistry,
+	childResolver *ChildBlueprintResolver,
 	state *State,
 	logger *zap.Logger,
 ) *CompletionService {
@@ -50,6 +52,7 @@ func NewCompletionService(
 		dataSourceRegistry:    dataSourceRegistry,
 		customVarTypeRegistry: customVarTypeRegistry,
 		functionRegistry:      functionRegistry,
+		childResolver:         childResolver,
 		annotationDefCache:    core.NewCache[map[string]*provider.LinkAnnotationDefinition](),
 		state:                 state,
 		logger:                logger,
@@ -105,7 +108,7 @@ func (s *CompletionService) GetCompletionItems(
 		return &CompletionResult{Items: []*lsp.CompletionItem{}}, nil
 	}
 
-	items, err := s.getCompletionItemsByContext(ctx, blueprint, &params.Position, completionCtx, cursorCtx, docCtx.Format)
+	items, err := s.getCompletionItemsByContext(ctx, blueprint, &params.Position, completionCtx, cursorCtx, docCtx.Format, docCtx.URI)
 	if err != nil {
 		return nil, err
 	}
@@ -129,6 +132,7 @@ func (s *CompletionService) getCompletionItemsByContext(
 	completionCtx *docmodel.CompletionContext,
 	cursorCtx *docmodel.CursorContext,
 	format docmodel.DocumentFormat,
+	docURI string,
 ) ([]*lsp.CompletionItem, error) {
 	if completionCtx == nil {
 		return []*lsp.CompletionItem{}, nil
@@ -232,7 +236,7 @@ func (s *CompletionService) getCompletionItemsByContext(
 	case docmodel.CompletionContextStringSubChildRef:
 		return s.getStringSubChildCompletionItems(position, blueprint)
 	case docmodel.CompletionContextStringSubChildProperty:
-		return s.getStringSubChildPropertyCompletionItems()
+		return s.getStringSubChildPropertyCompletionItems(position, blueprint, completionCtx, docURI)
 	case docmodel.CompletionContextStringSubElemRef:
 		return []*lsp.CompletionItem{}, nil
 	case docmodel.CompletionContextStringSubPartialPath:
@@ -258,7 +262,7 @@ func (s *CompletionService) getCompletionItemsByContext(
 	case docmodel.CompletionContextExportFieldChildRef:
 		return s.getExportFieldChildRefCompletionItems(position, blueprint, completionCtx, format)
 	case docmodel.CompletionContextExportFieldChildProperty:
-		return s.getExportFieldChildPropertyCompletionItems(position, blueprint, completionCtx, format)
+		return s.getExportFieldChildPropertyCompletionItems(position, blueprint, completionCtx, format, docURI)
 	case docmodel.CompletionContextExportFieldDataSourceRef:
 		return s.getExportFieldDataSourceRefCompletionItems(position, blueprint, completionCtx, format)
 	case docmodel.CompletionContextExportFieldDataSourceProperty:
@@ -325,6 +329,29 @@ func extractNewText(textEdit any) string {
 		return te.NewText
 	}
 	return ""
+}
+
+// resolveChildInfo looks up the include for a child name and resolves its exports
+// via the child blueprint resolver. Returns nil if the resolver is not available,
+// the child name is not found, or the child blueprint cannot be resolved.
+func (s *CompletionService) resolveChildInfo(
+	blueprint *schema.Blueprint,
+	childName string,
+	docURI string,
+) *ChildBlueprintInfo {
+	if s.childResolver == nil || childName == "" {
+		return nil
+	}
+	if blueprint.Include == nil {
+		return nil
+	}
+
+	include, ok := blueprint.Include.Values[childName]
+	if !ok || include == nil {
+		return nil
+	}
+
+	return s.childResolver.ResolveChildExports(docURI, include)
 }
 
 // substitutionPathPrefix extracts the path prefix from substitution text.

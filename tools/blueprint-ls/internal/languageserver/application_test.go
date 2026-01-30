@@ -90,13 +90,13 @@ func (s *ApplicationSuite) createTestApplication() *Application {
 	signatureService := languageservices.NewSignatureService(functionRegistry, s.logger)
 
 	completionService := languageservices.NewCompletionService(
-		resourceRegistry, dataSourceRegistry, customVarTypeRegistry, functionRegistry, state, s.logger,
+		resourceRegistry, dataSourceRegistry, customVarTypeRegistry, functionRegistry, nil, state, s.logger,
 	)
 	diagnosticService := languageservices.NewDiagnosticsService(
 		state, settingsService, diagnosticErrorService, nil, s.logger,
 	)
 	hoverService := languageservices.NewHoverService(
-		functionRegistry, resourceRegistry, dataSourceRegistry, signatureService, s.logger,
+		functionRegistry, resourceRegistry, dataSourceRegistry, signatureService, nil, s.logger,
 	)
 	symbolService := languageservices.NewSymbolService(state, s.logger)
 	gotoDefinitionService := languageservices.NewGotoDefinitionService(state, s.logger)
@@ -110,6 +110,7 @@ func (s *ApplicationSuite) createTestApplication() *Application {
 		nil, // blueprintLoader
 		completionService, diagnosticService, signatureService, hoverService,
 		symbolService, gotoDefinitionService, codeActionService,
+		nil, // childResolver
 		make(map[string]provider.Provider), make(map[string]transform.SpecTransformer),
 		nil, s.logger,
 		debouncer,

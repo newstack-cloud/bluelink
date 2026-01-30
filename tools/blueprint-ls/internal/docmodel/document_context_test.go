@@ -1057,6 +1057,106 @@ func (s *DocumentContextSuite) TestGetCursorContext_JSONC_AnnotationValue_EmptyS
 		"Expected ResourceAnnotationValue context, got: %s", completionCtx.Kind.String())
 }
 
+func (s *DocumentContextSuite) TestGetCursorContext_ExportFieldChildProperty_TrailingDot() {
+	// Reproduces the scenario where user deletes back to "children.coreInfra"
+	// and re-types "." to get "children.coreInfra." — completions should appear.
+	content := `version: 2021-12-18
+exports:
+  childReexport:
+    type: string
+    field: children.coreInfra.`
+
+	ctx := NewDocumentContext("file:///test.yaml", content, FormatYAML, nil)
+
+	// Cursor is right after the trailing dot on "children.coreInfra."
+	// Line 5 (1-indexed), column 31
+	nodeCtx := ctx.GetCursorContext(source.Position{Line: 5, Column: 31}, 2)
+
+	s.Require().NotNil(nodeCtx)
+	s.Require().NotNil(nodeCtx.UnifiedNode,
+		"Expected UnifiedNode to be resolved for position")
+
+	// The structural path should indicate we're at an export field value
+	s.Assert().True(
+		nodeCtx.StructuralPath.IsExportField() ||
+			nodeCtx.StructuralPath.IsInExports() ||
+			nodeCtx.StructuralPath.IsExportDefinition(),
+		"Expected path to be in exports, got: %s", nodeCtx.StructuralPath.String(),
+	)
+
+	// TextBefore should contain "field: children.coreInfra."
+	s.Assert().Contains(nodeCtx.TextBefore, "field:")
+	s.Assert().Contains(nodeCtx.TextBefore, "children.coreInfra.")
+
+	// Verify completion context resolves to export field child property
+	completionCtx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldChildProperty, completionCtx.Kind,
+		"Expected ExportFieldChildProperty context, got: %s", completionCtx.Kind.String())
+	s.Assert().Equal("coreInfra", completionCtx.ChildName,
+		"Expected child name to be 'coreInfra'")
+}
+
+func (s *DocumentContextSuite) TestGetCursorContext_ExportFieldChildProperty_AfterUpdateContent() {
+	// Simulates the exact edit scenario:
+	// 1. Start with "field: children.coreInfra.childFunctionArn"
+	// 2. Delete to "field: children.coreInfra"
+	// 3. Re-type "." to get "field: children.coreInfra."
+	// Verifies that after UpdateContent, the completion context is correct.
+
+	// Step 1: Initial document with full value
+	content1 := `version: 2021-12-18
+exports:
+  childReexport:
+    type: string
+    field: children.coreInfra.childFunctionArn`
+
+	ctx := NewDocumentContext("file:///test.yaml", content1, FormatYAML, nil)
+	s.Assert().NotNil(ctx.CurrentAST)
+
+	// Step 2: Update to deleted value (simulating user deleting ".childFunctionArn")
+	content2 := `version: 2021-12-18
+exports:
+  childReexport:
+    type: string
+    field: children.coreInfra`
+
+	ctx.UpdateContent(content2, 2)
+	s.Assert().NotNil(ctx.CurrentAST)
+
+	// Step 3: Update to re-typed dot (simulating user typing ".")
+	content3 := `version: 2021-12-18
+exports:
+  childReexport:
+    type: string
+    field: children.coreInfra.`
+
+	ctx.UpdateContent(content3, 3)
+	s.Assert().NotNil(ctx.CurrentAST)
+
+	// Check cursor context at the trailing dot position
+	// "    field: children.coreInfra." = 30 chars, cursor at column 31
+	nodeCtx := ctx.GetCursorContext(source.Position{Line: 5, Column: 31}, 2)
+
+	s.Require().NotNil(nodeCtx, "CursorContext should not be nil")
+	s.Require().NotNil(nodeCtx.UnifiedNode,
+		"Expected UnifiedNode to be resolved after UpdateContent")
+
+	// Path should be in exports
+	s.Assert().True(
+		nodeCtx.StructuralPath.IsExportField() ||
+			nodeCtx.StructuralPath.IsInExports() ||
+			nodeCtx.StructuralPath.IsExportDefinition(),
+		"Expected path to be in exports after UpdateContent, got: %s", nodeCtx.StructuralPath.String(),
+	)
+
+	// Verify completion context
+	completionCtx := DetermineCompletionContext(nodeCtx)
+	s.Assert().Equal(CompletionContextExportFieldChildProperty, completionCtx.Kind,
+		"Expected ExportFieldChildProperty context after UpdateContent, got: %s", completionCtx.Kind.String())
+	s.Assert().Equal("coreInfra", completionCtx.ChildName,
+		"Expected child name to be 'coreInfra' after UpdateContent")
+}
+
 func TestDocumentContextSuite(t *testing.T) {
 	suite.Run(t, new(DocumentContextSuite))
 }

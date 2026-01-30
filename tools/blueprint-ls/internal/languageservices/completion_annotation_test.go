@@ -83,6 +83,7 @@ func (s *AnnotationKeyCompletionSuite) SetupTest() {
 		dataSourceRegistry,
 		customVarTypeRegistry,
 		functionRegistry,
+		nil,
 		state,
 		logger,
 	)
@@ -146,6 +147,7 @@ func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_for_annotation_
 		&testutils.DataSourceRegistryMock{},
 		&testutils.CustomVarTypeRegistryMock{},
 		&testutils.FunctionRegistryMock{},
+		nil,
 		state,
 		logger,
 	)
@@ -233,6 +235,7 @@ func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_filters_by_appl
 		&testutils.DataSourceRegistryMock{},
 		&testutils.CustomVarTypeRegistryMock{},
 		&testutils.FunctionRegistryMock{},
+		nil,
 		state,
 		logger,
 	)
@@ -307,6 +310,7 @@ func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_filters_by_appl
 		&testutils.DataSourceRegistryMock{},
 		&testutils.CustomVarTypeRegistryMock{},
 		&testutils.FunctionRegistryMock{},
+		nil,
 		state,
 		logger,
 	)
@@ -446,6 +450,7 @@ func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_for_annotation_
 		&testutils.DataSourceRegistryMock{},
 		&testutils.CustomVarTypeRegistryMock{},
 		&testutils.FunctionRegistryMock{},
+		nil,
 		state,
 		logger,
 	)
