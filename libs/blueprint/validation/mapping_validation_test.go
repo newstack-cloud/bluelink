@@ -102,12 +102,14 @@ func (s *MappingNodeValidationTestSuite) Test_succeeds_without_any_issues_for_a_
 		"metadata.custom",
 		/* usedInResourceDerivedFromTemplate */ false,
 		mappingNode,
-		nil,
-		nil,
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
+		&ValidationContext{
+			BpSchema:           nil,
+			Params:             nil,
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 	)
 
 	c.Assert(err, IsNil)
@@ -123,12 +125,14 @@ func (s *MappingNodeValidationTestSuite) Test_succeeds_with_info_diagnostic_for_
 		"metadata.custom",
 		/* usedInResourceDerivedFromTemplate */ false,
 		mappingNode,
-		nil,
-		nil,
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
+		&ValidationContext{
+			BpSchema:           nil,
+			Params:             nil,
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 	)
 
 	c.Assert(err, IsNil)

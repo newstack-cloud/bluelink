@@ -147,12 +147,14 @@ func (s *ValueValidationTestSuite) Test_passes_validation_for_a_valid_value(c *C
 		context.TODO(),
 		"regions",
 		valueSchema,
-		blueprint,
-		params,
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             params,
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 	)
 	c.Assert(err, IsNil)
 	c.Assert(diagnostics, HasLen, 0)
@@ -215,12 +217,14 @@ func (s *ValueValidationTestSuite) Test_reports_error_for_invalid_sub_in_descrip
 		context.TODO(),
 		"regions",
 		valueSchema,
-		blueprint,
-		params,
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             params,
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -268,12 +272,14 @@ func (s *ValueValidationTestSuite) Test_reports_error_when_value_type_is_missing
 		context.TODO(),
 		"regions",
 		valueSchema,
-		blueprint,
-		params,
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             params,
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -317,12 +323,14 @@ func (s *ValueValidationTestSuite) Test_reports_error_when_unsupported_value_typ
 		context.TODO(),
 		"regions",
 		valueSchema,
-		blueprint,
-		params,
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             params,
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -387,12 +395,14 @@ func (s *ValueValidationTestSuite) Test_reports_error_for_interpolated_string_fo
 		context.TODO(),
 		"regions",
 		valueSchema,
-		blueprint,
-		params,
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             params,
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -441,12 +451,14 @@ func (s *ValueValidationTestSuite) Test_reports_error_when_string_literal_is_pro
 		context.TODO(),
 		"regions",
 		valueSchema,
-		blueprint,
-		params,
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             params,
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -510,12 +522,14 @@ func (s *ValueValidationTestSuite) Test_reports_error_when_sub_that_resolves_to_
 		context.TODO(),
 		"regions",
 		valueSchema,
-		blueprint,
-		params,
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             params,
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -560,12 +574,14 @@ func (s *ValueValidationTestSuite) Test_reports_error_when_static_integer_is_pro
 		context.TODO(),
 		"regions",
 		valueSchema,
-		blueprint,
-		params,
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             params,
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -631,12 +647,14 @@ func (s *ValueValidationTestSuite) Test_reports_error_when_nested_sub_reference_
 		context.TODO(),
 		"regions",
 		valueSchema,
-		blueprint,
-		params,
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             params,
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)

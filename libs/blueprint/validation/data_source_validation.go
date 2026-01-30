@@ -7,8 +7,6 @@ import (
 
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
@@ -36,12 +34,7 @@ func ValidateDataSource(
 	name string,
 	dataSource *schema.DataSource,
 	dataSourceMap *schema.DataSourceMap,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 	logger bpcore.Logger,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
@@ -54,7 +47,7 @@ func ValidateDataSource(
 		name,
 		dataSource.Type,
 		dataSourceMap,
-		dataSourceRegistry,
+		valCtx.DataSourceRegistry,
 	)
 	diagnostics = append(diagnostics, validateTypeDiagnostics...)
 	if validateTypeErr != nil {
@@ -66,12 +59,7 @@ func ValidateDataSource(
 		ctx,
 		name,
 		dataSource.DataSourceMetadata,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, validateMetadataDiagnostics...)
 	if validateMetadataErr != nil {
@@ -84,12 +72,7 @@ func ValidateDataSource(
 		bpcore.DataSourceElementID(name),
 		/* usedInResourceDerivedFromTemplate */ false,
 		dataSource.Description,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, validateDescriptionDiagnostics...)
 	if validateDescErr != nil {
@@ -110,12 +93,7 @@ func ValidateDataSource(
 		dataSource.Type.Value,
 		dataSource.Filter,
 		dataSourceMap,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, validateFilterDiagnostics...)
 	if validateFilterErr != nil {
@@ -127,8 +105,8 @@ func ValidateDataSource(
 		dataSource.Type.Value,
 		name,
 		dataSource.SourceMeta,
-		params,
-		dataSourceRegistry,
+		valCtx.Params,
+		valCtx.DataSourceRegistry,
 	)
 	if specDefErr != nil {
 		errs = append(errs, specDefErr)
@@ -142,13 +120,8 @@ func ValidateDataSource(
 		dataSource.Type.Value,
 		dataSource.Exports,
 		dataSourceMap,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
+		valCtx,
 		specDefinition,
-		dataSourceRegistry,
 	)
 	diagnostics = append(diagnostics, validateExportsDiagnostics...)
 	if validateExportsErr != nil {
@@ -157,14 +130,14 @@ func ValidateDataSource(
 
 	logger.Debug("Running custom validation for data source")
 	providerNamespace := provider.ExtractProviderFromItemType(dataSource.Type.Value)
-	customValidateOutput, err := dataSourceRegistry.CustomValidate(
+	customValidateOutput, err := valCtx.DataSourceRegistry.CustomValidate(
 		ctx,
 		dataSource.Type.Value,
 		&provider.DataSourceValidateInput{
 			SchemaDataSource: dataSource,
 			ProviderContext: provider.NewProviderContextFromParams(
 				providerNamespace,
-				params,
+				valCtx.Params,
 			),
 		},
 	)
@@ -220,12 +193,7 @@ func validateDataSourceMetadata(
 	ctx context.Context,
 	dataSourceName string,
 	metadataSchema *schema.DataSourceMetadata,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 
@@ -239,12 +207,7 @@ func validateDataSourceMetadata(
 		ctx,
 		dataSourceName,
 		metadataSchema,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, displayNameDiagnostics...)
 	if err != nil {
@@ -255,12 +218,7 @@ func validateDataSourceMetadata(
 		ctx,
 		dataSourceName,
 		metadataSchema,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, annotationsDiagnostics...)
 	if err != nil {
@@ -273,12 +231,7 @@ func validateDataSourceMetadata(
 		"metadata.custom",
 		/* usedInResourceDerivedFromTemplate */ false,
 		metadataSchema.Custom,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, customDiagnostics...)
 	if err != nil {
@@ -296,12 +249,7 @@ func validateDataSourceMetadataDisplayName(
 	ctx context.Context,
 	dataSourceName string,
 	metadataSchema *schema.DataSourceMetadata,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	if metadataSchema.DisplayName == nil {
 		return []*bpcore.Diagnostic{}, nil
@@ -316,15 +264,10 @@ func validateDataSourceMetadataDisplayName(
 				ctx,
 				stringOrSub.SubstitutionValue,
 				nil,
-				bpSchema,
+				valCtx,
 				/* usedInResourceDerivedFromTemplate */ false,
 				dataSourceIdentifier,
 				"metadata.displayName",
-				params,
-				funcRegistry,
-				refChainCollector,
-				resourceRegistry,
-				dataSourceRegistry,
 			)
 			if err != nil {
 				errs = append(errs, err)
@@ -352,12 +295,7 @@ func validateDataSourceMetadataAnnotations(
 	ctx context.Context,
 	dataSourceName string,
 	metadataSchema *schema.DataSourceMetadata,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	if metadataSchema.Annotations == nil || metadataSchema.Annotations.Values == nil {
 		return []*bpcore.Diagnostic{}, nil
@@ -379,12 +317,7 @@ func validateDataSourceMetadataAnnotations(
 			ctx,
 			dataSourceIdentifier,
 			annotation,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
+			valCtx,
 		)
 		diagnostics = append(diagnostics, annotationDiagnostics...)
 		if err != nil {
@@ -403,12 +336,7 @@ func validateMetadataAnnotation(
 	ctx context.Context,
 	itemIdentifier string,
 	annotation *substitutions.StringOrSubstitutions,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	if annotation == nil {
 		return []*bpcore.Diagnostic{}, nil
@@ -424,15 +352,10 @@ func validateMetadataAnnotation(
 				ctx,
 				stringOrSub.SubstitutionValue,
 				nil,
-				bpSchema,
+				valCtx,
 				/* usedInResourceDerivedFromTemplate */ false,
 				itemIdentifier,
 				"metadata.annotations",
-				params,
-				funcRegistry,
-				refChainCollector,
-				resourceRegistry,
-				dataSourceRegistry,
 			)
 			if err != nil {
 				errs = append(errs, err)
@@ -501,12 +424,7 @@ func validateDataSourceFilters(
 	dataSourceType string,
 	filters *schema.DataSourceFilters,
 	dataSourceMap *schema.DataSourceMap,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 	if filters == nil || len(filters.Filters) == 0 {
@@ -528,12 +446,7 @@ func validateDataSourceFilters(
 			filter,
 			otherFilterFields,
 			dataSourceMap,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
+			valCtx,
 		)
 		diagnostics = append(diagnostics, filterDiagnostics...)
 		if err != nil {
@@ -571,12 +484,7 @@ func validateDataSourceFilter(
 	filter *schema.DataSourceFilter,
 	otherFilterFields []string,
 	dataSourceMap *schema.DataSourceMap,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 
@@ -605,13 +513,13 @@ func validateDataSourceFilter(
 	}
 
 	providerNamespace := provider.ExtractProviderFromItemType(dataSourceType)
-	filterFieldsOutput, err := dataSourceRegistry.GetFilterFields(
+	filterFieldsOutput, err := valCtx.DataSourceRegistry.GetFilterFields(
 		ctx,
 		dataSourceType,
 		&provider.DataSourceGetFilterFieldsInput{
 			ProviderContext: provider.NewProviderContextFromParams(
 				providerNamespace,
-				params,
+				valCtx.Params,
 			),
 		},
 	)
@@ -662,12 +570,7 @@ func validateDataSourceFilter(
 		ctx,
 		dataSourceName,
 		filter.Search,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, searchValidationDiagnostics...)
 	if searchValidationErr != nil {
@@ -731,12 +634,7 @@ func validateDataSourceFilterSearch(
 	ctx context.Context,
 	dataSourceName string,
 	search *schema.DataSourceFilterSearch,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 
 	dataSourceIdentifier := bpcore.DataSourceElementID(dataSourceName)
@@ -747,12 +645,7 @@ func validateDataSourceFilterSearch(
 			ctx,
 			dataSourceIdentifier,
 			searchValue,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
+			valCtx,
 		)
 		diagnostics = append(diagnostics, searchValueDiagnostics...)
 		if err != nil {
@@ -771,12 +664,7 @@ func validateDataSourceFilterSearchValue(
 	ctx context.Context,
 	dataSourceIdentifier string,
 	searchValue *substitutions.StringOrSubstitutions,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	if searchValue == nil {
 		return []*bpcore.Diagnostic{}, nil
@@ -792,15 +680,10 @@ func validateDataSourceFilterSearchValue(
 				ctx,
 				stringOrSub.SubstitutionValue,
 				nil,
-				bpSchema,
+				valCtx,
 				/* usedInResourceDerivedFromTemplate */ false,
 				dataSourceIdentifier,
 				"filter.search",
-				params,
-				funcRegistry,
-				refChainCollector,
-				resourceRegistry,
-				dataSourceRegistry,
 			)
 			if err != nil {
 				errs = append(errs, err)
@@ -870,13 +753,8 @@ func validateDataSourceExports(
 	dataSourceType string,
 	exports *schema.DataSourceFieldExportMap,
 	dataSourceMap *schema.DataSourceMap,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
+	valCtx *ValidationContext,
 	specDefinition *provider.DataSourceSpecDefinition,
-	dataSourceRegistry provider.DataSourceRegistry,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 	if exports == nil || len(exports.Values) == 0 {
@@ -895,13 +773,8 @@ func validateDataSourceExports(
 			export,
 			exportName,
 			/* wrapperLocation */ exports.SourceMeta[exportName],
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
+			valCtx,
 			specDefinition,
-			dataSourceRegistry,
 		)
 		diagnostics = append(diagnostics, exportDiagnostics...)
 		if err != nil {
@@ -923,13 +796,8 @@ func validateDataSourceExport(
 	export *schema.DataSourceFieldExport,
 	exportName string,
 	wrapperLocation *source.Meta,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
+	valCtx *ValidationContext,
 	specDefinition *provider.DataSourceSpecDefinition,
-	dataSourceRegistry provider.DataSourceRegistry,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 	if export == nil {
@@ -994,12 +862,7 @@ func validateDataSourceExport(
 		),
 		/* usedInResourceDerivedFromTemplate */ false,
 		export.Description,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	if err != nil {
 		return diagnostics, err

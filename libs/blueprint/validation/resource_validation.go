@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
@@ -61,14 +60,9 @@ func ValidateResource(
 	name string,
 	resource *schema.Resource,
 	resourceMap *schema.ResourceMap,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
+	valCtx *ValidationContext,
 	resourceDerivedFromTemplate bool,
 	logger bpcore.Logger,
-	dataSourceRegistry provider.DataSourceRegistry,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 
@@ -79,7 +73,7 @@ func ValidateResource(
 		name,
 		resource.Type,
 		resourceMap,
-		resourceRegistry,
+		valCtx.ResourceRegistry,
 	)
 	diagnostics = append(diagnostics, validateTypeDiagnostics...)
 	if validateTypeErr != nil {
@@ -92,12 +86,7 @@ func ValidateResource(
 		name,
 		resourceDerivedFromTemplate,
 		resource.Metadata,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, validateMetadataDiagnostics...)
 	if validateMetadataErr != nil {
@@ -109,8 +98,8 @@ func ValidateResource(
 		ctx,
 		name,
 		resource.DependsOn,
-		bpSchema,
-		refChainCollector,
+		valCtx.BpSchema,
+		valCtx.RefChainCollector,
 	)
 	diagnostics = append(diagnostics, validateResDepsDiagnostics...)
 	if validateResDepsErr != nil {
@@ -123,12 +112,7 @@ func ValidateResource(
 		name,
 		resourceDerivedFromTemplate,
 		resource.Condition,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 		/* depth */ 0,
 	)
 	diagnostics = append(diagnostics, validateResConditionDiagnostics...)
@@ -142,12 +126,7 @@ func ValidateResource(
 		name,
 		resourceDerivedFromTemplate,
 		resource.Each,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, validateEachDiagnostics...)
 	if validateEachErr != nil {
@@ -158,7 +137,7 @@ func ValidateResource(
 	validateLSDiagnostics, validateLSErr := validateResourceLinkSelector(
 		name,
 		resource.LinkSelector,
-		bpSchema,
+		valCtx.BpSchema,
 	)
 	diagnostics = append(diagnostics, validateLSDiagnostics...)
 	if validateLSErr != nil {
@@ -173,12 +152,7 @@ func ValidateResource(
 			ResourceName:                name,
 			ResourceType:                resource.Type.Value,
 			ResourceDerivedFromTemplate: resourceDerivedFromTemplate,
-			BpSchema:                    bpSchema,
-			Params:                      params,
-			FuncRegistry:                funcRegistry,
-			RefChainCollector:           refChainCollector,
-			ResourceRegistry:            resourceRegistry,
-			DataSourceRegistry:          dataSourceRegistry,
+			ValidationContext:           valCtx,
 		}
 		validateSpecDiagnostics, validateSpecErr := ValidateResourceSpec(
 			ctx,
@@ -198,12 +172,7 @@ func ValidateResource(
 		bpcore.ResourceElementID(name),
 		resourceDerivedFromTemplate,
 		resource.Description,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, validateDescriptionDiagnostics...)
 	if validateDescErr != nil {
@@ -256,12 +225,7 @@ func validateResourceMetadata(
 	resourceName string,
 	resourceDerivedFromTemplate bool,
 	metadataSchema *schema.Metadata,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 
@@ -276,12 +240,7 @@ func validateResourceMetadata(
 		resourceName,
 		resourceDerivedFromTemplate,
 		metadataSchema,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, displayNameDiagnostics...)
 	if err != nil {
@@ -301,12 +260,7 @@ func validateResourceMetadata(
 		ctx,
 		resourceName,
 		metadataSchema,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, annotationsDiagnostics...)
 	if err != nil {
@@ -319,12 +273,7 @@ func validateResourceMetadata(
 		"metadata.custom",
 		resourceDerivedFromTemplate,
 		metadataSchema.Custom,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, customDiagnostics...)
 	if err != nil {
@@ -343,12 +292,7 @@ func validateResourceMetadataDisplayName(
 	resourceName string,
 	resourceDerivedFromTemplate bool,
 	metadataSchema *schema.Metadata,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	if metadataSchema.DisplayName == nil {
 		return []*bpcore.Diagnostic{}, nil
@@ -363,15 +307,10 @@ func validateResourceMetadataDisplayName(
 				ctx,
 				stringOrSub.SubstitutionValue,
 				nil,
-				bpSchema,
+				valCtx,
 				resourceDerivedFromTemplate,
 				resourceIdentifier,
 				"metadata.displayName",
-				params,
-				funcRegistry,
-				refChainCollector,
-				resourceRegistry,
-				dataSourceRegistry,
 			)
 			if err != nil {
 				errs = append(errs, err)
@@ -435,12 +374,7 @@ func validateResourceMetadataAnnotations(
 	ctx context.Context,
 	resourceName string,
 	metadataSchema *schema.Metadata,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	if metadataSchema.Annotations == nil || metadataSchema.Annotations.Values == nil {
 		return []*bpcore.Diagnostic{}, nil
@@ -462,12 +396,7 @@ func validateResourceMetadataAnnotations(
 			ctx,
 			resourceIdentifier,
 			annotation,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
+			valCtx,
 		)
 		diagnostics = append(diagnostics, annotationDiagnostics...)
 		if err != nil {
@@ -547,12 +476,7 @@ func validateResourceCondition(
 	resourceName string,
 	resourceDerivedFromTemplate bool,
 	conditionSchema *schema.Condition,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 	depth int,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
@@ -577,12 +501,7 @@ func validateResourceCondition(
 				resourceName,
 				resourceDerivedFromTemplate,
 				andCondition,
-				bpSchema,
-				params,
-				funcRegistry,
-				refChainCollector,
-				resourceRegistry,
-				dataSourceRegistry,
+				valCtx,
 				depth+1,
 			)
 			diagnostics = append(diagnostics, andDiagnostics...)
@@ -599,12 +518,7 @@ func validateResourceCondition(
 				resourceName,
 				resourceDerivedFromTemplate,
 				orCondition,
-				bpSchema,
-				params,
-				funcRegistry,
-				refChainCollector,
-				resourceRegistry,
-				dataSourceRegistry,
+				valCtx,
 				depth+1,
 			)
 			diagnostics = append(diagnostics, orDiagnostics...)
@@ -624,12 +538,7 @@ func validateResourceCondition(
 			resourceName,
 			resourceDerivedFromTemplate,
 			conditionSchema.Not,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
+			valCtx,
 			depth+1,
 		)
 		diagnostics = append(diagnostics, notDiagnostics...)
@@ -643,12 +552,7 @@ func validateResourceCondition(
 		resourceName,
 		resourceDerivedFromTemplate,
 		conditionSchema.StringValue,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, conditionValDiagnostics...)
 	if err != nil {
@@ -663,12 +567,7 @@ func validateConditionValue(
 	resourceName string,
 	resourceDerivedFromTemplate bool,
 	conditionValue *substitutions.StringOrSubstitutions,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	if conditionValue == nil {
 		return []*bpcore.Diagnostic{}, nil
@@ -698,15 +597,10 @@ func validateConditionValue(
 				ctx,
 				stringOrSub.SubstitutionValue,
 				nil,
-				bpSchema,
+				valCtx,
 				resourceDerivedFromTemplate,
 				resourceIdentifier,
 				"condition",
-				params,
-				funcRegistry,
-				refChainCollector,
-				resourceRegistry,
-				dataSourceRegistry,
 			)
 			if err != nil {
 				errs = append(errs, err)
@@ -776,12 +670,7 @@ func validateResourceEach(
 	resourceName string,
 	resourceDerivedFromTemplate bool,
 	each *substitutions.StringOrSubstitutions,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	// Only validate when a user has provided an empty array as a value
 	// for the each property. A nil slice is a default empty value that
@@ -821,15 +710,10 @@ func validateResourceEach(
 			ctx,
 			stringOrSub.SubstitutionValue,
 			nil,
-			bpSchema,
+			valCtx,
 			resourceDerivedFromTemplate,
 			resourceIdentifier,
 			"each",
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 		)
 		if err != nil {
 			return diagnostics, err

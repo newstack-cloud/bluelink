@@ -5,10 +5,6 @@ import (
 	"fmt"
 
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 )
@@ -25,12 +21,7 @@ func ValidateMappingNode(
 	attributePath string,
 	usedInResourceDerivedFromTemplate bool,
 	mappingNode *bpcore.MappingNode,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	if mappingNode == nil || mappingNodeNotSet(mappingNode) {
 		return nil, nil
@@ -44,12 +35,7 @@ func ValidateMappingNode(
 		mappingNode,
 		mappingNode.SourceMeta,
 		/* depth */ 0,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 }
 
@@ -61,12 +47,7 @@ func validateMappingNode(
 	mappingNode *bpcore.MappingNode,
 	wrapperLocation *source.Meta,
 	depth int,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 
@@ -99,12 +80,7 @@ func validateMappingNode(
 			attributePath,
 			usedInResourceDerivedFromTemplate,
 			mappingNode.StringWithSubstitutions,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
+			valCtx,
 		)
 	}
 
@@ -117,12 +93,7 @@ func validateMappingNode(
 			mappingNode.Fields,
 			mappingNode.FieldsSourceMeta,
 			depth,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
+			valCtx,
 		)
 	}
 
@@ -134,12 +105,7 @@ func validateMappingNode(
 			usedInResourceDerivedFromTemplate,
 			mappingNode.Items,
 			depth,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
+			valCtx,
 		)
 	}
 
@@ -154,12 +120,7 @@ func validateMappingNodeFields(
 	mappingNodeFields map[string]*bpcore.MappingNode,
 	mappingNodeFieldsSourceMeta map[string]*source.Meta,
 	depth int,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 	var errs []error
@@ -176,12 +137,7 @@ func validateMappingNodeFields(
 			field,
 			wrapperLocation,
 			depth+1,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
+			valCtx,
 		)
 		if err != nil {
 			errs = append(errs, err)
@@ -203,12 +159,7 @@ func validateMappingNodeItems(
 	usedInResourceDerivedFromTemplate bool,
 	mappingNodeItems []*bpcore.MappingNode,
 	depth int,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 	var errs []error
@@ -221,12 +172,7 @@ func validateMappingNodeItems(
 			item,
 			/* wrapperLocation */ item.SourceMeta,
 			depth+1,
-			bpSchema,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
+			valCtx,
 		)
 		if err != nil {
 			errs = append(errs, err)
@@ -247,12 +193,7 @@ func validateMappingNodeStringWithSubstitutions(
 	usedInPropertyPath string,
 	usedInResourceDerivedFromTemplate bool,
 	stringWithSub *substitutions.StringOrSubstitutions,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 	var errs []error
@@ -264,15 +205,10 @@ func validateMappingNodeStringWithSubstitutions(
 				ctx,
 				stringOrSub.SubstitutionValue,
 				nextLocation,
-				bpSchema,
+				valCtx,
 				usedInResourceDerivedFromTemplate,
 				usedIn,
 				usedInPropertyPath,
-				params,
-				funcRegistry,
-				refChainCollector,
-				resourceRegistry,
-				dataSourceRegistry,
 			)
 			if err != nil {
 				errs = append(errs, err)

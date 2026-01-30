@@ -38,17 +38,12 @@ func ValidateSubstitution(
 	ctx context.Context,
 	sub *substitutions.Substitution,
 	nextLocation *source.Meta,
-	bpSchema *schema.Blueprint,
+	valCtx *ValidationContext,
 	usedInResourceDerivedFromTemplate bool,
 	usedIn string,
 	// The path to the property where the substitution is used
 	// relative to the "usedIn" element.
 	usedInPropertyPath string,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
 ) (string, []*bpcore.Diagnostic, error) {
 
 	diagnostics := []*bpcore.Diagnostic{}
@@ -61,15 +56,10 @@ func ValidateSubstitution(
 			ctx,
 			sub.Function,
 			nextLocation,
-			bpSchema,
+			valCtx,
 			usedInResourceDerivedFromTemplate,
 			usedIn,
 			usedInPropertyPath,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 		)
 	}
 
@@ -90,16 +80,15 @@ func ValidateSubstitution(
 	}
 
 	if sub.Variable != nil {
-		return validateVariableSubstitution(sub.Variable, bpSchema)
+		return validateVariableSubstitution(sub.Variable, valCtx.BpSchema)
 	}
 
 	if sub.ValueReference != nil {
 		return validateValueSubstitution(
 			sub.ValueReference,
-			bpSchema,
+			valCtx,
 			usedIn,
 			usedInPropertyPath,
-			refChainCollector,
 		)
 	}
 
@@ -107,7 +96,7 @@ func ValidateSubstitution(
 		return validateElemReferenceSubstitution(
 			"element",
 			sub.ElemReference.SourceMeta,
-			bpSchema,
+			valCtx.BpSchema,
 			usedInResourceDerivedFromTemplate,
 			usedIn,
 		)
@@ -117,7 +106,7 @@ func ValidateSubstitution(
 		return validateElemReferenceSubstitution(
 			"index",
 			sub.ElemIndexReference.SourceMeta,
-			bpSchema,
+			valCtx.BpSchema,
 			usedInResourceDerivedFromTemplate,
 			usedIn,
 		)
@@ -127,12 +116,9 @@ func ValidateSubstitution(
 		return validateResourcePropertySubstitution(
 			ctx,
 			sub.ResourceProperty,
-			bpSchema,
+			valCtx,
 			usedIn,
 			usedInPropertyPath,
-			params,
-			refChainCollector,
-			resourceRegistry,
 			nextLocation,
 		)
 	}
@@ -141,22 +127,18 @@ func ValidateSubstitution(
 		return validateDataSourcePropertySubstitution(
 			ctx,
 			sub.DataSourceProperty,
-			bpSchema,
+			valCtx,
 			usedIn,
 			usedInPropertyPath,
-			refChainCollector,
-			dataSourceRegistry,
-			params,
 		)
 	}
 
 	if sub.Child != nil {
 		return validateChildSubstitution(
 			sub.Child,
-			bpSchema,
+			valCtx,
 			usedIn,
 			usedInPropertyPath,
-			refChainCollector,
 		)
 	}
 
@@ -189,19 +171,18 @@ func validateVariableSubstitution(
 
 func validateValueSubstitution(
 	subVal *substitutions.SubstitutionValueReference,
-	bpSchema *schema.Blueprint,
+	valCtx *ValidationContext,
 	usedIn string,
 	usedInPropertyPath string,
-	refChainCollector refgraph.RefChainCollector,
 ) (string, []*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 	valName := subVal.ValueName
 
-	if bpSchema.Values == nil || bpSchema.Values.Values == nil {
+	if valCtx.BpSchema.Values == nil || valCtx.BpSchema.Values.Values == nil {
 		return "", diagnostics, errSubValNotFound(valName, subVal.SourceMeta)
 	}
 
-	valSchema, hasVal := bpSchema.Values.Values[valName]
+	valSchema, hasVal := valCtx.BpSchema.Values.Values[valName]
 	if !hasVal {
 		return "", diagnostics, errSubValNotFound(valName, subVal.SourceMeta)
 	}
@@ -212,7 +193,7 @@ func validateValueSubstitution(
 
 	subRefTag := CreateSubRefTag(usedIn)
 	subRefPropTag := CreateSubRefPropTag(usedIn, usedInPropertyPath)
-	refChainCollector.Collect(
+	valCtx.RefChainCollector.Collect(
 		bpcore.ValueElementID(valName),
 		valSchema,
 		usedIn,
@@ -285,22 +266,19 @@ func validateElemReferenceSubstitution(
 func validateResourcePropertySubstitution(
 	ctx context.Context,
 	subResourceProp *substitutions.SubstitutionResourceProperty,
-	bpSchema *schema.Blueprint,
+	valCtx *ValidationContext,
 	usedIn string,
 	usedInPropertyPath string,
-	params bpcore.BlueprintParams,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
 	nextLocation *source.Meta,
 ) (string, []*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 	resourceName := subResourceProp.ResourceName
 
-	if bpSchema.Resources == nil || bpSchema.Resources.Values == nil {
+	if valCtx.BpSchema.Resources == nil || valCtx.BpSchema.Resources.Values == nil {
 		return "", diagnostics, errSubResourceNotFound(resourceName, subResourceProp.SourceMeta)
 	}
 
-	resourceSchema, hasResource := bpSchema.Resources.Values[resourceName]
+	resourceSchema, hasResource := valCtx.BpSchema.Resources.Values[resourceName]
 	if !hasResource {
 		return "", diagnostics, errSubResourceNotFound(resourceName, subResourceProp.SourceMeta)
 	}
@@ -326,9 +304,9 @@ func validateResourcePropertySubstitution(
 		ctx,
 		subResourceProp,
 		resourceSchema,
-		resourceRegistry,
+		valCtx.ResourceRegistry,
 		nextLocation,
-		params,
+		valCtx.Params,
 	)
 	diagnostics = append(diagnostics, extractDiagnostics...)
 	if err != nil {
@@ -337,7 +315,7 @@ func validateResourcePropertySubstitution(
 
 	subRefTag := CreateSubRefTag(usedIn)
 	subRefPropTag := CreateSubRefPropTag(usedIn, usedInPropertyPath)
-	refChainCollector.Collect(
+	valCtx.RefChainCollector.Collect(
 		bpcore.ResourceElementID(resourceName),
 		resourceSchema,
 		usedIn,
@@ -853,33 +831,30 @@ func isComplexResourceDefinitionsSchemaType(schemaType provider.ResourceDefiniti
 func validateDataSourcePropertySubstitution(
 	ctx context.Context,
 	subDataSourceProp *substitutions.SubstitutionDataSourceProperty,
-	bpSchema *schema.Blueprint,
+	valCtx *ValidationContext,
 	usedIn string,
 	usedInPropertyPath string,
-	refChainCollector refgraph.RefChainCollector,
-	dataSourceRegistry provider.DataSourceRegistry,
-	params bpcore.BlueprintParams,
 ) (string, []*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 	dataSourceName := subDataSourceProp.DataSourceName
-	if bpSchema.DataSources == nil || bpSchema.DataSources.Values == nil {
+	if valCtx.BpSchema.DataSources == nil || valCtx.BpSchema.DataSources.Values == nil {
 		return "", diagnostics, errSubDataSourceNotFound(dataSourceName, subDataSourceProp.SourceMeta)
 	}
 
-	dataSourceSchema, hasDataSource := bpSchema.DataSources.Values[dataSourceName]
+	dataSourceSchema, hasDataSource := valCtx.BpSchema.DataSources.Values[dataSourceName]
 	if !hasDataSource {
 		return "", diagnostics, errSubDataSourceNotFound(dataSourceName, subDataSourceProp.SourceMeta)
 	}
 
 	dataSourceType := schema.GetDataSourceType(dataSourceSchema)
 	providerNamespace := provider.ExtractProviderFromItemType(dataSourceType)
-	specDefOutput, err := dataSourceRegistry.GetSpecDefinition(
+	specDefOutput, err := valCtx.DataSourceRegistry.GetSpecDefinition(
 		ctx,
 		dataSourceType,
 		&provider.DataSourceGetSpecDefinitionInput{
 			ProviderContext: provider.NewProviderContextFromParams(
 				providerNamespace,
-				params,
+				valCtx.Params,
 			),
 		},
 	)
@@ -912,7 +887,7 @@ func validateDataSourcePropertySubstitution(
 
 	subRefTag := CreateSubRefTag(usedIn)
 	subRefPropTag := CreateSubRefPropTag(usedIn, usedInPropertyPath)
-	refChainCollector.Collect(
+	valCtx.RefChainCollector.Collect(
 		bpcore.DataSourceElementID(dataSourceName),
 		dataSourceSchema,
 		usedIn,
@@ -1004,14 +979,13 @@ func getFieldInDataSourceSpecDefinition(
 
 func validateChildSubstitution(
 	subChild *substitutions.SubstitutionChild,
-	bpSchema *schema.Blueprint,
+	valCtx *ValidationContext,
 	usedIn string,
 	usedInPropertyPath string,
-	refChainCollector refgraph.RefChainCollector,
 ) (string, []*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 	childName := subChild.ChildName
-	childSchema, hasChild := bpSchema.Include.Values[childName]
+	childSchema, hasChild := valCtx.BpSchema.Include.Values[childName]
 	if !hasChild {
 		return "", diagnostics, errSubChildBlueprintNotFound(childName, subChild.SourceMeta)
 	}
@@ -1022,15 +996,59 @@ func validateChildSubstitution(
 
 	subRefTag := CreateSubRefTag(usedIn)
 	subRefPropTag := CreateSubRefPropTag(usedIn, usedInPropertyPath)
-	refChainCollector.Collect(
+	valCtx.RefChainCollector.Collect(
 		bpcore.ChildElementID(childName),
 		childSchema,
 		usedIn,
 		[]string{subRefTag, subRefPropTag},
 	)
 
+	if valCtx.ChildExportLookup != nil && len(subChild.Path) > 0 {
+		exportName := subChild.Path[0].FieldName
+		exportSchema, err := valCtx.ChildExportLookup(childName, exportName, subChild.SourceMeta)
+		if err != nil {
+			return "", diagnostics, err
+		}
+		if exportSchema != nil {
+			return resolveChildExportType(subChild, exportSchema, childName, exportName)
+		}
+		// nil export schema means the child couldn't be resolved,
+		// fall through to return "any".
+	}
+
 	// There is no way of knowing the exact type of the child blueprint exports
 	// until runtime, so we return any to account for all possible types.
+	return string(substitutions.ResolvedSubExprTypeAny), diagnostics, nil
+}
+
+func resolveChildExportType(
+	subChild *substitutions.SubstitutionChild,
+	exportSchema *schema.Export,
+	childName string,
+	exportName string,
+) (string, []*bpcore.Diagnostic, error) {
+	diagnostics := []*bpcore.Diagnostic{}
+	if exportSchema.Type == nil {
+		return string(substitutions.ResolvedSubExprTypeAny), diagnostics, nil
+	}
+
+	resolvedType := subTypeFromExportType(exportSchema.Type.Value)
+	if len(subChild.Path) == 1 {
+		return resolvedType, diagnostics, nil
+	}
+
+	// Navigating into a scalar type is invalid.
+	if isSubPrimitiveType(resolvedType) {
+		return "", diagnostics, errChildExportScalarNavigation(
+			childName,
+			exportName,
+			resolvedType,
+			subChild.SourceMeta,
+		)
+	}
+
+	// For object/array types with deeper navigation, we can't know
+	// the exact structure so return "any".
 	return string(substitutions.ResolvedSubExprTypeAny), diagnostics, nil
 }
 
@@ -1038,15 +1056,10 @@ func validateFunctionSubstitution(
 	ctx context.Context,
 	subFunc *substitutions.SubstitutionFunctionExpr,
 	nextLocation *source.Meta,
-	bpSchema *schema.Blueprint,
+	valCtx *ValidationContext,
 	usedInResourceDerivedFromTemplate bool,
 	usedIn string,
 	usedInPropertyPath string,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
 ) (string, []*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 	funcName := string(subFunc.FunctionName)
@@ -1056,8 +1069,8 @@ func validateFunctionSubstitution(
 		funcName,
 		subFunc,
 		nextLocation,
-		funcRegistry,
-		params,
+		valCtx.FuncRegistry,
+		valCtx.Params,
 	)
 	diagnostics = append(diagnostics, validateFuncDiagnostics...)
 	if err != nil {
@@ -1084,16 +1097,11 @@ func validateFunctionSubstitution(
 			ctx,
 			arg,
 			nextLocation,
-			bpSchema,
+			valCtx,
 			usedInResourceDerivedFromTemplate,
 			usedIn,
 			usedInPropertyPath,
 			funcName,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 		)
 		diagnostics = append(diagnostics, argDiagnostics...)
 		if err != nil {
@@ -1109,7 +1117,7 @@ func validateFunctionSubstitution(
 
 		// "link" function arguments are a special case, where string literals
 		// that contain resource names should be treated as references to resources in the blueprint.
-		err = validateLinkFuncArg(funcName, i, arg, usedIn, bpSchema, refChainCollector)
+		err = validateLinkFuncArg(funcName, i, arg, usedIn, valCtx.BpSchema, valCtx.RefChainCollector)
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -1310,16 +1318,11 @@ func validateSubFuncArgument(
 	ctx context.Context,
 	arg *substitutions.SubstitutionFunctionArg,
 	nextLocation *source.Meta,
-	bpSchema *schema.Blueprint,
+	valCtx *ValidationContext,
 	usedInResourceDerivedFromTemplate bool,
 	usedIn string,
 	usedInPropertyPath string,
 	funcName string,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
 ) (string, []*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 	if arg == nil {
@@ -1338,15 +1341,10 @@ func validateSubFuncArgument(
 		ctx,
 		arg.Value,
 		nextLocation,
-		bpSchema,
+		valCtx,
 		usedInResourceDerivedFromTemplate,
 		usedIn,
 		usedInPropertyPath,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
 	)
 }
 

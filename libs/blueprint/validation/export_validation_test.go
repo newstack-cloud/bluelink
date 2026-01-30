@@ -91,12 +91,14 @@ func (s *ExportValidationTestSuite) Test_succeeds_with_no_errors_for_a_valid_exp
 		"cacheEndpointInfo",
 		exportSchema,
 		exportMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, IsNil)
@@ -143,12 +145,14 @@ func (s *ExportValidationTestSuite) Test_reports_error_when_an_unsupported_expor
 		"cacheEndpointInfo",
 		exportSchema,
 		exportMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)
@@ -203,12 +207,14 @@ func (s *ExportValidationTestSuite) Test_reports_error_when_an_empty_export_fiel
 		"cacheEndpointInfo",
 		exportSchema,
 		exportMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)
@@ -250,12 +256,14 @@ func (s *ExportValidationTestSuite) Test_reports_error_when_an_incorrect_referen
 		"cacheEndpointInfo",
 		exportSchema,
 		exportMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)

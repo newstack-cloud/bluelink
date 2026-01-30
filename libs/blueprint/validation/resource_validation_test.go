@@ -180,14 +180,16 @@ func (s *ResourceValidationTestSuite) Test_reports_errors_when_resource_type_is_
 		"unknownHandler",
 		resource,
 		resourceMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* resourceDerivedFromTemplate */ false,
 		core.NewNopLogger(),
-		s.dataSourceRegistry,
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)
@@ -219,14 +221,16 @@ func (s *ResourceValidationTestSuite) Test_reports_error_when_providing_a_displa
 		"testService",
 		resource,
 		resourceMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* resourceDerivedFromTemplate */ false,
 		core.NewNopLogger(),
-		s.dataSourceRegistry,
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)
@@ -259,14 +263,16 @@ func (s *ResourceValidationTestSuite) Test_reports_error_when_providing_a_descri
 		"testService",
 		resource,
 		resourceMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* resourceDerivedFromTemplate */ false,
 		core.NewNopLogger(),
-		s.dataSourceRegistry,
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)
@@ -300,14 +306,16 @@ func (s *ResourceValidationTestSuite) Test_reports_error_when_metadata_label_key
 		"testService",
 		resource,
 		resourceMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* resourceDerivedFromTemplate */ false,
 		core.NewNopLogger(),
-		s.dataSourceRegistry,
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)
@@ -340,14 +348,16 @@ func (s *ResourceValidationTestSuite) Test_reports_error_when_metadata_label_val
 		"testService",
 		resource,
 		resourceMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* resourceDerivedFromTemplate */ false,
 		core.NewNopLogger(),
-		s.dataSourceRegistry,
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)
@@ -387,14 +397,16 @@ func (s *ResourceValidationTestSuite) Test_reports_error_when_annotation_key_has
 		"testService",
 		resource,
 		resourceMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* resourceDerivedFromTemplate */ false,
 		core.NewNopLogger(),
-		s.dataSourceRegistry,
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)
@@ -428,14 +440,16 @@ func (s *ResourceValidationTestSuite) Test_reports_error_when_nested_condition_i
 		"testService",
 		resource,
 		resourceMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* resourceDerivedFromTemplate */ false,
 		core.NewNopLogger(),
-		s.dataSourceRegistry,
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)
@@ -481,14 +495,16 @@ func (s *ResourceValidationTestSuite) Test_reports_error_when_condition_resolves
 		"testService",
 		resource,
 		resourceMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* resourceDerivedFromTemplate */ false,
 		core.NewNopLogger(),
-		s.dataSourceRegistry,
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)
@@ -542,14 +558,16 @@ func (s *ResourceValidationTestSuite) Test_produces_warning_when_condition_resol
 		"testService",
 		resource,
 		resourceMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* resourceDerivedFromTemplate */ false,
 		core.NewNopLogger(),
-		s.dataSourceRegistry,
 	)
 
 	c.Assert(err, IsNil)
@@ -599,14 +617,16 @@ func (s *ResourceValidationTestSuite) Test_produces_warning_when_each_resolves_a
 		"testService",
 		resource,
 		resourceMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* resourceDerivedFromTemplate */ false,
 		core.NewNopLogger(),
-		s.dataSourceRegistry,
 	)
 
 	c.Assert(err, IsNil)
@@ -646,14 +666,16 @@ func (s *ResourceValidationTestSuite) Test_reports_error_when_each_resolves_inco
 		"testService",
 		resource,
 		resourceMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* resourceDerivedFromTemplate */ false,
 		core.NewNopLogger(),
-		s.dataSourceRegistry,
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)
@@ -687,14 +709,16 @@ func (s *ResourceValidationTestSuite) Test_reports_error_when_link_selector_labe
 		"testService",
 		resource,
 		resourceMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* resourceDerivedFromTemplate */ false,
 		core.NewNopLogger(),
-		s.dataSourceRegistry,
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)
@@ -727,14 +751,16 @@ func (s *ResourceValidationTestSuite) Test_reports_error_when_link_selector_labe
 		"testService",
 		resource,
 		resourceMap,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* resourceDerivedFromTemplate */ false,
 		core.NewNopLogger(),
-		s.dataSourceRegistry,
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)
@@ -777,14 +803,16 @@ func (s *ResourceValidationTestSuite) Test_reports_error_when_resource_has_a_mis
 		"testService",
 		resource,
 		blueprint.Resources,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* resourceDerivedFromTemplate */ false,
 		core.NewNopLogger(),
-		s.dataSourceRegistry,
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)
@@ -827,14 +855,16 @@ func (s *ResourceValidationTestSuite) Test_reports_error_when_resource_dependenc
 		"testService",
 		resource,
 		blueprint.Resources,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* resourceDerivedFromTemplate */ false,
 		core.NewNopLogger(),
-		s.dataSourceRegistry,
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)
@@ -878,14 +908,16 @@ func (s *ResourceValidationTestSuite) Test_reports_error_when_resource_depends_o
 		"testService",
 		resource,
 		blueprint.Resources,
-		blueprint,
-		&core.ParamsImpl{},
-		s.funcRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* resourceDerivedFromTemplate */ false,
 		core.NewNopLogger(),
-		s.dataSourceRegistry,
 	)
 	c.Assert(diagnostics, HasLen, 0)
 	c.Assert(err, NotNil)

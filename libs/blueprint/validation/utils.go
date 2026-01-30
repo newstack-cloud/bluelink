@@ -7,8 +7,6 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
@@ -110,12 +108,7 @@ func validateDescription(
 	usedIn string,
 	usedInResourceDerivedFromTemplate bool,
 	description *substitutions.StringOrSubstitutions,
-	bpSchema *schema.Blueprint,
-	params core.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
 
@@ -131,15 +124,10 @@ func validateDescription(
 				ctx,
 				stringOrSub.SubstitutionValue,
 				nil,
-				bpSchema,
+				valCtx,
 				usedInResourceDerivedFromTemplate,
 				usedIn,
 				"description",
-				params,
-				funcRegistry,
-				refChainCollector,
-				resourceRegistry,
-				dataSourceRegistry,
 			)
 			if err != nil {
 				errs = append(errs, err)

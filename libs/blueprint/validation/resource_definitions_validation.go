@@ -10,8 +10,6 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
@@ -22,12 +20,7 @@ type ResourceValidationParams struct {
 	ResourceName                string
 	ResourceType                string
 	ResourceDerivedFromTemplate bool
-	BpSchema                    *schema.Blueprint
-	Params                      core.BlueprintParams
-	FuncRegistry                provider.FunctionRegistry
-	RefChainCollector           refgraph.RefChainCollector
-	ResourceRegistry            resourcehelpers.Registry
-	DataSourceRegistry          provider.DataSourceRegistry
+	*ValidationContext
 }
 
 func validateResourceDefinition(
@@ -971,15 +964,17 @@ func validateResourceDefinitionSubstitution(
 				ctx,
 				stringOrSub.SubstitutionValue,
 				nil,
-				params.BpSchema,
+				&ValidationContext{
+					BpSchema:           params.BpSchema,
+					Params:             params.Params,
+					FuncRegistry:       params.FuncRegistry,
+					RefChainCollector:  params.RefChainCollector,
+					ResourceRegistry:   params.ResourceRegistry,
+					DataSourceRegistry: params.DataSourceRegistry,
+				},
 				params.ResourceDerivedFromTemplate,
 				resourceIdentifier,
 				path,
-				params.Params,
-				params.FuncRegistry,
-				params.RefChainCollector,
-				params.ResourceRegistry,
-				params.DataSourceRegistry,
 			)
 			if err != nil {
 				errs = append(errs, err)

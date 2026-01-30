@@ -274,6 +274,22 @@ const (
 	// ErrorReasonCodeVariableInvalidDefaultValue is provided when the reason
 	// for a blueprint spec load error is due to an invalid default value for a variable.
 	ErrorReasonCodeVariableInvalidDefaultValue errors.ErrorReasonCode = "variable_invalid_default_value"
+	// ErrorReasonCodeIncludePathNotFound is provided when the reason
+	// for a blueprint spec load error is due to a child blueprint include path
+	// pointing to a file that does not exist on the local filesystem.
+	ErrorReasonCodeIncludePathNotFound errors.ErrorReasonCode = "include_path_not_found"
+	// ErrorReasonCodeIncludeMissingRequiredVar is provided when a required variable
+	// is not provided to a child blueprint include.
+	ErrorReasonCodeIncludeMissingRequiredVar errors.ErrorReasonCode = "include_missing_required_variable"
+	// ErrorReasonCodeIncludeVarTypeMismatch is provided when a variable provided
+	// to a child blueprint include has a different type than expected.
+	ErrorReasonCodeIncludeVarTypeMismatch errors.ErrorReasonCode = "include_variable_type_mismatch"
+	// ErrorReasonCodeChildExportNotFound is provided when a substitution or export field
+	// references a child blueprint export that does not exist in the resolved child blueprint.
+	ErrorReasonCodeChildExportNotFound errors.ErrorReasonCode = "child_export_not_found"
+	// ErrorReasonCodeChildExportScalarNavigation is provided when a substitution or export field
+	// attempts to navigate into a child blueprint export that has a scalar type.
+	ErrorReasonCodeChildExportScalarNavigation errors.ErrorReasonCode = "child_export_scalar_navigation"
 )
 
 func errBlueprintMissingVersion() error {
@@ -1144,8 +1160,56 @@ func errIncludeEmptyPath(includeName string, varSourceMeta *source.Meta) error {
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeInvalidInclude,
 		Err: fmt.Errorf(
-			"validation failed due to an empty path being provided for include \"%s\"",
+			"validation failed due to a missing or empty path for include \"%s\"",
 			includeName,
+		),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
+	}
+}
+
+func errIncludeMissingRequiredVar(
+	includeName string,
+	varName string,
+	sourceMeta *source.Meta,
+) error {
+	posRange := source.PositionRangeFromSourceMeta(sourceMeta)
+	return &errors.LoadError{
+		ReasonCode: ErrorReasonCodeIncludeMissingRequiredVar,
+		Err: fmt.Errorf(
+			"validation failed due to required variable %q not being provided"+
+				" to include %q",
+			varName,
+			includeName,
+		),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
+	}
+}
+
+func errIncludeVarTypeMismatch(
+	includeName string,
+	varName string,
+	actualType string,
+	expectedType string,
+	sourceMeta *source.Meta,
+) error {
+	posRange := source.PositionRangeFromSourceMeta(sourceMeta)
+	return &errors.LoadError{
+		ReasonCode: ErrorReasonCodeIncludeVarTypeMismatch,
+		Err: fmt.Errorf(
+			"validation failed due to variable %q provided to include %q"+
+				" having type %q, but the child blueprint expects type %q",
+			varName,
+			includeName,
+			actualType,
+			expectedType,
 		),
 		Line:           posRange.Line,
 		EndLine:        posRange.EndLine,
@@ -3626,4 +3690,74 @@ func subPathToString(path []*substitutions.SubstitutionPathItem) string {
 	}
 
 	return sb.String()
+}
+
+func errIncludePathNotFound(
+	includeName string,
+	resolvedPath string,
+	pathSourceMeta *source.Meta,
+) error {
+	posRange := source.PositionRangeFromSourceMeta(pathSourceMeta)
+	return &errors.LoadError{
+		ReasonCode: ErrorReasonCodeIncludePathNotFound,
+		Err: fmt.Errorf(
+			"validation failed due to the include path for %q resolving to %q"+
+				" which does not exist on the local filesystem",
+			includeName,
+			resolvedPath,
+		),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
+	}
+}
+
+// ErrChildExportNotFound returns an error when a referenced export is not found
+// in a resolved child blueprint.
+func ErrChildExportNotFound(
+	childName string,
+	exportName string,
+	location *source.Meta,
+) error {
+	posRange := source.PositionRangeFromSourceMeta(location)
+	return &errors.LoadError{
+		ReasonCode: ErrorReasonCodeChildExportNotFound,
+		Err: fmt.Errorf(
+			"validation failed due to export %q not being found"+
+				" in child blueprint %q",
+			exportName,
+			childName,
+		),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
+	}
+}
+
+func errChildExportScalarNavigation(
+	childName string,
+	exportName string,
+	exportType string,
+	location *source.Meta,
+) error {
+	posRange := source.PositionRangeFromSourceMeta(location)
+	return &errors.LoadError{
+		ReasonCode: ErrorReasonCodeChildExportScalarNavigation,
+		Err: fmt.Errorf(
+			"validation failed due to an attempt to access a nested property"+
+				" of export %q in child blueprint %q which has scalar type %q",
+			exportName,
+			childName,
+			exportType,
+		),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
+	}
 }

@@ -4,9 +4,6 @@ import (
 	"context"
 
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
@@ -35,12 +32,7 @@ func ValidateValue(
 	ctx context.Context,
 	valName string,
 	valSchema *schema.Value,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 
@@ -60,12 +52,7 @@ func ValidateValue(
 		valName,
 		valSchema,
 		expectedResolveType,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 }
 
@@ -74,12 +61,7 @@ func validateValue(
 	valName string,
 	valSchema *schema.Value,
 	expectedResolveType string,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 
@@ -87,12 +69,7 @@ func validateValue(
 		ctx,
 		valName,
 		valSchema,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, descriptionDiagnostics...)
 	if err != nil {
@@ -104,12 +81,7 @@ func validateValue(
 		expectedResolveType,
 		valName,
 		valSchema,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, valueDiagnostics...)
 	if err != nil {
@@ -123,56 +95,20 @@ func validateValueDescription(
 	ctx context.Context,
 	valName string,
 	valSchema *schema.Value,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	if valSchema.Description == nil {
 		return []*bpcore.Diagnostic{}, nil
 	}
 
 	valIdentifier := bpcore.ValueElementID(valName)
-	errs := []error{}
-	diagnostics := []*bpcore.Diagnostic{}
-	for _, stringOrSub := range valSchema.Description.Values {
-		if stringOrSub.SubstitutionValue != nil {
-			resolvedType, subDiagnostics, err := ValidateSubstitution(
-				ctx,
-				stringOrSub.SubstitutionValue,
-				nil,
-				bpSchema,
-				/* usedInResourceDerivedFromTemplate */ false,
-				valIdentifier,
-				"description",
-				params,
-				funcRegistry,
-				refChainCollector,
-				resourceRegistry,
-				dataSourceRegistry,
-			)
-			if err != nil {
-				errs = append(errs, err)
-			} else {
-				diagnostics = append(diagnostics, subDiagnostics...)
-				if !isSubPrimitiveType(resolvedType) {
-					errs = append(errs, errInvalidDescriptionSubType(
-						valIdentifier,
-						resolvedType,
-						stringOrSub.SourceMeta,
-					))
-				}
-			}
-		}
-	}
-
-	if len(errs) > 0 {
-		return diagnostics, ErrMultipleValidationErrors(errs)
-	}
-
-	return diagnostics, nil
+	return validateDescription(
+		ctx,
+		valIdentifier,
+		/* usedInResourceDerivedFromTemplate */ false,
+		valSchema.Description,
+		valCtx,
+	)
 }
 
 func validateValueContent(
@@ -180,12 +116,7 @@ func validateValueContent(
 	expectedResolveType string,
 	valName string,
 	valSchema *schema.Value,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 
@@ -203,13 +134,8 @@ func validateValueContent(
 			ctx,
 			valIdentifier,
 			valSchema,
-			bpSchema,
+			valCtx,
 			expectedResolveType,
-			params,
-			funcRegistry,
-			refChainCollector,
-			resourceRegistry,
-			dataSourceRegistry,
 		)
 	}
 
@@ -229,12 +155,7 @@ func validateValueContent(
 		"value",
 		/* usedInResourceDerivedFromTemplate */ false,
 		valSchema.Value,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, mappingNodeDiags...)
 
@@ -265,13 +186,8 @@ func validateValueContentForStringWithSubs(
 	ctx context.Context,
 	valIdentifier string,
 	valSchema *schema.Value,
-	bpSchema *schema.Blueprint,
+	valCtx *ValidationContext,
 	expectedResolveType string,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 
@@ -303,15 +219,10 @@ func validateValueContentForStringWithSubs(
 				ctx,
 				stringOrSub.SubstitutionValue,
 				nil,
-				bpSchema,
+				valCtx,
 				/* usedInResourceDerivedFromTemplate */ false,
 				valIdentifier,
 				"value",
-				params,
-				funcRegistry,
-				refChainCollector,
-				resourceRegistry,
-				dataSourceRegistry,
 			)
 			if err != nil {
 				errs = append(errs, err)

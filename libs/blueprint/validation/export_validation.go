@@ -5,9 +5,6 @@ import (
 	"fmt"
 
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
@@ -25,12 +22,7 @@ func ValidateExport(
 	exportName string,
 	exportSchema *schema.Export,
 	exportMap *schema.ExportMap,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	funcRegistry provider.FunctionRegistry,
-	refChainCollector refgraph.RefChainCollector,
-	resourceRegistry resourcehelpers.Registry,
-	dataSourceRegistry provider.DataSourceRegistry,
+	valCtx *ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 	err := validateExportType(exportSchema.Type, exportName, exportMap)
@@ -66,15 +58,10 @@ func ValidateExport(
 		ctx,
 		exportFieldAsSub,
 		nil,
-		bpSchema,
+		valCtx,
 		/* usedInResourceDerivedFromTemplate */ false,
 		exportIdentifier,
 		"field",
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
 	)
 	diagnostics = append(diagnostics, subDiagnostics...)
 	if err != nil {
@@ -117,12 +104,7 @@ func ValidateExport(
 		exportIdentifier,
 		/* usedInResourceDerivedFromTemplate */ false,
 		exportSchema.Description,
-		bpSchema,
-		params,
-		funcRegistry,
-		refChainCollector,
-		resourceRegistry,
-		dataSourceRegistry,
+		valCtx,
 	)
 	diagnostics = append(diagnostics, descriptionDiagnostics...)
 	if err != nil {

@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -909,9 +910,18 @@ func (l *defaultLoader) loadSpec(
 		validationErrors = append(validationErrors, err)
 	}
 
+	valCtx := &validation.ValidationContext{
+		BpSchema:           blueprintSchema,
+		Params:             params,
+		FuncRegistry:       l.funcRegistry,
+		RefChainCollector:  refChainCollector,
+		ResourceRegistry:   l.resourceRegistry.WithParams(params),
+		DataSourceRegistry: l.dataSourceRegistry,
+	}
+
 	l.logger.Info("Validating blueprint variables")
 	var variableDiagnostics []*bpcore.Diagnostic
-	variableDiagnostics, err = l.validateVariables(ctx, blueprintSchema, params, refChainCollector)
+	variableDiagnostics, err = l.validateVariables(ctx, valCtx)
 	diagnostics = append(diagnostics, variableDiagnostics...)
 	if err != nil {
 		validationErrors = append(validationErrors, err)
@@ -919,23 +929,29 @@ func (l *defaultLoader) loadSpec(
 
 	l.logger.Info("Validating blueprint values")
 	var valueDiagnostics []*bpcore.Diagnostic
-	valueDiagnostics, err = l.validateValues(ctx, blueprintSchema, params, refChainCollector)
+	valueDiagnostics, err = l.validateValues(ctx, valCtx)
 	diagnostics = append(diagnostics, valueDiagnostics...)
 	if err != nil {
 		validationErrors = append(validationErrors, err)
 	}
 
+	l.logger.Info("Resolving child blueprint schemas for validation")
+	childSchemas := l.resolveChildBlueprintSchemas(blueprintSchema, params)
+
 	l.logger.Info("Validating blueprint includes")
 	var includeDiagnostics []*bpcore.Diagnostic
-	includeDiagnostics, err = l.validateIncludes(ctx, blueprintSchema, params, refChainCollector)
+	includeDiagnostics, err = l.validateIncludes(ctx, valCtx, childSchemas)
 	diagnostics = append(diagnostics, includeDiagnostics...)
 	if err != nil {
 		validationErrors = append(validationErrors, err)
 	}
 
+	childExportLookup := l.createChildExportLookup(childSchemas)
+	valCtx.ChildExportLookup = childExportLookup
+
 	l.logger.Info("Validating blueprint exports")
 	var exportDiagnostics []*bpcore.Diagnostic
-	exportDiagnostics, err = l.validateExports(ctx, blueprintSchema, params, refChainCollector)
+	exportDiagnostics, err = l.validateExports(ctx, valCtx)
 	diagnostics = append(diagnostics, exportDiagnostics...)
 	if err != nil {
 		validationErrors = append(validationErrors, err)
@@ -943,7 +959,7 @@ func (l *defaultLoader) loadSpec(
 
 	l.logger.Info("Validating blueprint top-level metadata")
 	var metadataDiagnostics []*bpcore.Diagnostic
-	metadataDiagnostics, err = l.validateMetadata(ctx, blueprintSchema, params, refChainCollector)
+	metadataDiagnostics, err = l.validateMetadata(ctx, valCtx)
 	diagnostics = append(diagnostics, metadataDiagnostics...)
 	if err != nil {
 		validationErrors = append(validationErrors, err)
@@ -951,7 +967,7 @@ func (l *defaultLoader) loadSpec(
 
 	l.logger.Info("Validating blueprint data sources")
 	var dataSourceDiagnostics []*bpcore.Diagnostic
-	dataSourceDiagnostics, err = l.validateDataSources(ctx, blueprintSchema, params, refChainCollector)
+	dataSourceDiagnostics, err = l.validateDataSources(ctx, valCtx)
 	diagnostics = append(diagnostics, dataSourceDiagnostics...)
 	if err != nil {
 		validationErrors = append(validationErrors, err)
@@ -959,7 +975,7 @@ func (l *defaultLoader) loadSpec(
 
 	l.logger.Info("Validating blueprint resources")
 	var resourceDiagnostics []*bpcore.Diagnostic
-	resourceDiagnostics, err = l.validateResources(ctx, blueprintSchema, params, refChainCollector)
+	resourceDiagnostics, err = l.validateResources(ctx, valCtx)
 	diagnostics = append(diagnostics, resourceDiagnostics...)
 	if err != nil {
 		validationErrors = append(validationErrors, err)
@@ -981,7 +997,7 @@ func (l *defaultLoader) loadSpec(
 		// This ultimately prevents transformers from expanding their abstractions into invalid
 		// representations of the lower level resources.
 		var resourceDiagnostics []*bpcore.Diagnostic
-		resourceDiagnostics, err = l.validateResources(ctx, blueprintSchema, params, refChainCollector)
+		resourceDiagnostics, err = l.validateResources(ctx, valCtx)
 		diagnostics = append(diagnostics, resourceDiagnostics...)
 		if err != nil {
 			validationErrors = append(validationErrors, err)
@@ -1088,20 +1104,18 @@ func (l *defaultLoader) validateTransforms(ctx context.Context, bpSchema *schema
 
 func (l *defaultLoader) validateVariables(
 	ctx context.Context,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	refChainCollector refgraph.RefChainCollector,
+	valCtx *validation.ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
-	if bpSchema.Variables == nil {
+	if valCtx.BpSchema.Variables == nil {
 		return diagnostics, nil
 	}
 
 	// To be as useful as possible, we'll collect and
 	// report issues for all the problematic variables.
 	variableErrors := map[string][]error{}
-	for name, varSchema := range bpSchema.Variables.Values {
-		currentVarErrs := l.validateVariable(ctx, &diagnostics, name, varSchema, bpSchema, params, refChainCollector)
+	for name, varSchema := range valCtx.BpSchema.Variables.Values {
+		currentVarErrs := l.validateVariable(ctx, &diagnostics, name, varSchema, valCtx)
 		if len(currentVarErrs) > 0 {
 			variableErrors[name] = currentVarErrs
 		}
@@ -1119,12 +1133,10 @@ func (l *defaultLoader) validateVariable(
 	diagnostics *[]*bpcore.Diagnostic,
 	name string,
 	varSchema *schema.Variable,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	refChainCollector refgraph.RefChainCollector,
+	valCtx *validation.ValidationContext,
 ) []error {
 	currentVarErrs := []error{}
-	err := validation.ValidateVariableName(name, bpSchema.Variables)
+	err := validation.ValidateVariableName(name, valCtx.BpSchema.Variables)
 	if err != nil {
 		currentVarErrs = append(currentVarErrs, err)
 	}
@@ -1132,45 +1144,43 @@ func (l *defaultLoader) validateVariable(
 	if varSchema.Type == nil {
 		// Use the variable key's source location (from SourceMeta map), not the value's source location.
 		// This ensures the diagnostic points to "myVar:" rather than the first property inside the variable.
-		keySourceMeta := bpSchema.Variables.SourceMeta[name]
+		keySourceMeta := valCtx.BpSchema.Variables.SourceMeta[name]
 		currentVarErrs = append(currentVarErrs, errMissingVariableType(name, keySourceMeta))
 		return currentVarErrs
 	}
 
 	if core.SliceContains(schema.CoreVariableTypes, varSchema.Type.Value) {
 		coreVarDiagnostics, err := validation.ValidateCoreVariable(
-			ctx, name, varSchema, bpSchema.Variables, params, l.validateRuntimeValues,
+			ctx, name, varSchema, valCtx.BpSchema.Variables, valCtx.Params, l.validateRuntimeValues,
 		)
 		if err != nil {
 			currentVarErrs = append(currentVarErrs, err)
 		}
 		*diagnostics = append(*diagnostics, coreVarDiagnostics...)
 	} else {
-		customVarDiagnostics, err := l.validateCustomVariableType(ctx, name, varSchema, bpSchema.Variables, params)
+		customVarDiagnostics, err := l.validateCustomVariableType(ctx, name, varSchema, valCtx.BpSchema.Variables, valCtx.Params)
 		if err != nil {
 			currentVarErrs = append(currentVarErrs, err)
 		}
 		*diagnostics = append(*diagnostics, customVarDiagnostics...)
 	}
 
-	refChainCollector.Collect(bpcore.VariableElementID(name), varSchema, "", []string{})
+	valCtx.RefChainCollector.Collect(bpcore.VariableElementID(name), varSchema, "", []string{})
 	return currentVarErrs
 }
 
 func (l *defaultLoader) validateValues(
 	ctx context.Context,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	refChainCollector refgraph.RefChainCollector,
+	valCtx *validation.ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
-	if bpSchema.Values == nil {
+	if valCtx.BpSchema.Values == nil {
 		return diagnostics, nil
 	}
 
 	valueErrors := map[string][]error{}
-	for name, valSchema := range bpSchema.Values.Values {
-		currentValErrs := l.validateValue(ctx, &diagnostics, name, valSchema, bpSchema, params, refChainCollector)
+	for name, valSchema := range valCtx.BpSchema.Values.Values {
+		currentValErrs := l.validateValue(ctx, &diagnostics, name, valSchema, valCtx)
 		if len(currentValErrs) > 0 {
 			valueErrors[name] = currentValErrs
 		}
@@ -1188,12 +1198,10 @@ func (l *defaultLoader) validateValue(
 	diagnostics *[]*bpcore.Diagnostic,
 	name string,
 	valSchema *schema.Value,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	refChainCollector refgraph.RefChainCollector,
+	valCtx *validation.ValidationContext,
 ) []error {
 	currentValErrs := []error{}
-	err := validation.ValidateValueName(name, bpSchema.Values)
+	err := validation.ValidateValueName(name, valCtx.BpSchema.Values)
 	if err != nil {
 		currentValErrs = append(currentValErrs, err)
 	}
@@ -1202,54 +1210,69 @@ func (l *defaultLoader) validateValue(
 		ctx,
 		name,
 		valSchema,
-		bpSchema,
-		params,
-		l.funcRegistry,
-		refChainCollector,
-		l.resourceRegistry.WithParams(params),
-		l.dataSourceRegistry,
+		valCtx,
 	)
 	if err != nil {
 		currentValErrs = append(currentValErrs, err)
 	}
 	*diagnostics = append(*diagnostics, resultDiagnostics...)
 
-	refChainCollector.Collect(bpcore.ValueElementID(name), valSchema, "", []string{})
+	valCtx.RefChainCollector.Collect(bpcore.ValueElementID(name), valSchema, "", []string{})
 	return currentValErrs
 }
 
 func (l *defaultLoader) validateIncludes(
 	ctx context.Context,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	refChainCollector refgraph.RefChainCollector,
+	valCtx *validation.ValidationContext,
+	childSchemas map[string]*schema.Blueprint,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
-	if bpSchema.Include == nil {
+	if valCtx.BpSchema.Include == nil {
 		return diagnostics, nil
 	}
 
 	// We'll collect and report issues for all the problematic includes.
 	includeErrors := map[string]error{}
-	for name, includeSchema := range bpSchema.Include.Values {
+	for name, includeSchema := range valCtx.BpSchema.Include.Values {
 		includeDiagnostics, err := validation.ValidateInclude(
 			ctx,
 			name,
 			includeSchema,
-			bpSchema.Include,
-			bpSchema,
-			params,
-			l.funcRegistry,
-			refChainCollector,
-			l.resourceRegistry.WithParams(params),
-			l.dataSourceRegistry,
+			valCtx.BpSchema.Include,
+			valCtx,
 		)
 		if err != nil {
 			includeErrors[name] = err
 		}
 		diagnostics = append(diagnostics, includeDiagnostics...)
 
-		refChainCollector.Collect(bpcore.ChildElementID(name), includeSchema, "", []string{})
+		pathDiagnostics, pathErr := validation.ValidateIncludePathExists(
+			name,
+			includeSchema,
+			l.resolveWorkingDir,
+			valCtx.Params,
+		)
+		diagnostics = append(diagnostics, pathDiagnostics...)
+		if pathErr != nil {
+			includeErrors[name] = pathErr
+		}
+
+		if childBp, ok := childSchemas[name]; ok {
+			varDiagnostics, varErr := validation.ValidateIncludeVariables(
+				ctx,
+				name,
+				includeSchema,
+				valCtx.BpSchema.Include,
+				childBp,
+				valCtx,
+			)
+			diagnostics = append(diagnostics, varDiagnostics...)
+			if varErr != nil {
+				includeErrors[name] = varErr
+			}
+		}
+
+		valCtx.RefChainCollector.Collect(bpcore.ChildElementID(name), includeSchema, "", []string{})
 	}
 
 	if len(includeErrors) > 0 {
@@ -1261,29 +1284,22 @@ func (l *defaultLoader) validateIncludes(
 
 func (l *defaultLoader) validateExports(
 	ctx context.Context,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	refChainCollector refgraph.RefChainCollector,
+	valCtx *validation.ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
-	if bpSchema.Exports == nil {
+	if valCtx.BpSchema.Exports == nil {
 		return diagnostics, nil
 	}
 
 	// We'll collect and report issues for all the problematic exports.
 	exportErrors := map[string]error{}
-	for name, exportSchema := range bpSchema.Exports.Values {
+	for name, exportSchema := range valCtx.BpSchema.Exports.Values {
 		exportDiagnostics, err := validation.ValidateExport(
 			ctx,
 			name,
 			exportSchema,
-			bpSchema.Exports,
-			bpSchema,
-			params,
-			l.funcRegistry,
-			refChainCollector,
-			l.resourceRegistry.WithParams(params),
-			l.dataSourceRegistry,
+			valCtx.BpSchema.Exports,
+			valCtx,
 		)
 		if err != nil {
 			exportErrors[name] = err
@@ -1300,11 +1316,9 @@ func (l *defaultLoader) validateExports(
 
 func (l *defaultLoader) validateMetadata(
 	ctx context.Context,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	refChainCollector refgraph.RefChainCollector,
+	valCtx *validation.ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
-	if bpSchema.Metadata == nil {
+	if valCtx.BpSchema.Metadata == nil {
 		return []*bpcore.Diagnostic{}, nil
 	}
 
@@ -1313,13 +1327,8 @@ func (l *defaultLoader) validateMetadata(
 		"root",
 		"metadata",
 		/* usedInResourceDerivedFromTemplate */ false,
-		bpSchema.Metadata,
-		bpSchema,
-		params,
-		l.funcRegistry,
-		refChainCollector,
-		l.resourceRegistry.WithParams(params),
-		l.dataSourceRegistry,
+		valCtx.BpSchema.Metadata,
+		valCtx,
 	)
 }
 
@@ -1380,18 +1389,16 @@ func (l *defaultLoader) deriveProviderCustomVarType(ctx context.Context, varName
 
 func (l *defaultLoader) validateDataSources(
 	ctx context.Context,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	refChainCollector refgraph.RefChainCollector,
+	valCtx *validation.ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
-	if bpSchema.DataSources == nil {
+	if valCtx.BpSchema.DataSources == nil {
 		return diagnostics, nil
 	}
 	// To be as useful as possible, we'll collect and
 	// report issues for all the problematic resources.
 	dataSourceErrors := map[string][]error{}
-	for name, dataSourceSchema := range bpSchema.DataSources.Values {
+	for name, dataSourceSchema := range valCtx.BpSchema.DataSources.Values {
 		dataSourceLogger := l.logger.WithFields(
 			bpcore.StringLogField("dataSourceName", name),
 		)
@@ -1401,9 +1408,7 @@ func (l *defaultLoader) validateDataSources(
 			&diagnostics,
 			name,
 			dataSourceSchema,
-			bpSchema,
-			params,
-			refChainCollector,
+			valCtx,
 			dataSourceLogger,
 		)
 		if len(currentDataSourceErrs) > 0 {
@@ -1423,13 +1428,11 @@ func (l *defaultLoader) validateDataSource(
 	diagnostics *[]*bpcore.Diagnostic,
 	name string,
 	dataSourceSchema *schema.DataSource,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	refChainCollector refgraph.RefChainCollector,
+	valCtx *validation.ValidationContext,
 	dataSourceLogger bpcore.Logger,
 ) []error {
 	currentDataSourceErrs := []error{}
-	err := validation.ValidateDataSourceName(name, bpSchema.DataSources)
+	err := validation.ValidateDataSourceName(name, valCtx.BpSchema.DataSources)
 	if err != nil {
 		currentDataSourceErrs = append(currentDataSourceErrs, err)
 	}
@@ -1439,13 +1442,8 @@ func (l *defaultLoader) validateDataSource(
 		ctx,
 		name,
 		dataSourceSchema,
-		bpSchema.DataSources,
-		bpSchema,
-		params,
-		l.funcRegistry,
-		refChainCollector,
-		l.resourceRegistry.WithParams(params),
-		l.dataSourceRegistry,
+		valCtx.BpSchema.DataSources,
+		valCtx,
 		dataSourceLogger,
 	)
 	*diagnostics = append(*diagnostics, validateDataSourceDiagnostics...)
@@ -1453,24 +1451,22 @@ func (l *defaultLoader) validateDataSource(
 		currentDataSourceErrs = append(currentDataSourceErrs, err)
 	}
 
-	refChainCollector.Collect(bpcore.DataSourceElementID(name), dataSourceSchema, "", []string{})
+	valCtx.RefChainCollector.Collect(bpcore.DataSourceElementID(name), dataSourceSchema, "", []string{})
 	return currentDataSourceErrs
 }
 
 func (l *defaultLoader) validateResources(
 	ctx context.Context,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	refChainCollector refgraph.RefChainCollector,
+	valCtx *validation.ValidationContext,
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
-	if bpSchema.Resources == nil {
+	if valCtx.BpSchema.Resources == nil {
 		return diagnostics, nil
 	}
 	// To be as useful as possible, we'll collect and
 	// report issues for all the problematic resources.
 	resourceErrors := map[string][]error{}
-	for name, resourceSchema := range bpSchema.Resources.Values {
+	for name, resourceSchema := range valCtx.BpSchema.Resources.Values {
 		resourceLogger := l.logger.WithFields(
 			bpcore.StringLogField("resourceName", name),
 		)
@@ -1480,9 +1476,7 @@ func (l *defaultLoader) validateResources(
 			&diagnostics,
 			name,
 			resourceSchema,
-			bpSchema,
-			params,
-			refChainCollector,
+			valCtx,
 			resourceLogger,
 		)
 		if len(currentResouceErrs) > 0 {
@@ -1502,19 +1496,17 @@ func (l *defaultLoader) validateResource(
 	diagnostics *[]*bpcore.Diagnostic,
 	name string,
 	resourceSchema *schema.Resource,
-	bpSchema *schema.Blueprint,
-	params bpcore.BlueprintParams,
-	refChainCollector refgraph.RefChainCollector,
+	valCtx *validation.ValidationContext,
 	resourceLogger bpcore.Logger,
 ) []error {
 	currentResouceErrs := []error{}
-	err := validation.ValidateResourceName(name, bpSchema.Resources)
+	err := validation.ValidateResourceName(name, valCtx.BpSchema.Resources)
 	if err != nil {
 		currentResouceErrs = append(currentResouceErrs, err)
 	}
 
 	resourceLogger.Info("Pre-validating resource spec")
-	err = validation.PreValidateResourceSpec(ctx, name, resourceSchema, bpSchema.Resources)
+	err = validation.PreValidateResourceSpec(ctx, name, resourceSchema, valCtx.BpSchema.Resources)
 	if err != nil {
 		currentResouceErrs = append(currentResouceErrs, err)
 	}
@@ -1524,22 +1516,17 @@ func (l *defaultLoader) validateResource(
 		ctx,
 		name,
 		resourceSchema,
-		bpSchema.Resources,
-		bpSchema,
-		params,
-		l.funcRegistry,
-		refChainCollector,
-		l.resourceRegistry.WithParams(params),
+		valCtx.BpSchema.Resources,
+		valCtx,
 		slices.Contains(l.derivedFromTemplates, name),
 		resourceLogger,
-		l.dataSourceRegistry,
 	)
 	*diagnostics = append(*diagnostics, validateResourceDiagnostics...)
 	if err != nil {
 		currentResouceErrs = append(currentResouceErrs, err)
 	}
 
-	refChainCollector.Collect(bpcore.ResourceElementID(name), resourceSchema, "", []string{})
+	valCtx.RefChainCollector.Collect(bpcore.ResourceElementID(name), resourceSchema, "", []string{})
 	return currentResouceErrs
 }
 
@@ -1676,4 +1663,120 @@ func getStateContainerLinks(
 		return &noopLinksContainer{}
 	}
 	return stateContainer.Links()
+}
+
+// createChildExportLookup resolves locally-available child blueprints
+// and returns a ChildExportTypeLookup that can be used during validation
+// to resolve child export types.
+func (l *defaultLoader) createChildExportLookup(
+	childSchemas map[string]*schema.Blueprint,
+) validation.ChildExportTypeLookup {
+	if len(childSchemas) == 0 {
+		return nil
+	}
+
+	return func(childName string, exportName string, location *source.Meta) (*schema.Export, error) {
+		childBp, ok := childSchemas[childName]
+		if !ok {
+			// Child blueprint couldn't be resolved from the filesystem,
+			// return nil to indicate "unknown" rather than "not found".
+			return nil, nil
+		}
+
+		if childBp.Exports == nil {
+			return nil, validation.ErrChildExportNotFound(childName, exportName, location)
+		}
+
+		exportSchema, ok := childBp.Exports.Values[exportName]
+		if !ok {
+			return nil, validation.ErrChildExportNotFound(childName, exportName, location)
+		}
+
+		return exportSchema, nil
+	}
+}
+
+// resolveChildBlueprintSchemas attempts to load child blueprints from local
+// filesystem paths for use during validation.
+// Returns a map of include names to their parsed blueprint schemas.
+// Failures are logged and skipped.
+func (l *defaultLoader) resolveChildBlueprintSchemas(
+	bpSchema *schema.Blueprint,
+	params bpcore.BlueprintParams,
+) map[string]*schema.Blueprint {
+	if bpSchema.Include == nil {
+		return nil
+	}
+
+	childSchemas := map[string]*schema.Blueprint{}
+	for name, includeSchema := range bpSchema.Include.Values {
+		if includeSchema.Path == nil {
+			continue
+		}
+
+		if validation.IsRemoteInclude(includeSchema) {
+			continue
+		}
+
+		resolvedPath, ok := validation.TryResolveIncludePath(
+			includeSchema.Path,
+			l.resolveWorkingDir,
+		)
+		if !ok {
+			continue
+		}
+
+		if !filepath.IsAbs(resolvedPath) {
+			baseDir := resolveBaseDirForLoader(params, l.resolveWorkingDir)
+			if baseDir == "" {
+				continue
+			}
+			resolvedPath = filepath.Join(baseDir, resolvedPath)
+		}
+
+		format, err := deriveSpecFormat(resolvedPath)
+		if err != nil {
+			l.logger.Debug(
+				"Could not determine format for child blueprint",
+				bpcore.StringLogField("include", name),
+				bpcore.StringLogField("path", resolvedPath),
+			)
+			continue
+		}
+
+		childBp, err := schema.Load(resolvedPath, format)
+		if err != nil {
+			l.logger.Debug(
+				"Could not load child blueprint for validation",
+				bpcore.StringLogField("include", name),
+				bpcore.StringLogField("path", resolvedPath),
+			)
+			continue
+		}
+
+		childSchemas[name] = childBp
+	}
+
+	return childSchemas
+}
+
+func resolveBaseDirForLoader(
+	params bpcore.BlueprintParams,
+	resolveWorkingDir func() (string, error),
+) string {
+	if params != nil {
+		bpDir := params.ContextVariable(BlueprintDirectoryContextVar)
+		if bpDir != nil && bpDir.StringValue != nil && *bpDir.StringValue != "" {
+			return *bpDir.StringValue
+		}
+	}
+
+	if resolveWorkingDir != nil {
+		dir, err := resolveWorkingDir()
+		if err == nil {
+			return dir
+		}
+	}
+
+	return ""
 }

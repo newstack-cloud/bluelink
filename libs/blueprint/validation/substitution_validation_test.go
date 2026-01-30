@@ -68,15 +68,13 @@ func (s *SubstitutionValidationTestSuite) Test_passes_validation_for_valid_subst
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		/* bpSchema */ nil,
+		&ValidationContext{
+			Params:       &core.ParamsImpl{},
+			FuncRegistry: s.functionRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		/* refChainCollector */ nil,
-		/* resourceRegistry */ nil,
-		/* dataSourceRegistry */ nil,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(len(diagnostics), Equals, 0)
@@ -121,15 +119,17 @@ func (s *SubstitutionValidationTestSuite) Test_passes_validation_for_valid_subst
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"exports.example",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(len(diagnostics), Equals, 0)
@@ -158,15 +158,17 @@ func (s *SubstitutionValidationTestSuite) Test_passes_validation_for_valid_subst
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(len(diagnostics), Equals, 0)
@@ -197,15 +199,17 @@ func (s *SubstitutionValidationTestSuite) Test_passes_validation_for_valid_subst
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(len(diagnostics), Equals, 0)
@@ -236,15 +240,17 @@ func (s *SubstitutionValidationTestSuite) Test_passes_validation_for_valid_subst
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(len(diagnostics), Equals, 0)
@@ -263,15 +269,16 @@ func (s *SubstitutionValidationTestSuite) Test_passes_validation_for_valid_subst
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		/* blueprint */ nil,
+		&ValidationContext{
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(len(diagnostics), Equals, 0)
@@ -321,15 +328,17 @@ func (s *SubstitutionValidationTestSuite) Test_passes_validation_for_valid_subst
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(len(diagnostics), Equals, 0)
@@ -379,15 +388,17 @@ func (s *SubstitutionValidationTestSuite) Test_passes_validation_for_valid_subst
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource2",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(len(diagnostics), Equals, 0)
@@ -423,15 +434,17 @@ func (s *SubstitutionValidationTestSuite) Test_passes_validation_for_valid_subst
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource3",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(len(diagnostics), Equals, 0)
@@ -477,15 +490,17 @@ func (s *SubstitutionValidationTestSuite) Test_passes_validation_for_valid_subst
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(len(diagnostics), Equals, 0)
@@ -531,15 +546,17 @@ func (s *SubstitutionValidationTestSuite) Test_passes_validation_for_valid_subst
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(len(diagnostics), Equals, 0)
@@ -581,15 +598,17 @@ func (s *SubstitutionValidationTestSuite) Test_passes_validation_for_valid_subst
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"exports.example",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(len(diagnostics), Equals, 0)
@@ -610,15 +629,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_a_var_ref_in
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -652,15 +673,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_a_var_ref_is
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -686,15 +709,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_a_val_ref_in
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -744,15 +769,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_a_val_ref_is
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -802,15 +829,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_self_referen
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"values.bucketConfig",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -834,15 +863,16 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_elem_ref_out
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		/* blueprint */ nil,
+		&ValidationContext{
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"datasources.networking",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -868,15 +898,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_elem_ref_in_
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -936,15 +968,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_elem_ref_in_
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource1",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -991,15 +1025,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_elem_ref_in_
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource3",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1028,15 +1064,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_resource_pro
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource2",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1087,15 +1125,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_resource_pro
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource2",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1139,15 +1179,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_self_referen
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource2",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1193,15 +1235,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_referencing_
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource2",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1246,15 +1290,17 @@ func (s *SubstitutionValidationTestSuite) Test_produces_warning_diagnostic_when_
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource2",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(len(diagnostics), Equals, 1)
@@ -1299,15 +1345,17 @@ func (s *SubstitutionValidationTestSuite) Test_produces_warning_diagnostic_when_
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource2",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, IsNil)
 	c.Assert(len(diagnostics), Equals, 1)
@@ -1352,15 +1400,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_referenced_r
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource3",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1405,15 +1455,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_referenced_r
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource3",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1458,15 +1510,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_accessing_in
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource3",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1511,15 +1565,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_accessing_in
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource3",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1563,15 +1619,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_accessing_in
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource3",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1615,15 +1673,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_accessing_in
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource9",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1668,15 +1728,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_accessing_pr
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource9",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1721,15 +1783,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_accessing_in
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource11",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1774,15 +1838,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_accessing_mi
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource14",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1827,15 +1893,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_accessing_in
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource9",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1880,15 +1948,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_accessing_mi
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource11",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1915,15 +1985,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_an_incorrect
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource1",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -1950,15 +2022,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_an_incorrect
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource1",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
@@ -1986,15 +2060,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_data_source_
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource1",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -2037,15 +2113,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_data_source_
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource1",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -2088,15 +2166,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_self_referen
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"datasources.networking",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -2130,15 +2210,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_data_source_
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource1",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -2181,15 +2263,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_data_source_
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -2229,15 +2313,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_data_source_
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -2281,15 +2367,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_data_source_
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := err.(*errors.LoadError)
@@ -2340,15 +2428,17 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_a_link_func_
 		context.TODO(),
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
-		blueprint,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
 		/* usedInResourceDerivedFromTemplate */ false,
 		"resources.exampleResource3",
 		"",
-		&core.ParamsImpl{},
-		s.functionRegistry,
-		s.refChainCollector,
-		s.resourceRegistry,
-		s.dataSourceRegistry,
 	)
 	c.Assert(err, NotNil)
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
