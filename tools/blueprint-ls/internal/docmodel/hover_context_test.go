@@ -220,6 +220,7 @@ func (s *HoverContextSuite) TestSchemaElementKind_SupportsHover() {
 		SchemaElementValue,
 		SchemaElementDataSource,
 		SchemaElementInclude,
+		SchemaElementExport,
 		// Top-level sections
 		SchemaElementResources,
 		SchemaElementVariables,
@@ -248,7 +249,6 @@ func (s *HoverContextSuite) TestSchemaElementKind_SupportsHover() {
 	nonHoverableKinds := []SchemaElementKind{
 		SchemaElementUnknown,
 		SchemaElementScalar,
-		SchemaElementExport,
 		SchemaElementExports,
 	}
 

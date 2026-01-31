@@ -80,6 +80,7 @@ func (k SchemaElementKind) SupportsHover() bool {
 		SchemaElementValue,
 		SchemaElementDataSource,
 		SchemaElementInclude,
+		SchemaElementExport,
 		// Top-level sections
 		SchemaElementResources,
 		SchemaElementVariables,

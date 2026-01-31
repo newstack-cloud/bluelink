@@ -66,6 +66,14 @@ exports:
     type: string
     field: "resources.ordersTable.state.arn"
     description: "The ARN of the orders table"
+  vpcRef:
+    type: string
+    field: datasources.network.vpcId
+    description: "The VPC ID from the network data source"
+  envVar:
+    type: string
+    field: variables.environment
+    description: "The deployment environment variable"
 
 metadata:
   annotationRef: "${resources.ordersTable.metadata.annotations['environment.v1']}"

@@ -52,10 +52,10 @@ func (s *HoverServiceSuite) SetupTest() {
 
 func (s *HoverServiceSuite) Test_hover_on_resource_metadata_annotations_key() {
 	lspCtx := &common.LSPContext{}
-	// Line 71 (0-indexed: 70): annotationRef: "${resources.ordersTable.metadata.annotations['environment.v1']}"
+	// Line 79 (0-indexed: 78): annotationRef: "${resources.ordersTable.metadata.annotations['environment.v1']}"
 	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
-		Position:     lsp.Position{Line: 70, Character: 65},
+		Position:     lsp.Position{Line: 78, Character: 65},
 	})
 	s.Require().NoError(err)
 	s.Assert().NotEmpty(hoverContent.Value)
@@ -65,10 +65,10 @@ func (s *HoverServiceSuite) Test_hover_on_resource_metadata_annotations_key() {
 
 func (s *HoverServiceSuite) Test_hover_on_resource_metadata_annotations() {
 	lspCtx := &common.LSPContext{}
-	// Line 73 (0-indexed: 72): allAnnotations: "${resources.ordersTable.metadata.annotations}"
+	// Line 81 (0-indexed: 80): allAnnotations: "${resources.ordersTable.metadata.annotations}"
 	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
-		Position:     lsp.Position{Line: 72, Character: 53},
+		Position:     lsp.Position{Line: 80, Character: 53},
 	})
 	s.Require().NoError(err)
 	s.Assert().NotEmpty(hoverContent.Value)
@@ -78,10 +78,10 @@ func (s *HoverServiceSuite) Test_hover_on_resource_metadata_annotations() {
 
 func (s *HoverServiceSuite) Test_hover_on_resource_metadata() {
 	lspCtx := &common.LSPContext{}
-	// Line 72 (0-indexed: 71): metadataRef: "${resources.ordersTable.metadata}"
+	// Line 80 (0-indexed: 79): metadataRef: "${resources.ordersTable.metadata}"
 	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
-		Position:     lsp.Position{Line: 71, Character: 44},
+		Position:     lsp.Position{Line: 79, Character: 44},
 	})
 	s.Require().NoError(err)
 	s.Assert().NotEmpty(hoverContent.Value)
@@ -91,10 +91,10 @@ func (s *HoverServiceSuite) Test_hover_on_resource_metadata() {
 
 func (s *HoverServiceSuite) Test_hover_on_resource_metadata_labels() {
 	lspCtx := &common.LSPContext{}
-	// Line 74 (0-indexed: 73): allLabels: "${resources.ordersTable.metadata.labels}"
+	// Line 82 (0-indexed: 81): allLabels: "${resources.ordersTable.metadata.labels}"
 	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
-		Position:     lsp.Position{Line: 73, Character: 49},
+		Position:     lsp.Position{Line: 81, Character: 49},
 	})
 	s.Require().NoError(err)
 	s.Assert().NotEmpty(hoverContent.Value)
@@ -164,14 +164,56 @@ func (s *HoverServiceSuite) Test_hover_on_datasource_name() {
 func (s *HoverServiceSuite) Test_hover_on_export_name_produces_no_hover() {
 	lspCtx := &common.LSPContext{}
 	// "  tableArn:" at line 65 (0-indexed: 64)
-	// Neither SchemaElementExport nor SchemaElementExports support hover,
-	// so hovering anywhere in the exports section produces no popup.
+	// Hovering on the export name (not on the field value) produces no hover.
 	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
 		Position:     lsp.Position{Line: 64, Character: 4},
 	})
 	s.Require().NoError(err)
 	s.Assert().Empty(hoverContent.Value)
+}
+
+func (s *HoverServiceSuite) Test_hover_on_export_field_value_resource_name() {
+	lspCtx := &common.LSPContext{}
+	// Line 67 (0-indexed: 66): field: "resources.ordersTable.state.arn"
+	// Cursor on "ordersTable" (character 22 is within the resource name).
+	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 66, Character: 22},
+	})
+	s.Require().NoError(err)
+	s.Assert().NotEmpty(hoverContent.Value)
+	s.Assert().Contains(hoverContent.Value, "ordersTable")
+	s.Assert().Contains(hoverContent.Value, "aws/dynamodb/table")
+}
+
+func (s *HoverServiceSuite) Test_hover_on_export_field_value_variable() {
+	lspCtx := &common.LSPContext{}
+	// Line 75 (0-indexed: 74): field: variables.environment
+	// Cursor on "environment" (character 15 is within the variable name).
+	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 74, Character: 15},
+	})
+	s.Require().NoError(err)
+	s.Assert().NotEmpty(hoverContent.Value)
+	s.Assert().Contains(hoverContent.Value, "variables.environment")
+	s.Assert().Contains(hoverContent.Value, "string")
+	s.Assert().Contains(hoverContent.Value, "The deployment environment")
+}
+
+func (s *HoverServiceSuite) Test_hover_on_export_field_value_datasource() {
+	lspCtx := &common.LSPContext{}
+	// Line 71 (0-indexed: 70): field: datasources.network.vpcId
+	// Cursor on "vpcId" (character 27 is within the field name).
+	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 70, Character: 27},
+	})
+	s.Require().NoError(err)
+	s.Assert().NotEmpty(hoverContent.Value)
+	s.Assert().Contains(hoverContent.Value, "vpcId")
+	s.Assert().Contains(hoverContent.Value, "string")
 }
 
 func (s *HoverServiceSuite) Test_hover_on_include_name() {

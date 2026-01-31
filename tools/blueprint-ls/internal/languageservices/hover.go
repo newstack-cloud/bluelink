@@ -189,6 +189,8 @@ func (s *HoverService) getHoverContentByKind(
 		return getDataSourceFilterSearchHoverContent(hoverCtx.TreeNode)
 	case docmodel.SchemaElementStringList:
 		return getStringListHoverContent(hoverCtx.TreeNode)
+	case docmodel.SchemaElementExport:
+		return s.getExportFieldValueHoverContent(ctx, hoverCtx, blueprint, docURI)
 	default:
 		return &HoverContent{}, nil
 	}

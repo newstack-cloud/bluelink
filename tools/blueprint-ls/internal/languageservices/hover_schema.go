@@ -890,3 +890,411 @@ func renderStringListDefinition(path string, label string) string {
 	}
 	return helpinfo.RenderFieldDefinition(label, "")
 }
+
+// getExportFieldValueHoverContent provides hover for export field values.
+// When the cursor is on the field value string (e.g., "resources.ordersTable.spec.tableName"),
+// the field reference is parsed and resolved to show the same hover info
+// as ${..} substitution references.
+func (s *HoverService) getExportFieldValueHoverContent(
+	ctx *common.LSPContext,
+	hoverCtx *docmodel.HoverContext,
+	blueprint *schema.Blueprint,
+	docURI string,
+) (*HoverContent, error) {
+	export, ok := hoverCtx.SchemaElement.(*schema.Export)
+	if !ok || export == nil {
+		return &HoverContent{}, nil
+	}
+
+	if export.Field == nil || export.Field.StringValue == nil || export.Field.SourceMeta == nil {
+		return &HoverContent{}, nil
+	}
+
+	fieldValue := *export.Field.StringValue
+	fieldMeta := export.Field.SourceMeta
+
+	if !isCursorOnFieldValue(hoverCtx.CursorPosition, fieldMeta, fieldValue) {
+		return &HoverContent{}, nil
+	}
+
+	segments := parseFieldPathSegments(fieldValue)
+	if len(segments) < 2 {
+		return &HoverContent{}, nil
+	}
+
+	cursorSegIndex := findCursorSegmentIndex(
+		hoverCtx.CursorPosition,
+		fieldMeta,
+		fieldValue,
+		segments,
+	)
+	if cursorSegIndex < 0 {
+		return &HoverContent{}, nil
+	}
+
+	namespace := segments[0].value
+	return s.resolveExportFieldHover(
+		ctx, blueprint, docURI,
+		segments, namespace, cursorSegIndex,
+	)
+}
+
+// isCursorOnFieldValue checks if the cursor position falls within
+// the source range of the export field value.
+func isCursorOnFieldValue(
+	cursor source.Position,
+	fieldMeta *source.Meta,
+	fieldValue string,
+) bool {
+	if cursor.Line != fieldMeta.Position.Line {
+		return false
+	}
+
+	startCol := fieldMeta.Position.Column
+	endCol := startCol + len(fieldValue)
+	if fieldMeta.EndPosition != nil {
+		endCol = fieldMeta.EndPosition.Column
+	}
+
+	return cursor.Column >= startCol && cursor.Column < endCol
+}
+
+// findCursorSegmentIndex determines which path segment the cursor is on
+// within the export field value string.
+func findCursorSegmentIndex(
+	cursor source.Position,
+	fieldMeta *source.Meta,
+	fieldValue string,
+	segments []pathSegment,
+) int {
+	// Calculate the offset of the actual string content start,
+	// accounting for potential quote characters.
+	contentStartCol := fieldMeta.Position.Column
+	if fieldMeta.EndPosition != nil {
+		totalWidth := fieldMeta.EndPosition.Column - fieldMeta.Position.Column
+		if totalWidth == len(fieldValue)+2 {
+			// Quoted string — skip opening quote.
+			contentStartCol++
+		}
+	}
+
+	cursorOffset := cursor.Column - contentStartCol
+	if cursorOffset < 0 || cursorOffset >= len(fieldValue) {
+		return -1
+	}
+
+	// Walk through the field value to map character offsets to segments.
+	charPos := 0
+	for i, seg := range segments {
+		// Find the start of this segment in the field value.
+		segStart := strings.Index(fieldValue[charPos:], seg.value)
+		if segStart < 0 {
+			continue
+		}
+		segStart += charPos
+		segEnd := segStart + len(seg.value)
+
+		if cursorOffset >= segStart && cursorOffset < segEnd {
+			return i
+		}
+
+		charPos = segEnd
+	}
+
+	return -1
+}
+
+// resolveExportFieldHover resolves hover content for a specific segment
+// of an export field value reference.
+func (s *HoverService) resolveExportFieldHover(
+	ctx *common.LSPContext,
+	blueprint *schema.Blueprint,
+	docURI string,
+	segments []pathSegment,
+	namespace string,
+	cursorSegIndex int,
+) (*HoverContent, error) {
+	switch namespace {
+	case "resources":
+		return s.resolveExportFieldResourceHover(ctx, blueprint, segments, cursorSegIndex)
+	case "variables":
+		return resolveExportFieldVariableHover(blueprint, segments)
+	case "values":
+		return resolveExportFieldValueHover(blueprint, segments)
+	case "children":
+		return s.resolveExportFieldChildHover(blueprint, segments, cursorSegIndex, docURI)
+	case "datasources":
+		return resolveExportFieldDataSourceHover(blueprint, segments)
+	default:
+		return &HoverContent{}, nil
+	}
+}
+
+func buildSubstitutionPathItems(
+	segments []pathSegment,
+) []*substitutions.SubstitutionPathItem {
+	items := make([]*substitutions.SubstitutionPathItem, 0, len(segments))
+	for _, seg := range segments {
+		item := &substitutions.SubstitutionPathItem{}
+		if seg.isIndex {
+			idx := seg.indexValue
+			item.ArrayIndex = &idx
+		} else {
+			item.FieldName = seg.value
+		}
+		items = append(items, item)
+	}
+	return items
+}
+
+func (s *HoverService) resolveExportFieldResourceHover(
+	ctx *common.LSPContext,
+	blueprint *schema.Blueprint,
+	segments []pathSegment,
+	cursorSegIndex int,
+) (*HoverContent, error) {
+	if len(segments) < 2 {
+		return &HoverContent{}, nil
+	}
+
+	resourceName := segments[1].value
+	resource := getResource(blueprint, resourceName)
+	if resource == nil {
+		return &HoverContent{}, nil
+	}
+
+	if cursorSegIndex <= 1 {
+		label := buildExportFieldLabel(segments)
+		return &HoverContent{
+			Value: helpinfo.RenderBasicResourceInfo(label, resource),
+		}, nil
+	}
+
+	if resource.Type == nil {
+		return &HoverContent{}, nil
+	}
+
+	pathItems := buildSubstitutionPathItems(segments[2:])
+	pathItemIndex := cursorSegIndex - 2
+	if pathItemIndex < 0 || pathItemIndex >= len(pathItems) {
+		return &HoverContent{}, nil
+	}
+
+	resRef := &substitutions.SubstitutionResourceProperty{
+		ResourceName: resourceName,
+		Path:         pathItems,
+	}
+	return s.resolveResourcePathItemHover(
+		ctx, resource, resRef, segments[cursorSegIndex].value, pathItemIndex,
+	)
+}
+
+func (s *HoverService) resolveResourcePathItemHover(
+	ctx *common.LSPContext,
+	resource *schema.Resource,
+	resRef *substitutions.SubstitutionResourceProperty,
+	segmentValue string,
+	pathItemIndex int,
+) (*HoverContent, error) {
+	firstField := ""
+	if len(resRef.Path) > 0 {
+		firstField = resRef.Path[0].FieldName
+	}
+
+	if firstField == "spec" && pathItemIndex > 0 {
+		return s.resolveResourceSpecFieldHover(
+			ctx, resource, resRef, segmentValue, pathItemIndex,
+		)
+	}
+
+	if firstField == "metadata" {
+		content := helpinfo.RenderResourceMetadataPathItemInfo(
+			segmentValue, resRef, pathItemIndex,
+		)
+		return &HoverContent{Value: content}, nil
+	}
+
+	return &HoverContent{}, nil
+}
+
+func (s *HoverService) resolveResourceSpecFieldHover(
+	ctx *common.LSPContext,
+	resource *schema.Resource,
+	resRef *substitutions.SubstitutionResourceProperty,
+	segmentValue string,
+	pathItemIndex int,
+) (*HoverContent, error) {
+	specDefOutput, err := s.resourceRegistry.GetSpecDefinition(
+		ctx.Context,
+		resource.Type.Value,
+		&provider.ResourceGetSpecDefinitionInput{},
+	)
+	if err != nil {
+		return &HoverContent{}, nil
+	}
+
+	pathToItem := resRef.Path[1 : pathItemIndex+1]
+	specFieldSchema, err := findResourceFieldSchema(
+		specDefOutput.SpecDefinition.Schema, pathToItem,
+	)
+	if err != nil || specFieldSchema == nil {
+		return &HoverContent{}, nil
+	}
+
+	content := helpinfo.RenderPathItemFieldInfo(segmentValue, specFieldSchema)
+	return &HoverContent{Value: content}, nil
+}
+
+func resolveExportFieldVariableHover(
+	blueprint *schema.Blueprint,
+	segments []pathSegment,
+) (*HoverContent, error) {
+	if len(segments) < 2 {
+		return &HoverContent{}, nil
+	}
+
+	varName := segments[1].value
+	variable := getVariable(blueprint, varName)
+	if variable == nil {
+		return &HoverContent{}, nil
+	}
+
+	label := buildExportFieldLabel(segments)
+	content := helpinfo.RenderVariableInfo(label, variable)
+	return &HoverContent{
+		Value: content,
+	}, nil
+}
+
+func resolveExportFieldValueHover(
+	blueprint *schema.Blueprint,
+	segments []pathSegment,
+) (*HoverContent, error) {
+	if len(segments) < 2 {
+		return &HoverContent{}, nil
+	}
+
+	valueName := segments[1].value
+	value := getValue(blueprint, valueName)
+	if value == nil {
+		return &HoverContent{}, nil
+	}
+
+	label := buildExportFieldLabel(segments)
+	content := helpinfo.RenderValueInfo(label, value)
+	return &HoverContent{
+		Value: content,
+	}, nil
+}
+
+func (s *HoverService) resolveExportFieldChildHover(
+	blueprint *schema.Blueprint,
+	segments []pathSegment,
+	cursorSegIndex int,
+	docURI string,
+) (*HoverContent, error) {
+	if len(segments) < 2 {
+		return &HoverContent{}, nil
+	}
+
+	childName := segments[1].value
+	child := getChild(blueprint, childName)
+	if child == nil {
+		return &HoverContent{}, nil
+	}
+
+	// If cursor is on namespace or child name, show child info.
+	if cursorSegIndex <= 1 {
+		label := buildExportFieldLabel(segments)
+		content := helpinfo.RenderChildInfo(label, child)
+		return &HoverContent{
+			Value: content,
+		}, nil
+	}
+
+	// If cursor is on an export name (segment 2+), try to resolve child export.
+	if cursorSegIndex >= 2 && len(segments) > 2 {
+		exportName := segments[cursorSegIndex].value
+		childRef := &substitutions.SubstitutionChild{
+			ChildName: childName,
+		}
+		exportInfo := s.resolveChildExportInfo(blueprint, childName, exportName, docURI)
+		if exportInfo != nil {
+			content := helpinfo.RenderChildExportFieldInfo(
+				exportName,
+				childRef,
+				string(exportInfo.Type),
+				exportInfo.Field,
+				exportInfo.Description,
+			)
+			return &HoverContent{
+				Value: content,
+			}, nil
+		}
+
+		pathItem := &substitutions.SubstitutionPathItem{
+			FieldName: exportName,
+		}
+		content := helpinfo.RenderChildPathItemInfo(exportName, childRef, pathItem)
+		return &HoverContent{
+			Value: content,
+		}, nil
+	}
+
+	return &HoverContent{}, nil
+}
+
+func resolveExportFieldDataSourceHover(
+	blueprint *schema.Blueprint,
+	segments []pathSegment,
+) (*HoverContent, error) {
+	if len(segments) < 2 {
+		return &HoverContent{}, nil
+	}
+
+	dsName := segments[1].value
+	dataSource := getDataSource(blueprint, dsName)
+	if dataSource == nil {
+		return &HoverContent{}, nil
+	}
+
+	label := buildExportFieldLabel(segments)
+	fieldName := ""
+	if len(segments) > 2 {
+		fieldName = segments[2].value
+	}
+
+	dsRef := &substitutions.SubstitutionDataSourceProperty{
+		DataSourceName: dsName,
+		FieldName:      fieldName,
+	}
+
+	if fieldName == "" {
+		content := helpinfo.RenderBasicDataSourceInfo(label, dataSource)
+		return &HoverContent{
+			Value: content,
+		}, nil
+	}
+
+	dataSourceField := getDataSourceField(dataSource, fieldName)
+	if dataSourceField == nil {
+		content := helpinfo.RenderBasicDataSourceInfo(label, dataSource)
+		return &HoverContent{
+			Value: content,
+		}, nil
+	}
+
+	content := helpinfo.RenderDataSourceFieldInfo(label, dataSource, dsRef, dataSourceField)
+	return &HoverContent{
+		Value: content,
+	}, nil
+}
+
+// buildExportFieldLabel builds a display label from export field path segments.
+func buildExportFieldLabel(segments []pathSegment) string {
+	parts := make([]string, 0, len(segments))
+	for _, seg := range segments {
+		parts = append(parts, seg.value)
+	}
+	return strings.Join(parts, ".")
+}
