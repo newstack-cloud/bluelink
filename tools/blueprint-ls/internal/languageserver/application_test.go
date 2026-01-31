@@ -99,7 +99,7 @@ func (s *ApplicationSuite) createTestApplication() *Application {
 		functionRegistry, resourceRegistry, dataSourceRegistry, nil, signatureService, nil, s.logger,
 	)
 	symbolService := languageservices.NewSymbolService(state, s.logger)
-	gotoDefinitionService := languageservices.NewGotoDefinitionService(state, s.logger)
+	gotoDefinitionService := languageservices.NewGotoDefinitionService(state, nil /* childResolver */, s.logger)
 	codeActionService := languageservices.NewCodeActionService(state, s.logger)
 
 	debouncer := NewDocumentDebouncer(300 * time.Millisecond)

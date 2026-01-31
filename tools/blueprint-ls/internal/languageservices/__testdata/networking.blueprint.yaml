@@ -1,0 +1,6 @@
+version: 2024-07-20
+
+resources:
+  vpc:
+    type: celerity/vpc
+    description: "The VPC for the application."

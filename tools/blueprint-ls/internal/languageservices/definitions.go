@@ -2,6 +2,7 @@ package languageservices
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
@@ -14,18 +15,21 @@ import (
 
 // GotoDefinitionService provides go-to-definition functionality for blueprint documents.
 type GotoDefinitionService struct {
-	state  *State
-	logger *zap.Logger
+	state         *State
+	childResolver *ChildBlueprintResolver
+	logger        *zap.Logger
 }
 
 // NewGotoDefinitionService creates a new service for go-to-definition support.
 func NewGotoDefinitionService(
 	state *State,
+	childResolver *ChildBlueprintResolver,
 	logger *zap.Logger,
 ) *GotoDefinitionService {
 	return &GotoDefinitionService{
-		state:  state,
-		logger: logger,
+		state:         state,
+		childResolver: childResolver,
+		logger:        logger,
 	}
 }
 
@@ -258,6 +262,7 @@ type plainStringContextType int
 const (
 	plainStringContextExportField plainStringContextType = iota
 	plainStringContextResourceRef
+	plainStringContextIncludePath
 )
 
 type plainStringContext struct {
@@ -292,6 +297,8 @@ func (s *GotoDefinitionService) findPlainStringDefinitionLink(
 		return s.buildExportFieldDefinitionLink(docURI, ctx, tree)
 	case plainStringContextResourceRef:
 		return s.buildResourceNameDefinitionLink(docURI, blueprint, ctx.leafNode, tree)
+	case plainStringContextIncludePath:
+		return s.buildIncludePathDefinitionLink(docURI, ctx.parentNode, ctx.leafNode)
 	}
 
 	return []lsp.LocationLink{}, nil
@@ -310,6 +317,14 @@ func classifyPlainStringContext(collected []*schema.TreeNode) *plainStringContex
 	for i := len(collected) - 2; i >= 0; i-- {
 		node := collected[i]
 		kind := docmodel.KindFromSchemaElement(node.SchemaElement)
+
+		if kind == docmodel.SchemaElementInclude && hasPathDescendant(collected[i+1:]) {
+			return &plainStringContext{
+				contextType: plainStringContextIncludePath,
+				leafNode:    leaf,
+				parentNode:  node,
+			}
+		}
 
 		if kind == docmodel.SchemaElementExport && hasFieldDescendant(collected[i+1:]) {
 			return &plainStringContext{
@@ -334,6 +349,15 @@ func classifyPlainStringContext(collected []*schema.TreeNode) *plainStringContex
 func hasFieldDescendant(descendants []*schema.TreeNode) bool {
 	for _, node := range descendants {
 		if node.Label == "field" {
+			return true
+		}
+	}
+	return false
+}
+
+func hasPathDescendant(descendants []*schema.TreeNode) bool {
+	for _, node := range descendants {
+		if node.Label == "path" {
 			return true
 		}
 	}
@@ -398,4 +422,44 @@ func (s *GotoDefinitionService) buildResourceNameDefinitionLink(
 	}
 
 	return buildLocationLink(docURI, leafNode.Range, targetNode.Range), nil
+}
+
+func (s *GotoDefinitionService) buildIncludePathDefinitionLink(
+	docURI lsp.URI,
+	includeNode *schema.TreeNode,
+	leafNode *schema.TreeNode,
+) ([]lsp.LocationLink, error) {
+	if s.childResolver == nil {
+		return []lsp.LocationLink{}, nil
+	}
+
+	include, ok := includeNode.SchemaElement.(*schema.Include)
+	if !ok || include == nil {
+		return []lsp.LocationLink{}, nil
+	}
+
+	resolvedPath := s.childResolver.ResolveIncludePath(string(docURI), include)
+	if resolvedPath == "" {
+		return []lsp.LocationLink{}, nil
+	}
+
+	if _, err := os.Stat(resolvedPath); err != nil {
+		return []lsp.LocationLink{}, nil
+	}
+
+	targetURI := lsp.URI(fileURIFromPath(resolvedPath))
+	origin := rangeToLSPRange(leafNode.Range)
+	startOfFile := lsp.Range{
+		Start: lsp.Position{Line: 0, Character: 0},
+		End:   lsp.Position{Line: 0, Character: 0},
+	}
+
+	return []lsp.LocationLink{
+		{
+			OriginSelectionRange: origin,
+			TargetURI:            targetURI,
+			TargetRange:          startOfFile,
+			TargetSelectionRange: startOfFile,
+		},
+	}, nil
 }

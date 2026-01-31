@@ -42,20 +42,19 @@ func NewChildBlueprintResolver(logger *zap.Logger) *ChildBlueprintResolver {
 	}
 }
 
-// ResolveChildExports resolves and returns the export info for a child blueprint.
-// parentDocURI is the URI of the parent document (used to derive the parent directory).
-// include is the include schema for the child blueprint.
-// Returns nil if the child blueprint cannot be resolved.
-func (r *ChildBlueprintResolver) ResolveChildExports(
+// ResolveIncludePath resolves an include path to an absolute filesystem path.
+// Returns an empty string if the path cannot be resolved (remote includes,
+// unresolvable substitutions, or missing parent directory).
+func (r *ChildBlueprintResolver) ResolveIncludePath(
 	parentDocURI string,
 	include *schema.Include,
-) *ChildBlueprintInfo {
+) string {
 	if include == nil || include.Path == nil {
-		return nil
+		return ""
 	}
 
 	if validation.IsRemoteInclude(include) {
-		return nil
+		return ""
 	}
 
 	parentDir := parentDirFromURI(parentDocURI)
@@ -65,17 +64,30 @@ func (r *ChildBlueprintResolver) ResolveChildExports(
 
 	resolvedPath, ok := validation.TryResolveIncludePath(include.Path, resolveWorkingDir)
 	if !ok {
-		return nil
+		return ""
 	}
 
 	if !filepath.IsAbs(resolvedPath) {
 		if parentDir == "" {
-			return nil
+			return ""
 		}
 		resolvedPath = filepath.Join(parentDir, resolvedPath)
 	}
 
-	// Check cache first.
+	return resolvedPath
+}
+
+// ResolveChildExports resolves and returns the export info for a child blueprint.
+// Returns nil if the child blueprint cannot be resolved.
+func (r *ChildBlueprintResolver) ResolveChildExports(
+	parentDocURI string,
+	include *schema.Include,
+) *ChildBlueprintInfo {
+	resolvedPath := r.ResolveIncludePath(parentDocURI, include)
+	if resolvedPath == "" {
+		return nil
+	}
+
 	if cached, ok := r.cache.Get(resolvedPath); ok {
 		return cached
 	}
@@ -157,6 +169,10 @@ func filePathFromURI(uri string) string {
 		return parsed.Path
 	}
 	return uri
+}
+
+func fileURIFromPath(filePath string) string {
+	return "file://" + filePath
 }
 
 func deriveChildBlueprintFormat(filePath string) (schema.SpecFormat, error) {

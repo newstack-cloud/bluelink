@@ -111,6 +111,7 @@ func main() {
 	)
 	gotoDefinitionService := languageservices.NewGotoDefinitionService(
 		state,
+		childResolver,
 		logger,
 	)
 	codeActionService := languageservices.NewCodeActionService(

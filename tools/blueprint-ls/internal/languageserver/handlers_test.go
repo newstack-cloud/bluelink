@@ -396,7 +396,7 @@ func (s *HandlersSuite) createTestApplication(state *languageservices.State) *Ap
 		s.logger,
 	)
 	symbolService := languageservices.NewSymbolService(state, s.logger)
-	gotoDefinitionService := languageservices.NewGotoDefinitionService(state, s.logger)
+	gotoDefinitionService := languageservices.NewGotoDefinitionService(state, nil /* childResolver */, s.logger)
 	codeActionService := languageservices.NewCodeActionService(state, s.logger)
 
 	return NewApplication(

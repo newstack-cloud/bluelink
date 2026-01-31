@@ -1,6 +1,7 @@
 package languageservices
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
@@ -13,19 +14,22 @@ import (
 type GotoDefinitionServiceSuite struct {
 	suite.Suite
 	service          *GotoDefinitionService
+	state            *State
+	logger           *zap.Logger
 	blueprintContent string
 	docCtx           *docmodel.DocumentContext
 }
 
 func (s *GotoDefinitionServiceSuite) SetupTest() {
-	logger, err := zap.NewDevelopment()
+	var err error
+	s.logger, err = zap.NewDevelopment()
 	if err != nil {
 		s.FailNow(err.Error())
 	}
 
-	state := NewState()
-	state.SetLinkSupportCapability(true)
-	s.service = NewGotoDefinitionService(state, logger)
+	s.state = NewState()
+	s.state.SetLinkSupportCapability(true)
+	s.service = NewGotoDefinitionService(s.state, nil, s.logger)
 	s.blueprintContent, err = loadTestBlueprintContent("blueprint-definitions.yaml")
 	s.Require().NoError(err)
 
@@ -430,6 +434,47 @@ func (s *GotoDefinitionServiceSuite) Test_get_definitions_for_depends_on_item() 
 	s.Assert().Equal("file:///blueprint.yaml", string(definitions[0].TargetURI))
 	// Target should be getOrderHandler resource (lines 126-147, 0-indexed: 125-146)
 	s.Assert().Equal(lsp.Position{Line: 125, Character: 2}, definitions[0].TargetRange.Start)
+}
+
+func (s *GotoDefinitionServiceSuite) Test_get_definitions_for_include_path() {
+	childResolver := NewChildBlueprintResolver(s.logger)
+	service := NewGotoDefinitionService(s.state, childResolver, s.logger)
+
+	absTestdataDir, err := filepath.Abs("__testdata")
+	s.Require().NoError(err)
+	realURI := "file://" + filepath.Join(absTestdataDir, "blueprint-definitions.yaml")
+
+	docCtx := docmodel.NewDocumentContextFromSchema(
+		realURI, s.docCtx.Blueprint, s.docCtx.SchemaTree,
+	)
+	docCtx.Content = s.blueprintContent
+
+	// Line 168 (0-indexed: 167): path: networking.blueprint.yaml
+	definitions, err := service.GetDefinitionsFromContext(docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: lsp.URI(realURI)},
+		Position:     lsp.Position{Line: 167, Character: 12},
+	})
+	s.Require().NoError(err)
+	s.Require().Len(definitions, 1)
+
+	expectedTargetURI := "file://" + filepath.Join(absTestdataDir, "networking.blueprint.yaml")
+	s.Assert().Equal(expectedTargetURI, string(definitions[0].TargetURI))
+	s.Assert().Equal(lsp.Position{Line: 0, Character: 0}, definitions[0].TargetRange.Start)
+}
+
+func (s *GotoDefinitionServiceSuite) Test_get_definitions_for_include_path_returns_empty_for_unresolvable() {
+	// With nil childResolver, include path definitions return empty.
+	definitions, err := s.service.GetDefinitionsFromContext(s.docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{
+			URI: "file:///blueprint.yaml",
+		},
+		Position: lsp.Position{
+			Line:      167,
+			Character: 12,
+		},
+	})
+	s.Require().NoError(err)
+	s.Assert().Empty(definitions)
 }
 
 func (s *GotoDefinitionServiceSuite) Test_get_definitions_returns_empty_list_for_a_non_ref_position() {
