@@ -14,15 +14,16 @@ import (
 // Resource represents a blueprint
 // resource in the specification.
 type Resource struct {
-	Type         *ResourceTypeWrapper                 `yaml:"type" json:"type"`
-	Description  *substitutions.StringOrSubstitutions `yaml:"description,omitempty" json:"description,omitempty"`
-	Metadata     *Metadata                            `yaml:"metadata,omitempty" json:"metadata,omitempty"`
-	DependsOn    *DependsOnList                       `yaml:"dependsOn,omitempty" json:"dependsOn,omitempty"`
-	Condition    *Condition                           `yaml:"condition,omitempty" json:"condition,omitempty"`
-	Each         *substitutions.StringOrSubstitutions `yaml:"each,omitempty" json:"each,omitempty"`
-	LinkSelector *LinkSelector                        `yaml:"linkSelector,omitempty" json:"linkSelector,omitempty"`
-	Spec         *core.MappingNode                    `yaml:"spec" json:"spec"`
-	SourceMeta   *source.Meta                         `yaml:"-" json:"-"`
+	Type             *ResourceTypeWrapper                 `yaml:"type" json:"type"`
+	Description      *substitutions.StringOrSubstitutions `yaml:"description,omitempty" json:"description,omitempty"`
+	Metadata         *Metadata                            `yaml:"metadata,omitempty" json:"metadata,omitempty"`
+	DependsOn        *DependsOnList                       `yaml:"dependsOn,omitempty" json:"dependsOn,omitempty"`
+	Condition        *Condition                           `yaml:"condition,omitempty" json:"condition,omitempty"`
+	Each             *substitutions.StringOrSubstitutions `yaml:"each,omitempty" json:"each,omitempty"`
+	LinkSelector     *LinkSelector                        `yaml:"linkSelector,omitempty" json:"linkSelector,omitempty"`
+	Spec             *core.MappingNode                    `yaml:"spec" json:"spec"`
+	SourceMeta       *source.Meta                         `yaml:"-" json:"-"`
+	FieldsSourceMeta map[string]*source.Meta              `yaml:"-" json:"-"`
 }
 
 func (r *Resource) UnmarshalYAML(value *yaml.Node) error {
@@ -32,6 +33,7 @@ func (r *Resource) UnmarshalYAML(value *yaml.Node) error {
 			Column: value.Column,
 		},
 	}
+	r.FieldsSourceMeta = source.ExtractFieldsSourceMetaFromYAMLNode(value)
 
 	type resourceAlias Resource
 	var alias resourceAlias
@@ -61,6 +63,8 @@ func (r *Resource) FromJSONNode(
 		position := source.PositionFromJSONNode(node, linePositions)
 		return errInvalidMap(&position, parentPath)
 	}
+
+	r.FieldsSourceMeta = source.ExtractFieldsSourceMetaFromJSONNodeMap(nodeMap, linePositions)
 
 	r.Type = &ResourceTypeWrapper{}
 	err := core.UnpackValueFromJSONMapNode(
@@ -275,11 +279,12 @@ func (t *ResourceTypeWrapper) FromJSONNode(
 // and annotations that can be used to configure
 // instances and used for link selections.
 type Metadata struct {
-	DisplayName *substitutions.StringOrSubstitutions `yaml:"displayName" json:"displayName"`
-	Annotations *StringOrSubstitutionsMap            `yaml:"annotations,omitempty" json:"annotations,omitempty"`
-	Labels      *StringMap                           `yaml:"labels,omitempty" json:"labels,omitempty"`
-	Custom      *core.MappingNode                    `yaml:"custom,omitempty" json:"custom,omitempty"`
-	SourceMeta  *source.Meta                         `yaml:"-" json:"-"`
+	DisplayName      *substitutions.StringOrSubstitutions `yaml:"displayName" json:"displayName"`
+	Annotations      *StringOrSubstitutionsMap            `yaml:"annotations,omitempty" json:"annotations,omitempty"`
+	Labels           *StringMap                           `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Custom           *core.MappingNode                    `yaml:"custom,omitempty" json:"custom,omitempty"`
+	SourceMeta       *source.Meta                         `yaml:"-" json:"-"`
+	FieldsSourceMeta map[string]*source.Meta              `yaml:"-" json:"-"`
 }
 
 func (m *Metadata) UnmarshalYAML(value *yaml.Node) error {
@@ -289,6 +294,7 @@ func (m *Metadata) UnmarshalYAML(value *yaml.Node) error {
 			Column: value.Column,
 		},
 	}
+	m.FieldsSourceMeta = source.ExtractFieldsSourceMetaFromYAMLNode(value)
 
 	type metadataAlias Metadata
 	var alias metadataAlias
@@ -314,6 +320,8 @@ func (m *Metadata) FromJSONNode(
 		position := source.PositionFromJSONNode(node, linePositions)
 		return errInvalidMap(&position, parentPath)
 	}
+
+	m.FieldsSourceMeta = source.ExtractFieldsSourceMetaFromJSONNodeMap(nodeMap, linePositions)
 
 	m.DisplayName = &substitutions.StringOrSubstitutions{}
 	err := core.UnpackValueFromJSONMapNode(
@@ -382,9 +390,10 @@ func (m *Metadata) FromJSONNode(
 // LinkSelector allows a resource to select other resources
 // to link to by label.
 type LinkSelector struct {
-	ByLabel    *StringMap   `yaml:"byLabel" json:"byLabel"`
-	Exclude    *StringList  `yaml:"exclude,omitempty" json:"exclude,omitempty"`
-	SourceMeta *source.Meta `yaml:"-" json:"-"`
+	ByLabel          *StringMap              `yaml:"byLabel" json:"byLabel"`
+	Exclude          *StringList             `yaml:"exclude,omitempty" json:"exclude,omitempty"`
+	SourceMeta       *source.Meta            `yaml:"-" json:"-"`
+	FieldsSourceMeta map[string]*source.Meta `yaml:"-" json:"-"`
 }
 
 func (s *LinkSelector) UnmarshalYAML(value *yaml.Node) error {
@@ -394,6 +403,7 @@ func (s *LinkSelector) UnmarshalYAML(value *yaml.Node) error {
 			Column: value.Column,
 		},
 	}
+	s.FieldsSourceMeta = source.ExtractFieldsSourceMetaFromYAMLNode(value)
 
 	type linkSelectorAlias LinkSelector
 	var alias linkSelectorAlias
@@ -417,6 +427,8 @@ func (s *LinkSelector) FromJSONNode(
 		position := source.PositionFromJSONNode(node, linePositions)
 		return errInvalidMap(&position, parentPath)
 	}
+
+	s.FieldsSourceMeta = source.ExtractFieldsSourceMetaFromJSONNodeMap(nodeMap, linePositions)
 
 	s.ByLabel = &StringMap{}
 	err := core.UnpackValueFromJSONMapNode(

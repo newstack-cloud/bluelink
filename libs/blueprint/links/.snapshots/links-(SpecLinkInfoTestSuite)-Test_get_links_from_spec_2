@@ -17,14 +17,16 @@
           SourceMeta: (map[string]*source.Meta) <nil>
         }),
         Custom: (*core.MappingNode)(<nil>),
-        SourceMeta: (*source.Meta)(<nil>)
+        SourceMeta: (*source.Meta)(<nil>),
+        FieldsSourceMeta: (map[string]*source.Meta) <nil>
       }),
       DependsOn: (*schema.DependsOnList)(<nil>),
       Condition: (*schema.Condition)(<nil>),
       Each: (*substitutions.StringOrSubstitutions)(<nil>),
       LinkSelector: (*schema.LinkSelector)(<nil>),
       Spec: (*core.MappingNode)(<nil>),
-      SourceMeta: (*source.Meta)(<nil>)
+      SourceMeta: (*source.Meta)(<nil>),
+      FieldsSourceMeta: (map[string]*source.Meta) <nil>
     }),
     Selectors: (map[string][]string) {
     },
@@ -55,14 +57,16 @@
           SourceMeta: (map[string]*source.Meta) <nil>
         }),
         Custom: (*core.MappingNode)(<nil>),
-        SourceMeta: (*source.Meta)(<nil>)
+        SourceMeta: (*source.Meta)(<nil>),
+        FieldsSourceMeta: (map[string]*source.Meta) <nil>
       }),
       DependsOn: (*schema.DependsOnList)(<nil>),
       Condition: (*schema.Condition)(<nil>),
       Each: (*substitutions.StringOrSubstitutions)(<nil>),
       LinkSelector: (*schema.LinkSelector)(<nil>),
       Spec: (*core.MappingNode)(<nil>),
-      SourceMeta: (*source.Meta)(<nil>)
+      SourceMeta: (*source.Meta)(<nil>),
+      FieldsSourceMeta: (map[string]*source.Meta) <nil>
     }),
     Selectors: (map[string][]string) {
     },
@@ -88,14 +92,16 @@
         Annotations: (*schema.StringOrSubstitutionsMap)(<nil>),
         Labels: (*schema.StringMap)(<nil>),
         Custom: (*core.MappingNode)(<nil>),
-        SourceMeta: (*source.Meta)(<nil>)
+        SourceMeta: (*source.Meta)(<nil>),
+        FieldsSourceMeta: (map[string]*source.Meta) <nil>
       }),
       DependsOn: (*schema.DependsOnList)(<nil>),
       Condition: (*schema.Condition)(<nil>),
       Each: (*substitutions.StringOrSubstitutions)(<nil>),
       LinkSelector: (*schema.LinkSelector)(<nil>),
       Spec: (*core.MappingNode)(<nil>),
-      SourceMeta: (*source.Meta)(<nil>)
+      SourceMeta: (*source.Meta)(<nil>),
+      FieldsSourceMeta: (map[string]*source.Meta) <nil>
     }),
     Selectors: (map[string][]string) {
     },

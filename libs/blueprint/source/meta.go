@@ -166,6 +166,42 @@ func ExtractSourcePositionForJSONNodeMapField(
 	}
 }
 
+// ExtractFieldsSourceMetaFromYAMLNode extracts the source positions for
+// all field keys in a YAML mapping node.
+func ExtractFieldsSourceMetaFromYAMLNode(node *yaml.Node) map[string]*Meta {
+	if node == nil || node.Kind != yaml.MappingNode {
+		return nil
+	}
+	meta := make(map[string]*Meta, len(node.Content)/2)
+	for i := 0; i < len(node.Content); i += 2 {
+		key := node.Content[i]
+		meta[key.Value] = &Meta{
+			Position: Position{
+				Line:   key.Line,
+				Column: key.Column,
+			},
+			EndPosition: EndSourcePositionFromYAMLScalarNode(key),
+		}
+	}
+	return meta
+}
+
+// ExtractFieldsSourceMetaFromJSONNodeMap extracts the source positions for
+// all field keys in a JSON map node.
+func ExtractFieldsSourceMetaFromJSONNodeMap(
+	nodeMap map[string]json.Node,
+	linePositions []int,
+) map[string]*Meta {
+	if nodeMap == nil {
+		return nil
+	}
+	meta := make(map[string]*Meta, len(nodeMap))
+	for key, node := range nodeMap {
+		meta[key] = ExtractSourcePositionForJSONNodeMapField(&node, linePositions)
+	}
+	return meta
+}
+
 func getJSONNodeStartOffset(node *json.Node) int {
 	// Always use node.Start to get the value's position.
 	// node.KeyEnd points to ':' (after the key), not to the value itself.

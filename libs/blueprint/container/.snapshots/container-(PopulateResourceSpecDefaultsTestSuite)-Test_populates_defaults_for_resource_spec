@@ -484,7 +484,42 @@
           },
           EndPosition: (*source.Position)(<nil>),
           ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-        })
+        }),
+        FieldsSourceMeta: (map[string]*source.Meta) (len=3) {
+          (string) (len=11) "description": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 57,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 57,
+              Column: (int) 16
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=8) "metadata": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 58,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 58,
+              Column: (int) 13
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=4) "path": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 56,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 56,
+              Column: (int) 9
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }
       })
     },
     SourceMeta: (map[string]*source.Meta) (len=1) {
@@ -909,7 +944,8 @@
           },
           EndPosition: (*source.Position)(<nil>),
           ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-        })
+        }),
+        FieldsSourceMeta: (map[string]*source.Meta) <nil>
       })
     },
     SourceMeta: (map[string]*source.Meta) <nil>
@@ -971,7 +1007,20 @@
             },
             EndPosition: (*source.Position)(<nil>),
             ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-          })
+          }),
+          FieldsSourceMeta: (map[string]*source.Meta) (len=1) {
+            (string) (len=11) "displayName": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 23,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 23,
+                Column: (int) 18
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }
         }),
         Filter: (*schema.DataSourceFilters)({
           Filters: ([]*schema.DataSourceFilter) (len=1) {
@@ -1250,7 +1299,64 @@
           },
           EndPosition: (*source.Position)(<nil>),
           ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-        })
+        }),
+        FieldsSourceMeta: (map[string]*source.Meta) (len=5) {
+          (string) (len=11) "description": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 17,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 17,
+              Column: (int) 16
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=7) "exports": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 24,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 24,
+              Column: (int) 12
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=6) "filter": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 18,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 18,
+              Column: (int) 11
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=8) "metadata": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 22,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 22,
+              Column: (int) 13
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=4) "type": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 16,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 16,
+              Column: (int) 9
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }
       })
     },
     SourceMeta: (map[string]*source.Meta) (len=1) {

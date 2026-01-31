@@ -22,9 +22,10 @@ type Include struct {
 	// An example of this could be the use of fields that provide information
 	// about a remote location to download the child blueprint from such as
 	// an AWS S3 bucket.
-	Metadata    *core.MappingNode                    `yaml:"metadata" json:"metadata"`
-	Description *substitutions.StringOrSubstitutions `yaml:"description" json:"description"`
-	SourceMeta  *source.Meta                         `yaml:"-" json:"-"`
+	Metadata         *core.MappingNode                    `yaml:"metadata" json:"metadata"`
+	Description      *substitutions.StringOrSubstitutions `yaml:"description" json:"description"`
+	SourceMeta       *source.Meta                         `yaml:"-" json:"-"`
+	FieldsSourceMeta map[string]*source.Meta              `yaml:"-" json:"-"`
 }
 
 func (i *Include) UnmarshalYAML(value *yaml.Node) error {
@@ -34,6 +35,7 @@ func (i *Include) UnmarshalYAML(value *yaml.Node) error {
 			Column: value.Column,
 		},
 	}
+	i.FieldsSourceMeta = source.ExtractFieldsSourceMetaFromYAMLNode(value)
 
 	type includeAlias Include
 	var alias includeAlias
@@ -59,6 +61,8 @@ func (i *Include) FromJSONNode(
 		position := source.PositionFromJSONNode(node, linePositions)
 		return errInvalidMap(&position, parentPath)
 	}
+
+	i.FieldsSourceMeta = source.ExtractFieldsSourceMetaFromJSONNodeMap(nodeMap, linePositions)
 
 	i.Path = &substitutions.StringOrSubstitutions{}
 	err := core.UnpackValueFromJSONMapNode(

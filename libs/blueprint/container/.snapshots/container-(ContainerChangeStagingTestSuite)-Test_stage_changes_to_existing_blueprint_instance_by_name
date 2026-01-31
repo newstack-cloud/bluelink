@@ -97,7 +97,20 @@
               },
               EndPosition: (*source.Position)(<nil>),
               ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-            })
+            }),
+            FieldsSourceMeta: (map[string]*source.Meta) (len=1) {
+              (string) (len=7) "byLabel": (*source.Meta)({
+                Position: (source.Position) {
+                  Line: (int) 106,
+                  Column: (int) 7
+                },
+                EndPosition: (*source.Position)({
+                  Line: (int) 106,
+                  Column: (int) 14
+                }),
+                ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+              })
+            }
           }),
           Spec: (*core.MappingNode)({
             Scalar: (*core.ScalarValue)(<nil>),
@@ -2286,7 +2299,20 @@
               },
               EndPosition: (*source.Position)(<nil>),
               ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-            })
+            }),
+            FieldsSourceMeta: (map[string]*source.Meta) (len=1) {
+              (string) (len=7) "byLabel": (*source.Meta)({
+                Position: (source.Position) {
+                  Line: (int) 125,
+                  Column: (int) 7
+                },
+                EndPosition: (*source.Position)({
+                  Line: (int) 125,
+                  Column: (int) 14
+                }),
+                ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+              })
+            }
           }),
           Spec: (*core.MappingNode)({
             Scalar: (*core.ScalarValue)(<nil>),

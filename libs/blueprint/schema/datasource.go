@@ -24,6 +24,7 @@ type DataSource struct {
 	Exports            *DataSourceFieldExportMap            `yaml:"exports" json:"exports"`
 	Description        *substitutions.StringOrSubstitutions `yaml:"description,omitempty" json:"description,omitempty"`
 	SourceMeta         *source.Meta                         `yaml:"-" json:"-"`
+	FieldsSourceMeta   map[string]*source.Meta              `yaml:"-" json:"-"`
 }
 
 func (s *DataSource) UnmarshalYAML(value *yaml.Node) error {
@@ -33,6 +34,7 @@ func (s *DataSource) UnmarshalYAML(value *yaml.Node) error {
 			Column: value.Column,
 		},
 	}
+	s.FieldsSourceMeta = source.ExtractFieldsSourceMetaFromYAMLNode(value)
 
 	type dataSourceAlias DataSource
 	var alias dataSourceAlias
@@ -64,6 +66,8 @@ func (s *DataSource) FromJSONNode(
 		position := source.PositionFromJSONNode(node, linePositions)
 		return errInvalidMap(&position, parentPath)
 	}
+
+	s.FieldsSourceMeta = source.ExtractFieldsSourceMetaFromJSONNodeMap(nodeMap, linePositions)
 
 	s.Type = &DataSourceTypeWrapper{}
 	err := bpcore.UnpackValueFromJSONMapNode(
@@ -870,10 +874,11 @@ func (e *DataSourceFieldExport) FromJSONNode(
 // annotations that are used to configure data sources when fetching data
 // from the data source provider.
 type DataSourceMetadata struct {
-	DisplayName *substitutions.StringOrSubstitutions `yaml:"displayName" json:"displayName"`
-	Annotations *StringOrSubstitutionsMap            `yaml:"annotations,omitempty" json:"annotations,omitempty"`
-	Custom      *bpcore.MappingNode                  `yaml:"custom,omitempty" json:"custom,omitempty"`
-	SourceMeta  *source.Meta                         `yaml:"-" json:"-"`
+	DisplayName      *substitutions.StringOrSubstitutions `yaml:"displayName" json:"displayName"`
+	Annotations      *StringOrSubstitutionsMap            `yaml:"annotations,omitempty" json:"annotations,omitempty"`
+	Custom           *bpcore.MappingNode                  `yaml:"custom,omitempty" json:"custom,omitempty"`
+	SourceMeta       *source.Meta                         `yaml:"-" json:"-"`
+	FieldsSourceMeta map[string]*source.Meta              `yaml:"-" json:"-"`
 }
 
 func (m *DataSourceMetadata) UnmarshalYAML(value *yaml.Node) error {
@@ -883,6 +888,7 @@ func (m *DataSourceMetadata) UnmarshalYAML(value *yaml.Node) error {
 			Column: value.Column,
 		},
 	}
+	m.FieldsSourceMeta = source.ExtractFieldsSourceMetaFromYAMLNode(value)
 
 	type dataSourceMetadataAlias DataSourceMetadata
 	var alias dataSourceMetadataAlias
@@ -907,6 +913,8 @@ func (m *DataSourceMetadata) FromJSONNode(
 		position := source.PositionFromJSONNode(node, linePositions)
 		return errInvalidMap(&position, parentPath)
 	}
+
+	m.FieldsSourceMeta = source.ExtractFieldsSourceMetaFromJSONNodeMap(nodeMap, linePositions)
 
 	m.DisplayName = &substitutions.StringOrSubstitutions{}
 	err := bpcore.UnpackValueFromJSONMapNode(

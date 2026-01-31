@@ -64,6 +64,18 @@ func (n *TreeNode) SetRangeEnd(end *source.Meta) {
 	}
 }
 
+// resolveStartPosition returns the key position if available,
+// otherwise falls back to the element's own source position.
+func resolveStartPosition(keyMeta *source.Meta, elementMeta *source.Meta) *source.Position {
+	if keyMeta != nil {
+		return &keyMeta.Position
+	}
+	if elementMeta != nil {
+		return &elementMeta.Position
+	}
+	return nil
+}
+
 // setRangeEndFromChildren sets the range end of a tree node from the last child's range end.
 // If there are no children, the range end is set to the range start.
 func setRangeEndFromChildren(node *TreeNode, children []*TreeNode) {
@@ -482,12 +494,18 @@ func includeToTreeNode(includeName string, include *Include, parentPath string, 
 		children = append(children, pathNode)
 	}
 
-	variablesNode := mappingNodeToTreeNode("variables", include.Variables, includeNode.Path, nil)
+	variablesNode := mappingNodeToTreeNode(
+		"variables", include.Variables, includeNode.Path,
+		include.FieldsSourceMeta["variables"],
+	)
 	if variablesNode != nil {
 		children = append(children, variablesNode)
 	}
 
-	metadataNode := mappingNodeToTreeNode("metadata", include.Metadata, includeNode.Path, nil)
+	metadataNode := mappingNodeToTreeNode(
+		"metadata", include.Metadata, includeNode.Path,
+		include.FieldsSourceMeta["metadata"],
+	)
 	if metadataNode != nil {
 		children = append(children, metadataNode)
 	}
@@ -561,7 +579,9 @@ func resourceToTreeNode(resourceName string, resource *Resource, parentPath stri
 		children = append(children, descriptionNode)
 	}
 
-	metadataNode := resourceMetadataToTreeNode(resource.Metadata, resourceNode.Path)
+	metadataNode := resourceMetadataToTreeNode(
+		resource.Metadata, resourceNode.Path, resource.FieldsSourceMeta["metadata"],
+	)
 	if metadataNode != nil {
 		children = append(children, metadataNode)
 	}
@@ -576,12 +596,14 @@ func resourceToTreeNode(resourceName string, resource *Resource, parentPath stri
 		children = append(children, eachNode)
 	}
 
-	linkSelectorNode := resourceLinkSelectorToTreeNode(resource.LinkSelector, resourceNode.Path)
+	linkSelectorNode := resourceLinkSelectorToTreeNode(
+		resource.LinkSelector, resourceNode.Path, resource.FieldsSourceMeta["linkSelector"],
+	)
 	if linkSelectorNode != nil {
 		children = append(children, linkSelectorNode)
 	}
 
-	specNode := mappingNodeToTreeNode("spec", resource.Spec, resourceNode.Path, nil)
+	specNode := mappingNodeToTreeNode("spec", resource.Spec, resourceNode.Path, resource.FieldsSourceMeta["spec"])
 	if specNode != nil {
 		children = append(children, specNode)
 	}
@@ -593,33 +615,52 @@ func resourceToTreeNode(resourceName string, resource *Resource, parentPath stri
 	return resourceNode
 }
 
-func resourceLinkSelectorToTreeNode(linkSelector *LinkSelector, parentPath string) *TreeNode {
+func resourceLinkSelectorToTreeNode(
+	linkSelector *LinkSelector,
+	parentPath string,
+	keyMeta *source.Meta,
+) *TreeNode {
 	if linkSelector == nil || linkSelector.SourceMeta == nil {
 		return nil
 	}
 
+	startPos := resolveStartPosition(keyMeta, linkSelector.SourceMeta)
 	linkSelectorNode := &TreeNode{
 		Label:         "linkSelector",
 		Path:          fmt.Sprintf("%s/linkSelector", parentPath),
 		Type:          TreeNodeTypeNonTerminal,
 		SchemaElement: linkSelector,
 		Range: &source.Range{
-			Start: &linkSelector.SourceMeta.Position,
+			Start: startPos,
 		},
 	}
 
-	if linkSelector.ByLabel == nil {
+	children := []*TreeNode{}
+
+	byLabelNode := stringMapToTreeNode(
+		"byLabel", linkSelector.ByLabel, linkSelectorNode.Path,
+		linkSelector.FieldsSourceMeta["byLabel"],
+	)
+	if byLabelNode != nil {
+		children = append(children, byLabelNode)
+	}
+
+	excludeNode := stringListToTreeNode(
+		"exclude", linkSelector.Exclude, linkSelectorNode.Path,
+		linkSelector.FieldsSourceMeta["exclude"],
+	)
+	if excludeNode != nil {
+		children = append(children, excludeNode)
+	}
+
+	if len(children) == 0 {
 		linkSelectorNode.Type = TreeNodeTypeLeaf
 		return linkSelectorNode
 	}
 
-	byLabelNode := stringMapToTreeNode("byLabel", linkSelector.ByLabel, linkSelectorNode.Path)
-	if byLabelNode != nil {
-		linkSelectorNode.Children = []*TreeNode{byLabelNode}
-		linkSelectorNode.Range.End = byLabelNode.Range.End
-	} else {
-		linkSelectorNode.Type = TreeNodeTypeLeaf
-	}
+	sortTreeNodes(children)
+	linkSelectorNode.Children = children
+	setRangeEndFromChildren(linkSelectorNode, children)
 
 	return linkSelectorNode
 }
@@ -747,7 +788,11 @@ func resourceTypeToTreeNode(resType *ResourceTypeWrapper, parentPath string) *Tr
 	}
 }
 
-func resourceMetadataToTreeNode(metadata *Metadata, parentPath string) *TreeNode {
+func resourceMetadataToTreeNode(
+	metadata *Metadata,
+	parentPath string,
+	keyMeta *source.Meta,
+) *TreeNode {
 	if metadata == nil {
 		return nil
 	}
@@ -757,10 +802,9 @@ func resourceMetadataToTreeNode(metadata *Metadata, parentPath string) *TreeNode
 		Path:          fmt.Sprintf("%s/metadata", parentPath),
 		Type:          TreeNodeTypeNonTerminal,
 		SchemaElement: metadata,
-		Range:         &source.Range{},
-	}
-	if metadata.SourceMeta != nil {
-		metadataNode.Range.Start = &metadata.SourceMeta.Position
+		Range: &source.Range{
+			Start: resolveStartPosition(keyMeta, metadata.SourceMeta),
+		},
 	}
 
 	children := []*TreeNode{}
@@ -770,17 +814,26 @@ func resourceMetadataToTreeNode(metadata *Metadata, parentPath string) *TreeNode
 		children = append(children, displayNameNode)
 	}
 
-	annotationsNode := stringSubsMapToTreeNode("annotations", metadata.Annotations, metadataNode.Path)
+	annotationsNode := stringSubsMapToTreeNode(
+		"annotations", metadata.Annotations, metadataNode.Path,
+		metadata.FieldsSourceMeta["annotations"],
+	)
 	if annotationsNode != nil {
 		children = append(children, annotationsNode)
 	}
 
-	labelsNode := stringMapToTreeNode("labels", metadata.Labels, metadataNode.Path)
+	labelsNode := stringMapToTreeNode(
+		"labels", metadata.Labels, metadataNode.Path,
+		metadata.FieldsSourceMeta["labels"],
+	)
 	if labelsNode != nil {
 		children = append(children, labelsNode)
 	}
 
-	customNode := mappingNodeToTreeNode("custom", metadata.Custom, metadataNode.Path, nil)
+	customNode := mappingNodeToTreeNode(
+		"custom", metadata.Custom, metadataNode.Path,
+		metadata.FieldsSourceMeta["custom"],
+	)
 	if customNode != nil {
 		children = append(children, customNode)
 	}
@@ -848,17 +901,26 @@ func dataSourceToTreeNode(dataSourceName string, dataSource *DataSource, parentP
 		children = append(children, dataSourceTypeNode)
 	}
 
-	dataSourceMetadataNode := dataSourceMetadataToTreeNode(dataSource.DataSourceMetadata, dataSourceNode.Path)
+	dataSourceMetadataNode := dataSourceMetadataToTreeNode(
+		dataSource.DataSourceMetadata, dataSourceNode.Path,
+		dataSource.FieldsSourceMeta["metadata"],
+	)
 	if dataSourceMetadataNode != nil {
 		children = append(children, dataSourceMetadataNode)
 	}
 
-	dataSourceFilterNode := dataSourceFiltersToTreeNode(dataSource.Filter, dataSourceNode.Path)
+	dataSourceFilterNode := dataSourceFiltersToTreeNode(
+		dataSource.Filter, dataSourceNode.Path,
+		dataSource.FieldsSourceMeta["filter"],
+	)
 	if dataSourceFilterNode != nil {
 		children = append(children, dataSourceFilterNode)
 	}
 
-	dataSourceFieldExportsNode := dataSourceFieldExportsToTreeNode(dataSource.Exports, dataSourceNode.Path)
+	dataSourceFieldExportsNode := dataSourceFieldExportsToTreeNode(
+		dataSource.Exports, dataSourceNode.Path,
+		dataSource.FieldsSourceMeta["exports"],
+	)
 	if dataSourceFieldExportsNode != nil {
 		children = append(children, dataSourceFieldExportsNode)
 	}
@@ -892,7 +954,11 @@ func dataSourceTypeToTreeNode(dataSourceType *DataSourceTypeWrapper, parentPath 
 	}
 }
 
-func dataSourceMetadataToTreeNode(metadata *DataSourceMetadata, parentPath string) *TreeNode {
+func dataSourceMetadataToTreeNode(
+	metadata *DataSourceMetadata,
+	parentPath string,
+	keyMeta *source.Meta,
+) *TreeNode {
 	if metadata == nil {
 		return nil
 	}
@@ -902,10 +968,9 @@ func dataSourceMetadataToTreeNode(metadata *DataSourceMetadata, parentPath strin
 		Path:          fmt.Sprintf("%s/metadata", parentPath),
 		Type:          TreeNodeTypeNonTerminal,
 		SchemaElement: metadata,
-		Range:         &source.Range{},
-	}
-	if metadata.SourceMeta != nil {
-		metadataNode.Range.Start = &metadata.SourceMeta.Position
+		Range: &source.Range{
+			Start: resolveStartPosition(keyMeta, metadata.SourceMeta),
+		},
 	}
 
 	children := []*TreeNode{}
@@ -915,12 +980,18 @@ func dataSourceMetadataToTreeNode(metadata *DataSourceMetadata, parentPath strin
 		children = append(children, displayNameNode)
 	}
 
-	annotationsNode := stringSubsMapToTreeNode("annotations", metadata.Annotations, metadataNode.Path)
+	annotationsNode := stringSubsMapToTreeNode(
+		"annotations", metadata.Annotations, metadataNode.Path,
+		metadata.FieldsSourceMeta["annotations"],
+	)
 	if annotationsNode != nil {
 		children = append(children, annotationsNode)
 	}
 
-	customNode := mappingNodeToTreeNode("custom", metadata.Custom, metadataNode.Path, nil)
+	customNode := mappingNodeToTreeNode(
+		"custom", metadata.Custom, metadataNode.Path,
+		metadata.FieldsSourceMeta["custom"],
+	)
 	if customNode != nil {
 		children = append(children, customNode)
 	}
@@ -936,9 +1007,18 @@ func dataSourceMetadataToTreeNode(metadata *DataSourceMetadata, parentPath strin
 	return metadataNode
 }
 
-func dataSourceFiltersToTreeNode(filters *DataSourceFilters, parentPath string) *TreeNode {
+func dataSourceFiltersToTreeNode(
+	filters *DataSourceFilters,
+	parentPath string,
+	keyMeta *source.Meta,
+) *TreeNode {
 	if filters == nil || len(filters.Filters) == 0 {
 		return nil
+	}
+
+	startPos := resolveStartPosition(keyMeta, nil)
+	if startPos == nil {
+		startPos = &filters.Filters[0].SourceMeta.Position
 	}
 
 	filtersNode := &TreeNode{
@@ -947,7 +1027,7 @@ func dataSourceFiltersToTreeNode(filters *DataSourceFilters, parentPath string) 
 		Type:          TreeNodeTypeNonTerminal,
 		SchemaElement: filters,
 		Range: &source.Range{
-			Start: &filters.Filters[0].SourceMeta.Position,
+			Start: startPos,
 		},
 	}
 
@@ -1072,9 +1152,18 @@ func filterSearchToTreeNode(search *DataSourceFilterSearch, parentPath string) *
 	return searchNode
 }
 
-func dataSourceFieldExportsToTreeNode(exports *DataSourceFieldExportMap, parentPath string) *TreeNode {
+func dataSourceFieldExportsToTreeNode(
+	exports *DataSourceFieldExportMap,
+	parentPath string,
+	keyMeta *source.Meta,
+) *TreeNode {
 	if exports == nil || len(exports.Values) == 0 {
 		return nil
+	}
+
+	startPos := resolveStartPosition(keyMeta, nil)
+	if startPos == nil {
+		startPos = minPosition(core.MapToSlice(exports.SourceMeta))
 	}
 
 	exportsNode := &TreeNode{
@@ -1083,7 +1172,7 @@ func dataSourceFieldExportsToTreeNode(exports *DataSourceFieldExportMap, parentP
 		Type:          TreeNodeTypeNonTerminal,
 		SchemaElement: exports,
 		Range: &source.Range{
-			Start: minPosition(core.MapToSlice(exports.SourceMeta)),
+			Start: startPos,
 		},
 	}
 
@@ -1249,9 +1338,19 @@ func exportTypeToTreeNode(exportType *ExportTypeWrapper, parentPath string) *Tre
 	}
 }
 
-func stringSubsMapToTreeNode(label string, subsMap *StringOrSubstitutionsMap, parentPath string) *TreeNode {
+func stringSubsMapToTreeNode(
+	label string,
+	subsMap *StringOrSubstitutionsMap,
+	parentPath string,
+	keyMeta *source.Meta,
+) *TreeNode {
 	if subsMap == nil || len(subsMap.Values) == 0 {
 		return nil
+	}
+
+	startPos := resolveStartPosition(keyMeta, nil)
+	if startPos == nil {
+		startPos = minPosition(core.MapToSlice(subsMap.SourceMeta))
 	}
 
 	subsMapNode := &TreeNode{
@@ -1260,7 +1359,7 @@ func stringSubsMapToTreeNode(label string, subsMap *StringOrSubstitutionsMap, pa
 		Type:          TreeNodeTypeNonTerminal,
 		SchemaElement: subsMap,
 		Range: &source.Range{
-			Start: minPosition(core.MapToSlice(subsMap.SourceMeta)),
+			Start: startPos,
 		},
 	}
 
@@ -1283,9 +1382,19 @@ func stringSubsMapToTreeNode(label string, subsMap *StringOrSubstitutionsMap, pa
 	return subsMapNode
 }
 
-func stringMapToTreeNode(label string, stringMap *StringMap, parentPath string) *TreeNode {
+func stringMapToTreeNode(
+	label string,
+	stringMap *StringMap,
+	parentPath string,
+	keyMeta *source.Meta,
+) *TreeNode {
 	if stringMap == nil || len(stringMap.Values) == 0 {
 		return nil
+	}
+
+	startPos := resolveStartPosition(keyMeta, nil)
+	if startPos == nil {
+		startPos = minPosition(core.MapToSlice(stringMap.SourceMeta))
 	}
 
 	subsMapNode := &TreeNode{
@@ -1294,7 +1403,7 @@ func stringMapToTreeNode(label string, stringMap *StringMap, parentPath string) 
 		Type:          TreeNodeTypeNonTerminal,
 		SchemaElement: stringMap,
 		Range: &source.Range{
-			Start: minPosition(core.MapToSlice(stringMap.SourceMeta)),
+			Start: startPos,
 		},
 	}
 
@@ -1315,6 +1424,48 @@ func stringMapToTreeNode(label string, stringMap *StringMap, parentPath string) 
 	setRangeEndFromChildren(subsMapNode, children)
 
 	return subsMapNode
+}
+
+func stringListToTreeNode(
+	label string,
+	stringList *StringList,
+	parentPath string,
+	keyMeta *source.Meta,
+) *TreeNode {
+	if stringList == nil || len(stringList.Values) == 0 {
+		return nil
+	}
+
+	startPos := resolveStartPosition(keyMeta, nil)
+	if startPos == nil && len(stringList.SourceMeta) > 0 {
+		startPos = &stringList.SourceMeta[0].Position
+	}
+
+	listNode := &TreeNode{
+		Label:         label,
+		Path:          fmt.Sprintf("%s/%s", parentPath, label),
+		Type:          TreeNodeTypeNonTerminal,
+		SchemaElement: stringList,
+		Range: &source.Range{
+			Start: startPos,
+		},
+	}
+
+	children := make([]*TreeNode, 0, len(stringList.Values))
+	for i, value := range stringList.Values {
+		if i < len(stringList.SourceMeta) && stringList.SourceMeta[i] != nil {
+			child := stringToTreeNode(value, stringList.SourceMeta[i], listNode.Path)
+			if child != nil {
+				children = append(children, child)
+			}
+		}
+	}
+
+	sortTreeNodes(children)
+	listNode.Children = children
+	setRangeEndFromChildren(listNode, children)
+
+	return listNode
 }
 
 func mappingNodeToTreeNode(

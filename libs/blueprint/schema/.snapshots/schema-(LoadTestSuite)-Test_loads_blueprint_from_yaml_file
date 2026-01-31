@@ -588,7 +588,42 @@
             },
             EndPosition: (*source.Position)(<nil>),
             ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-          })
+          }),
+          FieldsSourceMeta: (map[string]*source.Meta) (len=3) {
+            (string) (len=11) "annotations": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 90,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 90,
+                Column: (int) 18
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            }),
+            (string) (len=11) "displayName": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 89,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 89,
+                Column: (int) 18
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            }),
+            (string) (len=6) "labels": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 101,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 101,
+                Column: (int) 13
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }
         }),
         DependsOn: (*schema.DependsOnList)(<nil>),
         Condition: (*schema.Condition)(<nil>),
@@ -712,7 +747,42 @@
           },
           EndPosition: (*source.Position)(<nil>),
           ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-        })
+        }),
+        FieldsSourceMeta: (map[string]*source.Meta) (len=3) {
+          (string) (len=8) "metadata": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 88,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 88,
+              Column: (int) 13
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=4) "spec": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 103,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 103,
+              Column: (int) 9
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=4) "type": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 87,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 87,
+              Column: (int) 9
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }
       }),
       (string) (len=16) "getOrdersHandler": (*schema.Resource)({
         Type: (*schema.ResourceTypeWrapper)({
@@ -785,7 +855,31 @@
             },
             EndPosition: (*source.Position)(<nil>),
             ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-          })
+          }),
+          FieldsSourceMeta: (map[string]*source.Meta) (len=2) {
+            (string) (len=11) "displayName": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 110,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 110,
+                Column: (int) 18
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            }),
+            (string) (len=6) "labels": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 111,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 111,
+                Column: (int) 13
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }
         }),
         DependsOn: (*schema.DependsOnList)(<nil>),
         Condition: (*schema.Condition)(<nil>),
@@ -1130,7 +1224,42 @@
           },
           EndPosition: (*source.Position)(<nil>),
           ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-        })
+        }),
+        FieldsSourceMeta: (map[string]*source.Meta) (len=3) {
+          (string) (len=8) "metadata": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 109,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 109,
+              Column: (int) 13
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=4) "spec": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 113,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 113,
+              Column: (int) 9
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=4) "type": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 108,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 108,
+              Column: (int) 9
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }
       }),
       (string) (len=8) "orderApi": (*schema.Resource)({
         Type: (*schema.ResourceTypeWrapper)({
@@ -1573,7 +1702,42 @@
             },
             EndPosition: (*source.Position)(<nil>),
             ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-          })
+          }),
+          FieldsSourceMeta: (map[string]*source.Meta) (len=3) {
+            (string) (len=6) "custom": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 47,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 47,
+                Column: (int) 13
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            }),
+            (string) (len=11) "displayName": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 44,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 44,
+                Column: (int) 18
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            }),
+            (string) (len=6) "labels": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 45,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 45,
+                Column: (int) 13
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }
         }),
         DependsOn: (*schema.DependsOnList)(<nil>),
         Condition: (*schema.Condition)(<nil>),
@@ -1602,7 +1766,20 @@
             },
             EndPosition: (*source.Position)(<nil>),
             ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-          })
+          }),
+          FieldsSourceMeta: (map[string]*source.Meta) (len=1) {
+            (string) (len=7) "byLabel": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 57,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 57,
+                Column: (int) 14
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }
         }),
         Spec: (*core.MappingNode)({
           Scalar: (*core.ScalarValue)(<nil>),
@@ -1874,7 +2051,53 @@
           },
           EndPosition: (*source.Position)(<nil>),
           ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-        })
+        }),
+        FieldsSourceMeta: (map[string]*source.Meta) (len=4) {
+          (string) (len=12) "linkSelector": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 56,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 56,
+              Column: (int) 17
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=8) "metadata": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 43,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 43,
+              Column: (int) 13
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=4) "spec": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 59,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 59,
+              Column: (int) 9
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=4) "type": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 42,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 42,
+              Column: (int) 9
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }
       }),
       (string) (len=11) "orderPubSub": (*schema.Resource)({
         Type: (*schema.ResourceTypeWrapper)({
@@ -1947,7 +2170,31 @@
             },
             EndPosition: (*source.Position)(<nil>),
             ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-          })
+          }),
+          FieldsSourceMeta: (map[string]*source.Meta) (len=2) {
+            (string) (len=11) "displayName": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 168,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 168,
+                Column: (int) 18
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            }),
+            (string) (len=6) "labels": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 169,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 169,
+                Column: (int) 13
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }
         }),
         DependsOn: (*schema.DependsOnList)(<nil>),
         Condition: (*schema.Condition)(<nil>),
@@ -1976,7 +2223,20 @@
             },
             EndPosition: (*source.Position)(<nil>),
             ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-          })
+          }),
+          FieldsSourceMeta: (map[string]*source.Meta) (len=1) {
+            (string) (len=7) "byLabel": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 172,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 172,
+                Column: (int) 14
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }
         }),
         Spec: (*core.MappingNode)({
           Scalar: (*core.ScalarValue)(<nil>),
@@ -2098,7 +2358,53 @@
           },
           EndPosition: (*source.Position)(<nil>),
           ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-        })
+        }),
+        FieldsSourceMeta: (map[string]*source.Meta) (len=4) {
+          (string) (len=12) "linkSelector": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 171,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 171,
+              Column: (int) 17
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=8) "metadata": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 167,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 167,
+              Column: (int) 13
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=4) "spec": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 174,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 174,
+              Column: (int) 9
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=4) "type": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 166,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 166,
+              Column: (int) 9
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }
       }),
       (string) (len=19) "sharedPackagesLayer": (*schema.Resource)({
         Type: (*schema.ResourceTypeWrapper)({
@@ -2180,7 +2486,31 @@
             },
             EndPosition: (*source.Position)(<nil>),
             ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-          })
+          }),
+          FieldsSourceMeta: (map[string]*source.Meta) (len=2) {
+            (string) (len=11) "displayName": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 152,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 152,
+                Column: (int) 18
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            }),
+            (string) (len=6) "labels": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 153,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 153,
+                Column: (int) 13
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }
         }),
         DependsOn: (*schema.DependsOnList)(<nil>),
         Condition: (*schema.Condition)(<nil>),
@@ -2367,7 +2697,42 @@
           },
           EndPosition: (*source.Position)(<nil>),
           ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-        })
+        }),
+        FieldsSourceMeta: (map[string]*source.Meta) (len=3) {
+          (string) (len=8) "metadata": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 151,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 151,
+              Column: (int) 13
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=4) "spec": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 156,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 156,
+              Column: (int) 9
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=4) "type": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 150,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 150,
+              Column: (int) 9
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }
       }),
       (string) (len=19) "updateOrderFunction": (*schema.Resource)({
         Type: (*schema.ResourceTypeWrapper)({
@@ -2449,7 +2814,31 @@
             },
             EndPosition: (*source.Position)(<nil>),
             ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-          })
+          }),
+          FieldsSourceMeta: (map[string]*source.Meta) (len=2) {
+            (string) (len=11) "displayName": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 125,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 125,
+                Column: (int) 18
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            }),
+            (string) (len=6) "labels": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 126,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 126,
+                Column: (int) 13
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }
         }),
         DependsOn: (*schema.DependsOnList)(<nil>),
         Condition: (*schema.Condition)(<nil>),
@@ -2723,7 +3112,42 @@
           },
           EndPosition: (*source.Position)(<nil>),
           ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-        })
+        }),
+        FieldsSourceMeta: (map[string]*source.Meta) (len=3) {
+          (string) (len=8) "metadata": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 124,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 124,
+              Column: (int) 13
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=4) "spec": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 133,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 133,
+              Column: (int) 9
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=4) "type": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 123,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 123,
+              Column: (int) 9
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }
       })
     },
     SourceMeta: (map[string]*source.Meta) (len=6) {
@@ -2834,7 +3258,20 @@
             },
             EndPosition: (*source.Position)(<nil>),
             ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-          })
+          }),
+          FieldsSourceMeta: (map[string]*source.Meta) (len=1) {
+            (string) (len=11) "displayName": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 23,
+                Column: (int) 7
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 23,
+                Column: (int) 18
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }
         }),
         Filter: (*schema.DataSourceFilters)({
           Filters: ([]*schema.DataSourceFilter) (len=1) {
@@ -3080,7 +3517,53 @@
           },
           EndPosition: (*source.Position)(<nil>),
           ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
-        })
+        }),
+        FieldsSourceMeta: (map[string]*source.Meta) (len=4) {
+          (string) (len=7) "exports": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 28,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 28,
+              Column: (int) 12
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=6) "filter": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 24,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 24,
+              Column: (int) 11
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=8) "metadata": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 22,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 22,
+              Column: (int) 13
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=4) "type": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 21,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 21,
+              Column: (int) 9
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }
       })
     },
     SourceMeta: (map[string]*source.Meta) (len=1) {
