@@ -591,6 +591,13 @@ func resourceToTreeNode(resourceName string, resource *Resource, parentPath stri
 		children = append(children, conditionNode)
 	}
 
+	dependsOnNode := dependsOnToTreeNode(
+		resource.DependsOn, resourceNode.Path, resource.FieldsSourceMeta["dependsOn"],
+	)
+	if dependsOnNode != nil {
+		children = append(children, dependsOnNode)
+	}
+
 	eachNode := stringSubsToTreeNode("each", resource.Each, resourceNode.Path)
 	if eachNode != nil {
 		children = append(children, eachNode)
@@ -663,6 +670,17 @@ func resourceLinkSelectorToTreeNode(
 	setRangeEndFromChildren(linkSelectorNode, children)
 
 	return linkSelectorNode
+}
+
+func dependsOnToTreeNode(
+	dependsOn *DependsOnList,
+	parentPath string,
+	keyMeta *source.Meta,
+) *TreeNode {
+	if dependsOn == nil || len(dependsOn.Values) == 0 {
+		return nil
+	}
+	return stringListToTreeNode("dependsOn", &dependsOn.StringList, parentPath, keyMeta)
 }
 
 func resourceConditionToTreeNode(label string, condition *Condition, parentPath string) *TreeNode {
