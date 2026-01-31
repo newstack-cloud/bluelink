@@ -414,6 +414,7 @@ func (s *HandlersSuite) createTestApplication(state *languageservices.State) *Ap
 		hoverService,
 		symbolService,
 		gotoDefinitionService,
+		nil, // findReferencesService
 		codeActionService,
 		nil, // childResolver
 		make(map[string]provider.Provider),

@@ -109,7 +109,8 @@ func (s *ApplicationSuite) createTestApplication() *Application {
 		functionRegistry, resourceRegistry, dataSourceRegistry, customVarTypeRegistry,
 		nil, // blueprintLoader
 		completionService, diagnosticService, signatureService, hoverService,
-		symbolService, gotoDefinitionService, codeActionService,
+		symbolService, gotoDefinitionService, nil, /* findReferencesService */
+		codeActionService,
 		nil, // childResolver
 		make(map[string]provider.Provider), make(map[string]transform.SpecTransformer),
 		nil, s.logger,

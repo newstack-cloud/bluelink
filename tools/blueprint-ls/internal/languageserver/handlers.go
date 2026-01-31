@@ -553,6 +553,22 @@ func (a *Application) handleGotoDefinition(
 	return []lsp.Location{}, nil
 }
 
+func (a *Application) handleFindReferences(
+	ctx *common.LSPContext,
+	params *lsp.ReferencesParams,
+) ([]lsp.Location, error) {
+	docCtx := a.state.GetDocumentContext(params.TextDocument.URI)
+	if docCtx == nil {
+		return []lsp.Location{}, nil
+	}
+
+	if docCtx.GetEffectiveSchema() == nil {
+		return []lsp.Location{}, nil
+	}
+
+	return a.findReferencesService.GetReferencesFromContext(docCtx, params)
+}
+
 // HandleShutdown handles the LSP shutdown request, closing the plugin host if active.
 func (a *Application) HandleShutdown(ctx *common.LSPContext) error {
 	a.logger.Info("Shutting down server...")

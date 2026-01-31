@@ -114,6 +114,10 @@ func main() {
 		childResolver,
 		logger,
 	)
+	findReferencesService := languageservices.NewFindReferencesService(
+		state,
+		logger,
+	)
 	codeActionService := languageservices.NewCodeActionService(
 		state,
 		logger,
@@ -136,6 +140,7 @@ func main() {
 		hoverService,
 		symbolService,
 		gotoDefinitionService,
+		findReferencesService,
 		codeActionService,
 		childResolver,
 		providers,

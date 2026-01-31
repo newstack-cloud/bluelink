@@ -26,8 +26,9 @@ type Application struct {
 	signatureService      *languageservices.SignatureService
 	hoverService          *languageservices.HoverService
 	symbolService         *languageservices.SymbolService
-	gotoDefinitionService *languageservices.GotoDefinitionService
-	codeActionService     *languageservices.CodeActionService
+	gotoDefinitionService  *languageservices.GotoDefinitionService
+	findReferencesService  *languageservices.FindReferencesService
+	codeActionService      *languageservices.CodeActionService
 	logger                *zap.Logger
 	traceService          *lsp.TraceService
 
@@ -65,6 +66,7 @@ func NewApplication(
 	hoverService *languageservices.HoverService,
 	symbolService *languageservices.SymbolService,
 	gotoDefinitionService *languageservices.GotoDefinitionService,
+	findReferencesService *languageservices.FindReferencesService,
 	codeActionService *languageservices.CodeActionService,
 	childResolver *languageservices.ChildBlueprintResolver,
 	builtInProviders map[string]provider.Provider,
@@ -87,8 +89,9 @@ func NewApplication(
 		signatureService:      signatureService,
 		hoverService:          hoverService,
 		symbolService:         symbolService,
-		gotoDefinitionService: gotoDefinitionService,
-		codeActionService:     codeActionService,
+		gotoDefinitionService:  gotoDefinitionService,
+		findReferencesService:  findReferencesService,
+		codeActionService:      codeActionService,
 		childResolver:         childResolver,
 		builtInProviders:      builtInProviders,
 		builtInTransformers:   builtInTransformers,
@@ -114,6 +117,7 @@ func (a *Application) Setup() {
 		lsp.WithCompletionItemResolveHandler(a.handleCompletionItemResolve),
 		lsp.WithDocumentSymbolHandler(a.handleDocumentSymbols),
 		lsp.WithGotoDefinitionHandler(a.handleGotoDefinition),
+		lsp.WithFindReferencesHandler(a.handleFindReferences),
 		lsp.WithCodeActionHandler(a.handleCodeAction),
 	)
 }
