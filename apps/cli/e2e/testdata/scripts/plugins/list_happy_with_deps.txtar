@@ -1,0 +1,33 @@
+# Test plugins list shows dependency information for installed plugins
+# This test requires the mock-registry container to be running
+
+wait_registry
+
+# Save API key credentials and set up environment
+mkdir $WORK/.bluelink/clients
+cp plugins.auth.json $WORK/.bluelink/clients/plugins.auth.json
+env HOME=$WORK
+env BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH=$WORK/plugins
+
+# Install a plugin with dependencies (aws-link-provider depends on test-provider)
+# Both plugins are reported in the install output.
+exec bluelink plugins install localhost:18080/bluelink/aws-link-provider@1.0.0
+stdout 'Installed: 2'
+
+# List plugins and verify dependency info is shown
+exec bluelink plugins list
+stdout 'test-provider@1.0.0'
+stdout 'aws-link-provider@1.0.0'
+stdout 'Dependencies:'
+stdout 'bluelink/test-provider@1.0.0'
+stdout 'Total: 2 plugin\(s\)'
+
+-- bluelink.config.toml --
+# Empty config file
+
+-- plugins.auth.json --
+{
+  "localhost:18080": {
+    "apiKey": "test-api-key-12345"
+  }
+}

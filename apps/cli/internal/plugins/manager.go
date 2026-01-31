@@ -54,11 +54,13 @@ type InstallResult struct {
 
 // InstalledPlugin represents a plugin that has been installed.
 type InstalledPlugin struct {
-	ID           string    `json:"id"`
-	Version      string    `json:"version"`
-	RegistryHost string    `json:"registryHost"`
-	Shasum       string    `json:"shasum"`
-	InstalledAt  time.Time `json:"installedAt"`
+	ID           string            `json:"id"`
+	Version      string            `json:"version"`
+	RegistryHost string            `json:"registryHost"`
+	Shasum       string            `json:"shasum"`
+	InstalledAt  time.Time         `json:"installedAt"`
+	Type         string            `json:"type,omitempty"`
+	Dependencies map[string]string `json:"dependencies,omitempty"`
 }
 
 // PluginManifest tracks all installed plugins.
@@ -142,6 +144,16 @@ func (m *Manager) Install(
 		return nil, fmt.Errorf("unexpected empty results")
 	}
 	return results[0], nil
+}
+
+// ResolveDependencies resolves all dependencies for the given plugins and returns
+// the full list in topological order (dependencies first, requested plugins last).
+// Already-installed plugins are excluded from the result.
+func (m *Manager) ResolveDependencies(
+	ctx context.Context,
+	pluginIDs []*PluginID,
+) ([]*PluginID, error) {
+	return m.resolveDependencies(ctx, pluginIDs)
 }
 
 // InstallAll installs multiple plugins with dependency resolution.
@@ -262,6 +274,9 @@ func (m *Manager) installPlugin(
 		return failedResult(result, err)
 	}
 
+	// Determine plugin type from registry service discovery
+	pluginType := m.resolvePluginType(ctx, resolvedID)
+
 	archivePath, cleanup, err := m.downloadAndVerifyPlugin(ctx, resolvedID, metadata, progressFn)
 	if err != nil {
 		return failedResult(result, err)
@@ -271,7 +286,7 @@ func (m *Manager) installPlugin(
 	// Stage: Extracting
 	reportProgress(progressFn, resolvedID, StageExtracting, 0, 0)
 
-	if err := m.extractAndInstallPlugin(resolvedID, archivePath, metadata); err != nil {
+	if err := m.extractAndInstallPlugin(resolvedID, archivePath, metadata, pluginType); err != nil {
 		return failedResult(result, err)
 	}
 
@@ -290,6 +305,17 @@ func reportProgress(fn ProgressCallback, id *PluginID, stage InstallStage, downl
 	if fn != nil {
 		fn(id, stage, downloaded, total)
 	}
+}
+
+func (m *Manager) resolvePluginType(ctx context.Context, pluginID *PluginID) string {
+	if m.discoveryClient == nil {
+		return ""
+	}
+	pt, err := m.discoveryClient.GetPluginType(ctx, pluginID.RegistryHost)
+	if err != nil {
+		return ""
+	}
+	return string(pt)
 }
 
 func (m *Manager) checkIfAlreadyInstalled(pluginID *PluginID) (*InstallResult, error) {
@@ -411,6 +437,7 @@ func (m *Manager) extractAndInstallPlugin(
 	pluginID *PluginID,
 	archivePath string,
 	metadata *registries.PluginPackageMetadata,
+	pluginType string,
 ) error {
 	// Plugin executables are extracted to the bin subdirectory
 	destDir := filepath.Join(m.pluginsDir, "bin", pluginID.Namespace, pluginID.Name, pluginID.Version)
@@ -422,7 +449,7 @@ func (m *Manager) extractAndInstallPlugin(
 		return fmt.Errorf("%w: %v", registries.ErrExtractionFailed, err)
 	}
 
-	if err := m.addToManifest(pluginID, metadata.Shasum); err != nil {
+	if err := m.addToManifest(pluginID, metadata.Shasum, pluginType, metadata.Dependencies); err != nil {
 		return fmt.Errorf("failed to update manifest: %w", err)
 	}
 
@@ -867,7 +894,12 @@ func (m *Manager) SaveManifest(manifest *PluginManifest) error {
 	return nil
 }
 
-func (m *Manager) addToManifest(pluginID *PluginID, shasum string) error {
+func (m *Manager) addToManifest(
+	pluginID *PluginID,
+	shasum string,
+	pluginType string,
+	dependencies map[string]string,
+) error {
 	manifest, err := m.LoadManifest()
 	if err != nil {
 		return err
@@ -880,6 +912,8 @@ func (m *Manager) addToManifest(pluginID *PluginID, shasum string) error {
 		RegistryHost: pluginID.RegistryHost,
 		Shasum:       shasum,
 		InstalledAt:  time.Now(),
+		Type:         pluginType,
+		Dependencies: dependencies,
 	}
 
 	return m.SaveManifest(manifest)

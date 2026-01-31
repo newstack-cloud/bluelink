@@ -182,6 +182,78 @@ func (s *PluginsCommandSuite) Test_plugins_uninstall_accepts_multiple_arguments(
 	s.NoError(err)
 }
 
+// List command tests
+
+func (s *PluginsCommandSuite) Test_plugins_list_command_exists() {
+	rootCmd := NewRootCmd()
+	listCmd, _, err := rootCmd.Find([]string{"plugins", "list"})
+
+	s.NoError(err)
+	s.NotNil(listCmd)
+	s.Equal("list", listCmd.Use)
+}
+
+func (s *PluginsCommandSuite) Test_plugins_list_help_contains_usage() {
+	rootCmd := NewRootCmd()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{"plugins", "list", "--help"})
+
+	rootCmd.Execute()
+	output := buf.String()
+
+	s.Contains(output, "list")
+	s.Contains(output, "--type")
+	s.Contains(output, "--search")
+	s.Contains(output, "Usage:")
+}
+
+func (s *PluginsCommandSuite) Test_plugins_list_has_type_flag() {
+	rootCmd := NewRootCmd()
+	listCmd, _, err := rootCmd.Find([]string{"plugins", "list"})
+
+	s.NoError(err)
+	s.NotNil(listCmd)
+
+	typeFlag := listCmd.Flag("type")
+	s.NotNil(typeFlag)
+	s.Equal("all", typeFlag.DefValue)
+}
+
+func (s *PluginsCommandSuite) Test_plugins_list_has_search_flag() {
+	rootCmd := NewRootCmd()
+	listCmd, _, err := rootCmd.Find([]string{"plugins", "list"})
+
+	s.NoError(err)
+	s.NotNil(listCmd)
+
+	searchFlag := listCmd.Flag("search")
+	s.NotNil(searchFlag)
+	s.Equal("", searchFlag.DefValue)
+}
+
+func (s *PluginsCommandSuite) Test_plugins_list_accepts_no_args() {
+	rootCmd := NewRootCmd()
+	listCmd, _, err := rootCmd.Find([]string{"plugins", "list"})
+
+	s.NoError(err)
+	s.NotNil(listCmd)
+
+	err = listCmd.Args(listCmd, []string{})
+	s.NoError(err)
+}
+
+func (s *PluginsCommandSuite) Test_plugins_list_rejects_args() {
+	rootCmd := NewRootCmd()
+	listCmd, _, err := rootCmd.Find([]string{"plugins", "list"})
+
+	s.NoError(err)
+	s.NotNil(listCmd)
+
+	err = listCmd.Args(listCmd, []string{"unexpected-arg"})
+	s.Error(err)
+}
+
 func TestPluginsCommandSuite(t *testing.T) {
 	suite.Run(t, new(PluginsCommandSuite))
 }

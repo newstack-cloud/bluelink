@@ -7,8 +7,9 @@ This guide explains how to manually test the `bluelink plugins` commands using t
 The plugin registry test server (`tools/plugin-registry-test-server`) provides a local mock plugin registry for testing:
 
 - **Login** - Authentication flows (API Key, OAuth2 Client Credentials, OAuth2 Auth Code)
-- **Install** - Plugin discovery, download, and installation
+- **Install** - Plugin discovery, download, and installation (including dependency resolution)
 - **Uninstall** - Plugin removal from local machine
+- **List** - Listing installed plugins with dependency trees, filtering, and search
 
 ## Prerequisites
 
@@ -163,12 +164,14 @@ bluelink plugins login http://localhost:8080
 
 The test server provides these test plugins:
 
-| Plugin | Versions | Notes |
-|--------|----------|-------|
-| `bluelink/test-provider` | 1.0.0, 1.1.0, 2.0.0 | Valid signed plugin |
-| `bluelink/test-transformer` | 1.0.0 | Valid signed plugin |
-| `bluelink/bad-signature` | 1.0.0 | Returns invalid GPG signature |
-| `bluelink/unsigned` | 1.0.0 | No signature URLs (should fail) |
+| Plugin | Versions | Dependencies | Notes |
+|--------|----------|--------------|-------|
+| `bluelink/test-provider` | 1.0.0, 1.1.0, 2.0.0 | None | Base provider plugin |
+| `bluelink/test-transformer` | 1.0.0 | None | Base transformer plugin |
+| `bluelink/aws-link-provider` | 1.0.0 | `bluelink/test-provider@1.0.0` | Provider with single dependency |
+| `bluelink/multi-cloud-transformer` | 1.0.0 | `bluelink/test-provider@1.0.0`, `bluelink/aws-link-provider@1.0.0` | Plugin with dependency chain |
+| `bluelink/bad-signature` | 1.0.0 | None | Returns invalid GPG signature |
+| `bluelink/unsigned` | 1.0.0 | None | No signature URLs (should fail) |
 
 ### Basic Install
 
@@ -192,6 +195,47 @@ bluelink plugins install localhost:8080/bluelink/test-provider@1.0.0
 bluelink plugins install \
   localhost:8080/bluelink/test-provider@1.0.0 \
   localhost:8080/bluelink/test-transformer@1.0.0
+```
+
+### Install with Dependency Resolution
+
+Install a plugin that has a dependency on another plugin. The CLI automatically resolves and installs dependencies first:
+```bash
+bluelink plugins install localhost:8080/bluelink/aws-link-provider@1.0.0
+```
+
+**Expected behavior:**
+- CLI resolves that `aws-link-provider` depends on `bluelink/test-provider@1.0.0`
+- Both plugins are installed in topological order (dependency first)
+- Dependency plugins are labeled with `(dependency)` in the output
+- Shows "Installed: 2" in the summary
+
+### Install Deep Dependency Chain
+
+Install a plugin with a multi-level dependency tree:
+```bash
+bluelink plugins install localhost:8080/bluelink/multi-cloud-transformer@1.0.0
+```
+
+**Expected behavior:**
+- CLI resolves the full dependency tree:
+  1. `bluelink/test-provider@1.0.0` (no dependencies)
+  2. `bluelink/aws-link-provider@1.0.0` (depends on test-provider)
+  3. `bluelink/multi-cloud-transformer@1.0.0` (depends on both)
+- All three plugins are installed in topological order
+- Dependency plugins are labeled with `(dependency)` in the output
+- Shows "Installed: 3" in the summary
+
+### Verify Dependencies in Manifest
+
+After installing plugins with dependencies, inspect the manifest to see dependency metadata:
+```bash
+cat ${BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH:-~/.bluelink/engine/plugins}/manifest.json | jq '
+  .plugins | to_entries[] | {
+    plugin: .value.id,
+    type: .value.type,
+    dependencies: .value.dependencies
+  }'
 ```
 
 ### Install Latest Version
@@ -368,6 +412,118 @@ BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH=/tmp/my-plugins \
 
 ---
 
+## Testing `plugins list`
+
+The list command shows all installed plugins with their dependency trees, supports type filtering and name search.
+
+### Prerequisites
+
+Before testing list, install some plugins including ones with dependencies:
+```bash
+bluelink plugins login http://localhost:8080
+bluelink plugins install \
+  localhost:8080/bluelink/test-provider@1.0.0 \
+  localhost:8080/bluelink/test-transformer@1.0.0
+bluelink plugins install localhost:8080/bluelink/aws-link-provider@1.0.0
+```
+
+### List All Plugins
+
+```bash
+bluelink plugins list
+```
+
+**Expected behavior (interactive mode):**
+- Shows a styled list of all installed plugins grouped by type
+- Each plugin shows version, install date, and dependency tree
+- Footer shows total count and keybinding hints
+- Press `↑/↓` or `j/k` to navigate, `/` to search, `q` to quit
+
+### Filter by Type
+
+```bash
+bluelink plugins list --type provider
+```
+
+**Expected behavior:**
+- Only plugins of type "provider" are shown
+- Header includes "(type: provider)"
+- `test-transformer` is excluded from the list
+
+### Search by Name
+
+```bash
+bluelink plugins list --search "aws"
+```
+
+**Expected behavior:**
+- Only plugins matching "aws" (case-insensitive) are shown
+- `aws-link-provider` appears in results
+- Other plugins are excluded
+- Header includes `(search: "aws")`
+
+### Verify Dependency Tree in Output
+
+After installing `aws-link-provider` (which depends on `test-provider`):
+```bash
+bluelink plugins list | cat
+```
+
+**Expected behavior (headless output):**
+- Output includes `bluelink/aws-link-provider@1.0.0 [provider]`
+- Dependency section shows `Dependencies:` followed by `bluelink/test-provider@1.0.0`
+- Total count reflects all installed plugins
+
+### Headless Output
+
+When piped or in a non-interactive terminal, output is plain text with `[plugins]` prefix:
+```bash
+bluelink plugins list | cat
+```
+
+**Expected output format:**
+```
+[plugins]
+[plugins] Installed Plugins
+[plugins] ════════════════════════════════════════════════════════════
+[plugins]   bluelink/test-provider@1.0.0 [provider]
+[plugins]     Version: 1.0.0
+[plugins]     Registry: localhost:8080
+[plugins]     Installed: 2025-01-30 10:00:00
+[plugins]   bluelink/aws-link-provider@1.0.0 [provider]
+[plugins]     Version: 1.0.0
+[plugins]     Registry: localhost:8080
+[plugins]     Installed: 2025-01-30 10:00:01
+[plugins]     Dependencies:
+[plugins]       - bluelink/test-provider@1.0.0
+[plugins]
+[plugins] ════════════════════════════════════════════════════════════
+[plugins] Total: 2 plugin(s)
+```
+
+### Interactive Search
+
+In interactive mode (not piped), you can search dynamically:
+1. Run `bluelink plugins list`
+2. Press `/` to enter search mode
+3. Type a search term (e.g., "provider")
+4. Press `Enter` to apply the filter
+5. Press `Esc` to clear the search
+
+### List with No Plugins
+
+If no plugins are installed:
+```bash
+BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH=/tmp/empty-plugins \
+  bluelink plugins list | cat
+```
+
+**Expected behavior:**
+- Shows "No plugins found."
+- Shows "Total: 0 plugin(s)"
+
+---
+
 ## Verifying Endpoints Directly
 
 You can test the OAuth2 and registry endpoints directly with curl:
@@ -405,6 +561,20 @@ curl http://localhost:8080/v1/plugins/bluelink/test-provider/versions \
 ```bash
 curl http://localhost:8080/v1/plugins/bluelink/test-provider/1.0.0/package/darwin/arm64 \
   -H "Authorization: Bearer test-api-key-12345" | jq .
+```
+
+### Get Package Metadata with Dependencies
+```bash
+curl http://localhost:8080/v1/plugins/bluelink/multi-cloud-transformer/1.0.0/package/darwin/arm64 \
+  -H "Authorization: Bearer test-api-key-12345" | jq .dependencies
+```
+
+Expected output:
+```json
+{
+  "bluelink/test-provider": "1.0.0",
+  "bluelink/aws-link-provider": "1.0.0"
+}
 ```
 
 ### Download Plugin Archive

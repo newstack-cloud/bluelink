@@ -9,7 +9,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/plugins"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/registries"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/plugininstallui"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/pluginlistui"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/pluginloginui"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/pluginuninstallui"
 	"github.com/newstack-cloud/deploy-cli-sdk/config"
@@ -21,6 +23,7 @@ import (
 var errLoginFailed = errors.New("login failed")
 var errInstallFailed = errors.New("install failed")
 var errUninstallFailed = errors.New("uninstall failed")
+var errListPluginsFailed = errors.New("list plugins failed")
 
 func setupPluginsCommand(rootCmd *cobra.Command, confProvider *config.Provider) {
 	pluginsCmd := &cobra.Command{
@@ -32,6 +35,7 @@ func setupPluginsCommand(rootCmd *cobra.Command, confProvider *config.Provider) 
 	setupPluginsLoginCommand(pluginsCmd)
 	setupPluginsInstallCommand(pluginsCmd, confProvider)
 	setupPluginsUninstallCommand(pluginsCmd)
+	setupPluginsListCommand(pluginsCmd, confProvider)
 
 	rootCmd.AddCommand(pluginsCmd)
 }
@@ -206,24 +210,36 @@ func runPluginsInstall(args []string, deployConfigFile string) error {
 		}
 	}
 
-	// Detect if running in a terminal
+	manager := createPluginManager()
+
+	resolvedPlugins, err := manager.ResolveDependencies(context.TODO(), pluginIDs)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to resolve plugin dependencies: %v\n", err)
+		return errInstallFailed
+	}
+
+	if len(resolvedPlugins) == 0 {
+		fmt.Fprintln(os.Stdout, "All plugins are already installed.")
+		return nil
+	}
+
 	inTerminal := term.IsTerminal(int(os.Stdout.Fd()))
 	headlessMode := !inTerminal
 
-	// Create styles
 	styles := stylespkg.NewStyles(
 		lipgloss.NewRenderer(os.Stdout),
 		stylespkg.NewBluelinkPalette(),
 	)
 
-	// Create the install app
 	installApp, err := plugininstallui.NewInstallApp(
 		context.Background(),
 		plugininstallui.InstallAppOptions{
-			PluginIDs:      pluginIDs,
-			Styles:         styles,
-			Headless:       headlessMode,
-			HeadlessWriter: os.Stdout,
+			PluginIDs:        resolvedPlugins,
+			UserRequestedIDs: pluginIDs,
+			Manager:          manager,
+			Styles:           styles,
+			Headless:         headlessMode,
+			HeadlessWriter:   os.Stdout,
 		},
 	)
 	if err != nil {
@@ -355,4 +371,117 @@ func runPluginsUninstall(args []string) error {
 	}
 
 	return nil
+}
+
+func setupPluginsListCommand(pluginsCmd *cobra.Command, confProvider *config.Provider) {
+	listCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List installed plugins",
+		Long: `Lists all plugins installed on the local machine.
+Each plugin is displayed with its dependency tree. Transformer plugins
+typically depend on provider plugins to deploy concrete resources.
+
+Use --type to filter by plugin type and --search to filter by name.
+
+Examples:
+  # List all installed plugins
+  bluelink plugins list
+
+  # List only provider plugins
+  bluelink plugins list --type provider
+
+  # Search plugins by name
+  bluelink plugins list --search "aws"`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
+			cmd.SilenceErrors = true
+			return runPluginsList(confProvider)
+		},
+	}
+
+	listCmd.PersistentFlags().String(
+		"type",
+		"all",
+		"Filter plugins by type. Allowed values: provider, transformer, all.",
+	)
+	confProvider.BindPFlag("pluginsListType", listCmd.PersistentFlags().Lookup("type"))
+	confProvider.BindEnvVar("pluginsListType", "BLUELINK_CLI_PLUGINS_LIST_TYPE")
+
+	listCmd.PersistentFlags().String(
+		"search",
+		"",
+		"Filter plugins by name (case-insensitive substring match).",
+	)
+	confProvider.BindPFlag("pluginsListSearch", listCmd.PersistentFlags().Lookup("search"))
+	confProvider.BindEnvVar("pluginsListSearch", "BLUELINK_CLI_PLUGINS_LIST_SEARCH")
+
+	pluginsCmd.AddCommand(listCmd)
+}
+
+func runPluginsList(confProvider *config.Provider) error {
+	typeFilter, _ := confProvider.GetString("pluginsListType")
+	search, _ := confProvider.GetString("pluginsListSearch")
+
+	switch typeFilter {
+	case "all", "provider", "transformer":
+	default:
+		return fmt.Errorf(
+			"invalid type filter %q: allowed values are provider, transformer, all",
+			typeFilter,
+		)
+	}
+
+	inTerminal := term.IsTerminal(int(os.Stdout.Fd()))
+	headlessMode := !inTerminal
+
+	styles := stylespkg.NewStyles(
+		lipgloss.NewRenderer(os.Stdout),
+		stylespkg.NewBluelinkPalette(),
+	)
+
+	app, err := pluginlistui.NewListApp(pluginlistui.ListAppOptions{
+		TypeFilter:     typeFilter,
+		Search:         search,
+		Styles:         styles,
+		Headless:       headlessMode,
+		HeadlessWriter: os.Stdout,
+	})
+	if err != nil {
+		return err
+	}
+
+	var teaOpts []tea.ProgramOption
+	if headlessMode {
+		teaOpts = append(teaOpts, tea.WithoutRenderer(), tea.WithInput(nil))
+	} else {
+		teaOpts = append(teaOpts, tea.WithAltScreen())
+	}
+
+	p := tea.NewProgram(app, teaOpts...)
+	finalModel, err := p.Run()
+	if err != nil {
+		return err
+	}
+
+	switch m := finalModel.(type) {
+	case pluginlistui.MainModel:
+		if m.Error != nil {
+			return errListPluginsFailed
+		}
+	case *pluginlistui.MainModel:
+		if m.Error != nil {
+			return errListPluginsFailed
+		}
+	}
+
+	return nil
+}
+
+func createPluginManager() *plugins.Manager {
+	authStore := registries.NewAuthConfigStore()
+	tokenStore := registries.NewTokenStore()
+	discoveryClient := registries.NewServiceDiscoveryClient()
+	registryClient := registries.NewRegistryClient(authStore, tokenStore, discoveryClient)
+	return plugins.NewManager(registryClient, discoveryClient)
 }

@@ -202,10 +202,13 @@ func main() {
 	log.Printf("Usage:")
 	log.Printf("  bluelink plugins login http://localhost:%s", port)
 	log.Printf("  bluelink plugins install localhost:%s/bluelink/test-provider@1.0.0", port)
+	log.Printf("  bluelink plugins list")
 	log.Printf("")
 	log.Printf("Test Plugins:")
 	log.Printf("  bluelink/test-provider (1.0.0, 1.1.0, 2.0.0)")
 	log.Printf("  bluelink/test-transformer (1.0.0)")
+	log.Printf("  bluelink/aws-link-provider (1.0.0) - depends on bluelink/test-provider@1.0.0")
+	log.Printf("  bluelink/multi-cloud-transformer (1.0.0) - depends on bluelink/test-provider@1.0.0, bluelink/aws-link-provider@1.0.0")
 	log.Printf("  bluelink/bad-signature (1.0.0) - returns invalid GPG signature")
 	log.Printf("  bluelink/unsigned (1.0.0) - no signature URLs")
 

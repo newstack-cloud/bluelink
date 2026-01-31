@@ -46,6 +46,7 @@ type PluginInstallState struct {
 	DownloadedBytes int64
 	TotalBytes      int64
 	Error           error
+	IsDependency    bool
 }
 
 // MainModel is the main model for the plugin install TUI.
@@ -192,7 +193,11 @@ func (m *MainModel) handlePluginComplete(msg PluginCompleteMsg) (tea.Model, tea.
 		state.StatusText = "Installed"
 		m.installedCount += 1
 		if m.headless {
-			fmt.Fprintf(m.headlessWriter, "  %s: installed\n", state.PluginID.String())
+			label := "installed"
+			if state.IsDependency {
+				label = "installed (dependency)"
+			}
+			fmt.Fprintf(m.headlessWriter, "  %s: %s\n", state.PluginID.String(), label)
 		}
 
 	case plugins.StatusSkipped:
@@ -300,13 +305,16 @@ func (m MainModel) renderInstalling() string {
 
 		sb.WriteString(" ")
 		sb.WriteString(state.PluginID.String())
+		if state.IsDependency {
+			sb.WriteString(" ")
+			sb.WriteString(m.styles.Muted.Render("(dependency)"))
+		}
 
 		if state.StatusText != "" {
 			sb.WriteString(" ")
 			sb.WriteString(m.styles.Muted.Render("(" + state.StatusText + ")"))
 		}
 
-		// Show progress bar for downloading
 		if state.Status == PluginDownloading && state.TotalBytes > 0 && i == m.currentPlugin {
 			sb.WriteString("\n    ")
 			sb.WriteString(m.progress.View())
@@ -341,7 +349,6 @@ func (m MainModel) renderComplete() string {
 
 	sb.WriteString("\n")
 
-	// List installed plugins
 	for _, state := range m.pluginStates {
 		sb.WriteString("  ")
 		switch state.Status {
@@ -352,6 +359,9 @@ func (m MainModel) renderComplete() string {
 		}
 		sb.WriteString(" ")
 		sb.WriteString(state.PluginID.String())
+		if state.IsDependency {
+			sb.WriteString(m.styles.Muted.Render(" (dependency)"))
+		}
 		if state.Status == PluginSkipped {
 			sb.WriteString(m.styles.Muted.Render(" (already installed)"))
 		}
@@ -400,7 +410,6 @@ func (m MainModel) renderError() string {
 	}
 	errorWrapStyle := errorStyle.Width(maxWidth)
 
-	// List all plugins with their status
 	for _, state := range m.pluginStates {
 		sb.WriteString("  ")
 		switch state.Status {
@@ -413,6 +422,9 @@ func (m MainModel) renderError() string {
 		}
 		sb.WriteString(" ")
 		sb.WriteString(state.PluginID.String())
+		if state.IsDependency {
+			sb.WriteString(m.styles.Muted.Render(" (dependency)"))
+		}
 
 		if state.Status == PluginFailed && state.Error != nil {
 			sb.WriteString("\n    ")
@@ -430,11 +442,12 @@ func (m MainModel) renderError() string {
 
 // InstallAppOptions contains options for creating a new install app.
 type InstallAppOptions struct {
-	PluginIDs      []*plugins.PluginID
-	Styles         *stylespkg.Styles
-	Headless       bool
-	HeadlessWriter io.Writer
-	Manager        *plugins.Manager
+	PluginIDs        []*plugins.PluginID
+	UserRequestedIDs []*plugins.PluginID
+	Styles           *stylespkg.Styles
+	Headless         bool
+	HeadlessWriter   io.Writer
+	Manager          *plugins.Manager
 }
 
 // NewInstallApp creates a new plugin install TUI application.
@@ -453,16 +466,8 @@ func NewInstallApp(ctx context.Context, opts InstallAppOptions) (*MainModel, err
 		progress.WithoutPercentage(),
 	)
 
-	// Create plugin states
-	states := make([]*PluginInstallState, len(opts.PluginIDs))
-	for i, id := range opts.PluginIDs {
-		states[i] = &PluginInstallState{
-			PluginID: id,
-			Status:   PluginPending,
-		}
-	}
+	states := buildPluginStates(opts.PluginIDs, opts.UserRequestedIDs)
 
-	// Create manager if not provided
 	manager := opts.Manager
 	if manager == nil {
 		authStore := registries.NewAuthConfigStore()
@@ -485,4 +490,24 @@ func NewInstallApp(ctx context.Context, opts InstallAppOptions) (*MainModel, err
 		width:          80, // Default width until WindowSizeMsg is received
 		manager:        manager,
 	}, nil
+}
+
+func buildPluginStates(
+	pluginIDs []*plugins.PluginID,
+	userRequestedIDs []*plugins.PluginID,
+) []*PluginInstallState {
+	userRequested := make(map[string]bool, len(userRequestedIDs))
+	for _, id := range userRequestedIDs {
+		userRequested[id.FullyQualified()] = true
+	}
+
+	states := make([]*PluginInstallState, len(pluginIDs))
+	for i, id := range pluginIDs {
+		states[i] = &PluginInstallState{
+			PluginID:     id,
+			Status:       PluginPending,
+			IsDependency: len(userRequested) > 0 && !userRequested[id.FullyQualified()],
+		}
+	}
+	return states
 }

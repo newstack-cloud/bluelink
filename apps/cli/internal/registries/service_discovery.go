@@ -130,6 +130,28 @@ func isLocalhost(host string) bool {
 	return hostOnly == "localhost" || hostOnly == "127.0.0.1"
 }
 
+// GetPluginType determines the plugin type served by a registry host
+// by checking which service endpoint is configured in the discovery document.
+func (c *ServiceDiscoveryClient) GetPluginType(
+	ctx context.Context,
+	registryHost string,
+) (PluginType, error) {
+	doc, err := c.Discover(ctx, registryHost)
+	if err != nil {
+		return PluginTypeUnknown, err
+	}
+
+	if doc.ProviderV1 != nil && doc.ProviderV1.Endpoint != "" {
+		return PluginTypeProvider, nil
+	}
+
+	if doc.TransformerV1 != nil && doc.TransformerV1.Endpoint != "" {
+		return PluginTypeTransformer, nil
+	}
+
+	return PluginTypeUnknown, nil
+}
+
 // DiscoverAuthConfig fetches the service discovery document and returns just the auth configuration.
 // Returns ErrNoAuthMethodsSupported if the registry has no auth.v1 configuration.
 func (c *ServiceDiscoveryClient) DiscoverAuthConfig(ctx context.Context, registryHost string) (*AuthV1Config, error) {

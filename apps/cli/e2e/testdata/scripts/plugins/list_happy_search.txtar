@@ -1,0 +1,30 @@
+# Test plugins list --search filters by name
+# This test requires the mock-registry container to be running
+
+wait_registry
+
+# Save API key credentials and set up environment
+mkdir $WORK/.bluelink/clients
+cp plugins.auth.json $WORK/.bluelink/clients/plugins.auth.json
+env HOME=$WORK
+env BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH=$WORK/plugins
+
+# Install two plugins
+exec bluelink plugins install localhost:18080/bluelink/test-provider@1.0.0 localhost:18080/bluelink/test-transformer@1.0.0
+stdout 'Installed: 2'
+
+# Search for "provider" - should only show test-provider
+exec bluelink plugins list --search provider
+stdout 'test-provider@1.0.0'
+! stdout 'test-transformer'
+stdout 'Total: 1 plugin\(s\)'
+
+-- bluelink.config.toml --
+# Empty config file
+
+-- plugins.auth.json --
+{
+  "localhost:18080": {
+    "apiKey": "test-api-key-12345"
+  }
+}

@@ -14,6 +14,15 @@ const (
 	AuthTypeOAuth2AuthCode    AuthType = "oauth2_authorization_code"
 )
 
+// PluginType represents the type of a plugin as discovered from the registry.
+type PluginType string
+
+const (
+	PluginTypeProvider    PluginType = "provider"
+	PluginTypeTransformer PluginType = "transformer"
+	PluginTypeUnknown     PluginType = ""
+)
+
 // ServiceDiscoveryDocument represents the .well-known/bluelink-services.json response.
 type ServiceDiscoveryDocument struct {
 	Auth          *AuthV1Config        `json:"auth.v1,omitempty"`

@@ -13,7 +13,7 @@ env BLUELINK_DEPLOY_ENGINE_PLUGIN_PATH=$WORK/plugins
 
 # Run install for non-existent plugin
 ! exec bluelink plugins install localhost:18080/bluelink/nonexistent@1.0.0
-stdout 'not found'
+stderr 'not found'
 
 -- bluelink.config.toml --
 # Empty config file
