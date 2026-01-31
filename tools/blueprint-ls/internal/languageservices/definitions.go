@@ -2,6 +2,7 @@ package languageservices
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
@@ -62,8 +63,6 @@ func (s *GotoDefinitionService) findDefinitionLink(
 	tree *schema.TreeNode,
 	collected []*schema.TreeNode,
 ) ([]lsp.LocationLink, error) {
-	// Work backwards through collected elements to find the first element
-	// of a type that supports definition links.
 	for i := len(collected) - 1; i >= 0; i-- {
 		node := collected[i]
 		kind := docmodel.KindFromSchemaElement(node.SchemaElement)
@@ -82,7 +81,9 @@ func (s *GotoDefinitionService) findDefinitionLink(
 		}
 	}
 
-	return []lsp.LocationLink{}, nil
+	// Fallback: check for plain-string contexts (export field values,
+	// linkSelector.exclude items, dependsOn items).
+	return s.findPlainStringDefinitionLink(docURI, blueprint, tree, collected)
 }
 
 func (s *GotoDefinitionService) buildResourceRefLink(
@@ -250,4 +251,151 @@ func buildLocationLink(docURI lsp.URI, originRange, targetRange *source.Range) [
 			TargetSelectionRange: *target,
 		},
 	}
+}
+
+type plainStringContextType int
+
+const (
+	plainStringContextExportField plainStringContextType = iota
+	plainStringContextResourceRef
+)
+
+type plainStringContext struct {
+	contextType plainStringContextType
+	leafNode    *schema.TreeNode
+	parentNode  *schema.TreeNode
+}
+
+// exportFieldNamespaceTargets maps export field namespace prefixes
+// to their corresponding schema tree path prefixes.
+var exportFieldNamespaceTargets = map[string]string{
+	"resources":   "/resources",
+	"datasources": "/datasources",
+	"variables":   "/variables",
+	"values":      "/values",
+	"children":    "/includes",
+}
+
+func (s *GotoDefinitionService) findPlainStringDefinitionLink(
+	docURI lsp.URI,
+	blueprint *schema.Blueprint,
+	tree *schema.TreeNode,
+	collected []*schema.TreeNode,
+) ([]lsp.LocationLink, error) {
+	ctx := classifyPlainStringContext(collected)
+	if ctx == nil {
+		return []lsp.LocationLink{}, nil
+	}
+
+	switch ctx.contextType {
+	case plainStringContextExportField:
+		return s.buildExportFieldDefinitionLink(docURI, ctx, tree)
+	case plainStringContextResourceRef:
+		return s.buildResourceNameDefinitionLink(docURI, blueprint, ctx.leafNode, tree)
+	}
+
+	return []lsp.LocationLink{}, nil
+}
+
+func classifyPlainStringContext(collected []*schema.TreeNode) *plainStringContext {
+	if len(collected) < 2 {
+		return nil
+	}
+
+	leaf := collected[len(collected)-1]
+	if docmodel.KindFromSchemaElement(leaf.SchemaElement) != docmodel.SchemaElementUnknown {
+		return nil
+	}
+
+	for i := len(collected) - 2; i >= 0; i-- {
+		node := collected[i]
+		kind := docmodel.KindFromSchemaElement(node.SchemaElement)
+
+		if kind == docmodel.SchemaElementExport && hasFieldDescendant(collected[i+1:]) {
+			return &plainStringContext{
+				contextType: plainStringContextExportField,
+				leafNode:    leaf,
+				parentNode:  node,
+			}
+		}
+
+		if kind == docmodel.SchemaElementStringList && isResourceRefStringList(node.Path) {
+			return &plainStringContext{
+				contextType: plainStringContextResourceRef,
+				leafNode:    leaf,
+				parentNode:  node,
+			}
+		}
+	}
+
+	return nil
+}
+
+func hasFieldDescendant(descendants []*schema.TreeNode) bool {
+	for _, node := range descendants {
+		if node.Label == "field" {
+			return true
+		}
+	}
+	return false
+}
+
+func isResourceRefStringList(path string) bool {
+	return strings.HasSuffix(path, "/linkSelector/exclude") ||
+		strings.HasSuffix(path, "/dependsOn")
+}
+
+func (s *GotoDefinitionService) buildExportFieldDefinitionLink(
+	docURI lsp.URI,
+	ctx *plainStringContext,
+	tree *schema.TreeNode,
+) ([]lsp.LocationLink, error) {
+	export, ok := ctx.parentNode.SchemaElement.(*schema.Export)
+	if !ok || export == nil || export.Field == nil || export.Field.StringValue == nil {
+		return []lsp.LocationLink{}, nil
+	}
+
+	segments := parseFieldPathSegments(*export.Field.StringValue)
+	if len(segments) < 2 {
+		return []lsp.LocationLink{}, nil
+	}
+
+	targetPathPrefix, ok := exportFieldNamespaceTargets[segments[0].value]
+	if !ok {
+		return []lsp.LocationLink{}, nil
+	}
+
+	targetNode := findSchemaNodeByPath(
+		tree, fmt.Sprintf("%s/%s", targetPathPrefix, segments[1].value),
+	)
+	if targetNode == nil {
+		return []lsp.LocationLink{}, nil
+	}
+
+	return buildLocationLink(docURI, ctx.leafNode.Range, targetNode.Range), nil
+}
+
+func (s *GotoDefinitionService) buildResourceNameDefinitionLink(
+	docURI lsp.URI,
+	blueprint *schema.Blueprint,
+	leafNode *schema.TreeNode,
+	tree *schema.TreeNode,
+) ([]lsp.LocationLink, error) {
+	if blueprint.Resources == nil || len(blueprint.Resources.Values) == 0 {
+		return []lsp.LocationLink{}, nil
+	}
+
+	resourceName, ok := leafNode.SchemaElement.(string)
+	if !ok || resourceName == "" {
+		return []lsp.LocationLink{}, nil
+	}
+
+	targetNode := findSchemaNodeByPath(
+		tree, fmt.Sprintf("/resources/%s", resourceName),
+	)
+	if targetNode == nil {
+		return []lsp.LocationLink{}, nil
+	}
+
+	return buildLocationLink(docURI, leafNode.Range, targetNode.Range), nil
 }

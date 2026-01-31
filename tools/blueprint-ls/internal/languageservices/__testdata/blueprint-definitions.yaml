@@ -146,6 +146,23 @@ resources:
         SECRET_STORE_ID: "${variables.secretStoreId}"
         PAYMENT_API_SECRET: "${variables.paymentApiSecret}"
 
+  linkedResource:
+    type: celerity/handler
+    linkSelector:
+      byLabel:
+        application: orders
+      exclude:
+        - resource53
+    spec:
+      handlerName: linked-handler
+
+  dependentResource:
+    type: celerity/handler
+    dependsOn:
+      - getOrderHandler
+    spec:
+      handlerName: dependent-handler
+
 include:
   networking:
     path: networking.blueprint.yaml
@@ -168,3 +185,19 @@ exports:
     type: string
     field: variables.certificateId
     description: "The ID of the certificate to use for the API domain."
+  ordersHandlerName:
+    type: string
+    field: resources.getOrderHandler.spec.handlerName
+    description: "The handler name of the get order handler."
+  networkingExport:
+    type: string
+    field: children.networking.someExport
+    description: "An export from the networking child blueprint."
+  networkVpc:
+    type: string
+    field: datasources.network.vpc
+    description: "The VPC ID from the network data source."
+  certInfoValue:
+    type: string
+    field: values.derivitiveCertInfo
+    description: "The certificate info value."
