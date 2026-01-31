@@ -415,6 +415,49 @@ func RenderByLabelDefinition() string {
 		"contain the specified key-value pairs."
 }
 
+// MatchingResourceInfo holds information about a resource that matches a byLabel selector.
+type MatchingResourceInfo struct {
+	Name         string
+	ResourceType string
+	Linked       bool
+}
+
+// RenderByLabelHoverContent renders hover content for a byLabel selector,
+// showing the base definition, optional focused label key, and matching resources.
+func RenderByLabelHoverContent(
+	labelKey string,
+	labelValue string,
+	matchingResources []MatchingResourceInfo,
+) string {
+	var sb strings.Builder
+	sb.WriteString("**byLabel**\n\nLabel selector that matches resources whose labels " +
+		"contain the specified key-value pairs.\n\n")
+
+	if labelKey != "" {
+		sb.WriteString(fmt.Sprintf("**%s:** `%s`\n\n", labelKey, labelValue))
+	}
+
+	if len(matchingResources) == 0 {
+		sb.WriteString("*No matching resources found.*")
+		return sb.String()
+	}
+
+	sb.WriteString("**Matching resources:**\n\n")
+	for _, res := range matchingResources {
+		linkStatus := ""
+		if res.Linked {
+			linkStatus = " *(linked)*"
+		}
+		if res.ResourceType != "" {
+			sb.WriteString(fmt.Sprintf("- `%s` — `%s`%s\n", res.Name, res.ResourceType, linkStatus))
+		} else {
+			sb.WriteString(fmt.Sprintf("- `%s`%s\n", res.Name, linkStatus))
+		}
+	}
+
+	return strings.TrimSpace(sb.String())
+}
+
 // RenderExcludeDefinition renders a schema definition for an exclude list.
 func RenderExcludeDefinition() string {
 	return "**exclude**\n\nA list of resource names to exclude from link matching."

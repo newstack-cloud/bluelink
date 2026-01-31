@@ -170,6 +170,9 @@ func (s *HoverService) getHoverContentByKind(
 	case docmodel.SchemaElementLinkSelector:
 		return getLinkSelectorHoverContent(hoverCtx.TreeNode)
 	case docmodel.SchemaElementStringMap:
+		if isByLabelNode(hoverCtx.TreeNode.Path) {
+			return s.getByLabelHoverContent(ctx, hoverCtx, blueprint)
+		}
 		return getStringMapHoverContent(hoverCtx.TreeNode)
 	case docmodel.SchemaElementStringOrSubstitutionsMap:
 		return s.getStringOrSubsMapHoverContent(ctx, hoverCtx, blueprint)

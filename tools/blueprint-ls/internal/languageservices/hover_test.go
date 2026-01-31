@@ -298,6 +298,36 @@ func (s *HoverServiceSuite) Test_hover_on_filter_search_key() {
 	s.Assert().Contains(hoverContent.Value, "match")
 }
 
+func (s *HoverServiceSuite) Test_hover_on_byLabel_shows_matching_resources() {
+	lspCtx := &common.LSPContext{}
+	// Line 29 (0-indexed: 28): "        application: orders" (the label key line)
+	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 28, Character: 10},
+	})
+	s.Require().NoError(err)
+	s.Assert().NotEmpty(hoverContent.Value)
+	s.Assert().Contains(hoverContent.Value, "byLabel")
+	s.Assert().Contains(hoverContent.Value, "application")
+	s.Assert().Contains(hoverContent.Value, "Matching resources")
+	s.Assert().Contains(hoverContent.Value, "getOrderHandler")
+	s.Assert().Contains(hoverContent.Value, "celerity/handler")
+}
+
+func (s *HoverServiceSuite) Test_hover_on_byLabel_map_key_shows_matching_resources() {
+	lspCtx := &common.LSPContext{}
+	// Line 28 (0-indexed: 27): "      byLabel:" (on the byLabel key itself)
+	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 27, Character: 8},
+	})
+	s.Require().NoError(err)
+	s.Assert().NotEmpty(hoverContent.Value)
+	s.Assert().Contains(hoverContent.Value, "byLabel")
+	s.Assert().Contains(hoverContent.Value, "Matching resources")
+	s.Assert().Contains(hoverContent.Value, "getOrderHandler")
+}
+
 func TestHoverServiceSuite(t *testing.T) {
 	suite.Run(t, new(HoverServiceSuite))
 }

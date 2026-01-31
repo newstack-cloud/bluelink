@@ -1298,3 +1298,104 @@ func buildExportFieldLabel(segments []pathSegment) string {
 	}
 	return strings.Join(parts, ".")
 }
+
+func isByLabelNode(path string) bool {
+	return strings.HasSuffix(path, "/linkSelector/byLabel")
+}
+
+func (s *HoverService) getByLabelHoverContent(
+	ctx *common.LSPContext,
+	hoverCtx *docmodel.HoverContext,
+	blueprint *schema.Blueprint,
+) (*HoverContent, error) {
+	node := hoverCtx.TreeNode
+
+	byLabelMap, ok := node.SchemaElement.(*schema.StringMap)
+	if !ok || byLabelMap == nil {
+		return &HoverContent{
+			Value: helpinfo.RenderByLabelDefinition(),
+			Range: safeRangeToLSPRange(node.Range),
+		}, nil
+	}
+
+	parts := strings.Split(node.Path, "/")
+	if len(parts) < 5 || parts[1] != "resources" {
+		return &HoverContent{
+			Value: helpinfo.RenderByLabelDefinition(),
+			Range: safeRangeToLSPRange(node.Range),
+		}, nil
+	}
+
+	resourceName := parts[2]
+	resource := getResource(blueprint, resourceName)
+	if resource == nil {
+		return &HoverContent{
+			Value: helpinfo.RenderByLabelDefinition(),
+			Range: safeRangeToLSPRange(node.Range),
+		}, nil
+	}
+
+	labelKey := findFieldKeyAtPosition(byLabelMap.SourceMeta, hoverCtx.CursorPosition)
+	labelValue := ""
+	if labelKey != "" {
+		labelValue = byLabelMap.Values[labelKey]
+	}
+
+	matchingResources := s.findMatchingResourcesForByLabel(ctx, blueprint, resourceName, resource)
+
+	return &HoverContent{
+		Value: helpinfo.RenderByLabelHoverContent(labelKey, labelValue, matchingResources),
+		Range: safeRangeToLSPRange(node.Range),
+	}, nil
+}
+
+func (s *HoverService) findMatchingResourcesForByLabel(
+	ctx *common.LSPContext,
+	blueprint *schema.Blueprint,
+	resourceName string,
+	resource *schema.Resource,
+) []helpinfo.MatchingResourceInfo {
+	if blueprint.Resources == nil {
+		return nil
+	}
+
+	var result []helpinfo.MatchingResourceInfo
+	for otherName, otherResource := range blueprint.Resources.Values {
+		if otherName == resourceName || otherResource == nil {
+			continue
+		}
+
+		if !hasMatchingSelector(resource, otherResource, otherName) {
+			continue
+		}
+
+		linked := false
+		if s.linkRegistry != nil && resource.Type != nil && otherResource.Type != nil {
+			_, linked = s.getLinkDirectionForHover(
+				ctx, resource.Type.Value, otherResource.Type.Value,
+			)
+		}
+
+		resourceType := ""
+		if otherResource.Type != nil {
+			resourceType = otherResource.Type.Value
+		}
+
+		result = append(result, helpinfo.MatchingResourceInfo{
+			Name:         otherName,
+			ResourceType: resourceType,
+			Linked:       linked,
+		})
+	}
+
+	slices.SortFunc(result, func(a, b helpinfo.MatchingResourceInfo) int {
+		if a.Name < b.Name {
+			return -1
+		} else if a.Name > b.Name {
+			return 1
+		}
+		return 0
+	})
+
+	return result
+}
