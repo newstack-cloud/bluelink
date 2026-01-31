@@ -96,7 +96,7 @@ func (s *ApplicationSuite) createTestApplication() *Application {
 		state, settingsService, diagnosticErrorService, nil, s.logger,
 	)
 	hoverService := languageservices.NewHoverService(
-		functionRegistry, resourceRegistry, dataSourceRegistry, signatureService, nil, s.logger,
+		functionRegistry, resourceRegistry, dataSourceRegistry, nil, signatureService, nil, s.logger,
 	)
 	symbolService := languageservices.NewSymbolService(state, s.logger)
 	gotoDefinitionService := languageservices.NewGotoDefinitionService(state, s.logger)

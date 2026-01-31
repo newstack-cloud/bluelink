@@ -2,6 +2,7 @@ package docmodel
 
 import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 )
 
 // HoverContext provides context for hover information at a position.
@@ -17,6 +18,14 @@ type HoverContext struct {
 
 	// AncestorNodes are the ancestor tree nodes from root to the target node
 	AncestorNodes []*schema.TreeNode
+
+	// DescendantNodes are tree nodes deeper than the target node
+	// that were collected at the hover position but are not themselves hoverable.
+	DescendantNodes []*schema.TreeNode
+
+	// CursorPosition is the 1-based cursor position used for hover.
+	// This is set by the caller after DetermineHoverContext returns.
+	CursorPosition source.Position
 }
 
 // DetermineHoverContext analyzes collected tree nodes to find the hover target.
@@ -32,11 +41,16 @@ func DetermineHoverContext(collected []*schema.TreeNode) *HoverContext {
 		kind := KindFromSchemaElement(node.SchemaElement)
 
 		if kind.SupportsHover() {
+			var descendants []*schema.TreeNode
+			if i+1 < len(collected) {
+				descendants = collected[i+1:]
+			}
 			return &HoverContext{
-				ElementKind:   kind,
-				SchemaElement: node.SchemaElement,
-				TreeNode:      node,
-				AncestorNodes: collected[:i+1],
+				ElementKind:     kind,
+				SchemaElement:   node.SchemaElement,
+				TreeNode:        node,
+				AncestorNodes:   collected[:i+1],
+				DescendantNodes: descendants,
 			}
 		}
 	}
@@ -57,7 +71,34 @@ func (k SchemaElementKind) SupportsHover() bool {
 		SchemaElementElemIndexRef,
 		SchemaElementPathItem,
 		SchemaElementResourceType,
-		SchemaElementDataSourceType:
+		SchemaElementDataSourceType,
+		SchemaElementDataSourceFieldType,
+		SchemaElementDataSourceFilterOperator,
+		// Named elements
+		SchemaElementResource,
+		SchemaElementVariable,
+		SchemaElementValue,
+		SchemaElementDataSource,
+		SchemaElementInclude,
+		// Top-level sections
+		SchemaElementResources,
+		SchemaElementVariables,
+		SchemaElementValues,
+		SchemaElementDataSources,
+		SchemaElementIncludes,
+		// Structural elements
+		SchemaElementMappingNode,
+		SchemaElementDataSourceFieldExport,
+		SchemaElementDataSourceFieldExportMap,
+		SchemaElementDataSourceFilters,
+		SchemaElementDataSourceFilter,
+		SchemaElementDataSourceFilterSearch,
+		SchemaElementMetadata,
+		SchemaElementDataSourceMetadata,
+		SchemaElementLinkSelector,
+		SchemaElementStringMap,
+		SchemaElementStringOrSubstitutionsMap,
+		SchemaElementStringList:
 		return true
 	}
 	return false

@@ -100,6 +100,7 @@ func main() {
 		functionRegistry,
 		resourceRegistry,
 		dataSourceRegistry,
+		nil, // linkRegistry - set after plugin loading
 		signatureService,
 		childResolver,
 		logger,

@@ -1,5 +1,17 @@
 version: 2024-07-20
 
+variables:
+  environment:
+    type: string
+    description: "The deployment environment"
+    default: staging
+
+values:
+  tableName:
+    type: string
+    value: "orders-${variables.environment}"
+    description: "The DynamoDB table name"
+
 resources:
   ordersTable:
     type: aws/dynamodb/table
@@ -12,12 +24,48 @@ resources:
       annotations:
         environment.v1: production
         cost-center.v1: engineering
+    linkSelector:
+      byLabel:
+        application: orders
+    spec:
+      tableName: orders
+      region: us-east-1
 
   getOrderHandler:
     type: celerity/handler
     description: "Handler for getting order data"
+    metadata:
+      labels:
+        application: orders
     spec:
       handlerName: get-order
+
+datasources:
+  network:
+    type: aws/vpc
+    description: "VPC network configuration"
+    filter:
+      field: environment
+      operator: "="
+      search: production
+    exports:
+      vpcId:
+        type: string
+        description: "The VPC identifier"
+      subnetIds:
+        type: array
+        description: "List of subnet identifiers"
+
+include:
+  auth:
+    path: "./auth-blueprint.yaml"
+    description: "Authentication child blueprint"
+
+exports:
+  tableArn:
+    type: string
+    field: "resources.ordersTable.state.arn"
+    description: "The ARN of the orders table"
 
 metadata:
   annotationRef: "${resources.ordersTable.metadata.annotations['environment.v1']}"

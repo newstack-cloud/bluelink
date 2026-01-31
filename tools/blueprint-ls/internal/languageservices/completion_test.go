@@ -41,7 +41,7 @@ func (s *CompletionServiceGetItemsSuite) SetupTest() {
 	}
 	functionRegistry := &testutils.FunctionRegistryMock{
 		Functions: map[string]provider.Function{
-			"len":          corefunctions.NewLenFunction(),
+			"len":           corefunctions.NewLenFunction(),
 			"_compose_exec": corefunctions.NewComposeExecFunction(),
 		},
 	}
@@ -51,4 +51,3 @@ func (s *CompletionServiceGetItemsSuite) SetupTest() {
 func TestCompletionServiceGetItemsSuite(t *testing.T) {
 	suite.Run(t, new(CompletionServiceGetItemsSuite))
 }
-

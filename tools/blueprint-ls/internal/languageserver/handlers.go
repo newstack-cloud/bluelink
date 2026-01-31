@@ -140,7 +140,7 @@ func (a *Application) handleHover(ctx *common.LSPContext, params *lsp.HoverParam
 		return nil, err
 	}
 
-	if content == nil {
+	if content == nil || content.Value == "" {
 		return nil, nil
 	}
 
@@ -498,11 +498,13 @@ func (a *Application) handleDocumentSymbols(
 ) (any, error) {
 	docCtx := a.state.GetDocumentContext(params.TextDocument.URI)
 
-	// If no stored context, create one from content for symbols
+	// If no stored context, create one from content for symbols.
+	// Content may be nil during startup before textDocument/didOpen
+	// has been processed, return empty symbols in that case.
 	if docCtx == nil {
 		content := a.state.GetDocumentContent(params.TextDocument.URI)
 		if content == nil {
-			return nil, errors.New("no content found for document")
+			return []lsp.DocumentSymbol{}, nil
 		}
 
 		format := blueprint.DetermineDocFormat(params.TextDocument.URI)
@@ -657,6 +659,7 @@ func (a *Application) ReinitialiseRegistries(
 		a.functionRegistry,
 		a.resourceRegistry,
 		a.dataSourceRegistry,
+		linkRegistry,
 	)
 }
 

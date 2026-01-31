@@ -390,6 +390,7 @@ func (s *HandlersSuite) createTestApplication(state *languageservices.State) *Ap
 		functionRegistry,
 		resourceRegistry,
 		dataSourceRegistry,
+		nil, // linkRegistry
 		signatureService,
 		nil, // childResolver
 		s.logger,

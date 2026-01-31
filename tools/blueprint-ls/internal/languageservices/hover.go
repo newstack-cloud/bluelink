@@ -20,6 +20,7 @@ type HoverService struct {
 	funcRegistry       provider.FunctionRegistry
 	resourceRegistry   resourcehelpers.Registry
 	dataSourceRegistry provider.DataSourceRegistry
+	linkRegistry       provider.LinkRegistry
 	signatureService   *SignatureService
 	childResolver      *ChildBlueprintResolver
 	logger             *zap.Logger
@@ -30,17 +31,19 @@ func NewHoverService(
 	funcRegistry provider.FunctionRegistry,
 	resourceRegistry resourcehelpers.Registry,
 	dataSourceRegistry provider.DataSourceRegistry,
+	linkRegistry provider.LinkRegistry,
 	signatureService *SignatureService,
 	childResolver *ChildBlueprintResolver,
 	logger *zap.Logger,
 ) *HoverService {
 	return &HoverService{
-		funcRegistry,
-		resourceRegistry,
-		dataSourceRegistry,
-		signatureService,
-		childResolver,
-		logger,
+		funcRegistry:       funcRegistry,
+		resourceRegistry:   resourceRegistry,
+		dataSourceRegistry: dataSourceRegistry,
+		linkRegistry:       linkRegistry,
+		signatureService:   signatureService,
+		childResolver:      childResolver,
+		logger:             logger,
 	}
 }
 
@@ -50,10 +53,12 @@ func (s *HoverService) UpdateRegistries(
 	funcRegistry provider.FunctionRegistry,
 	resourceRegistry resourcehelpers.Registry,
 	dataSourceRegistry provider.DataSourceRegistry,
+	linkRegistry provider.LinkRegistry,
 ) {
 	s.funcRegistry = funcRegistry
 	s.resourceRegistry = resourceRegistry
 	s.dataSourceRegistry = dataSourceRegistry
+	s.linkRegistry = linkRegistry
 }
 
 // HoverContent represents the content for a hover message.
@@ -89,13 +94,14 @@ func (s *HoverService) GetHoverContent(
 		return &HoverContent{}, nil
 	}
 
-	return s.getHoverElementContent(ctx, blueprint, collected, docCtx.URI)
+	return s.getHoverElementContent(ctx, blueprint, collected, pos, docCtx.URI)
 }
 
 func (s *HoverService) getHoverElementContent(
 	ctx *common.LSPContext,
 	blueprint *schema.Blueprint,
 	collected []*schema.TreeNode,
+	pos source.Position,
 	docURI string,
 ) (*HoverContent, error) {
 	hoverCtx := docmodel.DetermineHoverContext(collected)
@@ -103,6 +109,7 @@ func (s *HoverService) getHoverElementContent(
 		return &HoverContent{}, nil
 	}
 
+	hoverCtx.CursorPosition = pos
 	return s.getHoverContentByKind(ctx, blueprint, hoverCtx, docURI)
 }
 
@@ -135,6 +142,53 @@ func (s *HoverService) getHoverContentByKind(
 		return s.getDataSourceTypeHoverContent(ctx, hoverCtx.TreeNode)
 	case docmodel.SchemaElementPathItem:
 		return s.getPathItemHoverContent(ctx, hoverCtx, blueprint, docURI)
+	// Named elements
+	case docmodel.SchemaElementResource:
+		return getResourceNameHoverContent(hoverCtx.TreeNode, blueprint)
+	case docmodel.SchemaElementVariable:
+		return getVariableNameHoverContent(hoverCtx.TreeNode, blueprint)
+	case docmodel.SchemaElementValue:
+		return getValueNameHoverContent(hoverCtx.TreeNode, blueprint)
+	case docmodel.SchemaElementDataSource:
+		return getDataSourceNameHoverContent(hoverCtx.TreeNode, blueprint)
+	case docmodel.SchemaElementInclude:
+		return getIncludeNameHoverContent(hoverCtx.TreeNode, blueprint)
+	// Top-level sections
+	case docmodel.SchemaElementResources,
+		docmodel.SchemaElementVariables,
+		docmodel.SchemaElementValues,
+		docmodel.SchemaElementDataSources,
+		docmodel.SchemaElementIncludes:
+		return getSectionHoverContent(hoverCtx.TreeNode)
+	// Structural elements
+	case docmodel.SchemaElementMappingNode:
+		return s.getMappingNodeHoverContent(ctx, hoverCtx, blueprint)
+	case docmodel.SchemaElementMetadata:
+		return getMetadataHoverContent(hoverCtx)
+	case docmodel.SchemaElementDataSourceMetadata:
+		return getDataSourceMetadataHoverContent(hoverCtx)
+	case docmodel.SchemaElementLinkSelector:
+		return getLinkSelectorHoverContent(hoverCtx.TreeNode)
+	case docmodel.SchemaElementStringMap:
+		return getStringMapHoverContent(hoverCtx.TreeNode)
+	case docmodel.SchemaElementStringOrSubstitutionsMap:
+		return s.getStringOrSubsMapHoverContent(ctx, hoverCtx, blueprint)
+	case docmodel.SchemaElementDataSourceFieldExport:
+		return s.getDataSourceFieldExportHoverContent(ctx, hoverCtx.TreeNode, blueprint)
+	case docmodel.SchemaElementDataSourceFieldExportMap:
+		return getDataSourceFieldExportMapHoverContent(hoverCtx.TreeNode)
+	case docmodel.SchemaElementDataSourceFieldType:
+		return getDataSourceFieldTypeHoverContent(hoverCtx.TreeNode)
+	case docmodel.SchemaElementDataSourceFilters:
+		return getDataSourceFiltersHoverContent(hoverCtx.TreeNode)
+	case docmodel.SchemaElementDataSourceFilter:
+		return s.getDataSourceFilterHoverContent(ctx, hoverCtx, blueprint)
+	case docmodel.SchemaElementDataSourceFilterOperator:
+		return getDataSourceFilterOperatorHoverContent(hoverCtx.TreeNode)
+	case docmodel.SchemaElementDataSourceFilterSearch:
+		return getDataSourceFilterSearchHoverContent(hoverCtx.TreeNode)
+	case docmodel.SchemaElementStringList:
+		return getStringListHoverContent(hoverCtx.TreeNode)
 	default:
 		return &HoverContent{}, nil
 	}

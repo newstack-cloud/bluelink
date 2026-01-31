@@ -154,8 +154,8 @@ func (s *HoverContextSuite) TestDetermineHoverContext_DataSourceType() {
 	s.Assert().Equal(SchemaElementDataSourceType, ctx.ElementKind)
 }
 
-func (s *HoverContextSuite) TestDetermineHoverContext_SkipsNonHoverElements() {
-	// Resource itself doesn't support hover, but ResourceType does
+func (s *HoverContextSuite) TestDetermineHoverContext_PrefersDeepestHoverElement() {
+	// Both Resource and ResourceType support hover; deepest (ResourceType) should win
 	resType := &schema.ResourceTypeWrapper{Value: "aws/dynamodb/table"}
 	collected := []*schema.TreeNode{
 		{Path: "/resources", SchemaElement: &schema.ResourceMap{}},
@@ -166,7 +166,7 @@ func (s *HoverContextSuite) TestDetermineHoverContext_SkipsNonHoverElements() {
 	ctx := DetermineHoverContext(collected)
 
 	s.Require().NotNil(ctx)
-	// Should find the ResourceType, not the Resource
+	// Should find the ResourceType (deepest hoverable element), not the Resource
 	s.Assert().Equal(SchemaElementResourceType, ctx.ElementKind)
 }
 
@@ -176,13 +176,27 @@ func (s *HoverContextSuite) TestDetermineHoverContext_EmptyCollected() {
 }
 
 func (s *HoverContextSuite) TestDetermineHoverContext_NoHoverableElements() {
+	// Use a type that maps to SchemaElementUnknown (not in KindFromSchemaElement switch)
 	collected := []*schema.TreeNode{
-		{Path: "/resources", SchemaElement: &schema.ResourceMap{}},
-		{Path: "/resources/myTable", SchemaElement: &schema.Resource{}},
+		{Path: "/unknown", SchemaElement: "plain string"},
 	}
 
 	ctx := DetermineHoverContext(collected)
 	s.Assert().Nil(ctx)
+}
+
+func (s *HoverContextSuite) TestDetermineHoverContext_ResourceSupportsHover() {
+	resource := &schema.Resource{}
+	collected := []*schema.TreeNode{
+		{Path: "/resources", SchemaElement: &schema.ResourceMap{}},
+		{Path: "/resources/myTable", SchemaElement: resource},
+	}
+
+	ctx := DetermineHoverContext(collected)
+
+	s.Require().NotNil(ctx)
+	s.Assert().Equal(SchemaElementResource, ctx.ElementKind)
+	s.Assert().Equal(resource, ctx.SchemaElement)
 }
 
 func (s *HoverContextSuite) TestSchemaElementKind_SupportsHover() {
@@ -195,8 +209,36 @@ func (s *HoverContextSuite) TestSchemaElementKind_SupportsHover() {
 		SchemaElementDataSourceRef,
 		SchemaElementElemRef,
 		SchemaElementElemIndexRef,
+		SchemaElementPathItem,
 		SchemaElementResourceType,
 		SchemaElementDataSourceType,
+		SchemaElementDataSourceFieldType,
+		SchemaElementDataSourceFilterOperator,
+		// Named elements
+		SchemaElementResource,
+		SchemaElementVariable,
+		SchemaElementValue,
+		SchemaElementDataSource,
+		SchemaElementInclude,
+		// Top-level sections
+		SchemaElementResources,
+		SchemaElementVariables,
+		SchemaElementValues,
+		SchemaElementDataSources,
+		SchemaElementIncludes,
+		// Structural elements
+		SchemaElementMappingNode,
+		SchemaElementDataSourceFieldExport,
+		SchemaElementDataSourceFieldExportMap,
+		SchemaElementDataSourceFilters,
+		SchemaElementDataSourceFilter,
+		SchemaElementDataSourceFilterSearch,
+		SchemaElementMetadata,
+		SchemaElementDataSourceMetadata,
+		SchemaElementLinkSelector,
+		SchemaElementStringMap,
+		SchemaElementStringOrSubstitutionsMap,
+		SchemaElementStringList,
 	}
 
 	for _, kind := range hoverableKinds {
@@ -205,17 +247,35 @@ func (s *HoverContextSuite) TestSchemaElementKind_SupportsHover() {
 
 	nonHoverableKinds := []SchemaElementKind{
 		SchemaElementUnknown,
-		SchemaElementResource,
-		SchemaElementDataSource,
-		SchemaElementVariable,
-		SchemaElementValue,
-		SchemaElementResources,
 		SchemaElementScalar,
+		SchemaElementExport,
+		SchemaElementExports,
 	}
 
 	for _, kind := range nonHoverableKinds {
 		s.Assert().False(kind.SupportsHover(), "expected %s to not support hover", kind)
 	}
+}
+
+func (s *HoverContextSuite) TestDetermineHoverContext_PopulatesDescendantNodes() {
+	// When the deepest hoverable element is not the last in collected,
+	// the remaining nodes should be stored as DescendantNodes.
+	annotationsMap := &schema.StringOrSubstitutionsMap{}
+	collected := []*schema.TreeNode{
+		{Path: "/resources", SchemaElement: &schema.ResourceMap{}},
+		{Path: "/resources/myTable", SchemaElement: &schema.Resource{}},
+		{Path: "/resources/myTable/metadata/annotations", SchemaElement: annotationsMap},
+		// A non-hoverable node deeper than the annotations map
+		{Path: "/resources/myTable/metadata/annotations/myKey", SchemaElement: "plain string", Label: "myKey"},
+	}
+
+	ctx := DetermineHoverContext(collected)
+
+	s.Require().NotNil(ctx)
+	s.Assert().Equal(SchemaElementStringOrSubstitutionsMap, ctx.ElementKind)
+	s.Assert().Equal(annotationsMap, ctx.SchemaElement)
+	s.Require().Len(ctx.DescendantNodes, 1)
+	s.Assert().Equal("myKey", ctx.DescendantNodes[0].Label)
 }
 
 func TestHoverContextSuite(t *testing.T) {

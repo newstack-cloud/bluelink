@@ -1,0 +1,25 @@
+version: 2024-07-20
+
+resources:
+  newOrderTable:
+    type: aws/dynamodb/table
+    description: "DynamoDB table for orders"
+    metadata:
+      labels:
+        subsystem: eventProcessing
+    linkSelector:
+      byLabel:
+        subsystem: eventProcessing
+    spec:
+      tableName: orders
+
+  processOrders:
+    type: aws/lambda/function
+    description: "Lambda function that processes orders"
+    metadata:
+      annotations:
+        aws.dynamodb.lambda.stream.startingPosition: LATEST
+      labels:
+        subsystem: eventProcessing
+    spec:
+      functionName: processOrders

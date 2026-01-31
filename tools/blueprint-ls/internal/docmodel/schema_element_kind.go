@@ -1,6 +1,7 @@
 package docmodel
 
 import (
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 )
@@ -48,6 +49,20 @@ const (
 	SchemaElementElemRef
 	SchemaElementElemIndexRef
 	SchemaElementPathItem
+
+	// Structural elements
+	SchemaElementMappingNode
+	SchemaElementDataSourceFieldExport
+	SchemaElementDataSourceFieldExportMap
+	SchemaElementDataSourceFilters
+	SchemaElementDataSourceFilter
+	SchemaElementDataSourceFilterSearch
+	SchemaElementMetadata
+	SchemaElementDataSourceMetadata
+	SchemaElementLinkSelector
+	SchemaElementStringMap
+	SchemaElementStringOrSubstitutionsMap
+	SchemaElementStringList
 
 	// Value nodes
 	SchemaElementScalar
@@ -118,6 +133,36 @@ func KindFromSchemaElement(elem any) SchemaElementKind {
 	case *schema.ExportMap:
 		return SchemaElementExports
 
+	// Structural elements
+	case *core.MappingNode:
+		return SchemaElementMappingNode
+	case *schema.DataSourceFieldExport:
+		return SchemaElementDataSourceFieldExport
+	case *schema.DataSourceFieldExportMap:
+		return SchemaElementDataSourceFieldExportMap
+	case *schema.DataSourceFieldTypeWrapper:
+		return SchemaElementDataSourceFieldType
+	case *schema.DataSourceFilters:
+		return SchemaElementDataSourceFilters
+	case *schema.DataSourceFilter:
+		return SchemaElementDataSourceFilter
+	case *schema.DataSourceFilterOperatorWrapper:
+		return SchemaElementDataSourceFilterOperator
+	case *schema.DataSourceFilterSearch:
+		return SchemaElementDataSourceFilterSearch
+	case *schema.Metadata:
+		return SchemaElementMetadata
+	case *schema.DataSourceMetadata:
+		return SchemaElementDataSourceMetadata
+	case *schema.LinkSelector:
+		return SchemaElementLinkSelector
+	case *schema.StringMap:
+		return SchemaElementStringMap
+	case *schema.StringOrSubstitutionsMap:
+		return SchemaElementStringOrSubstitutionsMap
+	case *schema.StringList:
+		return SchemaElementStringList
+
 	default:
 		return SchemaElementUnknown
 	}
@@ -155,6 +200,18 @@ var schemaElementKindNames = map[SchemaElementKind]string{
 	SchemaElementElemRef:                  "elem_ref",
 	SchemaElementElemIndexRef:             "elem_index_ref",
 	SchemaElementPathItem:                 "path_item",
+	SchemaElementMappingNode:              "mapping_node",
+	SchemaElementDataSourceFieldExport:    "datasource_field_export",
+	SchemaElementDataSourceFieldExportMap: "datasource_field_export_map",
+	SchemaElementDataSourceFilters:        "datasource_filters",
+	SchemaElementDataSourceFilter:         "datasource_filter",
+	SchemaElementDataSourceFilterSearch:   "datasource_filter_search",
+	SchemaElementMetadata:                 "metadata",
+	SchemaElementDataSourceMetadata:       "datasource_metadata",
+	SchemaElementLinkSelector:             "link_selector",
+	SchemaElementStringMap:                "string_map",
+	SchemaElementStringOrSubstitutionsMap: "string_or_substitutions_map",
+	SchemaElementStringList:               "string_list",
 	SchemaElementScalar:                   "scalar",
 	SchemaElementMapping:                  "mapping",
 	SchemaElementSequence:                 "sequence",
