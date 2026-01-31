@@ -273,6 +273,7 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 	// as this test is for a global identifier used to reference a resource.
 	// The LSP client should filter the results based on the context.
 	// This includes both prefixed (resources.x) and standalone (x) resource names.
+	// Internal functions (e.g. _compose_exec) should be excluded from completion suggestions.
 	expectedLabels := []string{
 		"datasources.network",
 		"len",
@@ -285,7 +286,10 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_
 		"variables.instanceType",
 	}
 	slices.Sort(expectedLabels)
-	s.Assert().Equal(expectedLabels, completionItemLabels(completionItems.Items))
+	actualLabels := completionItemLabels(completionItems.Items)
+	s.Assert().Equal(expectedLabels, actualLabels)
+	s.Assert().NotContains(actualLabels, "_compose_exec",
+		"Internal functions should be excluded from completion suggestions")
 }
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_resource_ref_2() {

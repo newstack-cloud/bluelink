@@ -761,6 +761,19 @@ func (s *CompletionService) getFunctionCompletionItems(
 	insertRange := getItemInsertRange(position)
 
 	for _, functionName := range functionNames {
+		defOutput, err := s.functionRegistry.GetDefinition(
+			ctx.Context,
+			functionName,
+			&provider.FunctionGetDefinitionInput{},
+		)
+		if err != nil {
+			continue
+		}
+
+		if defOutput.Definition.Internal {
+			continue
+		}
+
 		functionText := fmt.Sprintf("%s(", functionName)
 		edit := lsp.TextEdit{
 			NewText: functionText,
