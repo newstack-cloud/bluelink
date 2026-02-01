@@ -2,6 +2,65 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.42.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.41.0...blueprint/v0.42.0) (2026-02-01)
+
+
+### Features
+
+* **blueprint:** add behaviour to reverse a change set ([bbbdb1a](https://github.com/newstack-cloud/bluelink/commit/bbbdb1acd7983580eace24ee397d9456bf60dfb5))
+* **blueprint:** add deep mapping node validation in references ([25a45a5](https://github.com/newstack-cloud/bluelink/commit/25a45a59daddf5c8648e7bca3c0ca3b2cd8f8c9a))
+* **blueprint:** add depends on list to schema tree ([8a73265](https://github.com/newstack-cloud/bluelink/commit/8a73265422b7e610b78899cfc62ed11491d95d23))
+* **blueprint:** add drift detection and reconciliation support for child blueprints ([347894f](https://github.com/newstack-cloud/bluelink/commit/347894fea55e338d924eef57886a4adf0bfda97e))
+* **blueprint:** add end position capture for mapping nodes and new registry methods ([36913e6](https://github.com/newstack-cloud/bluelink/commit/36913e6fe77d6cc2cf751d3636f256a8e18e78e5))
+* **blueprint:** add field to more accurately map annotation to resource ([478e984](https://github.com/newstack-cloud/bluelink/commit/478e9841dad47d3a0d2d1b80dc3a1b25baa40142))
+* **blueprint:** add helpers to support rollbacks for new and existing deployments ([9ff363b](https://github.com/newstack-cloud/bluelink/commit/9ff363b3541d4af7fd902f99d6cfa4eda0dbbc41))
+* **blueprint:** add improvements to blueprint container ([39c5e2e](https://github.com/newstack-cloud/bluelink/commit/39c5e2e3a1e01c603cb521e7a08bf4bbf7b56cae))
+* **blueprint:** add improvements to diagnostics and errors ([a182c6c](https://github.com/newstack-cloud/bluelink/commit/a182c6c655871c287a228a7dae398fbc04b8ed92))
+* **blueprint:** add link selector exclude list and annotation value validation ([b9c366a](https://github.com/newstack-cloud/bluelink/commit/b9c366abee6ab22d5a6c0a2e0948188dffbcdd14))
+* **blueprint:** add method to get batch of instances for list of ids or names ([2321597](https://github.com/newstack-cloud/bluelink/commit/2321597d8d048c4a753d2e190c8101ea7f8021a5))
+* **blueprint:** add method to list instances to state container ([239b022](https://github.com/newstack-cloud/bluelink/commit/239b022a61118f252a256e65b8af4ae4237b70d8))
+* **blueprint:** add safe to rollback check for links ([f486673](https://github.com/newstack-cloud/bluelink/commit/f4866737a85f7ef5d4d1d9a400f21ae049f011de))
+* **blueprint:** add safe to rollback checks for resources ([881fe79](https://github.com/newstack-cloud/bluelink/commit/881fe79068ae666408208265f43bf64ab32ec2dd))
+* **blueprint:** add support for accurately tracking field locations ([2e57b36](https://github.com/newstack-cloud/bluelink/commit/2e57b36dcbdf0bf2843a72c4e896fe3046df0c83))
+* **blueprint:** add support for advanced reconciliation and drift checks ([b889111](https://github.com/newstack-cloud/bluelink/commit/b8891116050e5f2c5d11d48e37853cb65e6f28be))
+* **blueprint:** add support for resolvable child blueprint export validation ([1a843b3](https://github.com/newstack-cloud/bluelink/commit/1a843b3b7eedffe12e6ce95be7d7033dc7b04d11))
+* **blueprint:** add support for resolving relative child blueprints from local fs ([e3806b3](https://github.com/newstack-cloud/bluelink/commit/e3806b36359d2f0dc84a10f6aed725830f08987c))
+* **blueprint:** add support for saving blueprint instances in batches ([ef2e18b](https://github.com/newstack-cloud/bluelink/commit/ef2e18b97c85481766773f68ef3a04ddbc0fe47b))
+* **blueprint:** add support for single quotes in name accessors ([b179879](https://github.com/newstack-cloud/bluelink/commit/b179879ec75bf7919b5615f184acac9eee6f12ac))
+* **blueprint:** add support for sorting resource schema arrays for comparison ([d8e8ed6](https://github.com/newstack-cloud/bluelink/commit/d8e8ed6b601c02627f7d4d984e9c6be953469d87))
+* **blueprint:** add support for system-level tagging ([74122ad](https://github.com/newstack-cloud/bluelink/commit/74122ad9cf577eb6775494829b768272617a1c74))
+* **blueprint:** add validation for link selector exclude list ([a16af10](https://github.com/newstack-cloud/bluelink/commit/a16af1003a9ad11654a5858072664cfdba18a73a))
+* **blueprint:** add warnings for array index access in validation ([bf6e857](https://github.com/newstack-cloud/bluelink/commit/bf6e857920c0841540b80fd7aaaac028155bb0a3))
+* **blueprint:** integrate full support for rollbacks  and pre-rollback state capture ([e089295](https://github.com/newstack-cloud/bluelink/commit/e089295bcedb6001b8ff1434d08465b2307e25af))
+
+
+### Bug Fixes
+
+* **blueprint:** add fix for nil pointer derefs for change staging ([f4a7932](https://github.com/newstack-cloud/bluelink/commit/f4a7932c4b2a1a80e0cd5afdfaf1a44b1a8a1f67))
+* **blueprint:** add fix for validating optional link annotations ([7983c7f](https://github.com/newstack-cloud/bluelink/commit/7983c7fbcad9535deba4d80ca793bac6a2af3075))
+* **blueprint:** add fixes to change set output and add computed fields to resource state ([06b2b08](https://github.com/newstack-cloud/bluelink/commit/06b2b08dad9e509744afa22c028282e891960895))
+* **blueprint:** add improvements to errors and position tracking for errors ([77186c7](https://github.com/newstack-cloud/bluelink/commit/77186c7e6b38ec9d0fbc87480afaf6b151dbbab3))
+* **blueprint:** add missing json struct tags to reconciliation types ([053f155](https://github.com/newstack-cloud/bluelink/commit/053f155d0067bfa22732aff27afd0cd9ab19e67d))
+* **blueprint:** add missing tagging config to drift checker ([4d59e61](https://github.com/newstack-cloud/bluelink/commit/4d59e61cac273db005a872cd33efc9c93a6d250c))
+* **blueprint:** add resource name to get external state input ([56d8434](https://github.com/newstack-cloud/bluelink/commit/56d8434ec331d166f08b01e6c21af81eb9405c5f))
+* **blueprint:** add unmarshal yaml support for string lists ([591daa7](https://github.com/newstack-cloud/bluelink/commit/591daa744d3182de6a6c25bfe2ceca64bfbc69c4))
+* **blueprint:** add validation improvements and defensive checks ([ab0bea4](https://github.com/newstack-cloud/bluelink/commit/ab0bea421c19020e1a27a09506a99649b328aca3))
+* **blueprint:** capture child blueprint final status and correct messaging for interruptions ([54dfdc1](https://github.com/newstack-cloud/bluelink/commit/54dfdc196fdd70e48e5f3c4149f6abd02671d249))
+* **blueprint:** ensure empty mapping nodes are treated correctly for protobuf conversion ([1822d2f](https://github.com/newstack-cloud/bluelink/commit/1822d2fe03cede073bcf63d6c5d60fc2009bdc9a))
+* **blueprint:** ensure link context is set for method calls to link implementations ([b3c18df](https://github.com/newstack-cloud/bluelink/commit/b3c18df25b2e2986bd81fd76b424ae44c3ce399d))
+* **blueprint:** ensure resource spec and child attachments are persisted even for failed deployments ([c435296](https://github.com/newstack-cloud/bluelink/commit/c435296c9801fa9fb3ca2db6a4d84be72a3172ae))
+* **blueprint:** improve failure handling for deployment orchestration ([3bedabc](https://github.com/newstack-cloud/bluelink/commit/3bedabcc1107edb05f1a71b3b4e2e9a1f974bd98))
+* **blueprint:** improve failure handling for deployment orchestration process ([d88bd48](https://github.com/newstack-cloud/bluelink/commit/d88bd48362247e6a46a512e7c1d7bb77d9b49a3d))
+* **blueprint:** initialise missing maps in initial instance state ([8bb3766](https://github.com/newstack-cloud/bluelink/commit/8bb3766e3916e5dffbcbbacde0935c0c6182503f))
+* **blueprint:** relax json string list parsing by skipping non-string values ([8e95b77](https://github.com/newstack-cloud/bluelink/commit/8e95b773b1bdbfb9805df172fdfc4f1e9e2a8579))
+
+
+### Dependencies
+
+* **blueprint:** bump google.golang.org/protobuf ([9b8eca6](https://github.com/newstack-cloud/bluelink/commit/9b8eca65a8983a3e2d83d92ffdd17d222169e9f4))
+* **blueprint:** bump the go-deps group ([ef381e8](https://github.com/newstack-cloud/bluelink/commit/ef381e8d881fea096bc32e3267f984a1236ecee0))
+* **blueprint:** update common lib to version with similar string checks ([d4de9d4](https://github.com/newstack-cloud/bluelink/commit/d4de9d47534d0739c09cec7ad70cce979ef63b8b))
+
 ## [0.41.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.40.0...blueprint/v0.41.0) (2026-02-01)
 
 
