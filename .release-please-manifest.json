@@ -2,7 +2,7 @@
   "apps/cli": "0.1.1",
   "apps/deploy-engine": "0.3.0",
   "libs/blueprint": "0.40.0",
-  "libs/blueprint-resolvers": "0.1.2",
+  "libs/blueprint-resolvers": "0.1.3",
   "libs/blueprint-state": "0.6.1",
   "libs/common": "0.4.0",
   "libs/deploy-engine-client": "0.3.0",
