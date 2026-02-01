@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/newstack-cloud/bluelink/compare/blueprint-resolvers/v0.1.2...blueprint-resolvers/v0.1.3) (2026-02-01)
+
+
+### Dependencies
+
+* **blueprint-resolvers:** bump the go-deps group across 1 directory with 9 updates ([920a2a0](https://github.com/newstack-cloud/bluelink/commit/920a2a0ae599f57a5ad1b6c5fa85cabba3f3e0b8))
+
 ## [0.1.2](https://github.com/newstack-cloud/bluelink/compare/blueprint-resolvers/v0.1.1...blueprint-resolvers/v0.1.2) (2026-01-06)
 
 
