@@ -2,20 +2,19 @@ package initui
 
 import (
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/templates"
 	sharedui "github.com/newstack-cloud/deploy-cli-sdk/ui"
 )
 
 func selectTemplateListItems() []list.Item {
-	return []list.Item{
-		sharedui.BluelinkListItem{
-			Key:   "scaffold",
-			Label: "Scaffold",
-			Desc:  "A scaffold project that generates essential files with placeholders.",
-		},
-		sharedui.BluelinkListItem{
-			Key:   "aws-simple-api",
-			Label: "AWS Simple API",
-			Desc:  "A simple API project using AWS API Gateway and Lambda functions for a RESTful API.",
-		},
+	allTemplates := templates.GetTemplates()
+	items := make([]list.Item, len(allTemplates))
+	for i, t := range allTemplates {
+		items[i] = sharedui.BluelinkListItem{
+			Key:   t.Key,
+			Label: t.Label,
+			Desc:  t.Description,
+		}
 	}
+	return items
 }

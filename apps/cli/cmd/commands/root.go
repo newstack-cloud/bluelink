@@ -122,6 +122,7 @@ This CLI validates, stages changes for, and deploys blueprints.`,
 	setupStateCommand(rootCmd, confProvider)
 	setupCleanupCommand(rootCmd, confProvider)
 	setupPluginsCommand(rootCmd, confProvider)
+	setupTemplatesCommand(rootCmd, confProvider)
 
 	return rootCmd
 }
