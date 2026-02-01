@@ -110,6 +110,32 @@ func (s *CompletionServiceResolveItemSuite) Test_resolves_function_docs() {
 	}, resolvedItem.Documentation)
 }
 
+func (s *CompletionServiceResolveItemSuite) Test_resolve_unknown_completion_type() {
+	itemKind := lsp.CompletionItemKindEnum
+	item := &lsp.CompletionItem{
+		Label: "some-value",
+		Kind:  &itemKind,
+	}
+	lspCtx := &common.LSPContext{}
+	resolvedItem, err := s.service.ResolveCompletionItem(lspCtx, item, "unknownType")
+	s.Require().NoError(err)
+	s.Assert().Equal(item, resolvedItem)
+	s.Assert().Nil(resolvedItem.Documentation)
+}
+
+func (s *CompletionServiceResolveItemSuite) Test_resolve_core_variable_type() {
+	itemKind := lsp.CompletionItemKindEnum
+	item := &lsp.CompletionItem{
+		Label: "string",
+		Kind:  &itemKind,
+	}
+	lspCtx := &common.LSPContext{}
+	resolvedItem, err := s.service.ResolveCompletionItem(lspCtx, item, "variableType")
+	s.Require().NoError(err)
+	s.Assert().Equal(item, resolvedItem)
+	s.Assert().Nil(resolvedItem.Documentation)
+}
+
 func TestCompletionServiceResolveItemSuite(t *testing.T) {
 	suite.Run(t, new(CompletionServiceResolveItemSuite))
 }

@@ -4,11 +4,14 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/testutils"
 	"github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
+	"go.uber.org/zap"
 )
 
 func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_variable_ref() {
@@ -2403,4 +2406,150 @@ func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_link_sele
 	s.Assert().NotContains(labels, "orderFunction", "Should not include the current resource")
 	// existingTable is already in the exclude list but completion service doesn't filter already-excluded items
 	s.Assert().Contains(labels, "existingTable", "existingTable should still be suggested (filtering is done by the user)")
+}
+
+func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_version() {
+	blueprintInfo, err := loadCompletionBlueprintAndTree("blueprint-completion-version")
+	s.Require().NoError(err)
+
+	lspCtx := &common.LSPContext{}
+	completionItems, err := s.service.GetCompletionItems(
+		lspCtx,
+		blueprintInfo.toDocumentContextWithTreeSitter(),
+		&lsp.TextDocumentPositionParams{
+			TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+			Position:     lsp.Position{Line: 0, Character: 8},
+		},
+	)
+	s.Require().NoError(err)
+	s.Require().Len(completionItems.Items, 1)
+	item := completionItems.Items[0]
+	s.Assert().Equal("2025-11-02", item.Label)
+	s.Assert().Equal(lsp.CompletionItemKindEnumMember, *item.Kind)
+	s.Assert().Equal("Blueprint spec version", *item.Detail)
+	s.Assert().Equal(map[string]any{"completionType": "version"}, item.Data)
+}
+
+func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_custom_variable_type_options() {
+	blueprintInfo, err := loadCompletionBlueprintAndTree("blueprint-completion-custom-var-type-options")
+	s.Require().NoError(err)
+
+	lspCtx := &common.LSPContext{}
+	completionItems, err := s.service.GetCompletionItems(
+		lspCtx,
+		blueprintInfo.toDocumentContextWithTreeSitter(),
+		&lsp.TextDocumentPositionParams{
+			TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+			Position:     lsp.Position{Line: 5, Character: 12},
+		},
+	)
+	s.Require().NoError(err)
+	s.Require().Len(completionItems.Items, 7)
+
+	labels := completionItemLabels(completionItems.Items)
+	s.Assert().Contains(labels, "t2.nano")
+	s.Assert().Contains(labels, "t2.micro")
+	s.Assert().Contains(labels, "t2.small")
+	s.Assert().Contains(labels, "t2.medium")
+	s.Assert().Contains(labels, "t2.large")
+	s.Assert().Contains(labels, "t2.xlarge")
+	s.Assert().Contains(labels, "t2.2xlarge")
+
+	for _, item := range completionItems.Items {
+		s.Assert().Equal(lsp.CompletionItemKindEnumMember, *item.Kind)
+		s.Assert().Equal("Option (aws/ec2/instanceType)", *item.Detail)
+		s.Assert().Equal(map[string]any{"completionType": "customVariableTypeOption"}, item.Data)
+		s.Assert().NotNil(item.Documentation)
+	}
+}
+
+func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_custom_variable_type_options_core_type() {
+	validContent := "version: 2025-11-02\nvariables:\n  name:\n    type: string\n    default: \"\""
+	blueprint, err := schema.LoadString(validContent, schema.YAMLSpecFormat)
+	s.Require().NoError(err)
+	tree := schema.SchemaToTree(blueprint)
+
+	editingContent := "version: 2025-11-02\nvariables:\n  name:\n    type: string\n    default:"
+	docCtx := docmodel.NewDocumentContext(blueprintURI, editingContent, docmodel.FormatYAML, nil)
+	docCtx.UpdateSchema(blueprint, tree)
+
+	lspCtx := &common.LSPContext{}
+	completionItems, err := s.service.GetCompletionItems(
+		lspCtx,
+		docCtx,
+		&lsp.TextDocumentPositionParams{
+			TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+			Position:     lsp.Position{Line: 4, Character: 12},
+		},
+	)
+	s.Require().NoError(err)
+	s.Assert().Empty(completionItems.Items)
+}
+
+func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_transform_empty() {
+	validContent := "version: 2025-11-02\ntransform:\n  - \"dummy\"\nresources:\n  ordersTable:\n    type: aws/dynamodb/table"
+	blueprint, err := schema.LoadString(validContent, schema.YAMLSpecFormat)
+	s.Require().NoError(err)
+	tree := schema.SchemaToTree(blueprint)
+
+	editingContent := "version: 2025-11-02\ntransform:\nresources:\n  ordersTable:\n    type: aws/dynamodb/table"
+	docCtx := docmodel.NewDocumentContext(blueprintURI, editingContent, docmodel.FormatYAML, nil)
+	docCtx.UpdateSchema(blueprint, tree)
+
+	lspCtx := &common.LSPContext{}
+	completionItems, err := s.service.GetCompletionItems(
+		lspCtx,
+		docCtx,
+		&lsp.TextDocumentPositionParams{
+			TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+			Position:     lsp.Position{Line: 1, Character: 10},
+		},
+	)
+	s.Require().NoError(err)
+	s.Assert().Empty(completionItems.Items)
+}
+
+func (s *CompletionServiceGetItemsSuite) Test_get_completion_items_for_transform_with_transformers() {
+	logger, err := zap.NewDevelopment()
+	s.Require().NoError(err)
+
+	state := NewState()
+	resourceRegistry := &testutils.ResourceRegistryMock{
+		Resources: map[string]provider.Resource{
+			"aws/dynamodb/table": &testutils.DynamoDBTableResource{},
+		},
+		TransformerNames: []string{"aws/cdk/v2"},
+	}
+	service := NewCompletionService(
+		resourceRegistry,
+		&testutils.DataSourceRegistryMock{DataSources: map[string]provider.DataSource{}},
+		&testutils.CustomVarTypeRegistryMock{CustomVarTypes: map[string]provider.CustomVariableType{}},
+		&testutils.FunctionRegistryMock{Functions: map[string]provider.Function{}},
+		nil, state, logger,
+	)
+
+	validContent := "version: 2025-11-02\ntransform:\n  - \"dummy\"\nresources:\n  ordersTable:\n    type: aws/dynamodb/table"
+	blueprint, err := schema.LoadString(validContent, schema.YAMLSpecFormat)
+	s.Require().NoError(err)
+	tree := schema.SchemaToTree(blueprint)
+
+	editingContent := "version: 2025-11-02\ntransform:\nresources:\n  ordersTable:\n    type: aws/dynamodb/table"
+	docCtx := docmodel.NewDocumentContext(blueprintURI, editingContent, docmodel.FormatYAML, nil)
+	docCtx.UpdateSchema(blueprint, tree)
+
+	lspCtx := &common.LSPContext{}
+	completionItems, err := service.GetCompletionItems(
+		lspCtx,
+		docCtx,
+		&lsp.TextDocumentPositionParams{
+			TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+			Position:     lsp.Position{Line: 1, Character: 10},
+		},
+	)
+	s.Require().NoError(err)
+	s.Require().Len(completionItems.Items, 1)
+	s.Assert().Equal("aws/cdk/v2", completionItems.Items[0].Label)
+	s.Assert().Equal(lsp.CompletionItemKindEnumMember, *completionItems.Items[0].Kind)
+	s.Assert().Equal("Blueprint transformer", *completionItems.Items[0].Detail)
+	s.Assert().Equal(map[string]any{"completionType": "transform"}, completionItems.Items[0].Data)
 }

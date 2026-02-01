@@ -81,7 +81,8 @@ func (f *FunctionRegistryMock) HasFunction(ctx context.Context, functionName str
 }
 
 type ResourceRegistryMock struct {
-	Resources map[string]provider.Resource
+	Resources          map[string]provider.Resource
+	TransformerNames   []string
 }
 
 func (r *ResourceRegistryMock) HasResourceType(ctx context.Context, resourceType string) (bool, error) {
@@ -237,7 +238,9 @@ func (r *ResourceRegistryMock) ReleaseResourceLocksAcquiredBy(
 func (r *ResourceRegistryMock) ListTransformers(
 	ctx context.Context,
 ) ([]string, error) {
-	// Return empty list for tests - no transformers in mock
+	if r.TransformerNames != nil {
+		return r.TransformerNames, nil
+	}
 	return []string{}, nil
 }
 

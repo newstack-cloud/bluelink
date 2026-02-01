@@ -12,6 +12,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/languageservices"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/testutils"
+	"github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"github.com/newstack-cloud/ls-builder/server"
 	"github.com/sourcegraph/jsonrpc2"
@@ -116,6 +117,42 @@ func (s *ApplicationSuite) createTestApplication() *Application {
 		nil, s.logger,
 		debouncer,
 	)
+}
+
+type testServerContext struct {
+	clientLSPCtx *common.LSPContext
+	cancel       context.CancelFunc
+}
+
+func (s *ApplicationSuite) defaultClientCaps() lsp.ClientCapabilities {
+	return lsp.ClientCapabilities{
+		General: &lsp.GeneralClientCapabilities{
+			PositionEncodings: []lsp.PositionEncodingKind{lsp.PositionEncodingKindUTF16},
+		},
+	}
+}
+
+func (s *ApplicationSuite) createInitializedServer(
+	caps lsp.ClientCapabilities,
+) *testServerContext {
+	app := s.createTestApplication()
+	app.Setup()
+	srv := server.NewServer(app.Handler(), true, nil, nil)
+	container := createTestConnectionsContainer(srv.NewHandler())
+	go srv.Serve(container.serverConn, s.logger)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	clientLSPCtx := server.NewLSPContext(ctx, container.clientConn, nil)
+
+	initParams := lsp.InitializeParams{Capabilities: caps}
+	var result lsp.InitializeResult
+	err := clientLSPCtx.Call(lsp.MethodInitialize, initParams, &result)
+	s.Require().NoError(err)
+
+	return &testServerContext{
+		clientLSPCtx: clientLSPCtx,
+		cancel:       cancel,
+	}
 }
 
 // Tests
@@ -311,6 +348,202 @@ func (s *ApplicationSuite) TestSignatureHelpProvider_ConfiguredCorrectly() {
 	s.NotNil(result.Capabilities.SignatureHelpProvider)
 	s.Contains(result.Capabilities.SignatureHelpProvider.TriggerCharacters, "(")
 	s.Contains(result.Capabilities.SignatureHelpProvider.TriggerCharacters, ",")
+}
+
+// Initialize capability tests
+
+func (s *ApplicationSuite) TestInitialize_SetsConfigCapability() {
+	caps := s.defaultClientCaps()
+	caps.Workspace = &lsp.ClientWorkspaceCapabilities{
+		Configuration: &lsp.True,
+	}
+	srvCtx := s.createInitializedServer(caps)
+	defer srvCtx.cancel()
+
+	// Send initialized notification to exercise handleInitialised config branch
+	err := srvCtx.clientLSPCtx.Notify(lsp.MethodInitialized, &lsp.InitializedParams{})
+	s.Require().NoError(err)
+}
+
+func (s *ApplicationSuite) TestInitialize_SetsHierarchicalDocSymbolCapability() {
+	caps := s.defaultClientCaps()
+	caps.TextDocument = &lsp.TextDocumentClientCapabilities{
+		DocumentSymbol: &lsp.DocumentSymbolClientCapabilities{
+			HierarchicalDocumentSymbolSupport: &lsp.True,
+		},
+	}
+	srvCtx := s.createInitializedServer(caps)
+	defer srvCtx.cancel()
+}
+
+func (s *ApplicationSuite) TestInitialize_SetsLinkSupportCapability() {
+	caps := s.defaultClientCaps()
+	caps.TextDocument = &lsp.TextDocumentClientCapabilities{
+		Definition: &lsp.DefinitionClientCapabilities{
+			LinkSupport: &lsp.True,
+		},
+	}
+	srvCtx := s.createInitializedServer(caps)
+	defer srvCtx.cancel()
+}
+
+func (s *ApplicationSuite) TestInitialize_WithDiagnosticInitOptions() {
+	app := s.createTestApplication()
+	app.Setup()
+	srv := server.NewServer(app.Handler(), true, nil, nil)
+	container := createTestConnectionsContainer(srv.NewHandler())
+	go srv.Serve(container.serverConn, s.logger)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
+	clientLSPCtx := server.NewLSPContext(ctx, container.clientConn, nil)
+
+	initParams := lsp.InitializeParams{
+		Capabilities: s.defaultClientCaps(),
+		InitializationOptions: map[string]interface{}{
+			"diagnostics": map[string]interface{}{
+				"showAnyTypeWarnings": false,
+			},
+		},
+	}
+	var result lsp.InitializeResult
+	err := clientLSPCtx.Call(lsp.MethodInitialize, initParams, &result)
+	s.Require().NoError(err)
+	s.NotNil(result.Capabilities.CompletionProvider)
+}
+
+func (s *ApplicationSuite) TestInitialize_NilInitOptions_NoError() {
+	app := s.createTestApplication()
+	app.Setup()
+	srv := server.NewServer(app.Handler(), true, nil, nil)
+	container := createTestConnectionsContainer(srv.NewHandler())
+	go srv.Serve(container.serverConn, s.logger)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
+	clientLSPCtx := server.NewLSPContext(ctx, container.clientConn, nil)
+
+	initParams := lsp.InitializeParams{
+		Capabilities: s.defaultClientCaps(),
+	}
+	var result lsp.InitializeResult
+	err := clientLSPCtx.Call(lsp.MethodInitialize, initParams, &result)
+	s.Require().NoError(err)
+	s.NotNil(result.Capabilities.CompletionProvider)
+}
+
+// Handler nil-guard tests
+
+func (s *ApplicationSuite) TestHover_NoDocument_ReturnsNull() {
+	srvCtx := s.createInitializedServer(s.defaultClientCaps())
+	defer srvCtx.cancel()
+
+	var result *lsp.Hover
+	err := srvCtx.clientLSPCtx.Call(lsp.MethodHover, lsp.HoverParams{
+		TextDocumentPositionParams: lsp.TextDocumentPositionParams{
+			TextDocument: lsp.TextDocumentIdentifier{URI: "file:///unknown.yaml"},
+			Position:     lsp.Position{Line: 0, Character: 0},
+		},
+	}, &result)
+	s.Require().NoError(err)
+	s.Nil(result)
+}
+
+func (s *ApplicationSuite) TestCompletion_NoDocument_ReturnsEmptyList() {
+	srvCtx := s.createInitializedServer(s.defaultClientCaps())
+	defer srvCtx.cancel()
+
+	var result lsp.CompletionList
+	err := srvCtx.clientLSPCtx.Call(lsp.MethodCompletion, lsp.CompletionParams{
+		TextDocumentPositionParams: lsp.TextDocumentPositionParams{
+			TextDocument: lsp.TextDocumentIdentifier{URI: "file:///unknown.yaml"},
+			Position:     lsp.Position{Line: 0, Character: 0},
+		},
+	}, &result)
+	s.Require().NoError(err)
+	s.Empty(result.Items)
+}
+
+func (s *ApplicationSuite) TestDocumentSymbol_NoDocument_ReturnsEmpty() {
+	srvCtx := s.createInitializedServer(s.defaultClientCaps())
+	defer srvCtx.cancel()
+
+	var result []lsp.DocumentSymbol
+	err := srvCtx.clientLSPCtx.Call(lsp.MethodDocumentSymbol, lsp.DocumentSymbolParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: "file:///unknown.yaml"},
+	}, &result)
+	s.Require().NoError(err)
+	s.Empty(result)
+}
+
+func (s *ApplicationSuite) TestGotoDefinition_NoDocument_ReturnsEmpty() {
+	srvCtx := s.createInitializedServer(s.defaultClientCaps())
+	defer srvCtx.cancel()
+
+	var result []lsp.Location
+	err := srvCtx.clientLSPCtx.Call(lsp.MethodGotoDefinition, lsp.DefinitionParams{
+		TextDocumentPositionParams: lsp.TextDocumentPositionParams{
+			TextDocument: lsp.TextDocumentIdentifier{URI: "file:///unknown.yaml"},
+			Position:     lsp.Position{Line: 0, Character: 0},
+		},
+	}, &result)
+	s.Require().NoError(err)
+	s.Empty(result)
+}
+
+func (s *ApplicationSuite) TestCodeAction_NoDocument_ReturnsEmpty() {
+	srvCtx := s.createInitializedServer(s.defaultClientCaps())
+	defer srvCtx.cancel()
+
+	var result []lsp.CodeActionOrCommand
+	err := srvCtx.clientLSPCtx.Call(lsp.MethodCodeAction, lsp.CodeActionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: "file:///unknown.yaml"},
+		Range:        lsp.Range{},
+		Context:      lsp.CodeActionContext{Diagnostics: []lsp.Diagnostic{}},
+	}, &result)
+	s.Require().NoError(err)
+	s.Empty(result)
+}
+
+// CompletionItemResolve protocol tests
+
+func (s *ApplicationSuite) TestCompletionResolve_NilData_ReturnsUnchanged() {
+	srvCtx := s.createInitializedServer(s.defaultClientCaps())
+	defer srvCtx.cancel()
+
+	item := lsp.CompletionItem{Label: "test"}
+	var result lsp.CompletionItem
+	err := srvCtx.clientLSPCtx.Call(lsp.MethodCompletionItemResolve, item, &result)
+	s.Require().NoError(err)
+	s.Equal("test", result.Label)
+	s.Nil(result.Documentation)
+}
+
+func (s *ApplicationSuite) TestCompletionResolve_NonMapData_ReturnsUnchanged() {
+	srvCtx := s.createInitializedServer(s.defaultClientCaps())
+	defer srvCtx.cancel()
+
+	item := lsp.CompletionItem{Label: "test", Data: "not-a-map"}
+	var result lsp.CompletionItem
+	err := srvCtx.clientLSPCtx.Call(lsp.MethodCompletionItemResolve, item, &result)
+	s.Require().NoError(err)
+	s.Equal("test", result.Label)
+	s.Nil(result.Documentation)
+}
+
+func (s *ApplicationSuite) TestCompletionResolve_NoCompletionType_ReturnsUnchanged() {
+	srvCtx := s.createInitializedServer(s.defaultClientCaps())
+	defer srvCtx.cancel()
+
+	item := lsp.CompletionItem{
+		Label: "test",
+		Data:  map[string]any{"someKey": "someValue"},
+	}
+	var result lsp.CompletionItem
+	err := srvCtx.clientLSPCtx.Call(lsp.MethodCompletionItemResolve, item, &result)
+	s.Require().NoError(err)
+	s.Equal("test", result.Label)
+	s.Nil(result.Documentation)
 }
 
 func TestApplicationSuite(t *testing.T) {
