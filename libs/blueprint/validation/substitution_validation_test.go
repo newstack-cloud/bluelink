@@ -12,6 +12,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	. "gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
@@ -35,6 +36,7 @@ func (s *SubstitutionValidationTestSuite) SetUpTest(c *C) {
 			"object":     corefunctions.NewObjectFunction(),
 			"datetime":   corefunctions.NewDateTimeFunction(&mockclock.StaticClock{}),
 			"link":       corefunctions.NewLinkFunction(nil, nil),
+			"jsondecode": corefunctions.NewJSONDecodeFunction(),
 		},
 	}
 	s.refChainCollector = refgraph.NewRefChainCollector()
@@ -503,7 +505,10 @@ func (s *SubstitutionValidationTestSuite) Test_passes_validation_for_valid_subst
 		"",
 	)
 	c.Assert(err, IsNil)
-	c.Assert(len(diagnostics), Equals, 0)
+	// A warning is expected for the array index as bounds can't be verified
+	// against the resource spec definition schema.
+	c.Assert(len(diagnostics), Equals, 1)
+	c.Assert(diagnostics[0].Level, Equals, core.DiagnosticLevelWarning)
 	c.Assert(resolveType, Equals, string(substitutions.ResolvedSubExprTypeString))
 }
 
@@ -2450,4 +2455,298 @@ func (s *SubstitutionValidationTestSuite) Test_fails_validation_for_a_link_func_
 		"validation failed due to a missing resource \"exampleResource2\" being referenced "+
 			"in the link function call argument at position 1 in \"resources.exampleResource3\"",
 	)
+}
+
+func (s *SubstitutionValidationTestSuite) Test_produces_warning_for_resource_spec_array_index(c *C) {
+	subInputStr := "${resources.exampleResource1.spec.ids[0].name}"
+	stringOrSubs := &substitutions.StringOrSubstitutions{}
+	err := yaml.Unmarshal([]byte(subInputStr), stringOrSubs)
+	if err != nil {
+		c.Fatalf("Failed to parse substitution: %v", err)
+	}
+
+	blueprint := &schema.Blueprint{
+		Resources: &schema.ResourceMap{
+			Values: map[string]*schema.Resource{
+				"exampleResource1": {
+					Type: &schema.ResourceTypeWrapper{Value: "exampleResource"},
+				},
+			},
+		},
+	}
+
+	resolveType, diagnostics, err := ValidateSubstitution(
+		context.TODO(),
+		stringOrSubs.Values[0].SubstitutionValue,
+		/* nextLocation */ nil,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
+		/* usedInResourceDerivedFromTemplate */ false,
+		"resources.exampleResource",
+		"",
+	)
+	c.Assert(err, IsNil)
+	c.Assert(len(diagnostics), Equals, 1)
+	c.Assert(diagnostics[0].Level, Equals, core.DiagnosticLevelWarning)
+	c.Assert(diagnostics[0].Context, NotNil)
+	c.Assert(diagnostics[0].Context.ReasonCode, Equals, errors.ErrorReasonCodeAnyTypeWarning)
+	c.Assert(resolveType, Equals, string(substitutions.ResolvedSubExprTypeString))
+}
+
+func (s *SubstitutionValidationTestSuite) Test_resolves_item_type_for_terminal_resource_spec_array_index(c *C) {
+	subInputStr := "${resources.exampleResource1.spec.ids[0]}"
+	stringOrSubs := &substitutions.StringOrSubstitutions{}
+	err := yaml.Unmarshal([]byte(subInputStr), stringOrSubs)
+	if err != nil {
+		c.Fatalf("Failed to parse substitution: %v", err)
+	}
+
+	blueprint := &schema.Blueprint{
+		Resources: &schema.ResourceMap{
+			Values: map[string]*schema.Resource{
+				"exampleResource1": {
+					Type: &schema.ResourceTypeWrapper{Value: "exampleResource"},
+				},
+			},
+		},
+	}
+
+	resolveType, diagnostics, err := ValidateSubstitution(
+		context.TODO(),
+		stringOrSubs.Values[0].SubstitutionValue,
+		/* nextLocation */ nil,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
+		/* usedInResourceDerivedFromTemplate */ false,
+		"resources.exampleResource",
+		"",
+	)
+	c.Assert(err, IsNil)
+	c.Assert(len(diagnostics), Equals, 1)
+	c.Assert(diagnostics[0].Level, Equals, core.DiagnosticLevelWarning)
+	// Terminal array index should resolve to the items type (object), not array.
+	c.Assert(resolveType, Equals, string(substitutions.ResolvedSubExprTypeObject))
+}
+
+func (s *SubstitutionValidationTestSuite) Test_produces_warning_for_data_source_array_index(c *C) {
+	subInputStr := "${datasources.networking.hosts[0]}"
+	stringOrSubs := &substitutions.StringOrSubstitutions{}
+	err := yaml.Unmarshal([]byte(subInputStr), stringOrSubs)
+	if err != nil {
+		c.Fatalf("Failed to parse substitution: %v", err)
+	}
+
+	blueprint := &schema.Blueprint{
+		DataSources: &schema.DataSourceMap{
+			Values: map[string]*schema.DataSource{
+				"networking": {
+					Type: &schema.DataSourceTypeWrapper{Value: "celerity/exampleDataSource"},
+					Exports: &schema.DataSourceFieldExportMap{
+						Values: map[string]*schema.DataSourceFieldExport{
+							"hosts": {
+								Type: &schema.DataSourceFieldTypeWrapper{
+									Value: schema.DataSourceFieldTypeArray,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	resolveType, diagnostics, err := ValidateSubstitution(
+		context.TODO(),
+		stringOrSubs.Values[0].SubstitutionValue,
+		/* nextLocation */ nil,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
+		/* usedInResourceDerivedFromTemplate */ false,
+		"resources.exampleResource",
+		"",
+	)
+	c.Assert(err, IsNil)
+	c.Assert(len(diagnostics), Equals, 1)
+	c.Assert(diagnostics[0].Level, Equals, core.DiagnosticLevelWarning)
+	c.Assert(diagnostics[0].Context, NotNil)
+	c.Assert(diagnostics[0].Context.ReasonCode, Equals, errors.ErrorReasonCodeAnyTypeWarning)
+	c.Assert(resolveType, Equals, string(substitutions.ResolvedSubExprTypeAny))
+}
+
+func (s *SubstitutionValidationTestSuite) Test_produces_warning_for_child_export_array_index(c *C) {
+	subInputStr := "${children.coreInfra.hosts[0].hostname}"
+	stringOrSubs := &substitutions.StringOrSubstitutions{}
+	err := yaml.Unmarshal([]byte(subInputStr), stringOrSubs)
+	if err != nil {
+		c.Fatalf("Failed to parse substitution: %v", err)
+	}
+
+	networkingBlueprintPath := "core-infra.blueprint.yml"
+	blueprint := &schema.Blueprint{
+		Include: &schema.IncludeMap{
+			Values: map[string]*schema.Include{
+				"coreInfra": {
+					Path: &substitutions.StringOrSubstitutions{
+						Values: []*substitutions.StringOrSubstitution{
+							{
+								StringValue: &networkingBlueprintPath,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	resolveType, diagnostics, err := ValidateSubstitution(
+		context.TODO(),
+		stringOrSubs.Values[0].SubstitutionValue,
+		/* nextLocation */ nil,
+		&ValidationContext{
+			BpSchema:     blueprint,
+			Params:       &core.ParamsImpl{},
+			FuncRegistry: s.functionRegistry,
+			RefChainCollector: s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+			ChildExportLookup: func(
+				childName string, exportName string, location *source.Meta,
+			) (*schema.Export, error) {
+				if childName == "coreInfra" && exportName == "hosts" {
+					return &schema.Export{
+						Type: &schema.ExportTypeWrapper{Value: schema.ExportTypeArray},
+					}, nil
+				}
+				return nil, nil
+			},
+		},
+		/* usedInResourceDerivedFromTemplate */ false,
+		"resources.exampleResource3",
+		"",
+	)
+	c.Assert(err, IsNil)
+	c.Assert(len(diagnostics), Equals, 1)
+	c.Assert(diagnostics[0].Level, Equals, core.DiagnosticLevelWarning)
+	c.Assert(diagnostics[0].Context, NotNil)
+	c.Assert(diagnostics[0].Context.ReasonCode, Equals, errors.ErrorReasonCodeAnyTypeWarning)
+	c.Assert(resolveType, Equals, string(substitutions.ResolvedSubExprTypeAny))
+}
+
+func (s *SubstitutionValidationTestSuite) Test_produces_warning_for_function_return_array_index(c *C) {
+	subInputStr := "${jsondecode(variables.config)[0].host}"
+	stringOrSubs := &substitutions.StringOrSubstitutions{}
+	err := yaml.Unmarshal([]byte(subInputStr), stringOrSubs)
+	if err != nil {
+		c.Fatalf("Failed to parse substitution: %v", err)
+	}
+
+	blueprint := &schema.Blueprint{
+		Variables: &schema.VariableMap{
+			Values: map[string]*schema.Variable{
+				"config": {
+					Type: &schema.VariableTypeWrapper{Value: schema.VariableTypeString},
+				},
+			},
+		},
+	}
+
+	resolveType, diagnostics, err := ValidateSubstitution(
+		context.TODO(),
+		stringOrSubs.Values[0].SubstitutionValue,
+		/* nextLocation */ nil,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
+		/* usedInResourceDerivedFromTemplate */ false,
+		"resources.exampleResource",
+		"",
+	)
+	c.Assert(err, IsNil)
+	// One warning for [0] array index on function return.
+	c.Assert(len(diagnostics), Equals, 1)
+	c.Assert(diagnostics[0].Level, Equals, core.DiagnosticLevelWarning)
+	c.Assert(diagnostics[0].Context, NotNil)
+	c.Assert(diagnostics[0].Context.ReasonCode, Equals, errors.ErrorReasonCodeAnyTypeWarning)
+	c.Assert(resolveType, Equals, string(substitutions.ResolvedSubExprTypeAny))
+}
+
+func (s *SubstitutionValidationTestSuite) Test_fails_for_function_return_index_on_string(c *C) {
+	subInputStr := "${trim(\"  hello  \")[0]}"
+	stringOrSubs := &substitutions.StringOrSubstitutions{}
+	err := yaml.Unmarshal([]byte(subInputStr), stringOrSubs)
+	if err != nil {
+		c.Fatalf("Failed to parse substitution: %v", err)
+	}
+
+	_, _, err = ValidateSubstitution(
+		context.TODO(),
+		stringOrSubs.Values[0].SubstitutionValue,
+		/* nextLocation */ nil,
+		&ValidationContext{
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
+		/* usedInResourceDerivedFromTemplate */ false,
+		"resources.exampleResource",
+		"",
+	)
+	c.Assert(err, NotNil)
+	loadErr, isLoadErr := internal.UnpackLoadError(err)
+	c.Assert(isLoadErr, Equals, true)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeSubFuncPathIndexOnNonArray)
+}
+
+func (s *SubstitutionValidationTestSuite) Test_fails_for_function_return_field_on_string(c *C) {
+	subInputStr := "${trim(\"  hello  \").field}"
+	stringOrSubs := &substitutions.StringOrSubstitutions{}
+	err := yaml.Unmarshal([]byte(subInputStr), stringOrSubs)
+	if err != nil {
+		c.Fatalf("Failed to parse substitution: %v", err)
+	}
+
+	_, _, err = ValidateSubstitution(
+		context.TODO(),
+		stringOrSubs.Values[0].SubstitutionValue,
+		/* nextLocation */ nil,
+		&ValidationContext{
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
+		/* usedInResourceDerivedFromTemplate */ false,
+		"resources.exampleResource",
+		"",
+	)
+	c.Assert(err, NotNil)
+	loadErr, isLoadErr := internal.UnpackLoadError(err)
+	c.Assert(isLoadErr, Equals, true)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeSubFuncPathFieldOnNonObject)
 }

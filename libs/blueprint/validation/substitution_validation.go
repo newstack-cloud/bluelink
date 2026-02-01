@@ -457,9 +457,19 @@ func validateResourcePropertySubDefinitionsPath(
 			}
 		} else if property.ArrayIndex != nil &&
 			currentSchema.Type == provider.ResourceDefinitionsSchemaTypeArray {
+			diagnostics = append(diagnostics, warnArrayIndexBoundsUnverifiable(
+				subResourceProp.ResourceName,
+				"resource",
+				*property.ArrayIndex,
+				subResourceProp.SourceMeta,
+			))
+			if currentSchema.Items == nil {
+				resolvedType = string(substitutions.ResolvedSubExprTypeAny)
+				return resolvedType, diagnostics, nil
+			}
 			currentSchema = currentSchema.Items
 			if i == len(subResourceProp.Path)-1 {
-				resolvedType = string(substitutions.ResolvedSubExprTypeArray)
+				resolvedType = subResourceDefinitionsSchemaType(currentSchema.Type)
 			}
 		} else {
 			propertyMatches = false
@@ -876,11 +886,12 @@ func validateDataSourcePropertySubstitution(
 		return "", diagnostics, errSubDataSourceSelfReference(dataSourceName, subDataSourceProp.SourceMeta)
 	}
 
-	resolveType, err := validateDataSourcePropertyField(
+	resolveType, fieldDiagnostics, err := validateDataSourcePropertyField(
 		subDataSourceProp,
 		dataSourceSchema,
 		specDefOutput.SpecDefinition,
 	)
+	diagnostics = append(diagnostics, fieldDiagnostics...)
 	if err != nil {
 		return "", diagnostics, err
 	}
@@ -901,9 +912,11 @@ func validateDataSourcePropertyField(
 	subDataSourceProp *substitutions.SubstitutionDataSourceProperty,
 	dataSourceSchema *schema.DataSource,
 	specDefinition *provider.DataSourceSpecDefinition,
-) (string, error) {
+) (string, []*bpcore.Diagnostic, error) {
+	diagnostics := []*bpcore.Diagnostic{}
+
 	if dataSourceSchema.Exports == nil {
-		return "", errSubDataSourceNoExportedFields(
+		return "", diagnostics, errSubDataSourceNoExportedFields(
 			subDataSourceProp.DataSourceName,
 			subDataSourceProp.SourceMeta,
 		)
@@ -911,7 +924,7 @@ func validateDataSourcePropertyField(
 
 	field, hasField := dataSourceSchema.Exports.Values[subDataSourceProp.FieldName]
 	if !hasField && !dataSourceSchema.Exports.ExportAll {
-		return "", errSubDataSourceFieldNotExported(
+		return "", diagnostics, errSubDataSourceFieldNotExported(
 			subDataSourceProp.DataSourceName,
 			subDataSourceProp.FieldName,
 			subDataSourceProp.SourceMeta,
@@ -926,7 +939,7 @@ func validateDataSourcePropertyField(
 			specDefinition,
 		)
 		if !hasField {
-			return "", errSubDataSourceFieldNotExported(
+			return "", diagnostics, errSubDataSourceFieldNotExported(
 				subDataSourceProp.DataSourceName,
 				subDataSourceProp.FieldName,
 				subDataSourceProp.SourceMeta,
@@ -935,7 +948,7 @@ func validateDataSourcePropertyField(
 	}
 
 	if field.Type == nil {
-		return "", errSubDataSourceFieldMissingType(
+		return "", diagnostics, errSubDataSourceFieldMissingType(
 			subDataSourceProp.DataSourceName,
 			subDataSourceProp.FieldName,
 			subDataSourceProp.SourceMeta,
@@ -944,7 +957,7 @@ func validateDataSourcePropertyField(
 
 	if subDataSourceProp.PrimitiveArrIndex != nil &&
 		field.Type.Value != schema.DataSourceFieldTypeArray {
-		return "", errSubDataSourceFieldNotArray(
+		return "", diagnostics, errSubDataSourceFieldNotArray(
 			subDataSourceProp.DataSourceName,
 			subDataSourceProp.FieldName,
 			*subDataSourceProp.PrimitiveArrIndex,
@@ -952,7 +965,19 @@ func validateDataSourcePropertyField(
 		)
 	}
 
-	return subDataSourceFieldType(field.Type.Value), nil
+	if subDataSourceProp.PrimitiveArrIndex != nil &&
+		field.Type.Value == schema.DataSourceFieldTypeArray {
+		diagnostics = append(diagnostics, warnArrayIndexBoundsUnverifiable(
+			subDataSourceProp.DataSourceName,
+			"data source",
+			*subDataSourceProp.PrimitiveArrIndex,
+			subDataSourceProp.SourceMeta,
+		))
+		// Element type of data source arrays is not known at validation time.
+		return string(substitutions.ResolvedSubExprTypeAny), diagnostics, nil
+	}
+
+	return subDataSourceFieldType(field.Type.Value), diagnostics, nil
 }
 
 func getFieldInDataSourceSpecDefinition(
@@ -1049,6 +1074,17 @@ func resolveChildExportType(
 
 	// For object/array types with deeper navigation, we can't know
 	// the exact structure so return "any".
+	// Scan remaining path items for array indices and emit warnings.
+	for _, pathItem := range subChild.Path[1:] {
+		if pathItem.ArrayIndex != nil {
+			diagnostics = append(diagnostics, warnArrayIndexBoundsUnverifiable(
+				childName,
+				"child export",
+				*pathItem.ArrayIndex,
+				subChild.SourceMeta,
+			))
+		}
+	}
 	return string(substitutions.ResolvedSubExprTypeAny), diagnostics, nil
 }
 
@@ -1127,7 +1163,62 @@ func validateFunctionSubstitution(
 		return "", diagnostics, ErrMultipleValidationErrors(errs)
 	}
 
-	return subFunctionReturnType(defOutput), diagnostics, nil
+	returnType := subFunctionReturnType(defOutput)
+	if len(subFunc.Path) > 0 {
+		resolvedType, pathDiagnostics, err := validateFunctionReturnPath(
+			subFunc,
+			funcName,
+			returnType,
+		)
+		diagnostics = append(diagnostics, pathDiagnostics...)
+		if err != nil {
+			return "", diagnostics, err
+		}
+		return resolvedType, diagnostics, nil
+	}
+
+	return returnType, diagnostics, nil
+}
+
+func validateFunctionReturnPath(
+	subFunc *substitutions.SubstitutionFunctionExpr,
+	funcName string,
+	returnType string,
+) (string, []*bpcore.Diagnostic, error) {
+	diagnostics := []*bpcore.Diagnostic{}
+	currentType := returnType
+
+	for _, pathItem := range subFunc.Path {
+		if pathItem.ArrayIndex != nil {
+			if isSubPrimitiveType(currentType) {
+				return "", diagnostics, errSubFuncPathIndexOnNonArray(
+					funcName,
+					currentType,
+					*pathItem.ArrayIndex,
+					subFunc.SourceMeta,
+				)
+			}
+			diagnostics = append(diagnostics, warnArrayIndexBoundsUnverifiable(
+				funcName,
+				"function return value",
+				*pathItem.ArrayIndex,
+				subFunc.SourceMeta,
+			))
+			currentType = string(substitutions.ResolvedSubExprTypeAny)
+		} else if pathItem.FieldName != "" {
+			if isSubPrimitiveType(currentType) {
+				return "", diagnostics, errSubFuncPathFieldOnNonObject(
+					funcName,
+					currentType,
+					pathItem.FieldName,
+					subFunc.SourceMeta,
+				)
+			}
+			currentType = string(substitutions.ResolvedSubExprTypeAny)
+		}
+	}
+
+	return currentType, diagnostics, nil
 }
 
 func validateFunction(

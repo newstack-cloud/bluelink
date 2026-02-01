@@ -71,6 +71,10 @@ const (
 	ActionTypeAddDataSourceType              ActionType = "add_data_source_type"
 )
 
+// ErrorReasonCodeAnyTypeWarning is used to tag warning diagnostics
+// where a substitution resolves to the "any" type.
+const ErrorReasonCodeAnyTypeWarning ErrorReasonCode = "any_type_warning"
+
 type LoadError struct {
 	ReasonCode     ErrorReasonCode
 	Err            error

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	bperrors "github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
@@ -659,7 +660,8 @@ func handleResolvedTypeExpectingBoolean(
 					valueContext,
 					valueContext,
 				),
-				Range: bpcore.DiagnosticRangeFromSourceMeta(value.SourceMeta, nextLocation),
+				Range:   bpcore.DiagnosticRangeFromSourceMeta(value.SourceMeta, nextLocation),
+				Context: &bperrors.ErrorContext{ReasonCode: bperrors.ErrorReasonCodeAnyTypeWarning},
 			},
 		)
 	}
@@ -770,7 +772,8 @@ func handleResolvedTypeExpectingArray(
 						"unexpected output in %s, an array is expected",
 					valueContext,
 				),
-				Range: bpcore.DiagnosticRangeFromSourceMeta(value.SourceMeta, nextLocation),
+				Range:   bpcore.DiagnosticRangeFromSourceMeta(value.SourceMeta, nextLocation),
+				Context: &bperrors.ErrorContext{ReasonCode: bperrors.ErrorReasonCodeAnyTypeWarning},
 			},
 		)
 	}

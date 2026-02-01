@@ -290,6 +290,12 @@ const (
 	// ErrorReasonCodeChildExportScalarNavigation is provided when a substitution or export field
 	// attempts to navigate into a child blueprint export that has a scalar type.
 	ErrorReasonCodeChildExportScalarNavigation errors.ErrorReasonCode = "child_export_scalar_navigation"
+	// ErrorReasonCodeSubFuncPathIndexOnNonArray is provided when a substitution
+	// applies an array index to a function that returns a scalar type.
+	ErrorReasonCodeSubFuncPathIndexOnNonArray errors.ErrorReasonCode = "sub_func_path_index_on_non_array"
+	// ErrorReasonCodeSubFuncPathFieldOnNonObject is provided when a substitution
+	// applies a field accessor to a function that returns a scalar type.
+	ErrorReasonCodeSubFuncPathFieldOnNonObject errors.ErrorReasonCode = "sub_func_path_field_on_non_object"
 )
 
 func errBlueprintMissingVersion() error {
@@ -3753,6 +3759,78 @@ func errChildExportScalarNavigation(
 			exportName,
 			childName,
 			exportType,
+		),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
+	}
+}
+
+func warnArrayIndexBoundsUnverifiable(
+	contextName string,
+	contextType string,
+	index int64,
+	location *source.Meta,
+) *bpcore.Diagnostic {
+	return &bpcore.Diagnostic{
+		Level: bpcore.DiagnosticLevelWarning,
+		Message: fmt.Sprintf(
+			"Array index [%d] in %s %q cannot be validated at this stage;"+
+				" the value at this index may not exist at deploy time",
+			index,
+			contextType,
+			contextName,
+		),
+		Range: bpcore.DiagnosticRangeFromSourceMeta(location, nil),
+		Context: &errors.ErrorContext{
+			ReasonCode: errors.ErrorReasonCodeAnyTypeWarning,
+		},
+	}
+}
+
+func errSubFuncPathIndexOnNonArray(
+	funcName string,
+	returnType string,
+	index int64,
+	location *source.Meta,
+) error {
+	posRange := source.PositionRangeFromSourceMeta(location)
+	return &errors.LoadError{
+		ReasonCode: ErrorReasonCodeSubFuncPathIndexOnNonArray,
+		Err: fmt.Errorf(
+			"validation failed due to an array index [%d] being applied to the result"+
+				" of function %q which returns type %q; array index access"+
+				" requires the return type to be an array or object",
+			index,
+			funcName,
+			returnType,
+		),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
+	}
+}
+
+func errSubFuncPathFieldOnNonObject(
+	funcName string,
+	returnType string,
+	fieldName string,
+	location *source.Meta,
+) error {
+	posRange := source.PositionRangeFromSourceMeta(location)
+	return &errors.LoadError{
+		ReasonCode: ErrorReasonCodeSubFuncPathFieldOnNonObject,
+		Err: fmt.Errorf(
+			"validation failed due to a field accessor %q being applied to the result"+
+				" of function %q which returns type %q; field access"+
+				" requires the return type to be an object",
+			fieldName,
+			funcName,
+			returnType,
 		),
 		Line:           posRange.Line,
 		EndLine:        posRange.EndLine,

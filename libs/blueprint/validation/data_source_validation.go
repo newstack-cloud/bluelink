@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	bperrors "github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
@@ -741,7 +742,8 @@ func handleResolvedTypeExpectingPrimitive(
 					valueContext,
 					valueContext,
 				),
-				Range: bpcore.DiagnosticRangeFromSourceMeta(value.SourceMeta, nextLocation),
+				Range:   bpcore.DiagnosticRangeFromSourceMeta(value.SourceMeta, nextLocation),
+				Context: &bperrors.ErrorContext{ReasonCode: bperrors.ErrorReasonCodeAnyTypeWarning},
 			},
 		)
 	}

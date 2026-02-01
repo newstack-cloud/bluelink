@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	bperrors "github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
@@ -95,6 +96,7 @@ func ValidateExport(
 					getExportSourceMeta(exportMap, exportName),
 					nil,
 				),
+				Context: &bperrors.ErrorContext{ReasonCode: bperrors.ErrorReasonCodeAnyTypeWarning},
 			},
 		)
 	}
