@@ -12,11 +12,20 @@ import (
 )
 
 // BlueprintToLSP deals with transforming blueprint diagnostics to LSP diagnostics.
-func BlueprintToLSP(bpDiagnostics []*core.Diagnostic) []lsp.Diagnostic {
+// When showAnyTypeWarnings is false, warning diagnostics tagged with
+// ErrorReasonCodeAnyTypeWarning are filtered out.
+func BlueprintToLSP(
+	bpDiagnostics []*core.Diagnostic,
+	showAnyTypeWarnings bool,
+) []lsp.Diagnostic {
 	lspDiagnostics := []lsp.Diagnostic{}
 	source := "blueprint-validator"
 
 	for _, bpDiagnostic := range bpDiagnostics {
+		if !showAnyTypeWarnings && isAnyTypeWarning(bpDiagnostic) {
+			continue
+		}
+
 		severity := lsp.DiagnosticSeverityInformation
 		switch bpDiagnostic.Level {
 		case core.DiagnosticLevelWarning:
@@ -50,6 +59,14 @@ func BlueprintToLSP(bpDiagnostics []*core.Diagnostic) []lsp.Diagnostic {
 	}
 
 	return lspDiagnostics
+}
+
+// isAnyTypeWarning checks if a diagnostic is a warning about a substitution
+// resolving to the "any" type. Only warning-level diagnostics are matched.
+func isAnyTypeWarning(diag *core.Diagnostic) bool {
+	return diag.Level == core.DiagnosticLevelWarning &&
+		diag.Context != nil &&
+		diag.Context.ReasonCode == errors.ErrorReasonCodeAnyTypeWarning
 }
 
 // formatDiagnosticWithContext formats a diagnostic message with its ErrorContext,

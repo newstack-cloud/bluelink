@@ -82,6 +82,14 @@ func (a *Application) handleInitialise(ctx *common.LSPContext, params *lsp.Initi
 		}
 	}
 
+	// Apply diagnostic settings from initializationOptions
+	if initOpts != nil && initOpts.Diagnostics != nil &&
+		initOpts.Diagnostics.ShowAnyTypeWarnings != nil {
+		a.diagnosticService.SetShowAnyTypeWarnings(
+			*initOpts.Diagnostics.ShowAnyTypeWarnings,
+		)
+	}
+
 	// Load plugins if configured (only once per server lifetime)
 	pluginConfig := pluginhost.NewDefaultConfig().WithInitOptions(initOpts)
 	if a.pluginHostService == nil && pluginConfig.IsEnabled() && pluginConfig.GetPluginPath() != "" {

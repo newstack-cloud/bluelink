@@ -16,7 +16,7 @@ type TransformSuite struct {
 }
 
 func (s *TransformSuite) TestBlueprintToLSP_EmptyDiagnostics() {
-	result := BlueprintToLSP([]*core.Diagnostic{})
+	result := BlueprintToLSP([]*core.Diagnostic{}, true)
 	s.Empty(result)
 }
 
@@ -36,7 +36,7 @@ func (s *TransformSuite) TestBlueprintToLSP_SingleErrorDiagnostic() {
 		},
 	}
 
-	result := BlueprintToLSP(input)
+	result := BlueprintToLSP(input, true)
 
 	s.Len(result, 1)
 	s.Equal(lsp.DiagnosticSeverityError, *result[0].Severity)
@@ -62,7 +62,7 @@ func (s *TransformSuite) TestBlueprintToLSP_SingleWarningDiagnostic() {
 		},
 	}
 
-	result := BlueprintToLSP(input)
+	result := BlueprintToLSP(input, true)
 
 	s.Len(result, 1)
 	s.Equal(lsp.DiagnosticSeverityWarning, *result[0].Severity)
@@ -85,7 +85,7 @@ func (s *TransformSuite) TestBlueprintToLSP_InformationLevelDiagnostic() {
 		},
 	}
 
-	result := BlueprintToLSP(input)
+	result := BlueprintToLSP(input, true)
 
 	s.Len(result, 1)
 	s.Equal(lsp.DiagnosticSeverityInformation, *result[0].Severity)
@@ -100,7 +100,7 @@ func (s *TransformSuite) TestBlueprintToLSP_NilRangeDefaultsToDocumentStart() {
 		},
 	}
 
-	result := BlueprintToLSP(input)
+	result := BlueprintToLSP(input, true)
 
 	s.Len(result, 1)
 	s.Equal(lsp.Position{Line: 0, Character: 0}, result[0].Range.Start)
@@ -126,7 +126,7 @@ func (s *TransformSuite) TestBlueprintToLSP_WithReasonCode() {
 		},
 	}
 
-	result := BlueprintToLSP(input)
+	result := BlueprintToLSP(input, true)
 
 	s.Len(result, 1)
 	s.NotNil(result[0].Code)
@@ -161,7 +161,7 @@ func (s *TransformSuite) TestBlueprintToLSP_MultipleDiagnostics() {
 		},
 	}
 
-	result := BlueprintToLSP(input)
+	result := BlueprintToLSP(input, true)
 
 	s.Len(result, 2)
 	s.Equal(lsp.DiagnosticSeverityError, *result[0].Severity)
@@ -191,12 +191,99 @@ func (s *TransformSuite) TestBlueprintToLSP_WithSuggestedActions() {
 		},
 	}
 
-	result := BlueprintToLSP(input)
+	result := BlueprintToLSP(input, true)
 
 	s.Len(result, 1)
 	expectedMessage := "Invalid configuration\n\nSuggested Actions:\n  1. Check syntax: Review the YAML syntax\n  2. Use validator\n"
 	s.Equal(expectedMessage, result[0].Message)
 	s.Equal("CONFIG_ERROR", *result[0].Code.StrVal)
+}
+
+func (s *TransformSuite) TestBlueprintToLSP_FiltersAnyTypeWarningsWhenDisabled() {
+	input := []*core.Diagnostic{
+		{
+			Level:   core.DiagnosticLevelWarning,
+			Message: "any type warning",
+			Range: &core.DiagnosticRange{
+				Start: &source.Meta{
+					Position: source.Position{Line: 1, Column: 1},
+				},
+				End: &source.Meta{
+					Position: source.Position{Line: 1, Column: 10},
+				},
+			},
+			Context: &errors.ErrorContext{
+				ReasonCode: errors.ErrorReasonCodeAnyTypeWarning,
+			},
+		},
+		{
+			Level:   core.DiagnosticLevelError,
+			Message: "real error",
+			Range: &core.DiagnosticRange{
+				Start: &source.Meta{
+					Position: source.Position{Line: 5, Column: 1},
+				},
+				End: &source.Meta{
+					Position: source.Position{Line: 5, Column: 10},
+				},
+			},
+		},
+	}
+
+	result := BlueprintToLSP(input, false)
+
+	s.Len(result, 1)
+	s.Equal("real error", result[0].Message)
+}
+
+func (s *TransformSuite) TestBlueprintToLSP_ShowsAnyTypeWarningsWhenEnabled() {
+	input := []*core.Diagnostic{
+		{
+			Level:   core.DiagnosticLevelWarning,
+			Message: "any type warning",
+			Range: &core.DiagnosticRange{
+				Start: &source.Meta{
+					Position: source.Position{Line: 1, Column: 1},
+				},
+				End: &source.Meta{
+					Position: source.Position{Line: 1, Column: 10},
+				},
+			},
+			Context: &errors.ErrorContext{
+				ReasonCode: errors.ErrorReasonCodeAnyTypeWarning,
+			},
+		},
+	}
+
+	result := BlueprintToLSP(input, true)
+
+	s.Len(result, 1)
+	s.Equal("any type warning", result[0].Message)
+}
+
+func (s *TransformSuite) TestBlueprintToLSP_DoesNotFilterNonAnyTypeWarnings() {
+	input := []*core.Diagnostic{
+		{
+			Level:   core.DiagnosticLevelWarning,
+			Message: "other warning",
+			Range: &core.DiagnosticRange{
+				Start: &source.Meta{
+					Position: source.Position{Line: 1, Column: 1},
+				},
+				End: &source.Meta{
+					Position: source.Position{Line: 1, Column: 10},
+				},
+			},
+			Context: &errors.ErrorContext{
+				ReasonCode: "some_other_reason",
+			},
+		},
+	}
+
+	result := BlueprintToLSP(input, false)
+
+	s.Len(result, 1)
+	s.Equal("other warning", result[0].Message)
 }
 
 func (s *TransformSuite) TestFormatDiagnosticWithContext_NilContext() {

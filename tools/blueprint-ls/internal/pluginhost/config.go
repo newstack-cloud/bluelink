@@ -131,7 +131,8 @@ func expandEnv(input string) string {
 
 // InitializationOptions represents the LSP initializationOptions from the client.
 type InitializationOptions struct {
-	Plugins *PluginInitOptions `json:"plugins,omitempty"`
+	Plugins     *PluginInitOptions      `json:"plugins,omitempty"`
+	Diagnostics *DiagnosticsInitOptions `json:"diagnostics,omitempty"`
 }
 
 // PluginInitOptions holds plugin-specific initialization options.
@@ -139,4 +140,9 @@ type PluginInitOptions struct {
 	Enabled        *bool   `json:"enabled,omitempty"`
 	PluginPath     *string `json:"pluginPath,omitempty"`
 	LogFileRootDir *string `json:"logFileRootDir,omitempty"`
+}
+
+// DiagnosticsInitOptions holds diagnostic-related initialization options.
+type DiagnosticsInitOptions struct {
+	ShowAnyTypeWarnings *bool `json:"showAnyTypeWarnings,omitempty"`
 }

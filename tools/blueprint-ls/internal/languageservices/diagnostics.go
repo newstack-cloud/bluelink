@@ -21,6 +21,7 @@ type DiagnosticsService struct {
 	settingsService        *SettingsService
 	diagnosticErrorService *DiagnosticErrorService
 	loader                 container.Loader
+	showAnyTypeWarnings    bool
 	logger                 *zap.Logger
 }
 
@@ -33,12 +34,19 @@ func NewDiagnosticsService(
 	logger *zap.Logger,
 ) *DiagnosticsService {
 	return &DiagnosticsService{
-		state,
-		settingsService,
-		diagnosticErrorService,
-		loader,
-		logger,
+		state:                  state,
+		settingsService:        settingsService,
+		diagnosticErrorService: diagnosticErrorService,
+		loader:                 loader,
+		showAnyTypeWarnings:    true,
+		logger:                 logger,
 	}
+}
+
+// SetShowAnyTypeWarnings configures whether "any" type warnings are included
+// in published diagnostics.
+func (s *DiagnosticsService) SetShowAnyTypeWarnings(show bool) {
+	s.showAnyTypeWarnings = show
 }
 
 // UpdateLoader updates the blueprint loader used by the diagnostics service.
@@ -89,6 +97,7 @@ func (s *DiagnosticsService) ValidateTextDocument(
 		diagnostics,
 		diagnostichelpers.BlueprintToLSP(
 			validationResult.Diagnostics,
+			s.showAnyTypeWarnings,
 		)...,
 	)
 	if err != nil {
@@ -176,6 +185,7 @@ func (s *DiagnosticsService) ValidateTextDocumentBackground(
 		diagnostics,
 		diagnostichelpers.BlueprintToLSP(
 			validationResult.Diagnostics,
+			s.showAnyTypeWarnings,
 		)...,
 	)
 	if err != nil {
