@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.41.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.40.0...blueprint/v0.41.0) (2026-02-01)
+
+
+### Features
+
+* **blueprint:** add deep mapping node validation in references ([25a45a5](https://github.com/newstack-cloud/bluelink/commit/25a45a59daddf5c8648e7bca3c0ca3b2cd8f8c9a))
+* **blueprint:** add depends on list to schema tree ([8a73265](https://github.com/newstack-cloud/bluelink/commit/8a73265422b7e610b78899cfc62ed11491d95d23))
+* **blueprint:** add support for accurately tracking field locations ([2e57b36](https://github.com/newstack-cloud/bluelink/commit/2e57b36dcbdf0bf2843a72c4e896fe3046df0c83))
+* **blueprint:** add support for resolvable child blueprint export validation ([1a843b3](https://github.com/newstack-cloud/bluelink/commit/1a843b3b7eedffe12e6ce95be7d7033dc7b04d11))
+* **blueprint:** add validation for link selector exclude list ([a16af10](https://github.com/newstack-cloud/bluelink/commit/a16af1003a9ad11654a5858072664cfdba18a73a))
+* **blueprint:** add warnings for array index access in validation ([bf6e857](https://github.com/newstack-cloud/bluelink/commit/bf6e857920c0841540b80fd7aaaac028155bb0a3))
+
+
+### Bug Fixes
+
+* **blueprint:** add unmarshal yaml support for string lists ([591daa7](https://github.com/newstack-cloud/bluelink/commit/591daa744d3182de6a6c25bfe2ceca64bfbc69c4))
+* **blueprint:** relax json string list parsing by skipping non-string values ([8e95b77](https://github.com/newstack-cloud/bluelink/commit/8e95b773b1bdbfb9805df172fdfc4f1e9e2a8579))
+
+
+### Dependencies
+
+* **blueprint:** bump google.golang.org/protobuf ([9b8eca6](https://github.com/newstack-cloud/bluelink/commit/9b8eca65a8983a3e2d83d92ffdd17d222169e9f4))
+
 ## [0.40.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.39.0...blueprint/v0.40.0) (2026-01-27)
 
 
