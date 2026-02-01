@@ -1152,6 +1152,584 @@ func (s *PathSuite) TestStructuredPath_IsExportField() {
 	}
 }
 
+func (s *PathSuite) TestStructuredPath_SegmentBasics() {
+	empty := StructuredPath{}
+	threeSegs := StructuredPath{
+		{Kind: PathSegmentField, FieldName: "resources"},
+		{Kind: PathSegmentField, FieldName: "myResource"},
+		{Kind: PathSegmentField, FieldName: "type"},
+	}
+
+	s.Run("Len_empty", func() {
+		s.Assert().Equal(0, empty.Len())
+	})
+	s.Run("Len_three", func() {
+		s.Assert().Equal(3, threeSegs.Len())
+	})
+	s.Run("IsEmpty_true", func() {
+		s.Assert().True(empty.IsEmpty())
+	})
+	s.Run("IsEmpty_false", func() {
+		s.Assert().False(threeSegs.IsEmpty())
+	})
+	s.Run("Last_empty", func() {
+		seg := empty.Last()
+		s.Assert().Equal(PathSegment{}, seg)
+	})
+	s.Run("Last_populated", func() {
+		seg := threeSegs.Last()
+		s.Assert().Equal("type", seg.FieldName)
+	})
+	s.Run("At_valid_index", func() {
+		seg := threeSegs.At(1)
+		s.Assert().Equal("myResource", seg.FieldName)
+	})
+	s.Run("At_out_of_bounds", func() {
+		seg := threeSegs.At(5)
+		s.Assert().Equal(PathSegment{}, seg)
+	})
+	s.Run("At_negative_index", func() {
+		seg := threeSegs.At(-1)
+		s.Assert().Equal(PathSegment{}, seg)
+	})
+}
+
+func (s *PathSuite) TestStructuredPath_SectionCheckers() {
+	tests := []struct {
+		name     string
+		path     StructuredPath
+		inRes    bool
+		inDS     bool
+		inVars   bool
+		inVals   bool
+		inExps   bool
+		inIncl   bool
+	}{
+		{
+			name: "resources path",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "myResource"},
+			},
+			inRes: true,
+		},
+		{
+			name: "datasources path",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "datasources"},
+				{Kind: PathSegmentField, FieldName: "myDS"},
+			},
+			inDS: true,
+		},
+		{
+			name: "variables path",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "variables"},
+				{Kind: PathSegmentField, FieldName: "myVar"},
+			},
+			inVars: true,
+		},
+		{
+			name: "values path",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "values"},
+				{Kind: PathSegmentField, FieldName: "myVal"},
+			},
+			inVals: true,
+		},
+		{
+			name: "exports path",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "exports"},
+				{Kind: PathSegmentField, FieldName: "myExport"},
+			},
+			inExps: true,
+		},
+		{
+			name: "include path",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "include"},
+				{Kind: PathSegmentField, FieldName: "myInclude"},
+			},
+			inIncl: true,
+		},
+		{
+			name:  "empty path",
+			path:  StructuredPath{},
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			s.Assert().Equal(tt.inRes, tt.path.IsInResources())
+			s.Assert().Equal(tt.inDS, tt.path.IsInDataSources())
+			s.Assert().Equal(tt.inVars, tt.path.IsInVariables())
+			s.Assert().Equal(tt.inVals, tt.path.IsInValues())
+			s.Assert().Equal(tt.inExps, tt.path.IsInExports())
+			s.Assert().Equal(tt.inIncl, tt.path.IsInIncludes())
+		})
+	}
+}
+
+func (s *PathSuite) TestStructuredPath_GetterMethods() {
+	tests := []struct {
+		name         string
+		path         StructuredPath
+		method       string
+		expectedName string
+		expectedOk   bool
+	}{
+		{
+			name: "GetVariableName valid",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "variables"},
+				{Kind: PathSegmentField, FieldName: "environment"},
+			},
+			method:       "GetVariableName",
+			expectedName: "environment",
+			expectedOk:   true,
+		},
+		{
+			name:         "GetVariableName too short",
+			path:         StructuredPath{{Kind: PathSegmentField, FieldName: "variables"}},
+			method:       "GetVariableName",
+			expectedName: "",
+			expectedOk:   false,
+		},
+		{
+			name: "GetValueName valid",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "values"},
+				{Kind: PathSegmentField, FieldName: "tableName"},
+				{Kind: PathSegmentField, FieldName: "type"},
+			},
+			method:       "GetValueName",
+			expectedName: "tableName",
+			expectedOk:   true,
+		},
+		{
+			name:         "GetValueName too short",
+			path:         StructuredPath{{Kind: PathSegmentField, FieldName: "values"}},
+			method:       "GetValueName",
+			expectedName: "",
+			expectedOk:   false,
+		},
+		{
+			name: "GetDataSourceName valid",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "datasources"},
+				{Kind: PathSegmentField, FieldName: "network"},
+			},
+			method:       "GetDataSourceName",
+			expectedName: "network",
+			expectedOk:   true,
+		},
+		{
+			name:         "GetDataSourceName wrong section",
+			path:         StructuredPath{{Kind: PathSegmentField, FieldName: "resources"}, {Kind: PathSegmentField, FieldName: "x"}},
+			method:       "GetDataSourceName",
+			expectedName: "",
+			expectedOk:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			var name string
+			var ok bool
+			switch tt.method {
+			case "GetVariableName":
+				name, ok = tt.path.GetVariableName()
+			case "GetValueName":
+				name, ok = tt.path.GetValueName()
+			case "GetDataSourceName":
+				name, ok = tt.path.GetDataSourceName()
+			}
+			s.Assert().Equal(tt.expectedName, name)
+			s.Assert().Equal(tt.expectedOk, ok)
+		})
+	}
+}
+
+func (s *PathSuite) TestStructuredPath_AnnotationAndExportGetters() {
+	tests := []struct {
+		name         string
+		path         StructuredPath
+		method       string
+		expectedName string
+		expectedOk   bool
+	}{
+		{
+			name: "GetAnnotationKey valid",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "handler"},
+				{Kind: PathSegmentField, FieldName: "metadata"},
+				{Kind: PathSegmentField, FieldName: "annotations"},
+				{Kind: PathSegmentField, FieldName: "aws.lambda.runtime"},
+			},
+			method:       "GetAnnotationKey",
+			expectedName: "aws.lambda.runtime",
+			expectedOk:   true,
+		},
+		{
+			name: "GetAnnotationKey too short",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "handler"},
+				{Kind: PathSegmentField, FieldName: "metadata"},
+				{Kind: PathSegmentField, FieldName: "annotations"},
+			},
+			method:       "GetAnnotationKey",
+			expectedName: "",
+			expectedOk:   false,
+		},
+		{
+			name: "GetDataSourceAnnotationKey valid",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "datasources"},
+				{Kind: PathSegmentField, FieldName: "network"},
+				{Kind: PathSegmentField, FieldName: "metadata"},
+				{Kind: PathSegmentField, FieldName: "annotations"},
+				{Kind: PathSegmentField, FieldName: "aws.vpc.id"},
+			},
+			method:       "GetDataSourceAnnotationKey",
+			expectedName: "aws.vpc.id",
+			expectedOk:   true,
+		},
+		{
+			name: "GetDataSourceAnnotationKey wrong section",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "handler"},
+				{Kind: PathSegmentField, FieldName: "metadata"},
+				{Kind: PathSegmentField, FieldName: "annotations"},
+				{Kind: PathSegmentField, FieldName: "key"},
+			},
+			method:       "GetDataSourceAnnotationKey",
+			expectedName: "",
+			expectedOk:   false,
+		},
+		{
+			name: "GetDataSourceExportName valid",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "datasources"},
+				{Kind: PathSegmentField, FieldName: "network"},
+				{Kind: PathSegmentField, FieldName: "exports"},
+				{Kind: PathSegmentField, FieldName: "vpcId"},
+			},
+			method:       "GetDataSourceExportName",
+			expectedName: "vpcId",
+			expectedOk:   true,
+		},
+		{
+			name: "GetDataSourceExportName too short",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "datasources"},
+				{Kind: PathSegmentField, FieldName: "network"},
+				{Kind: PathSegmentField, FieldName: "exports"},
+			},
+			method:       "GetDataSourceExportName",
+			expectedName: "",
+			expectedOk:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			var name string
+			var ok bool
+			switch tt.method {
+			case "GetAnnotationKey":
+				name, ok = tt.path.GetAnnotationKey()
+			case "GetDataSourceAnnotationKey":
+				name, ok = tt.path.GetDataSourceAnnotationKey()
+			case "GetDataSourceExportName":
+				name, ok = tt.path.GetDataSourceExportName()
+			}
+			s.Assert().Equal(tt.expectedName, name)
+			s.Assert().Equal(tt.expectedOk, ok)
+		})
+	}
+}
+
+func (s *PathSuite) TestStructuredPath_TypeCheckers() {
+	tests := []struct {
+		name    string
+		path    StructuredPath
+		isVarT  bool
+		isValT  bool
+		isExpT  bool
+	}{
+		{
+			name: "variable type",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "variables"},
+				{Kind: PathSegmentField, FieldName: "env"},
+				{Kind: PathSegmentField, FieldName: "type"},
+			},
+			isVarT: true,
+		},
+		{
+			name: "value type",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "values"},
+				{Kind: PathSegmentField, FieldName: "tableName"},
+				{Kind: PathSegmentField, FieldName: "type"},
+			},
+			isValT: true,
+		},
+		{
+			name: "export type",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "exports"},
+				{Kind: PathSegmentField, FieldName: "apiUrl"},
+				{Kind: PathSegmentField, FieldName: "type"},
+			},
+			isExpT: true,
+		},
+		{
+			name: "resource type is not variable/value/export type",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "handler"},
+				{Kind: PathSegmentField, FieldName: "type"},
+			},
+		},
+		{
+			name: "too short",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "variables"},
+				{Kind: PathSegmentField, FieldName: "env"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			s.Assert().Equal(tt.isVarT, tt.path.IsVariableType())
+			s.Assert().Equal(tt.isValT, tt.path.IsValueType())
+			s.Assert().Equal(tt.isExpT, tt.path.IsExportType())
+		})
+	}
+}
+
+func (s *PathSuite) TestStructuredPath_ResourceMetadataCheckers() {
+	tests := []struct {
+		name        string
+		path        StructuredPath
+		isMeta      bool
+		isAnnot     bool
+		isAnnotVal  bool
+		isLabels    bool
+		isLinkSel   bool
+		isLinkExcl  bool
+	}{
+		{
+			name: "resource metadata root",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "handler"},
+				{Kind: PathSegmentField, FieldName: "metadata"},
+			},
+			isMeta: true,
+		},
+		{
+			name: "resource metadata annotations",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "handler"},
+				{Kind: PathSegmentField, FieldName: "metadata"},
+				{Kind: PathSegmentField, FieldName: "annotations"},
+			},
+			isMeta: true, isAnnot: true,
+		},
+		{
+			name: "resource metadata annotation value",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "handler"},
+				{Kind: PathSegmentField, FieldName: "metadata"},
+				{Kind: PathSegmentField, FieldName: "annotations"},
+				{Kind: PathSegmentField, FieldName: "aws.runtime"},
+			},
+			isMeta: true, isAnnot: true, isAnnotVal: true,
+		},
+		{
+			name: "resource metadata labels",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "handler"},
+				{Kind: PathSegmentField, FieldName: "metadata"},
+				{Kind: PathSegmentField, FieldName: "labels"},
+			},
+			isMeta: true, isLabels: true,
+		},
+		{
+			name: "resource linkSelector",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "handler"},
+				{Kind: PathSegmentField, FieldName: "linkSelector"},
+			},
+			isLinkSel: true,
+		},
+		{
+			name: "resource linkSelector exclude",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "handler"},
+				{Kind: PathSegmentField, FieldName: "linkSelector"},
+				{Kind: PathSegmentField, FieldName: "exclude"},
+			},
+			isLinkExcl: true,
+		},
+		{
+			name: "datasource metadata is not resource metadata",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "datasources"},
+				{Kind: PathSegmentField, FieldName: "ds"},
+				{Kind: PathSegmentField, FieldName: "metadata"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			s.Assert().Equal(tt.isMeta, tt.path.IsResourceMetadata())
+			s.Assert().Equal(tt.isAnnot, tt.path.IsResourceMetadataAnnotations())
+			s.Assert().Equal(tt.isAnnotVal, tt.path.IsResourceMetadataAnnotationValue())
+			s.Assert().Equal(tt.isLabels, tt.path.IsResourceMetadataLabels())
+			s.Assert().Equal(tt.isLinkSel, tt.path.IsResourceLinkSelector())
+			s.Assert().Equal(tt.isLinkExcl, tt.path.IsResourceLinkSelectorExclude())
+		})
+	}
+}
+
+func (s *PathSuite) TestStructuredPath_DataSourceAnnotationAndFilterCheckers() {
+	tests := []struct {
+		name         string
+		path         StructuredPath
+		isDSAnnot    bool
+		isDSAnnotVal bool
+		isDSAliasFor bool
+		isDSFilterF  bool
+		isDSFilterOp bool
+	}{
+		{
+			name: "datasource annotations",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "datasources"},
+				{Kind: PathSegmentField, FieldName: "network"},
+				{Kind: PathSegmentField, FieldName: "metadata"},
+				{Kind: PathSegmentField, FieldName: "annotations"},
+			},
+			isDSAnnot: true,
+		},
+		{
+			name: "datasource annotation value",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "datasources"},
+				{Kind: PathSegmentField, FieldName: "network"},
+				{Kind: PathSegmentField, FieldName: "metadata"},
+				{Kind: PathSegmentField, FieldName: "annotations"},
+				{Kind: PathSegmentField, FieldName: "aws.vpc.id"},
+			},
+			isDSAnnot: true, isDSAnnotVal: true,
+		},
+		{
+			name: "datasource export aliasFor",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "datasources"},
+				{Kind: PathSegmentField, FieldName: "network"},
+				{Kind: PathSegmentField, FieldName: "exports"},
+				{Kind: PathSegmentField, FieldName: "vpcId"},
+				{Kind: PathSegmentField, FieldName: "aliasFor"},
+			},
+			isDSAliasFor: true,
+		},
+		{
+			name: "datasource export aliasFor wrong field",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "datasources"},
+				{Kind: PathSegmentField, FieldName: "network"},
+				{Kind: PathSegmentField, FieldName: "exports"},
+				{Kind: PathSegmentField, FieldName: "vpcId"},
+				{Kind: PathSegmentField, FieldName: "type"},
+			},
+		},
+		{
+			name: "datasource filter field (singular pattern)",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "datasources"},
+				{Kind: PathSegmentField, FieldName: "network"},
+				{Kind: PathSegmentField, FieldName: "filter"},
+				{Kind: PathSegmentField, FieldName: "field"},
+			},
+			isDSFilterF: true,
+		},
+		{
+			name: "datasource filter operator (singular pattern)",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "datasources"},
+				{Kind: PathSegmentField, FieldName: "network"},
+				{Kind: PathSegmentField, FieldName: "filter"},
+				{Kind: PathSegmentField, FieldName: "operator"},
+			},
+			isDSFilterOp: true,
+		},
+		{
+			name: "datasource filter field (plural pattern)",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "datasources"},
+				{Kind: PathSegmentField, FieldName: "network"},
+				{Kind: PathSegmentField, FieldName: "filters"},
+				{Kind: PathSegmentIndex, Index: 0},
+				{Kind: PathSegmentField, FieldName: "filter"},
+				{Kind: PathSegmentField, FieldName: "field"},
+			},
+			isDSFilterF: true,
+		},
+		{
+			name: "datasource filter operator (plural pattern)",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "datasources"},
+				{Kind: PathSegmentField, FieldName: "network"},
+				{Kind: PathSegmentField, FieldName: "filters"},
+				{Kind: PathSegmentIndex, Index: 0},
+				{Kind: PathSegmentField, FieldName: "filter"},
+				{Kind: PathSegmentField, FieldName: "operator"},
+			},
+			isDSFilterOp: true,
+		},
+		{
+			name: "resource annotations are not datasource annotations",
+			path: StructuredPath{
+				{Kind: PathSegmentField, FieldName: "resources"},
+				{Kind: PathSegmentField, FieldName: "handler"},
+				{Kind: PathSegmentField, FieldName: "metadata"},
+				{Kind: PathSegmentField, FieldName: "annotations"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			s.Assert().Equal(tt.isDSAnnot, tt.path.IsDataSourceMetadataAnnotations())
+			s.Assert().Equal(tt.isDSAnnotVal, tt.path.IsDataSourceMetadataAnnotationValue())
+			s.Assert().Equal(tt.isDSAliasFor, tt.path.IsDataSourceExportAliasFor())
+			s.Assert().Equal(tt.isDSFilterF, tt.path.IsDataSourceFilterField())
+			s.Assert().Equal(tt.isDSFilterOp, tt.path.IsDataSourceFilterOperator())
+		})
+	}
+}
+
+func (s *PathSuite) TestPathSegment_String() {
+	s.Assert().Equal("resources", PathSegment{Kind: PathSegmentField, FieldName: "resources"}.String())
+	s.Assert().Equal("0", PathSegment{Kind: PathSegmentIndex, Index: 0}.String())
+	s.Assert().Equal("42", PathSegment{Kind: PathSegmentIndex, Index: 42}.String())
+}
+
 func TestPathSuite(t *testing.T) {
 	suite.Run(t, new(PathSuite))
 }

@@ -425,6 +425,75 @@ func (s *HandlersSuite) createTestApplication(state *languageservices.State) *Ap
 	)
 }
 
+// Tests for Setup and Handler
+
+func (s *HandlersSuite) TestSetup_and_Handler_returns_non_nil() {
+	s.app.Setup()
+	s.NotNil(s.app.Handler())
+}
+
+func (s *HandlersSuite) TestHandler_returns_nil_before_setup() {
+	// A fresh application without Setup() called should have nil handler.
+	freshApp := s.createTestApplication(languageservices.NewState())
+	s.Nil(freshApp.Handler())
+}
+
+// Tests for StoreDocumentAndDerivedStructures with different formats
+
+func (s *HandlersSuite) TestStoreDocumentAndDerivedStructures_UpdatesExistingContext() {
+	uri := lsp.URI("file:///test.yaml")
+	content1 := "version: 2024-01-01\n"
+	blueprint1, err := schema.LoadString(content1, schema.YAMLSpecFormat)
+	s.NoError(err)
+
+	err = s.app.StoreDocumentAndDerivedStructures(uri, blueprint1, content1)
+	s.NoError(err)
+
+	docCtx1 := s.state.GetDocumentContext(uri)
+	s.NotNil(docCtx1)
+	s.NotNil(docCtx1.Blueprint)
+
+	// Store a second time with different content but same URI.
+	content2 := "version: 2025-01-01\n"
+	blueprint2, err := schema.LoadString(content2, schema.YAMLSpecFormat)
+	s.NoError(err)
+
+	err = s.app.StoreDocumentAndDerivedStructures(uri, blueprint2, content2)
+	s.NoError(err)
+
+	docCtx2 := s.state.GetDocumentContext(uri)
+	s.NotNil(docCtx2)
+	s.NotNil(docCtx2.Blueprint)
+}
+
+func (s *HandlersSuite) TestSaveDocumentContent_UnknownChangeType_ReturnsError() {
+	uri := lsp.URI("file:///test.yaml")
+	params := &lsp.DidChangeTextDocumentParams{
+		TextDocument: lsp.VersionedTextDocumentIdentifier{
+			TextDocumentIdentifier: lsp.TextDocumentIdentifier{URI: uri},
+		},
+		ContentChanges: []any{
+			"invalid change type",
+		},
+	}
+	existingContent := "hello world"
+	err := s.app.SaveDocumentContent(params, &existingContent)
+	s.Error(err)
+	s.Contains(err.Error(), "not of a valid type")
+}
+
+func (s *HandlersSuite) TestState_DocumentContext_SetGet() {
+	uri := lsp.URI("file:///test.yaml")
+	s.Nil(s.state.GetDocumentContext(uri))
+
+	content := "version: 2024-01-01\n"
+	err := s.app.StoreDocumentAndDerivedStructures(uri, nil, content)
+	s.NoError(err)
+
+	docCtx := s.state.GetDocumentContext(uri)
+	s.NotNil(docCtx)
+}
+
 func TestHandlersSuite(t *testing.T) {
 	suite.Run(t, new(HandlersSuite))
 }

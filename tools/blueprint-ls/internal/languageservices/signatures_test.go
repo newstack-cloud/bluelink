@@ -286,6 +286,45 @@ func (s *SignatureServiceSuite) Test_produces_function_signature_definition_with
 	}, signatureInfo)
 }
 
+func (s *SignatureServiceSuite) Test_GetFunctionSignatures_nil_doc_context_returns_empty() {
+	lspCtx := &common.LSPContext{}
+	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, nil, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 0, Character: 0},
+	})
+	s.Require().NoError(err)
+	s.Assert().Empty(signatureInfo)
+}
+
+func (s *SignatureServiceSuite) Test_GetFunctionSignatures_non_function_position_returns_empty() {
+	lspCtx := &common.LSPContext{}
+	// Line 0, character 0 is "version: 2024-07-20" — not inside a function call.
+	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 0, Character: 0},
+	})
+	s.Require().NoError(err)
+	s.Assert().Empty(signatureInfo)
+}
+
+func (s *SignatureServiceSuite) Test_UpdateRegistry_replaces_function_registry() {
+	// Create a new empty registry and update.
+	emptyRegistry := &testutils.FunctionRegistryMock{
+		Functions: map[string]provider.Function{},
+	}
+	s.service.UpdateRegistry(emptyRegistry)
+
+	// With the empty registry, a position that previously found "replace"
+	// should now return empty (function not found in new registry).
+	lspCtx := &common.LSPContext{}
+	signatureInfo, err := s.service.GetFunctionSignatures(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 81, Character: 42},
+	})
+	s.Require().NoError(err)
+	s.Assert().Empty(signatureInfo)
+}
+
 func TestSignatureServiceSuite(t *testing.T) {
 	suite.Run(t, new(SignatureServiceSuite))
 }

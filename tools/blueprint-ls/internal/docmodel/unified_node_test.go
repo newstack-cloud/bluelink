@@ -282,6 +282,100 @@ func (s *UnifiedNodeSuite) TestInlineJSONCArrayAfterCommaPathDetection() {
 	s.Assert().Equal("aNewFunction", completionCtx.ResourceName, "Resource name should be aNewFunction")
 }
 
+func (s *UnifiedNodeSuite) TestUnifiedNode_ContainsPosition() {
+	node := &UnifiedNode{
+		Kind: NodeKindScalar,
+		Range: source.Range{
+			Start: &source.Position{Line: 5, Column: 10},
+			End:   &source.Position{Line: 5, Column: 20},
+		},
+	}
+
+	s.Run("inside range", func() {
+		s.Assert().True(node.ContainsPosition(source.Position{Line: 5, Column: 15}))
+	})
+	s.Run("at start", func() {
+		s.Assert().True(node.ContainsPosition(source.Position{Line: 5, Column: 10}))
+	})
+	s.Run("at end", func() {
+		s.Assert().True(node.ContainsPosition(source.Position{Line: 5, Column: 20}))
+	})
+	s.Run("before range", func() {
+		s.Assert().False(node.ContainsPosition(source.Position{Line: 5, Column: 5}))
+	})
+	s.Run("after range", func() {
+		s.Assert().False(node.ContainsPosition(source.Position{Line: 5, Column: 25}))
+	})
+	s.Run("nil start returns false", func() {
+		nilNode := &UnifiedNode{Kind: NodeKindScalar, Range: source.Range{}}
+		s.Assert().False(nilNode.ContainsPosition(source.Position{Line: 1, Column: 1}))
+	})
+}
+
+func (s *UnifiedNodeSuite) TestUnifiedNode_ContainsPositionWithLeeway() {
+	node := &UnifiedNode{
+		Kind: NodeKindScalar,
+		Range: source.Range{
+			Start: &source.Position{Line: 5, Column: 10},
+			End:   &source.Position{Line: 5, Column: 20},
+		},
+	}
+
+	s.Run("just before start with leeway", func() {
+		s.Assert().True(node.ContainsPositionWithLeeway(source.Position{Line: 5, Column: 8}, 2))
+	})
+	s.Run("just before start without leeway", func() {
+		s.Assert().False(node.ContainsPositionWithLeeway(source.Position{Line: 5, Column: 8}, 0))
+	})
+}
+
+func (s *UnifiedNodeSuite) TestUnifiedNode_IsLeaf() {
+	s.Run("no children", func() {
+		node := &UnifiedNode{Kind: NodeKindScalar}
+		s.Assert().True(node.IsLeaf())
+	})
+	s.Run("with children", func() {
+		child := &UnifiedNode{Kind: NodeKindScalar}
+		node := &UnifiedNode{Kind: NodeKindMapping, Children: []*UnifiedNode{child}}
+		s.Assert().False(node.IsLeaf())
+	})
+	s.Run("empty children slice", func() {
+		node := &UnifiedNode{Kind: NodeKindMapping, Children: []*UnifiedNode{}}
+		s.Assert().True(node.IsLeaf())
+	})
+}
+
+func (s *UnifiedNodeSuite) TestUnifiedNode_CollectAncestors() {
+	root := &UnifiedNode{Kind: NodeKindDocument, FieldName: "root"}
+	mid := &UnifiedNode{Kind: NodeKindMapping, FieldName: "mid", Parent: root}
+	leaf := &UnifiedNode{Kind: NodeKindScalar, FieldName: "leaf", Parent: mid}
+
+	root.Children = []*UnifiedNode{mid}
+	mid.Children = []*UnifiedNode{leaf}
+
+	s.Run("leaf collects full chain", func() {
+		ancestors := leaf.CollectAncestors()
+		s.Assert().Len(ancestors, 3)
+		s.Assert().Equal(root, ancestors[0])
+		s.Assert().Equal(mid, ancestors[1])
+		s.Assert().Equal(leaf, ancestors[2])
+	})
+	s.Run("root collects only self", func() {
+		ancestors := root.CollectAncestors()
+		s.Assert().Len(ancestors, 1)
+		s.Assert().Equal(root, ancestors[0])
+	})
+}
+
+func (s *UnifiedNodeSuite) TestNodeKind_String_Key() {
+	s.Assert().Equal("key", NodeKindKey.String())
+}
+
+func (s *UnifiedNodeSuite) TestNodeKind_String_Unknown() {
+	unknown := NodeKind(99)
+	s.Assert().Equal("unknown", unknown.String())
+}
+
 func TestUnifiedNodeSuite(t *testing.T) {
 	suite.Run(t, new(UnifiedNodeSuite))
 }

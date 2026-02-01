@@ -42,6 +42,23 @@ func (s *SymbolServiceSuite) Test_creates_document_symbol_hierarchy() {
 	s.Require().NoError(err)
 }
 
+func (s *SymbolServiceSuite) Test_nil_doc_context_returns_empty() {
+	symbols, err := s.service.GetDocumentSymbolsFromContext(nil)
+	s.Require().NoError(err)
+	s.Assert().Empty(symbols)
+}
+
+func (s *SymbolServiceSuite) Test_doc_context_with_nil_ast_returns_empty() {
+	docCtx := docmodel.NewDocumentContextFromSchema(
+		string(blueprintURI),
+		nil,
+		nil,
+	)
+	symbols, err := s.service.GetDocumentSymbolsFromContext(docCtx)
+	s.Require().NoError(err)
+	s.Assert().Empty(symbols)
+}
+
 func TestSymbolServiceSuite(t *testing.T) {
 	suite.Run(t, new(SymbolServiceSuite))
 }

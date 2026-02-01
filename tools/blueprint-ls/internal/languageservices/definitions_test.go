@@ -491,6 +491,48 @@ func (s *GotoDefinitionServiceSuite) Test_get_definitions_returns_empty_list_for
 	s.Assert().Empty(definitions)
 }
 
+func (s *GotoDefinitionServiceSuite) Test_get_definitions_nil_doc_context_returns_empty() {
+	definitions, err := s.service.GetDefinitionsFromContext(nil, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: "file:///blueprint.yaml"},
+		Position:     lsp.Position{Line: 0, Character: 0},
+	})
+	s.Require().NoError(err)
+	s.Assert().Empty(definitions)
+}
+
+func (s *GotoDefinitionServiceSuite) Test_get_definitions_nil_blueprint_returns_empty() {
+	// Create a docCtx with nil Blueprint.
+	docCtx := docmodel.NewDocumentContextFromSchema(
+		"file:///blueprint.yaml",
+		nil,
+		nil,
+	)
+	definitions, err := s.service.GetDefinitionsFromContext(docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: "file:///blueprint.yaml"},
+		Position:     lsp.Position{Line: 0, Character: 0},
+	})
+	s.Require().NoError(err)
+	s.Assert().Empty(definitions)
+}
+
+func (s *GotoDefinitionServiceSuite) Test_get_definitions_nil_schema_tree_returns_empty() {
+	// Create a docCtx with a Blueprint but nil SchemaTree.
+	blueprint, err := schema.LoadString("version: 2024-01-01\n", schema.YAMLSpecFormat)
+	s.Require().NoError(err)
+
+	docCtx := docmodel.NewDocumentContextFromSchema(
+		"file:///blueprint.yaml",
+		blueprint,
+		nil,
+	)
+	definitions, err := s.service.GetDefinitionsFromContext(docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: "file:///blueprint.yaml"},
+		Position:     lsp.Position{Line: 0, Character: 0},
+	})
+	s.Require().NoError(err)
+	s.Assert().Empty(definitions)
+}
+
 func TestGotoDefinitionServiceSuite(t *testing.T) {
 	suite.Run(t, new(GotoDefinitionServiceSuite))
 }

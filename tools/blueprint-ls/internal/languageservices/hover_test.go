@@ -328,6 +328,103 @@ func (s *HoverServiceSuite) Test_hover_on_byLabel_map_key_shows_matching_resourc
 	s.Assert().Contains(hoverContent.Value, "getOrderHandler")
 }
 
+// -- Resource/data source type value hover tests --
+// These exercise the type hover handlers. Without registry definitions,
+// the handler returns empty gracefully but the code path is still exercised.
+
+func (s *HoverServiceSuite) Test_hover_on_resource_type_value_no_registry_definition() {
+	lspCtx := &common.LSPContext{}
+	// "    type: aws/dynamodb/table" at line 17 (0-indexed: 16)
+	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 16, Character: 12},
+	})
+	s.Require().NoError(err)
+	s.Assert().Empty(hoverContent.Value)
+}
+
+func (s *HoverServiceSuite) Test_hover_on_datasource_type_value_no_registry_definition() {
+	lspCtx := &common.LSPContext{}
+	// "    type: aws/vpc" at line 45 (0-indexed: 44)
+	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 44, Character: 12},
+	})
+	s.Require().NoError(err)
+	s.Assert().Empty(hoverContent.Value)
+}
+
+// -- Structural element hover tests --
+
+func (s *HoverServiceSuite) Test_hover_on_linkSelector_key() {
+	lspCtx := &common.LSPContext{}
+	// "    linkSelector:" at line 27 (0-indexed: 26)
+	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 26, Character: 6},
+	})
+	s.Require().NoError(err)
+	s.Assert().NotEmpty(hoverContent.Value)
+	s.Assert().Contains(hoverContent.Value, "linkSelector")
+}
+
+func (s *HoverServiceSuite) Test_hover_on_resource_metadata_key() {
+	lspCtx := &common.LSPContext{}
+	// "    metadata:" at line 19 (0-indexed: 18)
+	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 18, Character: 6},
+	})
+	s.Require().NoError(err)
+	s.Assert().NotEmpty(hoverContent.Value)
+	s.Assert().Contains(hoverContent.Value, "metadata")
+}
+
+func (s *HoverServiceSuite) Test_hover_on_resource_labels_key() {
+	lspCtx := &common.LSPContext{}
+	// "      labels:" at line 21 (0-indexed: 20)
+	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 20, Character: 8},
+	})
+	s.Require().NoError(err)
+	s.Assert().NotEmpty(hoverContent.Value)
+	s.Assert().Contains(hoverContent.Value, "labels")
+}
+
+func (s *HoverServiceSuite) Test_hover_on_annotation_key_name() {
+	lspCtx := &common.LSPContext{}
+	// "      annotations:" at line 24 (0-indexed: 23)
+	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 23, Character: 8},
+	})
+	s.Require().NoError(err)
+	s.Assert().NotEmpty(hoverContent.Value)
+	s.Assert().Contains(hoverContent.Value, "annotations")
+}
+
+func (s *HoverServiceSuite) Test_hover_on_no_target_returns_empty() {
+	lspCtx := &common.LSPContext{}
+	// Line 1 (0-indexed: 0): "version: 2024-07-20" - cursor on empty area
+	hoverContent, err := s.service.GetHoverContent(lspCtx, s.docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 82, Character: 0},
+	})
+	s.Require().NoError(err)
+	s.Assert().Empty(hoverContent.Value)
+}
+
+func (s *HoverServiceSuite) Test_hover_with_nil_doc_context() {
+	lspCtx := &common.LSPContext{}
+	hoverContent, err := s.service.GetHoverContent(lspCtx, nil, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 0, Character: 0},
+	})
+	s.Require().NoError(err)
+	s.Assert().Empty(hoverContent.Value)
+}
+
 func TestHoverServiceSuite(t *testing.T) {
 	suite.Run(t, new(HoverServiceSuite))
 }
