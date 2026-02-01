@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 
 	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
@@ -22,8 +23,16 @@ func NewRootCmd() *cobra.Command {
 		Long: `The CLI for managing and deploying your infrastructure blueprints.
 This CLI validates, stages changes for, and deploys blueprints.`,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if err := confProvider.LoadConfigFile(configFile); err != nil {
-				return err
+			loadConfig := cmd.Flags().Lookup("config").Changed
+			if !loadConfig {
+				if _, statErr := os.Stat(configFile); statErr == nil {
+					loadConfig = true
+				}
+			}
+			if loadConfig {
+				if err := confProvider.LoadConfigFile(configFile); err != nil {
+					return err
+				}
 			}
 
 			connectProtocol, _ := confProvider.GetString("connectProtocol")
@@ -93,6 +102,15 @@ This CLI validates, stages changes for, and deploys blueprints.`,
 	)
 	confProvider.BindPFlag("skipPluginConfigValidation", rootCmd.PersistentFlags().Lookup("skip-plugin-config-validation"))
 	confProvider.BindEnvVar("skipPluginConfigValidation", "BLUELINK_CLI_SKIP_PLUGIN_CONFIG_VALIDATION")
+
+	rootCmd.PersistentFlags().Bool(
+		"skip-plugin-check",
+		false,
+		"Skip the automatic plugin dependency check before "+
+			"validate, stage, deploy, and destroy commands.",
+	)
+	confProvider.BindPFlag("skipPluginCheck", rootCmd.PersistentFlags().Lookup("skip-plugin-check"))
+	confProvider.BindEnvVar("skipPluginCheck", "BLUELINK_CLI_SKIP_PLUGIN_CHECK")
 
 	setupVersionCommand(rootCmd)
 	setupInitCommand(rootCmd, confProvider)

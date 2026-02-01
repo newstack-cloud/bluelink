@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/preflightui"
 	"github.com/newstack-cloud/deploy-cli-sdk/consts"
 	"github.com/newstack-cloud/deploy-cli-sdk/engine"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
@@ -21,7 +22,8 @@ var (
 type stageSessionState uint32
 
 const (
-	stageBlueprintSelect stageSessionState = iota
+	stagePreflight       stageSessionState = iota
+	stageBlueprintSelect
 	stageOptionsInput
 	stageView
 )
@@ -35,23 +37,34 @@ type MainModel struct {
 	selectBlueprint  tea.Model
 	stageOptionsForm *StageOptionsFormModel
 	stage            tea.Model
+	preflight        *preflightui.PreflightModel
 	styles           *stylespkg.Styles
 	Error            error
 	// needsOptionsInput tracks whether we should prompt for stage options
 	needsOptionsInput bool
+	// autoStage tracks the original auto-stage state for post-preflight transition
+	autoStage bool
+	// restartInstructions stores engine restart info after plugin installation
+	restartInstructions    string
+	installedPlugins       []string
+	preflightCommandName   string
 }
 
 func (m MainModel) Init() tea.Cmd {
-	bpCmd := m.selectBlueprint.Init()
-	stageCmd := m.stage.Init()
-	var optionsCmd tea.Cmd
-	if m.stageOptionsForm != nil {
-		optionsCmd = m.stageOptionsForm.Init()
+	if m.sessionState == stagePreflight && m.preflight != nil {
+		return m.preflight.Init()
 	}
-	return tea.Batch(bpCmd, stageCmd, optionsCmd)
+	cmds := []tea.Cmd{m.selectBlueprint.Init(), m.stage.Init()}
+	if m.stageOptionsForm != nil {
+		cmds = append(cmds, m.stageOptionsForm.Init())
+	}
+	return tea.Batch(cmds...)
 }
 
 func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.sessionState == stagePreflight {
+		return m.updatePreflight(msg)
+	}
 	cmds := []tea.Cmd{}
 	switch msg := msg.(type) {
 	case sharedui.SelectBlueprintMsg:
@@ -141,9 +154,56 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+func (m MainModel) updatePreflight(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case preflightui.PreflightSatisfiedMsg:
+		if m.autoStage {
+			m.sessionState = stageView
+		} else {
+			m.sessionState = stageBlueprintSelect
+		}
+		cmds := []tea.Cmd{m.selectBlueprint.Init(), m.stage.Init()}
+		if m.stageOptionsForm != nil {
+			cmds = append(cmds, m.stageOptionsForm.Init())
+		}
+		return m, tea.Batch(cmds...)
+	case preflightui.PreflightInstalledMsg:
+		m.restartInstructions = msg.RestartInstructions
+		m.installedPlugins = msg.InstalledPlugins
+		m.preflightCommandName = msg.CommandName
+		m.quitting = true
+		return m, tea.Quit
+	case preflightui.PreflightErrorMsg:
+		m.Error = msg.Err
+		return m, tea.Quit
+	case tea.KeyMsg:
+		if msg.String() == "ctrl+c" {
+			m.quitting = true
+			return m, tea.Quit
+		}
+	}
+	if m.preflight != nil {
+		updated, cmd := m.preflight.Update(msg)
+		m.preflight = &updated
+		return m, cmd
+	}
+	return m, nil
+}
+
 func (m MainModel) View() string {
 	if m.quitting {
+		if m.restartInstructions != "" {
+			return preflightui.RenderInstallSummary(
+				m.styles, m.installedPlugins, len(m.installedPlugins),
+				m.restartInstructions, m.preflightCommandName,
+			)
+		}
 		return quitTextStyle.Render("See you next time.")
+	}
+	if m.sessionState == stagePreflight {
+		if m.preflight != nil {
+			return m.preflight.View()
+		}
 	}
 	if m.sessionState == stageBlueprintSelect {
 		return m.selectBlueprint.View()
@@ -181,8 +241,8 @@ func NewStageApp(
 	headless bool,
 	headlessWriter io.Writer,
 	jsonMode bool,
+	preflight *preflightui.PreflightModel,
 ) (*MainModel, error) {
-	sessionState := stageBlueprintSelect
 	// Auto-stage when:
 	// 1. A non-default blueprint file is provided, OR
 	// 2. An instance identifier is provided (staging for existing instance), OR
@@ -190,8 +250,12 @@ func NewStageApp(
 	hasInstanceIdentifier := instanceID != "" || instanceName != ""
 	autoStage := (blueprintFile != "" && !isDefaultBlueprintFile) || hasInstanceIdentifier || headless
 
+	sessionState := stageBlueprintSelect
 	if autoStage {
 		sessionState = stageView
+	}
+	if preflight != nil {
+		sessionState = stagePreflight
 	}
 
 	fp, err := sharedui.BlueprintLocalFilePicker(bluelinkStyles)
@@ -246,8 +310,10 @@ func NewStageApp(
 		selectBlueprint:   selectBlueprint,
 		stageOptionsForm:  stageOptionsForm,
 		stage:             stage,
+		preflight:         preflight,
 		styles:            bluelinkStyles,
 		needsOptionsInput: needsOptionsInput,
+		autoStage:         autoStage,
 	}, nil
 }
 

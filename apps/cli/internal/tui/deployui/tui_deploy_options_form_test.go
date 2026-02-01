@@ -65,6 +65,7 @@ func (s *DeployOptionsFormSuite) Test_deploy_options_form_stage_first_flow() {
 		false, // headless
 		os.Stdout,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -148,6 +149,7 @@ func (s *DeployOptionsFormSuite) Test_deploy_options_form_existing_changeset_flo
 		false, // headless
 		os.Stdout,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -220,6 +222,7 @@ func (s *DeployOptionsFormSuite) Test_deploy_options_form_with_instance_id_shows
 		false, // headless
 		os.Stdout,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -306,6 +309,7 @@ func (s *DeployOptionsFormSuite) Test_deploy_options_form_skipped_in_headless_mo
 		true, // headless
 		headlessOutput,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -339,6 +343,7 @@ func (s *DeployOptionsFormSuite) Test_deploy_options_form_skipped_with_skip_prom
 		false, // headless
 		os.Stdout,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -371,6 +376,7 @@ func (s *DeployOptionsFormSuite) Test_deploy_options_form_instance_name_validati
 		false,
 		os.Stdout,
 		false,
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -433,6 +439,7 @@ func (s *DeployOptionsFormSuite) Test_deploy_options_form_auto_approve_enabled()
 		false,
 		os.Stdout,
 		false,
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -505,6 +512,7 @@ func (s *DeployOptionsFormSuite) Test_deploy_options_form_auto_rollback_enabled(
 		false,
 		os.Stdout,
 		false,
+		nil,
 	)
 	s.Require().NoError(err)
 

@@ -56,6 +56,7 @@ func (s *StageOptionsFormSuite) Test_stage_options_flow_new_instance_skips_optio
 		false, // headless
 		os.Stdout,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -125,6 +126,7 @@ func (s *StageOptionsFormSuite) Test_stage_options_flow_existing_instance_shows_
 		false, // headless
 		os.Stdout,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -199,6 +201,7 @@ func (s *StageOptionsFormSuite) Test_stage_options_flow_existing_instance_with_d
 		false, // headless
 		os.Stdout,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -272,6 +275,7 @@ func (s *StageOptionsFormSuite) Test_stage_options_skipped_when_instance_name_pr
 		false, // headless
 		os.Stdout,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -302,6 +306,7 @@ func (s *StageOptionsFormSuite) Test_stage_options_skipped_in_headless_mode() {
 		true, // headless
 		headlessOutput,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -330,6 +335,7 @@ func (s *StageOptionsFormSuite) Test_instance_name_validation_rejects_empty() {
 		false,
 		os.Stdout,
 		false,
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -379,6 +385,7 @@ func (s *StageOptionsFormSuite) Test_instance_name_validation_rejects_short_name
 		false,
 		os.Stdout,
 		false,
+		nil,
 	)
 	s.Require().NoError(err)
 

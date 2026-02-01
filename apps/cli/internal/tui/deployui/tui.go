@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/driftui"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/preflightui"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/stageui"
 )
@@ -26,8 +27,10 @@ var (
 type deploySessionState uint32
 
 const (
+	// deployPreflight - preflight plugin dependency check
+	deployPreflight deploySessionState = iota
 	// deployBlueprintSelect - select blueprint file if not provided
-	deployBlueprintSelect deploySessionState = iota
+	deployBlueprintSelect
 	// deployConfigInput - combined config form for instance name, rollback, staging options
 	deployConfigInput
 	// deployStaging - run change staging (when --stage is set)
@@ -61,11 +64,18 @@ type MainModel struct {
 	autoApprove        bool
 	skipPrompts        bool
 
+	// Preflight
+	preflight          *preflightui.PreflightModel
+	postPreflightState deploySessionState
+
 	// Runtime state
-	headless bool
-	jsonMode bool
-	engine   engine.DeployEngine
-	logger   *zap.Logger
+	headless            bool
+	jsonMode            bool
+	restartInstructions    string
+	installedPlugins       []string
+	preflightCommandName   string
+	engine                 engine.DeployEngine
+	logger              *zap.Logger
 
 	styles *stylespkg.Styles
 	Error  error
@@ -82,6 +92,9 @@ func (m MainModel) GetEngine() shared.InstanceLookup { return m.engine }
 
 // Init initializes the main model.
 func (m MainModel) Init() tea.Cmd {
+	if m.sessionState == deployPreflight && m.preflight != nil {
+		return m.preflight.Init()
+	}
 	bpCmd := m.selectBlueprint.Init()
 	configFormCmd := m.deployConfigForm.Init()
 	deployCmd := m.deploy.Init()
@@ -89,11 +102,20 @@ func (m MainModel) Init() tea.Cmd {
 	if m.staging != nil {
 		stagingCmd = m.staging.Init()
 	}
-	return tea.Batch(bpCmd, configFormCmd, deployCmd, stagingCmd)
+	cmds := []tea.Cmd{bpCmd, configFormCmd, deployCmd, stagingCmd}
+	if m.sessionState == deployExecute {
+		cmds = append(cmds, func() tea.Msg {
+			return StartDeployMsg{}
+		})
+	}
+	return tea.Batch(cmds...)
 }
 
 // Update handles messages for the main model.
 func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.sessionState == deployPreflight {
+		return m.updatePreflight(msg)
+	}
 	cmds := []tea.Cmd{}
 
 	switch msg := msg.(type) {
@@ -453,13 +475,63 @@ func (m *MainModel) determineNextStateAfterBlueprintSelect() deploySessionState 
 	return deployConfigInput
 }
 
+func (m MainModel) updatePreflight(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case preflightui.PreflightSatisfiedMsg:
+		m.sessionState = m.postPreflightState
+		cmds := []tea.Cmd{
+			m.selectBlueprint.Init(),
+			m.deployConfigForm.Init(),
+			m.deploy.Init(),
+		}
+		if m.staging != nil {
+			cmds = append(cmds, m.staging.Init())
+		}
+		if m.postPreflightState == deployExecute {
+			cmds = append(cmds, func() tea.Msg { return StartDeployMsg{} })
+		}
+		return m, tea.Batch(cmds...)
+	case preflightui.PreflightInstalledMsg:
+		m.restartInstructions = msg.RestartInstructions
+		m.installedPlugins = msg.InstalledPlugins
+		m.preflightCommandName = msg.CommandName
+		m.quitting = true
+		return m, tea.Quit
+	case preflightui.PreflightErrorMsg:
+		m.Error = msg.Err
+		return m, tea.Quit
+	case tea.KeyMsg:
+		if msg.String() == "ctrl+c" {
+			m.quitting = true
+			return m, tea.Quit
+		}
+	}
+	if m.preflight != nil {
+		updated, cmd := m.preflight.Update(msg)
+		m.preflight = &updated
+		return m, cmd
+	}
+	return m, nil
+}
+
 // View renders the main model.
 func (m MainModel) View() string {
 	if m.quitting {
+		if m.restartInstructions != "" {
+			return preflightui.RenderInstallSummary(
+				m.styles, m.installedPlugins, len(m.installedPlugins),
+				m.restartInstructions, m.preflightCommandName,
+			)
+		}
 		return quitTextStyle.Render("See you next time.")
 	}
 
 	switch m.sessionState {
+	case deployPreflight:
+		if m.preflight != nil {
+			return m.preflight.View()
+		}
+		return ""
 	case deployBlueprintSelect:
 		return m.selectBlueprint.View()
 	case deployConfigInput:
@@ -498,6 +570,7 @@ func NewDeployApp(
 	headless bool,
 	headlessWriter io.Writer,
 	jsonMode bool,
+	preflight *preflightui.PreflightModel,
 ) (*MainModel, error) {
 	sessionState := deployBlueprintSelect
 	// In headless mode or with --skip-prompts, use the default blueprint file if no explicit file is provided.
@@ -591,12 +664,19 @@ func NewDeployApp(
 		jsonMode,
 	)
 
+	postPreflightState := sessionState
+	if preflight != nil {
+		sessionState = deployPreflight
+	}
+
 	return &MainModel{
 		sessionState:       sessionState,
 		selectBlueprint:    selectBlueprint,
 		deployConfigForm:   deployConfigForm,
 		staging:            staging,
 		deploy:             deploy,
+		preflight:          preflight,
+		postPreflightState: postPreflightState,
 		changesetID:        changesetID,
 		instanceID:         instanceID,
 		instanceName:       instanceName,

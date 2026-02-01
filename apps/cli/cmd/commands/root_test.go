@@ -20,10 +20,6 @@ func (s *RootCommandSuite) SetupTest() {
 	s.Require().NoError(err)
 	s.tempDir = tempDir
 
-	// Create empty default config file to prevent load errors
-	err = os.WriteFile(filepath.Join(tempDir, "bluelink.config.toml"), []byte(""), 0644)
-	s.Require().NoError(err)
-
 	s.originalDir, err = os.Getwd()
 	s.Require().NoError(err)
 	os.Chdir(tempDir)
@@ -42,6 +38,14 @@ func (s *RootCommandSuite) writeConfigFile(name, content string) string {
 }
 
 // Config loading tests
+
+func (s *RootCommandSuite) Test_succeeds_without_default_config_file() {
+	rootCmd := NewRootCmd()
+	rootCmd.SetArgs([]string{"version"})
+
+	err := rootCmd.Execute()
+	s.NoError(err)
+}
 
 func (s *RootCommandSuite) Test_loads_config_from_yaml() {
 	s.writeConfigFile("config.yaml", `

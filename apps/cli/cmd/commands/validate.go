@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/preflightui"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/validateui"
 	"github.com/newstack-cloud/deploy-cli-sdk/config"
 	"github.com/newstack-cloud/deploy-cli-sdk/engine"
@@ -51,14 +52,29 @@ func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider)
 				stylespkg.NewBluelinkPalette(),
 			)
 			inTerminal := term.IsTerminal(int(os.Stdout.Fd()))
+			headless := !inTerminal
+
+			skipCheck, _ := confProvider.GetBool("skipPluginCheck")
+			var preflight *preflightui.PreflightModel
+			if !skipCheck {
+				preflight = preflightui.NewPreflightModel(preflightui.PreflightOptions{
+					ConfProvider:   confProvider,
+					CommandName:    "validate",
+					Styles:         styles,
+					Headless:       headless,
+					HeadlessWriter: os.Stdout,
+				})
+			}
+
 			app, err := validateui.NewValidateApp(
 				deployEngine,
 				logger,
 				blueprintFile,
 				isDefault,
 				styles,
-				!inTerminal,
+				headless,
 				os.Stdout,
+				preflight,
 			)
 			if err != nil {
 				return err

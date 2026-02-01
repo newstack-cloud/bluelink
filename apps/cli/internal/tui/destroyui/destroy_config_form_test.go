@@ -59,6 +59,7 @@ func (s *DestroyConfigFormSuite) Test_stage_first_without_blueprint_goes_to_blue
 		false, // headless
 		os.Stdout,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -89,6 +90,7 @@ func (s *DestroyConfigFormSuite) Test_stage_first_with_blueprint_goes_to_config_
 		false, // headless
 		os.Stdout,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -119,6 +121,7 @@ func (s *DestroyConfigFormSuite) Test_skip_prompts_with_changeset_skips_to_execu
 		false, // headless
 		os.Stdout,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -149,6 +152,7 @@ func (s *DestroyConfigFormSuite) Test_skip_prompts_with_stage_first_goes_to_stag
 		false, // headless
 		os.Stdout,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -180,6 +184,7 @@ func (s *DestroyConfigFormSuite) Test_headless_with_changeset_skips_to_execute()
 		true, // headless
 		headlessOutput,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -212,6 +217,7 @@ func (s *DestroyConfigFormSuite) Test_headless_with_stage_first_goes_to_staging(
 		true, // headless
 		headlessOutput,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -242,6 +248,7 @@ func (s *DestroyConfigFormSuite) Test_interactive_mode_without_required_values_g
 		false, // headless
 		os.Stdout,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 
@@ -272,6 +279,7 @@ func (s *DestroyConfigFormSuite) Test_with_instance_id_preserves_value() {
 		false, // headless
 		os.Stdout,
 		false, // jsonMode
+		nil,
 	)
 	s.Require().NoError(err)
 

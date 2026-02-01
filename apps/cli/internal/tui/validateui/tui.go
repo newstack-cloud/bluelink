@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/preflightui"
 	"github.com/newstack-cloud/deploy-cli-sdk/engine"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 	sharedui "github.com/newstack-cloud/deploy-cli-sdk/ui"
@@ -36,28 +37,40 @@ const (
 type validateSessionState uint32
 
 const (
-	validateBlueprintSelect validateSessionState = iota
+	validatePreflight       validateSessionState = iota
+	validateBlueprintSelect
 	validateView
 )
 
 type MainModel struct {
 	sessionState validateSessionState
 	// validateStage   ValidateStage
-	blueprintFile   string
-	quitting        bool
-	selectBlueprint tea.Model
-	validate        tea.Model
-	styles          *stylespkg.Styles
-	Error           error
+	blueprintFile       string
+	quitting            bool
+	selectBlueprint     tea.Model
+	validate            tea.Model
+	preflight           *preflightui.PreflightModel
+	autoValidate        bool
+	restartInstructions  string
+	installedPlugins     []string
+	preflightCommandName string
+	styles               *stylespkg.Styles
+	Error               error
 }
 
 func (m MainModel) Init() tea.Cmd {
+	if m.sessionState == validatePreflight && m.preflight != nil {
+		return m.preflight.Init()
+	}
 	bpCmd := m.selectBlueprint.Init()
 	validateCmd := m.validate.Init()
 	return tea.Batch(bpCmd, validateCmd)
 }
 
 func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.sessionState == validatePreflight {
+		return m.updatePreflight(msg)
+	}
 	cmds := []tea.Cmd{}
 	switch msg := msg.(type) {
 	case sharedui.SelectBlueprintMsg:
@@ -114,9 +127,54 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+func (m MainModel) updatePreflight(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case preflightui.PreflightSatisfiedMsg:
+		if m.autoValidate {
+			m.sessionState = validateView
+		} else {
+			m.sessionState = validateBlueprintSelect
+		}
+		cmds := []tea.Cmd{m.selectBlueprint.Init(), m.validate.Init()}
+		return m, tea.Batch(cmds...)
+	case preflightui.PreflightInstalledMsg:
+		m.restartInstructions = msg.RestartInstructions
+		m.installedPlugins = msg.InstalledPlugins
+		m.preflightCommandName = msg.CommandName
+		m.quitting = true
+		return m, tea.Quit
+	case preflightui.PreflightErrorMsg:
+		m.Error = msg.Err
+		return m, tea.Quit
+	case tea.KeyMsg:
+		if msg.String() == "ctrl+c" {
+			m.quitting = true
+			return m, tea.Quit
+		}
+	}
+	if m.preflight != nil {
+		updated, cmd := m.preflight.Update(msg)
+		m.preflight = &updated
+		return m, cmd
+	}
+	return m, nil
+}
+
 func (m MainModel) View() string {
 	if m.quitting {
+		if m.restartInstructions != "" {
+			return preflightui.RenderInstallSummary(
+				m.styles, m.installedPlugins, len(m.installedPlugins),
+				m.restartInstructions, m.preflightCommandName,
+			)
+		}
 		return quitTextStyle.Render("Had enough? See you next time.")
+	}
+	if m.sessionState == validatePreflight {
+		if m.preflight != nil {
+			return m.preflight.View()
+		}
+		return ""
 	}
 	if m.sessionState == validateBlueprintSelect {
 		return m.selectBlueprint.View()
@@ -134,6 +192,7 @@ func NewValidateApp(
 	bluelinkStyles *stylespkg.Styles,
 	headless bool,
 	headlessWriter io.Writer,
+	preflight *preflightui.PreflightModel,
 ) (*MainModel, error) {
 	sessionState := validateBlueprintSelect
 	// In headless mode, use the default blueprint file
@@ -142,6 +201,10 @@ func NewValidateApp(
 
 	if autoValidate {
 		sessionState = validateView
+	}
+
+	if preflight != nil {
+		sessionState = validatePreflight
 	}
 
 	fp, err := sharedui.BlueprintLocalFilePicker(bluelinkStyles)
@@ -165,6 +228,8 @@ func NewValidateApp(
 		blueprintFile:   blueprintFile,
 		selectBlueprint: selectBlueprint,
 		validate:        validate,
+		preflight:       preflight,
+		autoValidate:    autoValidate,
 		styles:          bluelinkStyles,
 	}, nil
 }

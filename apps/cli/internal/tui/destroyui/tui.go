@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/driftui"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/preflightui"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/shared"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/stageui"
 )
@@ -26,8 +27,10 @@ var (
 type destroySessionState uint32
 
 const (
+	// destroyPreflight - preflight plugin dependency check
+	destroyPreflight destroySessionState = iota
 	// destroyBlueprintSelect - select blueprint file (only when --stage is set)
-	destroyBlueprintSelect destroySessionState = iota
+	destroyBlueprintSelect
 	// destroyConfigInput - combined config form for instance name, staging options
 	destroyConfigInput
 	// destroyStaging - run change staging with destroy=true (when --stage is set)
@@ -60,11 +63,18 @@ type MainModel struct {
 	autoApprove        bool
 	skipPrompts        bool
 
+	// Preflight
+	preflight          *preflightui.PreflightModel
+	postPreflightState destroySessionState
+
 	// Runtime state
-	headless bool
-	jsonMode bool
-	engine   engine.DeployEngine
-	logger   *zap.Logger
+	headless            bool
+	jsonMode            bool
+	restartInstructions    string
+	installedPlugins       []string
+	preflightCommandName   string
+	engine                 engine.DeployEngine
+	logger              *zap.Logger
 
 	styles *stylespkg.Styles
 	Error  error
@@ -81,6 +91,9 @@ func (m MainModel) GetEngine() shared.InstanceLookup { return m.engine }
 
 // Init initializes the main model.
 func (m MainModel) Init() tea.Cmd {
+	if m.sessionState == destroyPreflight && m.preflight != nil {
+		return m.preflight.Init()
+	}
 	bpCmd := m.selectBlueprint.Init()
 	configFormCmd := m.destroyConfigForm.Init()
 	destroyCmd := m.destroy.Init()
@@ -103,6 +116,9 @@ func (m MainModel) Init() tea.Cmd {
 
 // Update handles messages for the main model.
 func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.sessionState == destroyPreflight {
+		return m.updatePreflight(msg)
+	}
 	cmds := []tea.Cmd{}
 
 	switch msg := msg.(type) {
@@ -489,13 +505,63 @@ func (m *MainModel) determineNextStateAfterBlueprintSelect() destroySessionState
 	return destroyConfigInput
 }
 
+func (m MainModel) updatePreflight(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case preflightui.PreflightSatisfiedMsg:
+		m.sessionState = m.postPreflightState
+		cmds := []tea.Cmd{
+			m.selectBlueprint.Init(),
+			m.destroyConfigForm.Init(),
+			m.destroy.Init(),
+		}
+		if m.staging != nil {
+			cmds = append(cmds, m.staging.Init())
+		}
+		if m.postPreflightState == destroyExecute {
+			cmds = append(cmds, func() tea.Msg { return StartDestroyMsg{} })
+		}
+		return m, tea.Batch(cmds...)
+	case preflightui.PreflightInstalledMsg:
+		m.restartInstructions = msg.RestartInstructions
+		m.installedPlugins = msg.InstalledPlugins
+		m.preflightCommandName = msg.CommandName
+		m.quitting = true
+		return m, tea.Quit
+	case preflightui.PreflightErrorMsg:
+		m.Error = msg.Err
+		return m, tea.Quit
+	case tea.KeyMsg:
+		if msg.String() == "ctrl+c" {
+			m.quitting = true
+			return m, tea.Quit
+		}
+	}
+	if m.preflight != nil {
+		updated, cmd := m.preflight.Update(msg)
+		m.preflight = &updated
+		return m, cmd
+	}
+	return m, nil
+}
+
 // View renders the main model.
 func (m MainModel) View() string {
 	if m.quitting {
+		if m.restartInstructions != "" {
+			return preflightui.RenderInstallSummary(
+				m.styles, m.installedPlugins, len(m.installedPlugins),
+				m.restartInstructions, m.preflightCommandName,
+			)
+		}
 		return quitTextStyle.Render("See you next time.")
 	}
 
 	switch m.sessionState {
+	case destroyPreflight:
+		if m.preflight != nil {
+			return m.preflight.View()
+		}
+		return ""
 	case destroyBlueprintSelect:
 		return m.selectBlueprint.View()
 	case destroyConfigInput:
@@ -532,6 +598,7 @@ func NewDestroyApp(
 	headless bool,
 	headlessWriter io.Writer,
 	jsonMode bool,
+	preflight *preflightui.PreflightModel,
 ) (*MainModel, error) {
 	sessionState := determineInitialSessionState(
 		blueprintFile, isDefaultBlueprintFile, instanceID, instanceName,
@@ -599,12 +666,19 @@ func NewDestroyApp(
 		jsonMode,
 	)
 
+	postPreflightState := sessionState
+	if preflight != nil {
+		sessionState = destroyPreflight
+	}
+
 	return &MainModel{
 		sessionState:       sessionState,
 		selectBlueprint:    selectBlueprint,
 		destroyConfigForm:  destroyConfigForm,
 		staging:            staging,
 		destroy:            destroy,
+		preflight:          preflight,
+		postPreflightState: postPreflightState,
 		changesetID:        changesetID,
 		instanceID:         instanceID,
 		instanceName:       instanceName,

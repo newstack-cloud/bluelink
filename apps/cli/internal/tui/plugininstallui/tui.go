@@ -49,6 +49,15 @@ type PluginInstallState struct {
 	IsDependency    bool
 }
 
+// InstallCompleteMsg is sent when all plugins have been processed
+// in embedded mode. The parent model should handle this to proceed.
+type InstallCompleteMsg struct {
+	InstalledCount int
+	SkippedCount   int
+	FailedCount    int
+	Error          error
+}
+
 // MainModel is the main model for the plugin install TUI.
 type MainModel struct {
 	ctx            context.Context
@@ -60,6 +69,7 @@ type MainModel struct {
 	styles         *stylespkg.Styles
 	headless       bool
 	headlessWriter io.Writer
+	embeddedMode   bool
 	quitting       bool
 	width          int
 	Error          error
@@ -71,6 +81,12 @@ type MainModel struct {
 
 	// Dependencies
 	manager *plugins.Manager
+}
+
+// SetEmbeddedMode configures the install model to run as a sub-model.
+// When embedded: does not auto-quit, sends InstallCompleteMsg instead.
+func (m *MainModel) SetEmbeddedMode(embedded bool) {
+	m.embeddedMode = embedded
 }
 
 func (m MainModel) Init() tea.Cmd {
@@ -98,7 +114,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 		case "q":
-			if m.stage == completeStage || m.stage == errorStage {
+			if !m.embeddedMode && (m.stage == completeStage || m.stage == errorStage) {
 				return m, tea.Quit
 			}
 		}
@@ -272,6 +288,20 @@ func (m *MainModel) finishInstallation() (tea.Model, tea.Cmd) {
 	if m.headless {
 		fmt.Fprintf(m.headlessWriter, "\nInstalled: %d, Skipped: %d, Failed: %d\n",
 			m.installedCount, m.skippedCount, m.failedCount)
+	}
+
+	if m.embeddedMode {
+		return m, func() tea.Msg {
+			return InstallCompleteMsg{
+				InstalledCount: m.installedCount,
+				SkippedCount:   m.skippedCount,
+				FailedCount:    m.failedCount,
+				Error:          m.Error,
+			}
+		}
+	}
+
+	if m.headless {
 		return m, tea.Quit
 	}
 
@@ -369,8 +399,10 @@ func (m MainModel) renderComplete() string {
 	}
 
 	sb.WriteString("\n")
-	sb.WriteString(m.styles.Muted.Render("  Press q to quit."))
-	sb.WriteString("\n\n")
+	if !m.embeddedMode {
+		sb.WriteString(m.styles.Muted.Render("  Press q to quit."))
+		sb.WriteString("\n\n")
+	}
 
 	return sb.String()
 }
@@ -434,8 +466,10 @@ func (m MainModel) renderError() string {
 	}
 
 	sb.WriteString("\n")
-	sb.WriteString(m.styles.Muted.Render("  Press q to quit."))
-	sb.WriteString("\n\n")
+	if !m.embeddedMode {
+		sb.WriteString(m.styles.Muted.Render("  Press q to quit."))
+		sb.WriteString("\n\n")
+	}
 
 	return sb.String()
 }

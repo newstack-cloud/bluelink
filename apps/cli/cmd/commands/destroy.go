@@ -10,6 +10,7 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/jsonout"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/destroyui"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/preflightui"
 	"github.com/newstack-cloud/deploy-cli-sdk/config"
 	"github.com/newstack-cloud/deploy-cli-sdk/engine"
 	"github.com/newstack-cloud/deploy-cli-sdk/headless"
@@ -135,6 +136,20 @@ Examples:
 			)
 			inTerminal := term.IsTerminal(int(os.Stdout.Fd()))
 			headlessMode := !inTerminal || jsonMode
+
+			skipCheck, _ := confProvider.GetBool("skipPluginCheck")
+			var preflight *preflightui.PreflightModel
+			if !skipCheck {
+				preflight = preflightui.NewPreflightModel(preflightui.PreflightOptions{
+					ConfProvider:   confProvider,
+					CommandName:    "destroy",
+					Styles:         styles,
+					Headless:       headlessMode,
+					HeadlessWriter: os.Stdout,
+					JsonMode:       jsonMode,
+				})
+			}
+
 			app, err := destroyui.NewDestroyApp(
 				destroyEngine,
 				logger,
@@ -151,6 +166,7 @@ Examples:
 				headlessMode,
 				os.Stdout,
 				jsonMode,
+				preflight,
 			)
 			if err != nil {
 				return err

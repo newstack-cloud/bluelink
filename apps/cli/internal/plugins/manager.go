@@ -242,6 +242,69 @@ func (m *Manager) IsInstalled(pluginID *PluginID) (bool, *InstalledPlugin, error
 	return true, installed, nil
 }
 
+// IsSatisfied checks if a plugin requirement is met by an installed version.
+// Unlike IsInstalled, this handles version constraints ("^1.0.0", "~1.0.0")
+// and "latest" (any installed version satisfies).
+func (m *Manager) IsSatisfied(pluginID *PluginID) (bool, *InstalledPlugin, error) {
+	manifest, err := m.LoadManifest()
+	if err != nil {
+		return false, nil, err
+	}
+
+	key := pluginID.ManifestKey()
+	installed, exists := manifest.Plugins[key]
+	if !exists {
+		return false, nil, nil
+	}
+
+	if !isVersionSatisfied(pluginID.Version, installed.Version) {
+		return false, nil, nil
+	}
+
+	return true, installed, nil
+}
+
+// GetUnsatisfiedPlugins returns plugins from the list that are not installed
+// or whose installed version does not satisfy the version requirement.
+func (m *Manager) GetUnsatisfiedPlugins(pluginIDs []*PluginID) ([]*PluginID, error) {
+	var unsatisfied []*PluginID
+
+	for _, pluginID := range pluginIDs {
+		satisfied, _, err := m.IsSatisfied(pluginID)
+		if err != nil {
+			return nil, err
+		}
+		if !satisfied {
+			unsatisfied = append(unsatisfied, pluginID)
+		}
+	}
+
+	return unsatisfied, nil
+}
+
+// isVersionSatisfied checks if an installed version satisfies a required version.
+// - "" or "latest": any installed version satisfies.
+// - Exact "1.0.0": exact match required.
+// - Constraint "^1.0.0" or "~1.0.0": uses Constraint.Matches().
+// - Unparseable versions: falls back to exact string comparison.
+func isVersionSatisfied(requiredVersion, installedVersion string) bool {
+	if requiredVersion == "" || requiredVersion == "latest" {
+		return true
+	}
+
+	constraint, err := version.ParseConstraint(requiredVersion)
+	if err != nil {
+		return requiredVersion == installedVersion
+	}
+
+	installed, err := version.Parse(installedVersion)
+	if err != nil {
+		return requiredVersion == installedVersion
+	}
+
+	return constraint.Matches(installed)
+}
+
 func (m *Manager) installPlugin(
 	ctx context.Context,
 	pluginID *PluginID,

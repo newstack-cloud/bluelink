@@ -356,6 +356,199 @@ func (s *ManagerSuite) TestGetMissingPlugins() {
 	s.Equal("gcp", missing[0].Name)
 }
 
+func (s *ManagerSuite) TestIsVersionSatisfied_empty_matches_any() {
+	s.True(isVersionSatisfied("", "1.0.0"))
+	s.True(isVersionSatisfied("", "2.5.3"))
+}
+
+func (s *ManagerSuite) TestIsVersionSatisfied_latest_matches_any() {
+	s.True(isVersionSatisfied("latest", "1.0.0"))
+	s.True(isVersionSatisfied("latest", "99.0.0"))
+}
+
+func (s *ManagerSuite) TestIsVersionSatisfied_exact_match() {
+	s.True(isVersionSatisfied("1.0.0", "1.0.0"))
+	s.False(isVersionSatisfied("1.0.0", "1.0.1"))
+	s.False(isVersionSatisfied("1.0.0", "2.0.0"))
+}
+
+func (s *ManagerSuite) TestIsVersionSatisfied_caret_constraint() {
+	// ^1.0.0 matches >=1.0.0, <2.0.0
+	s.True(isVersionSatisfied("^1.0.0", "1.0.0"))
+	s.True(isVersionSatisfied("^1.0.0", "1.5.0"))
+	s.True(isVersionSatisfied("^1.0.0", "1.99.99"))
+	s.False(isVersionSatisfied("^1.0.0", "2.0.0"))
+	s.False(isVersionSatisfied("^1.0.0", "0.9.0"))
+}
+
+func (s *ManagerSuite) TestIsVersionSatisfied_tilde_constraint() {
+	// ~1.2.0 matches >=1.2.0, <1.3.0
+	s.True(isVersionSatisfied("~1.2.0", "1.2.0"))
+	s.True(isVersionSatisfied("~1.2.0", "1.2.5"))
+	s.False(isVersionSatisfied("~1.2.0", "1.3.0"))
+	s.False(isVersionSatisfied("~1.2.0", "1.1.0"))
+}
+
+func (s *ManagerSuite) TestIsVersionSatisfied_unparseable_fallback() {
+	// When versions can't be parsed as semver, fall back to exact string match
+	s.True(isVersionSatisfied("custom-build", "custom-build"))
+	s.False(isVersionSatisfied("custom-build", "other-build"))
+}
+
+func (s *ManagerSuite) TestIsSatisfied_not_installed() {
+	pluginsDir := filepath.Join(s.tempDir, "plugins")
+	manager := &Manager{pluginsDir: pluginsDir}
+
+	pluginID := &PluginID{
+		RegistryHost: DefaultRegistryHost,
+		Namespace:    "bluelink",
+		Name:         "aws",
+		Version:      "latest",
+	}
+
+	satisfied, plugin, err := manager.IsSatisfied(pluginID)
+	s.NoError(err)
+	s.False(satisfied)
+	s.Nil(plugin)
+}
+
+func (s *ManagerSuite) TestIsSatisfied_latest_matches_installed() {
+	pluginsDir := filepath.Join(s.tempDir, "plugins")
+	manager := &Manager{pluginsDir: pluginsDir}
+
+	manifest := &PluginManifest{
+		Plugins: map[string]*InstalledPlugin{
+			"registry.bluelink.dev/bluelink/aws": {
+				ID:           "bluelink/aws@1.0.0",
+				Version:      "1.0.0",
+				RegistryHost: "registry.bluelink.dev",
+				InstalledAt:  time.Now(),
+			},
+		},
+	}
+	err := manager.SaveManifest(manifest)
+	s.Require().NoError(err)
+
+	pluginID := &PluginID{
+		RegistryHost: DefaultRegistryHost,
+		Namespace:    "bluelink",
+		Name:         "aws",
+		Version:      "latest",
+	}
+
+	satisfied, plugin, err := manager.IsSatisfied(pluginID)
+	s.NoError(err)
+	s.True(satisfied)
+	s.NotNil(plugin)
+	s.Equal("1.0.0", plugin.Version)
+}
+
+func (s *ManagerSuite) TestIsSatisfied_constraint_matches() {
+	pluginsDir := filepath.Join(s.tempDir, "plugins")
+	manager := &Manager{pluginsDir: pluginsDir}
+
+	manifest := &PluginManifest{
+		Plugins: map[string]*InstalledPlugin{
+			"registry.bluelink.dev/bluelink/aws": {
+				ID:           "bluelink/aws@1.5.0",
+				Version:      "1.5.0",
+				RegistryHost: "registry.bluelink.dev",
+				InstalledAt:  time.Now(),
+			},
+		},
+	}
+	err := manager.SaveManifest(manifest)
+	s.Require().NoError(err)
+
+	pluginID := &PluginID{
+		RegistryHost: DefaultRegistryHost,
+		Namespace:    "bluelink",
+		Name:         "aws",
+		Version:      "^1.0.0",
+	}
+
+	satisfied, plugin, err := manager.IsSatisfied(pluginID)
+	s.NoError(err)
+	s.True(satisfied)
+	s.NotNil(plugin)
+	s.Equal("1.5.0", plugin.Version)
+}
+
+func (s *ManagerSuite) TestIsSatisfied_constraint_not_matching() {
+	pluginsDir := filepath.Join(s.tempDir, "plugins")
+	manager := &Manager{pluginsDir: pluginsDir}
+
+	manifest := &PluginManifest{
+		Plugins: map[string]*InstalledPlugin{
+			"registry.bluelink.dev/bluelink/aws": {
+				ID:           "bluelink/aws@2.0.0",
+				Version:      "2.0.0",
+				RegistryHost: "registry.bluelink.dev",
+				InstalledAt:  time.Now(),
+			},
+		},
+	}
+	err := manager.SaveManifest(manifest)
+	s.Require().NoError(err)
+
+	pluginID := &PluginID{
+		RegistryHost: DefaultRegistryHost,
+		Namespace:    "bluelink",
+		Name:         "aws",
+		Version:      "^1.0.0",
+	}
+
+	satisfied, _, err := manager.IsSatisfied(pluginID)
+	s.NoError(err)
+	s.False(satisfied)
+}
+
+func (s *ManagerSuite) TestGetUnsatisfiedPlugins() {
+	pluginsDir := filepath.Join(s.tempDir, "plugins")
+	manager := &Manager{pluginsDir: pluginsDir}
+
+	manifest := &PluginManifest{
+		Plugins: map[string]*InstalledPlugin{
+			"registry.bluelink.dev/bluelink/aws": {
+				ID:           "bluelink/aws@1.5.0",
+				Version:      "1.5.0",
+				RegistryHost: "registry.bluelink.dev",
+				InstalledAt:  time.Now(),
+			},
+		},
+	}
+	err := manager.SaveManifest(manifest)
+	s.Require().NoError(err)
+
+	pluginIDs := []*PluginID{
+		{
+			RegistryHost: DefaultRegistryHost,
+			Namespace:    "bluelink",
+			Name:         "aws",
+			Version:      "^1.0.0", // satisfied by 1.5.0
+		},
+		{
+			RegistryHost: DefaultRegistryHost,
+			Namespace:    "bluelink",
+			Name:         "gcp",
+			Version:      "latest", // not installed
+		},
+		{
+			RegistryHost: DefaultRegistryHost,
+			Namespace:    "bluelink",
+			Name:         "aws",
+			Version:      "^2.0.0", // NOT satisfied by 1.5.0
+		},
+	}
+
+	unsatisfied, err := manager.GetUnsatisfiedPlugins(pluginIDs)
+	s.NoError(err)
+	s.Len(unsatisfied, 2)
+	s.Equal("gcp", unsatisfied[0].Name)
+	s.Equal("aws", unsatisfied[1].Name)
+	s.Equal("^2.0.0", unsatisfied[1].Version)
+}
+
 func (s *ManagerSuite) TestListInstalled() {
 	pluginsDir := filepath.Join(s.tempDir, "plugins")
 

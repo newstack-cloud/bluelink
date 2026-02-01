@@ -30,6 +30,7 @@ func (s *ValidateTUISuite) Test_successful_validation() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		/* headless */ false,
 		os.Stdout,
+		nil,
 	)
 	if err != nil {
 		s.FailNow("failed to create main model: %v", err)
@@ -66,6 +67,7 @@ func (s *ValidateTUISuite) Test_successful_validation_headless() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		/* headless */ true,
 		headlessOutput,
+		nil,
 	)
 	if err != nil {
 		s.FailNow("failed to create main model: %v", err)
@@ -96,6 +98,7 @@ func (s *ValidateTUISuite) Test_validation_failed() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		/* headless */ false,
 		os.Stdout,
+		nil,
 	)
 	if err != nil {
 		s.FailNow("failed to create main model: %v", err)
@@ -138,6 +141,7 @@ func (s *ValidateTUISuite) Test_validation_failed_headless() {
 		stylespkg.NewStyles(lipgloss.NewRenderer(os.Stdout), stylespkg.NewBluelinkPalette()),
 		/* headless */ true,
 		headlessOutput,
+		nil,
 	)
 	if err != nil {
 		s.FailNow("failed to create main model: %v", err)
