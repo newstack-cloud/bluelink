@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.3.0...deploy-engine/v0.4.0) (2026-02-01)
+
+
+### Features
+
+* **deploy-engine:** add call to close manager that kills plugin processes ([4a1cbf6](https://github.com/newstack-cloud/bluelink/commit/4a1cbf60a3f9838c2faaef2b5558afb864e1ab0f))
+
+
+### Dependencies
+
+* **deploy-engine:** bump the go-deps group ([747c369](https://github.com/newstack-cloud/bluelink/commit/747c3694db1c5f765f27400c1b0fe6a247e0399e))
+* **deploy-engine:** update blueprint state lib to version with fix for empty cleanups ([30665ad](https://github.com/newstack-cloud/bluelink/commit/30665ad29d14b38ba93568f4c206f754c3763fdc))
+* **docker:** bump golang in /apps/deploy-engine ([1cc43f5](https://github.com/newstack-cloud/bluelink/commit/1cc43f59a3bd2adbb52c368ae38401561d93e46b))
+
 ## [0.3.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.2.0...deploy-engine/v0.3.0) (2026-01-11)
 
 
