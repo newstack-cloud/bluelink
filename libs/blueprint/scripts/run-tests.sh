@@ -42,24 +42,21 @@ fi
 set -e
 echo "" > coverage.txt
 
+PACKAGES=$(go list ./... | egrep -v '(/(schemapb|testutils))$')
+TEST_FLAGS="-timeout 120000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic"
+
 if [[ -n "$UPDATE_SNAPSHOTS" ]]; then
-  # Exclude generated protobuf code from coverage.
-  UPDATE_SNAPSHOTS=true go test -timeout 120000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(schemapb|testutils))$'`
-
-else
-  # Exclude generated protobuf code from coverage.
-  go test -timeout 120000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(schemapb|testutils))$'`
-fi
-
-if [[ -z "$GITHUB_ACTION" ]]; then
-  # We are on a dev machine so produce html output of coverage
-  # to get a visual to better reveal uncovered lines.
-  go tool cover -html=coverage.txt -o coverage.html
+  export UPDATE_SNAPSHOTS=true
 fi
 
 if [[ -n "$GITHUB_ACTION" ]]; then
-  # We are in a CI environment so run tests again to generate JSON report.
-  # Use tee to both save to file and show output, preserving the exit code with PIPESTATUS.
-  go test -timeout 120000ms -json `go list ./... | egrep -v '(/(schemapb|testutils))$'` 2>&1 | tee report.json
+  # In CI, include -json output in a single test run
+  # to avoid running the full suite twice.
+  go test ${TEST_FLAGS} -json ${PACKAGES} 2>&1 | tee report.json
   test ${PIPESTATUS[0]} -eq 0
+else
+  go test ${TEST_FLAGS} ${PACKAGES}
+  # On a dev machine, produce html output of coverage
+  # to get a visual to better reveal uncovered lines.
+  go tool cover -html=coverage.txt -o coverage.html
 fi
