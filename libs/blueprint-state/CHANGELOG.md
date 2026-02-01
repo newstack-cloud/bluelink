@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.2](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.6.1...blueprint-state/v0.6.2) (2026-02-01)
+
+
+### Dependencies
+
+* **blueprint-state:** bump github.com/jackc/pgx/v5 ([81334b7](https://github.com/newstack-cloud/bluelink/commit/81334b762c7b3694b4888c8d6e560039f80ccbfe))
+
 ## [0.6.1](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.6.0...blueprint-state/v0.6.1) (2026-01-12)
 
 
