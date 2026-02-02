@@ -14,11 +14,11 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/lestrrat-go/jwx v1.2.31
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.38.0
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.41.0
 	github.com/newstack-cloud/bluelink/libs/blueprint-resolvers v0.1.2
 	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.6.1
-	github.com/newstack-cloud/bluelink/libs/common v0.3.2
-	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.2.0
+	github.com/newstack-cloud/bluelink/libs/common v0.4.0
+	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.4.0
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/spf13/afero v1.15.0
 	github.com/spf13/viper v1.21.0
@@ -130,7 +130,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20251111163417-95abcf5c77ba // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251124214823-79d6a2a48846 // indirect
 	google.golang.org/grpc v1.77.0 // indirect
-	google.golang.org/protobuf v1.36.10 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
