@@ -6,9 +6,9 @@ toolchain go1.24.4
 
 require (
 	github.com/gorilla/mux v1.8.1
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.38.0
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.41.0
 	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.6.1
-	github.com/newstack-cloud/bluelink/libs/common v0.3.2
+	github.com/newstack-cloud/bluelink/libs/common v0.4.0
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.64.0
