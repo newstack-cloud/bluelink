@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.3.0...deploy-engine-client/v0.3.1) (2026-02-01)
+
+
+### Dependencies
+
+* **deploy-engine-client:** bump the go-deps group ([6562aae](https://github.com/newstack-cloud/bluelink/commit/6562aae6ccc0d1acd28165df82658758fb4865b4))
+
 ## [0.3.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.2.0...deploy-engine-client/v0.3.0) (2026-01-11)
 
 
