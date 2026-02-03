@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.4.0...plugin-framework/v0.4.1) (2026-02-01)
+
+
+### Dependencies
+
+* **plugin-framework:** bump the go-deps group across 1 directory with 2 updates ([39abecc](https://github.com/newstack-cloud/bluelink/commit/39abeccf204992e7c7e711787d9c5e998417c644))
+
 ## [0.4.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.3.0...plugin-framework/v0.4.0) (2026-01-27)
 
 
