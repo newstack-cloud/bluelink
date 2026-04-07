@@ -39,7 +39,11 @@ func TestMain(m *testing.M) {
 	// Build with coverage instrumentation (Go 1.20+)
 	// Use atomic mode to match unit test coverage for merging
 	// Limit coverage to CLI packages only (not dependencies)
-	cmd := exec.Command("go", "build", "-cover", "-covermode=atomic", "-coverpkg=github.com/newstack-cloud/bluelink/apps/cli/...", "-o", binaryPath, "../cmd")
+	goBin, err := exec.LookPath("go")
+	if err != nil {
+		panic("go binary not found in PATH: " + err.Error())
+	}
+	cmd := exec.Command(goBin, "build", "-cover", "-covermode=atomic", "-coverpkg=github.com/newstack-cloud/bluelink/apps/cli/...", "-o", binaryPath, "../cmd")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	if err := cmd.Run(); err != nil {
