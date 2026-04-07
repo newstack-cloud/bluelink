@@ -7,11 +7,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/preflightui"
-	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/validateui"
+	bluelinkpreflight "github.com/newstack-cloud/bluelink/apps/cli/internal/preflight"
 	"github.com/newstack-cloud/deploy-cli-sdk/config"
 	"github.com/newstack-cloud/deploy-cli-sdk/engine"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
+	"github.com/newstack-cloud/deploy-cli-sdk/tui/validateui"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -55,27 +55,24 @@ func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider)
 			headless := !inTerminal
 
 			skipCheck, _ := confProvider.GetBool("skipPluginCheck")
-			var preflight *preflightui.PreflightModel
+			var preflightModel tea.Model
 			if !skipCheck {
-				preflight = preflightui.NewPreflightModel(preflightui.PreflightOptions{
-					ConfProvider:   confProvider,
-					CommandName:    "validate",
-					Styles:         styles,
-					Headless:       headless,
-					HeadlessWriter: os.Stdout,
-				})
+				factory := &bluelinkpreflight.BluelinkPreflightFactory{}
+				preflightModel = factory.CreatePreflight(
+					confProvider, "validate", styles, headless, os.Stdout, false,
+				)
 			}
 
-			app, err := validateui.NewValidateApp(
-				deployEngine,
-				logger,
-				blueprintFile,
-				isDefault,
-				styles,
-				headless,
-				os.Stdout,
-				preflight,
-			)
+			app, err := validateui.NewValidateApp(validateui.ValidateAppConfig{
+				Engine:                 deployEngine,
+				Logger:                 logger,
+				BlueprintFile:          blueprintFile,
+				IsDefaultBlueprintFile: isDefault,
+				Styles:                 styles,
+				Headless:               headless,
+				HeadlessWriter:         os.Stdout,
+				Preflight:              preflightModel,
+			})
 			if err != nil {
 				return err
 			}

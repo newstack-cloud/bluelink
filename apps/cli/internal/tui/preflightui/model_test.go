@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/plugininstallui"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
+	"github.com/newstack-cloud/deploy-cli-sdk/tui/preflight"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -283,7 +284,7 @@ func (s *PreflightSuite) Test_Update_install_complete_headless_includes_command_
 	_, _ = model.Update(plugininstallui.InstallCompleteMsg{
 		InstalledCount: 1,
 	})
-	s.Contains(buf.String(), "Re-run `bluelink deploy`")
+	s.Contains(buf.String(), "Re-run the `deploy` command")
 }
 
 func (s *PreflightSuite) Test_key_q_in_complete_stage_produces_installed_msg() {
@@ -318,7 +319,7 @@ func (s *PreflightSuite) Test_key_q_in_checking_stage_does_not_quit() {
 // --- RenderInstallSummary tests ---
 
 func (s *PreflightSuite) Test_RenderInstallSummary_shows_plugin_list() {
-	output := RenderInstallSummary(
+	output := preflight.RenderInstallSummary(
 		s.styles,
 		[]string{"bluelink/aws-provider", "bluelink/gcp-provider"},
 		2,
@@ -329,11 +330,11 @@ func (s *PreflightSuite) Test_RenderInstallSummary_shows_plugin_list() {
 	s.Contains(output, "bluelink/gcp-provider")
 	s.Contains(output, "2 missing plugin(s) installed")
 	s.Contains(output, "bluelink-manager restart")
-	s.Contains(output, "Re-run `bluelink stage`")
+	s.Contains(output, "Re-run the `stage` command")
 }
 
 func (s *PreflightSuite) Test_RenderInstallSummary_without_command_name() {
-	output := RenderInstallSummary(
+	output := preflight.RenderInstallSummary(
 		s.styles,
 		[]string{"bluelink/aws-provider"},
 		1,
@@ -346,7 +347,7 @@ func (s *PreflightSuite) Test_RenderInstallSummary_without_command_name() {
 }
 
 func (s *PreflightSuite) Test_RenderInstallSummary_shows_context_message() {
-	output := RenderInstallSummary(
+	output := preflight.RenderInstallSummary(
 		s.styles,
 		nil,
 		0,

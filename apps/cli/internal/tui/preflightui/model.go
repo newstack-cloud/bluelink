@@ -12,6 +12,7 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/tui/plugininstallui"
 	"github.com/newstack-cloud/deploy-cli-sdk/config"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
+	"github.com/newstack-cloud/deploy-cli-sdk/tui/preflight"
 )
 
 type preflightStage int
@@ -23,21 +24,11 @@ const (
 	preflightError
 )
 
-// PreflightSatisfiedMsg indicates all plugins are present (or check was skipped).
-type PreflightSatisfiedMsg struct{}
-
-// PreflightInstalledMsg indicates plugins were installed and the engine needs a restart.
-type PreflightInstalledMsg struct {
-	CommandName         string
-	RestartInstructions string
-	InstalledPlugins    []string
-	InstalledCount      int
-}
-
-// PreflightErrorMsg indicates the preflight check failed.
-type PreflightErrorMsg struct {
-	Err error
-}
+// Type aliases so existing references (tests, validate command) continue to compile
+// while the actual message types come from the SDK's preflight package.
+type PreflightSatisfiedMsg = preflight.SatisfiedMsg
+type PreflightInstalledMsg = preflight.InstalledMsg
+type PreflightErrorMsg = preflight.ErrorMsg
 
 // PreflightOptions contains options for creating a new preflight model.
 type PreflightOptions struct {
@@ -110,13 +101,13 @@ func (m PreflightModel) Update(msg tea.Msg) (PreflightModel, tea.Cmd) {
 	case plugininstallui.InstallCompleteMsg:
 		return m.handleInstallComplete(msg)
 
-	case PreflightSatisfiedMsg:
+	case preflight.SatisfiedMsg:
 		return m, nil
 
-	case PreflightInstalledMsg:
+	case preflight.InstalledMsg:
 		return m, nil
 
-	case PreflightErrorMsg:
+	case preflight.ErrorMsg:
 		m.stage = preflightError
 		m.Error = msg.Err
 		return m, nil
@@ -184,7 +175,7 @@ func (m *PreflightModel) handleCheckResult(msg preflightCheckResultMsg) (Preflig
 		m.stage = preflightError
 		m.Error = fmt.Errorf("failed to create plugin installer: %w", err)
 		return *m, func() tea.Msg {
-			return PreflightErrorMsg{Err: m.Error}
+			return preflight.ErrorMsg{Err: m.Error}
 		}
 	}
 
@@ -199,7 +190,7 @@ func (m *PreflightModel) handleInstallComplete(msg plugininstallui.InstallComple
 		m.stage = preflightError
 		m.Error = msg.Error
 		return *m, func() tea.Msg {
-			return PreflightErrorMsg{Err: msg.Error}
+			return preflight.ErrorMsg{Err: msg.Error}
 		}
 	}
 
@@ -217,7 +208,7 @@ func (m *PreflightModel) handleInstallComplete(msg plugininstallui.InstallComple
 		fmt.Fprintf(m.headlessWriter, "\n%s\n", m.restartInstructions)
 		if m.commandName != "" {
 			fmt.Fprintf(m.headlessWriter,
-				"Re-run `bluelink %s` after restarting the engine.\n", m.commandName)
+				"Re-run the `%s` command after restarting the engine.\n", m.commandName)
 		}
 		return *m, m.preflightInstalledCmd()
 	}
@@ -233,7 +224,7 @@ func (m PreflightModel) preflightInstalledCmd() tea.Cmd {
 	for i, p := range m.allToInstall {
 		pluginNames[i] = p.String()
 	}
-	msg := PreflightInstalledMsg{
+	msg := preflight.InstalledMsg{
 		CommandName:         m.commandName,
 		RestartInstructions: m.restartInstructions,
 		InstalledPlugins:    pluginNames,

@@ -105,7 +105,7 @@ func NewInputDirectoryModel(
 					return nil
 				}),
 		),
-	).WithTheme(stylespkg.NewBluelinkHuhTheme())
+	).WithTheme(stylespkg.NewHuhTheme(stylespkg.NewBluelinkPalette()))
 
 	return model
 }

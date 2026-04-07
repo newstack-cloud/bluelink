@@ -6,7 +6,10 @@ import (
 	"runtime"
 
 	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
+	bluelinkpreflight "github.com/newstack-cloud/bluelink/apps/cli/internal/preflight"
+	sdkcommands "github.com/newstack-cloud/deploy-cli-sdk/commands"
 	"github.com/newstack-cloud/deploy-cli-sdk/config"
+	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
 	"github.com/spf13/cobra"
 )
 
@@ -112,15 +115,25 @@ This CLI validates, stages changes for, and deploys blueprints.`,
 	confProvider.BindPFlag("skipPluginCheck", rootCmd.PersistentFlags().Lookup("skip-plugin-check"))
 	confProvider.BindEnvVar("skipPluginCheck", "BLUELINK_CLI_SKIP_PLUGIN_CHECK")
 
+	cliConfig := &sdkcommands.CLIConfig{
+		CLIName:              "bluelink",
+		EnvVarPrefix:         "BLUELINK_CLI",
+		DefaultBlueprintFile: "project.blueprint.yaml",
+		DefaultDeployConfig:  "bluelink.deploy.json",
+		DefaultConfigFile:    "bluelink.config.toml",
+		Palette:              stylespkg.NewBluelinkPalette(),
+		PreflightFactory:     &bluelinkpreflight.BluelinkPreflightFactory{},
+	}
+
 	setupVersionCommand(rootCmd)
 	setupInitCommand(rootCmd, confProvider)
 	setupValidateCommand(rootCmd, confProvider)
-	setupStageCommand(rootCmd, confProvider)
-	setupDeployCommand(rootCmd, confProvider)
-	setupDestroyCommand(rootCmd, confProvider)
-	setupInstancesCommand(rootCmd, confProvider)
-	setupStateCommand(rootCmd, confProvider)
-	setupCleanupCommand(rootCmd, confProvider)
+	sdkcommands.SetupStageCommand(rootCmd, confProvider, cliConfig)
+	sdkcommands.SetupDeployCommand(rootCmd, confProvider, cliConfig)
+	sdkcommands.SetupDestroyCommand(rootCmd, confProvider, cliConfig)
+	sdkcommands.SetupInstancesCommand(rootCmd, confProvider, cliConfig)
+	sdkcommands.SetupStateCommand(rootCmd, confProvider, cliConfig)
+	sdkcommands.SetupCleanupCommand(rootCmd, confProvider, cliConfig)
 	setupPluginsCommand(rootCmd, confProvider)
 	setupTemplatesCommand(rootCmd, confProvider)
 

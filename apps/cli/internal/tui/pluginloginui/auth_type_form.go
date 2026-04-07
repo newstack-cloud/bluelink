@@ -76,7 +76,7 @@ func NewAuthTypeFormModel(
 				Options(options...).
 				Value(&model.selectedAuthType),
 		),
-	).WithTheme(stylespkg.NewBluelinkHuhTheme())
+	).WithTheme(stylespkg.NewHuhTheme(stylespkg.NewBluelinkPalette()))
 
 	return model
 }

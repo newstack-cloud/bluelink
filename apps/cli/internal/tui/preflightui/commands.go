@@ -10,6 +10,7 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/plugins"
 	"github.com/newstack-cloud/bluelink/apps/cli/internal/registries"
 	"github.com/newstack-cloud/deploy-cli-sdk/config"
+	"github.com/newstack-cloud/deploy-cli-sdk/tui/preflight"
 )
 
 // preflightCheckResultMsg is the internal result of checking plugin satisfaction.
@@ -22,29 +23,29 @@ type preflightCheckResultMsg struct {
 func checkPluginsCmd(confProvider *config.Provider) tea.Cmd {
 	return func() tea.Msg {
 		if !isLocalEngine(confProvider) {
-			return PreflightSatisfiedMsg{}
+			return preflight.SatisfiedMsg{}
 		}
 
 		deployConfigFile, _ := confProvider.GetString("deployConfigFile")
 		pluginIDs, err := loadDeployConfigPlugins(deployConfigFile)
 		if err != nil || len(pluginIDs) == 0 {
-			return PreflightSatisfiedMsg{}
+			return preflight.SatisfiedMsg{}
 		}
 
 		manager := createPluginManager()
 
 		unsatisfied, err := manager.GetUnsatisfiedPlugins(pluginIDs)
 		if err != nil {
-			return PreflightErrorMsg{Err: err}
+			return preflight.ErrorMsg{Err: err}
 		}
 
 		if len(unsatisfied) == 0 {
-			return PreflightSatisfiedMsg{}
+			return preflight.SatisfiedMsg{}
 		}
 
 		allToInstall, err := manager.ResolveDependencies(context.TODO(), unsatisfied)
 		if err != nil {
-			return PreflightErrorMsg{Err: err}
+			return preflight.ErrorMsg{Err: err}
 		}
 
 		return preflightCheckResultMsg{

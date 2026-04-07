@@ -69,7 +69,7 @@ func NewAPIKeyFormModel(registryHost string, styles *stylespkg.Styles) *APIKeyFo
 					return nil
 				}),
 		),
-	).WithTheme(stylespkg.NewBluelinkHuhTheme())
+	).WithTheme(stylespkg.NewHuhTheme(stylespkg.NewBluelinkPalette()))
 
 	return model
 }

@@ -83,7 +83,7 @@ func NewOAuth2ClientCredsFormModel(registryHost string, styles *stylespkg.Styles
 					return nil
 				}),
 		),
-	).WithTheme(stylespkg.NewBluelinkHuhTheme())
+	).WithTheme(stylespkg.NewHuhTheme(stylespkg.NewBluelinkPalette()))
 
 	return model
 }

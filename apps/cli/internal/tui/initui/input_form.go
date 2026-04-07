@@ -143,7 +143,7 @@ func NewInputFormModel(
 				Negative("No, use git").
 				Value(&model.noGit),
 		),
-	).WithTheme(stylespkg.NewBluelinkHuhTheme())
+	).WithTheme(stylespkg.NewHuhTheme(stylespkg.NewBluelinkPalette()))
 
 	return model
 }

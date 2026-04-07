@@ -30,6 +30,8 @@ report.json
 # in non-interactive mode.
 test-*.sh
 
+# Keep test env file used for automated tests
+# against a local postgres DB for stateio.
 !.env.test
 
 # Test blueprint files used when testing the CLI during development.
@@ -54,3 +56,7 @@ e2e/testregistry/testregistry
 
 # Binary for plugin registry test server
 tools/plugin-registry-test-server/plugin-registry-test-server
+
+# Test files for manually testing the CLI during development.
+bluelink.config.toml
+bluelink.deploy.jsonc
