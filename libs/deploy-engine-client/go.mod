@@ -1,18 +1,16 @@
 module github.com/newstack-cloud/bluelink/libs/deploy-engine-client
 
-go 1.24.0
-
-toolchain go1.24.4
+go 1.25.0
 
 require (
 	github.com/gorilla/mux v1.8.1
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.38.0
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.41.0
 	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.6.1
-	github.com/newstack-cloud/bluelink/libs/common v0.3.2
+	github.com/newstack-cloud/bluelink/libs/common v0.4.0
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.64.0
-	golang.org/x/oauth2 v0.34.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
+	golang.org/x/oauth2 v0.36.0
 )
 
 require (
@@ -27,9 +25,9 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/tailscale/hujson v0.0.0-20250226034555-ec1d1c113d33 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel v1.39.0 // indirect
-	go.opentelemetry.io/otel/metric v1.39.0 // indirect
-	go.opentelemetry.io/otel/trace v1.39.0 // indirect
+	go.opentelemetry.io/otel v1.43.0 // indirect
+	go.opentelemetry.io/otel/metric v1.43.0 // indirect
+	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	go.uber.org/zap v1.27.1 // indirect
 	golang.org/x/net v0.0.0-20191116160921-f9c825593386 // indirect
