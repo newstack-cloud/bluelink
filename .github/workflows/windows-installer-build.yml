@@ -7,12 +7,25 @@ on:
         description: "Bluelink Manager version (e.g., v0.1.0)"
         required: true
         type: string
+      profile:
+        description: "Product profile to build"
+        required: true
+        type: choice
+        options:
+          - bluelink
+          - celerity
+        default: bluelink
   workflow_call:
     inputs:
       manager_version:
         description: "Bluelink Manager version (e.g., v0.1.0)"
         required: true
         type: string
+      profile:
+        description: "Product profile to build (bluelink or celerity)"
+        required: false
+        type: string
+        default: bluelink
     secrets:
       AZURE_TENANT_ID:
         required: false
@@ -32,8 +45,12 @@ permissions:
 
 jobs:
   build-msi:
-    name: Build MSI Installer
+    name: Build ${{ inputs.profile == 'celerity' && 'Celerity' || 'Bluelink' }} MSI
     runs-on: windows-latest
+    env:
+      PROFILE: ${{ inputs.profile || 'bluelink' }}
+      PRODUCT_NAME: ${{ inputs.profile == 'celerity' && 'Celerity' || 'Bluelink' }}
+      RELEASE_TAG: ${{ inputs.profile == 'celerity' && 'windows-installer-celerity-latest' || 'windows-installer-latest' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,7 +60,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.24"
+          go-version: "1.26"
           cache-dependency-path: tools/bluelink-manager/go.sum
 
       - name: Derive installer version
@@ -85,10 +102,11 @@ jobs:
           wix build tools/windows-installer/Package.wxs `
             -d ProductVersion=${{ steps.version.outputs.installer_version }} `
             -d BinariesDir=${{ github.workspace }}\binaries `
+            -d Profile=${{ env.PROFILE }} `
             -arch x64 `
             -ext WixToolset.UI.wixext `
             -bindpath tools/windows-installer `
-            -out Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi
+            -out ${{ env.PRODUCT_NAME }}-${{ steps.version.outputs.installer_version }}-x64.msi
         shell: pwsh
 
       - name: Sign MSI with Azure Trusted Signing
@@ -108,18 +126,18 @@ jobs:
 
       - name: Generate checksum
         run: |
-          $hash = Get-FileHash -Algorithm SHA256 Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi
-          "$($hash.Hash.ToLower())  Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi" | Out-File -Encoding utf8 Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi.sha256
+          $hash = Get-FileHash -Algorithm SHA256 ${{ env.PRODUCT_NAME }}-${{ steps.version.outputs.installer_version }}-x64.msi
+          "$($hash.Hash.ToLower())  ${{ env.PRODUCT_NAME }}-${{ steps.version.outputs.installer_version }}-x64.msi" | Out-File -Encoding utf8 ${{ env.PRODUCT_NAME }}-${{ steps.version.outputs.installer_version }}-x64.msi.sha256
         shell: pwsh
 
       - name: Delete old release assets
         run: |
-          # Get all assets from the windows-installer-latest release and delete them
-          $assets = gh release view windows-installer-latest --json assets --jq '.assets[].name' 2>$null
+          # Get all assets from the release and delete them
+          $assets = gh release view ${{ env.RELEASE_TAG }} --json assets --jq '.assets[].name' 2>$null
           if ($LASTEXITCODE -eq 0 -and $assets) {
             foreach ($asset in $assets) {
               Write-Host "Deleting old asset: $asset"
-              gh release delete-asset windows-installer-latest $asset --yes
+              gh release delete-asset ${{ env.RELEASE_TAG }} $asset --yes
             }
           } else {
             Write-Host "No existing release or assets found"
@@ -131,39 +149,39 @@ jobs:
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: windows-installer-latest
-          name: Bluelink Windows Installer
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.PRODUCT_NAME }} Windows Installer
           draft: false
           prerelease: false
           make_latest: false
           files: |
-            Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi
-            Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi.sha256
+            ${{ env.PRODUCT_NAME }}-${{ steps.version.outputs.installer_version }}-x64.msi
+            ${{ env.PRODUCT_NAME }}-${{ steps.version.outputs.installer_version }}-x64.msi.sha256
           body: |
-            ## Bluelink Windows Installer
+            ## ${{ env.PRODUCT_NAME }} Windows Installer
 
             **Version:** ${{ steps.version.outputs.installer_version }}
             **Manager Version:** ${{ inputs.manager_version }}
 
-            This installer sets up Bluelink on Windows. It installs the Bluelink Manager and automatically downloads and configures all Bluelink components.
+            This installer sets up ${{ env.PRODUCT_NAME }} on Windows. It installs the Bluelink Manager and automatically downloads and configures all ${{ env.PRODUCT_NAME }} components.
 
             ### Installation
 
-            1. Download `Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi`
+            1. Download `${{ env.PRODUCT_NAME }}-${{ steps.version.outputs.installer_version }}-x64.msi`
             2. Run the installer (no Administrator privileges required)
             3. Wait for the installation to complete (downloads ~100MB of components)
-            4. Open a new terminal and run: `bluelink --help`
+            4. Open a new terminal and run: `${{ env.PROFILE }} --help`
 
             ### What Gets Installed
 
-            - **Bluelink CLI** - Command-line interface for infrastructure management
+            - **${{ env.PRODUCT_NAME }} CLI** - Command-line interface
             - **Deploy Engine** - Background service for deployments (auto-starts)
             - **Blueprint Language Server** - IDE support for .blueprint.(yaml|yml|jsonc) files
-            - **Bluelink Manager** - Tool for managing and updating Bluelink
+            - **Bluelink Manager** - Tool for managing and updating components
 
             All binaries are installed to `%LOCALAPPDATA%\NewStack\Bluelink\bin\`
 
-            ### Managing Bluelink
+            ### Managing ${{ env.PRODUCT_NAME }}
 
             ```powershell
             # Check installation status
@@ -177,8 +195,8 @@ jobs:
             bluelink-manager stop
             bluelink-manager restart
 
-            # Uninstall components (keeps config)
-            bluelink-manager uninstall
+            # Uninstall ${{ env.PRODUCT_NAME }} components (keeps config)
+            bluelink-manager uninstall --profile ${{ env.PROFILE }}
 
             # Uninstall everything including config
             bluelink-manager uninstall --all
@@ -186,14 +204,14 @@ jobs:
 
             ### Uninstalling
 
-            1. Run `bluelink-manager uninstall --all` to remove all Bluelink components
+            1. Run `bluelink-manager uninstall --profile ${{ env.PROFILE }}` to remove ${{ env.PRODUCT_NAME }} components
             2. Open **Settings** > **Apps** > **Installed apps**
-            3. Search for "Bluelink" and uninstall
+            3. Search for "${{ env.PRODUCT_NAME }}" and uninstall
 
             ### Verify Download
 
             ```powershell
-            (Get-FileHash Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi -Algorithm SHA256).Hash.ToLower()
+            (Get-FileHash ${{ env.PRODUCT_NAME }}-${{ steps.version.outputs.installer_version }}-x64.msi -Algorithm SHA256).Hash.ToLower()
             ```
 
-            Compare with the checksum in `Bluelink-${{ steps.version.outputs.installer_version }}-x64.msi.sha256`
+            Compare with the checksum in `${{ env.PRODUCT_NAME }}-${{ steps.version.outputs.installer_version }}-x64.msi.sha256`

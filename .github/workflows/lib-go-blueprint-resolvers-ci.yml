@@ -30,7 +30,7 @@ jobs:
         fetch-depth: 0
     - uses: actions/setup-go@v6
       with:
-        go-version: '1.24'
+        go-version: '1.26'
 
     - name: Install LocalStack CLIs
       uses: LocalStack/setup-localstack@v0.2.4

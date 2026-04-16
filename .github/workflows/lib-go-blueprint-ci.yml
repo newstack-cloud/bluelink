@@ -34,7 +34,7 @@ jobs:
         fetch-depth: 0
     - uses: actions/setup-go@v6
       with:
-        go-version: '1.24'
+        go-version: '1.26'
         cache-dependency-path: libs/blueprint/go.sum
 
     # Install global Go dependencies
