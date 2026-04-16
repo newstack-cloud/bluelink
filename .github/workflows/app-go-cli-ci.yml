@@ -1,4 +1,4 @@
-name: Bluelink CLI
+name: Bluelink CLI CI
 
 # Triggers on push or pull request to main branch
 # Runs unit and integration tests without coverage reporting to Sonar
