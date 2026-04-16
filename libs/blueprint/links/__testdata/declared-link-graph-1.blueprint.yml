@@ -1,0 +1,113 @@
+version: 2021-12-18
+transform:
+  - celerity-2026-04-01
+resources:
+  # Abstract resource acting as a selector via multiple labels.
+  # Used to exercise classification of abstract resources, fan-out
+  # to several candidates, and the selector-key de-duplication path
+  # where the same (source, target) pair is reached via more than one
+  # selector key (ordersApi -> ordersDatastore matches both app:orders
+  # and tier:persistence).
+  ordersApi:
+    type: "celerity/handler"
+    metadata:
+      displayName: Orders API Handler
+      # Validates self-referencing selectors are ignored
+      # (ordersApi has app:orders, but should not match itself).
+      labels:
+        app: orders
+    linkSelector:
+      byLabel:
+        app: orders
+        tier: persistence
+    spec:
+      handler: handlers.OrdersApi
+
+  # Abstract resource that is only a target: matched by ordersApi via
+  # two distinct labels (app:orders and tier:persistence), which should
+  # collapse into a single edge with two selector keys.
+  ordersDatastore:
+    type: "celerity/datastore"
+    metadata:
+      displayName: Orders Datastore
+      labels:
+        app: orders
+        tier: persistence
+    spec:
+      name: orders
+
+  # Abstract resource that is BOTH a candidate (for ordersApi via
+  # app:orders) and a selector (matches orderWorker via worker:orders).
+  # Exercises a node having both incoming and outgoing edges.
+  ordersQueue:
+    type: "celerity/queue"
+    metadata:
+      displayName: Orders Queue
+      labels:
+        app: orders
+    linkSelector:
+      byLabel:
+        worker: orders
+    spec:
+      name: orders-queue
+
+  # Abstract resource that is matched by two different sources
+  # (ordersApi via app:orders and ordersQueue via worker:orders).
+  # Exercises multiple incoming edges into a single target.
+  orderWorker:
+    type: "celerity/handler"
+    metadata:
+      displayName: Order Worker Handler
+      labels:
+        app: orders
+        worker: orders
+    spec:
+      handler: handlers.OrderWorker
+
+  # Concrete resource target. Exercises the concrete classification
+  # path and an abstract -> concrete edge (ordersApi -> emailQueue).
+  emailQueue:
+    type: "aws/sqs/queue"
+    metadata:
+      displayName: Email Queue
+      labels:
+        app: orders
+    spec:
+      queueName: email-queue
+
+  # Concrete resource target matched only through tier:persistence,
+  # giving ordersApi -> auditTable a single selector key while
+  # ordersApi -> ordersDatastore has two.
+  auditTable:
+    type: "aws/dynamodb/table"
+    metadata:
+      displayName: Audit Table
+      labels:
+        tier: persistence
+    spec:
+      tableName: audit
+
+  # Selector with no matching candidates: exercises the path where a
+  # resource is added to the graph via a selector-only group and ends
+  # up with zero outgoing and zero incoming edges.
+  orphanHandler:
+    type: "aws/lambda/function"
+    metadata:
+      displayName: Orphan Handler
+    linkSelector:
+      byLabel:
+        stack: legacy
+    spec:
+      functionName: orphan-handler
+
+  # Candidate-only resource (labelled but never selected). Exercises
+  # the path where a group has candidates but no selectors, and
+  # therefore the resource is NOT added to the graph.
+  unusedTable:
+    type: "aws/dynamodb/table"
+    metadata:
+      displayName: Unused Table
+      labels:
+        legacy: "true"
+    spec:
+      tableName: unused

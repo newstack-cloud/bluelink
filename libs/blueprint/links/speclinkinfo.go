@@ -130,7 +130,7 @@ func (l *defaultSpecLinkInfo) buildChainLinkNodes(
 		}
 	}
 
-	standaloneResources := l.extractStandaloneResources(groupedBySelector)
+	standaloneResources := l.extractStandaloneResources()
 	for _, standaloneResource := range standaloneResources {
 		standaloneChainLinkNode := &ChainLinkNode{
 			ResourceName: standaloneResource.Name,
@@ -178,9 +178,7 @@ func (l *defaultSpecLinkInfo) buildChainLinkNodes(
 	return nil
 }
 
-func (l *defaultSpecLinkInfo) extractStandaloneResources(
-	resourcesGroupedBySelectors map[string]*SelectGroup,
-) []*ResourceWithNameAndSelectors {
+func (l *defaultSpecLinkInfo) extractStandaloneResources() []*ResourceWithNameAndSelectors {
 	standaloneResources := []*ResourceWithNameAndSelectors{}
 	resourceNamesWithLinks := l.collectResourceNamesWithLinks()
 	resources := map[string]*schema.Resource{}

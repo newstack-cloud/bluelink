@@ -19,6 +19,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/speccore"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/subengine"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
@@ -132,26 +133,6 @@ type loadBlueprintInfo struct {
 	preloadedSchema *schema.Blueprint
 }
 
-// Stores the full blueprint schema and direct access to the
-// mapping of resource names to their schemas for convenience.
-// This is structure of the spec encapsulated by the blueprint container.
-type internalBlueprintSpec struct {
-	resourceSchemas map[string]*schema.Resource
-	schema          *schema.Blueprint
-}
-
-func (s *internalBlueprintSpec) ResourceSchema(resourceName string) *schema.Resource {
-	resourceSchema, ok := s.resourceSchemas[resourceName]
-	if !ok {
-		return nil
-	}
-	return resourceSchema
-}
-
-func (s *internalBlueprintSpec) Schema() *schema.Blueprint {
-	return s.schema
-}
-
 // DependenciesOverrider is a function that customises the dependencies
 // used to instantiate a blueprint container on each call to load a blueprint.
 type DependenciesOverrider func(
@@ -243,7 +224,6 @@ func WithLoaderTransformSpec(transformSpec bool) LoaderOption {
 		loader.transformSpec = transformSpec
 	}
 }
-
 
 // WithLoaderClock sets the clock to be used by the loader.
 //
@@ -755,7 +735,7 @@ func (l *defaultLoader) buildPartialBlueprintContainerDependencies(
 
 func (l *defaultLoader) buildFullBlueprintContainerDependencies(
 	refChainCollector refgraph.RefChainCollector,
-	blueprintSpec *internalBlueprintSpec,
+	blueprintSpec speccore.BlueprintSpec,
 	linkInfo links.SpecLinkInfo,
 	params bpcore.BlueprintParams,
 ) *BlueprintContainerDependencies {
@@ -892,13 +872,13 @@ func (l *defaultLoader) loadSpec(
 	loader schema.Loader,
 	formatLoader func(string) (schema.SpecFormat, error),
 	refChainCollector refgraph.RefChainCollector,
-) (*internalBlueprintSpec, []*bpcore.Diagnostic, error) {
+) (speccore.BlueprintSpec, []*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 
 	l.logger.Info("Loading blueprint spec")
 	blueprintSchema, err := loadBlueprintSpec(loadInfo, formatLoader, loader)
 	if err != nil {
-		return &internalBlueprintSpec{}, diagnostics, err
+		return speccore.BlueprintSpecFromSchema(nil), diagnostics, err
 	}
 
 	l.logger.Info("Validating blueprint top-level properties")
@@ -985,10 +965,7 @@ func (l *defaultLoader) loadSpec(
 	transformers, transformDiagnostics, err := l.validateAndApplyTransforms(ctx, blueprintSchema)
 	diagnostics = append(diagnostics, transformDiagnostics...)
 	if err != nil {
-		return &internalBlueprintSpec{
-			resourceSchemas: getResourcesFromBlueprint(blueprintSchema),
-			schema:          blueprintSchema,
-		}, diagnostics, err
+		return speccore.BlueprintSpecFromSchema(blueprintSchema), diagnostics, err
 	}
 
 	if l.validateAfterTransform && len(transformers) > 0 {
@@ -1005,16 +982,12 @@ func (l *defaultLoader) loadSpec(
 	}
 
 	if len(validationErrors) > 0 {
-		return &internalBlueprintSpec{
-			resourceSchemas: getResourcesFromBlueprint(blueprintSchema),
-			schema:          blueprintSchema,
-		}, diagnostics, validation.ErrMultipleValidationErrors(validationErrors)
+		return speccore.BlueprintSpecFromSchema(
+			blueprintSchema,
+		), diagnostics, validation.ErrMultipleValidationErrors(validationErrors)
 	}
 
-	return &internalBlueprintSpec{
-		resourceSchemas: getResourcesFromBlueprint(blueprintSchema),
-		schema:          blueprintSchema,
-	}, diagnostics, nil
+	return speccore.BlueprintSpecFromSchema(blueprintSchema), diagnostics, nil
 }
 
 func (l *defaultLoader) validateAndApplyTransforms(
@@ -1641,15 +1614,6 @@ func getSchemaFromContainer(
 		}
 	}
 	return schema
-}
-
-func getResourcesFromBlueprint(
-	blueprintSchema *schema.Blueprint,
-) map[string]*schema.Resource {
-	if blueprintSchema.Resources == nil {
-		return map[string]*schema.Resource{}
-	}
-	return blueprintSchema.Resources.Values
 }
 
 func getStateContainerLinks(

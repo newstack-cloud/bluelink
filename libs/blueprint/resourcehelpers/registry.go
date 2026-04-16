@@ -42,6 +42,9 @@ type Registry interface {
 	// ListResourceTypes returns a list of all resource types available in the registry.
 	ListResourceTypes(ctx context.Context) ([]string, error)
 
+	// IsAbstractResourceType checks if a resource type is an abstract resource type defined in a transformer plugin.
+	IsAbstractResourceType(ctx context.Context, resourceType string) (bool, error)
+
 	// CustomValidate allows for custom validation of a resource of a given type.
 	CustomValidate(
 		ctx context.Context,
@@ -371,6 +374,13 @@ func (r *registryFromProviders) hasAbstractResourceType(ctx context.Context, res
 		return false, err
 	}
 	return abstractResourceImpl != nil, nil
+}
+
+func (r *registryFromProviders) IsAbstractResourceType(
+	ctx context.Context,
+	resourceType string,
+) (bool, error) {
+	return r.hasAbstractResourceType(ctx, resourceType)
 }
 
 func (r *registryFromProviders) CustomValidate(

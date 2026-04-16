@@ -87,6 +87,7 @@ func (f *FunctionRegistryMock) HasFunction(ctx context.Context, functionName str
 
 type ResourceRegistryMock struct {
 	Resources                 map[string]provider.Resource
+	AbstractResources         map[string]string
 	StateContainer            state.Container
 	resourceLocks             map[string]*resourceLock
 	resourceLockCheckInterval time.Duration
@@ -124,12 +125,21 @@ func WithResourceRegistryStateContainer(stateContainer state.Container) Resource
 	}
 }
 
+func WithResourceRegistryAbstractResources(abstractResources []string) ResourceRegistryMockOption {
+	return func(r *ResourceRegistryMock) {
+		for _, ar := range abstractResources {
+			r.AbstractResources[ar] = ar
+		}
+	}
+}
+
 func NewResourceRegistryMock(
 	resources map[string]provider.Resource,
 	opts ...ResourceRegistryMockOption,
 ) *ResourceRegistryMock {
 	registry := &ResourceRegistryMock{
 		Resources:                 resources,
+		AbstractResources:         map[string]string{},
 		StateContainer:            nil,
 		resourceLocks:             make(map[string]*resourceLock),
 		resourceLockCheckInterval: 10 * time.Millisecond,
@@ -155,6 +165,11 @@ func (r *ResourceRegistryMock) ListTransformers(ctx context.Context) ([]string, 
 
 func (r *ResourceRegistryMock) HasResourceType(ctx context.Context, resourceType string) (bool, error) {
 	_, ok := r.Resources[resourceType]
+	return ok, nil
+}
+
+func (r *ResourceRegistryMock) IsAbstractResourceType(ctx context.Context, resourceType string) (bool, error) {
+	_, ok := r.AbstractResources[resourceType]
 	return ok, nil
 }
 
