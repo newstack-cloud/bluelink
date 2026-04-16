@@ -52,10 +52,10 @@ fi
 if [[ -n "$GITHUB_ACTION" ]]; then
   # In CI, include -json output in a single test run
   # to avoid running the full suite twice.
-  go test ${TEST_FLAGS} -json ${PACKAGES} 2>&1 | tee report.json
+  go test -count=1 ${TEST_FLAGS} -json ${PACKAGES} 2>&1 | tee report.json
   test ${PIPESTATUS[0]} -eq 0
 else
-  go test ${TEST_FLAGS} ${PACKAGES}
+  go test -count=1 ${TEST_FLAGS} ${PACKAGES}
   # On a dev machine, produce html output of coverage
   # to get a visual to better reveal uncovered lines.
   go tool cover -html=coverage.txt -o coverage.html
