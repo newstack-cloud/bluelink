@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/linktypes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 )
@@ -31,7 +32,19 @@ type SpecTransformer interface {
 	// Transform a blueprint by expanding abstract resources
 	// into their final form along with any other transformations
 	// that are required.
-	Transform(ctx context.Context, input *SpecTransformerTransformInput) (*SpecTransformerTransformOutput, error)
+	Transform(
+		ctx context.Context,
+		input *SpecTransformerTransformInput,
+	) (*SpecTransformerTransformOutput, error)
+	// ValidateLinks provides a way to validate links between abstract resources
+	// in a blueprint prior to transformation.
+	// This is important for catching and surfacing issues to users before
+	// transformation instead of having to wait to deal with more obscure errors
+	// that pertain to concrete resources after transformation.
+	ValidateLinks(
+		ctx context.Context,
+		input *SpecTransformerValidateLinksInput,
+	) (*SpecTransformerValidateLinksOutput, error)
 	// AbstractResources returns the abstract resource implementation
 	// for a given resource type.
 	AbstractResource(ctx context.Context, resourceType string) (AbstractResource, error)
@@ -40,6 +53,20 @@ type SpecTransformer interface {
 	// This is primarily used in tools and documentation to provide a list of
 	// available abstract resource types.
 	ListAbstractResourceTypes(ctx context.Context) ([]string, error)
+}
+
+// SpecTransformerValidateLinksOutput provides the output from validating links between
+// abstract resources in a blueprint prior to transformation.
+type SpecTransformerValidateLinksOutput struct {
+	Diagnostics []*core.Diagnostic
+}
+
+// SpecTransformerValidateLinksInput provides the input required to validate links between
+// abstract resources in a blueprint prior to transformation.
+type SpecTransformerValidateLinksInput struct {
+	Blueprint          *schema.Blueprint
+	LinkGraph          linktypes.DeclaredLinkGraph
+	TransformerContext Context
 }
 
 // AbstractResource is the interface for an abstract resource

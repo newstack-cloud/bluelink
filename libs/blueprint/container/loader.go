@@ -13,6 +13,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/drift"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/includes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/links"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/linktypes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/providerhelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
@@ -962,7 +963,11 @@ func (l *defaultLoader) loadSpec(
 	}
 
 	l.logger.Info("Validating and applying blueprint transforms")
-	transformers, transformDiagnostics, err := l.validateAndApplyTransforms(ctx, blueprintSchema)
+	transformers, transformDiagnostics, err := l.validateAndApplyTransforms(
+		ctx,
+		blueprintSchema,
+		valCtx,
+	)
 	diagnostics = append(diagnostics, transformDiagnostics...)
 	if err != nil {
 		return speccore.BlueprintSpecFromSchema(blueprintSchema), diagnostics, err
@@ -993,7 +998,8 @@ func (l *defaultLoader) loadSpec(
 func (l *defaultLoader) validateAndApplyTransforms(
 	ctx context.Context,
 	blueprintSchema *schema.Blueprint,
-) ([]transform.SpecTransformer, []*bpcore.Diagnostic, error) {
+	valCtx *validation.ValidationContext,
+) (map[string]transform.SpecTransformer, []*bpcore.Diagnostic, error) {
 	// Apply some validation to get diagnostics about non-standard transformers
 	// that may not be present at runtime.
 	var transformDiagnostics []*bpcore.Diagnostic
@@ -1017,23 +1023,90 @@ func (l *defaultLoader) validateAndApplyTransforms(
 			append(validationErrors, err),
 		)
 	}
-	for _, transformer := range transformers {
-		output, err := transformer.Transform(ctx, &transform.SpecTransformerTransformInput{
-			InputBlueprint: blueprintSchema,
-		})
-		blueprintSchema = output.TransformedBlueprint
+
+	declaredLinkGraph, err := links.EnumerateDeclaredLinks(
+		ctx,
+		blueprintSchema,
+		l.resourceRegistry,
+	)
+	if err != nil {
+		return nil, transformDiagnostics, validation.ErrMultipleValidationErrors(
+			append(validationErrors, err),
+		)
+	}
+
+	currentBlueprintSchema := blueprintSchema
+	for transformName, transformer := range transformers {
+		transformerCtx := transform.NewTransformerContextFromParams(
+			transformName,
+			valCtx.Params,
+		)
+
+		validateLinksDiagnostics, err := l.validateTransformerLinks(
+			ctx,
+			blueprintSchema,
+			declaredLinkGraph,
+			transformerCtx,
+			transformer,
+		)
+		transformDiagnostics = append(transformDiagnostics, validateLinksDiagnostics...)
 		if err != nil {
 			return transformers, transformDiagnostics, validation.ErrMultipleValidationErrors(
 				append(validationErrors, err),
 			)
 		}
+
+		output, err := transformer.Transform(ctx, &transform.SpecTransformerTransformInput{
+			InputBlueprint:     currentBlueprintSchema,
+			TransformerContext: transformerCtx,
+		})
+		if err != nil {
+			return transformers, transformDiagnostics, validation.ErrMultipleValidationErrors(
+				append(validationErrors, err),
+			)
+		}
+		currentBlueprintSchema = output.TransformedBlueprint
 	}
 
 	return transformers, transformDiagnostics, nil
 }
 
-func (l *defaultLoader) collectTransformers(schema *schema.Blueprint) ([]transform.SpecTransformer, error) {
-	usedBySpec := []transform.SpecTransformer{}
+func (l *defaultLoader) validateTransformerLinks(
+	ctx context.Context,
+	blueprint *schema.Blueprint,
+	declaredLinkGraph linktypes.DeclaredLinkGraph,
+	transformerCtx transform.Context,
+	transformer transform.SpecTransformer,
+) ([]*bpcore.Diagnostic, error) {
+	validateLinksOutput, err := transformer.ValidateLinks(
+		ctx,
+		&transform.SpecTransformerValidateLinksInput{
+			Blueprint:          blueprint,
+			LinkGraph:          declaredLinkGraph,
+			TransformerContext: transformerCtx,
+		},
+	)
+	if err != nil {
+		return []*bpcore.Diagnostic{}, err
+	}
+
+	if validateLinksOutput != nil && len(validateLinksOutput.Diagnostics) > 0 {
+		linkDiags, linkErr := validation.ExtractDiagnosticsAndErrors(
+			validateLinksOutput.Diagnostics,
+			validation.ErrorReasonCodeInvalidTransformLinks,
+		)
+		if linkErr != nil {
+			return linkDiags, linkErr
+		}
+
+		return linkDiags, nil
+	}
+
+	return []*bpcore.Diagnostic{}, nil
+}
+
+func (l *defaultLoader) collectTransformers(schema *schema.Blueprint) (map[string]transform.SpecTransformer, error) {
+	usedBySpec := map[string]transform.SpecTransformer{}
 	missingTransformers := []string{}
 	childErrors := []error{}
 
@@ -1044,7 +1117,7 @@ func (l *defaultLoader) collectTransformers(schema *schema.Blueprint) ([]transfo
 	for i, name := range schema.Transform.Values {
 		transformer, exists := l.specTransformers[name]
 		if exists {
-			usedBySpec = append(usedBySpec, transformer)
+			usedBySpec[name] = transformer
 		} else {
 			missingTransformers = append(missingTransformers, name)
 			sourceMeta := (*source.Meta)(nil)
@@ -1071,7 +1144,10 @@ func (l *defaultLoader) validateBlueprint(ctx context.Context, bpSchema *schema.
 	return validation.ValidateBlueprint(ctx, bpSchema)
 }
 
-func (l *defaultLoader) validateTransforms(ctx context.Context, bpSchema *schema.Blueprint) ([]*bpcore.Diagnostic, error) {
+func (l *defaultLoader) validateTransforms(
+	ctx context.Context,
+	bpSchema *schema.Blueprint,
+) ([]*bpcore.Diagnostic, error) {
 	return validation.ValidateTransforms(ctx, bpSchema, l.transformSpec)
 }
 

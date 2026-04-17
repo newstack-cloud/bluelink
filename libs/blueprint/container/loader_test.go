@@ -26,6 +26,9 @@ type LoaderTestSuite struct {
 	loader                       Loader
 	loaderDefaultCore            Loader
 	loaderValidateAfterTransform Loader
+	loaderErrorLinks             Loader
+	loaderWarningLinks           Loader
+	loaderGoErrorLinks           Loader
 	providersWithoutCore         map[string]provider.Provider
 	specTransformers             map[string]transform.SpecTransformer
 	logger                       core.Logger
@@ -54,6 +57,9 @@ func (s *LoaderTestSuite) SetupSuite() {
 		"invalid-resource-each-dep-1": "__testdata/loader/invalid-resource-each-dep-1-blueprint.yml",
 		"invalid-resource-each-dep-2": "__testdata/loader/invalid-resource-each-dep-2-blueprint.yml",
 		"stub-resource":               "__testdata/loader/stub-resource-blueprint.yml",
+		"transform-error-links":       "__testdata/loader/transform-error-links-blueprint.yml",
+		"transform-warning-links":     "__testdata/loader/transform-warning-links-blueprint.yml",
+		"transform-go-error-links":    "__testdata/loader/transform-go-error-links-blueprint.yml",
 	}
 	s.specFixtureSchemas = make(map[string]*schema.Blueprint)
 
@@ -127,6 +133,40 @@ func (s *LoaderTestSuite) SetupSuite() {
 		specTransformers,
 		stateContainer,
 		newFSChildResolver(),
+		WithLoaderRefChainCollectorFactory(refgraph.NewRefChainCollector),
+		WithLoaderLogger(logger),
+	)
+
+	s.loaderErrorLinks = NewDefaultLoader(
+		providers,
+		map[string]transform.SpecTransformer{
+			"test-error-links-2024": &errorLinksTransformer{},
+		},
+		stateContainer,
+		newFSChildResolver(),
+		WithLoaderTransformSpec(true),
+		WithLoaderRefChainCollectorFactory(refgraph.NewRefChainCollector),
+		WithLoaderLogger(logger),
+	)
+	s.loaderWarningLinks = NewDefaultLoader(
+		providers,
+		map[string]transform.SpecTransformer{
+			"test-warning-links-2024": &warningLinksTransformer{},
+		},
+		stateContainer,
+		newFSChildResolver(),
+		WithLoaderTransformSpec(true),
+		WithLoaderRefChainCollectorFactory(refgraph.NewRefChainCollector),
+		WithLoaderLogger(logger),
+	)
+	s.loaderGoErrorLinks = NewDefaultLoader(
+		providers,
+		map[string]transform.SpecTransformer{
+			"test-go-error-links-2024": &generalErrorLinksTransformer{},
+		},
+		stateContainer,
+		newFSChildResolver(),
+		WithLoaderTransformSpec(true),
 		WithLoaderRefChainCollectorFactory(refgraph.NewRefChainCollector),
 		WithLoaderLogger(logger),
 	)
@@ -340,6 +380,77 @@ func (s *LoaderTestSuite) Test_reports_error_for_blueprint_with_invalid_resource
 		validation.ErrorReasonCodeEachChildDependency,
 		loadErr.ReasonCode,
 	)
+}
+
+func (s *LoaderTestSuite) Test_reports_error_for_blueprint_with_invalid_transform_links() {
+	_, err := s.loaderErrorLinks.Load(
+		context.TODO(),
+		s.specFixtureFiles["transform-error-links"],
+		createParams(),
+	)
+	s.Require().Error(err)
+	loadErr, isLoadErr := internal.UnpackLoadError(err)
+	s.Assert().True(isLoadErr)
+	s.Assert().Equal(
+		validation.ErrorReasonCodeInvalidTransformLinks,
+		loadErr.ReasonCode,
+	)
+}
+
+func (s *LoaderTestSuite) Test_validate_reports_error_for_blueprint_with_invalid_transform_links() {
+	result, err := s.loaderErrorLinks.Validate(
+		context.TODO(),
+		s.specFixtureFiles["transform-error-links"],
+		createParams(),
+	)
+	s.Require().Error(err)
+	loadErr, isLoadErr := internal.UnpackLoadError(err)
+	s.Assert().True(isLoadErr)
+	s.Assert().Equal(
+		validation.ErrorReasonCodeInvalidTransformLinks,
+		loadErr.ReasonCode,
+	)
+	s.Assert().NotNil(result)
+}
+
+func (s *LoaderTestSuite) Test_validate_returns_warnings_for_blueprint_with_transform_link_warnings() {
+	result, err := s.loaderWarningLinks.Validate(
+		context.TODO(),
+		s.specFixtureFiles["transform-warning-links"],
+		createParams(),
+	)
+	s.Require().NoError(err)
+	s.Require().NotNil(result)
+	hasWarning := false
+	for _, diag := range result.Diagnostics {
+		if diag.Level == core.DiagnosticLevelWarning &&
+			strings.Contains(diag.Message, "may cause issues at deploy time") {
+			hasWarning = true
+			break
+		}
+	}
+	s.Assert().True(hasWarning, "expected warning diagnostic from transformer link validation")
+}
+
+func (s *LoaderTestSuite) Test_loads_blueprint_with_transform_link_warnings_without_error() {
+	container, err := s.loaderWarningLinks.Load(
+		context.TODO(),
+		s.specFixtureFiles["transform-warning-links"],
+		createParams(),
+	)
+	s.Require().NoError(err)
+	s.Assert().NotNil(container)
+}
+
+func (s *LoaderTestSuite) Test_reports_error_when_transformer_validate_links_returns_go_error() {
+	_, err := s.loaderGoErrorLinks.Load(
+		context.TODO(),
+		s.specFixtureFiles["transform-go-error-links"],
+		createParams(),
+	)
+	s.Require().Error(err)
+	unpackedErr, _ := internal.UnpackError(err)
+	s.Assert().Contains(unpackedErr.Error(), "internal transformer error during link validation")
 }
 
 func TestLoaderTestSuite(t *testing.T) {

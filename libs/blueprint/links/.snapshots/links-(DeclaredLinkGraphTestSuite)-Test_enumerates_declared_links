@@ -1,8 +1,8 @@
 ([]*links.groupedResolvedLinks) (len=10) {
   (*links.groupedResolvedLinks)({
     GroupName: (string) (len=3) "all",
-    Edges: ([]*links.ResolvedLink) (len=6) {
-      (*links.ResolvedLink)({
+    Edges: ([]*linktypes.ResolvedLink) (len=6) {
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=9) "ordersApi",
         Target: (string) (len=10) "auditTable",
         SourceType: (string) (len=16) "celerity/handler",
@@ -11,7 +11,7 @@
           (string) (len=23) "label::tier:persistence"
         }
       }),
-      (*links.ResolvedLink)({
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=9) "ordersApi",
         Target: (string) (len=10) "emailQueue",
         SourceType: (string) (len=16) "celerity/handler",
@@ -20,7 +20,7 @@
           (string) (len=17) "label::app:orders"
         }
       }),
-      (*links.ResolvedLink)({
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=9) "ordersApi",
         Target: (string) (len=11) "orderWorker",
         SourceType: (string) (len=16) "celerity/handler",
@@ -29,7 +29,7 @@
           (string) (len=17) "label::app:orders"
         }
       }),
-      (*links.ResolvedLink)({
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=9) "ordersApi",
         Target: (string) (len=15) "ordersDatastore",
         SourceType: (string) (len=16) "celerity/handler",
@@ -39,7 +39,7 @@
           (string) (len=23) "label::tier:persistence"
         }
       }),
-      (*links.ResolvedLink)({
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=9) "ordersApi",
         Target: (string) (len=11) "ordersQueue",
         SourceType: (string) (len=16) "celerity/handler",
@@ -48,7 +48,7 @@
           (string) (len=17) "label::app:orders"
         }
       }),
-      (*links.ResolvedLink)({
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=11) "ordersQueue",
         Target: (string) (len=11) "orderWorker",
         SourceType: (string) (len=14) "celerity/queue",
@@ -61,8 +61,8 @@
   }),
   (*links.groupedResolvedLinks)({
     GroupName: (string) (len=17) "source::ordersApi",
-    Edges: ([]*links.ResolvedLink) (len=5) {
-      (*links.ResolvedLink)({
+    Edges: ([]*linktypes.ResolvedLink) (len=5) {
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=9) "ordersApi",
         Target: (string) (len=10) "auditTable",
         SourceType: (string) (len=16) "celerity/handler",
@@ -71,7 +71,7 @@
           (string) (len=23) "label::tier:persistence"
         }
       }),
-      (*links.ResolvedLink)({
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=9) "ordersApi",
         Target: (string) (len=10) "emailQueue",
         SourceType: (string) (len=16) "celerity/handler",
@@ -80,7 +80,7 @@
           (string) (len=17) "label::app:orders"
         }
       }),
-      (*links.ResolvedLink)({
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=9) "ordersApi",
         Target: (string) (len=11) "orderWorker",
         SourceType: (string) (len=16) "celerity/handler",
@@ -89,7 +89,7 @@
           (string) (len=17) "label::app:orders"
         }
       }),
-      (*links.ResolvedLink)({
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=9) "ordersApi",
         Target: (string) (len=15) "ordersDatastore",
         SourceType: (string) (len=16) "celerity/handler",
@@ -99,7 +99,7 @@
           (string) (len=23) "label::tier:persistence"
         }
       }),
-      (*links.ResolvedLink)({
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=9) "ordersApi",
         Target: (string) (len=11) "ordersQueue",
         SourceType: (string) (len=16) "celerity/handler",
@@ -112,8 +112,8 @@
   }),
   (*links.groupedResolvedLinks)({
     GroupName: (string) (len=19) "source::ordersQueue",
-    Edges: ([]*links.ResolvedLink) (len=1) {
-      (*links.ResolvedLink)({
+    Edges: ([]*linktypes.ResolvedLink) (len=1) {
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=11) "ordersQueue",
         Target: (string) (len=11) "orderWorker",
         SourceType: (string) (len=14) "celerity/queue",
@@ -126,13 +126,13 @@
   }),
   (*links.groupedResolvedLinks)({
     GroupName: (string) (len=21) "source::orphanHandler",
-    Edges: ([]*links.ResolvedLink) {
+    Edges: ([]*linktypes.ResolvedLink) {
     }
   }),
   (*links.groupedResolvedLinks)({
     GroupName: (string) (len=18) "target::auditTable",
-    Edges: ([]*links.ResolvedLink) (len=1) {
-      (*links.ResolvedLink)({
+    Edges: ([]*linktypes.ResolvedLink) (len=1) {
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=9) "ordersApi",
         Target: (string) (len=10) "auditTable",
         SourceType: (string) (len=16) "celerity/handler",
@@ -145,8 +145,8 @@
   }),
   (*links.groupedResolvedLinks)({
     GroupName: (string) (len=18) "target::emailQueue",
-    Edges: ([]*links.ResolvedLink) (len=1) {
-      (*links.ResolvedLink)({
+    Edges: ([]*linktypes.ResolvedLink) (len=1) {
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=9) "ordersApi",
         Target: (string) (len=10) "emailQueue",
         SourceType: (string) (len=16) "celerity/handler",
@@ -159,8 +159,8 @@
   }),
   (*links.groupedResolvedLinks)({
     GroupName: (string) (len=19) "target::orderWorker",
-    Edges: ([]*links.ResolvedLink) (len=2) {
-      (*links.ResolvedLink)({
+    Edges: ([]*linktypes.ResolvedLink) (len=2) {
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=9) "ordersApi",
         Target: (string) (len=11) "orderWorker",
         SourceType: (string) (len=16) "celerity/handler",
@@ -169,7 +169,7 @@
           (string) (len=17) "label::app:orders"
         }
       }),
-      (*links.ResolvedLink)({
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=11) "ordersQueue",
         Target: (string) (len=11) "orderWorker",
         SourceType: (string) (len=14) "celerity/queue",
@@ -182,8 +182,8 @@
   }),
   (*links.groupedResolvedLinks)({
     GroupName: (string) (len=23) "target::ordersDatastore",
-    Edges: ([]*links.ResolvedLink) (len=1) {
-      (*links.ResolvedLink)({
+    Edges: ([]*linktypes.ResolvedLink) (len=1) {
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=9) "ordersApi",
         Target: (string) (len=15) "ordersDatastore",
         SourceType: (string) (len=16) "celerity/handler",
@@ -197,8 +197,8 @@
   }),
   (*links.groupedResolvedLinks)({
     GroupName: (string) (len=19) "target::ordersQueue",
-    Edges: ([]*links.ResolvedLink) (len=1) {
-      (*links.ResolvedLink)({
+    Edges: ([]*linktypes.ResolvedLink) (len=1) {
+      (*linktypes.ResolvedLink)({
         Source: (string) (len=9) "ordersApi",
         Target: (string) (len=11) "ordersQueue",
         SourceType: (string) (len=16) "celerity/handler",
@@ -211,7 +211,7 @@
   }),
   (*links.groupedResolvedLinks)({
     GroupName: (string) (len=19) "target::unusedTable",
-    Edges: ([]*links.ResolvedLink) {
+    Edges: ([]*linktypes.ResolvedLink) {
     }
   })
 }

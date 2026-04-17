@@ -295,6 +295,15 @@ func (t *testSpecTransformer) Transform(
 	}, nil
 }
 
+func (t *testSpecTransformer) ValidateLinks(
+	ctx context.Context,
+	input *transform.SpecTransformerValidateLinksInput,
+) (*transform.SpecTransformerValidateLinksOutput, error) {
+	return &transform.SpecTransformerValidateLinksOutput{
+		Diagnostics: []*core.Diagnostic{},
+	}, nil
+}
+
 func (t *testSpecTransformer) AbstractResource(
 	ctx context.Context,
 	resourceType string,

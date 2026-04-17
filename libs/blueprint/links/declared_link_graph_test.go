@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/linktypes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
@@ -85,7 +86,7 @@ func (s *DeclaredLinkGraphTestSuite) Test_enumerates_declared_links(c *C) {
 	edgesToAuditTable := linkGraph.EdgesTo("auditTable")
 	edgesToUnusedTable := linkGraph.EdgesTo("unusedTable")
 
-	edgeGroups := map[string][]*ResolvedLink{
+	edgeGroups := map[string][]*linktypes.ResolvedLink{
 		"source::ordersApi":       edgesFromOrdersAPI,
 		"source::ordersQueue":     edgesFromOrdersQueue,
 		"source::orphanHandler":   edgesFromOrphanHandler,
@@ -105,10 +106,10 @@ func (s *DeclaredLinkGraphTestSuite) Test_enumerates_declared_links(c *C) {
 
 type groupedResolvedLinks struct {
 	GroupName string
-	Edges     []*ResolvedLink
+	Edges     []*linktypes.ResolvedLink
 }
 
-func normaliseEdgeGroupsForSnapshot(edgeGroups map[string][]*ResolvedLink) []*groupedResolvedLinks {
+func normaliseEdgeGroupsForSnapshot(edgeGroups map[string][]*linktypes.ResolvedLink) []*groupedResolvedLinks {
 	normalised := make([]*groupedResolvedLinks, 0, len(edgeGroups))
 	for groupName, edgeGroup := range edgeGroups {
 		normalised = append(normalised, &groupedResolvedLinks{
@@ -124,12 +125,12 @@ func normaliseEdgeGroupsForSnapshot(edgeGroups map[string][]*ResolvedLink) []*gr
 	return normalised
 }
 
-func normaliseEdgesForSnapshot(edges []*ResolvedLink) []*ResolvedLink {
-	normalised := make([]*ResolvedLink, len(edges))
+func normaliseEdgesForSnapshot(edges []*linktypes.ResolvedLink) []*linktypes.ResolvedLink {
+	normalised := make([]*linktypes.ResolvedLink, len(edges))
 
 	for i, edge := range edges {
 		slices.Sort(edge.SelectorKeys)
-		normalised[i] = &ResolvedLink{
+		normalised[i] = &linktypes.ResolvedLink{
 			Source:       edge.Source,
 			Target:       edge.Target,
 			SourceType:   edge.SourceType,
@@ -138,7 +139,7 @@ func normaliseEdgesForSnapshot(edges []*ResolvedLink) []*ResolvedLink {
 		}
 	}
 
-	slices.SortStableFunc(normalised, func(a *ResolvedLink, b *ResolvedLink) int {
+	slices.SortStableFunc(normalised, func(a *linktypes.ResolvedLink, b *linktypes.ResolvedLink) int {
 		aKey := fmt.Sprintf("%s->%s", a.Source, a.Target)
 		bKey := fmt.Sprintf("%s->%s", b.Source, b.Target)
 		return strings.Compare(aKey, bKey)

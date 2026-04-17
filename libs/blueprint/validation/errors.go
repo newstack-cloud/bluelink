@@ -296,6 +296,9 @@ const (
 	// ErrorReasonCodeSubFuncPathFieldOnNonObject is provided when a substitution
 	// applies a field accessor to a function that returns a scalar type.
 	ErrorReasonCodeSubFuncPathFieldOnNonObject errors.ErrorReasonCode = "sub_func_path_field_on_non_object"
+	// ErrorReasonCodeInvalidTransformLinks is provided when the reason for a blueprint spec
+	// load error is due to invalid transform links.
+	ErrorReasonCodeInvalidTransformLinks errors.ErrorReasonCode = "invalid_transform_links"
 )
 
 func errBlueprintMissingVersion() error {

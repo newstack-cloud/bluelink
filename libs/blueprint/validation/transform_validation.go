@@ -12,6 +12,8 @@ import (
 
 // ValidateTransforms checks for non-standard transforms and reports warnings
 // when the spec is not going to be transformed (e.g. dry run validation).
+// This is intended for validation of the transform string list only, more advanced
+// validation that requires the transformer implementation is carried out a different stage.
 func ValidateTransforms(
 	ctx context.Context,
 	blueprint *schema.Blueprint,

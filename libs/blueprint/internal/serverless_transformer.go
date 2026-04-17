@@ -40,6 +40,15 @@ func (t *ServerlessTransformer) Transform(
 	}, nil
 }
 
+func (t *ServerlessTransformer) ValidateLinks(
+	ctx context.Context,
+	input *transform.SpecTransformerValidateLinksInput,
+) (*transform.SpecTransformerValidateLinksOutput, error) {
+	return &transform.SpecTransformerValidateLinksOutput{
+		Diagnostics: []*core.Diagnostic{},
+	}, nil
+}
+
 func transformServerlessFunctions(
 	blueprint *schema.Blueprint,
 ) *schema.Blueprint {

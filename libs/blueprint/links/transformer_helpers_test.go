@@ -45,6 +45,15 @@ func (t *testCelerityTransformer) Transform(
 	}, nil
 }
 
+func (t *testCelerityTransformer) ValidateLinks(
+	ctx context.Context,
+	input *transform.SpecTransformerValidateLinksInput,
+) (*transform.SpecTransformerValidateLinksOutput, error) {
+	return &transform.SpecTransformerValidateLinksOutput{
+		Diagnostics: []*core.Diagnostic{},
+	}, nil
+}
+
 func (t *testCelerityTransformer) AbstractResource(
 	ctx context.Context,
 	resourceType string,
