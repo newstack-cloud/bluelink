@@ -6,6 +6,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/linkinfo"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/testutils"
 	"github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
@@ -32,7 +33,7 @@ func createByLabelHoverService(
 		funcRegistry,
 		&testutils.ResourceRegistryMock{},
 		&testutils.DataSourceRegistryMock{},
-		linkRegistry,
+		linkinfo.NewProviderSource(linkRegistry),
 		signatureService,
 		nil,
 		logger,
@@ -109,6 +110,50 @@ func (s *HoverByLabelSuite) Test_hover_on_byLabel_with_reversed_link_direction()
 	s.Require().NoError(err)
 	s.Assert().Contains(hoverContent.Value, "processOrders")
 	s.Assert().Contains(hoverContent.Value, "linked")
+}
+
+func (s *HoverByLabelSuite) Test_hover_on_byLabel_shows_cardinality_for_selecting_side() {
+	// Selecting resource (ordersTable, type A) may link to at most 5 handlers (type B).
+	linkRegistry := &testutils.LinkRegistryMock{
+		Links: map[string]provider.Link{
+			"aws/dynamodb/table::aws/lambda/function": &testutils.MockLink{
+				CardinalityA: provider.LinkCardinality{Min: 0, Max: 5},
+				CardinalityB: provider.LinkCardinality{Min: 1, Max: 1},
+			},
+		},
+	}
+	service, docCtx := createByLabelHoverService(s.T(), linkRegistry)
+
+	lspCtx := &common.LSPContext{}
+	hoverContent, err := service.GetHoverContent(lspCtx, docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 11, Character: 10},
+	})
+	s.Require().NoError(err)
+	s.Assert().Contains(hoverContent.Value, "processOrders")
+	s.Assert().Contains(hoverContent.Value, "at most 5")
+}
+
+func (s *HoverByLabelSuite) Test_hover_on_byLabel_cardinality_uses_side_B_when_registered_reversed() {
+	// Link is registered B→A but the selector lives on the B-side resource, so
+	// the selecting resource's outgoing count comes from CardinalityB.
+	linkRegistry := &testutils.LinkRegistryMock{
+		Links: map[string]provider.Link{
+			"aws/lambda/function::aws/dynamodb/table": &testutils.MockLink{
+				CardinalityA: provider.LinkCardinality{Min: 1, Max: 1},
+				CardinalityB: provider.LinkCardinality{Min: 0, Max: 3},
+			},
+		},
+	}
+	service, docCtx := createByLabelHoverService(s.T(), linkRegistry)
+
+	lspCtx := &common.LSPContext{}
+	hoverContent, err := service.GetHoverContent(lspCtx, docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 11, Character: 10},
+	})
+	s.Require().NoError(err)
+	s.Assert().Contains(hoverContent.Value, "at most 3")
 }
 
 func TestHoverByLabelSuite(t *testing.T) {

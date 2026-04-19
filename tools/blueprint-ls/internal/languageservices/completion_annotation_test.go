@@ -3,10 +3,11 @@ package languageservices
 import (
 	"testing"
 
-	"github.com/newstack-cloud/bluelink/libs/blueprint/corefunctions"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/corefunctions"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/linkinfo"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/testutils"
 	"github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
@@ -87,7 +88,7 @@ func (s *AnnotationKeyCompletionSuite) SetupTest() {
 		state,
 		logger,
 	)
-	s.service.linkRegistry = s.linkRegistry
+	s.service.linkSource = linkinfo.NewProviderSource(s.linkRegistry)
 }
 
 func TestAnnotationKeyCompletionSuite(t *testing.T) {
@@ -239,7 +240,7 @@ func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_filters_by_appl
 		state,
 		logger,
 	)
-	service.linkRegistry = linkRegistry
+	service.linkSource = linkinfo.NewProviderSource(linkRegistry)
 
 	blueprintInfo, err := loadCompletionBlueprintAndTree("blueprint-completion-annotation-key-applies-to")
 	s.Require().NoError(err)
@@ -314,7 +315,7 @@ func (s *AnnotationKeyCompletionSuite) Test_get_completion_items_filters_by_appl
 		state,
 		logger,
 	)
-	service.linkRegistry = linkRegistry
+	service.linkSource = linkinfo.NewProviderSource(linkRegistry)
 
 	blueprintInfo, err := loadCompletionBlueprintAndTree("blueprint-completion-annotation-key-applies-to-resource-b")
 	s.Require().NoError(err)

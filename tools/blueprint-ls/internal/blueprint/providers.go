@@ -7,12 +7,12 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/providerhelpers"
 )
 
-// LoadProviders deals with loading the providers to be used for validating
+// LoadProviders deals with loading initial providers to be used for validating
 // and in providing other LSP features for blueprint such as function signatures,
 // hover information and completion items.
 //
 // The language server uses the deploy engine plugin system to load gRPC provider
-// plugins.
+// plugins at a later stage.
 func LoadProviders(ctx context.Context) (map[string]provider.Provider, error) {
 
 	// We won't be calling any functions in the language server, so we can provide

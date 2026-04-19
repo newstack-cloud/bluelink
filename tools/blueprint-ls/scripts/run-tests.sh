@@ -40,7 +40,7 @@ set -e
 echo "" > coverage.txt
 
 
-go test -timeout 30000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic ./...
+go test -count=1 -timeout 30000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic ./...
 
 
 if [ -z "$GITHUB_ACTION" ]; then
@@ -51,5 +51,5 @@ fi
 
 if [ -n "$GITHUB_ACTION" ]; then
   # We are in a CI environment so run tests again to generate JSON report.
-  go test -timeout 30000ms -json -tags "$TEST_TYPES" ./... > report.json
+  go test -count=1 -timeout 30000ms -json -tags "$TEST_TYPES" ./... > report.json
 fi

@@ -7,10 +7,12 @@ import (
 )
 
 // MockLink provides a mock implementation of provider.Link for testing.
-// Only GetAnnotationDefinitions is implemented with actual behavior;
+// Only GetAnnotationDefinitions and GetCardinality honour configured values;
 // other methods return empty/nil outputs.
 type MockLink struct {
 	AnnotationDefs map[string]*provider.LinkAnnotationDefinition
+	CardinalityA   provider.LinkCardinality
+	CardinalityB   provider.LinkCardinality
 }
 
 func (l *MockLink) StageChanges(
@@ -83,4 +85,21 @@ func (l *MockLink) GetIntermediaryExternalState(
 	input *provider.LinkGetIntermediaryExternalStateInput,
 ) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
+func (l *MockLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{
+		CardinalityA: l.CardinalityA,
+		CardinalityB: l.CardinalityB,
+	}, nil
+}
+
+func (l *MockLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
 }

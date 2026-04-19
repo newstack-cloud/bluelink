@@ -17,6 +17,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/plugin"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/blueprint"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/linkinfo"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/pluginhost"
 	common "github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
@@ -657,6 +658,10 @@ func (a *Application) ReinitialiseRegistries(
 	)
 	a.customVarTypeRegistry = provider.NewCustomVariableTypeRegistry(providers)
 	linkRegistry := provider.NewLinkRegistry(providers)
+	linkSource := linkinfo.NewCompositeSource(
+		linkinfo.NewProviderSource(linkRegistry),
+		linkinfo.NewTransformerSource(transformers),
+	)
 
 	// Create a new blueprint loader with merged providers
 	blueprintLoader := container.NewDefaultLoader(
@@ -675,7 +680,7 @@ func (a *Application) ReinitialiseRegistries(
 		a.dataSourceRegistry,
 		a.customVarTypeRegistry,
 		a.functionRegistry,
-		linkRegistry,
+		linkSource,
 	)
 	a.diagnosticService.UpdateLoader(blueprintLoader)
 	a.signatureService.UpdateRegistry(a.functionRegistry)
@@ -683,7 +688,7 @@ func (a *Application) ReinitialiseRegistries(
 		a.functionRegistry,
 		a.resourceRegistry,
 		a.dataSourceRegistry,
-		linkRegistry,
+		linkSource,
 	)
 }
 

@@ -7,6 +7,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/linkinfo"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/testutils"
 	"github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
@@ -47,7 +48,7 @@ func createAnnotationHoverService(
 		funcRegistry,
 		&testutils.ResourceRegistryMock{},
 		&testutils.DataSourceRegistryMock{},
-		linkRegistry,
+		linkinfo.NewProviderSource(linkRegistry),
 		signatureService,
 		nil,
 		logger,
@@ -174,6 +175,34 @@ func (s *HoverAnnotationSuite) Test_hover_on_annotation_key_fallback() {
 	s.Assert().Contains(hoverContent.Value, "Annotation")
 	s.Assert().Contains(hoverContent.Value, "aws.dynamodb.lambda.stream.startingPosition")
 	s.Assert().Contains(hoverContent.Value, "LATEST")
+}
+
+// Test_hover_on_link_annotation_key_shows_cardinality verifies that hovering on
+// a link annotation key renders the owning link's cardinality alongside the
+// annotation definition.
+func (s *HoverAnnotationSuite) Test_hover_on_link_annotation_key_shows_cardinality() {
+	linkRegistry := &testutils.LinkRegistryMock{
+		Links: map[string]provider.Link{
+			"aws/dynamodb/table::aws/lambda/function": &testutils.MockLink{
+				AnnotationDefs: annotationDefs,
+				CardinalityA:   provider.LinkCardinality{Min: 0, Max: 5},
+				CardinalityB:   provider.LinkCardinality{Min: 1, Max: 1},
+			},
+		},
+	}
+	service, docCtx := createAnnotationHoverService(s.T(), linkRegistry, false)
+
+	lspCtx := &common.LSPContext{}
+	hoverContent, err := service.GetHoverContent(lspCtx, docCtx, &lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+		Position:     lsp.Position{Line: 20, Character: 15},
+	})
+	s.Require().NoError(err)
+	s.Assert().Contains(hoverContent.Value, "Link cardinality")
+	s.Assert().Contains(hoverContent.Value, "aws/dynamodb/table")
+	s.Assert().Contains(hoverContent.Value, "aws/lambda/function")
+	s.Assert().Contains(hoverContent.Value, "at most 5")
+	s.Assert().Contains(hoverContent.Value, "exactly 1")
 }
 
 func TestHoverAnnotationSuite(t *testing.T) {

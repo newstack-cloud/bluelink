@@ -10,6 +10,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/helpinfo"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/linkinfo"
 	common "github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"go.uber.org/zap"
@@ -20,7 +21,7 @@ type HoverService struct {
 	funcRegistry       provider.FunctionRegistry
 	resourceRegistry   resourcehelpers.Registry
 	dataSourceRegistry provider.DataSourceRegistry
-	linkRegistry       provider.LinkRegistry
+	linkSource         linkinfo.Source
 	signatureService   *SignatureService
 	childResolver      *ChildBlueprintResolver
 	logger             *zap.Logger
@@ -31,7 +32,7 @@ func NewHoverService(
 	funcRegistry provider.FunctionRegistry,
 	resourceRegistry resourcehelpers.Registry,
 	dataSourceRegistry provider.DataSourceRegistry,
-	linkRegistry provider.LinkRegistry,
+	linkSource linkinfo.Source,
 	signatureService *SignatureService,
 	childResolver *ChildBlueprintResolver,
 	logger *zap.Logger,
@@ -40,7 +41,7 @@ func NewHoverService(
 		funcRegistry:       funcRegistry,
 		resourceRegistry:   resourceRegistry,
 		dataSourceRegistry: dataSourceRegistry,
-		linkRegistry:       linkRegistry,
+		linkSource:         linkSource,
 		signatureService:   signatureService,
 		childResolver:      childResolver,
 		logger:             logger,
@@ -53,12 +54,12 @@ func (s *HoverService) UpdateRegistries(
 	funcRegistry provider.FunctionRegistry,
 	resourceRegistry resourcehelpers.Registry,
 	dataSourceRegistry provider.DataSourceRegistry,
-	linkRegistry provider.LinkRegistry,
+	linkSource linkinfo.Source,
 ) {
 	s.funcRegistry = funcRegistry
 	s.resourceRegistry = resourceRegistry
 	s.dataSourceRegistry = dataSourceRegistry
-	s.linkRegistry = linkRegistry
+	s.linkSource = linkSource
 }
 
 // HoverContent represents the content for a hover message.
@@ -168,7 +169,7 @@ func (s *HoverService) getHoverContentByKind(
 	case docmodel.SchemaElementDataSourceMetadata:
 		return getDataSourceMetadataHoverContent(hoverCtx)
 	case docmodel.SchemaElementLinkSelector:
-		return getLinkSelectorHoverContent(hoverCtx.TreeNode)
+		return s.getLinkSelectorHoverContent(ctx, hoverCtx.TreeNode, blueprint)
 	case docmodel.SchemaElementStringMap:
 		if isByLabelNode(hoverCtx.TreeNode.Path) {
 			return s.getByLabelHoverContent(ctx, hoverCtx, blueprint)
@@ -364,7 +365,6 @@ func (s *HoverService) getDataSourceTypeHoverContent(
 		Range: rangeToLSPRange(node.Range),
 	}, nil
 }
-
 
 func (s *HoverService) getPathItemHoverContent(
 	ctx *common.LSPContext,
@@ -854,7 +854,6 @@ func getChild(blueprint *schema.Blueprint, name string) *schema.Include {
 
 	return child
 }
-
 
 func getDataSourceField(dataSource *schema.DataSource, name string) *schema.DataSourceFieldExport {
 	if dataSource.Exports == nil || dataSource.Exports.Values == nil {

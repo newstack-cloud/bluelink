@@ -261,6 +261,7 @@ func RenderSpecFieldDefinition(
 func RenderLinkAnnotationDefinition(
 	annotationKey string,
 	def *provider.LinkAnnotationDefinition,
+	cardinality *LinkCardinalityInfo,
 ) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf(
@@ -292,19 +293,40 @@ func RenderLinkAnnotationDefinition(
 			}
 		}
 		sb.WriteString(strings.Join(values, ", "))
+		sb.WriteString("\n\n")
 	}
 
+	writeLinkCardinalityBlock(&sb, cardinality)
+
 	return strings.TrimSpace(sb.String())
+}
+
+func writeLinkCardinalityBlock(sb *strings.Builder, cardinality *LinkCardinalityInfo) {
+	if cardinality == nil {
+		return
+	}
+
+	sb.WriteString("**Link cardinality**\n\n")
+	fmt.Fprintf(sb,
+		"- Each `%s` links to %s `%s`\n",
+		cardinality.TypeA,
+		FormatLinkCardinality(cardinality.CardinalityA),
+		cardinality.TypeB)
+	fmt.Fprintf(sb,
+		"- Each `%s` is linked from %s `%s`\n",
+		cardinality.TypeB,
+		FormatLinkCardinality(cardinality.CardinalityB),
+		cardinality.TypeA)
 }
 
 // RenderAnnotationKeyInfo renders basic annotation key information
 // as a fallback when a link annotation definition is not found.
 func RenderAnnotationKeyInfo(annotationKey string, annotationValue string) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("**Annotation** `%s`\n\n", annotationKey))
+	fmt.Fprintf(&sb, "**Annotation** `%s`\n\n", annotationKey)
 
 	if annotationValue != "" {
-		sb.WriteString(fmt.Sprintf("**value:** `%s`", annotationValue))
+		fmt.Fprintf(&sb, "**value:** `%s`", annotationValue)
 	}
 
 	return strings.TrimSpace(sb.String())
@@ -330,6 +352,36 @@ func RenderLinkSelectorDefinition() string {
 		"Resources are matched by label selectors using `byLabel`. " +
 		"Matched resources establish link relationships that enable " +
 		"inter-resource configuration via annotations."
+}
+
+// RenderLinkSelectorHoverContent renders hover content for a linkSelector,
+// showing the base definition and the list of resources the selecting
+// resource will link to, along with per-target outgoing link cardinality.
+func RenderLinkSelectorHoverContent(targets []LinkSelectorTargetInfo) string {
+	var sb strings.Builder
+	sb.WriteString(RenderLinkSelectorDefinition())
+
+	if len(targets) == 0 {
+		return sb.String()
+	}
+
+	sb.WriteString("\n\n**Will link to:**\n\n")
+	for _, target := range targets {
+		sb.WriteString(formatLinkSelectorTargetLine(target))
+	}
+
+	return strings.TrimSpace(sb.String())
+}
+
+func formatLinkSelectorTargetLine(target LinkSelectorTargetInfo) string {
+	suffix := ""
+	if target.Cardinality != nil {
+		suffix = fmt.Sprintf(" *(%s)*", FormatLinkCardinality(*target.Cardinality))
+	}
+	if target.ResourceType != "" {
+		return fmt.Sprintf("- `%s` — `%s`%s\n", target.Name, target.ResourceType, suffix)
+	}
+	return fmt.Sprintf("- `%s`%s\n", target.Name, suffix)
 }
 
 // RenderDataSourceExportFieldDefinition renders a data source export field definition
@@ -420,6 +472,9 @@ type MatchingResourceInfo struct {
 	Name         string
 	ResourceType string
 	Linked       bool
+	// Cardinality describes how many targets of this type the selecting
+	// resource may link to. Nil when no link is registered for the pair.
+	Cardinality *provider.LinkCardinality
 }
 
 // RenderByLabelHoverContent renders hover content for a byLabel selector,
@@ -434,7 +489,7 @@ func RenderByLabelHoverContent(
 		"contain the specified key-value pairs.\n\n")
 
 	if labelKey != "" {
-		sb.WriteString(fmt.Sprintf("**%s:** `%s`\n\n", labelKey, labelValue))
+		fmt.Fprintf(&sb, "**%s:** `%s`\n\n", labelKey, labelValue)
 	}
 
 	if len(matchingResources) == 0 {
@@ -444,18 +499,28 @@ func RenderByLabelHoverContent(
 
 	sb.WriteString("**Matching resources:**\n\n")
 	for _, res := range matchingResources {
-		linkStatus := ""
-		if res.Linked {
-			linkStatus = " *(linked)*"
-		}
-		if res.ResourceType != "" {
-			sb.WriteString(fmt.Sprintf("- `%s` — `%s`%s\n", res.Name, res.ResourceType, linkStatus))
-		} else {
-			sb.WriteString(fmt.Sprintf("- `%s`%s\n", res.Name, linkStatus))
-		}
+		sb.WriteString(formatMatchingResourceLine(res))
 	}
 
 	return strings.TrimSpace(sb.String())
+}
+
+func formatMatchingResourceLine(res MatchingResourceInfo) string {
+	suffix := formatMatchingResourceSuffix(res)
+	if res.ResourceType != "" {
+		return fmt.Sprintf("- `%s` — `%s`%s\n", res.Name, res.ResourceType, suffix)
+	}
+	return fmt.Sprintf("- `%s`%s\n", res.Name, suffix)
+}
+
+func formatMatchingResourceSuffix(res MatchingResourceInfo) string {
+	if !res.Linked {
+		return ""
+	}
+	if res.Cardinality == nil {
+		return " *(linked)*"
+	}
+	return fmt.Sprintf(" *(linked, %s)*", FormatLinkCardinality(*res.Cardinality))
 }
 
 // RenderExcludeDefinition renders a schema definition for an exclude list.
@@ -477,11 +542,11 @@ func RenderDataSourceFilterDefinition(filter *schema.DataSourceFilter) string {
 	sb.WriteString("**filter**\n\nA filter expression matching data source records by field values.\n\n")
 
 	if filter.Field != nil && filter.Field.StringValue != nil {
-		sb.WriteString(fmt.Sprintf("**field:** `%s`\n\n", *filter.Field.StringValue))
+		fmt.Fprintf(&sb, "**field:** `%s`\n\n", *filter.Field.StringValue)
 	}
 
 	if filter.Operator != nil {
-		sb.WriteString(fmt.Sprintf("**operator:** `%s`", string(filter.Operator.Value)))
+		fmt.Fprintf(&sb, "**operator:** `%s`", string(filter.Operator.Value))
 	}
 
 	return strings.TrimSpace(sb.String())
@@ -533,7 +598,7 @@ func RenderDataSourceFilterFieldKeyDefinition(
 	var sb strings.Builder
 
 	if fieldValue != "" {
-		sb.WriteString(fmt.Sprintf("**field** `%s`\n\n", fieldValue))
+		fmt.Fprintf(&sb, "**field** `%s`\n\n", fieldValue)
 	} else {
 		sb.WriteString("**field**\n\n")
 	}
@@ -550,7 +615,7 @@ func RenderDataSourceFilterFieldKeyDefinition(
 			sb.WriteString("\n\n")
 		}
 		if filterSchema.Type != "" {
-			sb.WriteString(fmt.Sprintf("**type:** `%s`", string(filterSchema.Type)))
+			fmt.Fprintf(&sb, "**type:** `%s`", string(filterSchema.Type))
 		}
 	}
 

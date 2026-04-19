@@ -4,13 +4,13 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/helpinfo"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/linkinfo"
 	common "github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"go.uber.org/zap"
@@ -182,11 +182,48 @@ func findFieldKeyAtPosition(
 	return ""
 }
 
-func getLinkSelectorHoverContent(node *schema.TreeNode) (*HoverContent, error) {
-	return &HoverContent{
+func (s *HoverService) getLinkSelectorHoverContent(
+	ctx *common.LSPContext,
+	node *schema.TreeNode,
+	blueprint *schema.Blueprint,
+) (*HoverContent, error) {
+	staticHover := &HoverContent{
 		Value: helpinfo.RenderLinkSelectorDefinition(),
 		Range: safeRangeToLSPRange(node.Range),
+	}
+
+	parts := strings.Split(node.Path, "/")
+	if len(parts) < 3 || parts[1] != "resources" {
+		return staticHover, nil
+	}
+
+	resourceName := parts[2]
+	resource := getResource(blueprint, resourceName)
+	if resource == nil {
+		return staticHover, nil
+	}
+
+	matches := s.findMatchingResourcesForByLabel(ctx, blueprint, resourceName, resource)
+	targets := matchingResourcesToLinkSelectorTargets(matches)
+
+	return &HoverContent{
+		Value: helpinfo.RenderLinkSelectorHoverContent(targets),
+		Range: safeRangeToLSPRange(node.Range),
 	}, nil
+}
+
+func matchingResourcesToLinkSelectorTargets(
+	matches []helpinfo.MatchingResourceInfo,
+) []helpinfo.LinkSelectorTargetInfo {
+	targets := make([]helpinfo.LinkSelectorTargetInfo, 0, len(matches))
+	for _, m := range matches {
+		targets = append(targets, helpinfo.LinkSelectorTargetInfo{
+			Name:         m.Name,
+			ResourceType: m.ResourceType,
+			Cardinality:  m.Cardinality,
+		})
+	}
+	return targets
 }
 
 func getStringMapHoverContent(node *schema.TreeNode) (*HoverContent, error) {
@@ -205,7 +242,7 @@ func (s *HoverService) getStringOrSubsMapHoverContent(
 	node := hoverCtx.TreeNode
 
 	// Check if this is an annotations map that could have link annotation definitions
-	if isAnnotationsNode(node.Path) && s.linkRegistry != nil {
+	if isAnnotationsNode(node.Path) && s.linkSource != nil {
 		return s.getAnnotationHoverContent(ctx, hoverCtx, blueprint)
 	}
 
@@ -388,10 +425,10 @@ func (s *HoverService) getAnnotationHoverContent(
 		return &HoverContent{}, nil
 	}
 
-	def := s.findAnnotationDefinition(ctx, blueprint, resourceName, resource, annotationKey)
-	if def != nil {
+	match := s.findAnnotationDefinition(ctx, blueprint, resourceName, resource, annotationKey)
+	if match != nil && match.def != nil {
 		return &HoverContent{
-			Value: helpinfo.RenderLinkAnnotationDefinition(annotationKey, def),
+			Value: helpinfo.RenderLinkAnnotationDefinition(annotationKey, match.def, match.cardinality),
 			Range: safeRangeToLSPRange(node.Range),
 		}, nil
 	}
@@ -450,13 +487,20 @@ func findAnnotationKeyAtPosition(
 	return ""
 }
 
+// annotationDefMatch pairs a matched link annotation definition with the
+// cardinality of the owning link so the hover renderer can surface both.
+type annotationDefMatch struct {
+	def         *provider.LinkAnnotationDefinition
+	cardinality *helpinfo.LinkCardinalityInfo
+}
+
 func (s *HoverService) findAnnotationDefinition(
 	ctx *common.LSPContext,
 	blueprint *schema.Blueprint,
 	resourceName string,
 	resource *schema.Resource,
 	annotationKey string,
-) *provider.LinkAnnotationDefinition {
+) *annotationDefMatch {
 	if blueprint.Resources == nil {
 		return nil
 	}
@@ -475,16 +519,16 @@ func (s *HoverService) findAnnotationDefinition(
 			typeB = currentType
 		}
 
-		def := s.findAnnotationDefFromLink(ctx, typeA, typeB, linked, annotationKey)
-		if def != nil {
-			return def
+		match := s.findAnnotationDefFromLink(ctx, typeA, typeB, linked, annotationKey)
+		if match != nil {
+			return match
 		}
 
 		// Try the reverse direction; real plugins may register bidirectional links
 		// with different annotations on each direction.
-		def = s.findAnnotationDefFromLink(ctx, typeB, typeA, linked, annotationKey)
-		if def != nil {
-			return def
+		match = s.findAnnotationDefFromLink(ctx, typeB, typeA, linked, annotationKey)
+		if match != nil {
+			return match
 		}
 	}
 
@@ -496,32 +540,35 @@ func (s *HoverService) findAnnotationDefFromLink(
 	typeA, typeB string,
 	linked linkedResourceInfoForHover,
 	annotationKey string,
-) *provider.LinkAnnotationDefinition {
-	link, err := s.linkRegistry.Link(ctx.Context, typeA, typeB)
-	if err != nil || link == nil {
+) *annotationDefMatch {
+	linkInfo, ok, err := s.linkSource.LookupLink(ctx.Context, typeA, typeB)
+	if err != nil || !ok || linkInfo == nil {
 		return nil
 	}
 
-	emptyParams := core.NewDefaultParams(nil, nil, nil, nil)
-	linkCtx := provider.NewLinkContextFromParams(emptyParams)
-	output, err := link.GetAnnotationDefinitions(
-		ctx.Context,
-		&provider.LinkGetAnnotationDefinitionsInput{
-			LinkContext: linkCtx,
-		},
-	)
-	if err != nil || output == nil || output.AnnotationDefinitions == nil {
-		return nil
-	}
-
-	for _, def := range output.AnnotationDefinitions {
+	for _, def := range linkInfo.AnnotationDefinitions {
 		expandedNames := expandAnnotationNameForHover(def.Name, linked.name)
 		if slices.Contains(expandedNames, annotationKey) {
-			return def
+			return &annotationDefMatch{
+				def:         def,
+				cardinality: fetchLinkCardinalityInfo(linkInfo, typeA, typeB),
+			}
 		}
 	}
 
 	return nil
+}
+
+func fetchLinkCardinalityInfo(
+	linkInfo *linkinfo.LinkInfo,
+	typeA, typeB string,
+) *helpinfo.LinkCardinalityInfo {
+	return &helpinfo.LinkCardinalityInfo{
+		TypeA:        typeA,
+		TypeB:        typeB,
+		CardinalityA: linkInfo.CardinalityA,
+		CardinalityB: linkInfo.CardinalityB,
+	}
 }
 
 type linkedResourceInfoForHover struct {
@@ -585,17 +632,53 @@ func (s *HoverService) getLinkDirectionForHover(
 	ctx *common.LSPContext,
 	currentType, otherType string,
 ) (bool, bool) {
-	link, err := s.linkRegistry.Link(ctx.Context, currentType, otherType)
-	if err == nil && link != nil {
+	_, ok, err := s.linkSource.LookupLink(ctx.Context, currentType, otherType)
+	if err == nil && ok {
 		return true, true
 	}
 
-	link, err = s.linkRegistry.Link(ctx.Context, otherType, currentType)
-	if err == nil && link != nil {
+	_, ok, err = s.linkSource.LookupLink(ctx.Context, otherType, currentType)
+	if err == nil && ok {
 		return false, true
 	}
 
 	return false, false
+}
+
+// fetchSelectorOutgoingCardinality returns the cardinality side that applies
+// to the selecting resource for a given (currentType, otherType) pair.
+// When current is A in the registered link direction, the selecting side's
+// outgoing count is CardinalityA; when current is B, it is CardinalityB.
+func (s *HoverService) fetchSelectorOutgoingCardinality(
+	ctx *common.LSPContext,
+	currentType, otherType string,
+	currentIsA bool,
+) *provider.LinkCardinality {
+	var typeA, typeB string
+	if currentIsA {
+		typeA = currentType
+		typeB = otherType
+	} else {
+		typeA = otherType
+		typeB = currentType
+	}
+
+	linkInfo, ok, err := s.linkSource.LookupLink(ctx.Context, typeA, typeB)
+	if err != nil || !ok {
+		return nil
+	}
+
+	info := fetchLinkCardinalityInfo(linkInfo, typeA, typeB)
+	if info == nil {
+		return nil
+	}
+
+	if currentIsA {
+		c := info.CardinalityA
+		return &c
+	}
+	c := info.CardinalityB
+	return &c
 }
 
 // expandAnnotationNameForHover expands <resourceName> placeholders with a specific name.
@@ -1370,10 +1453,17 @@ func (s *HoverService) findMatchingResourcesForByLabel(
 		}
 
 		linked := false
-		if s.linkRegistry != nil && resource.Type != nil && otherResource.Type != nil {
-			_, linked = s.getLinkDirectionForHover(
+		var cardinality *provider.LinkCardinality
+		if s.linkSource != nil && resource.Type != nil && otherResource.Type != nil {
+			var currentIsA bool
+			currentIsA, linked = s.getLinkDirectionForHover(
 				ctx, resource.Type.Value, otherResource.Type.Value,
 			)
+			if linked {
+				cardinality = s.fetchSelectorOutgoingCardinality(
+					ctx, resource.Type.Value, otherResource.Type.Value, currentIsA,
+				)
+			}
 		}
 
 		resourceType := ""
@@ -1385,6 +1475,7 @@ func (s *HoverService) findMatchingResourcesForByLabel(
 			Name:         otherName,
 			ResourceType: resourceType,
 			Linked:       linked,
+			Cardinality:  cardinality,
 		})
 	}
 

@@ -6,10 +6,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/linkinfo"
 	"github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 )
@@ -22,7 +22,7 @@ func (s *CompletionService) getResourceAnnotationKeyCompletionItems(
 	blueprint *schema.Blueprint,
 	completionCtx *docmodel.CompletionContext,
 ) ([]*lsp.CompletionItem, error) {
-	if s.linkRegistry == nil {
+	if s.linkSource == nil {
 		return []*lsp.CompletionItem{}, nil
 	}
 
@@ -150,13 +150,13 @@ func determineCurrentIsA(
 // whether the current resource (first parameter) is A in the link relationship.
 // Returns (currentIsA, linked).
 func (s *CompletionService) getLinkDirection(ctx context.Context, currentType, otherType string) (bool, bool) {
-	link, err := s.linkRegistry.Link(ctx, currentType, otherType)
-	if err == nil && link != nil {
+	_, ok, err := s.linkSource.LookupLink(ctx, currentType, otherType)
+	if err == nil && ok {
 		return true, true // current is A
 	}
 
-	link, err = s.linkRegistry.Link(ctx, otherType, currentType)
-	if err == nil && link != nil {
+	_, ok, err = s.linkSource.LookupLink(ctx, otherType, currentType)
+	if err == nil && ok {
 		return false, true // current is B
 	}
 
@@ -207,12 +207,12 @@ func (s *CompletionService) collectDefsFromLinkPair(
 	currentIsA bool,
 	allDefs map[string]*annotationDefWithContext,
 ) {
-	link, err := s.linkRegistry.Link(ctx, typeA, typeB)
-	if err != nil || link == nil {
+	linkInfo, ok, err := s.linkSource.LookupLink(ctx, typeA, typeB)
+	if err != nil || !ok {
 		return
 	}
 
-	defs, err := s.getAnnotationDefinitionsForLink(ctx, link, typeA, typeB)
+	defs, err := s.getAnnotationDefinitionsForLink(linkInfo, typeA, typeB)
 	if err != nil {
 		return
 	}
@@ -295,11 +295,8 @@ func extractResourceTypeFromKey(key string) string {
 	return key[:idx]
 }
 
-// getAnnotationDefinitionsForLink retrieves annotation definitions from a link,
-// using the cache to avoid repeated calls.
 func (s *CompletionService) getAnnotationDefinitionsForLink(
-	ctx context.Context,
-	link provider.Link,
+	linkInfo *linkinfo.LinkInfo,
 	typeA, typeB string,
 ) (map[string]*provider.LinkAnnotationDefinition, error) {
 	linkKey := fmt.Sprintf("%s::%s", typeA, typeB)
@@ -308,21 +305,12 @@ func (s *CompletionService) getAnnotationDefinitionsForLink(
 		return cached, nil
 	}
 
-	emptyParams := core.NewDefaultParams(nil, nil, nil, nil)
-	linkCtx := provider.NewLinkContextFromParams(emptyParams)
-	output, err := link.GetAnnotationDefinitions(ctx, &provider.LinkGetAnnotationDefinitionsInput{
-		LinkContext: linkCtx,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if output == nil || output.AnnotationDefinitions == nil {
+	if linkInfo == nil || linkInfo.AnnotationDefinitions == nil {
 		return nil, nil
 	}
 
-	s.annotationDefCache.Set(linkKey, output.AnnotationDefinitions)
-	return output.AnnotationDefinitions, nil
+	s.annotationDefCache.Set(linkKey, linkInfo.AnnotationDefinitions)
+	return linkInfo.AnnotationDefinitions, nil
 }
 
 // createAnnotationKeyCompletionItems creates completion items for annotation keys.
@@ -585,7 +573,7 @@ func (s *CompletionService) getResourceAnnotationValueCompletionItems(
 	completionCtx *docmodel.CompletionContext,
 	format docmodel.DocumentFormat,
 ) ([]*lsp.CompletionItem, error) {
-	if s.linkRegistry == nil {
+	if s.linkSource == nil {
 		return []*lsp.CompletionItem{}, nil
 	}
 

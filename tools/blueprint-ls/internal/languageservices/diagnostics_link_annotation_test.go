@@ -309,3 +309,17 @@ func (l *mockLambdaDynamoDBLinkForDiagnostics) GetKind(ctx context.Context, inpu
 func (l *mockLambdaDynamoDBLinkForDiagnostics) GetIntermediaryExternalState(ctx context.Context, input *provider.LinkGetIntermediaryExternalStateInput) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
+
+func (l *mockLambdaDynamoDBLinkForDiagnostics) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+func (l *mockLambdaDynamoDBLinkForDiagnostics) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
+}

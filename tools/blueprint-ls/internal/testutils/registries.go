@@ -81,8 +81,8 @@ func (f *FunctionRegistryMock) HasFunction(ctx context.Context, functionName str
 }
 
 type ResourceRegistryMock struct {
-	Resources          map[string]provider.Resource
-	TransformerNames   []string
+	Resources        map[string]provider.Resource
+	TransformerNames []string
 }
 
 func (r *ResourceRegistryMock) HasResourceType(ctx context.Context, resourceType string) (bool, error) {
@@ -242,6 +242,10 @@ func (r *ResourceRegistryMock) ListTransformers(
 		return r.TransformerNames, nil
 	}
 	return []string{}, nil
+}
+
+func (r *ResourceRegistryMock) IsAbstractResourceType(ctx context.Context, resourceType string) (bool, error) {
+	return false, nil
 }
 
 type DataSourceRegistryMock struct {

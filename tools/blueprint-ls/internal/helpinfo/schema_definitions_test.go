@@ -327,7 +327,7 @@ func (s *SchemaDefinitionsSuite) Test_RenderLinkAnnotationDefinition_full() {
 			{StringValue: strPtr("90")},
 		},
 	}
-	result := RenderLinkAnnotationDefinition("aws.lambda.timeout", def)
+	result := RenderLinkAnnotationDefinition("aws.lambda.timeout", def, nil)
 	s.Contains(result, "Link Annotation")
 	s.Contains(result, "aws.lambda.timeout")
 	s.Contains(result, "string")
@@ -341,13 +341,32 @@ func (s *SchemaDefinitionsSuite) Test_RenderLinkAnnotationDefinition_minimal() {
 	def := &provider.LinkAnnotationDefinition{
 		Type: bpcore.ScalarTypeInteger,
 	}
-	result := RenderLinkAnnotationDefinition("myAnnotation", def)
+	result := RenderLinkAnnotationDefinition("myAnnotation", def, nil)
 	s.Contains(result, "Link Annotation")
 	s.Contains(result, "myAnnotation")
 	s.Contains(result, "integer")
 	s.NotContains(result, "required")
 	s.NotContains(result, "default:")
 	s.NotContains(result, "allowed values:")
+	s.NotContains(result, "Link cardinality")
+}
+
+func (s *SchemaDefinitionsSuite) Test_RenderLinkAnnotationDefinition_with_cardinality() {
+	def := &provider.LinkAnnotationDefinition{
+		Type: bpcore.ScalarTypeString,
+	}
+	cardinality := &LinkCardinalityInfo{
+		TypeA:        "aws/dynamodb/table",
+		TypeB:        "aws/lambda/function",
+		CardinalityA: provider.LinkCardinality{Min: 0, Max: 5},
+		CardinalityB: provider.LinkCardinality{Min: 1, Max: 1},
+	}
+	result := RenderLinkAnnotationDefinition("aws.dynamodb.stream", def, cardinality)
+	s.Contains(result, "Link cardinality")
+	s.Contains(result, "aws/dynamodb/table")
+	s.Contains(result, "aws/lambda/function")
+	s.Contains(result, "at most 5")
+	s.Contains(result, "exactly 1")
 }
 
 func (s *SchemaDefinitionsSuite) Test_RenderSpecFieldDefinition_with_schema() {
@@ -517,6 +536,61 @@ func (s *SchemaDefinitionsSuite) Test_RenderByLabelHoverContent_match_without_ty
 	result := RenderByLabelHoverContent("", "", matches)
 	s.Contains(result, "handler")
 	s.NotContains(result, "—")
+}
+
+func (s *SchemaDefinitionsSuite) Test_RenderByLabelHoverContent_linked_match_with_cardinality() {
+	matches := []MatchingResourceInfo{
+		{
+			Name:         "handler",
+			ResourceType: "aws/lambda/function",
+			Linked:       true,
+			Cardinality:  &provider.LinkCardinality{Min: 0, Max: 5},
+		},
+	}
+	result := RenderByLabelHoverContent("application", "orders", matches)
+	s.Contains(result, "handler")
+	s.Contains(result, "aws/lambda/function")
+	s.Contains(result, "linked, at most 5")
+}
+
+func (s *SchemaDefinitionsSuite) Test_RenderByLabelHoverContent_linked_match_without_cardinality() {
+	matches := []MatchingResourceInfo{
+		{
+			Name:         "handler",
+			ResourceType: "aws/lambda/function",
+			Linked:       true,
+		},
+	}
+	result := RenderByLabelHoverContent("", "", matches)
+	s.Contains(result, "*(linked)*")
+	s.NotContains(result, "linked,")
+}
+
+func (s *SchemaDefinitionsSuite) Test_RenderLinkSelectorHoverContent_no_targets() {
+	result := RenderLinkSelectorHoverContent(nil)
+	s.Contains(result, "linkSelector")
+	s.NotContains(result, "Will link to")
+}
+
+func (s *SchemaDefinitionsSuite) Test_RenderLinkSelectorHoverContent_targets_with_cardinality() {
+	targets := []LinkSelectorTargetInfo{
+		{
+			Name:         "handler",
+			ResourceType: "aws/lambda/function",
+			Cardinality:  &provider.LinkCardinality{Min: 1, Max: 1},
+		},
+		{
+			Name:         "queue",
+			ResourceType: "aws/sqs/queue",
+		},
+	}
+	result := RenderLinkSelectorHoverContent(targets)
+	s.Contains(result, "Will link to")
+	s.Contains(result, "handler")
+	s.Contains(result, "aws/lambda/function")
+	s.Contains(result, "exactly 1")
+	s.Contains(result, "queue")
+	s.Contains(result, "aws/sqs/queue")
 }
 
 func TestSchemaDefinitionsSuite(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/linkinfo"
 	"github.com/newstack-cloud/ls-builder/common"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"go.uber.org/zap"
@@ -30,7 +31,7 @@ type CompletionService struct {
 	dataSourceRegistry    provider.DataSourceRegistry
 	customVarTypeRegistry provider.CustomVariableTypeRegistry
 	functionRegistry      provider.FunctionRegistry
-	linkRegistry          provider.LinkRegistry
+	linkSource            linkinfo.Source
 	childResolver         *ChildBlueprintResolver
 	annotationDefCache    *core.Cache[map[string]*provider.LinkAnnotationDefinition]
 	state                 *State
@@ -66,13 +67,13 @@ func (s *CompletionService) UpdateRegistries(
 	dataSourceRegistry provider.DataSourceRegistry,
 	customVarTypeRegistry provider.CustomVariableTypeRegistry,
 	functionRegistry provider.FunctionRegistry,
-	linkRegistry provider.LinkRegistry,
+	linkSource linkinfo.Source,
 ) {
 	s.resourceRegistry = resourceRegistry
 	s.dataSourceRegistry = dataSourceRegistry
 	s.customVarTypeRegistry = customVarTypeRegistry
 	s.functionRegistry = functionRegistry
-	s.linkRegistry = linkRegistry
+	s.linkSource = linkSource
 }
 
 // CompletionResult contains the completion items and metadata for the response.
