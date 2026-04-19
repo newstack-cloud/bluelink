@@ -224,7 +224,13 @@ type InstancesContainer interface {
 
     LookupIDByName(ctx context.Context, instanceName string) (string, error)
 
+    List(ctx context.Context, params ListInstancesParams) (ListInstancesResult, error)
+
     Save(ctx context.Context, instanceState InstanceState) error
+
+    SaveBatch(ctx context.Context, instances []InstanceState) error
+
+    GetBatch(ctx context.Context, instanceIDsOrNames []string) ([]InstanceState, error)
 
     UpdateStatus(
         ctx context.Context,
@@ -472,15 +478,28 @@ type SpecTransformer interface {
         input *SpecTransformerTransformInput,
     ) (*SpecTransformerTransformOutput, error)
 
+    ValidateLinks(
+        ctx context.Context,
+        input *SpecTransformerValidateLinksInput,
+    ) (*SpecTransformerValidateLinksOutput, error)
+
     AbstractResource(ctx context.Context, resourceType string) (AbstractResource, error)
 
     ListAbstractResourceTypes(ctx context.Context) ([]string, error)
+
+    ListAbstractLinkTypes(ctx context.Context) ([]string, error)
+
+    AbstractLink(ctx context.Context, linkType string) (AbstractLink, error)
 }
 ```
 
 A spec transformer transforms a blueprint spec into an expanded form.
 The primary purpose of a transformer is to allow users to define more concise specifications where a lot of detail can be abstracted away
 during the blueprint development process and then expanded into a more detailed form for deployment.
+
+A transformer also supports link validation via `ValidateLinks`, which validates links between abstract resources at blueprint validation time before transformation occurs. This allows for early detection of invalid link configurations.
+
+Transformers can define abstract link types via `ListAbstractLinkTypes` and `AbstractLink`, providing metadata about links between abstract resource types such as type information, descriptions, annotation definitions, and cardinality constraints.
 
 The interface for a transformer includes `context.Context` and returns an `error` to allow for transformer implementations over the network boundary like with an RPC-based plugin system.
 
@@ -512,10 +531,41 @@ type AbstractResource interface {
         ctx context.Context,
         input *AbstractResourceGetTypeDescriptionInput,
     ) (*AbstractResourceGetTypeDescriptionOutput, error)
+
+    GetExamples(ctx context.Context, input *AbstractResourceGetExamplesInput) (*AbstractResourceGetExamplesOutput, error)
 }
 ```
 
 An abstract resource provides a way to validate a resource in an abstract (usually more concise) form before it is expanded into a more detailed form in the spec transformer implementation that the abstract resource belongs to.
+
+## AbstractLink (transformer.AbstractLink)
+
+```go
+type AbstractLink interface {
+
+    GetType(
+        ctx context.Context,
+        input *AbstractLinkGetTypeInput,
+    ) (*AbstractLinkGetTypeOutput, error)
+
+    GetTypeDescription(
+        ctx context.Context,
+        input *AbstractLinkGetTypeDescriptionInput,
+    ) (*AbstractLinkGetTypeDescriptionOutput, error)
+
+    GetAnnotationDefinitions(
+        ctx context.Context,
+        input *AbstractLinkGetAnnotationDefinitionsInput,
+    ) (*AbstractLinkGetAnnotationDefinitionsOutput, error)
+
+    GetCardinality(
+        ctx context.Context,
+        input *AbstractLinkGetCardinalityInput,
+    ) (*AbstractLinkGetCardinalityOutput, error)
+}
+```
+
+An abstract link provides metadata about a link between two abstract resource types in a spec transformer. This includes type information (the ordered resource type pair), human-readable descriptions, annotation definitions for fine-tuning link behaviour, and cardinality constraints for both sides of the link relationship. Abstract links are used during blueprint validation to validate link configurations before transformation occurs.
 
 ## DriftChecker (drift.Checker)
 
@@ -526,12 +576,14 @@ type Checker interface {
         ctx context.Context,
         instanceID string,
         params core.BlueprintParams,
+        taggingConfig *provider.TaggingConfig,
     ) (map[string]*state.ResourceDriftState, error)
 
     CheckDriftWithState(
         ctx context.Context,
         instanceState *state.InstanceState,
         params core.BlueprintParams,
+        taggingConfig *provider.TaggingConfig,
     ) (map[string]*state.ResourceDriftState, error)
 
     CheckResourceDrift(
@@ -540,24 +592,28 @@ type Checker interface {
         instanceName string,
         resourceID string,
         params core.BlueprintParams,
+        taggingConfig *provider.TaggingConfig,
     ) (*state.ResourceDriftState, error)
 
     CheckInterruptedResources(
         ctx context.Context,
         instanceID string,
         params core.BlueprintParams,
+        taggingConfig *provider.TaggingConfig,
     ) ([]ReconcileResult, error)
 
     CheckInterruptedResourcesWithState(
         ctx context.Context,
         instanceState *state.InstanceState,
         params core.BlueprintParams,
+        taggingConfig *provider.TaggingConfig,
     ) ([]ReconcileResult, error)
 
     CheckAllLinkDrift(
         ctx context.Context,
         instanceID string,
         params core.BlueprintParams,
+        taggingConfig *provider.TaggingConfig,
     ) (map[string]*state.LinkDriftState, error)
 
     CheckLinkDrift(
@@ -565,12 +621,14 @@ type Checker interface {
         instanceID string,
         linkID string,
         params core.BlueprintParams,
+        taggingConfig *provider.TaggingConfig,
     ) (*state.LinkDriftState, error)
 
     CheckAllLinkDriftWithState(
         ctx context.Context,
         instanceState *state.InstanceState,
         params core.BlueprintParams,
+        taggingConfig *provider.TaggingConfig,
     ) (map[string]*state.LinkDriftState, error)
 
     ApplyReconciliation(
@@ -583,6 +641,7 @@ type Checker interface {
 A drift checker checks for drift between the state of a resource in the external system and the state of the resource in the blueprint state container.
 Drift can be checked for a single resources or all resources in a blueprint instance.
 As a part of the check, the drift checker will in most cases update the state of the resources being checked, storing the drift including a set of differences along with metadata attached to the resource about whether it is in sync or not.
+All drift check methods accept a `taggingConfig` parameter that provides the tagging configuration for the provider, allowing drift checks to account for provider-managed tags when comparing external state.
 
 The drift checker also provides reconciliation support for interrupted resources. `CheckInterruptedResources` detects resources left in an interrupted state (e.g., after a drain timeout) and determines their actual cloud state without updating persisted state. `ApplyReconciliation` then applies the reconciliation results to update persisted state after user approval.
 
