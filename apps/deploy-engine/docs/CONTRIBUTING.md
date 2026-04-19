@@ -4,7 +4,7 @@
 
 ### Prerequisites
 
-- [Go](https://golang.org/dl/) >=1.22
+- [Go](https://golang.org/dl/) >=1.25
 - [Air](https://github.com/air-verse/air) >=1.63.0 - For hot reloading when running locally on the host machine
 
 Dependencies are managed with Go modules (go.mod) and will be installed automatically when you first
