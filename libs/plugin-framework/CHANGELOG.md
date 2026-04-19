@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.4.0...plugin-framework/v0.5.0) (2026-04-19)
+
+
+### Features
+
+* **plugin-framework:** add support for transformer abstract links and concrete link validation ([eef22e9](https://github.com/newstack-cloud/bluelink/commit/eef22e94154f3de58a70a37bd3116b35ae278ad2))
+
+
+### Dependencies
+
+* **plugin-framework:** bump the go-deps group across 1 directory with 2 updates ([39abecc](https://github.com/newstack-cloud/bluelink/commit/39abeccf204992e7c7e711787d9c5e998417c644))
+
 ## [0.4.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.3.0...plugin-framework/v0.4.0) (2026-01-27)
 
 
