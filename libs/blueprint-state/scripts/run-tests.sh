@@ -72,10 +72,10 @@ echo "" > coverage.txt
 
 if [ -n "$UPDATE_SNAPSHOTS" ]; then
 
-  UPDATE_SNAPSHOTS=true go test -timeout 60000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(testutils))$'`
+  UPDATE_SNAPSHOTS=true go test -count=1 -timeout 60000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(testutils))$'`
 else
 
-  go test -timeout 60000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(testutils))$'`
+  go test -count=1 -timeout 60000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(testutils))$'`
 
 fi
 
@@ -92,5 +92,5 @@ if [ -n "$GITHUB_ACTION" ]; then
   teardown_deps
   setup_deps
   # We are in a CI environment so run tests again to generate JSON report.
-  go test -timeout 60000ms -json `go list ./... | egrep -v '(/(testutils))$'` > report.json
+  go test -count=1 -timeout 60000ms -json `go list ./... | egrep -v '(/(testutils))$'` > report.json
 fi
