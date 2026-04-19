@@ -19,6 +19,9 @@ func NewTransformer() transform.SpecTransformer {
 		AbstractResources: map[string]transform.AbstractResource{
 			"celerity/handler": abstractResourceHandler(),
 		},
+		AbstractLinks: map[string]*transformerv1.AbstractLinkDefinition{
+			"celerity/handler::celerity/api": abstractLinkHandlerAPI().(*transformerv1.AbstractLinkDefinition),
+		},
 		TransformFunc: transformBlueprint,
 	}
 }

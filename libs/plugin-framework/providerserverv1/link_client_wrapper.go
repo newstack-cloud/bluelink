@@ -418,6 +418,139 @@ func (l *linkProviderClientWrapper) GetTypeDescription(
 	)
 }
 
+func (l *linkProviderClientWrapper) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	request, err := l.buildLinkRequest(input.LinkContext)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionProviderGetLinkCardinality,
+		)
+	}
+
+	response, err := l.client.GetLinkCardinality(ctx, request)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionProviderGetLinkCardinality,
+		)
+	}
+
+	switch result := response.Response.(type) {
+	case *sharedtypesv1.LinkCardinalityResponse_CardinalityInfo:
+		return convertv1.FromPBLinkCardinalityResponse(result), nil
+	case *sharedtypesv1.LinkCardinalityResponse_ErrorResponse:
+		return nil, errorsv1.CreateErrorFromResponse(
+			result.ErrorResponse,
+			errorsv1.PluginActionProviderGetLinkCardinality,
+		)
+	}
+
+	return nil, errorsv1.CreateGeneralError(
+		errorsv1.ErrUnexpectedResponseType(
+			errorsv1.PluginActionProviderGetLinkCardinality,
+		),
+		errorsv1.PluginActionProviderGetLinkCardinality,
+	)
+}
+
+func (l *linkProviderClientWrapper) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	request, err := l.buildValidateLinkRequest(input)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionProviderValidateLink,
+		)
+	}
+
+	response, err := l.client.ValidateLink(ctx, request)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionProviderValidateLink,
+		)
+	}
+
+	switch result := response.Response.(type) {
+	case *ValidateLinkResponse_CompleteResponse:
+		output, err := fromPBValidateLinkResponse(result.CompleteResponse)
+		if err != nil {
+			return nil, errorsv1.CreateGeneralError(
+				err,
+				errorsv1.PluginActionProviderValidateLink,
+			)
+		}
+		return output, nil
+	case *ValidateLinkResponse_ErrorResponse:
+		return nil, errorsv1.CreateErrorFromResponse(
+			result.ErrorResponse,
+			errorsv1.PluginActionProviderValidateLink,
+		)
+	}
+
+	return nil, errorsv1.CreateGeneralError(
+		errorsv1.ErrUnexpectedResponseType(
+			errorsv1.PluginActionProviderValidateLink,
+		),
+		errorsv1.PluginActionProviderValidateLink,
+	)
+}
+
+func (l *linkProviderClientWrapper) buildValidateLinkRequest(
+	input *provider.LinkValidateInput,
+) (*ValidateLinkRequest, error) {
+	linkCtx, err := toPBLinkContext(input.LinkContext)
+	if err != nil {
+		return nil, err
+	}
+
+	resourceASpec, err := serialisation.ToMappingNodePB(
+		input.ResourceASpec,
+		/* optional */ false,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	resourceBSpec, err := serialisation.ToMappingNodePB(
+		input.ResourceBSpec,
+		/* optional */ false,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	resourceAType := &sharedtypesv1.ResourceType{
+		Type: input.ResourceAType,
+	}
+
+	resourceBType := &sharedtypesv1.ResourceType{
+		Type: input.ResourceBType,
+	}
+
+	annotations, err := convertv1.ToPBScalarMap(input.Annotations)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ValidateLinkRequest{
+		ResourceASpec: resourceASpec,
+		ResourceBSpec: resourceBSpec,
+		ResourceAName: input.ResourceAName,
+		ResourceBName: input.ResourceBName,
+		ResourceAType: resourceAType,
+		ResourceBType: resourceBType,
+		Annotations:   annotations,
+		LinkContext:   linkCtx,
+		HostId:        l.hostID,
+	}, nil
+}
+
 func (l *linkProviderClientWrapper) GetAnnotationDefinitions(
 	ctx context.Context,
 	input *provider.LinkGetAnnotationDefinitionsInput,
@@ -439,7 +572,7 @@ func (l *linkProviderClientWrapper) GetAnnotationDefinitions(
 	}
 
 	switch result := response.Response.(type) {
-	case *LinkAnnotationDefinitionsResponse_AnnotationDefinitions:
+	case *sharedtypesv1.LinkAnnotationDefinitionsResponse_AnnotationDefinitions:
 		output, err := fromPBLinkAnnotationDefinitions(
 			result.AnnotationDefinitions,
 		)
@@ -451,7 +584,7 @@ func (l *linkProviderClientWrapper) GetAnnotationDefinitions(
 		}
 
 		return output, nil
-	case *LinkAnnotationDefinitionsResponse_ErrorResponse:
+	case *sharedtypesv1.LinkAnnotationDefinitionsResponse_ErrorResponse:
 		return nil, errorsv1.CreateErrorFromResponse(
 			result.ErrorResponse,
 			errorsv1.PluginActionProviderGetLinkAnnotationDefinitions,

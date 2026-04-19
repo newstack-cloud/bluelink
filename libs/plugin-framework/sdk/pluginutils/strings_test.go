@@ -3,6 +3,7 @@ package pluginutils
 import (
 	"testing"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -41,6 +42,40 @@ func (s *StringsTestSuite) Test_strip_non_alphanumeric_chars() {
 	for _, tc := range testCases {
 		s.Run(tc.name, func() {
 			result := StripNonAlphaNumericChars(tc.input)
+			s.Equal(tc.expected, result)
+		})
+	}
+}
+
+func (s *StringsTestSuite) Test_string_to_substitutions() {
+	testCases := []struct {
+		name     string
+		input    string
+		expected *substitutions.StringOrSubstitutions
+	}{
+		{
+			name:  "simple string",
+			input: "OrderFunction",
+			expected: &substitutions.StringOrSubstitutions{
+				Values: []*substitutions.StringOrSubstitution{
+					{StringValue: strPtr("OrderFunction")},
+				},
+			},
+		},
+		{
+			name:  "empty string",
+			input: "",
+			expected: &substitutions.StringOrSubstitutions{
+				Values: []*substitutions.StringOrSubstitution{
+					{StringValue: strPtr("")},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		s.Run(tc.name, func() {
+			result := StringToSubstitutions(tc.input)
 			s.Equal(tc.expected, result)
 		})
 	}

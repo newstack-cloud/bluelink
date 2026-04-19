@@ -551,3 +551,122 @@ func (s *ProviderPluginV1Suite) Test_link_get_intermediary_external_state_report
 		"internal error occurred when getting intermediary external state for link",
 	)
 }
+
+func (s *ProviderPluginV1Suite) Test_link_get_cardinality() {
+	link, err := s.provider.Link(
+		context.Background(),
+		lambdaFunctionResourceType,
+		dynamoDBTableResourceType,
+	)
+	s.Require().NoError(err)
+
+	output, err := link.GetCardinality(
+		context.Background(),
+		linkGetCardinalityInput(),
+	)
+	s.Require().NoError(err)
+	s.Assert().Equal(
+		&provider.LinkGetCardinalityOutput{
+			CardinalityA: testprovider.LinkLambdaFunctionDDBTableCardinalityA(),
+			CardinalityB: testprovider.LinkLambdaFunctionDDBTableCardinalityB(),
+		},
+		output,
+	)
+}
+
+func (s *ProviderPluginV1Suite) Test_link_get_cardinality_fails_for_unexpected_host() {
+	link, err := s.providerWrongHost.Link(
+		context.Background(),
+		lambdaFunctionResourceType,
+		dynamoDBTableResourceType,
+	)
+	s.Require().NoError(err)
+
+	_, err = link.GetCardinality(
+		context.Background(),
+		linkGetCardinalityInput(),
+	)
+	testutils.AssertInvalidHost(
+		err,
+		errorsv1.PluginActionProviderGetLinkCardinality,
+		testWrongHostID,
+		&s.Suite,
+	)
+}
+
+func (s *ProviderPluginV1Suite) Test_link_get_cardinality_reports_expected_error_for_failure() {
+	link, err := s.failingProvider.Link(
+		context.Background(),
+		lambdaFunctionResourceType,
+		dynamoDBTableResourceType,
+	)
+	s.Require().NoError(err)
+
+	_, err = link.GetCardinality(
+		context.Background(),
+		linkGetCardinalityInput(),
+	)
+	s.Assert().Error(err)
+	s.Assert().Contains(
+		err.Error(),
+		"internal error occurred when retrieving cardinality for link",
+	)
+}
+
+func (s *ProviderPluginV1Suite) Test_link_validate() {
+	link, err := s.provider.Link(
+		context.Background(),
+		lambdaFunctionResourceType,
+		dynamoDBTableResourceType,
+	)
+	s.Require().NoError(err)
+
+	output, err := link.ValidateLink(
+		context.Background(),
+		linkValidateInput(),
+	)
+	s.Require().NoError(err)
+	s.Assert().Equal(
+		testprovider.LinkLambdaFunctionDDBTableValidateOutput(),
+		output,
+	)
+}
+
+func (s *ProviderPluginV1Suite) Test_link_validate_fails_for_unexpected_host() {
+	link, err := s.providerWrongHost.Link(
+		context.Background(),
+		lambdaFunctionResourceType,
+		dynamoDBTableResourceType,
+	)
+	s.Require().NoError(err)
+
+	_, err = link.ValidateLink(
+		context.Background(),
+		linkValidateInput(),
+	)
+	testutils.AssertInvalidHost(
+		err,
+		errorsv1.PluginActionProviderValidateLink,
+		testWrongHostID,
+		&s.Suite,
+	)
+}
+
+func (s *ProviderPluginV1Suite) Test_link_validate_reports_expected_error_for_failure() {
+	link, err := s.failingProvider.Link(
+		context.Background(),
+		lambdaFunctionResourceType,
+		dynamoDBTableResourceType,
+	)
+	s.Require().NoError(err)
+
+	_, err = link.ValidateLink(
+		context.Background(),
+		linkValidateInput(),
+	)
+	s.Assert().Error(err)
+	s.Assert().Contains(
+		err.Error(),
+		"internal error occurred when validating link",
+	)
+}

@@ -1498,6 +1498,68 @@ message BlueprintParams {
     map<string, schema.ScalarValue> blueprint_variables = 4;
 }
 
+// LinkAnnotationDefinitionsResponse is the response
+// containing the annotation definitions for a link.
+message LinkAnnotationDefinitionsResponse {
+    oneof response {
+        LinkAnnotationDefinitions annotation_definitions = 1;
+        ErrorResponse error_response = 2;
+    }
+}
+
+// LinkAnnotationDefinition provides a definition for an annotation
+// that can be applied to either of the resources in a link.
+message LinkAnnotationDefinitions {
+    // A mapping of annotation definitions for a link.
+    // The keys are expected to be in the format `{resourceType}::{annotationKey}`.
+    // For example, `aws/lambda/function::aws.lambda.dynamodb.accessType`.
+    // The resource type in the key represents the resource type in a link
+    // that the annotation can be applied to.
+    map<string, LinkAnnotationDefinition> definitions = 1;
+}
+
+// LinkAnnotationDefinition provides a way to define annotations
+// for a link type.
+message LinkAnnotationDefinition {
+    string name = 1;
+    string label = 2;
+    ScalarType type = 3;
+    string description = 4;
+    schema.ScalarValue default_value = 5;
+    repeated schema.ScalarValue allowed_values = 6;
+    repeated schema.ScalarValue examples = 7;
+    bool required = 8;
+    // AppliesTo determines which resource in the link relationship
+    // the annotation can be applied to.
+    // 0 = Any (default), 1 = ResourceA, 2 = ResourceB
+    int32 applies_to = 9;
+}
+
+// LinkCardinalityResponse is the response containing the cardinality for a link type.
+message LinkCardinalityResponse {
+    oneof response {
+        LinkCardinalityInfo cardinality_info = 1;
+        ErrorResponse error_response = 2;
+    }
+}
+
+// LinkCardinalityInfo provides the cardinality information for a link type.
+message LinkCardinalityInfo {
+    LinkItemCardinality cardinality_a = 1;
+    LinkItemCardinality cardinality_b = 2;
+}
+
+// LinkItemCardinality provides the cardinality for an item in a link relationship
+// in relation to the other item in the link.
+message LinkItemCardinality {
+    // The minimum number of links that can exist between a pair of resource types.
+    // 0 means no minimum.
+    int32 min = 1;
+    // The maximum number of links that can exist between a pair of resource types.
+    // 0 means unlimited.
+    int32 max = 2;
+}
+
 // Error response returned by the provider plugin
 // when an error occurs during any of the supported
 // provider plugin actions.

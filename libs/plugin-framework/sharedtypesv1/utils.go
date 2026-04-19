@@ -40,6 +40,10 @@ func ToPBDiagnostics(diagnostics []*core.Diagnostic) ([]*Diagnostic, error) {
 }
 
 func toPBDiagnosticRange(coreRange *core.DiagnosticRange) *DiagnosticRange {
+	if coreRange == nil {
+		return nil
+	}
+
 	columnAccuracy := ColumnAccuracy_COLUMN_ACCURACY_NONE
 	if coreRange.ColumnAccuracy != nil {
 		columnAccuracy = ColumnAccuracy(*coreRange.ColumnAccuracy)
@@ -143,6 +147,10 @@ func ToCoreDiagnostics(diagnostics []*Diagnostic) ([]*core.Diagnostic, error) {
 }
 
 func toCoreDiagnosticRange(pbRange *DiagnosticRange) *core.DiagnosticRange {
+	if pbRange == nil {
+		return nil
+	}
+
 	columnAccuracyPtr := (*substitutions.ColumnAccuracy)(nil)
 	if pbRange.ColumnAccuracy != ColumnAccuracy_COLUMN_ACCURACY_NONE {
 		columnAccuracy := substitutions.ColumnAccuracy(pbRange.ColumnAccuracy)
@@ -170,9 +178,13 @@ func toCoreDiagnosticContext(pbContext *DiagnosticContext) (*errors.ErrorContext
 		return nil, err
 	}
 
-	metadata, isMetadataMap := metadataAny.(map[string]any)
-	if !isMetadataMap {
-		return nil, fmt.Errorf("metadata is expected to be a map of string to any")
+	var metadata map[string]any
+	if metadataAny != nil {
+		var isMetadataMap bool
+		metadata, isMetadataMap = metadataAny.(map[string]any)
+		if !isMetadataMap {
+			return nil, fmt.Errorf("metadata is expected to be a map of string to any")
+		}
 	}
 
 	return &errors.ErrorContext{

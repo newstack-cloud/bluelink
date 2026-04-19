@@ -15,7 +15,6 @@ import (
 // This implements the `provider.Link` interface and can be used in the same way
 // as any other link implementation used in a provider plugin.
 type LinkDefinition struct {
-	// an AWS Lambda function and an AWS DynamoDB table.
 	// The type of the first resource in the link relationship.
 	// (e.g. "aws/lambda/function").
 	ResourceTypeA string
@@ -55,6 +54,24 @@ type LinkDefinition struct {
 	// {resourceType}::{annotationName} -> LinkAnnotationDefinition
 	// e.g. "aws/lambda/function::aws.lambda.dynamodb.accessType" -> LinkAnnotationDefinition
 	AnnotationDefinitions map[string]*provider.LinkAnnotationDefinition
+
+	// Cardinality on the A side of the link: how many B's each A may link to.
+	// Zero value means no constraint.
+	CardinalityA provider.LinkCardinality
+
+	// Cardinality on the B side of the link: how many A's may link to each B.
+	// Zero value means no constraint.
+	CardinalityB provider.LinkCardinality
+
+	// ValidateFunc is a custom validation function that runs at blueprint
+	// validation time (pre-deploy). It receives the resource specs and
+	// annotations for the link pair and returns diagnostics.
+	// This is distinct from StageChangesFunc which runs at deployment
+	// staging time. Nil means no custom validation.
+	ValidateFunc func(
+		ctx context.Context,
+		input *provider.LinkValidateInput,
+	) (*provider.LinkValidateOutput, error)
 
 	// The priority resource in the relationship based on the ordering of the resource
 	// types.
@@ -231,6 +248,29 @@ func (l *LinkDefinition) GetIntermediaryExternalState(
 		}, nil
 	}
 	return l.GetIntermediaryExternalStateFunc(ctx, input)
+}
+
+func (l *LinkDefinition) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{
+		CardinalityA: l.CardinalityA,
+		CardinalityB: l.CardinalityB,
+	}, nil
+}
+
+func (l *LinkDefinition) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	if l.ValidateFunc == nil {
+		// No custom validation, return empty diagnostics
+		return &provider.LinkValidateOutput{
+			Diagnostics: nil,
+		}, nil
+	}
+	return l.ValidateFunc(ctx, input)
 }
 
 func (l *LinkDefinition) getPriorityResourceType() string {

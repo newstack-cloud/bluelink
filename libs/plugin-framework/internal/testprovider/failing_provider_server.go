@@ -277,7 +277,7 @@ func (p *failingProviderServer) GetLinkTypeDescription(
 func (p *failingProviderServer) GetLinkAnnotationDefinitions(
 	ctx context.Context,
 	req *providerserverv1.LinkRequest,
-) (*providerserverv1.LinkAnnotationDefinitionsResponse, error) {
+) (*sharedtypesv1.LinkAnnotationDefinitionsResponse, error) {
 	return nil, status.Error(
 		codes.Unknown,
 		"internal error occurred when retrieving annotation definitions for link",
@@ -301,6 +301,26 @@ func (p *failingProviderServer) GetLinkIntermediaryExternalState(
 	return nil, status.Error(
 		codes.Unknown,
 		"internal error occurred when getting intermediary external state for link",
+	)
+}
+
+func (p *failingProviderServer) GetLinkCardinality(
+	ctx context.Context,
+	req *providerserverv1.LinkRequest,
+) (*sharedtypesv1.LinkCardinalityResponse, error) {
+	return nil, status.Error(
+		codes.Unknown,
+		"internal error occurred when retrieving cardinality for link",
+	)
+}
+
+func (p *failingProviderServer) ValidateLink(
+	ctx context.Context,
+	req *providerserverv1.ValidateLinkRequest,
+) (*providerserverv1.ValidateLinkResponse, error) {
+	return nil, status.Error(
+		codes.Unknown,
+		"internal error occurred when validating link",
 	)
 }
 

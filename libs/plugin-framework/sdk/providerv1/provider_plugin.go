@@ -866,7 +866,7 @@ func (p *blueprintProviderPluginImpl) GetLinkTypeDescription(
 func (p *blueprintProviderPluginImpl) GetLinkAnnotationDefinitions(
 	ctx context.Context,
 	req *providerserverv1.LinkRequest,
-) (*providerserverv1.LinkAnnotationDefinitionsResponse, error) {
+) (*sharedtypesv1.LinkAnnotationDefinitionsResponse, error) {
 	err := p.checkHostID(req.HostId)
 	if err != nil {
 		return toGetLinkAnnotationsDefinitionsErrorResponse(err), nil
@@ -982,6 +982,87 @@ func (p *blueprintProviderPluginImpl) GetLinkIntermediaryExternalState(
 	response, err := toPBGetLinkIntermediaryExternalStateResponse(output)
 	if err != nil {
 		return toGetLinkIntermediaryExternalStateErrorResponse(err), nil
+	}
+
+	return response, nil
+}
+
+func (p *blueprintProviderPluginImpl) GetLinkCardinality(
+	ctx context.Context,
+	req *providerserverv1.LinkRequest,
+) (*sharedtypesv1.LinkCardinalityResponse, error) {
+	err := p.checkHostID(req.HostId)
+	if err != nil {
+		return toGetLinkCardinalityErrorResponse(err), nil
+	}
+
+	linkTypeInfo, err := extractLinkTypeInfo(req.LinkType)
+	if err != nil {
+		return toGetLinkCardinalityErrorResponse(err), nil
+	}
+
+	link, err := p.bpProvider.Link(
+		ctx,
+		linkTypeInfo.resourceTypeA,
+		linkTypeInfo.resourceTypeB,
+	)
+	if err != nil {
+		return toGetLinkCardinalityErrorResponse(err), nil
+	}
+
+	cardinalityInput, err := fromPBLinkRequestForCardinality(req)
+	if err != nil {
+		return toGetLinkCardinalityErrorResponse(err), nil
+	}
+
+	output, err := link.GetCardinality(
+		ctx,
+		cardinalityInput,
+	)
+	if err != nil {
+		return toGetLinkCardinalityErrorResponse(err), nil
+	}
+
+	return toPBGetLinkCardinalityResponse(output), nil
+}
+
+func (p *blueprintProviderPluginImpl) ValidateLink(
+	ctx context.Context,
+	req *providerserverv1.ValidateLinkRequest,
+) (*providerserverv1.ValidateLinkResponse, error) {
+	err := p.checkHostID(req.HostId)
+	if err != nil {
+		return toValidateLinkErrorResponse(err), nil
+	}
+
+	resourceTypeA := convertv1.ResourceTypeToString(req.ResourceAType)
+	resourceTypeB := convertv1.ResourceTypeToString(req.ResourceBType)
+
+	link, err := p.bpProvider.Link(
+		ctx,
+		resourceTypeA,
+		resourceTypeB,
+	)
+	if err != nil {
+		return toValidateLinkErrorResponse(err), nil
+	}
+
+	validateInput, err := fromPBValidateLinkRequest(req)
+	if err != nil {
+		return toValidateLinkErrorResponse(err), nil
+	}
+
+	output, err := link.ValidateLink(
+		ctx,
+		validateInput,
+	)
+	if err != nil {
+		return toValidateLinkErrorResponse(err), nil
+	}
+
+	response, err := toPBValidateLinkResponse(output)
+	if err != nil {
+		return toValidateLinkErrorResponse(err), nil
 	}
 
 	return response, nil

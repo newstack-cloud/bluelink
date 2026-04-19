@@ -1,6 +1,7 @@
 package transformerv1
 
 import (
+	"github.com/newstack-cloud/bluelink/libs/blueprint/linktypes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/serialisation"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/convertv1"
@@ -29,6 +30,72 @@ func fromPBCustomValidateAbstractResourceRequest(
 		SchemaResource:     schemaResource,
 		TransformerContext: transformerCtx,
 	}, nil
+}
+
+func fromPBValidateLinksRequest(
+	req *transformerserverv1.ValidateLinksRequest,
+) (*transform.SpecTransformerValidateLinksInput, error) {
+	if req == nil {
+		return nil, nil
+	}
+
+	blueprint, err := serialisation.FromSchemaPB(req.Blueprint)
+	if err != nil {
+		return nil, err
+	}
+
+	linkGraph, err := fromPBDeclaredLinkGraph(req.LinkGraph)
+	if err != nil {
+		return nil, err
+	}
+
+	transformerCtx, err := fromPBTransformerContext(req.Context)
+	if err != nil {
+		return nil, err
+	}
+
+	return &transform.SpecTransformerValidateLinksInput{
+		Blueprint:          blueprint,
+		LinkGraph:          linkGraph,
+		TransformerContext:  transformerCtx,
+	}, nil
+}
+
+func fromPBDeclaredLinkGraph(
+	pbGraph *transformerserverv1.DeclaredLinkGraph,
+) (linktypes.DeclaredLinkGraph, error) {
+	if pbGraph == nil {
+		return nil, nil
+	}
+
+	edges := make([]*linktypes.ResolvedLink, len(pbGraph.Edges))
+	for i, pbEdge := range pbGraph.Edges {
+		edges[i] = fromPBResolvedLink(pbEdge)
+	}
+
+	resources := make(map[string]resourceEntry)
+	for name, pbEntry := range pbGraph.Resources {
+		resource, err := serialisation.FromResourcePB(pbEntry.Resource)
+		if err != nil {
+			return nil, err
+		}
+		resources[name] = resourceEntry{
+			schema:         resource,
+			classification: linktypes.ResourceClass(pbEntry.ResourceClass),
+		}
+	}
+
+	return newReconstructedLinkGraph(edges, resources), nil
+}
+
+func fromPBResolvedLink(pbEdge *transformerserverv1.ResolvedLink) *linktypes.ResolvedLink {
+	return &linktypes.ResolvedLink{
+		Source:       pbEdge.Source,
+		Target:       pbEdge.Target,
+		SourceType:   pbEdge.SourceType,
+		TargetType:   pbEdge.TargetType,
+		SelectorKeys: pbEdge.SelectorKeys,
+	}
 }
 
 func fromPBTransformerContext(

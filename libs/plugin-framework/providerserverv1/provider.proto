@@ -179,7 +179,7 @@ service Provider {
 	// GetLinkAnnotationDefinitions retrieves the annotation definitions for the link type.
 	// Annotations provide a way to fine tune the behaviour of a link in a blueprint spec
 	// in the linked resource metadata sections.
-    rpc GetLinkAnnotationDefinitions(LinkRequest) returns (LinkAnnotationDefinitionsResponse) {}
+    rpc GetLinkAnnotationDefinitions(LinkRequest) returns (sharedtypesv1.LinkAnnotationDefinitionsResponse) {}
 	// GetKind tells us whether the link is a "hard" or "soft" link.
 	// A hard link is where the priority resource type must be created first.
 	// A soft link is where it does not matter which resource type in the relationship
@@ -191,6 +191,10 @@ service Provider {
 	// an empty map or nil output.
 	rpc GetLinkIntermediaryExternalState(GetLinkIntermediaryExternalStateRequest)
 		returns (GetLinkIntermediaryExternalStateResponse) {}
+    // GetLinkCardinality retrieves the cardinality for the link between two resources.
+    rpc GetLinkCardinality(LinkRequest) returns (sharedtypesv1.LinkCardinalityResponse) {}
+    // ValidateLink carries out custom validation for the link between two resources.
+    rpc ValidateLink(ValidateLinkRequest) returns (ValidateLinkResponse) {}
 
     //////////////////////////////////////////////////////////////////////
     // Data source methods
@@ -1102,6 +1106,43 @@ message GetLinkIntermediaryExternalStateCompleteResponse {
     map<string, IntermediaryExternalState> intermediary_states = 1;
 }
 
+// ValidateLinkRequest is the request input for validating a link between two resources.
+message ValidateLinkRequest {
+    // The specification of the first resource in the link relationship.
+    schema.MappingNode resource_a_spec = 1;
+    // The specification of the second resource in the link relationship.
+    schema.MappingNode resource_b_spec = 2;
+    // The logical name of resource A in the blueprint.
+    string resource_a_name = 3;
+    // The logical name of resource B in the blueprint.
+    string resource_b_name = 4;
+    // The type of resource A.
+    sharedtypesv1.ResourceType resource_a_type = 5;
+    // The type of resource B.
+    sharedtypesv1.ResourceType resource_b_type = 6;
+    // Annotations are the link-related annotations from both resources
+    // in the link, keyed by "{resourceType}::{annotationName}".
+    map<string, schema.ScalarValue> annotations = 7;
+    // Provides access to provider config and context variables.
+    LinkContext link_context = 8;
+    // The ID of the host that the plugin is registered with.
+    string host_id = 9;
+}
+
+// ValidateLinkResponse is the response for validating a link between two resources.
+message ValidateLinkResponse {
+    oneof response {
+        ValidateLinkCompleteResponse complete_response = 1;
+        sharedtypesv1.ErrorResponse error_response = 2;
+    }
+}
+
+// ValidateLinkCompleteResponse contains the result of validating a link between two resources.
+message ValidateLinkCompleteResponse {
+    // A list of diagnostics related to validating the link.
+    repeated sharedtypesv1.Diagnostic diagnostics = 1;
+}
+
 // IntermediaryExternalState contains the external (cloud) state
 // of an intermediary resource.
 message IntermediaryExternalState {
@@ -1266,43 +1307,6 @@ enum PreciseLinkStatus {
     // due to deployment being cancelled (e.g., drain timeout after terminal failure).
     // The actual state is unknown and needs reconciliation.
     PRECISE_LINK_STATUS_INTERMEDIARY_RESOURCE_UPDATE_INTERRUPTED = 21;
-}
-
-// LinkAnnotationDefinitionsResponse is the response
-// containing the annotation definitions for a link.
-message LinkAnnotationDefinitionsResponse {
-    oneof response {
-        LinkAnnotationDefinitions annotation_definitions = 1;
-        sharedtypesv1.ErrorResponse error_response = 2;
-    }
-}
-
-// LinkAnnotationDefinition provides a definition for an annotation
-// that can be applied to either of the resources in a link.
-message LinkAnnotationDefinitions {
-    // A mapping of annotation definitions for a link.
-    // The keys are expected to be in the format `{resourceType}::{annotationKey}`.
-    // For example, `aws/lambda/function::aws.lambda.dynamodb.accessType`.
-    // The resource type in the key represents the resource type in a link
-    // that the annotation can be applied to.
-    map<string, LinkAnnotationDefinition> definitions = 1;
-}
-
-// LinkAnnotationDefinition provides a way to define annotations
-// for a link type.
-message LinkAnnotationDefinition {
-    string name = 1;
-    string label = 2;
-    sharedtypesv1.ScalarType type = 3;
-    string description = 4;
-    schema.ScalarValue default_value = 5;
-    repeated schema.ScalarValue allowed_values = 6;
-    repeated schema.ScalarValue examples = 7;
-    bool required = 8;
-    // AppliesTo determines which resource in the link relationship
-    // the annotation can be applied to.
-    // 0 = Any (default), 1 = ResourceA, 2 = ResourceB
-    int32 applies_to = 9;
 }
 
 // LinkContext holds the environment configuration

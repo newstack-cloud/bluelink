@@ -11,6 +11,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginservicev1"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/providerserverv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/transformerserverv1"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/utils"
 	"github.com/spf13/afero"
 )
@@ -176,8 +177,10 @@ func (l *Launcher) Launch(ctx context.Context) (*PluginMaps, error) {
 	}
 
 	return &PluginMaps{
-		Providers:    providerPluginMap,
-		Transformers: transformerPluginMap,
+		Providers: providerPluginMap,
+		Transformers: wrapTransformersWithDerivedCanLinkTo(
+			transformerPluginMap,
+		),
 	}, nil
 }
 
@@ -337,6 +340,16 @@ func wrapProvidersWithDerivedCanLinkTo(
 	}
 
 	return wrapProviders(providers, allLinkTypes), nil
+}
+
+func wrapTransformersWithDerivedCanLinkTo(
+	transformers map[string]transform.SpecTransformer,
+) map[string]transform.SpecTransformer {
+	wrapped := make(map[string]transform.SpecTransformer, len(transformers))
+	for namespace, t := range transformers {
+		wrapped[namespace] = transformerserverv1.WrapTransformerWithDerivedCanLinkTo(t)
+	}
+	return wrapped
 }
 
 func collectAllLinkTypes(

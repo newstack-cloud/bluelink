@@ -49,6 +49,8 @@ const (
 	Provider_GetLinkAnnotationDefinitions_FullMethodName     = "/providerserverv1.Provider/GetLinkAnnotationDefinitions"
 	Provider_GetLinkKind_FullMethodName                      = "/providerserverv1.Provider/GetLinkKind"
 	Provider_GetLinkIntermediaryExternalState_FullMethodName = "/providerserverv1.Provider/GetLinkIntermediaryExternalState"
+	Provider_GetLinkCardinality_FullMethodName               = "/providerserverv1.Provider/GetLinkCardinality"
+	Provider_ValidateLink_FullMethodName                     = "/providerserverv1.Provider/ValidateLink"
 	Provider_GetDataSourceType_FullMethodName                = "/providerserverv1.Provider/GetDataSourceType"
 	Provider_GetDataSourceTypeDescription_FullMethodName     = "/providerserverv1.Provider/GetDataSourceTypeDescription"
 	Provider_GetDataSourceExamples_FullMethodName            = "/providerserverv1.Provider/GetDataSourceExamples"
@@ -223,7 +225,7 @@ type ProviderClient interface {
 	// GetLinkAnnotationDefinitions retrieves the annotation definitions for the link type.
 	// Annotations provide a way to fine tune the behaviour of a link in a blueprint spec
 	// in the linked resource metadata sections.
-	GetLinkAnnotationDefinitions(ctx context.Context, in *LinkRequest, opts ...grpc.CallOption) (*LinkAnnotationDefinitionsResponse, error)
+	GetLinkAnnotationDefinitions(ctx context.Context, in *LinkRequest, opts ...grpc.CallOption) (*sharedtypesv1.LinkAnnotationDefinitionsResponse, error)
 	// GetKind tells us whether the link is a "hard" or "soft" link.
 	// A hard link is where the priority resource type must be created first.
 	// A soft link is where it does not matter which resource type in the relationship
@@ -234,6 +236,10 @@ type ProviderClient interface {
 	// Link implementations that don't manage intermediary resources should return
 	// an empty map or nil output.
 	GetLinkIntermediaryExternalState(ctx context.Context, in *GetLinkIntermediaryExternalStateRequest, opts ...grpc.CallOption) (*GetLinkIntermediaryExternalStateResponse, error)
+	// GetLinkCardinality retrieves the cardinality for the link between two resources.
+	GetLinkCardinality(ctx context.Context, in *LinkRequest, opts ...grpc.CallOption) (*sharedtypesv1.LinkCardinalityResponse, error)
+	// ValidateLink carries out custom validation for the link between two resources.
+	ValidateLink(ctx context.Context, in *ValidateLinkRequest, opts ...grpc.CallOption) (*ValidateLinkResponse, error)
 	// GetDataSourceType retrieves the type of a data source in a blueprint spec
 	// that can be used for documentation and tooling.
 	// This allows callers to get a human-readable label for the already known
@@ -560,9 +566,9 @@ func (c *providerClient) GetLinkTypeDescription(ctx context.Context, in *LinkReq
 	return out, nil
 }
 
-func (c *providerClient) GetLinkAnnotationDefinitions(ctx context.Context, in *LinkRequest, opts ...grpc.CallOption) (*LinkAnnotationDefinitionsResponse, error) {
+func (c *providerClient) GetLinkAnnotationDefinitions(ctx context.Context, in *LinkRequest, opts ...grpc.CallOption) (*sharedtypesv1.LinkAnnotationDefinitionsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(LinkAnnotationDefinitionsResponse)
+	out := new(sharedtypesv1.LinkAnnotationDefinitionsResponse)
 	err := c.cc.Invoke(ctx, Provider_GetLinkAnnotationDefinitions_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -584,6 +590,26 @@ func (c *providerClient) GetLinkIntermediaryExternalState(ctx context.Context, i
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetLinkIntermediaryExternalStateResponse)
 	err := c.cc.Invoke(ctx, Provider_GetLinkIntermediaryExternalState_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *providerClient) GetLinkCardinality(ctx context.Context, in *LinkRequest, opts ...grpc.CallOption) (*sharedtypesv1.LinkCardinalityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(sharedtypesv1.LinkCardinalityResponse)
+	err := c.cc.Invoke(ctx, Provider_GetLinkCardinality_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *providerClient) ValidateLink(ctx context.Context, in *ValidateLinkRequest, opts ...grpc.CallOption) (*ValidateLinkResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidateLinkResponse)
+	err := c.cc.Invoke(ctx, Provider_ValidateLink_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -879,7 +905,7 @@ type ProviderServer interface {
 	// GetLinkAnnotationDefinitions retrieves the annotation definitions for the link type.
 	// Annotations provide a way to fine tune the behaviour of a link in a blueprint spec
 	// in the linked resource metadata sections.
-	GetLinkAnnotationDefinitions(context.Context, *LinkRequest) (*LinkAnnotationDefinitionsResponse, error)
+	GetLinkAnnotationDefinitions(context.Context, *LinkRequest) (*sharedtypesv1.LinkAnnotationDefinitionsResponse, error)
 	// GetKind tells us whether the link is a "hard" or "soft" link.
 	// A hard link is where the priority resource type must be created first.
 	// A soft link is where it does not matter which resource type in the relationship
@@ -890,6 +916,10 @@ type ProviderServer interface {
 	// Link implementations that don't manage intermediary resources should return
 	// an empty map or nil output.
 	GetLinkIntermediaryExternalState(context.Context, *GetLinkIntermediaryExternalStateRequest) (*GetLinkIntermediaryExternalStateResponse, error)
+	// GetLinkCardinality retrieves the cardinality for the link between two resources.
+	GetLinkCardinality(context.Context, *LinkRequest) (*sharedtypesv1.LinkCardinalityResponse, error)
+	// ValidateLink carries out custom validation for the link between two resources.
+	ValidateLink(context.Context, *ValidateLinkRequest) (*ValidateLinkResponse, error)
 	// GetDataSourceType retrieves the type of a data source in a blueprint spec
 	// that can be used for documentation and tooling.
 	// This allows callers to get a human-readable label for the already known
@@ -1034,7 +1064,7 @@ func (UnimplementedProviderServer) GetLinkPriorityResource(context.Context, *Lin
 func (UnimplementedProviderServer) GetLinkTypeDescription(context.Context, *LinkRequest) (*sharedtypesv1.TypeDescriptionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLinkTypeDescription not implemented")
 }
-func (UnimplementedProviderServer) GetLinkAnnotationDefinitions(context.Context, *LinkRequest) (*LinkAnnotationDefinitionsResponse, error) {
+func (UnimplementedProviderServer) GetLinkAnnotationDefinitions(context.Context, *LinkRequest) (*sharedtypesv1.LinkAnnotationDefinitionsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLinkAnnotationDefinitions not implemented")
 }
 func (UnimplementedProviderServer) GetLinkKind(context.Context, *LinkRequest) (*LinkKindResponse, error) {
@@ -1042,6 +1072,12 @@ func (UnimplementedProviderServer) GetLinkKind(context.Context, *LinkRequest) (*
 }
 func (UnimplementedProviderServer) GetLinkIntermediaryExternalState(context.Context, *GetLinkIntermediaryExternalStateRequest) (*GetLinkIntermediaryExternalStateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLinkIntermediaryExternalState not implemented")
+}
+func (UnimplementedProviderServer) GetLinkCardinality(context.Context, *LinkRequest) (*sharedtypesv1.LinkCardinalityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLinkCardinality not implemented")
+}
+func (UnimplementedProviderServer) ValidateLink(context.Context, *ValidateLinkRequest) (*ValidateLinkResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidateLink not implemented")
 }
 func (UnimplementedProviderServer) GetDataSourceType(context.Context, *DataSourceRequest) (*DataSourceTypeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetDataSourceType not implemented")
@@ -1625,6 +1661,42 @@ func _Provider_GetLinkIntermediaryExternalState_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Provider_GetLinkCardinality_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProviderServer).GetLinkCardinality(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Provider_GetLinkCardinality_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProviderServer).GetLinkCardinality(ctx, req.(*LinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Provider_ValidateLink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateLinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProviderServer).ValidateLink(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Provider_ValidateLink_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProviderServer).ValidateLink(ctx, req.(*ValidateLinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Provider_GetDataSourceType_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DataSourceRequest)
 	if err := dec(in); err != nil {
@@ -1981,6 +2053,14 @@ var Provider_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetLinkIntermediaryExternalState",
 			Handler:    _Provider_GetLinkIntermediaryExternalState_Handler,
+		},
+		{
+			MethodName: "GetLinkCardinality",
+			Handler:    _Provider_GetLinkCardinality_Handler,
+		},
+		{
+			MethodName: "ValidateLink",
+			Handler:    _Provider_ValidateLink_Handler,
 		},
 		{
 			MethodName: "GetDataSourceType",

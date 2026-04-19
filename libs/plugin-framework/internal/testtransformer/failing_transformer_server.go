@@ -122,3 +122,63 @@ func (p *failingTransformerServer) GetAbstractResourceExamples(
 		"internal error occurred retrieving abstract resource examples",
 	)
 }
+
+func (p *failingTransformerServer) ListAbstractLinkTypes(
+	ctx context.Context,
+	req *transformerserverv1.TransformerRequest,
+) (*transformerserverv1.AbstractLinkTypesResponse, error) {
+	return nil, status.Error(
+		codes.Unknown,
+		"internal error occurred listing abstract link types",
+	)
+}
+
+func (p *failingTransformerServer) GetAbstractLinkType(
+	ctx context.Context,
+	req *transformerserverv1.GetAbstractLinkTypeRequest,
+) (*transformerserverv1.GetAbstractLinkTypeResponse, error) {
+	return nil, status.Error(
+		codes.Unknown,
+		"internal error occurred retrieving abstract link type",
+	)
+}
+
+func (p *failingTransformerServer) GetAbstractLinkTypeDescription(
+	ctx context.Context,
+	req *transformerserverv1.GetAbstractLinkTypeRequest,
+) (*sharedtypesv1.TypeDescriptionResponse, error) {
+	return nil, status.Error(
+		codes.Unknown,
+		"internal error occurred retrieving abstract link type description",
+	)
+}
+
+func (p *failingTransformerServer) GetAbstractLinkAnnotationDefinitions(
+	ctx context.Context,
+	req *transformerserverv1.GetAbstractLinkTypeRequest,
+) (*sharedtypesv1.LinkAnnotationDefinitionsResponse, error) {
+	return nil, status.Error(
+		codes.Unknown,
+		"internal error occurred retrieving abstract link annotation definitions",
+	)
+}
+
+func (p *failingTransformerServer) GetAbstractLinkCardinality(
+	ctx context.Context,
+	req *transformerserverv1.GetAbstractLinkTypeRequest,
+) (*sharedtypesv1.LinkCardinalityResponse, error) {
+	return nil, status.Error(
+		codes.Unknown,
+		"internal error occurred retrieving abstract link cardinality",
+	)
+}
+
+func (p *failingTransformerServer) ValidateLinks(
+	ctx context.Context,
+	req *transformerserverv1.ValidateLinksRequest,
+) (*transformerserverv1.ValidateLinksResponse, error) {
+	return nil, status.Error(
+		codes.Unknown,
+		"internal error occurred validating links",
+	)
+}

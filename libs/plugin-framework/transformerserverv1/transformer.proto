@@ -28,6 +28,14 @@ service Transformer {
     // ListAbstractResourceTypes returns a list of abstract resource types
     // that are supported by the transformer.
     rpc ListAbstractResourceTypes(TransformerRequest) returns (AbstractResourceTypesResponse) {}
+    // ListAbstractLinkTypes returns a list of abstract link types
+    // that are supported by the transformer.
+    rpc ListAbstractLinkTypes(TransformerRequest) returns (AbstractLinkTypesResponse) {}
+    // ValidateLinks validates links between abstract resources in a blueprint
+    // prior to transformation. This is important for catching and surfacing issues
+    // to users before transformation instead of having to wait to deal with more
+    // obscure errors that pertain to concrete resources after transformation.
+    rpc ValidateLinks(ValidateLinksRequest) returns (ValidateLinksResponse) {}
 
     //////////////////////////////////////////////////////////////////////
     // Abstract resource methods
@@ -67,6 +75,24 @@ service Transformer {
     // for documentation and tooling.
     // Markdown and plain text formats are supported.
     rpc GetAbstractResourceExamples(AbstractResourceRequest) returns (sharedtypesv1.ExamplesResponse) {}
+    
+    //////////////////////////////////////////////////////////////////////
+    // Abstract link methods
+    //////////////////////////////////////////////////////////////////////
+
+    // GetAbstractLinkType retrieves the type of an abstract link in a blueprint spec
+    // that can be used for documentation and tooling.
+    rpc GetAbstractLinkType(GetAbstractLinkTypeRequest) returns (GetAbstractLinkTypeResponse) {}
+    // GetAbstractLinkTypeDescription retrieves the description for an abstract link type
+    // in a blueprint spec that can be used for documentation and tooling.
+    // Markdown and plain text formats are supported.
+    rpc GetAbstractLinkTypeDescription(GetAbstractLinkTypeRequest) returns (sharedtypesv1.TypeDescriptionResponse) {}
+    // GetAbstractLinkAnnotationDefinitions retrieves the annotation definitions for an abstract link type in a blueprint spec
+    // that can be used for documentation and tooling.
+    rpc GetAbstractLinkAnnotationDefinitions(GetAbstractLinkTypeRequest) returns (sharedtypesv1.LinkAnnotationDefinitionsResponse) {}
+    // GetAbstractLinkCardinality retrieves the cardinality for an abstract link type in a blueprint spec
+    // that can be used for documentation and tooling.
+    rpc GetAbstractLinkCardinality(GetAbstractLinkTypeRequest) returns (sharedtypesv1.LinkCardinalityResponse) {}
 }
 
 // TransformNameResponse is the response for requesting
@@ -208,6 +234,50 @@ message IsAbstractResourceCommonTerminalResponse {
     }
 }
 
+// AbstractLinkTypesResponse contains the response for
+// requesting a list of all the abstract link types
+// that are implemented by the transformer.
+message AbstractLinkTypesResponse {
+    oneof response {
+        AbstractLinkTypes link_types = 1;
+        sharedtypesv1.ErrorResponse error_response = 2;
+    }
+}
+
+// AbstractLinkTypes holds a list of link types
+// that are implemented by the transformer.
+message AbstractLinkTypes {
+    repeated string link_types = 1;
+}
+
+// GetAbstractLinkTypeResponse is the response for requesting
+// the type of an abstract link in a blueprint spec.
+message GetAbstractLinkTypeRequest {
+    // The type of link to get the abstract link type for.
+    string link_type = 1;
+    // The ID of the host making the request
+    // to the transformer.
+    string host_id = 2;
+    // Runtime configuration for the current environment
+    // specific to the current transformer.
+    TransformerContext context = 3;
+}
+
+// GetAbstractLinkTypeResponse is the response for requesting
+// the type of an abstract link in a blueprint spec.
+message GetAbstractLinkTypeResponse {
+    oneof response {
+        AbstractLinkType link_type = 1;
+        sharedtypesv1.ErrorResponse error_response = 2;
+    }
+}
+
+// AbstractLinkType holds the type of an abstract link
+// in a blueprint spec.
+message AbstractLinkType {
+    string link_type = 1;
+}
+
 // TransformerContext holds the environment configuration
 // for the current transformer.
 message TransformerContext {
@@ -215,4 +285,66 @@ message TransformerContext {
     map<string, schema.ScalarValue> transformer_config_variables = 1;
 	// Context-wide variables for the current deploy engine run.
     map<string, schema.ScalarValue> context_variables = 2;
+}
+
+// ResolvedLink represents a link edge between two resources
+// in the declared link graph.
+message ResolvedLink {
+    // The source resource name.
+    string source = 1;
+    // The target resource name.
+    string target = 2;
+    // The source resource type.
+    string source_type = 3;
+    // The target resource type.
+    string target_type = 4;
+    // The label keys that matched.
+    // In the form "label::<key>:<value>" as per the selector keys
+    // generated by GroupResourcesBySelector.
+    repeated string selector_keys = 5;
+}
+
+// DeclaredLinkGraphEntry represents a resource entry
+// in the declared link graph.
+message DeclaredLinkGraphEntry {
+    // The resource schema.
+    schema.Resource resource = 1;
+    // The classification of the resource ("concrete" or "abstract").
+    string resource_class = 2;
+}
+
+// DeclaredLinkGraph represents a serialised view of the declared
+// link graph that can be sent to a transformer plugin for link validation.
+message DeclaredLinkGraph {
+    // All edges in the graph.
+    repeated ResolvedLink edges = 1;
+    // Resources in the graph, keyed by resource name.
+    map<string, DeclaredLinkGraphEntry> resources = 2;
+}
+
+// ValidateLinksRequest is the request for validating links between
+// abstract resources in a blueprint prior to transformation.
+message ValidateLinksRequest {
+    // The blueprint being validated.
+    schema.Blueprint blueprint = 1;
+    // The declared link graph for the blueprint.
+    DeclaredLinkGraph link_graph = 2;
+    // The ID of the host making the request to the transformer.
+    string host_id = 3;
+    // Runtime configuration for the current environment
+    // specific to the current transformer.
+    TransformerContext context = 4;
+}
+
+// ValidateLinksResponse is the response for link validation.
+message ValidateLinksResponse {
+    oneof response {
+        ValidateLinksCompleteResponse complete_response = 1;
+        sharedtypesv1.ErrorResponse error_response = 2;
+    }
+}
+
+// ValidateLinksCompleteResponse is returned when link validation completes.
+message ValidateLinksCompleteResponse {
+    repeated sharedtypesv1.Diagnostic diagnostics = 1;
 }

@@ -219,12 +219,41 @@ func linkGetKindInput() *provider.LinkGetKindInput {
 	}
 }
 
+func linkGetCardinalityInput() *provider.LinkGetCardinalityInput {
+	return &provider.LinkGetCardinalityInput{
+		LinkContext: testutils.CreateTestLinkContext(),
+	}
+}
+
+func linkValidateInput() *provider.LinkValidateInput {
+	return &provider.LinkValidateInput{
+		ResourceASpec: &core.MappingNode{
+			Fields: map[string]*core.MappingNode{
+				"functionName": core.MappingNodeFromString("processOrderFunction"),
+			},
+		},
+		ResourceBSpec: &core.MappingNode{
+			Fields: map[string]*core.MappingNode{
+				"tableName": core.MappingNodeFromString("orders"),
+			},
+		},
+		ResourceAName: "processOrderFunction",
+		ResourceBName: "ordersTable",
+		ResourceAType: lambdaFunctionResourceType,
+		ResourceBType: dynamoDBTableResourceType,
+		Annotations: map[string]*core.ScalarValue{
+			"aws/lambda/function::aws.lambda.dynamodb.accessType": core.ScalarFromString("read"),
+		},
+		LinkContext: testutils.CreateTestLinkContext(),
+	}
+}
+
 func linkGetIntermediaryExternalStateInput() *provider.LinkGetIntermediaryExternalStateInput {
 	return &provider.LinkGetIntermediaryExternalStateInput{
-		ResourceAInfo:            createLinkResourceAInfo(),
-		ResourceBInfo:            createLinkResourceBInfo(),
-		IntermediaryResourceIDs:  []string{"iam-role-1", "iam-policy-1"},
-		CurrentLinkState:         createCurrentLinkState(),
-		LinkContext:              testutils.CreateTestLinkContext(),
+		ResourceAInfo:           createLinkResourceAInfo(),
+		ResourceBInfo:           createLinkResourceBInfo(),
+		IntermediaryResourceIDs: []string{"iam-role-1", "iam-policy-1"},
+		CurrentLinkState:        createCurrentLinkState(),
+		LinkContext:             testutils.CreateTestLinkContext(),
 	}
 }

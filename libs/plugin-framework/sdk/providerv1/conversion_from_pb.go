@@ -348,6 +348,60 @@ func fromPBLinkRequestForKind(
 	}, nil
 }
 
+func fromPBLinkRequestForCardinality(
+	req *providerserverv1.LinkRequest,
+) (*provider.LinkGetCardinalityInput, error) {
+	linkContext, err := fromPBLinkContext(req.Context)
+	if err != nil {
+		return nil, err
+	}
+
+	return &provider.LinkGetCardinalityInput{
+		LinkContext: linkContext,
+	}, nil
+}
+
+func fromPBValidateLinkRequest(
+	req *providerserverv1.ValidateLinkRequest,
+) (*provider.LinkValidateInput, error) {
+	linkContext, err := fromPBLinkContext(req.LinkContext)
+	if err != nil {
+		return nil, err
+	}
+
+	resourceASpec, err := serialisation.FromMappingNodePB(
+		req.ResourceASpec,
+		/* optional */ true,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	resourceBSpec, err := serialisation.FromMappingNodePB(
+		req.ResourceBSpec,
+		/* optional */ true,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	annotations, err := convertv1.FromPBScalarMap(req.Annotations)
+	if err != nil {
+		return nil, err
+	}
+
+	return &provider.LinkValidateInput{
+		ResourceASpec: resourceASpec,
+		ResourceBSpec: resourceBSpec,
+		ResourceAName: req.ResourceAName,
+		ResourceBName: req.ResourceBName,
+		ResourceAType: convertv1.ResourceTypeToString(req.ResourceAType),
+		ResourceBType: convertv1.ResourceTypeToString(req.ResourceBType),
+		Annotations:   annotations,
+		LinkContext:   linkContext,
+	}, nil
+}
+
 func fromPBGetLinkIntermediaryExternalStateRequest(
 	req *providerserverv1.GetLinkIntermediaryExternalStateRequest,
 ) (*provider.LinkGetIntermediaryExternalStateInput, error) {

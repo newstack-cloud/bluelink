@@ -39,3 +39,21 @@ func (m *MockTransformer) AbstractResource(
 func (m *MockTransformer) ListAbstractResourceTypes(ctx context.Context) ([]string, error) {
 	return []string{}, nil
 }
+
+func (m *MockTransformer) AbstractLink(
+	ctx context.Context,
+	linkType string,
+) (transform.AbstractLink, error) {
+	return nil, nil
+}
+
+func (m *MockTransformer) ListAbstractLinkTypes(ctx context.Context) ([]string, error) {
+	return []string{}, nil
+}
+
+func (m *MockTransformer) ValidateLinks(
+	ctx context.Context,
+	input *transform.SpecTransformerValidateLinksInput,
+) (*transform.SpecTransformerValidateLinksOutput, error) {
+	return nil, nil
+}

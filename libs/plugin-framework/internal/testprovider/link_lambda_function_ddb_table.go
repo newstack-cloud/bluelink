@@ -5,6 +5,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sdk/providerv1"
 )
 
@@ -20,6 +21,9 @@ func linkLambdaFunctionDynamoDBTable() provider.Link {
 		PlainTextSummary:                 descriptionInfo.PlainTextSummary,
 		FormattedSummary:                 descriptionInfo.MarkdownSummary,
 		AnnotationDefinitions:            LinkLambdaFunctionDDBTableAnnotations(),
+		CardinalityA:                     LinkLambdaFunctionDDBTableCardinalityA(),
+		CardinalityB:                     LinkLambdaFunctionDDBTableCardinalityB(),
+		ValidateFunc:                     linkLambdaFunctionDDBTableValidate,
 		StageChangesFunc:                 linkLambdaFunctionDDBTableStageChanges,
 		UpdateResourceAFunc:              linkLambdaFunctionDDBTableUpdateResourceA,
 		UpdateResourceBFunc:              linkLambdaFunctionDDBTableUpdateResourceB,
@@ -221,6 +225,58 @@ func linkLambdaFunctionDDBTableGetIntermediaryExternalState(
 	input *provider.LinkGetIntermediaryExternalStateInput,
 ) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
 	return LinkLambdaDynamoDBGetIntermediaryExternalStateOutput(), nil
+}
+
+// LinkLambdaFunctionDDBTableCardinalityA returns the cardinality for the A side
+// of the lambda function -> dynamodb table link.
+func LinkLambdaFunctionDDBTableCardinalityA() provider.LinkCardinality {
+	return provider.LinkCardinality{
+		Min: 0,
+		Max: 0,
+	}
+}
+
+// LinkLambdaFunctionDDBTableCardinalityB returns the cardinality for the B side
+// of the lambda function -> dynamodb table link.
+func LinkLambdaFunctionDDBTableCardinalityB() provider.LinkCardinality {
+	return provider.LinkCardinality{
+		Min: 1,
+		Max: 5,
+	}
+}
+
+func linkLambdaFunctionDDBTableValidate(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return LinkLambdaFunctionDDBTableValidateOutput(), nil
+}
+
+// LinkLambdaFunctionDDBTableValidateOutput returns the expected output for
+// validating the lambda function -> dynamodb table link.
+func LinkLambdaFunctionDDBTableValidateOutput() *provider.LinkValidateOutput {
+	return &provider.LinkValidateOutput{
+		Diagnostics: []*core.Diagnostic{
+			{
+				Level:   core.DiagnosticLevelWarning,
+				Message: "Lambda function has broad access to DynamoDB table",
+				Range: &core.DiagnosticRange{
+					Start: &source.Meta{
+						Position: source.Position{
+							Line:   10,
+							Column: 5,
+						},
+					},
+					End: &source.Meta{
+						Position: source.Position{
+							Line:   15,
+							Column: 10,
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 // LinkLambdaDynamoDBGetIntermediaryExternalStateOutput returns test output for

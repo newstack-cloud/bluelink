@@ -663,9 +663,9 @@ func toPBGetLinkTypeDescriptionResponse(
 
 func toGetLinkAnnotationsDefinitionsErrorResponse(
 	err error,
-) *providerserverv1.LinkAnnotationDefinitionsResponse {
-	return &providerserverv1.LinkAnnotationDefinitionsResponse{
-		Response: &providerserverv1.LinkAnnotationDefinitionsResponse_ErrorResponse{
+) *sharedtypesv1.LinkAnnotationDefinitionsResponse {
+	return &sharedtypesv1.LinkAnnotationDefinitionsResponse{
+		Response: &sharedtypesv1.LinkAnnotationDefinitionsResponse_ErrorResponse{
 			ErrorResponse: errorsv1.CreateResponseFromError(err),
 		},
 	}
@@ -673,17 +673,17 @@ func toGetLinkAnnotationsDefinitionsErrorResponse(
 
 func toPBGetLinkAnnotationDefinitionsResponse(
 	output *provider.LinkGetAnnotationDefinitionsOutput,
-) (*providerserverv1.LinkAnnotationDefinitionsResponse, error) {
+) (*sharedtypesv1.LinkAnnotationDefinitionsResponse, error) {
 	if output == nil {
-		return &providerserverv1.LinkAnnotationDefinitionsResponse{
-			Response: &providerserverv1.LinkAnnotationDefinitionsResponse_ErrorResponse{
+		return &sharedtypesv1.LinkAnnotationDefinitionsResponse{
+			Response: &sharedtypesv1.LinkAnnotationDefinitionsResponse_ErrorResponse{
 				ErrorResponse: sharedtypesv1.NoResponsePBError(),
 			},
 		}, nil
 	}
 
 	annotations := make(
-		map[string]*providerserverv1.LinkAnnotationDefinition,
+		map[string]*sharedtypesv1.LinkAnnotationDefinition,
 		len(output.AnnotationDefinitions),
 	)
 	for key, annotation := range output.AnnotationDefinitions {
@@ -695,9 +695,9 @@ func toPBGetLinkAnnotationDefinitionsResponse(
 		annotations[key] = pbAnnotation
 	}
 
-	return &providerserverv1.LinkAnnotationDefinitionsResponse{
-		Response: &providerserverv1.LinkAnnotationDefinitionsResponse_AnnotationDefinitions{
-			AnnotationDefinitions: &providerserverv1.LinkAnnotationDefinitions{
+	return &sharedtypesv1.LinkAnnotationDefinitionsResponse{
+		Response: &sharedtypesv1.LinkAnnotationDefinitionsResponse_AnnotationDefinitions{
+			AnnotationDefinitions: &sharedtypesv1.LinkAnnotationDefinitions{
 				Definitions: annotations,
 			},
 		},
@@ -706,7 +706,7 @@ func toPBGetLinkAnnotationDefinitionsResponse(
 
 func toPBLinkAnnotationDefinition(
 	definition *provider.LinkAnnotationDefinition,
-) (*providerserverv1.LinkAnnotationDefinition, error) {
+) (*sharedtypesv1.LinkAnnotationDefinition, error) {
 	if definition == nil {
 		return nil, nil
 	}
@@ -729,7 +729,7 @@ func toPBLinkAnnotationDefinition(
 		return nil, err
 	}
 
-	return &providerserverv1.LinkAnnotationDefinition{
+	return &sharedtypesv1.LinkAnnotationDefinition{
 		Name:          definition.Name,
 		Label:         definition.Label,
 		Type:          convertv1.ToPBScalarType(definition.Type),
@@ -823,7 +823,7 @@ func toPBIntermediaryExternalState(
 		return nil, nil
 	}
 
-	specDataPB, err := serialisation.ToMappingNodePB(state.SpecData, /* optional */ true)
+	specDataPB, err := serialisation.ToMappingNodePB(state.SpecData /* optional */, true)
 	if err != nil {
 		return nil, err
 	}
@@ -833,6 +833,80 @@ func toPBIntermediaryExternalState(
 		ResourceType: state.ResourceType,
 		SpecData:     specDataPB,
 		Exists:       state.Exists,
+	}, nil
+}
+
+func toGetLinkCardinalityErrorResponse(
+	err error,
+) *sharedtypesv1.LinkCardinalityResponse {
+	return &sharedtypesv1.LinkCardinalityResponse{
+		Response: &sharedtypesv1.LinkCardinalityResponse_ErrorResponse{
+			ErrorResponse: errorsv1.CreateResponseFromError(err),
+		},
+	}
+}
+
+func toPBGetLinkCardinalityResponse(
+	output *provider.LinkGetCardinalityOutput,
+) *sharedtypesv1.LinkCardinalityResponse {
+	if output == nil {
+		return &sharedtypesv1.LinkCardinalityResponse{
+			Response: &sharedtypesv1.LinkCardinalityResponse_ErrorResponse{
+				ErrorResponse: sharedtypesv1.NoResponsePBError(),
+			},
+		}
+	}
+
+	return &sharedtypesv1.LinkCardinalityResponse{
+		Response: &sharedtypesv1.LinkCardinalityResponse_CardinalityInfo{
+			CardinalityInfo: &sharedtypesv1.LinkCardinalityInfo{
+				CardinalityA: &sharedtypesv1.LinkItemCardinality{
+					Min: int32(output.CardinalityA.Min),
+					Max: int32(output.CardinalityA.Max),
+				},
+				CardinalityB: &sharedtypesv1.LinkItemCardinality{
+					Min: int32(output.CardinalityB.Min),
+					Max: int32(output.CardinalityB.Max),
+				},
+			},
+		},
+	}
+}
+
+func toValidateLinkErrorResponse(
+	err error,
+) *providerserverv1.ValidateLinkResponse {
+	return &providerserverv1.ValidateLinkResponse{
+		Response: &providerserverv1.ValidateLinkResponse_ErrorResponse{
+			ErrorResponse: errorsv1.CreateResponseFromError(err),
+		},
+	}
+}
+
+func toPBValidateLinkResponse(
+	output *provider.LinkValidateOutput,
+) (*providerserverv1.ValidateLinkResponse, error) {
+	if output == nil {
+		return &providerserverv1.ValidateLinkResponse{
+			Response: &providerserverv1.ValidateLinkResponse_CompleteResponse{
+				CompleteResponse: &providerserverv1.ValidateLinkCompleteResponse{
+					Diagnostics: nil,
+				},
+			},
+		}, nil
+	}
+
+	diagnostics, err := sharedtypesv1.ToPBDiagnostics(output.Diagnostics)
+	if err != nil {
+		return nil, err
+	}
+
+	return &providerserverv1.ValidateLinkResponse{
+		Response: &providerserverv1.ValidateLinkResponse_CompleteResponse{
+			CompleteResponse: &providerserverv1.ValidateLinkCompleteResponse{
+				Diagnostics: diagnostics,
+			},
+		},
 	}, nil
 }
 

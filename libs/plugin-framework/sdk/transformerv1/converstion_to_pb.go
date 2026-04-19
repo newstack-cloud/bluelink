@@ -1,6 +1,8 @@
 package transformerv1
 
 import (
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/serialisation"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/convertv1"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/errorsv1"
@@ -232,4 +234,218 @@ func toPBAbstractResourceExamplesResponse(
 			},
 		},
 	}
+}
+
+func toPBListAbstractLinkTypesErrorResponse(
+	err error,
+) *transformerserverv1.AbstractLinkTypesResponse {
+	return &transformerserverv1.AbstractLinkTypesResponse{
+		Response: &transformerserverv1.AbstractLinkTypesResponse_ErrorResponse{
+			ErrorResponse: errorsv1.CreateResponseFromError(err),
+		},
+	}
+}
+
+func toPBAbstractLinkTypesResponse(
+	abstractLinkTypes []string,
+) *transformerserverv1.AbstractLinkTypesResponse {
+	return &transformerserverv1.AbstractLinkTypesResponse{
+		Response: &transformerserverv1.AbstractLinkTypesResponse_LinkTypes{
+			LinkTypes: &transformerserverv1.AbstractLinkTypes{
+				LinkTypes: abstractLinkTypes,
+			},
+		},
+	}
+}
+
+func toPBAbstractLinkTypeErrorResponse(
+	err error,
+) *transformerserverv1.GetAbstractLinkTypeResponse {
+	return &transformerserverv1.GetAbstractLinkTypeResponse{
+		Response: &transformerserverv1.GetAbstractLinkTypeResponse_ErrorResponse{
+			ErrorResponse: errorsv1.CreateResponseFromError(err),
+		},
+	}
+}
+
+func toPBAbstractLinkTypeResponse(
+	typeInfo *transform.AbstractLinkGetTypeOutput,
+) *transformerserverv1.GetAbstractLinkTypeResponse {
+	return &transformerserverv1.GetAbstractLinkTypeResponse{
+		Response: &transformerserverv1.GetAbstractLinkTypeResponse_LinkType{
+			LinkType: &transformerserverv1.AbstractLinkType{
+				LinkType: typeInfo.Type,
+			},
+		},
+	}
+}
+
+func toPBAbstractLinkTypeDescriptionResponse(
+	output *transform.AbstractLinkGetTypeDescriptionOutput,
+) *sharedtypesv1.TypeDescriptionResponse {
+	return &sharedtypesv1.TypeDescriptionResponse{
+		Response: &sharedtypesv1.TypeDescriptionResponse_Description{
+			Description: &sharedtypesv1.TypeDescription{
+				MarkdownDescription:  output.MarkdownDescription,
+				PlainTextDescription: output.PlainTextDescription,
+				MarkdownSummary:      output.MarkdownSummary,
+				PlainTextSummary:     output.PlainTextSummary,
+			},
+		},
+	}
+}
+
+func toPBAbstractLinkAnnotationDefinitionsErrorResponse(
+	err error,
+) *sharedtypesv1.LinkAnnotationDefinitionsResponse {
+	return &sharedtypesv1.LinkAnnotationDefinitionsResponse{
+		Response: &sharedtypesv1.LinkAnnotationDefinitionsResponse_ErrorResponse{
+			ErrorResponse: errorsv1.CreateResponseFromError(err),
+		},
+	}
+}
+
+func toPBAbstractLinkAnnotationDefinitionsResponse(
+	output *transform.AbstractLinkGetAnnotationDefinitionsOutput,
+) (*sharedtypesv1.LinkAnnotationDefinitionsResponse, error) {
+	if output == nil {
+		return &sharedtypesv1.LinkAnnotationDefinitionsResponse{
+			Response: &sharedtypesv1.LinkAnnotationDefinitionsResponse_ErrorResponse{
+				ErrorResponse: sharedtypesv1.NoResponsePBError(),
+			},
+		}, nil
+	}
+
+	annotations := make(
+		map[string]*sharedtypesv1.LinkAnnotationDefinition,
+		len(output.AnnotationDefinitions),
+	)
+	for key, annotation := range output.AnnotationDefinitions {
+		pbAnnotation, err := toPBLinkAnnotationDefinition(annotation)
+		if err != nil {
+			return nil, err
+		}
+
+		annotations[key] = pbAnnotation
+	}
+
+	return &sharedtypesv1.LinkAnnotationDefinitionsResponse{
+		Response: &sharedtypesv1.LinkAnnotationDefinitionsResponse_AnnotationDefinitions{
+			AnnotationDefinitions: &sharedtypesv1.LinkAnnotationDefinitions{
+				Definitions: annotations,
+			},
+		},
+	}, nil
+}
+
+func toPBAbstractLinkCardinalityErrorResponse(
+	err error,
+) *sharedtypesv1.LinkCardinalityResponse {
+	return &sharedtypesv1.LinkCardinalityResponse{
+		Response: &sharedtypesv1.LinkCardinalityResponse_ErrorResponse{
+			ErrorResponse: errorsv1.CreateResponseFromError(err),
+		},
+	}
+}
+
+func toPBAbstractLinkCardinalityResponse(
+	output *transform.AbstractLinkGetCardinalityOutput,
+) *sharedtypesv1.LinkCardinalityResponse {
+	if output == nil {
+		return &sharedtypesv1.LinkCardinalityResponse{
+			Response: &sharedtypesv1.LinkCardinalityResponse_ErrorResponse{
+				ErrorResponse: sharedtypesv1.NoResponsePBError(),
+			},
+		}
+	}
+
+	return &sharedtypesv1.LinkCardinalityResponse{
+		Response: &sharedtypesv1.LinkCardinalityResponse_CardinalityInfo{
+			CardinalityInfo: &sharedtypesv1.LinkCardinalityInfo{
+				CardinalityA: &sharedtypesv1.LinkItemCardinality{
+					Min: int32(output.CardinalityA.Min),
+					Max: int32(output.CardinalityA.Max),
+				},
+				CardinalityB: &sharedtypesv1.LinkItemCardinality{
+					Min: int32(output.CardinalityB.Min),
+					Max: int32(output.CardinalityB.Max),
+				},
+			},
+		},
+	}
+}
+
+func toValidateLinksErrorResponse(err error) *transformerserverv1.ValidateLinksResponse {
+	return &transformerserverv1.ValidateLinksResponse{
+		Response: &transformerserverv1.ValidateLinksResponse_ErrorResponse{
+			ErrorResponse: errorsv1.CreateResponseFromError(err),
+		},
+	}
+}
+
+func toPBValidateLinksResponse(
+	output *transform.SpecTransformerValidateLinksOutput,
+) (*transformerserverv1.ValidateLinksResponse, error) {
+	if output == nil {
+		return &transformerserverv1.ValidateLinksResponse{
+			Response: &transformerserverv1.ValidateLinksResponse_ErrorResponse{
+				ErrorResponse: errorsv1.CreateResponseFromError(
+					errorsv1.ErrUnexpectedResponseType(
+						errorsv1.PluginActionTransformerValidateLinks,
+					),
+				),
+			},
+		}, nil
+	}
+
+	diagnostics, err := sharedtypesv1.ToPBDiagnostics(output.Diagnostics)
+	if err != nil {
+		return nil, err
+	}
+
+	return &transformerserverv1.ValidateLinksResponse{
+		Response: &transformerserverv1.ValidateLinksResponse_CompleteResponse{
+			CompleteResponse: &transformerserverv1.ValidateLinksCompleteResponse{
+				Diagnostics: diagnostics,
+			},
+		},
+	}, nil
+}
+
+func toPBLinkAnnotationDefinition(
+	definition *provider.LinkAnnotationDefinition,
+) (*sharedtypesv1.LinkAnnotationDefinition, error) {
+	if definition == nil {
+		return nil, nil
+	}
+
+	defaultValue, err := serialisation.ToScalarValuePB(
+		definition.DefaultValue,
+		/* optional */ true,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	allowedValues, err := convertv1.ToPBScalarSlice(definition.AllowedValues)
+	if err != nil {
+		return nil, err
+	}
+
+	examples, err := convertv1.ToPBScalarSlice(definition.Examples)
+	if err != nil {
+		return nil, err
+	}
+
+	return &sharedtypesv1.LinkAnnotationDefinition{
+		Name:          definition.Name,
+		Label:         definition.Label,
+		Type:          convertv1.ToPBScalarType(definition.Type),
+		Description:   definition.Description,
+		DefaultValue:  defaultValue,
+		AllowedValues: allowedValues,
+		Examples:      examples,
+		Required:      definition.Required,
+		AppliesTo:     int32(definition.AppliesTo),
+	}, nil
 }

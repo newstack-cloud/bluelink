@@ -134,6 +134,76 @@ func (p *transformerClientWrapper) Transform(
 	)
 }
 
+func (p *transformerClientWrapper) ValidateLinks(
+	ctx context.Context,
+	input *transform.SpecTransformerValidateLinksInput,
+) (*transform.SpecTransformerValidateLinksOutput, error) {
+	transformerCtx, err := toPBTransformerContext(input.TransformerContext)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionTransformerValidateLinks,
+		)
+	}
+
+	blueprintPB, err := serialisation.ToSchemaPB(input.Blueprint)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionTransformerValidateLinks,
+		)
+	}
+
+	linkGraphPB, err := toPBDeclaredLinkGraph(input.LinkGraph)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionTransformerValidateLinks,
+		)
+	}
+
+	response, err := p.client.ValidateLinks(ctx, &ValidateLinksRequest{
+		Blueprint: blueprintPB,
+		LinkGraph: linkGraphPB,
+		HostId:    p.hostID,
+		Context:   transformerCtx,
+	})
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionTransformerValidateLinks,
+		)
+	}
+
+	switch result := response.Response.(type) {
+	case *ValidateLinksResponse_CompleteResponse:
+		diagnostics, err := sharedtypesv1.ToCoreDiagnostics(
+			result.CompleteResponse.GetDiagnostics(),
+		)
+		if err != nil {
+			return nil, errorsv1.CreateGeneralError(
+				err,
+				errorsv1.PluginActionTransformerValidateLinks,
+			)
+		}
+		return &transform.SpecTransformerValidateLinksOutput{
+			Diagnostics: diagnostics,
+		}, nil
+	case *ValidateLinksResponse_ErrorResponse:
+		return nil, errorsv1.CreateErrorFromResponse(
+			result.ErrorResponse,
+			errorsv1.PluginActionTransformerValidateLinks,
+		)
+	}
+
+	return nil, errorsv1.CreateGeneralError(
+		errorsv1.ErrUnexpectedResponseType(
+			errorsv1.PluginActionTransformerValidateLinks,
+		),
+		errorsv1.PluginActionTransformerValidateLinks,
+	)
+}
+
 func (p *transformerClientWrapper) AbstractResource(
 	ctx context.Context,
 	abstractResourceType string,
@@ -173,5 +243,47 @@ func (p *transformerClientWrapper) ListAbstractResourceTypes(ctx context.Context
 			errorsv1.PluginActionTransformerListAbstractResourceTypes,
 		),
 		errorsv1.PluginActionTransformerListAbstractResourceTypes,
+	)
+}
+
+func (p *transformerClientWrapper) AbstractLink(
+	ctx context.Context,
+	abstractLinkType string,
+) (transform.AbstractLink, error) {
+	return &abstractLinkTransformerClientWrapper{
+		client:           p.client,
+		abstractLinkType: abstractLinkType,
+		hostID:           p.hostID,
+	}, nil
+}
+
+func (p *transformerClientWrapper) ListAbstractLinkTypes(ctx context.Context) ([]string, error) {
+	response, err := p.client.ListAbstractLinkTypes(ctx, &TransformerRequest{
+		HostId: p.hostID,
+	})
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionTransformerListAbstractLinkTypes,
+		)
+	}
+
+	switch result := response.Response.(type) {
+	case *AbstractLinkTypesResponse_LinkTypes:
+		return fromPBAbstractLinkTypes(
+			result.LinkTypes,
+		), nil
+	case *AbstractLinkTypesResponse_ErrorResponse:
+		return nil, errorsv1.CreateErrorFromResponse(
+			result.ErrorResponse,
+			errorsv1.PluginActionTransformerListAbstractLinkTypes,
+		)
+	}
+
+	return nil, errorsv1.CreateGeneralError(
+		errorsv1.ErrUnexpectedResponseType(
+			errorsv1.PluginActionTransformerListAbstractLinkTypes,
+		),
+		errorsv1.PluginActionTransformerListAbstractLinkTypes,
 	)
 }

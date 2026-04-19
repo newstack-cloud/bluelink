@@ -32,15 +32,17 @@ const (
 	PluginActionProviderGetResourceExternalState      = PluginAction("Provider::GetResourceExternalState")
 	PluginActionProviderDestroyResource               = PluginAction("Provider::DestroyResource")
 
-	PluginActionProviderStageLinkChanges                    = PluginAction("Provider::StageLinkChanges")
-	PluginActionProviderUpdateLinkResourceA                 = PluginAction("Provider::UpdateLinkResourceA")
-	PluginActionProviderUpdateLinkResourceB                 = PluginAction("Provider::UpdateLinkResourceB")
-	PluginActionProviderUpdateLinkIntermediaryResources     = PluginAction("Provider::UpdateLinkIntermediaryResources")
-	PluginActionProviderGetLinkPriorityResource             = PluginAction("Provider::GetLinkPriorityResource")
-	PluginActionProviderGetLinkTypeDescription              = PluginAction("Provider::GetLinkTypeDescription")
-	PluginActionProviderGetLinkAnnotationDefinitions        = PluginAction("Provider::GetLinkAnnotationDefinitions")
-	PluginActionProviderGetLinkKind                         = PluginAction("Provider::GetLinkKind")
-	PluginActionProviderGetLinkIntermediaryExternalState    = PluginAction("Provider::GetLinkIntermediaryExternalState")
+	PluginActionProviderStageLinkChanges                 = PluginAction("Provider::StageLinkChanges")
+	PluginActionProviderUpdateLinkResourceA              = PluginAction("Provider::UpdateLinkResourceA")
+	PluginActionProviderUpdateLinkResourceB              = PluginAction("Provider::UpdateLinkResourceB")
+	PluginActionProviderUpdateLinkIntermediaryResources  = PluginAction("Provider::UpdateLinkIntermediaryResources")
+	PluginActionProviderGetLinkPriorityResource          = PluginAction("Provider::GetLinkPriorityResource")
+	PluginActionProviderGetLinkTypeDescription           = PluginAction("Provider::GetLinkTypeDescription")
+	PluginActionProviderGetLinkAnnotationDefinitions     = PluginAction("Provider::GetLinkAnnotationDefinitions")
+	PluginActionProviderGetLinkKind                      = PluginAction("Provider::GetLinkKind")
+	PluginActionProviderGetLinkIntermediaryExternalState = PluginAction("Provider::GetLinkIntermediaryExternalState")
+	PluginActionProviderGetLinkCardinality               = PluginAction("Provider::GetLinkCardinality")
+	PluginActionProviderValidateLink                     = PluginAction("Provider::ValidateLink")
 
 	PluginActionProviderGetDataSourceType            = PluginAction("Provider::GetDataSourceType")
 	PluginActionProviderGetDataSourceTypeDescription = PluginAction("Provider::GetDataSourceTypeDescription")
@@ -65,7 +67,9 @@ const (
 	PluginActionTransformerGetTransformName          = PluginAction("Transformer::GetTransformName")
 	PluginActionTransformerGetConfigDefinition       = PluginAction("Transformer::GetConfigDefinition")
 	PluginActionTransformerTransform                 = PluginAction("Transformer::Transform")
+	PluginActionTransformerValidateLinks             = PluginAction("Transformer::ValidateLinks")
 	PluginActionTransformerListAbstractResourceTypes = PluginAction("Transformer::ListAbstractResourceTypes")
+	PluginActionTransformerListAbstractLinkTypes     = PluginAction("Transformer::ListAbstractLinkTypes")
 
 	PluginActionTransformerCustomValidateAbstractResource        = PluginAction("Transformer::CustomValidateAbstractResource")
 	PluginActionTransformerGetAbstractResourceSpecDefinition     = PluginAction("Transformer::GetAbstractResourceSpecDefinition")
@@ -74,6 +78,11 @@ const (
 	PluginActionTransformerGetAbstractResourceType               = PluginAction("Transformer::GetAbstractResourceType")
 	PluginActionTransformerGetAbstractResourceExamples           = PluginAction("Transformer::GetAbstractResourceExamples")
 	PluginActionTransformerGetAbstractResourceTypeDescription    = PluginAction("Transformer::GetAbstractResourceTypeDescription")
+
+	PluginActionTransformerGetAbstractLinkType                  = PluginAction("Transformer::GetAbstractLinkType")
+	PluginActionTransformerGetAbstractLinkTypeDescription       = PluginAction("Transformer::GetAbstractLinkTypeDescription")
+	PluginActionTransformerGetAbstractLinkAnnotationDefinitions = PluginAction("Transformer::GetAbstractLinkAnnotationDefinitions")
+	PluginActionTransformerGetAbstractLinkCardinality           = PluginAction("Transformer::GetAbstractLinkCardinality")
 
 	///////////////////////////////////////////////////////////////////////////////////////
 	// Service actions

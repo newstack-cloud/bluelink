@@ -108,7 +108,7 @@ func fromPBTypeDescriptionForLink(
 }
 
 func fromPBLinkAnnotationDefinitions(
-	pbDefinitions *LinkAnnotationDefinitions,
+	pbDefinitions *sharedtypesv1.LinkAnnotationDefinitions,
 ) (*provider.LinkGetAnnotationDefinitionsOutput, error) {
 	if pbDefinitions == nil {
 		return nil, nil
@@ -129,7 +129,7 @@ func fromPBLinkAnnotationDefinitions(
 }
 
 func fromPBLinkAnnotationDefinition(
-	pbDefinition *LinkAnnotationDefinition,
+	pbDefinition *sharedtypesv1.LinkAnnotationDefinition,
 ) (*provider.LinkAnnotationDefinition, error) {
 	if pbDefinition == nil {
 		return nil, nil
@@ -377,4 +377,21 @@ func fromPBExamplesForCustomVarType(
 		PlainTextExamples: req.Examples,
 		MarkdownExamples:  req.FormattedExamples,
 	}
+}
+
+func fromPBValidateLinkResponse(
+	response *ValidateLinkCompleteResponse,
+) (*provider.LinkValidateOutput, error) {
+	if response == nil {
+		return &provider.LinkValidateOutput{}, nil
+	}
+
+	diagnostics, err := sharedtypesv1.ToCoreDiagnostics(response.Diagnostics)
+	if err != nil {
+		return nil, err
+	}
+
+	return &provider.LinkValidateOutput{
+		Diagnostics: diagnostics,
+	}, nil
 }

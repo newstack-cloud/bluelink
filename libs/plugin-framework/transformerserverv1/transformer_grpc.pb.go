@@ -20,17 +20,23 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Transformer_GetTransformName_FullMethodName                   = "/transformerserverv1.Transformer/GetTransformName"
-	Transformer_GetConfigDefinition_FullMethodName                = "/transformerserverv1.Transformer/GetConfigDefinition"
-	Transformer_Transform_FullMethodName                          = "/transformerserverv1.Transformer/Transform"
-	Transformer_ListAbstractResourceTypes_FullMethodName          = "/transformerserverv1.Transformer/ListAbstractResourceTypes"
-	Transformer_CustomValidateAbstractResource_FullMethodName     = "/transformerserverv1.Transformer/CustomValidateAbstractResource"
-	Transformer_GetAbstractResourceSpecDefinition_FullMethodName  = "/transformerserverv1.Transformer/GetAbstractResourceSpecDefinition"
-	Transformer_CanAbstractResourceLinkTo_FullMethodName          = "/transformerserverv1.Transformer/CanAbstractResourceLinkTo"
-	Transformer_IsAbstractResourceCommonTerminal_FullMethodName   = "/transformerserverv1.Transformer/IsAbstractResourceCommonTerminal"
-	Transformer_GetAbstractResourceType_FullMethodName            = "/transformerserverv1.Transformer/GetAbstractResourceType"
-	Transformer_GetAbstractResourceTypeDescription_FullMethodName = "/transformerserverv1.Transformer/GetAbstractResourceTypeDescription"
-	Transformer_GetAbstractResourceExamples_FullMethodName        = "/transformerserverv1.Transformer/GetAbstractResourceExamples"
+	Transformer_GetTransformName_FullMethodName                     = "/transformerserverv1.Transformer/GetTransformName"
+	Transformer_GetConfigDefinition_FullMethodName                  = "/transformerserverv1.Transformer/GetConfigDefinition"
+	Transformer_Transform_FullMethodName                            = "/transformerserverv1.Transformer/Transform"
+	Transformer_ListAbstractResourceTypes_FullMethodName            = "/transformerserverv1.Transformer/ListAbstractResourceTypes"
+	Transformer_ListAbstractLinkTypes_FullMethodName                = "/transformerserverv1.Transformer/ListAbstractLinkTypes"
+	Transformer_ValidateLinks_FullMethodName                        = "/transformerserverv1.Transformer/ValidateLinks"
+	Transformer_CustomValidateAbstractResource_FullMethodName       = "/transformerserverv1.Transformer/CustomValidateAbstractResource"
+	Transformer_GetAbstractResourceSpecDefinition_FullMethodName    = "/transformerserverv1.Transformer/GetAbstractResourceSpecDefinition"
+	Transformer_CanAbstractResourceLinkTo_FullMethodName            = "/transformerserverv1.Transformer/CanAbstractResourceLinkTo"
+	Transformer_IsAbstractResourceCommonTerminal_FullMethodName     = "/transformerserverv1.Transformer/IsAbstractResourceCommonTerminal"
+	Transformer_GetAbstractResourceType_FullMethodName              = "/transformerserverv1.Transformer/GetAbstractResourceType"
+	Transformer_GetAbstractResourceTypeDescription_FullMethodName   = "/transformerserverv1.Transformer/GetAbstractResourceTypeDescription"
+	Transformer_GetAbstractResourceExamples_FullMethodName          = "/transformerserverv1.Transformer/GetAbstractResourceExamples"
+	Transformer_GetAbstractLinkType_FullMethodName                  = "/transformerserverv1.Transformer/GetAbstractLinkType"
+	Transformer_GetAbstractLinkTypeDescription_FullMethodName       = "/transformerserverv1.Transformer/GetAbstractLinkTypeDescription"
+	Transformer_GetAbstractLinkAnnotationDefinitions_FullMethodName = "/transformerserverv1.Transformer/GetAbstractLinkAnnotationDefinitions"
+	Transformer_GetAbstractLinkCardinality_FullMethodName           = "/transformerserverv1.Transformer/GetAbstractLinkCardinality"
 )
 
 // TransformerClient is the client API for Transformer service.
@@ -52,6 +58,14 @@ type TransformerClient interface {
 	// ListAbstractResourceTypes returns a list of abstract resource types
 	// that are supported by the transformer.
 	ListAbstractResourceTypes(ctx context.Context, in *TransformerRequest, opts ...grpc.CallOption) (*AbstractResourceTypesResponse, error)
+	// ListAbstractLinkTypes returns a list of abstract link types
+	// that are supported by the transformer.
+	ListAbstractLinkTypes(ctx context.Context, in *TransformerRequest, opts ...grpc.CallOption) (*AbstractLinkTypesResponse, error)
+	// ValidateLinks validates links between abstract resources in a blueprint
+	// prior to transformation. This is important for catching and surfacing issues
+	// to users before transformation instead of having to wait to deal with more
+	// obscure errors that pertain to concrete resources after transformation.
+	ValidateLinks(ctx context.Context, in *ValidateLinksRequest, opts ...grpc.CallOption) (*ValidateLinksResponse, error)
 	// CustomValidateAbstractResource deals with carrying out custom validation for
 	// an abstract resource that goes beyond the built-in resource spec validation.
 	CustomValidateAbstractResource(ctx context.Context, in *CustomValidateAbstractResourceRequest, opts ...grpc.CallOption) (*CustomValidateAbstractResourceResponse, error)
@@ -86,6 +100,19 @@ type TransformerClient interface {
 	// for documentation and tooling.
 	// Markdown and plain text formats are supported.
 	GetAbstractResourceExamples(ctx context.Context, in *AbstractResourceRequest, opts ...grpc.CallOption) (*sharedtypesv1.ExamplesResponse, error)
+	// GetAbstractLinkType retrieves the type of an abstract link in a blueprint spec
+	// that can be used for documentation and tooling.
+	GetAbstractLinkType(ctx context.Context, in *GetAbstractLinkTypeRequest, opts ...grpc.CallOption) (*GetAbstractLinkTypeResponse, error)
+	// GetAbstractLinkTypeDescription retrieves the description for an abstract link type
+	// in a blueprint spec that can be used for documentation and tooling.
+	// Markdown and plain text formats are supported.
+	GetAbstractLinkTypeDescription(ctx context.Context, in *GetAbstractLinkTypeRequest, opts ...grpc.CallOption) (*sharedtypesv1.TypeDescriptionResponse, error)
+	// GetAbstractLinkAnnotationDefinitions retrieves the annotation definitions for an abstract link type in a blueprint spec
+	// that can be used for documentation and tooling.
+	GetAbstractLinkAnnotationDefinitions(ctx context.Context, in *GetAbstractLinkTypeRequest, opts ...grpc.CallOption) (*sharedtypesv1.LinkAnnotationDefinitionsResponse, error)
+	// GetAbstractLinkCardinality retrieves the cardinality for an abstract link type in a blueprint spec
+	// that can be used for documentation and tooling.
+	GetAbstractLinkCardinality(ctx context.Context, in *GetAbstractLinkTypeRequest, opts ...grpc.CallOption) (*sharedtypesv1.LinkCardinalityResponse, error)
 }
 
 type transformerClient struct {
@@ -130,6 +157,26 @@ func (c *transformerClient) ListAbstractResourceTypes(ctx context.Context, in *T
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AbstractResourceTypesResponse)
 	err := c.cc.Invoke(ctx, Transformer_ListAbstractResourceTypes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transformerClient) ListAbstractLinkTypes(ctx context.Context, in *TransformerRequest, opts ...grpc.CallOption) (*AbstractLinkTypesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AbstractLinkTypesResponse)
+	err := c.cc.Invoke(ctx, Transformer_ListAbstractLinkTypes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transformerClient) ValidateLinks(ctx context.Context, in *ValidateLinksRequest, opts ...grpc.CallOption) (*ValidateLinksResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidateLinksResponse)
+	err := c.cc.Invoke(ctx, Transformer_ValidateLinks_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -206,6 +253,46 @@ func (c *transformerClient) GetAbstractResourceExamples(ctx context.Context, in 
 	return out, nil
 }
 
+func (c *transformerClient) GetAbstractLinkType(ctx context.Context, in *GetAbstractLinkTypeRequest, opts ...grpc.CallOption) (*GetAbstractLinkTypeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAbstractLinkTypeResponse)
+	err := c.cc.Invoke(ctx, Transformer_GetAbstractLinkType_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transformerClient) GetAbstractLinkTypeDescription(ctx context.Context, in *GetAbstractLinkTypeRequest, opts ...grpc.CallOption) (*sharedtypesv1.TypeDescriptionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(sharedtypesv1.TypeDescriptionResponse)
+	err := c.cc.Invoke(ctx, Transformer_GetAbstractLinkTypeDescription_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transformerClient) GetAbstractLinkAnnotationDefinitions(ctx context.Context, in *GetAbstractLinkTypeRequest, opts ...grpc.CallOption) (*sharedtypesv1.LinkAnnotationDefinitionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(sharedtypesv1.LinkAnnotationDefinitionsResponse)
+	err := c.cc.Invoke(ctx, Transformer_GetAbstractLinkAnnotationDefinitions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transformerClient) GetAbstractLinkCardinality(ctx context.Context, in *GetAbstractLinkTypeRequest, opts ...grpc.CallOption) (*sharedtypesv1.LinkCardinalityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(sharedtypesv1.LinkCardinalityResponse)
+	err := c.cc.Invoke(ctx, Transformer_GetAbstractLinkCardinality_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TransformerServer is the server API for Transformer service.
 // All implementations must embed UnimplementedTransformerServer
 // for forward compatibility.
@@ -225,6 +312,14 @@ type TransformerServer interface {
 	// ListAbstractResourceTypes returns a list of abstract resource types
 	// that are supported by the transformer.
 	ListAbstractResourceTypes(context.Context, *TransformerRequest) (*AbstractResourceTypesResponse, error)
+	// ListAbstractLinkTypes returns a list of abstract link types
+	// that are supported by the transformer.
+	ListAbstractLinkTypes(context.Context, *TransformerRequest) (*AbstractLinkTypesResponse, error)
+	// ValidateLinks validates links between abstract resources in a blueprint
+	// prior to transformation. This is important for catching and surfacing issues
+	// to users before transformation instead of having to wait to deal with more
+	// obscure errors that pertain to concrete resources after transformation.
+	ValidateLinks(context.Context, *ValidateLinksRequest) (*ValidateLinksResponse, error)
 	// CustomValidateAbstractResource deals with carrying out custom validation for
 	// an abstract resource that goes beyond the built-in resource spec validation.
 	CustomValidateAbstractResource(context.Context, *CustomValidateAbstractResourceRequest) (*CustomValidateAbstractResourceResponse, error)
@@ -259,6 +354,19 @@ type TransformerServer interface {
 	// for documentation and tooling.
 	// Markdown and plain text formats are supported.
 	GetAbstractResourceExamples(context.Context, *AbstractResourceRequest) (*sharedtypesv1.ExamplesResponse, error)
+	// GetAbstractLinkType retrieves the type of an abstract link in a blueprint spec
+	// that can be used for documentation and tooling.
+	GetAbstractLinkType(context.Context, *GetAbstractLinkTypeRequest) (*GetAbstractLinkTypeResponse, error)
+	// GetAbstractLinkTypeDescription retrieves the description for an abstract link type
+	// in a blueprint spec that can be used for documentation and tooling.
+	// Markdown and plain text formats are supported.
+	GetAbstractLinkTypeDescription(context.Context, *GetAbstractLinkTypeRequest) (*sharedtypesv1.TypeDescriptionResponse, error)
+	// GetAbstractLinkAnnotationDefinitions retrieves the annotation definitions for an abstract link type in a blueprint spec
+	// that can be used for documentation and tooling.
+	GetAbstractLinkAnnotationDefinitions(context.Context, *GetAbstractLinkTypeRequest) (*sharedtypesv1.LinkAnnotationDefinitionsResponse, error)
+	// GetAbstractLinkCardinality retrieves the cardinality for an abstract link type in a blueprint spec
+	// that can be used for documentation and tooling.
+	GetAbstractLinkCardinality(context.Context, *GetAbstractLinkTypeRequest) (*sharedtypesv1.LinkCardinalityResponse, error)
 	mustEmbedUnimplementedTransformerServer()
 }
 
@@ -281,6 +389,12 @@ func (UnimplementedTransformerServer) Transform(context.Context, *BlueprintTrans
 func (UnimplementedTransformerServer) ListAbstractResourceTypes(context.Context, *TransformerRequest) (*AbstractResourceTypesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAbstractResourceTypes not implemented")
 }
+func (UnimplementedTransformerServer) ListAbstractLinkTypes(context.Context, *TransformerRequest) (*AbstractLinkTypesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAbstractLinkTypes not implemented")
+}
+func (UnimplementedTransformerServer) ValidateLinks(context.Context, *ValidateLinksRequest) (*ValidateLinksResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidateLinks not implemented")
+}
 func (UnimplementedTransformerServer) CustomValidateAbstractResource(context.Context, *CustomValidateAbstractResourceRequest) (*CustomValidateAbstractResourceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CustomValidateAbstractResource not implemented")
 }
@@ -301,6 +415,18 @@ func (UnimplementedTransformerServer) GetAbstractResourceTypeDescription(context
 }
 func (UnimplementedTransformerServer) GetAbstractResourceExamples(context.Context, *AbstractResourceRequest) (*sharedtypesv1.ExamplesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAbstractResourceExamples not implemented")
+}
+func (UnimplementedTransformerServer) GetAbstractLinkType(context.Context, *GetAbstractLinkTypeRequest) (*GetAbstractLinkTypeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAbstractLinkType not implemented")
+}
+func (UnimplementedTransformerServer) GetAbstractLinkTypeDescription(context.Context, *GetAbstractLinkTypeRequest) (*sharedtypesv1.TypeDescriptionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAbstractLinkTypeDescription not implemented")
+}
+func (UnimplementedTransformerServer) GetAbstractLinkAnnotationDefinitions(context.Context, *GetAbstractLinkTypeRequest) (*sharedtypesv1.LinkAnnotationDefinitionsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAbstractLinkAnnotationDefinitions not implemented")
+}
+func (UnimplementedTransformerServer) GetAbstractLinkCardinality(context.Context, *GetAbstractLinkTypeRequest) (*sharedtypesv1.LinkCardinalityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAbstractLinkCardinality not implemented")
 }
 func (UnimplementedTransformerServer) mustEmbedUnimplementedTransformerServer() {}
 func (UnimplementedTransformerServer) testEmbeddedByValue()                     {}
@@ -391,6 +517,42 @@ func _Transformer_ListAbstractResourceTypes_Handler(srv interface{}, ctx context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TransformerServer).ListAbstractResourceTypes(ctx, req.(*TransformerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Transformer_ListAbstractLinkTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TransformerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransformerServer).ListAbstractLinkTypes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Transformer_ListAbstractLinkTypes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransformerServer).ListAbstractLinkTypes(ctx, req.(*TransformerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Transformer_ValidateLinks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateLinksRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransformerServer).ValidateLinks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Transformer_ValidateLinks_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransformerServer).ValidateLinks(ctx, req.(*ValidateLinksRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -521,6 +683,78 @@ func _Transformer_GetAbstractResourceExamples_Handler(srv interface{}, ctx conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Transformer_GetAbstractLinkType_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAbstractLinkTypeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransformerServer).GetAbstractLinkType(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Transformer_GetAbstractLinkType_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransformerServer).GetAbstractLinkType(ctx, req.(*GetAbstractLinkTypeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Transformer_GetAbstractLinkTypeDescription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAbstractLinkTypeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransformerServer).GetAbstractLinkTypeDescription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Transformer_GetAbstractLinkTypeDescription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransformerServer).GetAbstractLinkTypeDescription(ctx, req.(*GetAbstractLinkTypeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Transformer_GetAbstractLinkAnnotationDefinitions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAbstractLinkTypeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransformerServer).GetAbstractLinkAnnotationDefinitions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Transformer_GetAbstractLinkAnnotationDefinitions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransformerServer).GetAbstractLinkAnnotationDefinitions(ctx, req.(*GetAbstractLinkTypeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Transformer_GetAbstractLinkCardinality_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAbstractLinkTypeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransformerServer).GetAbstractLinkCardinality(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Transformer_GetAbstractLinkCardinality_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransformerServer).GetAbstractLinkCardinality(ctx, req.(*GetAbstractLinkTypeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Transformer_ServiceDesc is the grpc.ServiceDesc for Transformer service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -543,6 +777,14 @@ var Transformer_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAbstractResourceTypes",
 			Handler:    _Transformer_ListAbstractResourceTypes_Handler,
+		},
+		{
+			MethodName: "ListAbstractLinkTypes",
+			Handler:    _Transformer_ListAbstractLinkTypes_Handler,
+		},
+		{
+			MethodName: "ValidateLinks",
+			Handler:    _Transformer_ValidateLinks_Handler,
 		},
 		{
 			MethodName: "CustomValidateAbstractResource",
@@ -571,6 +813,22 @@ var Transformer_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAbstractResourceExamples",
 			Handler:    _Transformer_GetAbstractResourceExamples_Handler,
+		},
+		{
+			MethodName: "GetAbstractLinkType",
+			Handler:    _Transformer_GetAbstractLinkType_Handler,
+		},
+		{
+			MethodName: "GetAbstractLinkTypeDescription",
+			Handler:    _Transformer_GetAbstractLinkTypeDescription_Handler,
+		},
+		{
+			MethodName: "GetAbstractLinkAnnotationDefinitions",
+			Handler:    _Transformer_GetAbstractLinkAnnotationDefinitions_Handler,
+		},
+		{
+			MethodName: "GetAbstractLinkCardinality",
+			Handler:    _Transformer_GetAbstractLinkCardinality_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

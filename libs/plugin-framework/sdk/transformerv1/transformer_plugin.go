@@ -95,6 +95,11 @@ func (p *blueprintTransformerPluginImpl) Transform(
 		return toBlueprintTransformErrorResponse(err), nil
 	}
 
+	transformerContext, err := fromPBTransformerContext(req.Context)
+	if err != nil {
+		return toBlueprintTransformErrorResponse(err), nil
+	}
+
 	inputBlueprint, err := serialisation.FromSchemaPB(
 		req.InputBlueprint,
 	)
@@ -105,7 +110,8 @@ func (p *blueprintTransformerPluginImpl) Transform(
 	transformOutput, err := p.bpTransformer.Transform(
 		ctx,
 		&transform.SpecTransformerTransformInput{
-			InputBlueprint: inputBlueprint,
+			InputBlueprint:     inputBlueprint,
+			TransformerContext: transformerContext,
 		},
 	)
 	if err != nil {
@@ -321,6 +327,23 @@ func (p *blueprintTransformerPluginImpl) GetAbstractResourceType(
 	return toPBAbstractResourceTypeResponse(output), nil
 }
 
+func (p *blueprintTransformerPluginImpl) ListAbstractLinkTypes(
+	ctx context.Context,
+	req *transformerserverv1.TransformerRequest,
+) (*transformerserverv1.AbstractLinkTypesResponse, error) {
+	err := p.checkHostID(req.HostId)
+	if err != nil {
+		return toPBListAbstractLinkTypesErrorResponse(err), nil
+	}
+
+	abstractLinkTypes, err := p.bpTransformer.ListAbstractLinkTypes(ctx)
+	if err != nil {
+		return toPBListAbstractLinkTypesErrorResponse(err), nil
+	}
+
+	return toPBAbstractLinkTypesResponse(abstractLinkTypes), nil
+}
+
 func (p *blueprintTransformerPluginImpl) GetAbstractResourceTypeDescription(
 	ctx context.Context,
 	req *transformerserverv1.AbstractResourceRequest,
@@ -389,6 +412,173 @@ func (p *blueprintTransformerPluginImpl) GetAbstractResourceExamples(
 	}
 
 	return toPBAbstractResourceExamplesResponse(output), nil
+}
+
+func (p *blueprintTransformerPluginImpl) GetAbstractLinkType(
+	ctx context.Context,
+	req *transformerserverv1.GetAbstractLinkTypeRequest,
+) (*transformerserverv1.GetAbstractLinkTypeResponse, error) {
+	err := p.checkHostID(req.HostId)
+	if err != nil {
+		return toPBAbstractLinkTypeErrorResponse(err), nil
+	}
+
+	abstractLink, err := p.bpTransformer.AbstractLink(
+		ctx,
+		req.LinkType,
+	)
+	if err != nil {
+		return toPBAbstractLinkTypeErrorResponse(err), nil
+	}
+
+	transformerCtx, err := fromPBTransformerContext(req.Context)
+	if err != nil {
+		return toPBAbstractLinkTypeErrorResponse(err), nil
+	}
+
+	output, err := abstractLink.GetType(
+		ctx,
+		&transform.AbstractLinkGetTypeInput{
+			TransformerContext: transformerCtx,
+		},
+	)
+	if err != nil {
+		return toPBAbstractLinkTypeErrorResponse(err), nil
+	}
+
+	return toPBAbstractLinkTypeResponse(output), nil
+}
+
+func (p *blueprintTransformerPluginImpl) GetAbstractLinkTypeDescription(
+	ctx context.Context,
+	req *transformerserverv1.GetAbstractLinkTypeRequest,
+) (*sharedtypesv1.TypeDescriptionResponse, error) {
+	err := p.checkHostID(req.HostId)
+	if err != nil {
+		return convertv1.ToPBTypeDescriptionErrorResponse(err), nil
+	}
+
+	abstractLink, err := p.bpTransformer.AbstractLink(
+		ctx,
+		req.LinkType,
+	)
+	if err != nil {
+		return convertv1.ToPBTypeDescriptionErrorResponse(err), nil
+	}
+
+	transformerCtx, err := fromPBTransformerContext(req.Context)
+	if err != nil {
+		return convertv1.ToPBTypeDescriptionErrorResponse(err), nil
+	}
+
+	output, err := abstractLink.GetTypeDescription(
+		ctx,
+		&transform.AbstractLinkGetTypeDescriptionInput{
+			TransformerContext: transformerCtx,
+		},
+	)
+	if err != nil {
+		return convertv1.ToPBTypeDescriptionErrorResponse(err), nil
+	}
+
+	return toPBAbstractLinkTypeDescriptionResponse(output), nil
+}
+
+func (p *blueprintTransformerPluginImpl) GetAbstractLinkAnnotationDefinitions(
+	ctx context.Context,
+	req *transformerserverv1.GetAbstractLinkTypeRequest,
+) (*sharedtypesv1.LinkAnnotationDefinitionsResponse, error) {
+	err := p.checkHostID(req.HostId)
+	if err != nil {
+		return toPBAbstractLinkAnnotationDefinitionsErrorResponse(err), nil
+	}
+
+	abstractLink, err := p.bpTransformer.AbstractLink(
+		ctx,
+		req.LinkType,
+	)
+	if err != nil {
+		return toPBAbstractLinkAnnotationDefinitionsErrorResponse(err), nil
+	}
+
+	transformerCtx, err := fromPBTransformerContext(req.Context)
+	if err != nil {
+		return toPBAbstractLinkAnnotationDefinitionsErrorResponse(err), nil
+	}
+
+	output, err := abstractLink.GetAnnotationDefinitions(
+		ctx,
+		&transform.AbstractLinkGetAnnotationDefinitionsInput{
+			TransformerContext: transformerCtx,
+		},
+	)
+	if err != nil {
+		return toPBAbstractLinkAnnotationDefinitionsErrorResponse(err), nil
+	}
+
+	response, err := toPBAbstractLinkAnnotationDefinitionsResponse(output)
+	if err != nil {
+		return toPBAbstractLinkAnnotationDefinitionsErrorResponse(err), nil
+	}
+
+	return response, nil
+}
+
+func (p *blueprintTransformerPluginImpl) GetAbstractLinkCardinality(
+	ctx context.Context,
+	req *transformerserverv1.GetAbstractLinkTypeRequest,
+) (*sharedtypesv1.LinkCardinalityResponse, error) {
+	err := p.checkHostID(req.HostId)
+	if err != nil {
+		return toPBAbstractLinkCardinalityErrorResponse(err), nil
+	}
+
+	abstractLink, err := p.bpTransformer.AbstractLink(
+		ctx,
+		req.LinkType,
+	)
+	if err != nil {
+		return toPBAbstractLinkCardinalityErrorResponse(err), nil
+	}
+
+	transformerCtx, err := fromPBTransformerContext(req.Context)
+	if err != nil {
+		return toPBAbstractLinkCardinalityErrorResponse(err), nil
+	}
+
+	output, err := abstractLink.GetCardinality(
+		ctx,
+		&transform.AbstractLinkGetCardinalityInput{
+			TransformerContext: transformerCtx,
+		},
+	)
+	if err != nil {
+		return toPBAbstractLinkCardinalityErrorResponse(err), nil
+	}
+
+	return toPBAbstractLinkCardinalityResponse(output), nil
+}
+
+func (p *blueprintTransformerPluginImpl) ValidateLinks(
+	ctx context.Context,
+	req *transformerserverv1.ValidateLinksRequest,
+) (*transformerserverv1.ValidateLinksResponse, error) {
+	err := p.checkHostID(req.HostId)
+	if err != nil {
+		return toValidateLinksErrorResponse(err), nil
+	}
+
+	validateLinksInput, err := fromPBValidateLinksRequest(req)
+	if err != nil {
+		return toValidateLinksErrorResponse(err), nil
+	}
+
+	output, err := p.bpTransformer.ValidateLinks(ctx, validateLinksInput)
+	if err != nil {
+		return toValidateLinksErrorResponse(err), nil
+	}
+
+	return toPBValidateLinksResponse(output)
 }
 
 func (p *blueprintTransformerPluginImpl) checkHostID(hostID string) error {
