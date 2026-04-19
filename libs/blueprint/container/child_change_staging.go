@@ -143,6 +143,7 @@ func (d *defaultChildChangeStager) waitForChildChanges(
 				New:                childState.InstanceID == "",
 				Changes:            changes,
 			}
+			receivedFullChildChanges = true
 		case stagingErr = <-childChannels.ErrChan:
 			channels.ErrChan <- stagingErr
 		}

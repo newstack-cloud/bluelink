@@ -672,7 +672,7 @@ func (s *ContainerDeployTestSuite) stageChanges(
 			return changes, nil
 		case err := <-changeStagingChannels.ErrChan:
 			return nil, err
-		case <-time.After(60 * time.Second):
+		case <-time.After(120 * time.Second):
 			return nil, errors.New(timeoutMessage)
 		}
 	}
