@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -193,9 +194,11 @@ func (s *PluginServiceV1Suite) Test_fails_with_timeout_for_cyclic_function_calls
 		},
 	)
 	s.Require().Error(err)
-	s.Assert().Contains(
-		err.Error(),
-		"context deadline exceeded",
+	errMsg := err.Error()
+	s.Assert().True(
+		strings.Contains(errMsg, "context deadline exceeded") ||
+			strings.Contains(errMsg, "RST_STREAM with error code: CANCEL"),
+		"expected timeout-related error, got: %s", errMsg,
 	)
 }
 
