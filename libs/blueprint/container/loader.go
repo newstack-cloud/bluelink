@@ -134,6 +134,12 @@ type loadBlueprintInfo struct {
 	preloadedSchema *schema.Blueprint
 }
 
+type loadSpecResult struct {
+	spec              speccore.BlueprintSpec
+	declaredLinkGraph linktypes.DeclaredLinkGraph
+	diagnostics       []*bpcore.Diagnostic
+}
+
 // DependenciesOverrider is a function that customises the dependencies
 // used to instantiate a blueprint container on each call to load a blueprint.
 type DependenciesOverrider func(
@@ -629,38 +635,43 @@ func (l *defaultLoader) loadSpecAndLinkInfo(
 	formatLoader func(string) (schema.SpecFormat, error),
 ) (BlueprintContainer, []*bpcore.Diagnostic, error) {
 	refChainCollector := l.refChainCollectorFactory()
-	blueprintSpec, diagnostics, err := l.loadSpec(ctx, loadInfo, params, schemaLoader, formatLoader, refChainCollector)
+	loadSpecRes, err := l.loadSpec(ctx, loadInfo, params, schemaLoader, formatLoader, refChainCollector)
 	if err != nil {
 		// Ensure the spec is returned when parsing was successful
 		// but validation failed.
 		return NewDefaultBlueprintContainer(
-			blueprintSpec,
+			loadSpecRes.spec,
 			l.buildPartialBlueprintContainerDependencies(refChainCollector),
-			diagnostics,
-		), diagnostics, err
+			loadSpecRes.diagnostics,
+		), loadSpecRes.diagnostics, err
 	}
 
-	resourceTypeProviderMap := createResourceTypeProviderMap(blueprintSpec, l.providers)
-	linkInfo, err := links.NewDefaultLinkInfoProvider(resourceTypeProviderMap, l.linkRegistry, blueprintSpec, params)
+	resourceTypeProviderMap := createResourceTypeProviderMap(loadSpecRes.spec, l.providers)
+	linkInfo, err := links.NewDefaultLinkInfoProvider(
+		resourceTypeProviderMap,
+		l.linkRegistry,
+		loadSpecRes.spec,
+		params,
+	)
 	if err != nil {
 		// Ensure the spec is returned when parsing and
 		// validation was successful but loading link information failed.
 		return NewDefaultBlueprintContainer(
-			blueprintSpec,
+			loadSpecRes.spec,
 			l.buildPartialBlueprintContainerDependencies(refChainCollector),
-			diagnostics,
-		), diagnostics, err
+			loadSpecRes.diagnostics,
+		), loadSpecRes.diagnostics, err
 	}
 
 	container := NewDefaultBlueprintContainer(
-		blueprintSpec,
+		loadSpecRes.spec,
 		l.buildFullBlueprintContainerDependencies(
 			refChainCollector,
-			blueprintSpec,
+			loadSpecRes.spec,
 			linkInfo,
 			params,
 		),
-		diagnostics,
+		loadSpecRes.diagnostics,
 	)
 
 	// Once we have loaded the link information,
@@ -669,18 +680,30 @@ func (l *defaultLoader) loadSpecAndLinkInfo(
 	// a link and the other resource references a property of the first resource.
 	err = l.collectLinksAsReferences(ctx, linkInfo, refChainCollector, params)
 	if err != nil {
-		return container, diagnostics, err
+		return container, loadSpecRes.diagnostics, err
 	}
 
 	refCycleRoots := refChainCollector.FindCircularReferences()
 	if len(refCycleRoots) > 0 {
-		return container, diagnostics, validation.ErrReferenceCycles(refCycleRoots)
+		return container, loadSpecRes.diagnostics, validation.ErrReferenceCycles(refCycleRoots)
 	}
 
 	linkChains, err := linkInfo.Links(ctx)
 	if err != nil {
-		return container, diagnostics, err
+		return container, loadSpecRes.diagnostics, err
 	}
+
+	linkConstraintDiags, err := validation.ValidateLinkConstraints(
+		ctx,
+		linkChains,
+		loadSpecRes.declaredLinkGraph,
+		loadSpecRes.spec,
+		params,
+	)
+	if err != nil {
+		return container, loadSpecRes.diagnostics, err
+	}
+	loadSpecRes.diagnostics = append(loadSpecRes.diagnostics, linkConstraintDiags...)
 
 	l.logger.Info("Validating link annotations")
 	annotationDiagnostics, err := validation.ValidateLinkAnnotations(
@@ -689,7 +712,7 @@ func (l *defaultLoader) loadSpecAndLinkInfo(
 		params,
 	)
 	if err != nil {
-		return container, diagnostics, err
+		return container, loadSpecRes.diagnostics, err
 	}
 
 	// ValidateLinkAnnotations returns validation warnings and errors
@@ -700,20 +723,20 @@ func (l *defaultLoader) loadSpecAndLinkInfo(
 		annotationDiagnostics,
 		validation.ErrorReasonCodeInvalidResource,
 	)
-	diagnostics = append(diagnostics, finalAnnotationDiags...)
+	loadSpecRes.diagnostics = append(loadSpecRes.diagnostics, finalAnnotationDiags...)
 	if annotationsErr != nil {
-		return container, diagnostics, annotationsErr
+		return container, loadSpecRes.diagnostics, annotationsErr
 	}
 
 	eachDepsErr := validation.ValidateResourceEachDependencies(
-		blueprintSpec.Schema(),
+		loadSpecRes.spec.Schema(),
 		refChainCollector,
 	)
 	if eachDepsErr != nil {
-		return container, diagnostics, eachDepsErr
+		return container, loadSpecRes.diagnostics, eachDepsErr
 	}
 
-	return container, diagnostics, nil
+	return container, loadSpecRes.diagnostics, nil
 }
 
 func (l *defaultLoader) buildPartialBlueprintContainerDependencies(
@@ -873,13 +896,16 @@ func (l *defaultLoader) loadSpec(
 	loader schema.Loader,
 	formatLoader func(string) (schema.SpecFormat, error),
 	refChainCollector refgraph.RefChainCollector,
-) (speccore.BlueprintSpec, []*bpcore.Diagnostic, error) {
+) (*loadSpecResult, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 
 	l.logger.Info("Loading blueprint spec")
 	blueprintSchema, err := loadBlueprintSpec(loadInfo, formatLoader, loader)
 	if err != nil {
-		return speccore.BlueprintSpecFromSchema(nil), diagnostics, err
+		return &loadSpecResult{
+			spec:        speccore.BlueprintSpecFromSchema(nil),
+			diagnostics: diagnostics,
+		}, err
 	}
 
 	l.logger.Info("Validating blueprint top-level properties")
@@ -962,15 +988,38 @@ func (l *defaultLoader) loadSpec(
 		validationErrors = append(validationErrors, err)
 	}
 
+	l.logger.Info("Collecting declared links for blueprint into a graph")
+	declaredLinkGraph, err := links.EnumerateDeclaredLinks(
+		ctx,
+		blueprintSchema,
+		l.resourceRegistry,
+	)
+	if err != nil {
+		spec := speccore.BlueprintSpecFromSchema(blueprintSchema)
+		loadSpecRes := &loadSpecResult{
+			spec:              spec,
+			diagnostics:       diagnostics,
+			declaredLinkGraph: declaredLinkGraph,
+		}
+		return loadSpecRes, validation.ErrMultipleValidationErrors(
+			append(validationErrors, err),
+		)
+	}
+
 	l.logger.Info("Validating and applying blueprint transforms")
 	transformers, transformDiagnostics, err := l.validateAndApplyTransforms(
 		ctx,
 		blueprintSchema,
 		valCtx,
+		declaredLinkGraph,
 	)
 	diagnostics = append(diagnostics, transformDiagnostics...)
 	if err != nil {
-		return speccore.BlueprintSpecFromSchema(blueprintSchema), diagnostics, err
+		return &loadSpecResult{
+			spec:              speccore.BlueprintSpecFromSchema(blueprintSchema),
+			diagnostics:       diagnostics,
+			declaredLinkGraph: declaredLinkGraph,
+		}, err
 	}
 
 	if l.validateAfterTransform && len(transformers) > 0 {
@@ -987,18 +1036,25 @@ func (l *defaultLoader) loadSpec(
 	}
 
 	if len(validationErrors) > 0 {
-		return speccore.BlueprintSpecFromSchema(
-			blueprintSchema,
-		), diagnostics, validation.ErrMultipleValidationErrors(validationErrors)
+		return &loadSpecResult{
+			spec:              speccore.BlueprintSpecFromSchema(blueprintSchema),
+			diagnostics:       diagnostics,
+			declaredLinkGraph: declaredLinkGraph,
+		}, validation.ErrMultipleValidationErrors(validationErrors)
 	}
 
-	return speccore.BlueprintSpecFromSchema(blueprintSchema), diagnostics, nil
+	return &loadSpecResult{
+		spec:              speccore.BlueprintSpecFromSchema(blueprintSchema),
+		diagnostics:       diagnostics,
+		declaredLinkGraph: declaredLinkGraph,
+	}, nil
 }
 
 func (l *defaultLoader) validateAndApplyTransforms(
 	ctx context.Context,
 	blueprintSchema *schema.Blueprint,
 	valCtx *validation.ValidationContext,
+	declaredLinkGraph linktypes.DeclaredLinkGraph,
 ) (map[string]transform.SpecTransformer, []*bpcore.Diagnostic, error) {
 	// Apply some validation to get diagnostics about non-standard transformers
 	// that may not be present at runtime.
@@ -1018,17 +1074,6 @@ func (l *defaultLoader) validateAndApplyTransforms(
 	}
 
 	transformers, err := l.collectTransformers(blueprintSchema)
-	if err != nil {
-		return nil, transformDiagnostics, validation.ErrMultipleValidationErrors(
-			append(validationErrors, err),
-		)
-	}
-
-	declaredLinkGraph, err := links.EnumerateDeclaredLinks(
-		ctx,
-		blueprintSchema,
-		l.resourceRegistry,
-	)
 	if err != nil {
 		return nil, transformDiagnostics, validation.ErrMultipleValidationErrors(
 			append(validationErrors, err),

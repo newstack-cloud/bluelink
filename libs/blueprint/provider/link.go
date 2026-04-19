@@ -17,6 +17,7 @@ type Link interface {
 		ctx context.Context,
 		input *LinkStageChangesInput,
 	) (*LinkStageChangesOutput, error)
+
 	// UpdateResourceA deals with applying the changes to the first of the two linked resources
 	// for the creation or removal of a link between two resources.
 	// The value of the `LinkData` field returned in the output will be combined
@@ -26,6 +27,7 @@ type Link interface {
 	// been substituted at this stage and must be used instead of the passed in params argument
 	// to ensure consistency between the staged changes that are reviewed and the deployment itself.
 	UpdateResourceA(ctx context.Context, input *LinkUpdateResourceInput) (*LinkUpdateResourceOutput, error)
+
 	// UpdateResourceB deals with applying the changes to the second of the two linked resources
 	// for the creation or removal of a link between two resources.
 	// The value of the `LinkData` field returned in the output will be combined
@@ -35,6 +37,7 @@ type Link interface {
 	// been substituted at this stage and must be used instead of the passed in params argument
 	// to ensure consistency between the staged changes that are reviewed and the deployment itself.
 	UpdateResourceB(ctx context.Context, input *LinkUpdateResourceInput) (*LinkUpdateResourceOutput, error)
+
 	// UpdateIntermediaryResources deals with creating, updating or deleting intermediary resources
 	// that are required for the link between two resources.
 	//
@@ -61,26 +64,40 @@ type Link interface {
 		ctx context.Context,
 		input *LinkUpdateIntermediaryResourcesInput,
 	) (*LinkUpdateIntermediaryResourcesOutput, error)
+
 	// GetPriorityResource retrieves the resource in the relationship
 	// that must be deployed first. This will be empty for links where one resource does not
 	// need to be deployed before the other.
-	GetPriorityResource(ctx context.Context, input *LinkGetPriorityResourceInput) (*LinkGetPriorityResourceOutput, error)
+	GetPriorityResource(
+		ctx context.Context,
+		input *LinkGetPriorityResourceInput,
+	) (*LinkGetPriorityResourceOutput, error)
+
 	// GetType deals with retrieving the type of the link in relation to the two resource
 	// types it provides a relationship between.
 	GetType(ctx context.Context, input *LinkGetTypeInput) (*LinkGetTypeOutput, error)
+
 	// GetTypeDescription deals with retrieving the description for a link type in a blueprint spec
 	// that can be used for documentation and tooling.
 	// Markdown and plain text formats are supported.
-	GetTypeDescription(ctx context.Context, input *LinkGetTypeDescriptionInput) (*LinkGetTypeDescriptionOutput, error)
+	GetTypeDescription(
+		ctx context.Context,
+		input *LinkGetTypeDescriptionInput,
+	) (*LinkGetTypeDescriptionOutput, error)
+
 	// GetAnnotationDefinitions retrieves the annotation definitions for the link type.
 	// Annotations provide a way to fine tune the behaviour of a link in a blueprint spec
 	// in the linked resource metadata sections.
-	GetAnnotationDefinitions(ctx context.Context, input *LinkGetAnnotationDefinitionsInput) (*LinkGetAnnotationDefinitionsOutput, error)
+	GetAnnotationDefinitions(
+		ctx context.Context,
+		input *LinkGetAnnotationDefinitionsInput,
+	) (*LinkGetAnnotationDefinitionsOutput, error)
 	// GetKind tells us whether the link is a "hard" or "soft" link.
 	// A hard link is where the priority resource type must be created first.
 	// A soft link is where it does not matter which resource type in the relationship
 	// is created first.
 	GetKind(ctx context.Context, input *LinkGetKindInput) (*LinkGetKindOutput, error)
+
 	// GetIntermediaryExternalState fetches the current cloud state for intermediary
 	// resources owned by this link. Used for drift detection and reconciliation.
 	// Link implementations that don't manage intermediary resources should return
@@ -89,6 +106,24 @@ type Link interface {
 		ctx context.Context,
 		input *LinkGetIntermediaryExternalStateInput,
 	) (*LinkGetIntermediaryExternalStateOutput, error)
+
+	// GetCardinality retrieves the cardinality constraints for both sides
+	// of the link relationship. A zero-valued cardinality on either side
+	// means no constraint is applied.
+	GetCardinality(
+		ctx context.Context,
+		input *LinkGetCardinalityInput,
+	) (*LinkGetCardinalityOutput, error)
+
+	// ValidateLink runs custom validation logic for this link at blueprint
+	// validation time (pre-deploy). This is distinct from StageChanges which
+	// runs when staging changes for a deployment. ValidateLink receives the resource specs
+	// and annotations and returns diagnostics.
+	// Returning nil output or empty diagnostics means validation passed.
+	ValidateLink(
+		ctx context.Context,
+		input *LinkValidateInput,
+	) (*LinkValidateOutput, error)
 }
 
 // LinkStageChangesInput provides the input required to
@@ -328,6 +363,47 @@ type LinkGetAnnotationDefinitionsOutput struct {
 	AnnotationDefinitions map[string]*LinkAnnotationDefinition
 }
 
+// LinkGetCardinalityInput provides the input for retrieving the cardinality
+// constraints for both sides of a link relationship.
+type LinkGetCardinalityInput struct {
+	LinkContext LinkContext
+}
+
+// LinkGetCardinalityOutput provides the output for retrieving the cardinality
+// constraints for both sides of a link relationship.
+type LinkGetCardinalityOutput struct {
+	CardinalityA LinkCardinality
+	CardinalityB LinkCardinality
+}
+
+// LinkValidateInput provides the input for running custom validation logic for a link at blueprint
+// validation time (pre-deploy).
+type LinkValidateInput struct {
+	// ResourceASpec is the parsed spec of resource A in the link.
+	ResourceASpec *core.MappingNode
+	// ResourceBSpec is the parsed spec of resource B in the link.
+	ResourceBSpec *core.MappingNode
+	// ResourceAName is the logical name of resource A in the blueprint.
+	ResourceAName string
+	// ResourceBName is the logical name of resource B in the blueprint.
+	ResourceBName string
+	// ResourceAType is the type of resource A.
+	ResourceAType string
+	// ResourceBType is the type of resource B.
+	ResourceBType string
+	// Annotations are the link-related annotations from both resources
+	// in the link, keyed by "{resourceType}::{annotationName}".
+	Annotations map[string]*core.ScalarValue
+	// LinkContext provides access to provider config and context variables.
+	LinkContext LinkContext
+}
+
+// LinkValidateOutput provides the output for running custom validation logic for a link at blueprint
+// validation time (pre-deploy).
+type LinkValidateOutput struct {
+	Diagnostics []*core.Diagnostic
+}
+
 // LinkAnnotationDefinition provides a way to define annotations
 // for a link type.
 // Annotations that have dynamic keys should use the `<resourceName>` syntax
@@ -398,6 +474,15 @@ const (
 	// first.
 	LinkKindSoft LinkKind = "soft"
 )
+
+// LinkCardinality specifies minimum and maximum number of
+// links allowed for one side of a link relationship.
+type LinkCardinality struct {
+	// Min is the minimum number of links required. 0 means no minimum.
+	Min int
+	// Max is the maximum number of links allowed. 0 means unlimited.
+	Max int
+}
 
 // LinkChanges provides a set of modified fields for a link between two resources.
 // The link field changes represent a set of changes that will be made to the

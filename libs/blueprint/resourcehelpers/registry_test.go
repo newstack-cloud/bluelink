@@ -45,6 +45,9 @@ func (s *RegistryTestSuite) SetUpTest(c *C) {
 			abstractResources: map[string]transform.AbstractResource{
 				"test/exampleAbstractResource": testAbstractRes,
 			},
+			abstractLinks: map[string]transform.AbstractLink{
+				"test/exampleAbstractResource::test/exampleAbstractResource": &testExampleAbstractLink{},
+			},
 		},
 	}
 

@@ -55,6 +55,21 @@ func collectLinksFromChain(
 	refChainCollector refgraph.RefChainCollector,
 	params core.BlueprintParams,
 ) error {
+	return collectLinksFromChainWithVisited(ctx, chain, refChainCollector, params, map[string]bool{})
+}
+
+func collectLinksFromChainWithVisited(
+	ctx context.Context,
+	chain *links.ChainLinkNode,
+	refChainCollector refgraph.RefChainCollector,
+	params core.BlueprintParams,
+	visited map[string]bool,
+) error {
+	if visited[chain.ResourceName] {
+		return nil
+	}
+	visited[chain.ResourceName] = true
+
 	// Always collect the resource that the chain is starting from to account for the case
 	// when the chain is a single resource, none of the links are hard or the root resource
 	// in the chain is not the priority resource in the link relationship.
@@ -105,50 +120,39 @@ func collectLinksFromChain(
 		}
 
 		if !alreadyCollected(refChainCollector, dependency, referencedByResourceID) {
-			err = collectResourceFromLink(
-				ctx,
+			err = collectHardLinkAsReference(
 				refChainCollector,
 				dependency,
 				linkKindOutput.Kind,
 				referencedByResourceID,
-				link,
-				params,
 			)
 			if err != nil {
 				return err
 			}
+		}
+
+		err = collectLinksFromChainWithVisited(ctx, link, refChainCollector, params, visited)
+		if err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func collectResourceFromLink(
-	ctx context.Context,
+func collectHardLinkAsReference(
 	refChainCollector refgraph.RefChainCollector,
 	dependency *links.ChainLinkNode,
 	linkKind provider.LinkKind,
 	referencedByResourceID string,
-	childLink *links.ChainLinkNode,
-	params core.BlueprintParams,
 ) error {
 	// Only collect link for cycle detection if it is a hard link.
 	// Soft links do not require a specific order of deployment/resolution.
 	if linkKind == provider.LinkKindHard {
 		resourceID := core.ResourceElementID(dependency.ResourceName)
-		err := refChainCollector.Collect(resourceID, dependency, referencedByResourceID, []string{
+		return refChainCollector.Collect(resourceID, dependency, referencedByResourceID, []string{
 			validation.CreateLinkTag(referencedByResourceID),
 		})
-		if err != nil {
-			return err
-		}
-	}
-
-	// There is no risk of infinite recursion due to cyclic links as at this point,
-	// any pure link cycles have been detected and reported.
-	err := collectLinksFromChain(ctx, childLink, refChainCollector, params)
-	if err != nil {
-		return err
 	}
 
 	return nil

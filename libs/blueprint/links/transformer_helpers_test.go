@@ -2,6 +2,7 @@ package links
 
 import (
 	"context"
+	"errors"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
@@ -69,6 +70,19 @@ func (t *testCelerityTransformer) ListAbstractResourceTypes(
 		types = append(types, resourceType)
 	}
 	return types, nil
+}
+
+func (t *testCelerityTransformer) ListAbstractLinkTypes(
+	ctx context.Context,
+) ([]string, error) {
+	return []string{}, nil
+}
+
+func (t *testCelerityTransformer) AbstractLink(
+	ctx context.Context,
+	linkType string,
+) (transform.AbstractLink, error) {
+	return nil, errors.New("no abstract links defined for testCelerityTransformer")
 }
 
 type testCelerityHandlerResource struct{}

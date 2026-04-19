@@ -150,3 +150,132 @@ func (l *testResourceTypeAResourceTypeBLink) GetIntermediaryExternalState(
 ) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
+
+func (l *testResourceTypeAResourceTypeBLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+func (l *testResourceTypeAResourceTypeBLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
+}
+
+// testConfigurableLink is a mock link implementation with configurable
+// return values for testing ValidateLinkConstraints.
+type testConfigurableLink struct {
+	linkType       string
+	cardinality    *provider.LinkGetCardinalityOutput
+	cardinalityErr error
+	validateOutput *provider.LinkValidateOutput
+	validateErr    error
+	// capturedInput is populated by ValidateLink so tests can inspect
+	// what was passed.
+	capturedInput *provider.LinkValidateInput
+}
+
+func (l *testConfigurableLink) StageChanges(
+	ctx context.Context,
+	input *provider.LinkStageChangesInput,
+) (*provider.LinkStageChangesOutput, error) {
+	return &provider.LinkStageChangesOutput{}, nil
+}
+
+func (l *testConfigurableLink) GetPriorityResource(
+	ctx context.Context,
+	input *provider.LinkGetPriorityResourceInput,
+) (*provider.LinkGetPriorityResourceOutput, error) {
+	return &provider.LinkGetPriorityResourceOutput{
+		PriorityResource: provider.LinkPriorityResourceNone,
+	}, nil
+}
+
+func (l *testConfigurableLink) GetType(
+	ctx context.Context,
+	input *provider.LinkGetTypeInput,
+) (*provider.LinkGetTypeOutput, error) {
+	return &provider.LinkGetTypeOutput{
+		Type: l.linkType,
+	}, nil
+}
+
+func (l *testConfigurableLink) GetTypeDescription(
+	ctx context.Context,
+	input *provider.LinkGetTypeDescriptionInput,
+) (*provider.LinkGetTypeDescriptionOutput, error) {
+	return &provider.LinkGetTypeDescriptionOutput{}, nil
+}
+
+func (l *testConfigurableLink) GetAnnotationDefinitions(
+	ctx context.Context,
+	input *provider.LinkGetAnnotationDefinitionsInput,
+) (*provider.LinkGetAnnotationDefinitionsOutput, error) {
+	return &provider.LinkGetAnnotationDefinitionsOutput{
+		AnnotationDefinitions: map[string]*provider.LinkAnnotationDefinition{},
+	}, nil
+}
+
+func (l *testConfigurableLink) GetKind(
+	ctx context.Context,
+	input *provider.LinkGetKindInput,
+) (*provider.LinkGetKindOutput, error) {
+	return &provider.LinkGetKindOutput{
+		Kind: provider.LinkKindHard,
+	}, nil
+}
+
+func (l *testConfigurableLink) UpdateResourceA(
+	ctx context.Context,
+	input *provider.LinkUpdateResourceInput,
+) (*provider.LinkUpdateResourceOutput, error) {
+	return &provider.LinkUpdateResourceOutput{}, nil
+}
+
+func (l *testConfigurableLink) UpdateResourceB(
+	ctx context.Context,
+	input *provider.LinkUpdateResourceInput,
+) (*provider.LinkUpdateResourceOutput, error) {
+	return &provider.LinkUpdateResourceOutput{}, nil
+}
+
+func (l *testConfigurableLink) UpdateIntermediaryResources(
+	ctx context.Context,
+	input *provider.LinkUpdateIntermediaryResourcesInput,
+) (*provider.LinkUpdateIntermediaryResourcesOutput, error) {
+	return &provider.LinkUpdateIntermediaryResourcesOutput{}, nil
+}
+
+func (l *testConfigurableLink) GetIntermediaryExternalState(
+	ctx context.Context,
+	input *provider.LinkGetIntermediaryExternalStateInput,
+) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
+	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
+func (l *testConfigurableLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	if l.cardinalityErr != nil {
+		return nil, l.cardinalityErr
+	}
+	return l.cardinality, nil
+}
+
+func (l *testConfigurableLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	l.capturedInput = input
+	if l.validateErr != nil {
+		return nil, l.validateErr
+	}
+	if l.validateOutput != nil {
+		return l.validateOutput, nil
+	}
+	return &provider.LinkValidateOutput{}, nil
+}

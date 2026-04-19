@@ -57,6 +57,7 @@ func (s *LoaderTestSuite) SetupSuite() {
 		"invalid-resource-each-dep-1": "__testdata/loader/invalid-resource-each-dep-1-blueprint.yml",
 		"invalid-resource-each-dep-2": "__testdata/loader/invalid-resource-each-dep-2-blueprint.yml",
 		"stub-resource":               "__testdata/loader/stub-resource-blueprint.yml",
+		"cyclic-soft-link":            "__testdata/loader/cyclic-soft-link-blueprint.yml",
 		"transform-error-links":       "__testdata/loader/transform-error-links-blueprint.yml",
 		"transform-warning-links":     "__testdata/loader/transform-warning-links-blueprint.yml",
 		"transform-go-error-links":    "__testdata/loader/transform-go-error-links-blueprint.yml",
@@ -347,6 +348,12 @@ func (s *LoaderTestSuite) Test_reports_error_for_blueprint_with_indirect_cyclic_
 		validation.ErrorReasonCodeReferenceCycle,
 		loadErr.ReasonCode,
 	)
+}
+
+func (s *LoaderTestSuite) Test_loads_blueprint_with_circular_soft_links_without_error() {
+	container, err := s.loader.Load(context.TODO(), s.specFixtureFiles["cyclic-soft-link"], createParams())
+	s.Require().NoError(err)
+	s.Assert().NotNil(container)
 }
 
 func (s *LoaderTestSuite) Test_reports_error_for_blueprint_with_indirect_cyclic_link_via_link_func_arg() {

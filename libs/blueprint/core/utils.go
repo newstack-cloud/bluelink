@@ -445,6 +445,20 @@ func LinkType(resourceTypeA string, resourceTypeB string) string {
 	return LogicalLinkName(resourceTypeA, resourceTypeB)
 }
 
+// SplitLinkType splits a link type identifier into its component resource types.
+// For example, "aws/lambda/function::aws/dynamodb/table" would be split into
+// "aws/lambda/function" and "aws/dynamodb/table".
+func SplitLinkType(linkType string) (string, string, error) {
+	parts := strings.Split(linkType, "::")
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf(
+			"invalid link type %q: must be in the format <sourceType>::<targetType>",
+			linkType,
+		)
+	}
+	return parts[0], parts[1], nil
+}
+
 // ReplaceSpecWithRoot replaces the "spec." prefix in a path with "$.".
 // This is primarily useful for resource specs during merge/overlay operations
 // for merging computed fields into a resource spec and overlaying link data mappings

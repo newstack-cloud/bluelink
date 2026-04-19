@@ -51,11 +51,13 @@ func ValidateLinkAnnotations(
 	params core.BlueprintParams,
 ) ([]*core.Diagnostic, error) {
 	diagnostics := []*core.Diagnostic{}
+	visited := map[string]bool{}
 	err := validateLinkAnnotations(
 		ctx,
 		linkChains,
 		params,
 		&diagnostics,
+		visited,
 	)
 	return diagnostics, err
 }
@@ -65,8 +67,14 @@ func validateLinkAnnotations(
 	linkChains []*links.ChainLinkNode,
 	params core.BlueprintParams,
 	diagnostics *[]*core.Diagnostic,
+	visited map[string]bool,
 ) error {
 	for _, linkChainNode := range linkChains {
+		if visited[linkChainNode.ResourceName] {
+			continue
+		}
+		visited[linkChainNode.ResourceName] = true
+
 		resourceAnnotations := getAnnotations(linkChainNode.Resource)
 		metadataBlockLocation := getMetadataBlockLocation(linkChainNode.Resource)
 
@@ -98,6 +106,7 @@ func validateLinkAnnotations(
 				linkChainNode.LinksTo,
 				params,
 				diagnostics,
+				visited,
 			)
 			if err != nil {
 				return err
@@ -186,7 +195,7 @@ func validateResourceLinkAnnotations(
 		resourcePosition,
 	)
 	for definitionKey, definition := range linkAnnotationDefinitionsForResourceType {
-		renderedDefAnnotationName := replacePlaceholderWithResourceName(
+		renderedDefAnnotationName := ReplaceAnnotationPlaceholderWithResourceName(
 			definition.Name,
 			linksTo,
 		)
@@ -195,7 +204,7 @@ func validateResourceLinkAnnotations(
 		// For dynamic definitions (with placeholders), this uses pattern matching
 		// to find all annotations that match the pattern, not just those
 		// that exactly match the rendered definition name.
-		matchingAnnotations, err := getAllMatchingAnnotations(
+		matchingAnnotations, err := GetAllMatchingAnnotations(
 			definition.Name,
 			resourceAnnotations,
 		)
@@ -223,62 +232,83 @@ func validateResourceLinkAnnotations(
 
 		// Validate each matching annotation
 		for _, resourceAnnotationInfo := range matchingAnnotations {
-			if substitutions.IsNilStringSubs(resourceAnnotationInfo.annotation) {
+			if substitutions.IsNilStringSubs(resourceAnnotationInfo.Annotation) {
 				continue
 			}
 
-			parsedValue, isCorrectTypeAndValueKnown := validateAnnotationType(
-				resourceAnnotationInfo,
+			validateDiagnostics := ValidateAnnotationValue(
+				definitionKey,
 				definition,
 				resourceName,
-				diagnostics,
+				resourceAnnotationInfo,
 			)
-
-			if isCorrectTypeAndValueKnown && len(definition.AllowedValues) > 0 {
-				validateAnnotationAllowedValues(
-					parsedValue,
-					resourceAnnotationInfo,
-					definition,
-					resourceName,
-					definitionKey,
-					diagnostics,
-				)
-			}
-
-			if isCorrectTypeAndValueKnown && definition.ValidateFunc != nil {
-				customValidateDiagnostics := definition.ValidateFunc(
-					resourceAnnotationInfo.annotationKey,
-					parsedValue,
-				)
-				*diagnostics = append(*diagnostics, customValidateDiagnostics...)
-			}
+			*diagnostics = append(*diagnostics, validateDiagnostics...)
 		}
 	}
 
 	return nil
 }
 
+// ValidateAnnotationValue carries out validation for the type and allowed values
+// of a link annotation based on its definition and returns any diagnostics.
+func ValidateAnnotationValue(
+	definitionKey string,
+	definition *provider.LinkAnnotationDefinition,
+	resourceName string,
+	resourceAnnotationInfo *ResourceAnnotationInfo,
+) []*core.Diagnostic {
+	diagnostics := []*core.Diagnostic{}
+
+	parsedValue, isCorrectTypeAndValueKnown := validateAnnotationType(
+		resourceAnnotationInfo,
+		definition,
+		resourceName,
+		&diagnostics,
+	)
+
+	if isCorrectTypeAndValueKnown && len(definition.AllowedValues) > 0 {
+		validateAnnotationAllowedValues(
+			parsedValue,
+			resourceAnnotationInfo,
+			definition,
+			resourceName,
+			definitionKey,
+			&diagnostics,
+		)
+	}
+
+	if isCorrectTypeAndValueKnown && definition.ValidateFunc != nil {
+		customValidateDiagnostics := definition.ValidateFunc(
+			resourceAnnotationInfo.AnnotationKey,
+			parsedValue,
+		)
+		diagnostics = append(diagnostics, customValidateDiagnostics...)
+	}
+
+	return diagnostics
+}
+
 func validateAnnotationType(
-	resourceAnnotationInfo *resourceAnnotationInfo,
+	resourceAnnotationInfo *ResourceAnnotationInfo,
 	definition *provider.LinkAnnotationDefinition,
 	resourceName string,
 	diagnostics *[]*core.Diagnostic,
 ) (*core.ScalarValue, bool) {
 	// An annotation can have an empty value if it is not a required
 	// annotation.
-	if len(resourceAnnotationInfo.annotation.Values) == 0 {
+	if len(resourceAnnotationInfo.Annotation.Values) == 0 {
 		return nil, false
 	}
 
 	// A StringOrSubstitutions struct with more than one value
 	// represents a string interpolation for which the final resolved
 	// value can not be known at the validation stage.
-	if len(resourceAnnotationInfo.annotation.Values) > 1 ||
+	if len(resourceAnnotationInfo.Annotation.Values) > 1 ||
 		// A StringOrSubstitutions struct with a single value
 		// that contains a substitution value can not be known at
 		// the validation stage.
-		(len(resourceAnnotationInfo.annotation.Values) == 1 &&
-			resourceAnnotationInfo.annotation.Values[0].SubstitutionValue != nil) {
+		(len(resourceAnnotationInfo.Annotation.Values) == 1 &&
+			resourceAnnotationInfo.Annotation.Values[0].SubstitutionValue != nil) {
 		*diagnostics = append(
 			*diagnostics,
 			&core.Diagnostic{
@@ -287,17 +317,17 @@ func validateAnnotationType(
 					"The value of the %q annotation in the %q resource contains substitutions"+
 						" and can not be validated against a type. "+
 						"When substitutions are resolved, this value must be a valid %s.",
-					resourceAnnotationInfo.annotationKey,
+					resourceAnnotationInfo.AnnotationKey,
 					resourceName,
 					definition.Type,
 				),
-				Range: core.DiagnosticRangeFromSourceMeta(resourceAnnotationInfo.annotation.SourceMeta, nil),
+				Range: core.DiagnosticRangeFromSourceMeta(resourceAnnotationInfo.Annotation.SourceMeta, nil),
 			},
 		)
 		return nil, false
 	}
 
-	stringVal := resourceAnnotationInfo.annotation.Values[0].StringValue
+	stringVal := resourceAnnotationInfo.Annotation.Values[0].StringValue
 	if stringVal == nil {
 		return nil, false
 	}
@@ -307,7 +337,7 @@ func validateAnnotationType(
 	// Ensure we carry over the original source meta information, if any,
 	// so diagnostics from custom validation can point to the correct
 	// location in the source blueprint.
-	scalarValue.SourceMeta = resourceAnnotationInfo.annotation.SourceMeta
+	scalarValue.SourceMeta = resourceAnnotationInfo.Annotation.SourceMeta
 
 	if core.IsScalarBool(scalarValue) && definition.Type == core.ScalarTypeBool {
 		return scalarValue, true
@@ -332,14 +362,14 @@ func validateAnnotationType(
 			Message: fmt.Sprintf(
 				"The value of the %q annotation in the %q resource is not a valid %s. "+
 					"Expected a value of type %s, but got %s.",
-				resourceAnnotationInfo.annotationKey,
+				resourceAnnotationInfo.AnnotationKey,
 				resourceName,
 				definition.Type,
 				definition.Type,
 				core.TypeFromScalarValue(scalarValue),
 			),
 			Range: core.DiagnosticRangeFromSourceMeta(
-				resourceAnnotationInfo.annotation.SourceMeta,
+				resourceAnnotationInfo.Annotation.SourceMeta,
 				nil,
 			),
 		},
@@ -350,7 +380,7 @@ func validateAnnotationType(
 
 func validateAnnotationAllowedValues(
 	parsedValue *core.ScalarValue,
-	resourceAnnotationInfo *resourceAnnotationInfo,
+	resourceAnnotationInfo *ResourceAnnotationInfo,
 	definition *provider.LinkAnnotationDefinition,
 	resourceName string,
 	definitionKey string,
@@ -376,13 +406,13 @@ func validateAnnotationAllowedValues(
 				Message: fmt.Sprintf(
 					"The value of the %q annotation in the %q resource is not one of the allowed values. "+
 						"%s was provided but expected one of %s",
-					resourceAnnotationInfo.annotationKey,
+					resourceAnnotationInfo.AnnotationKey,
 					resourceName,
 					parsedValue.ToString(),
 					allowedValuesText,
 				),
 				Range: core.DiagnosticRangeFromSourceMeta(
-					resourceAnnotationInfo.annotation.SourceMeta,
+					resourceAnnotationInfo.Annotation.SourceMeta,
 					nil,
 				),
 			},
@@ -426,33 +456,35 @@ func annotationAppliesToResource(
 	return appliesTo == resourcePosition
 }
 
-type resourceAnnotationInfo struct {
-	annotation            *substitutions.StringOrSubstitutions
-	annotationKey         string
-	hasResourceAnnotation bool
+// ResourceAnnotationInfo holds information about a resource annotation that is being validated, including
+// the annotation value, the annotation key, and whether the annotation is present on a resource.
+type ResourceAnnotationInfo struct {
+	Annotation            *substitutions.StringOrSubstitutions
+	AnnotationKey         string
+	HasResourceAnnotation bool
 }
 
-// getAllMatchingAnnotations returns all annotations that match a definition.
+// GetAllMatchingAnnotations returns all annotations that match a definition.
 // For static definitions (no placeholders), it returns at most one annotation
 // with an exact key match.
 // For dynamic definitions (with placeholders), it uses pattern matching to find
 // ALL annotations that match the pattern, ensuring that annotations are validated
 // even if the resource name in the annotation doesn't exactly match the linked resource.
-func getAllMatchingAnnotations(
+func GetAllMatchingAnnotations(
 	definitionKey string,
 	resourceAnnotations *schema.StringOrSubstitutionsMap,
-) ([]*resourceAnnotationInfo, error) {
+) ([]*ResourceAnnotationInfo, error) {
 	if resourceAnnotations == nil || resourceAnnotations.Values == nil {
 		return nil, nil
 	}
 
 	// Check for exact match with the definition key (literal placeholder in key)
 	if annotation, exists := resourceAnnotations.Values[definitionKey]; exists {
-		return []*resourceAnnotationInfo{
+		return []*ResourceAnnotationInfo{
 			{
-				annotation:            annotation,
-				annotationKey:         definitionKey,
-				hasResourceAnnotation: true,
+				Annotation:            annotation,
+				AnnotationKey:         definitionKey,
+				HasResourceAnnotation: true,
 			},
 		}, nil
 	}
@@ -468,13 +500,13 @@ func getAllMatchingAnnotations(
 		return nil, err
 	}
 
-	var matchingAnnotations []*resourceAnnotationInfo
+	var matchingAnnotations []*ResourceAnnotationInfo
 	for key, annotation := range resourceAnnotations.Values {
 		if pattern.MatchString(key) {
-			matchingAnnotations = append(matchingAnnotations, &resourceAnnotationInfo{
-				annotation:            annotation,
-				annotationKey:         key,
-				hasResourceAnnotation: true,
+			matchingAnnotations = append(matchingAnnotations, &ResourceAnnotationInfo{
+				Annotation:            annotation,
+				AnnotationKey:         key,
+				HasResourceAnnotation: true,
 			})
 		}
 	}
@@ -492,7 +524,10 @@ func createPatternForAnnotationKey(definitionKey string) (*regexp.Regexp, error)
 	return regexp.Compile(patternString)
 }
 
-func replacePlaceholderWithResourceName(
+// ReplaceAnnotationPlaceholderWithResourceName replaces the "<resourceName>" placeholder
+// in a definition key with the provided resource name.
+// If the definition key does not contain the placeholder, it is returned unchanged.
+func ReplaceAnnotationPlaceholderWithResourceName(
 	definitionKey, linksToResource string,
 ) string {
 	openAngleBracketIndex := strings.Index(definitionKey, "<")

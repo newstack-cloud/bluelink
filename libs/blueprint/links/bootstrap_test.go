@@ -1067,6 +1067,22 @@ func (l *testApiGatewayLambdaLink) GetIntermediaryExternalState(
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
+// GetCardinality is not used for spec link info!
+func (l *testApiGatewayLambdaLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+// ValidateLink is not used for spec link info!
+func (l *testApiGatewayLambdaLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
+}
+
 // The functionality provided by link implementations is not used for building
 // chain links. The spec link info behaviour that builds out the chain links
 // prepares link implementations so they can be used by the blueprint container.
@@ -1150,6 +1166,22 @@ func (l *testSQSQueueLambdaLink) GetIntermediaryExternalState(
 	input *provider.LinkGetIntermediaryExternalStateInput,
 ) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
+// GetCardinality is not used for spec link info!
+func (l *testSQSQueueLambdaLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+// ValidateLink is not used for spec link info!
+func (l *testSQSQueueLambdaLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
 }
 
 // The functionality provided by link implementations is not used for building
@@ -1238,6 +1270,22 @@ func (l *testLambdaDynamoDBTableLink) GetIntermediaryExternalState(
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
+// GetCardinality is not used for spec link info!
+func (l *testLambdaDynamoDBTableLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+// ValidateLink is not used for spec link info!
+func (l *testLambdaDynamoDBTableLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
+}
+
 // The functionality provided by link implementations is not used for building
 // chain links. The spec link info behaviour that builds out the chain links
 // prepares link implementations so they can be used by the blueprint container.
@@ -1323,6 +1371,22 @@ func (l *testStratosLambdaDynamoDBTableLink) GetIntermediaryExternalState(
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
+// GetCardinality is not used for spec link info!
+func (l *testStratosLambdaDynamoDBTableLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+// ValidateLink is not used for spec link info!
+func (l *testStratosLambdaDynamoDBTableLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
+}
+
 // The functionality provided by link implementations is not used for building
 // chain links. The spec link info behaviour that builds out the chain links
 // prepares link implementations so they can be used by the blueprint container.
@@ -1406,6 +1470,22 @@ func (l *testLambdaSQSQueueLink) GetIntermediaryExternalState(
 	input *provider.LinkGetIntermediaryExternalStateInput,
 ) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
+// GetCardinality is not used for spec link info!
+func (l *testLambdaSQSQueueLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+// ValidateLink is not used for spec link info!
+func (l *testLambdaSQSQueueLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
 }
 
 // The functionality provided by link implementations is not used for building
@@ -1494,6 +1574,22 @@ func (l *testDynamoDBTableStreamLink) GetIntermediaryExternalState(
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
+// GetCardinality is not used for spec link info!
+func (l *testDynamoDBTableStreamLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+// ValidateLink is not used for spec link info!
+func (l *testDynamoDBTableStreamLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
+}
+
 // The functionality provided by link implementations is not used for building
 // chain links. The spec link info behaviour that builds out the chain links
 // prepares link implementations so they can be used by the blueprint container.
@@ -1578,6 +1674,22 @@ func (l *testDynamoDBStreamLambdaLink) GetIntermediaryExternalState(
 	input *provider.LinkGetIntermediaryExternalStateInput,
 ) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
+// GetCardinality is not used for spec link info!
+func (l *testDynamoDBStreamLambdaLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+// ValidateLink is not used for spec link info!
+func (l *testDynamoDBStreamLambdaLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
 }
 
 // The functionality provided by link implementations is not used for building
@@ -1666,6 +1778,22 @@ func (l *testDynamoDBStreamStratosLambdaLink) GetIntermediaryExternalState(
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
+// GetCardinality is not used for spec link info!
+func (l *testDynamoDBStreamStratosLambdaLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+// ValidateLink is not used for spec link info!
+func (l *testDynamoDBStreamStratosLambdaLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
+}
+
 // The functionality provided by link implementations is not used for building
 // chain links. The spec link info behaviour that builds out the chain links
 // prepares link implementations so they can be used by the blueprint container.
@@ -1752,6 +1880,22 @@ func (l *testIAMRoleLambdaLink) GetIntermediaryExternalState(
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
+// GetCardinality is not used for spec link info!
+func (l *testIAMRoleLambdaLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+// ValidateLink is not used for spec link info!
+func (l *testIAMRoleLambdaLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
+}
+
 // The functionality provided by link implementations is not used for building
 // chain links. The spec link info behaviour that builds out the chain links
 // prepares link implementations so they can be used by the blueprint container.
@@ -1835,6 +1979,22 @@ func (l *testStratosIAMRoleLambdaLink) GetIntermediaryExternalState(
 	input *provider.LinkGetIntermediaryExternalStateInput,
 ) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
+// GetCardinality is not used for spec link info!
+func (l *testStratosIAMRoleLambdaLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+// ValidateLink is not used for spec link info!
+func (l *testStratosIAMRoleLambdaLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
 }
 
 // The functionality provided by link implementations is not used for building
@@ -1923,6 +2083,22 @@ func (l *testLambdaIAMRoleLink) GetIntermediaryExternalState(
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
+// GetCardinality is not used for spec link info!
+func (l *testLambdaIAMRoleLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+// ValidateLink is not used for spec link info!
+func (l *testLambdaIAMRoleLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
+}
+
 // The functionality provided by link implementations is not used for building
 // chain links. The spec link info behaviour that builds out the chain links
 // prepares link implementations so they can be used by the blueprint container.
@@ -2006,6 +2182,22 @@ func (l *testLambdaStratosIAMRoleLink) GetIntermediaryExternalState(
 	input *provider.LinkGetIntermediaryExternalStateInput,
 ) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
+// GetCardinality is not used for spec link info!
+func (l *testLambdaStratosIAMRoleLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+// ValidateLink is not used for spec link info!
+func (l *testLambdaStratosIAMRoleLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
 }
 
 // Provides a version of a chain link purely for snapshot tests.

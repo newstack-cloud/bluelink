@@ -274,6 +274,7 @@ func (r *testExampleResource) Destroy(
 
 type testSpecTransformer struct {
 	abstractResources map[string]transform.AbstractResource
+	abstractLinks     map[string]transform.AbstractLink
 }
 
 func (t *testSpecTransformer) GetTransformName(ctx context.Context) (string, error) {
@@ -304,6 +305,12 @@ func (t *testSpecTransformer) ValidateLinks(
 	}, nil
 }
 
+func (t *testSpecTransformer) ListAbstractLinkTypes(
+	ctx context.Context,
+) ([]string, error) {
+	return []string{}, nil
+}
+
 func (t *testSpecTransformer) AbstractResource(
 	ctx context.Context,
 	resourceType string,
@@ -323,6 +330,17 @@ func (t *testSpecTransformer) ListAbstractResourceTypes(
 		abstractResourceTypes = append(abstractResourceTypes, abstractResourceType)
 	}
 	return abstractResourceTypes, nil
+}
+
+func (t *testSpecTransformer) AbstractLink(
+	ctx context.Context,
+	linkType string,
+) (transform.AbstractLink, error) {
+	abstractLink, ok := t.abstractLinks[linkType]
+	if !ok {
+		return nil, errors.New("abstract link not found")
+	}
+	return abstractLink, nil
 }
 
 type testExampleAbstractResource struct{}
@@ -385,3 +403,36 @@ func (r *testExampleAbstractResource) GetSpecDefinition(
 ) (*transform.AbstractResourceGetSpecDefinitionOutput, error) {
 	return &transform.AbstractResourceGetSpecDefinitionOutput{}, nil
 }
+
+type testExampleAbstractLink struct{}
+
+func (l *testExampleAbstractLink) GetType(
+	ctx context.Context,
+	input *transform.AbstractLinkGetTypeInput,
+) (*transform.AbstractLinkGetTypeOutput, error) {
+	return &transform.AbstractLinkGetTypeOutput{
+		Type: "test/exampleAbstractResource::test/exampleAbstractResource",
+	}, nil
+}
+
+func (l *testExampleAbstractLink) GetTypeDescription(
+	ctx context.Context,
+	input *transform.AbstractLinkGetTypeDescriptionInput,
+) (*transform.AbstractLinkGetTypeDescriptionOutput, error) {
+	return &transform.AbstractLinkGetTypeDescriptionOutput{}, nil
+}
+
+func (l *testExampleAbstractLink) GetAnnotationDefinitions(
+	ctx context.Context,
+	input *transform.AbstractLinkGetAnnotationDefinitionsInput,
+) (*transform.AbstractLinkGetAnnotationDefinitionsOutput, error) {
+	return &transform.AbstractLinkGetAnnotationDefinitionsOutput{}, nil
+}
+
+func (l *testExampleAbstractLink) GetCardinality(
+	ctx context.Context,
+	input *transform.AbstractLinkGetCardinalityInput,
+) (*transform.AbstractLinkGetCardinalityOutput, error) {
+	return &transform.AbstractLinkGetCardinalityOutput{}, nil
+}
+

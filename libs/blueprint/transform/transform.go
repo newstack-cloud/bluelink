@@ -26,9 +26,11 @@ type SpecTransformer interface {
 	// that is used to identify the transformer in blueprints,
 	// this is what is set in the `transform` field of a blueprint.
 	GetTransformName(ctx context.Context) (string, error)
+
 	// ConfigDefinition retrieves a detailed definition of the
 	// configuration that is required for the transformer.
 	ConfigDefinition(ctx context.Context) (*core.ConfigDefinition, error)
+
 	// Transform a blueprint by expanding abstract resources
 	// into their final form along with any other transformations
 	// that are required.
@@ -36,6 +38,7 @@ type SpecTransformer interface {
 		ctx context.Context,
 		input *SpecTransformerTransformInput,
 	) (*SpecTransformerTransformOutput, error)
+
 	// ValidateLinks provides a way to validate links between abstract resources
 	// in a blueprint prior to transformation.
 	// This is important for catching and surfacing issues to users before
@@ -45,14 +48,28 @@ type SpecTransformer interface {
 		ctx context.Context,
 		input *SpecTransformerValidateLinksInput,
 	) (*SpecTransformerValidateLinksOutput, error)
+
 	// AbstractResources returns the abstract resource implementation
 	// for a given resource type.
 	AbstractResource(ctx context.Context, resourceType string) (AbstractResource, error)
+
 	// ListAbstractResourceTypes retrieves a list of all the abstract resource types
-	// that are provided by the provider.
+	// that are provided by the transformer.
 	// This is primarily used in tools and documentation to provide a list of
 	// available abstract resource types.
 	ListAbstractResourceTypes(ctx context.Context) ([]string, error)
+
+	// ListAbstractLinkTypes retrieves a list of all the abstract link types
+	// that are provided by the transformer.
+	// This is primarily used for validation and documentation purposes.
+	ListAbstractLinkTypes(ctx context.Context) ([]string, error)
+
+	// AbstractLink returns the abstract link implementation for a given
+	// link type string ("{ResourceTypeA}::{ResourceTypeB}").
+	// This is the link analogue of AbstractResource — it provides access
+	// to link metadata through the interface for documentation generation,
+	// tooling and host wrappers.
+	AbstractLink(ctx context.Context, linkType string) (AbstractLink, error)
 }
 
 // SpecTransformerValidateLinksOutput provides the output from validating links between
@@ -112,6 +129,106 @@ type AbstractResource interface {
 	// that can be used for documentation and tooling.
 	// Markdown and plain text formats are supported.
 	GetExamples(ctx context.Context, input *AbstractResourceGetExamplesInput) (*AbstractResourceGetExamplesOutput, error)
+}
+
+// AbstractLink is the interface for an abstract link between two abstract
+// resource types that a spec transformer can contain. It exposes
+// documentation-relevant metadata and validation constraints through teh same pattern
+// as AbstractResource.
+type AbstractLink interface {
+	// GetType retrieves the ordered resource type pair for this link,
+	// expressed as the "{ResourceTypeA}::{ResourceTypeB}" link type string
+	// plus the individual types for each side.
+	GetType(
+		ctx context.Context,
+		input *AbstractLinkGetTypeInput,
+	) (*AbstractLinkGetTypeOutput, error)
+
+	// GetTypeDescription retrieves a human-readable description of this
+	// link type for documentation and tooling.
+	// Markdown and plain text formats are supported.
+	GetTypeDescription(
+		ctx context.Context,
+		input *AbstractLinkGetTypeDescriptionInput,
+	) (*AbstractLinkGetTypeDescriptionOutput, error)
+
+	// GetAnnotationDefinitions retrieves the annotation schema for this
+	// link type. Keyed by "{resourceType}::{annotationName}", same
+	// convention as provider.Link.GetAnnotationDefinitions.
+	GetAnnotationDefinitions(
+		ctx context.Context,
+		input *AbstractLinkGetAnnotationDefinitionsInput,
+	) (*AbstractLinkGetAnnotationDefinitionsOutput, error)
+
+	// GetCardinality retrieves the cardinality constraints for both sides
+	// of the link relationship. Zero values mean no constraint.
+	GetCardinality(
+		ctx context.Context,
+		input *AbstractLinkGetCardinalityInput,
+	) (*AbstractLinkGetCardinalityOutput, error)
+}
+
+// AbstractLinkGetTypeInput provides the input data needed for an abstract link
+// to determine the type of a link in a blueprint spec.
+type AbstractLinkGetTypeInput struct {
+	TransformerContext Context
+}
+
+// AbstractLinkGetTypeOutput provides the output data from determining the type of an
+// abstract link in a blueprint spec.
+type AbstractLinkGetTypeOutput struct {
+	// The full link type string, e.g. "celerity/handler::celerity/api".
+	Type string
+	// The type of the source (selector-owner) abstract resource.
+	ResourceTypeA string
+	// The type of the target (selected) abstract resource.
+	ResourceTypeB string
+}
+
+// AbstractLinkGetTypeDescriptionInput provides the input data needed for an abstract link to
+// retrieve a description of the type of an abstract link in a blueprint spec.
+type AbstractLinkGetTypeDescriptionInput struct {
+	TransformerContext Context
+}
+
+// AbstractLinkGetTypeDescriptionOutput provides the output data from retrieving a description
+// of the type of an abstract link in a blueprint spec.
+type AbstractLinkGetTypeDescriptionOutput struct {
+	MarkdownDescription  string
+	PlainTextDescription string
+	// A short summary of the abstract link type that can be formatted
+	// in markdown, this is useful for listing abstract link types in documentation.
+	MarkdownSummary string
+	// A short summary of the abstract link type that can be formatted
+	// in plain text, this is useful for listing abstract link types in documentation.
+	PlainTextSummary string
+}
+
+// AbstractLinkGetAnnotationDefinitionsInput provides the input data needed for an abstract link to
+// retrieve the annotation definitions for an abstract link in a blueprint spec.
+type AbstractLinkGetAnnotationDefinitionsInput struct {
+	TransformerContext Context
+}
+
+// AbstractLinkGetAnnotationDefinitionsOutput provides the output data from retrieving the annotation
+// definitions for an abstract link in a blueprint spec.
+type AbstractLinkGetAnnotationDefinitionsOutput struct {
+	// Keyed by "{resourceType}::{annotationName}",
+	// same convention as provider.Link.GetAnnotationDefinitions.
+	AnnotationDefinitions map[string]*provider.LinkAnnotationDefinition
+}
+
+// AbstractLinkGetCardinalityInput provides the input data needed for an abstract link to
+// retrieve the cardinality constraints for both sides of the link relationship.
+type AbstractLinkGetCardinalityInput struct {
+	TransformerContext Context
+}
+
+// AbstractLinkGetCardinalityOutput provides the output data from retrieving the cardinality constraints
+// for both sides of the link relationship.
+type AbstractLinkGetCardinalityOutput struct {
+	CardinalityA provider.LinkCardinality
+	CardinalityB provider.LinkCardinality
 }
 
 // SpecTransformerTransformInput provides the input required to transform

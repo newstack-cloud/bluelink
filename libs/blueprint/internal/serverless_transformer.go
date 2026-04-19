@@ -5,6 +5,7 @@ package internal
 
 import (
 	"context"
+	"errors"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
@@ -135,6 +136,19 @@ func (t *ServerlessTransformer) ListAbstractResourceTypes(
 	ctx context.Context,
 ) ([]string, error) {
 	return []string{"aws/serverless/function"}, nil
+}
+
+func (t *ServerlessTransformer) ListAbstractLinkTypes(
+	ctx context.Context,
+) ([]string, error) {
+	return []string{}, nil
+}
+
+func (t *ServerlessTransformer) AbstractLink(
+	ctx context.Context,
+	linkType string,
+) (transform.AbstractLink, error) {
+	return nil, errors.New("no links defined for serverless transformer")
 }
 
 type serverlessFunctionResource struct{}

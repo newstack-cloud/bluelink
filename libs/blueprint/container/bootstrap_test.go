@@ -230,6 +230,20 @@ func (l *testApiGatewayLambdaLink) GetIntermediaryExternalState(
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
+func (l *testApiGatewayLambdaLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+func (l *testApiGatewayLambdaLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
+}
+
 type testLambdaDynamoDBTableLink struct {
 	// Tracks the number of resource A update attempts for each unique link name.
 	// This is used to emulate transient failures when updating links,
@@ -603,6 +617,20 @@ func (l *testLambdaDynamoDBTableLink) GetIntermediaryExternalState(
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
+func (l *testLambdaDynamoDBTableLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+func (l *testLambdaDynamoDBTableLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
+}
+
 type testDynamoDBTableStreamLink struct{}
 
 func (l *testDynamoDBTableStreamLink) StageChanges(
@@ -679,6 +707,20 @@ func (l *testDynamoDBTableStreamLink) GetIntermediaryExternalState(
 	input *provider.LinkGetIntermediaryExternalStateInput,
 ) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
+func (l *testDynamoDBTableStreamLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+func (l *testDynamoDBTableStreamLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
 }
 
 type testDynamoDBStreamLambdaLink struct{}
@@ -759,6 +801,20 @@ func (l *testDynamoDBStreamLambdaLink) GetIntermediaryExternalState(
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
+func (l *testDynamoDBStreamLambdaLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+func (l *testDynamoDBStreamLambdaLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
+}
+
 type testDynamoDBTableLambdaLink struct{}
 
 func (l *testDynamoDBTableLambdaLink) StageChanges(
@@ -837,6 +893,20 @@ func (l *testDynamoDBTableLambdaLink) GetIntermediaryExternalState(
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
+func (l *testDynamoDBTableLambdaLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+func (l *testDynamoDBTableLambdaLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
+}
+
 type testLambdaLambdaLink struct{}
 
 func (l *testLambdaLambdaLink) StageChanges(
@@ -913,6 +983,20 @@ func (l *testLambdaLambdaLink) GetIntermediaryExternalState(
 	input *provider.LinkGetIntermediaryExternalStateInput,
 ) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
+func (l *testLambdaLambdaLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+func (l *testLambdaLambdaLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
 }
 
 type testLambdaLambda2Link struct{}
@@ -995,6 +1079,20 @@ func (l *testLambdaLambda2Link) GetIntermediaryExternalState(
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
+func (l *testLambdaLambda2Link) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+func (l *testLambdaLambda2Link) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
+}
+
 type testSubnetVPCLink struct{}
 
 func (l *testSubnetVPCLink) StageChanges(
@@ -1071,6 +1169,20 @@ func (l *testSubnetVPCLink) GetIntermediaryExternalState(
 	input *provider.LinkGetIntermediaryExternalStateInput,
 ) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
+func (l *testSubnetVPCLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+func (l *testSubnetVPCLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
 }
 
 type testSecurityGroupVPCLink struct{}
@@ -1151,6 +1263,20 @@ func (l *testSecurityGroupVPCLink) GetIntermediaryExternalState(
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
+func (l *testSecurityGroupVPCLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+func (l *testSecurityGroupVPCLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
+}
+
 type testRouteTableVPCLink struct{}
 
 func (l *testRouteTableVPCLink) StageChanges(
@@ -1227,6 +1353,20 @@ func (l *testRouteTableVPCLink) GetIntermediaryExternalState(
 	input *provider.LinkGetIntermediaryExternalStateInput,
 ) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
+func (l *testRouteTableVPCLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+func (l *testRouteTableVPCLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
 }
 
 type testRouteRouteTableLink struct{}
@@ -1307,6 +1447,20 @@ func (l *testRouteRouteTableLink) GetIntermediaryExternalState(
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
 }
 
+func (l *testRouteRouteTableLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+func (l *testRouteRouteTableLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
+}
+
 type testRouteInternetGatewayLink struct{}
 
 func (l *testRouteInternetGatewayLink) StageChanges(
@@ -1383,4 +1537,18 @@ func (l *testRouteInternetGatewayLink) GetIntermediaryExternalState(
 	input *provider.LinkGetIntermediaryExternalStateInput,
 ) (*provider.LinkGetIntermediaryExternalStateOutput, error) {
 	return &provider.LinkGetIntermediaryExternalStateOutput{}, nil
+}
+
+func (l *testRouteInternetGatewayLink) GetCardinality(
+	ctx context.Context,
+	input *provider.LinkGetCardinalityInput,
+) (*provider.LinkGetCardinalityOutput, error) {
+	return &provider.LinkGetCardinalityOutput{}, nil
+}
+
+func (l *testRouteInternetGatewayLink) ValidateLink(
+	ctx context.Context,
+	input *provider.LinkValidateInput,
+) (*provider.LinkValidateOutput, error) {
+	return &provider.LinkValidateOutput{}, nil
 }

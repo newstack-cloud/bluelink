@@ -1,0 +1,41 @@
+version: 2025-11-02
+variables:
+  environment:
+    type: string
+
+resources:
+  ordersTable:
+    type: aws/dynamodb/table
+    description: "Table that stores orders for an application."
+    metadata:
+      labels:
+        step: "three"
+    linkSelector:
+      byLabel:
+        step: "one"
+    spec:
+      tableName: "Orders"
+
+  ordersStream:
+    type: aws/dynamodb/stream
+    description: "Stream for changes to the orders table."
+    metadata:
+      labels:
+        step: "one"
+    linkSelector:
+      byLabel:
+        step: "two"
+    spec:
+      label: "Orders Stream"
+
+  processOrderFunction:
+    type: aws/lambda/function
+    description: "Function that processes orders from the stream."
+    metadata:
+      labels:
+        step: "two"
+    linkSelector:
+      byLabel:
+        step: "three"
+    spec:
+      handler: "src/orders.processOrder"
