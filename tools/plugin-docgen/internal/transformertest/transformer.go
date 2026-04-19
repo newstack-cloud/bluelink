@@ -14,6 +14,9 @@ func NewTransformer() transform.SpecTransformer {
 			"celerity/handler":   handlerAbstractResource(),
 			"celerity/datastore": datastoreAbstractResource(),
 		},
+		AbstractLinks: map[string]*transformerv1.AbstractLinkDefinition{
+			"test/celerity/handler::test/celerity/datastore": handlerDatastoreAbstractLink(),
+		},
 	}
 }
 

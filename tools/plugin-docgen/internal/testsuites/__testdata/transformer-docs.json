@@ -242,5 +242,31 @@
         "Some example with `inline code`."
       ]
     }
+  ],
+  "abstractLinks": [
+    {
+      "type": "test/celerity/handler::test/celerity/datastore",
+      "summary": "A link between a Celerity handler and a NoSQL data store.",
+      "description": "Links a [Celerity Handler](https://www.celerityframework.io/docs/applications/resources/celerity-handler) to a Celerity datastore.",
+      "cardinalityA": {
+        "min": 0,
+        "max": 3
+      },
+      "cardinalityB": {
+        "min": 1,
+        "max": 0
+      },
+      "annotationDefinitions": {
+        "test/celerity/handler::celerity.handler.datastore.accessType": {
+          "name": "celerity.handler.datastore.accessType",
+          "label": "Datastore Access Type",
+          "type": "string",
+          "description": "The type of access the handler has to linked datastores.",
+          "default": "read",
+          "allowedValues": ["read", "write"],
+          "required": false
+        }
+      }
+    }
   ]
 }

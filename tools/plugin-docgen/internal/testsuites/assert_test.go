@@ -58,6 +58,11 @@ func assertPluginDocsEqual(
 		sortResources(actual.AbstractResources),
 		testSuite,
 	)
+	assertPluginDocLinksEqual(
+		sortLinks(expected.AbstractLinks),
+		sortLinks(actual.AbstractLinks),
+		testSuite,
+	)
 }
 
 func assertPluginDocsConfigEqual(

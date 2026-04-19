@@ -53,11 +53,23 @@ func getProviderLinkDocs(
 		return nil, err
 	}
 
+	cardinalityOutput, err := link.GetCardinality(
+		ctx,
+		&provider.LinkGetCardinalityInput{
+			LinkContext: createLinkContext(params),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	return &PluginDocsLink{
 		Type:                  typeInfo.Type,
 		Description:           getProviderLinkDescription(typeDescriptionOutput),
 		Summary:               getProviderLinkSummary(typeDescriptionOutput),
 		AnnotationDefinitions: annotationDefinitionDocs,
+		CardinalityA:          toDocsLinkCardinality(cardinalityOutput.CardinalityA),
+		CardinalityB:          toDocsLinkCardinality(cardinalityOutput.CardinalityB),
 	}, nil
 }
 
@@ -138,4 +150,13 @@ func getProviderLinkSummary(
 	}
 
 	return truncateDescription(getProviderLinkDescription(output), 120)
+}
+
+func toDocsLinkCardinality(
+	cardinality provider.LinkCardinality,
+) *PluginDocsLinkCardinality {
+	return &PluginDocsLinkCardinality{
+		Min: cardinality.Min,
+		Max: cardinality.Max,
+	}
 }

@@ -173,6 +173,16 @@ func generateTransformerDocs(
 		return nil, err
 	}
 
+	docsForAbstractLinks, err := getTransformerAbstractLinksDocs(
+		ctx,
+		namespace,
+		transformerPlugin,
+		params,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	return &PluginDocs{
 		ID:                pluginID,
 		DisplayName:       metadata.DisplayName,
@@ -184,6 +194,7 @@ func generateTransformerDocs(
 		Config:            configDocs,
 		TransformName:     transformName,
 		AbstractResources: docsForAbstractResources,
+		AbstractLinks:     docsForAbstractLinks,
 	}, nil
 }
 
@@ -418,4 +429,34 @@ func getTransformerAbstractResourcesDocs(
 	}
 
 	return docsForAbstractResources, nil
+}
+
+func getTransformerAbstractLinksDocs(
+	ctx context.Context,
+	namespace string,
+	transformerPlugin transform.SpecTransformer,
+	params core.BlueprintParams,
+) ([]*PluginDocsLink, error) {
+	abstractLinkTypes, err := transformerPlugin.ListAbstractLinkTypes(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	docsForAbstractLinks := make([]*PluginDocsLink, len(abstractLinkTypes))
+	for i, abstractLinkType := range abstractLinkTypes {
+		linkDocs, err := getTransformerAbstractLinkDocs(
+			ctx,
+			namespace,
+			transformerPlugin,
+			abstractLinkType,
+			params,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		docsForAbstractLinks[i] = linkDocs
+	}
+
+	return docsForAbstractLinks, nil
 }

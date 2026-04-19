@@ -71,6 +71,11 @@ properties:
     items:
       $ref: "#/$defs/resource"
     description: Abstract resource definitions (transformers only)
+  abstractLinks:
+    type: array
+    items:
+      $ref: "#/$defs/abstractLink"
+    description: Abstract link definitions (transformers only)
 
 $defs:
   pluginConfig:
@@ -258,10 +263,58 @@ $defs:
         type: string
       description:
         type: string
+      cardinalityA:
+        $ref: "#/$defs/linkCardinality"
+        description: How many B resources each A may link to.
+      cardinalityB:
+        $ref: "#/$defs/linkCardinality"
+        description: How many A resources may link to each B.
       annotationDefinitions:
         type: object
         additionalProperties:
           $ref: "#/$defs/linkAnnotation"
+
+  abstractLink:
+    type: object
+    required:
+      - type
+      - summary
+      - description
+      - annotationDefinitions
+    properties:
+      type:
+        type: string
+        description: Abstract link type in format resourceTypeA::resourceTypeB
+      summary:
+        type: string
+      description:
+        type: string
+      cardinalityA:
+        $ref: "#/$defs/linkCardinality"
+        description: How many B abstract resources each A may link to.
+      cardinalityB:
+        $ref: "#/$defs/linkCardinality"
+        description: How many A abstract resources may link to each B.
+      annotationDefinitions:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/linkAnnotation"
+
+  linkCardinality:
+    type: object
+    description: >-
+      Minimum and maximum number of links allowed for one side of a link
+      relationship. Zero values mean no constraint (Min 0 = no minimum,
+      Max 0 = unlimited).
+    properties:
+      min:
+        type: integer
+        minimum: 0
+        description: Minimum number of links required. 0 means no minimum.
+      max:
+        type: integer
+        minimum: 0
+        description: Maximum number of links allowed. 0 means unlimited.
 
   linkAnnotation:
     type: object
@@ -468,7 +521,21 @@ $defs:
     properties:
       paramType:
         type: string
-        enum: [scalar, list, map, object, function, variadic, any]
+        enum:
+          - string
+          - bytes
+          - int32
+          - int64
+          - uint32
+          - uint64
+          - float32
+          - float64
+          - bool
+          - list
+          - map
+          - object
+          - function
+          - any
       name:
         type: string
       label:
@@ -503,7 +570,21 @@ $defs:
     properties:
       returnType:
         type: string
-        enum: [scalar, list, map, object, function, any]
+        enum:
+          - string
+          - bytes
+          - int32
+          - int64
+          - uint32
+          - uint64
+          - float32
+          - float64
+          - bool
+          - list
+          - map
+          - object
+          - function
+          - any
       description:
         type: string
       valueTypeDefinition:

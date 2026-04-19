@@ -29,6 +29,8 @@ type PluginDocs struct {
 	TransformName string `json:"transformName,omitempty"`
 	// Required for transformers, should be empty for providers.
 	AbstractResources []*PluginDocsResource `json:"abstractResources,omitempty"`
+	// Required for transformers, should be empty for providers.
+	AbstractLinks []*PluginDocsLink `json:"abstractLinks,omitempty"`
 }
 
 type PluginDocsVersionConfig struct {
@@ -108,6 +110,8 @@ type PluginDocsLink struct {
 	Summary               string                                         `json:"summary"`
 	Description           string                                         `json:"description"`
 	AnnotationDefinitions map[string]*PluginDocsLinkAnnotationDefinition `json:"annotationDefinitions"`
+	CardinalityA          *PluginDocsLinkCardinality                     `json:"cardinalityA,omitempty"`
+	CardinalityB          *PluginDocsLinkCardinality                     `json:"cardinalityB,omitempty"`
 }
 
 type PluginDocsLinkAnnotationDefinition struct {
@@ -120,6 +124,11 @@ type PluginDocsLinkAnnotationDefinition struct {
 	Examples      []*core.ScalarValue `json:"examples,omitempty"`
 	Required      bool                `json:"required"`
 	AppliesTo     string              `json:"appliesTo,omitempty"`
+}
+
+type PluginDocsLinkCardinality struct {
+	Min int `json:"min"`
+	Max int `json:"max"`
 }
 
 type PluginDocsDataSource struct {

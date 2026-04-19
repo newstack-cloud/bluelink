@@ -264,6 +264,14 @@
       "type": "test/lambda/function::test2/dynamodb/table",
       "summary": "A link between an AWS Lambda function and an AWS DynamoDB table.",
       "description": "A link between an AWS Lambda function and an AWS DynamoDB table.",
+      "cardinalityA": {
+        "min": 0,
+        "max": 5
+      },
+      "cardinalityB": {
+        "min": 1,
+        "max": 0
+      },
       "annotationDefinitions": {
         "test/lambda/function::aws.lambda.dynamodb.accessTables": {
           "name": "aws.lambda.dynamodb.accessTables",

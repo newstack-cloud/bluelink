@@ -12,6 +12,14 @@ func lambdaFunctionTest2DynamoDBTableLink() provider.Link {
 		ResourceTypeB:        "test2/dynamodb/table",
 		Kind:                 provider.LinkKindSoft,
 		PlainTextDescription: "A link between an AWS Lambda function and an AWS DynamoDB table.",
+		CardinalityA: provider.LinkCardinality{
+			Min: 0,
+			Max: 5,
+		},
+		CardinalityB: provider.LinkCardinality{
+			Min: 1,
+			Max: 0,
+		},
 		AnnotationDefinitions: map[string]*provider.LinkAnnotationDefinition{
 			"test/lambda/function::aws.lambda.dynamodb.accessType": {
 				Name:         "aws.dynamodb.lambda.accessType",
