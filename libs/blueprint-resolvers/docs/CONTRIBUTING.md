@@ -4,7 +4,7 @@
 
 ### Prerequisites
 
-- [Go](https://golang.org/dl/) >=1.22
+- [Go](https://golang.org/dl/) >=1.25
 - [Docker](https://docs.docker.com/get-docker/) >=25.0.3
 - [jq](https://stedolan.github.io/jq/download/) >=1.7 - used in test runner script to parse JSON
 - [AWS CLI](https://aws.amazon.com/cli/) >=2.7.21 - used in test runner script to interact with S3
