@@ -137,10 +137,10 @@ github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/matoous/go-nanoid/v2 v2.1.0 h1:P64+dmq21hhWdtvZfEAofnvJULaRR1Yib0+PnU669bE=
 github.com/matoous/go-nanoid/v2 v2.1.0/go.mod h1:KlbGNQ+FhrUNIHUxZdL63t7tl4LaPkZNpUULS8H4uVM=
-github.com/newstack-cloud/bluelink/libs/blueprint v0.38.0 h1:cf4aofIMCnYjsgTVoO3FFAjyhlsxDCASA99u+ZMJHxA=
-github.com/newstack-cloud/bluelink/libs/blueprint v0.38.0/go.mod h1:BMnMYG+/C14VN46QjtwMLS2umagVaRvE5kfoji896yM=
-github.com/newstack-cloud/bluelink/libs/common v0.3.2 h1:YqD47176o62SwJyEqpTH/87nlaJJ7uowVrQFi0bJvfc=
-github.com/newstack-cloud/bluelink/libs/common v0.3.2/go.mod h1:b18HJMiIRGIFyom6jiweqcxA8vRO6D5Gkfssrq9C+Wc=
+github.com/newstack-cloud/bluelink/libs/blueprint v0.42.1 h1:7Vb1S3DWXEJfM1c31FZu2Yv5ezgUKedRmC162zy8mvQ=
+github.com/newstack-cloud/bluelink/libs/blueprint v0.42.1/go.mod h1:qd3ABYYlUvwF6ZImUZyJax6h+bEJdzw7Rluns2fKmDI=
+github.com/newstack-cloud/bluelink/libs/common v0.4.0 h1:E72YAjex+VydpaYJXaAwlqeII7jVugEKsfVjHFLaJJY=
+github.com/newstack-cloud/bluelink/libs/common v0.4.0/go.mod h1:09jWAU7PMDJSW0zokebgDZCr59Gg4JpqgF0Yq6kQ8gY=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c h1:+mdjkGKdHQG3305AYmdv1U2eRNDiU2ErMBj1gwrq8eQ=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c/go.mod h1:7rwL4CYBLnjLxUqIJNnCWiEdr3bn6IUYi15bNlnbCCU=
 github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 h1:GFCKgmp0tecUJ0sJuv4pzYCqS9+RGSn52M3FUwPs+uo=
