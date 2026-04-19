@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.42.1](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.42.0...blueprint/v0.42.1) (2026-04-19)
+
+
+### Bug Fixes
+
+* **blueprint:** add fix to stop loop when full child changes are received ([6da0d64](https://github.com/newstack-cloud/bluelink/commit/6da0d646efc47296e24b1c54a75f9fabc488a167))
+
 ## [0.42.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.41.0...blueprint/v0.42.0) (2026-04-19)
 
 
