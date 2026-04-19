@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.42.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.41.0...blueprint/v0.42.0) (2026-04-19)
+
+
+### Features
+
+* **blueprint:** add functionality to generate a declared link graph ([c86f9e7](https://github.com/newstack-cloud/bluelink/commit/c86f9e77807078dfdc316090271afc26717f685a))
+* **blueprint:** add functionality to validate transformer links ([ca1dfdc](https://github.com/newstack-cloud/bluelink/commit/ca1dfdc8aa97ee2811cf340ede891be474e3377d))
+* **blueprint:** add support for abstract links and enhanced validation for concrete links ([049352c](https://github.com/newstack-cloud/bluelink/commit/049352c9015f8d3d2a87d6ad6362248292771829))
+
 ## [0.41.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.40.0...blueprint/v0.41.0) (2026-02-01)
 
 
