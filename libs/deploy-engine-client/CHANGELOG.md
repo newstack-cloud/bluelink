@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.3.1...deploy-engine-client/v0.4.0) (2026-04-20)
+
+
+### Features
+
+* **deploy-engine-client:** add support for removal policy and retained resources ([ddccb4e](https://github.com/newstack-cloud/bluelink/commit/ddccb4e74bccae4c57abdcd4eb8e37ad85b65ea2))
+
 ## [0.3.1](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.3.0...deploy-engine-client/v0.3.1) (2026-04-19)
 
 
