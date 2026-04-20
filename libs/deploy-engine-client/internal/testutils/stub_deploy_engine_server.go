@@ -902,7 +902,8 @@ var stubChanges = &changes.BlueprintChanges{
 			},
 		},
 	},
-	RemovedResources: []string{"resource-2", "resource-3"},
+	RemovedResources:  []string{"resource-2", "resource-3"},
+	RetainedResources: []string{"resource-4"},
 }
 
 func stubReconciliationCheckResult(instanceID string) *container.ReconciliationCheckResult {
