@@ -3400,6 +3400,28 @@ func errLinkSelectorExcludeResourceNotFound(
 	}
 }
 
+func errInvalidResourceRemovalPolicy(
+	resourceName string,
+	value string,
+	location *source.Meta,
+) error {
+	posRange := source.PositionRangeFromSourceMeta(location)
+	return &errors.LoadError{
+		ReasonCode: ErrorReasonCodeInvalidResource,
+		Err: fmt.Errorf(
+			"validation failed due to an invalid removal policy value %q for resource %q, "+
+				"the removalPolicy field must be a static literal, one of \"delete\" or \"retain\"",
+			value,
+			resourceName,
+		),
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
+	}
+}
+
 func errAnnotationKeyContainsSubstitution(
 	resourceName string,
 	annotationKey string,

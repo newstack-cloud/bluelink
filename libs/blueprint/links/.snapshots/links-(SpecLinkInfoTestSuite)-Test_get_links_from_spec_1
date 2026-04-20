@@ -34,6 +34,7 @@
         SourceMeta: (*source.Meta)(<nil>),
         FieldsSourceMeta: (map[string]*source.Meta) <nil>
       }),
+      RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
       Spec: (*core.MappingNode)(<nil>),
       SourceMeta: (*source.Meta)(<nil>),
       FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -86,6 +87,7 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
+          RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
           Spec: (*core.MappingNode)(<nil>),
           SourceMeta: (*source.Meta)(<nil>),
           FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -135,6 +137,7 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
+              RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
               Spec: (*core.MappingNode)(<nil>),
               SourceMeta: (*source.Meta)(<nil>),
               FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -184,6 +187,7 @@
                     SourceMeta: (*source.Meta)(<nil>),
                     FieldsSourceMeta: (map[string]*source.Meta) <nil>
                   }),
+                  RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
                   Spec: (*core.MappingNode)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>),
                   FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -223,6 +227,7 @@
                       Condition: (*schema.Condition)(<nil>),
                       Each: (*substitutions.StringOrSubstitutions)(<nil>),
                       LinkSelector: (*schema.LinkSelector)(<nil>),
+                      RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
                       Spec: (*core.MappingNode)(<nil>),
                       SourceMeta: (*source.Meta)(<nil>),
                       FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -307,6 +312,7 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
+          RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
           Spec: (*core.MappingNode)(<nil>),
           SourceMeta: (*source.Meta)(<nil>),
           FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -356,6 +362,7 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
+              RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
               Spec: (*core.MappingNode)(<nil>),
               SourceMeta: (*source.Meta)(<nil>),
               FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -405,6 +412,7 @@
                     SourceMeta: (*source.Meta)(<nil>),
                     FieldsSourceMeta: (map[string]*source.Meta) <nil>
                   }),
+                  RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
                   Spec: (*core.MappingNode)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>),
                   FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -444,6 +452,7 @@
                       Condition: (*schema.Condition)(<nil>),
                       Each: (*substitutions.StringOrSubstitutions)(<nil>),
                       LinkSelector: (*schema.LinkSelector)(<nil>),
+                      RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
                       Spec: (*core.MappingNode)(<nil>),
                       SourceMeta: (*source.Meta)(<nil>),
                       FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -534,6 +543,7 @@
         SourceMeta: (*source.Meta)(<nil>),
         FieldsSourceMeta: (map[string]*source.Meta) <nil>
       }),
+      RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
       Spec: (*core.MappingNode)(<nil>),
       SourceMeta: (*source.Meta)(<nil>),
       FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -583,6 +593,7 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
+          RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
           Spec: (*core.MappingNode)(<nil>),
           SourceMeta: (*source.Meta)(<nil>),
           FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -632,6 +643,7 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
+              RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
               Spec: (*core.MappingNode)(<nil>),
               SourceMeta: (*source.Meta)(<nil>),
               FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -681,6 +693,7 @@
                     SourceMeta: (*source.Meta)(<nil>),
                     FieldsSourceMeta: (map[string]*source.Meta) <nil>
                   }),
+                  RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
                   Spec: (*core.MappingNode)(<nil>),
                   SourceMeta: (*source.Meta)(<nil>),
                   FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -720,6 +733,7 @@
                       Condition: (*schema.Condition)(<nil>),
                       Each: (*substitutions.StringOrSubstitutions)(<nil>),
                       LinkSelector: (*schema.LinkSelector)(<nil>),
+                      RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
                       Spec: (*core.MappingNode)(<nil>),
                       SourceMeta: (*source.Meta)(<nil>),
                       FieldsSourceMeta: (map[string]*source.Meta) <nil>
@@ -795,6 +809,7 @@
       Condition: (*schema.Condition)(<nil>),
       Each: (*substitutions.StringOrSubstitutions)(<nil>),
       LinkSelector: (*schema.LinkSelector)(<nil>),
+      RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
       Spec: (*core.MappingNode)(<nil>),
       SourceMeta: (*source.Meta)(<nil>),
       FieldsSourceMeta: (map[string]*source.Meta) <nil>

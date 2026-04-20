@@ -458,15 +458,22 @@ func ToResourcePB(resource *schema.Resource) (*schemapb.Resource, error) {
 		resType = string(resource.Type.Value)
 	}
 
+	var removalPolicy *string
+	if resource.RemovalPolicy != nil && resource.RemovalPolicy.Value != "" {
+		policyVal := string(resource.RemovalPolicy.Value)
+		removalPolicy = &policyVal
+	}
+
 	return &schemapb.Resource{
-		Type:         resType,
-		Description:  descriptionPB,
-		Condition:    conditionPB,
-		Each:         eachPB,
-		Metadata:     resourceMetadataPB,
-		DependsOn:    dependsOn,
-		LinkSelector: ToLinkSelectorPB(resource.LinkSelector),
-		Spec:         specPB,
+		Type:          resType,
+		Description:   descriptionPB,
+		Condition:     conditionPB,
+		Each:          eachPB,
+		Metadata:      resourceMetadataPB,
+		DependsOn:     dependsOn,
+		LinkSelector:  ToLinkSelectorPB(resource.LinkSelector),
+		Spec:          specPB,
+		RemovalPolicy: removalPolicy,
 	}, nil
 }
 

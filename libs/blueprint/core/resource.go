@@ -66,6 +66,11 @@ const (
 	// being cancelled (e.g., drain timeout after terminal failure).
 	// The actual state of the resource is unknown and needs reconciliation.
 	ResourceStatusDestroyInterrupted
+	// ResourceStatusRetained is used when a resource has been removed
+	// from the blueprint's managed state without destroying the underlying
+	// infrastructure in the provider, as a result of the resource having
+	// a removal policy of "retain".
+	ResourceStatusRetained
 )
 
 var resourceStatusStrings = map[ResourceStatus]string{
@@ -85,6 +90,7 @@ var resourceStatusStrings = map[ResourceStatus]string{
 	ResourceStatusCreateInterrupted:  "CREATE INTERRUPTED",
 	ResourceStatusUpdateInterrupted:  "UPDATE INTERRUPTED",
 	ResourceStatusDestroyInterrupted: "DESTROY INTERRUPTED",
+	ResourceStatusRetained:           "RETAINED",
 }
 
 func (s ResourceStatus) String() string {
@@ -223,6 +229,11 @@ const (
 	// being cancelled (e.g., drain timeout after terminal failure).
 	// The actual state of the resource is unknown and needs reconciliation.
 	PreciseResourceStatusDestroyInterrupted
+	// PreciseResourceStatusRetained is used when a resource has been removed
+	// from the blueprint's managed state without destroying the underlying
+	// infrastructure in the provider, as a result of the resource having
+	// a removal policy of "retain".
+	PreciseResourceStatusRetained
 )
 
 var preciseResourceStatusStrings = map[PreciseResourceStatus]string{
@@ -252,6 +263,7 @@ var preciseResourceStatusStrings = map[PreciseResourceStatus]string{
 	PreciseResourceStatusCreateInterrupted:             "CREATE INTERRUPTED",
 	PreciseResourceStatusUpdateInterrupted:             "UPDATE INTERRUPTED",
 	PreciseResourceStatusDestroyInterrupted:            "DESTROY INTERRUPTED",
+	PreciseResourceStatusRetained:                      "RETAINED",
 }
 
 func (s PreciseResourceStatus) String() string {

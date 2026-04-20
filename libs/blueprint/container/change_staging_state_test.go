@@ -50,6 +50,32 @@ func (s *ChangeStagingStateTestSuite) Test_ApplyResourceChanges_adds_removed_res
 	s.Empty(blueprintChanges.ResourceChanges)
 }
 
+func (s *ChangeStagingStateTestSuite) Test_ApplyResourceChanges_routes_retained_resource_to_RetainedResources() {
+	state := createTestChangeStagingState()
+	state.ApplyResourceChanges(ResourceChangesMessage{
+		ResourceName:  "testResource",
+		Removed:       true,
+		RemovalPolicy: "retain",
+	})
+
+	blueprintChanges := state.ExtractBlueprintChanges()
+	s.Contains(blueprintChanges.RetainedResources, "testResource")
+	s.NotContains(blueprintChanges.RemovedResources, "testResource")
+}
+
+func (s *ChangeStagingStateTestSuite) Test_ApplyResourceChanges_delete_policy_still_goes_to_RemovedResources() {
+	state := createTestChangeStagingState()
+	state.ApplyResourceChanges(ResourceChangesMessage{
+		ResourceName:  "testResource",
+		Removed:       true,
+		RemovalPolicy: "delete",
+	})
+
+	blueprintChanges := state.ExtractBlueprintChanges()
+	s.Contains(blueprintChanges.RemovedResources, "testResource")
+	s.NotContains(blueprintChanges.RetainedResources, "testResource")
+}
+
 func (s *ChangeStagingStateTestSuite) Test_ApplyResourceChanges_adds_resource_with_changes_to_ResourceChanges() {
 	state := createTestChangeStagingState()
 	state.ApplyResourceChanges(ResourceChangesMessage{

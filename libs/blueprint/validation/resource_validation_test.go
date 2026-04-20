@@ -775,6 +775,118 @@ func (s *ResourceValidationTestSuite) Test_reports_error_when_link_selector_labe
 	)
 }
 
+func (s *ResourceValidationTestSuite) Test_accepts_valid_removal_policies(c *C) {
+	cases := []string{"delete", "retain"}
+	for _, value := range cases {
+		resource := newTestValidResource()
+		resource.RemovalPolicy = &schema.RemovalPolicyWrapper{
+			Value: schema.RemovalPolicy(value),
+		}
+		resourceMap := &schema.ResourceMap{
+			Values: map[string]*schema.Resource{
+				"testService": resource,
+			},
+		}
+		blueprint := &schema.Blueprint{
+			Resources: resourceMap,
+		}
+
+		diagnostics, err := ValidateResource(
+			context.Background(),
+			"testService",
+			resource,
+			resourceMap,
+			&ValidationContext{
+				BpSchema:           blueprint,
+				Params:             &core.ParamsImpl{},
+				FuncRegistry:       s.funcRegistry,
+				RefChainCollector:  s.refChainCollector,
+				ResourceRegistry:   s.resourceRegistry,
+				DataSourceRegistry: s.dataSourceRegistry,
+			},
+			/* resourceDerivedFromTemplate */ false,
+			core.NewNopLogger(),
+		)
+		c.Assert(diagnostics, HasLen, 0)
+		c.Assert(err, IsNil)
+	}
+}
+
+func (s *ResourceValidationTestSuite) Test_accepts_absent_removal_policy(c *C) {
+	resource := newTestValidResource()
+	resource.RemovalPolicy = nil
+	resourceMap := &schema.ResourceMap{
+		Values: map[string]*schema.Resource{
+			"testService": resource,
+		},
+	}
+	blueprint := &schema.Blueprint{
+		Resources: resourceMap,
+	}
+
+	diagnostics, err := ValidateResource(
+		context.Background(),
+		"testService",
+		resource,
+		resourceMap,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
+		/* resourceDerivedFromTemplate */ false,
+		core.NewNopLogger(),
+	)
+	c.Assert(diagnostics, HasLen, 0)
+	c.Assert(err, IsNil)
+}
+
+func (s *ResourceValidationTestSuite) Test_reports_error_when_removal_policy_is_invalid(c *C) {
+	resource := newTestValidResource()
+	resource.RemovalPolicy = &schema.RemovalPolicyWrapper{
+		Value: "archive",
+	}
+	resourceMap := &schema.ResourceMap{
+		Values: map[string]*schema.Resource{
+			"testService": resource,
+		},
+	}
+	blueprint := &schema.Blueprint{
+		Resources: resourceMap,
+	}
+
+	diagnostics, err := ValidateResource(
+		context.Background(),
+		"testService",
+		resource,
+		resourceMap,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
+		/* resourceDerivedFromTemplate */ false,
+		core.NewNopLogger(),
+	)
+	c.Assert(diagnostics, HasLen, 0)
+	c.Assert(err, NotNil)
+	loadErr, isLoadErr := internal.UnpackLoadError(err)
+	c.Assert(isLoadErr, Equals, true)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(
+		loadErr.Error(),
+		Equals,
+		"blueprint load error: validation failed due to an invalid removal policy value \"archive\" for resource \"testService\", "+
+			"the removalPolicy field must be a static literal, one of \"delete\" or \"retain\"",
+	)
+}
+
 func (s *ResourceValidationTestSuite) Test_reports_error_when_resource_has_a_missing_dependency(c *C) {
 	resource := newTestValidResource()
 	resource.DependsOn = &schema.DependsOnList{

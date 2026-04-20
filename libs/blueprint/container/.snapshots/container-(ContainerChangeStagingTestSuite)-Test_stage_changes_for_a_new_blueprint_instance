@@ -2404,6 +2404,7 @@
   },
   RemovedResources: ([]string) {
   },
+  RetainedResources: ([]string) <nil>,
   RemovedLinks: ([]string) {
   },
   NewChildren: (map[string]changes.NewBlueprintDefinition) (len=1) {

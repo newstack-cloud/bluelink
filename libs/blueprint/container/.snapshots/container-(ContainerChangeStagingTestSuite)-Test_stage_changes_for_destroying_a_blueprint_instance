@@ -9,6 +9,7 @@
     (string) (len=13) "ordersTable_1",
     (string) (len=17) "saveOrderFunction"
   },
+  RetainedResources: ([]string) <nil>,
   RemovedLinks: ([]string) (len=2) {
     (string) (len=32) "saveOrderFunction::ordersTable_0",
     (string) (len=32) "saveOrderFunction::ordersTable_1"
@@ -24,6 +25,7 @@
       RemovedResources: ([]string) (len=1) {
         (string) (len=15) "complexResource"
       },
+      RetainedResources: ([]string) <nil>,
       RemovedLinks: ([]string) {
       },
       NewChildren: (map[string]changes.NewBlueprintDefinition) {

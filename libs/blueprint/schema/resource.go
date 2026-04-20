@@ -21,6 +21,7 @@ type Resource struct {
 	Condition        *Condition                           `yaml:"condition,omitempty" json:"condition,omitempty"`
 	Each             *substitutions.StringOrSubstitutions `yaml:"each,omitempty" json:"each,omitempty"`
 	LinkSelector     *LinkSelector                        `yaml:"linkSelector,omitempty" json:"linkSelector,omitempty"`
+	RemovalPolicy    *RemovalPolicyWrapper                `yaml:"removalPolicy,omitempty" json:"removalPolicy,omitempty"`
 	Spec             *core.MappingNode                    `yaml:"spec" json:"spec"`
 	SourceMeta       *source.Meta                         `yaml:"-" json:"-"`
 	FieldsSourceMeta map[string]*source.Meta              `yaml:"-" json:"-"`
@@ -48,6 +49,7 @@ func (r *Resource) UnmarshalYAML(value *yaml.Node) error {
 	r.Condition = alias.Condition
 	r.Each = alias.Each
 	r.LinkSelector = alias.LinkSelector
+	r.RemovalPolicy = alias.RemovalPolicy
 	r.Spec = alias.Spec
 
 	return nil
@@ -155,6 +157,20 @@ func (r *Resource) FromJSONNode(
 		nodeMap,
 		"linkSelector",
 		r.LinkSelector,
+		linePositions,
+		parentPath,
+		/* parentIsRoot */ false,
+		/* required */ false,
+	)
+	if err != nil {
+		return err
+	}
+
+	r.RemovalPolicy = &RemovalPolicyWrapper{}
+	err = core.UnpackValueFromJSONMapNode(
+		nodeMap,
+		"removalPolicy",
+		r.RemovalPolicy,
 		linePositions,
 		parentPath,
 		/* parentIsRoot */ false,

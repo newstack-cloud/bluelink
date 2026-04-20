@@ -471,7 +471,8 @@
       FailureReasons: ([]string) <nil>,
       Drifted: (bool) false,
       LastDriftDetectedTimestamp: (*int)(<nil>),
-      Durations: (*state.ResourceCompletionDurations)(<nil>)
+      Durations: (*state.ResourceCompletionDurations)(<nil>),
+      RemovalPolicy: (string) ""
     }),
     ResourceWithResolvedSubs: (*provider.ResolvedResource)({
       Type: (*schema.ResourceTypeWrapper)({

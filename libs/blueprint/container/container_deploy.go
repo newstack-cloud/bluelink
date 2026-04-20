@@ -1341,6 +1341,7 @@ func (c *defaultBlueprintContainer) buildResourceState(
 		DependsOnChildren:          dependencyInfo.DependsOnChildren,
 		LastStatusUpdateTimestamp:  int(msg.UpdateTimestamp),
 		LastDeployAttemptTimestamp: int(c.clock.Now().Unix()),
+		RemovalPolicy:              schema.GetResourceRemovalPolicy(blueprintResource),
 	}
 
 	if resourceData != nil {

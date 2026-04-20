@@ -145,6 +145,17 @@ func ValidateResource(
 		errs = append(errs, validateLSErr)
 	}
 
+	logger.Debug("Validating resource removal policy")
+	validateRemovalPolicyDiagnostics, validateRemovalPolicyErr := validateResourceRemovalPolicy(
+		name,
+		resource.RemovalPolicy,
+		resourceMap,
+	)
+	diagnostics = append(diagnostics, validateRemovalPolicyDiagnostics...)
+	if validateRemovalPolicyErr != nil {
+		errs = append(errs, validateRemovalPolicyErr)
+	}
+
 	// Only validate spec if type validation passed - there's no point validating
 	// the spec when we can't look up the spec definition for an unknown resource type.
 	if resource.Type != nil && validateTypeErr == nil {
@@ -914,6 +925,33 @@ func validateResourceLinkSelector(
 	}
 
 	return diagnostics, nil
+}
+
+func validateResourceRemovalPolicy(
+	resourceName string,
+	removalPolicy *schema.RemovalPolicyWrapper,
+	resourceMap *schema.ResourceMap,
+) ([]*bpcore.Diagnostic, error) {
+	if removalPolicy == nil || removalPolicy.Value == "" {
+		return []*bpcore.Diagnostic{}, nil
+	}
+
+	for _, valid := range schema.ValidRemovalPolicies {
+		if removalPolicy.Value == valid {
+			return []*bpcore.Diagnostic{}, nil
+		}
+	}
+
+	location := removalPolicy.SourceMeta
+	if location == nil {
+		location = getResourceSourceMeta(resourceMap, resourceName)
+	}
+
+	return []*bpcore.Diagnostic{}, errInvalidResourceRemovalPolicy(
+		resourceName,
+		string(removalPolicy.Value),
+		location,
+	)
 }
 
 func allConditionValuesNil(condition *schema.Condition) bool {

@@ -337,13 +337,24 @@ func (c *defaultBlueprintContainer) stageResourceRemovals(
 				dependents,
 			)
 			changes := ResourceChangesMessage{
-				ResourceName: resourceState.Name,
-				Removed:      true,
+				ResourceName:  resourceState.Name,
+				Removed:       true,
+				RemovalPolicy: effectiveRemovalPolicy(resourceState.RemovalPolicy),
 			}
 			stagingState.ApplyResourceChanges(changes)
 			channels.ResourceChangesChan <- changes
 		}
 	}
+}
+
+// effectiveRemovalPolicy returns the removal policy to apply when a resource
+// is being removed from management, defaulting to "delete" when the stored
+// value is empty.
+func effectiveRemovalPolicy(stored string) string {
+	if stored == string(schema.RemovalPolicyRetain) {
+		return string(schema.RemovalPolicyRetain)
+	}
+	return string(schema.RemovalPolicyDelete)
 }
 
 func (c *defaultBlueprintContainer) stageLinkRemovals(
@@ -566,6 +577,11 @@ type ResourceChangesMessage struct {
 	// This means the changes described in this message may not be applied
 	// if the condition evaluates to false when the blueprint is deployed.
 	ConditionKnownOnDeploy bool `json:"conditionKnownOnDeploy"`
+	// RemovalPolicy is populated for removed resources (Removed == true) to
+	// indicate whether the resource's underlying infrastructure will be destroyed
+	// ("delete", the default) or left untouched ("retain").
+	// This is empty for non-removal changes.
+	RemovalPolicy string `json:"removalPolicy,omitempty"`
 }
 
 // ChildChangesMessage provides a message containing the changes

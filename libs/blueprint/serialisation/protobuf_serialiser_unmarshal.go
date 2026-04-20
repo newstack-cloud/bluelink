@@ -461,15 +461,23 @@ func FromResourcePB(resourcePB *schemapb.Resource) (*schema.Resource, error) {
 		return nil, err
 	}
 
+	var removalPolicy *schema.RemovalPolicyWrapper
+	if resourcePB.RemovalPolicy != nil {
+		removalPolicy = &schema.RemovalPolicyWrapper{
+			Value: schema.RemovalPolicy(*resourcePB.RemovalPolicy),
+		}
+	}
+
 	return &schema.Resource{
-		Type:         &schema.ResourceTypeWrapper{Value: resourcePB.Type},
-		Description:  description,
-		Each:         each,
-		Condition:    condition,
-		DependsOn:    dependsOn,
-		Metadata:     resourceMetadata,
-		LinkSelector: FromLinkSelectorPB(resourcePB.LinkSelector),
-		Spec:         spec,
+		Type:          &schema.ResourceTypeWrapper{Value: resourcePB.Type},
+		Description:   description,
+		Each:          each,
+		Condition:     condition,
+		DependsOn:     dependsOn,
+		Metadata:      resourceMetadata,
+		LinkSelector:  FromLinkSelectorPB(resourcePB.LinkSelector),
+		Spec:          spec,
+		RemovalPolicy: removalPolicy,
 	}, nil
 }
 

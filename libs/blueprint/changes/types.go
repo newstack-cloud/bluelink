@@ -35,7 +35,17 @@ type BlueprintChanges struct {
 	ResourceChanges map[string]provider.Changes `json:"resourceChanges"`
 	// RemovedResources contains the name of the resources that will be removed
 	// when deploying the changes.
+	// Resources in this list will have their underlying infrastructure destroyed
+	// in the provider. Resources with a removalPolicy of "retain" go in
+	// RetainedResources instead.
 	RemovedResources []string `json:"removedResources"`
+	// RetainedResources contains the name of the resources that will be removed
+	// from the blueprint's managed state but whose underlying infrastructure in
+	// the provider will be left untouched, as a result of the resource having
+	// a removalPolicy of "retain".
+	// A resource name will appear in either RemovedResources or RetainedResources,
+	// never both, for a given deployment.
+	RetainedResources []string `json:"retainedResources"`
 	// RemovedLinks contains the name of the links that will be removed
 	// when deploying the changes.
 	// These will be in the format "resourceAName::resourceBName".
@@ -77,10 +87,11 @@ type BlueprintChanges struct {
 // This differs from blueprint changes in that it holds pointers to change items
 // that makes it more efficient to update the changes as the staging process progresses.
 type IntermediaryBlueprintChanges struct {
-	NewResources     map[string]*provider.Changes
-	ResourceChanges  map[string]*provider.Changes
-	RemovedResources []string
-	RemovedLinks     []string
+	NewResources      map[string]*provider.Changes
+	ResourceChanges   map[string]*provider.Changes
+	RemovedResources  []string
+	RetainedResources []string
+	RemovedLinks      []string
 	NewChildren      map[string]*NewBlueprintDefinition
 	ChildChanges     map[string]*BlueprintChanges
 	RemovedChildren  []string

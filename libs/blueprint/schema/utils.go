@@ -19,3 +19,15 @@ func GetResourceType(resource *Resource) string {
 
 	return resource.Type.Value
 }
+
+// GetResourceRemovalPolicy safely extracts the removal policy value from a
+// resource, returning an empty string if the wrapper or resource is nil or
+// the value is unset.
+// An empty value should be treated by callers as the default "delete" policy.
+func GetResourceRemovalPolicy(resource *Resource) string {
+	if resource == nil || resource.RemovalPolicy == nil {
+		return ""
+	}
+
+	return string(resource.RemovalPolicy.Value)
+}

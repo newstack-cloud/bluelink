@@ -63,6 +63,7 @@ message Resource {
     optional StringOrSubstitutions each = 6;
     optional LinkSelector link_selector = 7;
     MappingNode spec = 8;
+    optional string removal_policy = 9;
 }
 
 message LinkSelector {

@@ -2,18 +2,20 @@ package container
 
 import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
 func getInstanceRemovalChanges(instance *state.InstanceState) changes.BlueprintChanges {
-	removedResources := getResourceNamesFromInstanceState(instance)
+	removedResources, retainedResources := getResourceNamesFromInstanceState(instance)
 	removedLinks := getLinkNamesFromInstanceState(instance)
 	childRemovalInfo := getChildRemovalInfoFromInstanceState(instance)
 	removedExports := getExportNamesFromInstanceState(instance)
 
 	return changes.BlueprintChanges{
-		RemovedResources: removedResources,
-		RemovedLinks:     removedLinks,
+		RemovedResources:  removedResources,
+		RetainedResources: retainedResources,
+		RemovedLinks:      removedLinks,
 		// Capture both the names of the children that will be removed
 		// and the changes that will be applied to components of the child blueprints.
 		RemovedChildren: childRemovalInfo.removedChildren,
@@ -22,12 +24,19 @@ func getInstanceRemovalChanges(instance *state.InstanceState) changes.BlueprintC
 	}
 }
 
-func getResourceNamesFromInstanceState(instance *state.InstanceState) []string {
-	names := make([]string, 0)
+func getResourceNamesFromInstanceState(
+	instance *state.InstanceState,
+) (removed []string, retained []string) {
+	removed = make([]string, 0)
+	retained = make([]string, 0)
 	for _, resource := range instance.Resources {
-		names = append(names, resource.Name)
+		if resource.RemovalPolicy == string(schema.RemovalPolicyRetain) {
+			retained = append(retained, resource.Name)
+		} else {
+			removed = append(removed, resource.Name)
+		}
 	}
-	return names
+	return removed, retained
 }
 
 func getLinkNamesFromInstanceState(instance *state.InstanceState) []string {

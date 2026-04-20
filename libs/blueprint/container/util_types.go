@@ -46,6 +46,10 @@ func (r *LinkIDInfo) Kind() state.ElementKind {
 type ResourceIDInfo struct {
 	ResourceID   string
 	ResourceName string
+	// Retained indicates that this resource is being removed from the blueprint's
+	// managed state without destroying the underlying infrastructure in the provider,
+	// as a result of the resource having a removal policy of "retain".
+	Retained bool
 }
 
 func (r *ResourceIDInfo) ID() string {

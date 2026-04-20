@@ -721,13 +721,23 @@ func (c *defaultBlueprintContainer) removeGroupElements(
 			resourceLogger := deployCtx.Logger.Named("destroyResource").WithFields(
 				core.StringLogField("resourceName", element.LogicalName()),
 			)
-			resourceLogger.Info("destroying resource")
-			go c.resourceDestroyer.Destroy(
-				ctx,
-				element,
-				instanceID,
-				DeployContextWithLogger(deployCtx, resourceLogger),
-			)
+			if resourceInfo, ok := element.(*ResourceIDInfo); ok && resourceInfo.Retained {
+				resourceLogger.Info("retaining resource")
+				go c.resourceDestroyer.Retain(
+					ctx,
+					element,
+					instanceID,
+					DeployContextWithLogger(deployCtx, resourceLogger),
+				)
+			} else {
+				resourceLogger.Info("destroying resource")
+				go c.resourceDestroyer.Destroy(
+					ctx,
+					element,
+					instanceID,
+					DeployContextWithLogger(deployCtx, resourceLogger),
+				)
+			}
 		} else if element.Kind() == state.ChildElement {
 			childLogger := deployCtx.Logger.Named("destroyChild").WithFields(
 				core.StringLogField("childName", element.LogicalName()),
@@ -766,6 +776,7 @@ func (c *defaultBlueprintContainer) collectElementsToRemove(
 ) (*CollectedElements, bool, error) {
 	if len(changes.RemovedChildren) == 0 &&
 		len(changes.RemovedResources) == 0 &&
+		len(changes.RetainedResources) == 0 &&
 		len(changes.RemovedLinks) == 0 {
 		return &CollectedElements{}, false, nil
 	}
@@ -821,32 +832,73 @@ func (c *defaultBlueprintContainer) collectResourcesToRemove(
 ) ([]*ResourceIDInfo, error) {
 	resourcesToRemove := []*ResourceIDInfo{}
 	for _, resourceToRemove := range changes.RemovedResources {
-		toBeRemovedResourceState := getResourceStateByName(currentState, resourceToRemove)
-		if toBeRemovedResourceState != nil {
-			// Check if the resource has dependents that will not be removed or recreated.
-			// Resources that previously depended on the resource to be removed
-			// and are marked to be recreated will no longer have a dependency on the resource
-			// in question. This is because the same logic is applied during change staging
-			// to mark a resource or child blueprint to be recreated if
-			// it previously depended on a resource that is being removed.
-			elements := filterOutRecreated(
-				// For this purpose, there is no need to check transitive dependencies
-				// as for a transitive dependency to exist, a direct dependency would also need to exist
-				// and as soon as a direct dependency is found that will not be removed or recreated,
-				// the deployment process will be stopped.
-				findDependents(toBeRemovedResourceState, nodesToBeDeployed, currentState),
-				changes,
-			)
-			if elements.Total > 0 {
-				return nil, errResourceToBeRemovedHasDependents(resourceToRemove, elements)
-			}
-			resourcesToRemove = append(resourcesToRemove, &ResourceIDInfo{
-				ResourceID:   toBeRemovedResourceState.ResourceID,
-				ResourceName: toBeRemovedResourceState.Name,
-			})
+		info, err := c.buildResourceToRemoveInfo(
+			resourceToRemove,
+			/* retained */ false,
+			currentState,
+			changes,
+			nodesToBeDeployed,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if info != nil {
+			resourcesToRemove = append(resourcesToRemove, info)
+		}
+	}
+	for _, resourceToRetain := range changes.RetainedResources {
+		info, err := c.buildResourceToRemoveInfo(
+			resourceToRetain,
+			/* retained */ true,
+			currentState,
+			changes,
+			nodesToBeDeployed,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if info != nil {
+			resourcesToRemove = append(resourcesToRemove, info)
 		}
 	}
 	return resourcesToRemove, nil
+}
+
+func (c *defaultBlueprintContainer) buildResourceToRemoveInfo(
+	resourceName string,
+	retained bool,
+	currentState *state.InstanceState,
+	changes *changes.BlueprintChanges,
+	nodesToBeDeployed []*DeploymentNode,
+) (*ResourceIDInfo, error) {
+	toBeRemovedResourceState := getResourceStateByName(currentState, resourceName)
+	if toBeRemovedResourceState == nil {
+		return nil, nil
+	}
+
+	// Check if the resource has dependents that will not be removed or recreated.
+	// Resources that previously depended on the resource to be removed
+	// and are marked to be recreated will no longer have a dependency on the resource
+	// in question. This is because the same logic is applied during change staging
+	// to mark a resource or child blueprint to be recreated if
+	// it previously depended on a resource that is being removed.
+	elements := filterOutRecreated(
+		// For this purpose, there is no need to check transitive dependencies
+		// as for a transitive dependency to exist, a direct dependency would also need to exist
+		// and as soon as a direct dependency is found that will not be removed or recreated,
+		// the deployment process will be stopped.
+		findDependents(toBeRemovedResourceState, nodesToBeDeployed, currentState),
+		changes,
+	)
+	if elements.Total > 0 {
+		return nil, errResourceToBeRemovedHasDependents(resourceName, elements)
+	}
+
+	return &ResourceIDInfo{
+		ResourceID:   toBeRemovedResourceState.ResourceID,
+		ResourceName: toBeRemovedResourceState.Name,
+		Retained:     retained,
+	}, nil
 }
 
 func (c *defaultBlueprintContainer) collectChildrenToRemove(

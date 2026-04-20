@@ -18,6 +18,15 @@ type ResourceDestroyer interface {
 		instanceID string,
 		deployCtx *DeployContext,
 	)
+	// Retain removes a resource from the blueprint's managed state without
+	// calling the provider plugin to destroy the underlying infrastructure.
+	// This is used for resources that have a removal policy of "retain".
+	Retain(
+		ctx context.Context,
+		resourceElement state.Element,
+		instanceID string,
+		deployCtx *DeployContext,
+	)
 }
 
 // NewDefaultResourceDestroyer creates a new instance of the default implementation
@@ -92,6 +101,40 @@ func (d *defaultResourceDestroyer) Destroy(
 	)
 	if err != nil {
 		deployCtx.Channels.ErrChan <- err
+	}
+}
+
+func (d *defaultResourceDestroyer) Retain(
+	ctx context.Context,
+	resourceElement state.Element,
+	instanceID string,
+	deployCtx *DeployContext,
+) {
+	resourceState := getResourceStateByName(
+		deployCtx.InstanceStateSnapshot,
+		resourceElement.LogicalName(),
+	)
+	if resourceState == nil {
+		// Matches the existing Destroy path argument ordering for consistency.
+		deployCtx.Channels.ErrChan <- errResourceNotFoundInState(
+			resourceElement.LogicalName(),
+			instanceID,
+		)
+		return
+	}
+
+	deployCtx.Logger.Info(
+		"retaining resource — removing from blueprint state without destroying " +
+			"the underlying infrastructure",
+	)
+	deployCtx.Channels.ResourceUpdateChan <- ResourceDeployUpdateMessage{
+		InstanceID:      instanceID,
+		ResourceID:      resourceElement.ID(),
+		ResourceName:    resourceElement.LogicalName(),
+		Group:           deployCtx.CurrentGroupIndex,
+		Status:          core.ResourceStatusRetained,
+		PreciseStatus:   core.PreciseResourceStatusRetained,
+		UpdateTimestamp: d.clock.Now().Unix(),
 	}
 }
 

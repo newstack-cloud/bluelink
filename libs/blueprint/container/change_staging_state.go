@@ -7,6 +7,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/links"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
 )
 
@@ -122,13 +123,23 @@ func (c *defaultChangeStagingState) ApplyResourceChanges(changes ResourceChanges
 		}
 		c.outputChanges.NewResources[changes.ResourceName] = &changes.Changes
 	} else if changes.Removed {
-		if c.outputChanges.RemovedResources == nil {
-			c.outputChanges.RemovedResources = []string{}
+		if changes.RemovalPolicy == string(schema.RemovalPolicyRetain) {
+			if c.outputChanges.RetainedResources == nil {
+				c.outputChanges.RetainedResources = []string{}
+			}
+			c.outputChanges.RetainedResources = append(
+				c.outputChanges.RetainedResources,
+				changes.ResourceName,
+			)
+		} else {
+			if c.outputChanges.RemovedResources == nil {
+				c.outputChanges.RemovedResources = []string{}
+			}
+			c.outputChanges.RemovedResources = append(
+				c.outputChanges.RemovedResources,
+				changes.ResourceName,
+			)
 		}
-		c.outputChanges.RemovedResources = append(
-			c.outputChanges.RemovedResources,
-			changes.ResourceName,
-		)
 	} else {
 		// Store all existing resource changes (even those with no field modifications)
 		// so they're available for link staging via GetResourceChanges().
@@ -344,19 +355,20 @@ func (c *defaultChangeStagingState) ExtractBlueprintChanges() changes.BlueprintC
 	filteredResourceChanges := filterResourceChangesWithAnyChanges(c.outputChanges.ResourceChanges)
 
 	return changes.BlueprintChanges{
-		NewResources:     copyPointerMap(c.outputChanges.NewResources),
-		ResourceChanges:  filteredResourceChanges,
-		RemovedResources: c.outputChanges.RemovedResources,
-		RemovedLinks:     c.outputChanges.RemovedLinks,
-		NewChildren:      copyPointerMap(c.outputChanges.NewChildren),
-		RecreateChildren: recreateChildren,
-		ChildChanges:     copyPointerMap(c.outputChanges.ChildChanges),
-		RemovedChildren:  c.outputChanges.RemovedChildren,
-		NewExports:       copyPointerMap(c.outputChanges.NewExports),
-		ExportChanges:    copyPointerMap(c.outputChanges.ExportChanges),
-		MetadataChanges:  *c.outputChanges.MetadataChanges,
-		RemovedExports:   c.outputChanges.RemovedExports,
-		ResolveOnDeploy:  c.outputChanges.ResolveOnDeploy,
+		NewResources:      copyPointerMap(c.outputChanges.NewResources),
+		ResourceChanges:   filteredResourceChanges,
+		RemovedResources:  c.outputChanges.RemovedResources,
+		RetainedResources: c.outputChanges.RetainedResources,
+		RemovedLinks:      c.outputChanges.RemovedLinks,
+		NewChildren:       copyPointerMap(c.outputChanges.NewChildren),
+		RecreateChildren:  recreateChildren,
+		ChildChanges:      copyPointerMap(c.outputChanges.ChildChanges),
+		RemovedChildren:   c.outputChanges.RemovedChildren,
+		NewExports:        copyPointerMap(c.outputChanges.NewExports),
+		ExportChanges:     copyPointerMap(c.outputChanges.ExportChanges),
+		MetadataChanges:   *c.outputChanges.MetadataChanges,
+		RemovedExports:    c.outputChanges.RemovedExports,
+		ResolveOnDeploy:   c.outputChanges.ResolveOnDeploy,
 	}
 }
 

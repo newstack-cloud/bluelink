@@ -2354,6 +2354,10 @@
           SourceMeta: (*source.Meta)(<nil>),
           FieldsSourceMeta: (map[string]*source.Meta) <nil>
         }),
+        RemovalPolicy: (*schema.RemovalPolicyWrapper)({
+          Value: (schema.RemovalPolicy) "",
+          SourceMeta: (*source.Meta)(<nil>)
+        }),
         Spec: (*core.MappingNode)({
           Scalar: (*core.ScalarValue)(<nil>),
           Fields: (map[string]*core.MappingNode) (len=2) {
@@ -2653,6 +2657,10 @@
           Exclude: (*schema.StringList)(<nil>),
           SourceMeta: (*source.Meta)(<nil>),
           FieldsSourceMeta: (map[string]*source.Meta) <nil>
+        }),
+        RemovalPolicy: (*schema.RemovalPolicyWrapper)({
+          Value: (schema.RemovalPolicy) "",
+          SourceMeta: (*source.Meta)(<nil>)
         }),
         Spec: (*core.MappingNode)({
           Scalar: (*core.ScalarValue)(<nil>),
@@ -3606,6 +3614,10 @@
             })
           }
         }),
+        RemovalPolicy: (*schema.RemovalPolicyWrapper)({
+          Value: (schema.RemovalPolicy) "",
+          SourceMeta: (*source.Meta)(<nil>)
+        }),
         Spec: (*core.MappingNode)({
           Scalar: (*core.ScalarValue)(<nil>),
           Fields: (map[string]*core.MappingNode) (len=3) {
@@ -4117,6 +4129,10 @@
             })
           }
         }),
+        RemovalPolicy: (*schema.RemovalPolicyWrapper)({
+          Value: (schema.RemovalPolicy) "",
+          SourceMeta: (*source.Meta)(<nil>)
+        }),
         Spec: (*core.MappingNode)({
           Scalar: (*core.ScalarValue)(<nil>),
           Fields: (map[string]*core.MappingNode) (len=1) {
@@ -4441,6 +4457,10 @@
           Exclude: (*schema.StringList)(<nil>),
           SourceMeta: (*source.Meta)(<nil>),
           FieldsSourceMeta: (map[string]*source.Meta) <nil>
+        }),
+        RemovalPolicy: (*schema.RemovalPolicyWrapper)({
+          Value: (schema.RemovalPolicy) "",
+          SourceMeta: (*source.Meta)(<nil>)
         }),
         Spec: (*core.MappingNode)({
           Scalar: (*core.ScalarValue)(<nil>),
@@ -4819,6 +4839,10 @@
           Exclude: (*schema.StringList)(<nil>),
           SourceMeta: (*source.Meta)(<nil>),
           FieldsSourceMeta: (map[string]*source.Meta) <nil>
+        }),
+        RemovalPolicy: (*schema.RemovalPolicyWrapper)({
+          Value: (schema.RemovalPolicy) "",
+          SourceMeta: (*source.Meta)(<nil>)
         }),
         Spec: (*core.MappingNode)({
           Scalar: (*core.ScalarValue)(<nil>),

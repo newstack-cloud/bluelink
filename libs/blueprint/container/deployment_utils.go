@@ -1042,7 +1042,8 @@ func finishedDestroyingResource(
 	}
 
 	destroyFinished := msg.PreciseStatus == core.PreciseResourceStatusDestroyed ||
-		msg.PreciseStatus == core.PreciseResourceStatusDestroyFailed
+		msg.PreciseStatus == core.PreciseResourceStatusDestroyFailed ||
+		msg.PreciseStatus == core.PreciseResourceStatusRetained
 
 	return destroyFinished && !msg.CanRetry
 }
@@ -1092,7 +1093,11 @@ func wasResourceDestroyedSuccessfully(
 		return preciseStatus == core.PreciseResourceStatusCreateRollbackComplete
 	}
 
-	return preciseStatus == core.PreciseResourceStatusDestroyed
+	// Retained resources are treated as successfully "destroyed" from the
+	// blueprint's state point of view — the state entry is removed but the
+	// underlying infrastructure is left untouched in the provider.
+	return preciseStatus == core.PreciseResourceStatusDestroyed ||
+		preciseStatus == core.PreciseResourceStatusRetained
 }
 
 func wasChildDestroyedSuccessfully(

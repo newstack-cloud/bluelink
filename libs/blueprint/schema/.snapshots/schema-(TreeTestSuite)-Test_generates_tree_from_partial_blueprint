@@ -6298,6 +6298,7 @@
                 })
               }
             }),
+            RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
             Spec: (*core.MappingNode)({
               Scalar: (*core.ScalarValue)(<nil>),
               Fields: (map[string]*core.MappingNode) (len=3) {
@@ -8037,6 +8038,7 @@
             Condition: (*schema.Condition)(<nil>),
             Each: (*substitutions.StringOrSubstitutions)(<nil>),
             LinkSelector: (*schema.LinkSelector)(<nil>),
+            RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
             Spec: (*core.MappingNode)({
               Scalar: (*core.ScalarValue)(<nil>),
               Fields: (map[string]*core.MappingNode) (len=2) {
@@ -9696,6 +9698,7 @@
             Condition: (*schema.Condition)(<nil>),
             Each: (*substitutions.StringOrSubstitutions)(<nil>),
             LinkSelector: (*schema.LinkSelector)(<nil>),
+            RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
             Spec: (*core.MappingNode)({
               Scalar: (*core.ScalarValue)(<nil>),
               Fields: (map[string]*core.MappingNode) (len=3) {
@@ -11377,6 +11380,7 @@
             Condition: (*schema.Condition)(<nil>),
             Each: (*substitutions.StringOrSubstitutions)(<nil>),
             LinkSelector: (*schema.LinkSelector)(<nil>),
+            RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
             Spec: (*core.MappingNode)({
               Scalar: (*core.ScalarValue)(<nil>),
               Fields: (map[string]*core.MappingNode) (len=3) {
@@ -12597,6 +12601,7 @@
             Condition: (*schema.Condition)(<nil>),
             Each: (*substitutions.StringOrSubstitutions)(<nil>),
             LinkSelector: (*schema.LinkSelector)(<nil>),
+            RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
             Spec: (*core.MappingNode)({
               Scalar: (*core.ScalarValue)(<nil>),
               Fields: (map[string]*core.MappingNode) (len=3) {
@@ -13646,6 +13651,7 @@
                 })
               }
             }),
+            RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
             Spec: (*core.MappingNode)({
               Scalar: (*core.ScalarValue)(<nil>),
               Fields: (map[string]*core.MappingNode) (len=1) {
@@ -14097,6 +14103,7 @@
             Condition: (*schema.Condition)(<nil>),
             Each: (*substitutions.StringOrSubstitutions)(<nil>),
             LinkSelector: (*schema.LinkSelector)(<nil>),
+            RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
             Spec: (*core.MappingNode)({
               Scalar: (*core.ScalarValue)(<nil>),
               Fields: (map[string]*core.MappingNode) (len=2) {
@@ -14353,6 +14360,7 @@
             Condition: (*schema.Condition)(<nil>),
             Each: (*substitutions.StringOrSubstitutions)(<nil>),
             LinkSelector: (*schema.LinkSelector)(<nil>),
+            RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
             Spec: (*core.MappingNode)({
               Scalar: (*core.ScalarValue)(<nil>),
               Fields: (map[string]*core.MappingNode) (len=3) {
@@ -15249,6 +15257,7 @@
                 })
               }
             }),
+            RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
             Spec: (*core.MappingNode)({
               Scalar: (*core.ScalarValue)(<nil>),
               Fields: (map[string]*core.MappingNode) (len=3) {
@@ -15706,6 +15715,7 @@
                 })
               }
             }),
+            RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
             Spec: (*core.MappingNode)({
               Scalar: (*core.ScalarValue)(<nil>),
               Fields: (map[string]*core.MappingNode) (len=1) {
@@ -15984,6 +15994,7 @@
             Condition: (*schema.Condition)(<nil>),
             Each: (*substitutions.StringOrSubstitutions)(<nil>),
             LinkSelector: (*schema.LinkSelector)(<nil>),
+            RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
             Spec: (*core.MappingNode)({
               Scalar: (*core.ScalarValue)(<nil>),
               Fields: (map[string]*core.MappingNode) (len=3) {
@@ -16312,6 +16323,7 @@
             Condition: (*schema.Condition)(<nil>),
             Each: (*substitutions.StringOrSubstitutions)(<nil>),
             LinkSelector: (*schema.LinkSelector)(<nil>),
+            RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
             Spec: (*core.MappingNode)({
               Scalar: (*core.ScalarValue)(<nil>),
               Fields: (map[string]*core.MappingNode) (len=3) {
@@ -17144,6 +17156,7 @@
           Condition: (*schema.Condition)(<nil>),
           Each: (*substitutions.StringOrSubstitutions)(<nil>),
           LinkSelector: (*schema.LinkSelector)(<nil>),
+          RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
           Spec: (*core.MappingNode)({
             Scalar: (*core.ScalarValue)(<nil>),
             Fields: (map[string]*core.MappingNode) (len=2) {
@@ -17400,6 +17413,7 @@
           Condition: (*schema.Condition)(<nil>),
           Each: (*substitutions.StringOrSubstitutions)(<nil>),
           LinkSelector: (*schema.LinkSelector)(<nil>),
+          RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
           Spec: (*core.MappingNode)({
             Scalar: (*core.ScalarValue)(<nil>),
             Fields: (map[string]*core.MappingNode) (len=3) {
@@ -18296,6 +18310,7 @@
               })
             }
           }),
+          RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
           Spec: (*core.MappingNode)({
             Scalar: (*core.ScalarValue)(<nil>),
             Fields: (map[string]*core.MappingNode) (len=3) {
@@ -18753,6 +18768,7 @@
               })
             }
           }),
+          RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
           Spec: (*core.MappingNode)({
             Scalar: (*core.ScalarValue)(<nil>),
             Fields: (map[string]*core.MappingNode) (len=1) {
@@ -19031,6 +19047,7 @@
           Condition: (*schema.Condition)(<nil>),
           Each: (*substitutions.StringOrSubstitutions)(<nil>),
           LinkSelector: (*schema.LinkSelector)(<nil>),
+          RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
           Spec: (*core.MappingNode)({
             Scalar: (*core.ScalarValue)(<nil>),
             Fields: (map[string]*core.MappingNode) (len=3) {
@@ -19359,6 +19376,7 @@
           Condition: (*schema.Condition)(<nil>),
           Each: (*substitutions.StringOrSubstitutions)(<nil>),
           LinkSelector: (*schema.LinkSelector)(<nil>),
+          RemovalPolicy: (*schema.RemovalPolicyWrapper)(<nil>),
           Spec: (*core.MappingNode)({
             Scalar: (*core.ScalarValue)(<nil>),
             Fields: (map[string]*core.MappingNode) (len=3) {

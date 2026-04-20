@@ -665,7 +665,8 @@
           },
           Drifted: (bool) false,
           LastDriftDetectedTimestamp: (*int)(<nil>),
-          Durations: (*state.ResourceCompletionDurations)(<nil>)
+          Durations: (*state.ResourceCompletionDurations)(<nil>),
+          RemovalPolicy: (string) ""
         }),
         ResourceWithResolvedSubs: (*provider.ResolvedResource)({
           Type: (*schema.ResourceTypeWrapper)({
@@ -1529,7 +1530,8 @@
           },
           Drifted: (bool) false,
           LastDriftDetectedTimestamp: (*int)(<nil>),
-          Durations: (*state.ResourceCompletionDurations)(<nil>)
+          Durations: (*state.ResourceCompletionDurations)(<nil>),
+          RemovalPolicy: (string) ""
         }),
         ResourceWithResolvedSubs: (*provider.ResolvedResource)({
           Type: (*schema.ResourceTypeWrapper)({
@@ -2242,7 +2244,8 @@
           },
           Drifted: (bool) false,
           LastDriftDetectedTimestamp: (*int)(<nil>),
-          Durations: (*state.ResourceCompletionDurations)(<nil>)
+          Durations: (*state.ResourceCompletionDurations)(<nil>),
+          RemovalPolicy: (string) ""
         }),
         ResourceWithResolvedSubs: (*provider.ResolvedResource)({
           Type: (*schema.ResourceTypeWrapper)({
@@ -2563,6 +2566,7 @@
     (string) (len=13) "invoicesTable",
     (string) (len=23) "preprocessOrderFunction"
   },
+  RetainedResources: ([]string) <nil>,
   RemovedLinks: ([]string) {
   },
   NewChildren: (map[string]changes.NewBlueprintDefinition) {
@@ -2812,7 +2816,8 @@
               },
               Drifted: (bool) false,
               LastDriftDetectedTimestamp: (*int)(<nil>),
-              Durations: (*state.ResourceCompletionDurations)(<nil>)
+              Durations: (*state.ResourceCompletionDurations)(<nil>),
+              RemovalPolicy: (string) ""
             }),
             ResourceWithResolvedSubs: (*provider.ResolvedResource)({
               Type: (*schema.ResourceTypeWrapper)({
@@ -3677,6 +3682,7 @@
       },
       RemovedResources: ([]string) {
       },
+      RetainedResources: ([]string) <nil>,
       RemovedLinks: ([]string) {
       },
       NewChildren: (map[string]changes.NewBlueprintDefinition) {

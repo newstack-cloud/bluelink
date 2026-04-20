@@ -312,6 +312,12 @@ type ResourceState struct {
 	LastDriftDetectedTimestamp *int `json:"lastDriftDetectedTimestamp,omitempty"`
 	// Durations holds duration information for the latest deployment of the resource.
 	Durations *ResourceCompletionDurations `json:"durations,omitempty"`
+	// RemovalPolicy holds the removal policy for the resource as declared
+	// in the most recently deployed version of the source blueprint.
+	// This is persisted so that the framework can honour the policy even when
+	// the resource has since been removed from the source blueprint.
+	// An empty value is treated as the default "delete" policy.
+	RemovalPolicy string `json:"removalPolicy,omitempty"`
 }
 
 func (r *ResourceState) ID() string {
