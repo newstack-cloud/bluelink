@@ -58,6 +58,19 @@ func (s *ClientSuite) Test_stream_change_staging_events() {
 		sourceStubChangeStagingEvents,
 		collected,
 	)
+
+	// Locate the retained resource change event and assert the
+	// client surfaces the RemovalPolicy field to consumers.
+	var retainedResourceChange *types.ResourceChangesEventData
+	for i := range collected {
+		if rc, ok := collected[i].AsResourceChanges(); ok && rc.Removed {
+			retainedResourceChange = rc
+			break
+		}
+	}
+	s.Require().NotNil(retainedResourceChange)
+	s.Assert().Equal("resource-4", retainedResourceChange.ResourceName)
+	s.Assert().Equal("retain", retainedResourceChange.RemovalPolicy)
 }
 
 func (s *ClientSuite) Test_stream_change_staging_events_with_drift_detected() {

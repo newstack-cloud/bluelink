@@ -4,8 +4,8 @@ go 1.25.0
 
 require (
 	github.com/gorilla/mux v1.8.1
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.42.1
-	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.6.2
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.43.0
+	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.7.0
 	github.com/newstack-cloud/bluelink/libs/common v0.4.0
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/stretchr/testify v1.11.1

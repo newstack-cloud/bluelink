@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/internal/testutils"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
@@ -58,6 +60,20 @@ func (s *ClientSuite) Test_stream_blueprint_instance_events() {
 		sourceStubDeploymentEvents,
 		collected,
 	)
+
+	// Locate the retained resource update event and assert the
+	// retained statuses decode correctly.
+	var retainedResourceUpdate *container.ResourceDeployUpdateMessage
+	for i := range collected {
+		if ru, ok := collected[i].AsResourceUpdate(); ok && ru.Status == core.ResourceStatusRetained {
+			retainedResourceUpdate = ru
+			break
+		}
+	}
+	s.Require().NotNil(retainedResourceUpdate)
+	s.Assert().Equal("resource-4", retainedResourceUpdate.ResourceID)
+	s.Assert().Equal(core.ResourceStatusRetained, retainedResourceUpdate.Status)
+	s.Assert().Equal(core.PreciseResourceStatusRetained, retainedResourceUpdate.PreciseStatus)
 }
 
 func (s *ClientSuite) Test_stream_blueprint_instance_events_fails_due_to_stream_error() {

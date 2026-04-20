@@ -442,6 +442,17 @@ var sourceStubChangeStagingEvents = []types.ChangeStagingEvent{
 	},
 	{
 		ID: "test-event-4",
+		ResourceChanges: &types.ResourceChangesEventData{
+			ResourceChangesMessage: container.ResourceChangesMessage{
+				ResourceName:  "resource-4",
+				Removed:       true,
+				RemovalPolicy: "retain",
+			},
+			Timestamp: testTime.Unix(),
+		},
+	},
+	{
+		ID: "test-event-5",
 		CompleteChanges: &types.CompleteChangesEventData{
 			Changes: &changes.BlueprintChanges{
 				ResourceChanges: map[string]provider.Changes{
@@ -471,6 +482,7 @@ var sourceStubChangeStagingEvents = []types.ChangeStagingEvent{
 						RemovedResources: []string{"child-resource-1"},
 					},
 				},
+				RetainedResources: []string{"resource-4"},
 			},
 			Timestamp: testTime.Unix(),
 		},
@@ -628,6 +640,19 @@ var sourceStubDeploymentEvents = []types.BlueprintInstanceEvent{
 	},
 	{
 		ID: "test-deploy-event-5",
+		DeployEvent: container.DeployEvent{
+			ResourceUpdateEvent: &container.ResourceDeployUpdateMessage{
+				InstanceID:      testInstanceID,
+				ResourceID:      "resource-4",
+				ResourceName:    "Resource4",
+				Status:          core.ResourceStatusRetained,
+				PreciseStatus:   core.PreciseResourceStatusRetained,
+				UpdateTimestamp: testTime.Unix(),
+			},
+		},
+	},
+	{
+		ID: "test-deploy-event-6",
 		DeployEvent: container.DeployEvent{
 			FinishEvent: &container.DeploymentFinishedMessage{
 				InstanceID:      testInstanceID,
