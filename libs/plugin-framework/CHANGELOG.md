@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.5.0...plugin-framework/v0.5.1) (2026-04-20)
+
+
+### Dependencies
+
+* **plugin-framework:** bump blueprint lib to 0.43.0 with removal policies ([2e7603f](https://github.com/newstack-cloud/bluelink/commit/2e7603f575c1799e1b6f8d4978fc461d9832b82c))
+
 ## [0.5.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.4.0...plugin-framework/v0.5.0) (2026-04-19)
 
 
