@@ -14,8 +14,15 @@ WORKDIR /build/tools/genversions
 RUN go mod download
 WORKDIR /build
 
-# Copy source code
-COPY . .
+# Copy only the source directories needed to build the binary.
+# Avoids recursively copying the full build context (docs, local env files,
+# test artifacts, IDE state, coverage reports, etc.).
+COPY cmd/ ./cmd/
+COPY core/ ./core/
+COPY errors/ ./errors/
+COPY internal/ ./internal/
+COPY utils/ ./utils/
+COPY tools/genversions/ ./tools/genversions/
 
 # Build argument for version injection
 ARG DEPLOY_ENGINE_APPLICATION_VERSION=dev
@@ -60,8 +67,8 @@ RUN mkdir -p /app && \
     mkdir -p /home/bluelink/.bluelink/engine/state && \
     chown -R bluelink:bluelink /app /home/bluelink/.bluelink
 
-# Copy binary from builder
-COPY --from=builder --chown=bluelink:bluelink /app/deploy-engine /app/deploy-engine
+# Copy binary from builder (read + execute only, no write for any user)
+COPY --from=builder --chown=root:root --chmod=0555 /app/deploy-engine /app/deploy-engine
 
 # Switch to non-root user
 USER bluelink

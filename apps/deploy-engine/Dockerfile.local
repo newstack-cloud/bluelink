@@ -1,13 +1,15 @@
 FROM golang:1.25.6-trixie AS builder
 
-RUN apt update && apt upgrade -y && \
-  apt install -y git \
-  make openssh-client
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && \
+  apt-get install -y --no-install-recommends \
+  git \
+  make \
+  openssh-client && \
+  rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app/bluelink_deploy_engine
 
-RUN curl -fLo install.sh https://raw.githubusercontent.com/cosmtrek/air/master/install.sh \
-  && chmod +x install.sh && sh install.sh && cp ./bin/air /bin/air
+RUN go install github.com/air-verse/air@1.65.1
 
 # Copy go module files to load dependencies.
 COPY go.mod ./go.mod
