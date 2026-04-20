@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.6.2...blueprint-state/v0.7.0) (2026-04-20)
+
+
+### Features
+
+* **blueprint-state:** add persistence for removal policy and retained resources in change sets ([726e978](https://github.com/newstack-cloud/bluelink/commit/726e978e5bbf63d6eefcdfba6a0a273b50034659))
+
 ## [0.6.2](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.6.1...blueprint-state/v0.6.2) (2026-04-19)
 
 
