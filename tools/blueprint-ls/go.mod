@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/coreos/go-json v0.0.0-20231102161613-e49c8866685a
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.42.1
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.43.0
 	github.com/newstack-cloud/bluelink/libs/common v0.4.0
 	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.5.0
 	github.com/newstack-cloud/ls-builder v0.2.5
