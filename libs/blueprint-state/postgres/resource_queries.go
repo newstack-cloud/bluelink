@@ -33,7 +33,8 @@ func upsertResourcesQuery() string {
 		failure_reasons,
 		drifted,
 		last_drift_detected_timestamp,
-		durations
+		durations,
+		removal_policy
 	) VALUES (
 	 	@id,
 		@type,
@@ -53,7 +54,8 @@ func upsertResourcesQuery() string {
 		@failureReasons,
 		@drifted,
 		@lastDriftDetectedTimestamp,
-		@durations
+		@durations,
+		@removalPolicy
 	) ON CONFLICT (id) DO UPDATE SET
 		type = excluded.type,
 		template_name = excluded.template_name,
@@ -72,7 +74,8 @@ func upsertResourcesQuery() string {
 		failure_reasons = excluded.failure_reasons,
 		drifted = excluded.drifted,
 		last_drift_detected_timestamp = excluded.last_drift_detected_timestamp,
-		durations = excluded.durations
+		durations = excluded.durations,
+		removal_policy = excluded.removal_policy
 	`
 }
 

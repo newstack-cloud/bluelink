@@ -211,7 +211,8 @@
       },
       Drifted: (bool) true,
       LastDriftDetectedTimestamp: (*int)(1733145728),
-      Durations: (*state.ResourceCompletionDurations)(<nil>)
+      Durations: (*state.ResourceCompletionDurations)(<nil>),
+      RemovalPolicy: (string) ""
     }),
     (string) (len=36) "8cfab95d-4025-4586-8ff8-a4edfa39082d": (*state.ResourceState)({
       ResourceID: (string) (len=36) "8cfab95d-4025-4586-8ff8-a4edfa39082d",
@@ -291,7 +292,8 @@
       },
       Drifted: (bool) false,
       LastDriftDetectedTimestamp: (*int)(<nil>),
-      Durations: (*state.ResourceCompletionDurations)(<nil>)
+      Durations: (*state.ResourceCompletionDurations)(<nil>),
+      RemovalPolicy: (string) ""
     }),
     (string) (len=36) "8e82a3ab-28af-4fbd-b842-776794e82364": (*state.ResourceState)({
       ResourceID: (string) (len=36) "8e82a3ab-28af-4fbd-b842-776794e82364",
@@ -339,7 +341,8 @@
       },
       Drifted: (bool) false,
       LastDriftDetectedTimestamp: (*int)(<nil>),
-      Durations: (*state.ResourceCompletionDurations)(<nil>)
+      Durations: (*state.ResourceCompletionDurations)(<nil>),
+      RemovalPolicy: (string) ""
     }),
     (string) (len=36) "9d171038-b7e0-417f-a79f-57eaab9a9a11": (*state.ResourceState)({
       ResourceID: (string) (len=36) "9d171038-b7e0-417f-a79f-57eaab9a9a11",
@@ -540,7 +543,8 @@
       },
       Drifted: (bool) false,
       LastDriftDetectedTimestamp: (*int)(<nil>),
-      Durations: (*state.ResourceCompletionDurations)(<nil>)
+      Durations: (*state.ResourceCompletionDurations)(<nil>),
+      RemovalPolicy: (string) ""
     })
   },
   Links: (map[string]*state.LinkState) (len=2) {
@@ -1127,7 +1131,8 @@
           },
           Drifted: (bool) false,
           LastDriftDetectedTimestamp: (*int)(<nil>),
-          Durations: (*state.ResourceCompletionDurations)(<nil>)
+          Durations: (*state.ResourceCompletionDurations)(<nil>),
+          RemovalPolicy: (string) ""
         })
       },
       Links: (map[string]*state.LinkState) {
@@ -1445,7 +1450,8 @@
               },
               Drifted: (bool) false,
               LastDriftDetectedTimestamp: (*int)(<nil>),
-              Durations: (*state.ResourceCompletionDurations)(<nil>)
+              Durations: (*state.ResourceCompletionDurations)(<nil>),
+              RemovalPolicy: (string) ""
             })
           },
           Links: (map[string]*state.LinkState) {

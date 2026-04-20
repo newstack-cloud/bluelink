@@ -12,6 +12,7 @@
       (string) (len=10) "resource-2",
       (string) (len=10) "resource-3"
     },
+    RetainedResources: ([]string) <nil>,
     RemovedLinks: ([]string) (len=1) {
       (string) (len=22) "resource-1::resource-3"
     },

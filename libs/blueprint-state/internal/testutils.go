@@ -59,6 +59,7 @@ func AssertResourceStatesEqual(expected, actual *state.ResourceState, s *suite.S
 	s.Assert().Equal(expected.LastDeployAttemptTimestamp, actual.LastDeployAttemptTimestamp)
 	s.Assert().Equal(expected.LastDeployedTimestamp, actual.LastDeployedTimestamp)
 	s.Assert().Equal(expected.Durations, actual.Durations)
+	s.Assert().Equal(expected.RemovalPolicy, actual.RemovalPolicy)
 }
 
 func assertResourceMetadataEqual(

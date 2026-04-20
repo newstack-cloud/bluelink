@@ -200,5 +200,6 @@
   },
   Drifted: (bool) true,
   LastDriftDetectedTimestamp: (*int)(1733145728),
-  Durations: (*state.ResourceCompletionDurations)(<nil>)
+  Durations: (*state.ResourceCompletionDurations)(<nil>),
+  RemovalPolicy: (string) ""
 }

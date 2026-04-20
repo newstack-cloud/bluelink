@@ -210,6 +210,26 @@ func (s *PostgresStateContainerResourcesTestSuite) Test_saves_resource_with_comp
 	internal.AssertResourceStatesEqual(fixture.ResourceState, &savedState, &s.Suite)
 }
 
+func (s *PostgresStateContainerResourcesTestSuite) Test_saves_resource_with_removal_policy() {
+	fixture := s.saveResourceFixtures[6]
+	resources := s.container.Resources()
+	err := resources.Save(
+		context.Background(),
+		*fixture.ResourceState,
+	)
+	s.Require().NoError(err)
+
+	savedState, err := resources.Get(
+		context.Background(),
+		fixture.ResourceState.ResourceID,
+	)
+	s.Require().NoError(err)
+
+	s.Assert().Equal("retain", savedState.RemovalPolicy)
+
+	internal.AssertResourceStatesEqual(fixture.ResourceState, &savedState, &s.Suite)
+}
+
 func (s *PostgresStateContainerResourcesTestSuite) Test_updates_blueprint_resource_deployment_status() {
 	resources := s.container.Resources()
 

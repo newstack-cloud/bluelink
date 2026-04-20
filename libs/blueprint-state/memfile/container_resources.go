@@ -327,6 +327,7 @@ func copyResource(resourceState *state.ResourceState) state.ResourceState {
 		Drifted:                    resourceState.Drifted,
 		LastDriftDetectedTimestamp: resourceState.LastDriftDetectedTimestamp,
 		Durations:                  resourceState.Durations,
+		RemovalPolicy:              resourceState.RemovalPolicy,
 	}
 }
 

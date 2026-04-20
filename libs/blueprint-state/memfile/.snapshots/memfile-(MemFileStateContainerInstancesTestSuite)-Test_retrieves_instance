@@ -98,7 +98,8 @@
       },
       Drifted: (bool) false,
       LastDriftDetectedTimestamp: (*int)(<nil>),
-      Durations: (*state.ResourceCompletionDurations)(<nil>)
+      Durations: (*state.ResourceCompletionDurations)(<nil>),
+      RemovalPolicy: (string) ""
     }),
     (string) (len=22) "test-orders-table-0-id": (*state.ResourceState)({
       ResourceID: (string) (len=22) "test-orders-table-0-id",
@@ -302,7 +303,8 @@
       },
       Drifted: (bool) true,
       LastDriftDetectedTimestamp: (*int)(1733145728),
-      Durations: (*state.ResourceCompletionDurations)(<nil>)
+      Durations: (*state.ResourceCompletionDurations)(<nil>),
+      RemovalPolicy: (string) ""
     }),
     (string) (len=22) "test-orders-table-1-id": (*state.ResourceState)({
       ResourceID: (string) (len=22) "test-orders-table-1-id",
@@ -506,7 +508,8 @@
       },
       Drifted: (bool) false,
       LastDriftDetectedTimestamp: (*int)(<nil>),
-      Durations: (*state.ResourceCompletionDurations)(<nil>)
+      Durations: (*state.ResourceCompletionDurations)(<nil>),
+      RemovalPolicy: (string) ""
     }),
     (string) (len=27) "test-save-order-function-id": (*state.ResourceState)({
       ResourceID: (string) (len=27) "test-save-order-function-id",
@@ -562,7 +565,8 @@
       },
       Drifted: (bool) false,
       LastDriftDetectedTimestamp: (*int)(<nil>),
-      Durations: (*state.ResourceCompletionDurations)(<nil>)
+      Durations: (*state.ResourceCompletionDurations)(<nil>),
+      RemovalPolicy: (string) ""
     })
   },
   Links: (map[string]*state.LinkState) (len=2) {
@@ -1157,7 +1161,8 @@
           },
           Drifted: (bool) false,
           LastDriftDetectedTimestamp: (*int)(<nil>),
-          Durations: (*state.ResourceCompletionDurations)(<nil>)
+          Durations: (*state.ResourceCompletionDurations)(<nil>),
+          RemovalPolicy: (string) ""
         })
       },
       Links: (map[string]*state.LinkState) {
