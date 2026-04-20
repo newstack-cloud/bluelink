@@ -14,11 +14,11 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/lestrrat-go/jwx v1.2.31
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.42.1
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.43.0
 	github.com/newstack-cloud/bluelink/libs/blueprint-resolvers v0.1.3
-	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.6.2
+	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.7.0
 	github.com/newstack-cloud/bluelink/libs/common v0.4.0
-	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.5.0
+	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.5.1
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/spf13/afero v1.15.0
 	github.com/spf13/viper v1.21.0

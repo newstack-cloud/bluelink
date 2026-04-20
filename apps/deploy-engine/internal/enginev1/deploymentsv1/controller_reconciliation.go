@@ -382,6 +382,7 @@ func parsePreciseResourceStatus(status string) core.PreciseResourceStatus {
 		"CREATE INTERRUPTED":               core.PreciseResourceStatusCreateInterrupted,
 		"UPDATE INTERRUPTED":               core.PreciseResourceStatusUpdateInterrupted,
 		"DESTROY INTERRUPTED":              core.PreciseResourceStatusDestroyInterrupted,
+		"RETAINED":                         core.PreciseResourceStatusRetained,
 	}
 	if s, ok := statusMap[status]; ok {
 		return s
