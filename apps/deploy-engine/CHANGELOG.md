@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.4.0...deploy-engine/v0.5.0) (2026-04-20)
+
+
+### Features
+
+* **deploy-engine:** add support for removal policies ([d60c431](https://github.com/newstack-cloud/bluelink/commit/d60c431a22e53a655070603738c0a9edd6a27532))
+
 ## [0.4.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.3.0...deploy-engine/v0.4.0) (2026-04-19)
 
 
