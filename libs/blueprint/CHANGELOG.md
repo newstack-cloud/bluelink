@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.43.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.42.1...blueprint/v0.43.0) (2026-04-20)
+
+
+### Features
+
+* **blueprint:** add support for resource retention via a removal policy ([dc840e0](https://github.com/newstack-cloud/bluelink/commit/dc840e02abb9df47fad3bb44750df8fe576d8d81))
+
 ## [0.42.1](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.42.0...blueprint/v0.42.1) (2026-04-19)
 
 
