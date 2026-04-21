@@ -404,7 +404,7 @@ func (s *ContainerDestroyTestSuite) Test_fails_to_destroy_blueprint_instance_alr
 	s.Assert().NotNil(finishMsg)
 	s.Assert().Equal(core.InstanceStatusDestroyFailed, finishMsg.Status)
 	s.Assert().Equal([]string{
-		instanceInProgressDeployFailedMessage("blueprint-instance-5", false),
+		instanceInProgressFailedMessage("blueprint-instance-5", destroyClaimAction, false),
 	}, finishMsg.FailureReasons)
 }
 

@@ -10,6 +10,7 @@ import (
 	"maps"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
@@ -198,6 +199,7 @@ func (c *memoryInstancesContainer) UpdateStatus(
 	instance, ok := c.instances[instanceID]
 	if ok {
 		instance.Status = statusInfo.Status
+		instance.LastStatusUpdateTimestamp = int(time.Now().Unix())
 		if statusInfo.Durations != nil {
 			instance.Durations = statusInfo.Durations
 		}
@@ -206,6 +208,31 @@ func (c *memoryInstancesContainer) UpdateStatus(
 	}
 
 	return state.InstanceNotFoundError(instanceID)
+}
+
+func (c *memoryInstancesContainer) ClaimForDeployment(
+	ctx context.Context,
+	instanceID string,
+	expectedVersion int64,
+	newStatus core.InstanceStatus,
+) (newVersion int64, err error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	instance, ok := c.instances[instanceID]
+	if !ok {
+		return 0, state.InstanceNotFoundError(instanceID)
+	}
+
+	if instance.Version != expectedVersion {
+		return instance.Version, state.ErrVersionConflict
+	}
+
+	instance.Status = newStatus
+	instance.Version++
+	instance.LastStatusUpdateTimestamp = int(time.Now().Unix())
+
+	return instance.Version, nil
 }
 
 func (c *memoryInstancesContainer) Remove(ctx context.Context, instanceID string) (state.InstanceState, error) {

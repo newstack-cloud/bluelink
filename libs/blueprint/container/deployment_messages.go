@@ -162,6 +162,11 @@ type DeploymentUpdateMessage struct {
 	// UpdateTimestamp is the unix timestamp in seconds for
 	// when the status update occurred.
 	UpdateTimestamp int64 `json:"updateTimestamp"`
+	// SkipPersist signals to the in-process status persister that this
+	// status has already been written to state (e.g. by ClaimForDeployment)
+	// and only needs to be forwarded to downstream subscribers.
+	// Never serialised; this is an in-process routing hint only.
+	SkipPersist bool `json:"-"`
 }
 
 // DeploymentFinishedMessage provides a message containing the final status

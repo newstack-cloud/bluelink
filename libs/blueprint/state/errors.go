@@ -1,6 +1,9 @@
 package state
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // Error is an error type that MUST be used by implementations
 // of the state.Container interface to allow the engine to be able to distinguish
@@ -143,3 +146,8 @@ func IsInstancesNotFound(err error) bool {
 	_, ok := err.(*InstancesNotFoundError)
 	return ok
 }
+
+// ErrVersionConflict is used when an update to a blueprint instance fails because the version provided
+// does not match the current version of the instance in the state. This indicates that the instance
+// was modified by another operation since it was last read, and the update should be retried with the latest version.
+var ErrVersionConflict = errors.New("state: version conflict: instance was modified by another operation")

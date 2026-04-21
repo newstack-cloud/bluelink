@@ -347,7 +347,7 @@ func (c *defaultBlueprintContainer) stageResourceRemovals(
 	}
 }
 
-// effectiveRemovalPolicy returns the removal policy to apply when a resource
+// The removal policy to apply when a resource
 // is being removed from management, defaulting to "delete" when the stored
 // value is empty.
 func effectiveRemovalPolicy(stored string) string {

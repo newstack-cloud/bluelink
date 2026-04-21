@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -142,18 +143,40 @@ func emptyChangesDestroyFailedMessage(rollingBack bool) string {
 		"for the blueprint instance to be destroyed"
 }
 
-func instanceInProgressDeployFailedMessage(instanceID string, rollingBack bool) string {
+// instanceInProgressFailedMessage returns the user-visible reason used when
+// an attempted operation (deploy or destroy) is rejected because another
+// deployment, update or removal is already in progress for the same blueprint
+// instance. It is used by both the cheap status-based pre-check and the
+// atomic CAS rejection path, so the rejection wording stays consistent while
+// still making the attempted action explicit.
+func instanceInProgressFailedMessage(
+	instanceID string,
+	action claimAction,
+	rollingBack bool,
+) string {
+	attempted := attemptedActionLabel(action)
 	if rollingBack {
 		return fmt.Sprintf(
-			"a rollback is already in progress for the blueprint instance (%s)",
+			"cannot start %s rollback: a rollback is already in progress "+
+				"for the blueprint instance (%s)",
+			attempted,
 			instanceID,
 		)
 	}
 
 	return fmt.Sprintf(
-		"a deployment or removal is already in progress for the blueprint instance (%s)",
+		"cannot start %s: a deployment or removal is already in progress "+
+			"for the blueprint instance (%s)",
+		attempted,
 		instanceID,
 	)
+}
+
+func attemptedActionLabel(action claimAction) string {
+	if action == destroyClaimAction {
+		return "removal"
+	}
+	return "deployment"
 }
 
 func determineInstanceDestroyedStatus(rollingBack bool) core.InstanceStatus {
@@ -2457,4 +2480,107 @@ func determineChildInterruptedStatus(
 		return core.InstanceStatusDeployInterrupted
 	}
 	return core.InstanceStatusUpdateInterrupted
+}
+
+type claimDeploymentParams struct {
+	instances            state.InstancesContainer
+	currentInstanceState *state.InstanceState
+	isNewInstance        bool
+	channels             *DeployChannels
+	container            *defaultBlueprintContainer
+	// "deploy" or "destroy", used to determine the right status
+	// and messages to send to the channels on both successful and failed
+	// claims.
+	action claimAction
+	// Determines whether the current action is a rollback for a previous
+	// deploy or destroy action.
+	rollback    bool
+	claimStatus core.InstanceStatus
+	startTime   time.Time
+	logger      core.Logger
+}
+
+type claimAction string
+
+const (
+	deployClaimAction  claimAction = "deploy"
+	destroyClaimAction claimAction = "destroy"
+)
+
+func tryClaimForDeployment(
+	ctx context.Context,
+	params *claimDeploymentParams,
+) (newVersion int64, continueAction bool) {
+	if !params.isNewInstance && params.currentInstanceState.InstanceID != "" {
+		newVersion, err := params.instances.ClaimForDeployment(
+			ctx,
+			params.currentInstanceState.InstanceID,
+			params.currentInstanceState.Version,
+			params.claimStatus,
+		)
+		if err != nil {
+			if errors.Is(err, state.ErrVersionConflict) {
+				// Another deploy or destroy execution has claimed the instance,
+				// so we should stop our deploy and let the other one proceed.
+				params.channels.FinishChan <- createClaimDeploymentFinishedFailureMessage(params)
+				return 0, false
+			}
+
+			params.logger.Debug(
+				"failed to claim instance for deployment",
+				core.ErrorLogField("error", err),
+			)
+
+			params.channels.FinishChan <- params.container.createDeploymentFinishedMessage(
+				params.currentInstanceState.InstanceID,
+				determineInstanceDeployFailedStatus(params.rollback, params.isNewInstance),
+				[]string{prepareFailureMessage},
+				params.container.clock.Since(params.startTime),
+				/* prepareElapsedTime */ nil,
+			)
+
+			return 0, false
+		}
+
+		// As `currentInstanceState` is the snapshot of the instance state that will be passed through
+		// the deployment, let's make sure the version and status are updated to reflect
+		// the claimed instance state.
+		params.currentInstanceState.Version = newVersion
+		params.currentInstanceState.Status = params.claimStatus
+
+		params.logger.Debug(
+			"successfully claimed instance for deployment",
+			core.IntegerLogField("version", newVersion),
+		)
+
+		return newVersion, true
+	}
+
+	// No version to bump for new instances. Just proceed with the deployment.
+	return 0, true
+}
+
+func createClaimDeploymentFinishedFailureMessage(params *claimDeploymentParams) DeploymentFinishedMessage {
+	rejectionReason := instanceInProgressFailedMessage(
+		params.currentInstanceState.InstanceID,
+		params.action,
+		params.rollback,
+	)
+	if params.action == deployClaimAction {
+		return params.container.createDeploymentFinishedMessage(
+			params.currentInstanceState.InstanceID,
+			determineInstanceDeployFailedStatus(params.rollback, params.isNewInstance),
+			[]string{rejectionReason},
+			params.container.clock.Since(params.startTime),
+			/* prepareElapsedTime */ nil,
+		)
+	}
+
+	return params.container.createDeploymentFinishedMessage(
+		params.currentInstanceState.InstanceID,
+		determineInstanceDestroyFailedStatus(params.rollback),
+		[]string{rejectionReason},
+		params.container.clock.Since(params.startTime),
+		/* prepareElapsedTime */ nil,
+	)
 }

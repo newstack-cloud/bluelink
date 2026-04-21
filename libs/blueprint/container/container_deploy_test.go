@@ -27,6 +27,7 @@ type ContainerDeployTestSuite struct {
 	blueprint4Fixture blueprintDeployFixture
 	blueprint5Fixture blueprintDeployFixture
 	stateContainer    state.Container
+	loader            Loader
 	fixture1Params    core.BlueprintParams
 	fixture2Params    core.BlueprintParams
 	fixture3Params    core.BlueprintParams
@@ -79,6 +80,7 @@ func (s *ContainerDeployTestSuite) SetupTest() {
 		WithLoaderResourceStabilityPollingConfig(resStabilityPollingConfig),
 		WithLoaderLogger(logger),
 	)
+	s.loader = loader
 
 	s.fixture1Params = blueprint1DeployParams(
 		/* includeInvoices */ false,
@@ -481,7 +483,7 @@ func (s *ContainerDeployTestSuite) Test_fails_to_deploy_blueprint_instance_alrea
 	s.Assert().NotNil(finishMsg)
 	s.Assert().Equal(core.InstanceStatusUpdateFailed, finishMsg.Status)
 	s.Assert().Equal([]string{
-		instanceInProgressDeployFailedMessage("blueprint-instance-4", false),
+		instanceInProgressFailedMessage("blueprint-instance-4", deployClaimAction, false),
 	}, finishMsg.FailureReasons)
 }
 

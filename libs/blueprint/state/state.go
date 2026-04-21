@@ -74,6 +74,17 @@ type InstancesContainer interface {
 		instanceID string,
 		statusInfo InstanceStatusInfo,
 	) error
+	// ClaimForDeployment atomically transitions an instance to a deploying/destroying
+	// status if the current persisted version matches the expectedVersion.
+	// This will return the new version and only this method mutates the version.
+	// Returns state.ErrVersionConflict on mismatch and state.InstanceNotFoundError
+	// when the instance is missing.
+	ClaimForDeployment(
+		ctx context.Context,
+		instanceID string,
+		expectedVersion int64,
+		newStatus core.InstanceStatus,
+	) (newVersion int64, err error)
 	// Remove deals with removing the state for a given blueprint instance.
 	// This is not for destroying the actual deployed resources, just removing the state.
 	Remove(ctx context.Context, instanceID string) (InstanceState, error)
@@ -522,7 +533,7 @@ type InstanceState struct {
 	LastStatusUpdateTimestamp int `json:"lastStatusUpdateTimestamp,omitempty"`
 	// LastDeployedTimestamp holds the unix timestamp when the blueprint instance was last deployed.
 	LastDeployedTimestamp int `json:"lastDeployedTimestamp"`
-	// LastDeployAttempTimestamp holds the unix timestamp when an attempt
+	// LastDeployAttemptTimestamp holds the unix timestamp when an attempt
 	// was last made to deploy the blueprint instance.
 	LastDeployAttemptTimestamp int `json:"lastDeployAttemptTimestamp"`
 	// A mapping of logical resource definition name
@@ -545,6 +556,10 @@ type InstanceState struct {
 	ChildDependencies map[string]*DependencyInfo `json:"childDependencies,omitempty"`
 	// Durations holds duration information for the latest deployment of the blueprint instance.
 	Durations *InstanceCompletionDuration `json:"durations,omitempty"`
+	// Version is used for optimistic concurrency control when updating the instance status.
+	// This is used to protect against a race between multiple deployment processes that are trying to start
+	// a deployment at the same time.
+	Version int64 `json:"version"`
 }
 
 // ExportState holds state that is persisted for an export

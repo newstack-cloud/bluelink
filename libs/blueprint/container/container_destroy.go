@@ -117,10 +117,39 @@ func (c *defaultBlueprintContainer) destroy(
 		channels.FinishChan <- c.createDeploymentFinishedMessage(
 			resolvedInstanceID,
 			determineInstanceDestroyFailedStatus(input.Rollback),
-			[]string{instanceInProgressDeployFailedMessage(resolvedInstanceID, input.Rollback)},
+			[]string{instanceInProgressFailedMessage(resolvedInstanceID, destroyClaimAction, input.Rollback)},
 			c.clock.Since(startTime),
 			/* prepareElapsedTime */ nil,
 		)
+		return
+	}
+
+	destroyLogger := c.logger.Named("destroy").WithFields(
+		core.StringLogField("instanceId", resolvedInstanceID),
+		core.StringLogField("instanceName", input.InstanceName),
+	)
+
+	destroyingStatus := determineInstanceDestroyingStatus(input.Rollback)
+
+	// An atomic operation to claim the destroy action for the current instance ID,
+	// when concurrent executions try to destroy or deploy the same instance in the same moment,
+	// only one will be able to claim it successfully.
+	_, continueAction := tryClaimForDeployment(
+		ctx,
+		&claimDeploymentParams{
+			action:               destroyClaimAction,
+			rollback:             input.Rollback,
+			claimStatus:          destroyingStatus,
+			instances:            instances,
+			currentInstanceState: &currentInstanceState,
+			isNewInstance:        false,
+			channels:             channels,
+			container:            c,
+			startTime:            startTime,
+			logger:               destroyLogger,
+		},
+	)
+	if !continueAction {
 		return
 	}
 
@@ -129,8 +158,11 @@ func (c *defaultBlueprintContainer) destroy(
 	// instance ID.
 	channels.DeploymentUpdateChan <- DeploymentUpdateMessage{
 		InstanceID:      resolvedInstanceID,
-		Status:          determineInstanceDestroyingStatus(input.Rollback),
+		Status:          destroyingStatus,
 		UpdateTimestamp: startTime.Unix(),
+		// Instance status updates in deployment claiming for destroy operations
+		// are always made as you can only destroy existing instances.
+		SkipPersist: true,
 	}
 
 	resourceProviderMap := c.resourceProviderMapFromState(&currentInstanceState)
@@ -155,10 +187,7 @@ func (c *defaultBlueprintContainer) destroy(
 		TaggingConfig:          input.TaggingConfig,
 		ProviderMetadataLookup: input.ProviderMetadataLookup,
 		DrainTimeout:           drainTimeout,
-		Logger: c.logger.Named("destroy").WithFields(
-			core.StringLogField("instanceId", resolvedInstanceID),
-			core.StringLogField("instanceName", input.InstanceName),
-		),
+		Logger:                 destroyLogger,
 	}
 	// removeElements returns errors only for preparation phase issues (collecting,
 	// ordering elements). Runtime errors during element removal are handled internally

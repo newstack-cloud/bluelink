@@ -191,10 +191,32 @@ func (c *defaultBlueprintContainer) deploy(
 		channels.FinishChan <- c.createDeploymentFinishedMessage(
 			input.InstanceID,
 			determineInstanceDeployFailedStatus(input.Rollback, isNewInstance),
-			[]string{instanceInProgressDeployFailedMessage(input.InstanceID, input.Rollback)},
+			[]string{instanceInProgressFailedMessage(input.InstanceID, deployClaimAction, input.Rollback)},
 			c.clock.Since(startTime),
 			/* prepareElapsedTime */ nil,
 		)
+		return
+	}
+
+	// An atomic operation to claim the deployment for the current instance ID,
+	// when concurrent executions try to deploy the same instance in the same moment,
+	// only one will be able to claim it successfully.
+	_, continueDeployment := tryClaimForDeployment(
+		ctx,
+		&claimDeploymentParams{
+			action:               deployClaimAction,
+			rollback:             input.Rollback,
+			claimStatus:          core.InstanceStatusPreparing,
+			instances:            instances,
+			currentInstanceState: &currentInstanceState,
+			isNewInstance:        isNewInstance,
+			channels:             channels,
+			container:            c,
+			startTime:            startTime,
+			logger:               deployLogger,
+		},
+	)
+	if !continueDeployment {
 		return
 	}
 
@@ -205,6 +227,8 @@ func (c *defaultBlueprintContainer) deploy(
 		InstanceID:      input.InstanceID,
 		Status:          core.InstanceStatusPreparing,
 		UpdateTimestamp: startTime.Unix(),
+		// persisted atomically by ClaimForDeployment for an existing instance.
+		SkipPersist: !isNewInstance,
 	}
 
 	deployLogger.Info(
@@ -458,20 +482,27 @@ func (c *defaultBlueprintContainer) saveInstanceDeploymentStateAndCleanup(
 	for !finished {
 		select {
 		case msg := <-listenToChannels.DeploymentUpdateChan:
-			updateTimestamp := int(msg.UpdateTimestamp)
-			err := c.stateContainer.Instances().UpdateStatus(
-				ctx,
-				instanceID,
-				state.InstanceStatusInfo{
-					Status:                    msg.Status,
-					LastStatusUpdateTimestamp: &updateTimestamp,
-				},
-			)
-			if err != nil {
-				forwardToChannels.ErrChan <- err
-				return
+			// Some status updates will have already been persisted at the point the message is sent.
+			// This is especially important for atomic status changes
+			// to prevent races for concurrent executions trying to deploy the same instance in the
+			// same moment.
+			if !msg.SkipPersist {
+				updateTimestamp := int(msg.UpdateTimestamp)
+				err := c.stateContainer.Instances().UpdateStatus(
+					ctx,
+					instanceID,
+					state.InstanceStatusInfo{
+						Status:                    msg.Status,
+						LastStatusUpdateTimestamp: &updateTimestamp,
+					},
+				)
+				if err != nil {
+					forwardToChannels.ErrChan <- err
+					return
+				}
 			}
 			forwardToChannels.DeploymentUpdateChan <- msg
+
 		case msg := <-listenToChannels.FinishChan:
 			statusInfo := createDeployFinishedInstanceStatusInfo(&msg, rollingBack, isNewInstance)
 			err := c.stateContainer.Instances().UpdateStatus(
