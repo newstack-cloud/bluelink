@@ -140,6 +140,104 @@ func (s *ContainerDeployTestSuite) Test_concurrent_deploys_on_same_instance_only
 	)
 }
 
+// Test_concurrent_new_instance_deploys_with_same_user_supplied_id_only_one_wins
+// exercises the atomic-create guard added by InitialiseAndClaim. Two
+// concurrent deploys target the same user-supplied InstanceID that does not
+// yet exist in state. Both pass the Get → zero-state path, both reach
+// saveNewInstance; only InitialiseAndClaim's backend-native create-if-absent
+// CAS can resolve the race.
+//
+// Expected public-API outcome: exactly one deploy reaches a successful
+// terminal status; the other is rejected by either ErrInstanceAlreadyExists
+// (its InitialiseAndClaim lost) then ErrVersionConflict at the subsequent
+// ClaimForDeployment — surfaced as the in-progress rejection reason.
+func (s *ContainerDeployTestSuite) Test_concurrent_new_instance_deploys_with_same_user_supplied_id_only_one_wins() {
+	const sharedNewID = "user-supplied-new-id"
+	containerA, err := s.loadBlueprintContainer(2, schema.JWCCSpecFormat, s.fixture2Params)
+	s.Require().NoError(err)
+	containerB, err := s.loadBlueprintContainer(2, schema.JWCCSpecFormat, s.fixture2Params)
+	s.Require().NoError(err)
+
+	// Stage once against an empty instanceID so the produced change set
+	// describes a new-instance deploy. Both concurrent deploys replay the
+	// same change set against the same user-supplied instance ID.
+	//
+	// Change staging is run against both containers so each one operates
+	// with its own unique change set.
+	sharedChanges, err := s.stageChanges(
+		context.Background(),
+		/* instanceID */ "",
+		containerA,
+		s.fixture2Params,
+	)
+	s.Require().NoError(err)
+	_, err = s.stageChanges(
+		context.Background(),
+		/* instanceID */ "",
+		containerB,
+		s.fixture2Params,
+	)
+	s.Require().NoError(err)
+
+	channelsA := CreateDeployChannels()
+	channelsB := CreateDeployChannels()
+
+	startBarrier := make(chan struct{})
+	var kickoffWG sync.WaitGroup
+	kickoffWG.Add(2)
+
+	deploy := func(container BlueprintContainer, channels *DeployChannels) {
+		kickoffWG.Done()
+		<-startBarrier
+		_ = container.Deploy(
+			context.Background(),
+			&DeployInput{
+				InstanceID:   sharedNewID,
+				InstanceName: "BlueprintInstance2",
+				Changes:      sharedChanges,
+				Rollback:     false,
+			},
+			channels,
+			s.fixture2Params,
+		)
+	}
+
+	go deploy(containerA, channelsA)
+	go deploy(containerB, channelsB)
+
+	kickoffWG.Wait()
+	close(startBarrier)
+
+	finishA, errA := collectDeployFinish(channelsA)
+	finishB, errB := collectDeployFinish(channelsB)
+	s.Require().NoError(errA)
+	s.Require().NoError(errB)
+	s.Require().NotNil(finishA)
+	s.Require().NotNil(finishB)
+
+	aSucceeded := finishA.Status == core.InstanceStatusUpdated ||
+		finishA.Status == core.InstanceStatusDeployed
+	bSucceeded := finishB.Status == core.InstanceStatusUpdated ||
+		finishB.Status == core.InstanceStatusDeployed
+
+	s.Assert().True(
+		aSucceeded != bSucceeded,
+		"expected exactly one concurrent new-instance deploy to succeed, "+
+			"with the other rejected by the atomic-create guard; "+
+			"a status=%s reasons=%v b status=%s reasons=%v",
+		finishA.Status,
+		finishA.FailureReasons,
+		finishB.Status,
+		finishB.FailureReasons,
+	)
+
+	// The shared state should reflect exactly one instance record with the
+	// user-supplied ID, at a version bumped beyond the initial claim.
+	instanceState, err := s.stateContainer.Instances().Get(context.Background(), sharedNewID)
+	s.Require().NoError(err)
+	s.Assert().GreaterOrEqual(instanceState.Version, int64(1))
+}
+
 // loadBlueprintContainer loads a fresh BlueprintContainer from the same
 // blueprint fixture file the suite uses so tests can exercise concurrent
 // operations across independent container instances sharing the same state

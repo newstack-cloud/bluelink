@@ -145,6 +145,8 @@ The container also provides reconciliation capabilities for handling interrupted
 `CheckReconciliation` fetches external state and compares it to persisted state to identify resources and links
 needing attention, while `ApplyReconciliation` applies user-approved actions to update persisted state.
 
+`Deploy` and `Destroy` are safe to call concurrently on different instances. For the same instance, the library guarantees that at most one `Deploy` or `Destroy` is active at any time by combining a status-based pre-check with the atomic `InitialiseAndClaim` and `ClaimForDeployment` primitives on the state container — see [Concurrent deployment safety](#concurrent-deployment-safety) for the contract and host-level responsibilities. The loser of a concurrent claim receives a `DeploymentFinishedMessage` with a failed status and an in-progress rejection reason on its `FinishChan`; the winner proceeds normally. Callers can pass `Force: true` on the input to bypass the pre-check, which is intended for recovering instances stuck in an in-progress status after a hard process termination. Host applications with multiple tenants or untrusted callers should gate `Force` externally.
+
 The blueprint container needs to be instantiated with a state container, a map of resource names -> resource providers, a blueprint spec
 and a spec link info provider.
 
@@ -237,6 +239,19 @@ type InstancesContainer interface {
         instanceID string,
         statusInfo InstanceStatusInfo,
     ) error
+
+    ClaimForDeployment(
+        ctx context.Context,
+        instanceID string,
+        expectedVersion int64,
+        newStatus core.InstanceStatus,
+    ) (newVersion int64, err error)
+
+    InitialiseAndClaim(
+        ctx context.Context,
+        instanceState InstanceState,
+        newStatus core.InstanceStatus,
+    ) (newVersion int64, err error)
 
     Remove(ctx context.Context, instanceID string) (InstanceState, error)
 }
@@ -411,6 +426,20 @@ type ExportsContainer interface {
 A state container deals with persisting and loading state for blueprint instances, this could be to files on disk, to a NoSQL or relational database or a remote object/file storage service.
 
 The core blueprint framework does NOT come with any state container implementations, you must implement them yourself or use a library that extends the blueprint framework.
+
+### Concurrent deployment safety
+
+Two `InstancesContainer` methods `InitialiseAndClaim` and `ClaimForDeployment` exist specifically to make concurrent deploys and destroys on the same instance safe across multiple replicas of a host application sharing a single state backend. Both methods MUST be implemented as backend-native atomic operations (a single transaction in a relational database, an `INSERT ... ON CONFLICT` in PostgreSQL, a conditional put on an object store, etc.); check-then-act patterns in application code are not sufficient.
+
+`InitialiseAndClaim` atomically creates a new instance at version `1` with the given status if and only if no instance with the same ID already exists. It returns `state.ErrInstanceAlreadyExists` on conflict. It collapses the "initialise a new instance" and "first claim" steps into a single backend round-trip so two concurrent first-deploys of the same user-supplied instance name or ID are serialised by the backend's native create primitive, not by a check-then-insert race in Go.
+
+`ClaimForDeployment` atomically transitions an existing instance to a given in-progress status (`Preparing`/`Deploying`/`Destroying`/rollback variants) only if the caller's `expectedVersion` matches the persisted version. On success it increments the version and returns the new one. It returns `state.ErrVersionConflict` when the version has moved, which is how the loser of a concurrent claim on an existing instance is rejected. `ClaimForDeployment` is the only method that mutates the version; `UpdateStatus` and other writes MUST leave the version untouched.
+
+These two primitives combine with a status-based pre-check in the library's deploy/destroy entrypoints (`isInstanceInProgress`) to guarantee that at most one `Deploy` or `Destroy` operation is active per instance at any time, across any number of replicas. The pre-check treats `Preparing`, `Deploying`, `Updating`, `Destroying`, and the matching rollback statuses as in-progress. A caller whose `Get` returns one of these statuses is rejected before it reaches the atomic CAS operation. The goroutine that won `InitialiseAndClaim` is exempted from the pre-check (otherwise it would reject itself on the just-written `Preparing` status it legitimately owns).
+
+Hosts that want this guarantee MUST route every mutation through `BlueprintContainer.Deploy` / `BlueprintContainer.Destroy`. Direct callers of `ClaimForDeployment` or `InitialiseAndClaim` outside the library's own flow re-open the race unless they mirror the same pre-check + flag approach.
+
+The `LastStatusUpdateTimestamp` field on `InstanceStatusInfo` is maintained by every state-mutating call (`UpdateStatus`, `ClaimForDeployment`, `InitialiseAndClaim`) and can be optionally consulted by a host's reconciliation clean up task to detect instances whose state is frozen after an abrupt replica termination (where graceful shutdown did not get to run).
 
 ## Provider (provider.Provider)
 

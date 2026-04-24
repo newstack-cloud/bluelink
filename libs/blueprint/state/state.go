@@ -85,6 +85,19 @@ type InstancesContainer interface {
 		expectedVersion int64,
 		newStatus core.InstanceStatus,
 	) (newVersion int64, err error)
+	// InitialiseAndClaim atomically creates a new instance at version 1 with the
+	// given status, if and only if no instance with the same ID already exists.
+	// This collapses the "initialise a new instance" and "first claim" steps into
+	// a single backend round-trip so concurrent first-deploys of the same ID are
+	// serialised by the backend's native create primitive.
+	// Returns state.ErrInstanceAlreadyExists on conflict, the caller should fall
+	// through to the standard Get + ClaimForDeployment flow for existing
+	// records.
+	InitialiseAndClaim(
+		ctx context.Context,
+		instanceState InstanceState,
+		newStatus core.InstanceStatus,
+	) (newVersion int64, err error)
 	// Remove deals with removing the state for a given blueprint instance.
 	// This is not for destroying the actual deployed resources, just removing the state.
 	Remove(ctx context.Context, instanceID string) (InstanceState, error)

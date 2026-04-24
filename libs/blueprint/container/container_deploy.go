@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
@@ -57,12 +58,11 @@ func (c *defaultBlueprintContainer) Deploy(
 		return errMissingNameForNewInstance()
 	}
 
-	err = c.saveNewInstance(
+	initialised, err := c.saveNewInstance(
 		ctx,
 		instanceID,
 		input.InstanceName,
-		isNewInstance,
-		core.InstanceStatusNotDeployed,
+		core.InstanceStatusPreparing,
 		deployLogger,
 	)
 	if err != nil {
@@ -96,6 +96,7 @@ func (c *defaultBlueprintContainer) Deploy(
 		rewiredChannels,
 		state,
 		isNewInstance,
+		initialised,
 		&deployDeps{
 			resourceRegistry,
 			deployLogger,
@@ -139,6 +140,7 @@ func (c *defaultBlueprintContainer) deploy(
 	channels *DeployChannels,
 	deployState DeploymentState,
 	isNewInstance bool,
+	initialised bool,
 	deployDeps *deployDeps,
 ) {
 	deployLogger := deployDeps.logger
@@ -186,38 +188,44 @@ func (c *defaultBlueprintContainer) deploy(
 		}
 	}
 
-	if !input.Force && isInstanceInProgress(&currentInstanceState, input.Rollback) {
-		deployLogger.Info("instance is already in progress, exiting deployment early")
-		channels.FinishChan <- c.createDeploymentFinishedMessage(
-			input.InstanceID,
-			determineInstanceDeployFailedStatus(input.Rollback, isNewInstance),
-			[]string{instanceInProgressFailedMessage(input.InstanceID, deployClaimAction, input.Rollback)},
-			c.clock.Since(startTime),
-			/* prepareElapsedTime */ nil,
-		)
-		return
-	}
+	// When a new instance is being deployed, "initialised" indicates
+	// that this current execution successfully performed the atomic initialisation of the instance record,
+	// therefore, we can skip the in-progress check and the atomic claim for deployment as the instance is already claimed
+	// by this execution and there cannot be any concurrent deployments for the same instance ID at this point.
+	if !initialised {
+		if !input.Force && isInstanceInProgress(&currentInstanceState, input.Rollback) {
+			deployLogger.Info("instance is already in progress, exiting deployment early")
+			channels.FinishChan <- c.createDeploymentFinishedMessage(
+				input.InstanceID,
+				determineInstanceDeployFailedStatus(input.Rollback, isNewInstance),
+				[]string{instanceInProgressFailedMessage(input.InstanceID, deployClaimAction, input.Rollback)},
+				c.clock.Since(startTime),
+				/* prepareElapsedTime */ nil,
+			)
+			return
+		}
 
-	// An atomic operation to claim the deployment for the current instance ID,
-	// when concurrent executions try to deploy the same instance in the same moment,
-	// only one will be able to claim it successfully.
-	_, continueDeployment := tryClaimForDeployment(
-		ctx,
-		&claimDeploymentParams{
-			action:               deployClaimAction,
-			rollback:             input.Rollback,
-			claimStatus:          core.InstanceStatusPreparing,
-			instances:            instances,
-			currentInstanceState: &currentInstanceState,
-			isNewInstance:        isNewInstance,
-			channels:             channels,
-			container:            c,
-			startTime:            startTime,
-			logger:               deployLogger,
-		},
-	)
-	if !continueDeployment {
-		return
+		// An atomic operation to claim the deployment for the current instance ID,
+		// when concurrent executions try to deploy the same instance in the same moment,
+		// only one will be able to claim it successfully.
+		_, continueDeployment := tryClaimForDeployment(
+			ctx,
+			&claimDeploymentParams{
+				action:               deployClaimAction,
+				rollback:             input.Rollback,
+				claimStatus:          core.InstanceStatusPreparing,
+				instances:            instances,
+				currentInstanceState: &currentInstanceState,
+				isNewInstance:        isNewInstance,
+				channels:             channels,
+				container:            c,
+				startTime:            startTime,
+				logger:               deployLogger,
+			},
+		)
+		if !continueDeployment {
+			return
+		}
 	}
 
 	// Send the preparing status update after retrieving the current state
@@ -227,8 +235,10 @@ func (c *defaultBlueprintContainer) deploy(
 		InstanceID:      input.InstanceID,
 		Status:          core.InstanceStatusPreparing,
 		UpdateTimestamp: startTime.Unix(),
-		// persisted atomically by ClaimForDeployment for an existing instance.
-		SkipPersist: !isNewInstance,
+		// Preparing is always already persisted by this point:
+		// InitialiseAndClaim for fresh instances, ClaimForDeployment for
+		// existing ones.
+		SkipPersist: true,
 	}
 
 	deployLogger.Info(
@@ -562,31 +572,51 @@ func (c *defaultBlueprintContainer) generateInstanceID() (string, bool, error) {
 	return generatedID, true, nil
 }
 
+// Initialises the instance record via an atomic
+// InitialiseAndClaim. It is invoked for every deploy, regardless of whether
+// the instance ID was generated or user-supplied: the backend decides
+// whether the row is new by the outcome of the atomic create.
+//
+// Returns initialised=true when this goroutine's create-if-absent won and
+// the row was inserted at version 1 with the given status; downstream code
+// uses this to skip the second claim (already claimed by InitialiseAndClaim)
+// and to allow itself to proceed past the in-progress pre-check despite
+// seeing its own just-written claim status.
+//
+// Returns initialised=false when the row already existed
+// (ErrInstanceAlreadyExists) — downstream Get + ClaimForDeployment in
+// tryClaimForDeployment handles the existing record atomically.
+//
+// Other errors bubble up to fail the deploy synchronously.
 func (c *defaultBlueprintContainer) saveNewInstance(
 	ctx context.Context,
 	instanceID string,
 	instanceName string,
-	isNewInstance bool,
 	currentStatus core.InstanceStatus,
 	deployLogger core.Logger,
-) error {
-	if !isNewInstance {
-		deployLogger.Debug("instance already exists, skipping saving new instance")
-		return nil
-	}
-
-	deployLogger.Debug("saving new blueprint instance skeleton state")
-	return c.stateContainer.Instances().Save(
+) (initialised bool, err error) {
+	deployLogger.Debug("attempting atomic initialisation of blueprint instance")
+	_, err = c.stateContainer.Instances().InitialiseAndClaim(
 		ctx,
 		state.InstanceState{
 			InstanceID:   instanceID,
 			InstanceName: instanceName,
-			Status:       currentStatus,
 			ResourceIDs:  make(map[string]string),
 			Resources:    make(map[string]*state.ResourceState),
 			Links:        make(map[string]*state.LinkState),
 		},
+		currentStatus,
 	)
+	if err == nil {
+		return true, nil
+	}
+
+	if errors.Is(err, state.ErrInstanceAlreadyExists) {
+		deployLogger.Debug("instance already exists, skipping atomic initialisation")
+		return false, nil
+	}
+
+	return false, err
 }
 
 func (c *defaultBlueprintContainer) deployElements(

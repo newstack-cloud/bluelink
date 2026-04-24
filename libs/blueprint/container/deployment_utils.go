@@ -52,12 +52,14 @@ func isInstanceInProgress(instance *state.InstanceState, rollingBack bool) bool 
 	}
 
 	if rollingBack {
-		return instance.Status == core.InstanceStatusDeployRollingBack ||
+		return instance.Status == core.InstanceStatusPreparing ||
+			instance.Status == core.InstanceStatusDeployRollingBack ||
 			instance.Status == core.InstanceStatusUpdateRollingBack ||
 			instance.Status == core.InstanceStatusDestroyRollingBack
 	}
 
-	return instance.Status == core.InstanceStatusDeploying ||
+	return instance.Status == core.InstanceStatusPreparing ||
+		instance.Status == core.InstanceStatusDeploying ||
 		instance.Status == core.InstanceStatusUpdating ||
 		instance.Status == core.InstanceStatusDestroying
 }

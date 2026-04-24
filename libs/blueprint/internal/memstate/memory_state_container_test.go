@@ -121,3 +121,85 @@ func TestClaimForDeployment_concurrent_goroutines_only_one_wins(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), savedState.Version)
 }
+
+func TestInitialiseAndClaim_creates_new_instance_at_version_1(t *testing.T) {
+	container := NewMemoryStateContainer()
+	instances := container.Instances()
+
+	version, err := instances.InitialiseAndClaim(
+		context.Background(),
+		state.InstanceState{
+			InstanceID:   testInstanceID,
+			InstanceName: testInstanceName,
+		},
+		core.InstanceStatusPreparing,
+	)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), version)
+
+	savedState, err := instances.Get(context.Background(), testInstanceID)
+	require.NoError(t, err)
+	assert.Equal(t, core.InstanceStatusPreparing, savedState.Status)
+	assert.Equal(t, int64(1), savedState.Version)
+	assert.Equal(t, testInstanceName, savedState.InstanceName)
+}
+
+func TestInitialiseAndClaim_returns_already_exists_for_existing_instance(t *testing.T) {
+	instances := newTestContainerWithInstance(t)
+
+	_, err := instances.InitialiseAndClaim(
+		context.Background(),
+		state.InstanceState{
+			InstanceID:   testInstanceID,
+			InstanceName: "ignored-because-conflict",
+		},
+		core.InstanceStatusPreparing,
+	)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, state.ErrInstanceAlreadyExists))
+
+	savedState, err := instances.Get(context.Background(), testInstanceID)
+	require.NoError(t, err)
+	assert.NotEqual(t, "ignored-because-conflict", savedState.InstanceName)
+	assert.Equal(t, int64(0), savedState.Version)
+}
+
+func TestInitialiseAndClaim_concurrent_goroutines_only_one_wins(t *testing.T) {
+	container := NewMemoryStateContainer()
+	instances := container.Instances()
+	const raceID = "race-instance"
+
+	const workers = 10
+	var wg sync.WaitGroup
+	var successes, conflicts int64
+
+	wg.Add(workers)
+	for range workers {
+		go func() {
+			defer wg.Done()
+			_, err := instances.InitialiseAndClaim(
+				context.Background(),
+				state.InstanceState{
+					InstanceID:   raceID,
+					InstanceName: raceID,
+				},
+				core.InstanceStatusPreparing,
+			)
+			if err == nil {
+				atomic.AddInt64(&successes, 1)
+				return
+			}
+			if errors.Is(err, state.ErrInstanceAlreadyExists) {
+				atomic.AddInt64(&conflicts, 1)
+			}
+		}()
+	}
+	wg.Wait()
+
+	assert.Equal(t, int64(1), atomic.LoadInt64(&successes))
+	assert.Equal(t, int64(workers-1), atomic.LoadInt64(&conflicts))
+
+	savedState, err := instances.Get(context.Background(), raceID)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), savedState.Version)
+}

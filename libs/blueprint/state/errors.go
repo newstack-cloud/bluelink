@@ -151,3 +151,9 @@ func IsInstancesNotFound(err error) bool {
 // does not match the current version of the instance in the state. This indicates that the instance
 // was modified by another operation since it was last read, and the update should be retried with the latest version.
 var ErrVersionConflict = errors.New("state: version conflict: instance was modified by another operation")
+
+// ErrInstanceAlreadyExists is returned by InstancesContainer.InitialiseAndClaim when an atomic
+// create cannot proceed because an instance with the same ID already exists. Callers should treat
+// this as a signal to fall through to the standard Get + ClaimForDeployment flow on the existing
+// record.
+var ErrInstanceAlreadyExists = errors.New("state: instance already exists")

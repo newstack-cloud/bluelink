@@ -235,6 +235,26 @@ func (c *memoryInstancesContainer) ClaimForDeployment(
 	return instance.Version, nil
 }
 
+func (c *memoryInstancesContainer) InitialiseAndClaim(
+	ctx context.Context,
+	instanceState state.InstanceState,
+	newStatus core.InstanceStatus,
+) (int64, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, ok := c.instances[instanceState.InstanceID]; ok {
+		return 0, state.ErrInstanceAlreadyExists
+	}
+
+	instanceState.Status = newStatus
+	instanceState.Version = 1
+	instanceState.LastStatusUpdateTimestamp = int(time.Now().Unix())
+	c.instances[instanceState.InstanceID] = &instanceState
+
+	return instanceState.Version, nil
+}
+
 func (c *memoryInstancesContainer) Remove(ctx context.Context, instanceID string) (state.InstanceState, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
