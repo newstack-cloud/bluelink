@@ -43,7 +43,11 @@ set -e
 echo "" > coverage.txt
 
 PACKAGES=$(go list ./... | egrep -v '(/(schemapb|testutils))$')
-TEST_FLAGS="-timeout 120000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic"
+# Per-test timeout is set above the longest internal test timeout
+# (currently 120s in container/container_change_staging_test.go) so a slow
+# CI environment doesn't kill a test before its own timeout can surface a
+# meaningful error.
+TEST_FLAGS="-timeout 300000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic"
 
 if [[ -n "$UPDATE_SNAPSHOTS" ]]; then
   export UPDATE_SNAPSHOTS=true
