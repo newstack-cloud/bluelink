@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.44.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.43.0...blueprint/v0.44.0) (2026-04-24)
+
+
+### Features
+
+* **blueprint:** add concurrent deployment race protection ([9c327c8](https://github.com/newstack-cloud/bluelink/commit/9c327c8f225c3c493ce78bfa28e3913e132c7ccc))
+* **blueprint:** add protection against starting concurrent deployments ([ac7a51d](https://github.com/newstack-cloud/bluelink/commit/ac7a51d4897999cbbc0b620b38a23d5ba26a68d0))
+
 ## [0.43.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.42.1...blueprint/v0.43.0) (2026-04-20)
 
 
