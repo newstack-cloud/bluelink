@@ -1,10 +1,11 @@
 package memfile
 
 import (
-	"sync"
+	"context"
 	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/statestore"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
@@ -16,18 +17,18 @@ import (
 // along with methods to manage persistence for
 // blueprint validation requests, events and change sets.
 type StateContainer struct {
-	instancesContainer              *instancesContainerImpl
-	resourcesContainer              *resourcesContainerImpl
-	linksContainer                  *linksContainerImpl
-	childrenContainer               *childrenContainerImpl
-	metadataContainer               *metadataContainerImpl
-	exportContainer                 *exportContainerImpl
-	eventsContainer                 *eventsContainerImpl
-	changesetsContainer             *changesetsContainerImpl
-	validationContainer             *validationContainerImpl
-	reconciliationResultsContainer  *reconciliationResultsContainerImpl
-	cleanupOperationsContainer      *cleanupOperationsContainerImpl
-	persister                       *statePersister
+	instancesContainer             *statestore.InstancesContainer
+	resourcesContainer             *statestore.ResourcesContainer
+	linksContainer                 *statestore.LinksContainer
+	childrenContainer              *statestore.ChildrenContainer
+	metadataContainer              *statestore.MetadataContainer
+	exportContainer                *statestore.ExportsContainer
+	eventsContainer                *statestore.EventsContainer
+	changesetsContainer            *statestore.ChangesetsContainer
+	validationContainer            *statestore.ValidationsContainer
+	reconciliationResultsContainer *statestore.ReconciliationResultsContainer
+	cleanupOperationsContainer     *statestore.CleanupOperationsContainer
+	storePersister                 *statestore.Persister
 }
 
 // Option is a type for options that can be passed to LoadStateContainer
@@ -42,7 +43,7 @@ type Option func(*StateContainer)
 // When not set, the default value is 1MB (1,048,576 bytes).
 func WithMaxGuideFileSize(maxGuideFileSize int64) func(*StateContainer) {
 	return func(c *StateContainer) {
-		c.persister.maxGuideFileSize = maxGuideFileSize
+		statestore.WithMaxGuideFileSize(maxGuideFileSize)(c.storePersister)
 	}
 }
 
@@ -56,7 +57,7 @@ func WithMaxGuideFileSize(maxGuideFileSize int64) func(*StateContainer) {
 // When not set, the default value is 10MB (10,485,760 bytes).
 func WithMaxEventPartitionSize(maxEventPartitionSize int64) func(*StateContainer) {
 	return func(c *StateContainer) {
-		c.persister.maxEventPartitionSize = maxEventPartitionSize
+		statestore.WithMaxEventPartitionSize(maxEventPartitionSize)(c.storePersister)
 	}
 }
 
@@ -67,7 +68,8 @@ func WithMaxEventPartitionSize(maxEventPartitionSize int64) func(*StateContainer
 // When not set, the default value is 5 minutes (300 seconds).
 func WithRecentlyQueuedEventsThreshold(thresholdSeconds int64) func(*StateContainer) {
 	return func(c *StateContainer) {
-		c.eventsContainer.recentlyQueuedEventsThreshold = time.Duration(thresholdSeconds) * time.Second
+		d := time.Duration(thresholdSeconds) * time.Second
+		statestore.WithEventsRecentlyQueuedThreshold(d)(c.eventsContainer)
 	}
 }
 
@@ -78,148 +80,62 @@ func WithRecentlyQueuedEventsThreshold(thresholdSeconds int64) func(*StateContai
 // When not set, the default value is the system clock.
 func WithClock(clock commoncore.Clock) func(*StateContainer) {
 	return func(c *StateContainer) {
-		c.eventsContainer.clock = clock
+		statestore.WithEventsClock(clock)(c.eventsContainer)
 	}
 }
 
-// LoadStateContainer loads a new state container
-// that uses in-process memory to store state
-// with local files used for persistence.
-//
-// This will load the state into memory from the given directory
-// as the initial state and will write state files to the same
-// directory as they are updated.
-// stateDir can be relative to the current working directory
-// or an absolute path.
+// LoadStateContainer loads a new state container that uses in-process memory
+// to store state with local files used for persistence. State is loaded from
+// stateDir at construction time via statestore.Load; subsequent writes go
+// back to the same directory. stateDir can be relative to the current
+// working directory or an absolute path.
 func LoadStateContainer(
 	stateDir string,
 	fs afero.Fs,
 	logger core.Logger,
 	opts ...Option,
 ) (*StateContainer, error) {
-	mu := &sync.RWMutex{}
+	storage := newFSStorage(fs)
+	storeState := statestore.NewState()
+	cfg := memfileStatestoreConfig()
 
-	state, err := loadStateFromDir(stateDir, fs)
-	if err != nil {
+	if err := statestore.Load(context.Background(), storeState, storage, cfg, stateDir); err != nil {
 		return nil, err
 	}
 
-	persister := &statePersister{
-		stateDir:                      stateDir,
-		fs:                            fs,
-		instanceIndex:                 state.instanceIndex,
-		resourceDriftIndex:            state.resourceDriftIndex,
-		linkDriftIndex:                state.linkDriftIndex,
-		eventIndex:                    state.eventIndex,
-		changesetIndex:                state.changesetIndex,
-		blueprintValidationIndex:      state.blueprintValidationIndex,
-		reconciliationResultIndex:     state.reconciliationResultIndex,
-		maxGuideFileSize:              DefaultMaxGuideFileSize,
-		maxEventPartitionSize:         DefaultMaxEventParititionSize,
-		lastInstanceChunk:             getLastChunkFromIndex(state.instanceIndex),
-		lastResourceDriftChunk:        getLastChunkFromIndex(state.resourceDriftIndex),
-		lastLinkDriftChunk:            getLastChunkFromIndex(state.linkDriftIndex),
-		lastChangesetChunk:            getLastChunkFromIndex(state.changesetIndex),
-		lastBlueprintValidationChunk:  getLastChunkFromIndex(state.blueprintValidationIndex),
-		lastReconciliationResultChunk: getLastChunkFromIndex(state.reconciliationResultIndex),
-	}
+	storePersister := statestore.NewPersister(
+		storeState,
+		storage,
+		cfg,
+		stateDir,
+		statestore.WithMaxGuideFileSize(DefaultMaxGuideFileSize),
+		statestore.WithLogger(logger),
+	)
 
 	container := &StateContainer{
-		persister: persister,
-		instancesContainer: &instancesContainerImpl{
-			instances: state.instances,
-			// The instance ID lookup is not something that is persisted,
-			// it is generated at load time as for the vast majority of use-cases
-			// there will not be a significant cost to generating it on load.
-			instanceIDLookup: createInstanceIDLookup(state.instances),
-			resources:        state.resources,
-			links:            state.links,
-			fs:               fs,
-			persister:        persister,
-			logger:           logger,
-			mu:               mu,
-		},
-		resourcesContainer: &resourcesContainerImpl{
-			resources:            state.resources,
-			resourceDriftEntries: state.resourceDrift,
-			instances:            state.instances,
-			fs:                   fs,
-			persister:            persister,
-			logger:               logger,
-			mu:                   mu,
-		},
-		linksContainer: &linksContainerImpl{
-			links:                  state.links,
-			linkDriftEntries:       state.linkDrift,
-			instances:              state.instances,
-			fs:                     fs,
-			persister:              persister,
-			resourceDataMappingIDs: map[string]map[string][]string{},
-			logger:                 logger,
-			mu:                     mu,
-		},
-		childrenContainer: &childrenContainerImpl{
-			instances: state.instances,
-			fs:        fs,
-			persister: persister,
-			logger:    logger,
-			mu:        mu,
-		},
-		metadataContainer: &metadataContainerImpl{
-			instances: state.instances,
-			fs:        fs,
-			persister: persister,
-			logger:    logger,
-			mu:        mu,
-		},
-		exportContainer: &exportContainerImpl{
-			instances: state.instances,
-			fs:        fs,
-			persister: persister,
-			logger:    logger,
-			mu:        mu,
-		},
-		eventsContainer: &eventsContainerImpl{
-			events:                        state.events,
-			partitionEvents:               state.partitionEvents,
-			fs:                            fs,
-			recentlyQueuedEventsThreshold: manage.DefaultRecentlyQueuedEventsThreshold,
-			clock:                         &commoncore.SystemClock{},
-			listeners:                     make(map[string][]chan manage.Event),
-			persister:                     persister,
-			logger:                        logger,
-			mu:                            mu,
-		},
-		changesetsContainer: &changesetsContainerImpl{
-			changesets: state.changesets,
-			fs:         fs,
-			persister:  persister,
-			logger:     logger,
-			mu:         mu,
-		},
-		validationContainer: &validationContainerImpl{
-			validations: state.blueprintValidations,
-			fs:          fs,
-			persister:   persister,
-			logger:      logger,
-			mu:          mu,
-		},
-		reconciliationResultsContainer: &reconciliationResultsContainerImpl{
-			reconciliationResults: state.reconciliationResults,
-			changesetIndex:        buildChangesetIndex(state.reconciliationResults),
-			instanceIndex:         buildInstanceIndex(state.reconciliationResults),
-			fs:                    fs,
-			persister:             persister,
-			logger:                logger,
-			mu:                    mu,
-		},
-		cleanupOperationsContainer: newCleanupOperationsContainer(),
+		storePersister: storePersister,
+		instancesContainer: statestore.NewInstancesContainer(
+			storeState,
+			storePersister,
+			statestore.SingleProcessClaimFunc(storeState, storePersister),
+			statestore.SingleProcessInitialiseAndClaimFunc(storeState, storePersister),
+			logger,
+		),
+		resourcesContainer:             statestore.NewResourcesContainer(storeState, storePersister, logger),
+		linksContainer:                 statestore.NewLinksContainer(storeState, storePersister, logger),
+		childrenContainer:              statestore.NewChildrenContainer(storeState, storePersister, logger),
+		metadataContainer:              statestore.NewMetadataContainer(storeState, storePersister, logger),
+		exportContainer:                statestore.NewExportsContainer(storeState, storePersister, logger),
+		eventsContainer:                statestore.NewEventsContainer(storeState, storePersister, logger),
+		changesetsContainer:            statestore.NewChangesetsContainer(storeState, storePersister, logger),
+		validationContainer:            statestore.NewValidationsContainer(storeState, storePersister, logger),
+		reconciliationResultsContainer: statestore.NewReconciliationResultsContainer(storeState, storePersister, logger),
+		cleanupOperationsContainer:     statestore.NewCleanupOperationsContainer(storeState, storePersister, logger),
 	}
 
 	for _, opt := range opts {
 		opt(container)
 	}
-
 	return container, nil
 }
 
@@ -267,24 +183,35 @@ func (c *StateContainer) CleanupOperations() manage.CleanupOperations {
 	return c.cleanupOperationsContainer
 }
 
-func getLastChunkFromIndex(index map[string]*indexLocation) int {
-	lastChunk := 0
-	for _, locationInfo := range index {
-		if locationInfo.ChunkNumber > lastChunk {
-			lastChunk = locationInfo.ChunkNumber
-		}
+// The statestore.Config used by memfile:
+// ModeEager so state is bulk-loaded from disk at construction; every entity
+// category keeps the chunked, globally-scoped layout memfile has used
+// historically. Cleanup operations sit on LayoutPerEntity — one tiny JSON
+// per operation — because that category never had a chunked file layout.
+func memfileStatestoreConfig() statestore.Config {
+	chunkedGlobal := statestore.CategoryConfig{
+		Layout: statestore.LayoutChunked,
+		Scope:  statestore.ScopeGlobal,
 	}
-	return lastChunk
-}
-
-func createInstanceIDLookup(
-	instances map[string]*state.InstanceState,
-) map[string]string {
-	instanceIDLookup := make(map[string]string)
-	for instanceID, instance := range instances {
-		if instance.InstanceName != "" {
-			instanceIDLookup[instance.InstanceName] = instanceID
-		}
+	chunkedPerChannel := statestore.CategoryConfig{
+		Layout: statestore.LayoutChunked,
+		Scope:  statestore.ScopePerChannel,
 	}
-	return instanceIDLookup
+	perEntityGlobal := statestore.CategoryConfig{
+		Layout: statestore.LayoutPerEntity,
+		Scope:  statestore.ScopeGlobal,
+	}
+	return statestore.Config{
+		Mode:                  statestore.ModeEager,
+		Instances:             chunkedGlobal,
+		Resources:             chunkedGlobal,
+		Links:                 chunkedGlobal,
+		ResourceDrift:         chunkedGlobal,
+		LinkDrift:             chunkedGlobal,
+		Events:                chunkedPerChannel,
+		Changesets:            chunkedGlobal,
+		Validations:           chunkedGlobal,
+		ReconciliationResults: chunkedGlobal,
+		CleanupOperations:     perEntityGlobal,
+	}
 }

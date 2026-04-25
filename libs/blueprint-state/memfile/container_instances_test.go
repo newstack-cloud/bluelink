@@ -2,7 +2,10 @@ package memfile
 
 import (
 	"context"
+	"errors"
 	"path"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/internal"
@@ -490,6 +493,185 @@ func (s *MemFileStateContainerInstancesTestSuite) Test_get_batch_preserves_order
 	s.Require().Len(result, 2)
 	s.Assert().Equal("my-app-staging", result[0].InstanceName)
 	s.Assert().Equal("my-app-production", result[1].InstanceName)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_claim_for_deployment_succeeds_with_matching_version() {
+	instances := s.container.Instances()
+
+	newVersion, err := instances.ClaimForDeployment(
+		context.Background(),
+		existingBlueprintInstanceID,
+		0,
+		core.InstanceStatusDeploying,
+	)
+	s.Require().NoError(err)
+	s.Assert().Equal(int64(1), newVersion)
+
+	savedState, err := instances.Get(context.Background(), existingBlueprintInstanceID)
+	s.Require().NoError(err)
+	s.Assert().Equal(core.InstanceStatusDeploying, savedState.Status)
+	s.Assert().Equal(int64(1), savedState.Version)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_claim_for_deployment_returns_conflict_on_stale_version() {
+	instances := s.container.Instances()
+
+	_, err := instances.ClaimForDeployment(
+		context.Background(),
+		existingBlueprintInstanceID,
+		0,
+		core.InstanceStatusDeploying,
+	)
+	s.Require().NoError(err)
+
+	currentVersion, err := instances.ClaimForDeployment(
+		context.Background(),
+		existingBlueprintInstanceID,
+		0,
+		core.InstanceStatusDeploying,
+	)
+	s.Require().Error(err)
+	s.Assert().True(errors.Is(err, state.ErrVersionConflict))
+	s.Assert().Equal(int64(1), currentVersion)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_claim_for_deployment_reports_instance_not_found() {
+	instances := s.container.Instances()
+
+	_, err := instances.ClaimForDeployment(
+		context.Background(),
+		nonExistentInstanceID,
+		0,
+		core.InstanceStatusDeploying,
+	)
+	s.Require().Error(err)
+	stateErr, isStateErr := err.(*state.Error)
+	s.Assert().True(isStateErr)
+	s.Assert().Equal(state.ErrInstanceNotFound, stateErr.Code)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_claim_for_deployment_concurrent_goroutines_only_one_wins() {
+	instances := s.container.Instances()
+
+	const workers = 10
+	var wg sync.WaitGroup
+	var successes, conflicts int64
+
+	wg.Add(workers)
+	for range workers {
+		go func() {
+			defer wg.Done()
+			_, err := instances.ClaimForDeployment(
+				context.Background(),
+				existingBlueprintInstanceID,
+				0,
+				core.InstanceStatusDeploying,
+			)
+			if err == nil {
+				atomic.AddInt64(&successes, 1)
+				return
+			}
+			if errors.Is(err, state.ErrVersionConflict) {
+				atomic.AddInt64(&conflicts, 1)
+			}
+		}()
+	}
+	wg.Wait()
+
+	s.Assert().Equal(int64(1), atomic.LoadInt64(&successes))
+	s.Assert().Equal(int64(workers-1), atomic.LoadInt64(&conflicts))
+
+	savedState, err := instances.Get(context.Background(), existingBlueprintInstanceID)
+	s.Require().NoError(err)
+	s.Assert().Equal(int64(1), savedState.Version)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_initialise_and_claim_creates_new_instance_at_version_1() {
+	instances := s.container.Instances()
+	const newID = "fresh-instance"
+	const newName = "fresh-instance-name"
+
+	version, err := instances.InitialiseAndClaim(
+		context.Background(),
+		state.InstanceState{
+			InstanceID:   newID,
+			InstanceName: newName,
+			ResourceIDs:  map[string]string{},
+			Resources:    map[string]*state.ResourceState{},
+			Links:        map[string]*state.LinkState{},
+		},
+		core.InstanceStatusPreparing,
+	)
+	s.Require().NoError(err)
+	s.Assert().Equal(int64(1), version)
+
+	savedState, err := instances.Get(context.Background(), newID)
+	s.Require().NoError(err)
+	s.Assert().Equal(core.InstanceStatusPreparing, savedState.Status)
+	s.Assert().Equal(int64(1), savedState.Version)
+	s.Assert().Equal(newName, savedState.InstanceName)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_initialise_and_claim_returns_already_exists_for_existing_instance() {
+	instances := s.container.Instances()
+
+	_, err := instances.InitialiseAndClaim(
+		context.Background(),
+		state.InstanceState{
+			InstanceID:   existingBlueprintInstanceID,
+			InstanceName: "ignored-because-conflict",
+		},
+		core.InstanceStatusPreparing,
+	)
+	s.Require().Error(err)
+	s.Assert().True(errors.Is(err, state.ErrInstanceAlreadyExists))
+
+	savedState, err := instances.Get(context.Background(), existingBlueprintInstanceID)
+	s.Require().NoError(err)
+	s.Assert().NotEqual("ignored-because-conflict", savedState.InstanceName)
+	s.Assert().Equal(int64(0), savedState.Version)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_initialise_and_claim_concurrent_goroutines_only_one_wins() {
+	instances := s.container.Instances()
+	const raceID = "race-instance"
+
+	const workers = 10
+	var wg sync.WaitGroup
+	var successes, conflicts int64
+
+	wg.Add(workers)
+	for range workers {
+		go func() {
+			defer wg.Done()
+			_, err := instances.InitialiseAndClaim(
+				context.Background(),
+				state.InstanceState{
+					InstanceID:   raceID,
+					InstanceName: raceID,
+					ResourceIDs:  map[string]string{},
+					Resources:    map[string]*state.ResourceState{},
+					Links:        map[string]*state.LinkState{},
+				},
+				core.InstanceStatusPreparing,
+			)
+			if err == nil {
+				atomic.AddInt64(&successes, 1)
+				return
+			}
+			if errors.Is(err, state.ErrInstanceAlreadyExists) {
+				atomic.AddInt64(&conflicts, 1)
+			}
+		}()
+	}
+	wg.Wait()
+
+	s.Assert().Equal(int64(1), atomic.LoadInt64(&successes))
+	s.Assert().Equal(int64(workers-1), atomic.LoadInt64(&conflicts))
+
+	savedState, err := instances.Get(context.Background(), raceID)
+	s.Require().NoError(err)
+	s.Assert().Equal(int64(1), savedState.Version)
 }
 
 func TestMemFileStateContainerInstancesTestSuite(t *testing.T) {

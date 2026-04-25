@@ -43,6 +43,13 @@ finish() {
 trap finish EXIT
 
 setup_deps() {
+  # Guarantee a clean slate for every invocation — a previous run killed
+  # mid-flight or direct `go test` sessions can leave containers (and
+  # their DB state) up, which breaks the "each script run is isolated"
+  # contract the suite relies on.
+  echo "Tearing down any existing test dependencies docker compose stack ..."
+  docker compose --env-file .env.test -f docker-compose.test-deps.yml down -v --remove-orphans
+
   echo "Bringing up docker compose stack for test dependencies ..."
 
   docker compose --env-file .env.test -f docker-compose.test-deps.yml up -d

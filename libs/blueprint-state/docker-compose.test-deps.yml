@@ -47,6 +47,83 @@ services:
     ports:
       - 8080:8080
 
+  # AWS S3 emulator for objectstore backend tests.
+  localstack:
+    image: localstack/localstack:4.0
+    networks:
+      - blueprint_state_tests
+    restart: always
+    environment:
+      SERVICES: s3
+      DEFAULT_REGION: eu-west-1
+      AWS_DEFAULT_REGION: eu-west-1
+      DEBUG: 0
+    ports:
+      - 4566:4566
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Google Cloud Storage emulator for objectstore backend tests.
+  fake-gcs-server:
+    image: fsouza/fake-gcs-server:1.50
+    networks:
+      - blueprint_state_tests
+    restart: always
+    command:
+      [
+        "-scheme",
+        "http",
+        "-port",
+        "4443",
+        "-public-host",
+        "localhost:4443",
+        "-backend",
+        "memory",
+      ]
+    ports:
+      - 4443:4443
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4443/storage/v1/b"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # Azure Blob Storage emulator for objectstore backend tests.
+  # AZURITE_ACCOUNTS forces the shared-key used by Azurite to match the
+  # canonical dev-store key that the objectstore integration tests sign
+  # with — newer Azurite images ship a different built-in default which
+  # produces AuthorizationFailure against requests signed with the
+  # documented dev key.
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:3.33.0
+    networks:
+      - blueprint_state_tests
+    restart: always
+    environment:
+      AZURITE_ACCOUNTS: "devstoreaccount1:Eby8vdM02xNOcqFlqUwJPLlmEh4azupw3DM4mLuEG/nPYe3WtKHnUsCjN+BpYqzBz+q/MCm7wfMhDqg4qyN+5Q=="
+    command:
+      [
+        "azurite-blob",
+        "--blobHost",
+        "0.0.0.0",
+        "--blobPort",
+        "10000",
+        "--skipApiVersionCheck",
+      ]
+    ports:
+      - 10000:10000
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "10000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
 networks:
   blueprint_state_tests:
     name: blueprint_state_tests

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/statestore"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/common/testhelpers"
@@ -133,9 +134,9 @@ func (s *MemFileStateContainerLinkDriftTestSuite) Test_reports_malformed_state_e
 		},
 	)
 	s.Require().Error(err)
-	memFileErr, isMemFileErr := err.(*Error)
+	memFileErr, isMemFileErr := err.(*statestore.Error)
 	s.Assert().True(isMemFileErr)
-	s.Assert().Equal(ErrorReasonCodeMalformedState, memFileErr.ReasonCode)
+	s.Assert().Equal(statestore.ErrorReasonCodeMalformedState, memFileErr.ReasonCode)
 }
 
 func (s *MemFileStateContainerLinkDriftTestSuite) Test_removes_link_drift() {
@@ -192,9 +193,9 @@ func (s *MemFileStateContainerLinkDriftTestSuite) Test_reports_malformed_state_e
 		existingLinkID,
 	)
 	s.Require().Error(err)
-	memFileErr, isMemFileErr := err.(*Error)
+	memFileErr, isMemFileErr := err.(*statestore.Error)
 	s.Assert().True(isMemFileErr)
-	s.Assert().Equal(ErrorReasonCodeMalformedState, memFileErr.ReasonCode)
+	s.Assert().Equal(statestore.ErrorReasonCodeMalformedState, memFileErr.ReasonCode)
 }
 
 func (s *MemFileStateContainerLinkDriftTestSuite) assertPersistedLinkDrift(expected *state.LinkDriftState) {

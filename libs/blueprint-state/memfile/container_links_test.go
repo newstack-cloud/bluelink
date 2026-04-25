@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/statestore"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/common/testhelpers"
@@ -214,9 +215,9 @@ func (s *MemFileStateContainerLinksTestSuite) Test_reports_malformed_state_error
 		statusInfo,
 	)
 	s.Require().Error(err)
-	memFileErr, isMemFileErr := err.(*Error)
+	memFileErr, isMemFileErr := err.(*statestore.Error)
 	s.Assert().True(isMemFileErr)
-	s.Assert().Equal(ErrorReasonCodeMalformedState, memFileErr.ReasonCode)
+	s.Assert().Equal(statestore.ErrorReasonCodeMalformedState, memFileErr.ReasonCode)
 }
 
 func (s *MemFileStateContainerLinksTestSuite) Test_removes_link() {
@@ -254,9 +255,9 @@ func (s *MemFileStateContainerLinksTestSuite) Test_reports_malformed_state_error
 		existingLinkID,
 	)
 	s.Require().Error(err)
-	memFileErr, isMemFileErr := err.(*Error)
+	memFileErr, isMemFileErr := err.(*statestore.Error)
 	s.Assert().True(isMemFileErr)
-	s.Assert().Equal(ErrorReasonCodeMalformedState, memFileErr.ReasonCode)
+	s.Assert().Equal(statestore.ErrorReasonCodeMalformedState, memFileErr.ReasonCode)
 }
 
 func (s *MemFileStateContainerLinksTestSuite) assertPersistedLink(expected *state.LinkState) {

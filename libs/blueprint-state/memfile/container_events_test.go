@@ -9,6 +9,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/internal"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/statestore"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/common/testhelpers"
 	"github.com/spf13/afero"
@@ -162,10 +163,10 @@ func (s *MemFileStateContainerEventsTestSuite) Test_fails_to_save_event_that_pus
 		fixture.Event,
 	)
 	s.Require().Error(err)
-	memfileErr, isMemfileErr := err.(*Error)
+	memfileErr, isMemfileErr := err.(*statestore.Error)
 	s.Require().True(isMemfileErr)
 	s.Assert().Equal(
-		ErrorReasonCodeMaxEventPartitionSizeExceeded,
+		statestore.ErrorReasonCodeMaxEventPartitionSizeExceeded,
 		memfileErr.ReasonCode,
 	)
 }
