@@ -111,7 +111,7 @@ go generate ./...
 if [ -n "$UPDATE_SNAPSHOTS" ]; then
   UPDATE_SNAPSHOTS=true go test -timeout 30000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(testutils))$'`
 else
-  go test -timeout 30000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(testutils))$'`
+  go test -count=1 -timeout 30000ms -race -coverprofile=coverage.txt -coverpkg=./... -covermode=atomic `go list ./... | egrep -v '(/(testutils))$'`
 fi
 
 if [ -z "$GITHUB_ACTION" ]; then
@@ -122,5 +122,5 @@ fi
 
 if [ -n "$GITHUB_ACTION" ]; then
   # We are in a CI environment so run tests again to generate JSON report.
-  go test -timeout 30000ms -json -tags "$TEST_TYPES" `go list ./... | egrep -v '(/(testutils))$'` > report.json
+  go test -count=1 -timeout 30000ms -json -tags "$TEST_TYPES" `go list ./... | egrep -v '(/(testutils))$'` > report.json
 fi
