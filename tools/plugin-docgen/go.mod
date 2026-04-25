@@ -5,8 +5,8 @@ go 1.25.0
 require (
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/google/uuid v1.6.0
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.42.1
-	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.5.0
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.44.0
+	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.5.2
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/spf13/afero v1.15.0
 	github.com/stretchr/testify v1.11.1

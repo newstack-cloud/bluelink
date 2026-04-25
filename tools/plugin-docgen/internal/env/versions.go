@@ -5,7 +5,7 @@ const (
 	// The version of the plugin docgen software.
 	pluginDocgenVersion = "dev"
 	// The version of the blueprint framework used by the plugin docgen tool.
-	blueprintFrameworkVersion = "v0.42.1"
+	blueprintFrameworkVersion = "v0.44.0"
 	// The version of the plugin framework used by the plugin docgen tool.
-	pluginFrameworkVersion = "v0.5.0"
+	pluginFrameworkVersion = "v0.5.2"
 )
