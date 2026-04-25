@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/newstack-cloud/bluelink/compare/blueprint-ls/v0.2.0...blueprint-ls/v0.2.1) (2026-04-25)
+
+
+### Dependencies
+
+* **blueprint-ls:** bump up bluelink libs ([440620d](https://github.com/newstack-cloud/bluelink/commit/440620d28179614451afecfbd354f46490f26722))
+
 ## [0.2.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-ls/v0.1.1...blueprint-ls/v0.2.0) (2026-04-19)
 
 
