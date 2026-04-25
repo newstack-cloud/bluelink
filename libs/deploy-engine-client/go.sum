@@ -28,8 +28,8 @@ github.com/matoous/go-nanoid/v2 v2.1.0 h1:P64+dmq21hhWdtvZfEAofnvJULaRR1Yib0+PnU
 github.com/matoous/go-nanoid/v2 v2.1.0/go.mod h1:KlbGNQ+FhrUNIHUxZdL63t7tl4LaPkZNpUULS8H4uVM=
 github.com/newstack-cloud/bluelink/libs/blueprint v0.44.0 h1:qV7tOGb1OvdkBoJWEBiToDlqFYJq2aUNOYZ4B/UkM3w=
 github.com/newstack-cloud/bluelink/libs/blueprint v0.44.0/go.mod h1:qd3ABYYlUvwF6ZImUZyJax6h+bEJdzw7Rluns2fKmDI=
-github.com/newstack-cloud/bluelink/libs/blueprint-state v0.8.0 h1:zeo0PGJXwG1rxdLwgsw2BD6fGVjpVLeLs2lURrgYfRY=
-github.com/newstack-cloud/bluelink/libs/blueprint-state v0.8.0/go.mod h1:xUgwzwmR78YRD0zdW7kltuIPe/hs9VdEyKbWIVJbTDE=
+github.com/newstack-cloud/bluelink/libs/blueprint-state v0.8.1 h1:Mmt9fs8YNe/J15cLFFpEm6ltTmdTbhHRS2447fqZqYM=
+github.com/newstack-cloud/bluelink/libs/blueprint-state v0.8.1/go.mod h1:xUgwzwmR78YRD0zdW7kltuIPe/hs9VdEyKbWIVJbTDE=
 github.com/newstack-cloud/bluelink/libs/common v0.4.0 h1:E72YAjex+VydpaYJXaAwlqeII7jVugEKsfVjHFLaJJY=
 github.com/newstack-cloud/bluelink/libs/common v0.4.0/go.mod h1:09jWAU7PMDJSW0zokebgDZCr59Gg4JpqgF0Yq6kQ8gY=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
