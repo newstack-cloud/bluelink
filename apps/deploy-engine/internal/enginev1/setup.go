@@ -204,7 +204,7 @@ func Setup(
 		config,
 	)
 
-	setupDeploymentHandlers(
+	deploymentCtrl := setupDeploymentHandlers(
 		router,
 		dependencies,
 		config,
@@ -228,9 +228,21 @@ func Setup(
 	router.Use(authMiddleware.Middleware)
 
 	return nil, createServerCleanupFunc(
+		drainInFlightDeploymentsFunc(deploymentCtrl, config.GetShutdownDrainTimeout()),
 		closeStateService,
 		pluginHostService.Close,
 	), nil
+}
+
+func drainInFlightDeploymentsFunc(
+	deploymentCtrl *deploymentsv1.Controller,
+	drainTimeout time.Duration,
+) func() {
+	return func() {
+		ctx, cancel := context.WithTimeout(context.Background(), drainTimeout)
+		defer cancel()
+		deploymentCtrl.Shutdown(ctx)
+	}
 }
 
 func createServerCleanupFunc(
@@ -295,7 +307,7 @@ func setupDeploymentHandlers(
 	router *mux.Router,
 	dependencies *typesv1.Dependencies,
 	config *core.Config,
-) {
+) *deploymentsv1.Controller {
 	changesetRetentionPeriod := time.Duration(
 		config.Maintenance.ChangesetRetentionPeriod,
 	) * time.Second
@@ -397,6 +409,8 @@ func setupDeploymentHandlers(
 		"/deployments/instances/{id}/reconciliation/apply",
 		deploymentCtrl.ApplyReconciliationHandler,
 	).Methods("POST")
+
+	return deploymentCtrl
 }
 
 func setupEventManagementHandlers(

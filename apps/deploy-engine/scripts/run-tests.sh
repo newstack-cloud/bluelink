@@ -87,6 +87,15 @@ while [ "$status" != "exited 0" ]; do
   status="$(get_docker_container_status deploy_engine_test_postgres_migrate)"
 done
 
+# Wait for the LocalStack S3 emulator to be ready so the objectstore
+# integration tests can create buckets during SetupSuite.
+echo ""
+echo "Waiting for LocalStack to be ready ..."
+echo ""
+until curl -sf http://localhost:4567/_localstack/health > /dev/null 2>&1; do
+  sleep 1
+done
+
 echo "Exporting environment variables for test suite ..."
 set -a
 source .env.test

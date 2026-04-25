@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -23,10 +25,8 @@ func main() {
 	}
 
 	apiVersion := config.APIVersion
-	port := config.Port
 	useUnixSocket := config.UseUnixSocket
 	unixSocketPath := config.UnixSocketPath
-	loopbackOnly := config.LoopbackOnly
 	setup, setupExists := apiVersions[apiVersion]
 	if !setupExists {
 		log.Fatalf("version \"%s\" does not exist", apiVersion)
@@ -45,50 +45,84 @@ func main() {
 		log.Fatalf("error setting up Deploy Engine API: %s", err)
 	}
 
-	cleanupOnShutdown(cleanup, useUnixSocket, unixSocketPath)
-
 	srv := &http.Server{
 		IdleTimeout:       60 * time.Second,
 		ReadHeaderTimeout: 10 * time.Second,
 		Handler:           r,
 	}
 
-	if !useUnixSocket {
-		serverAddr := determineServerAddr(loopbackOnly, port)
-		srv.Addr = serverAddr
-		log.Fatal(srv.ListenAndServe())
-	} else {
-		startUnixSocketServer(srv, unixSocketPath)
+	shutdownTimeout := config.GetShutdownDrainTimeout()
+	serverErr := runServer(srv, &config)
+	// Shutdown signal has been received, or the server has terminated with an error.
+	runShutdown(srv, cleanup, useUnixSocket, unixSocketPath, shutdownTimeout)
+	if serverErr != nil && !errors.Is(serverErr, http.ErrServerClosed) {
+		log.Fatalf("server error: %s", serverErr)
 	}
 }
 
-func cleanupOnShutdown(
+// Starts the HTTP server in a goroutine so the main goroutine can
+// wait on a termination signal. Returns the server's terminal error (usually
+// http.ErrServerClosed after a graceful shutdown) once the server has stopped.
+func runServer(srv *http.Server, config *core.Config) error {
+	serverErrCh := make(chan error, 1)
+	go func() {
+		if config.UseUnixSocket {
+			serverErrCh <- serveUnixSocket(srv, config.UnixSocketPath)
+			return
+		}
+		srv.Addr = determineServerAddr(config.LoopbackOnly, config.Port)
+		serverErrCh <- srv.ListenAndServe()
+	}()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+	select {
+	case err := <-serverErrCh:
+		return err
+	case <-sigCh:
+		return nil
+	}
+}
+
+// Drains in-flight HTTP handlers, runs the engine cleanup chain
+// (which includes cancelling in-flight deploy/destroy/rollback goroutines and
+// waiting for the library to persist their terminal status), then removes the
+// unix socket file if one was in use. The drainTimeout bounds the entire
+// shutdown sequence so a wedged goroutine cannot block process exit
+// indefinitely.
+func runShutdown(
+	srv *http.Server,
 	cleanup func(),
 	useUnixSocket bool,
 	unixSocketPath string,
+	drainTimeout time.Duration,
 ) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		if useUnixSocket {
-			os.Remove(unixSocketPath)
-		}
-		if cleanup != nil {
-			cleanup()
-		}
-		os.Exit(1)
-	}()
-}
+	ctx, cancel := context.WithTimeout(context.Background(), drainTimeout)
+	defer cancel()
 
-func startUnixSocketServer(srv *http.Server, unixSocketPath string) {
-	listener, err := net.Listen("unix", unixSocketPath)
-	if err != nil {
-		log.Fatalf("error creating listener for unix socket: %s", err)
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("http server shutdown error: %s", err)
 	}
 
+	if cleanup != nil {
+		cleanup()
+	}
+
+	if useUnixSocket {
+		if err := os.Remove(unixSocketPath); err != nil && !os.IsNotExist(err) {
+			log.Printf("failed to remove unix socket %q: %s", unixSocketPath, err)
+		}
+	}
+}
+
+func serveUnixSocket(srv *http.Server, unixSocketPath string) error {
+	listener, err := net.Listen("unix", unixSocketPath)
+	if err != nil {
+		return fmt.Errorf("error creating listener for unix socket: %w", err)
+	}
 	defer listener.Close()
-	log.Fatal(srv.Serve(listener))
+	return srv.Serve(listener)
 }
 
 func determineServerAddr(loopbackOnly bool, port int) string {

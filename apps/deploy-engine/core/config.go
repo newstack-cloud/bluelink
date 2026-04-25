@@ -97,6 +97,9 @@ type Config struct {
 	// This is used for things like the retention periods for
 	// blueprint validations and change sets.
 	Maintenance MaintenanceConfig `mapstructure:"maintenance"`
+	// Shutdown provides configuration for graceful shutdown
+	// of the deploy engine when it receives a termination signal.
+	Shutdown ShutdownConfig `mapstructure:"shutdown"`
 }
 
 func (p *Config) GetPluginPath() string {
@@ -125,6 +128,10 @@ func (p *Config) GetPluginToPluginCallTimeoutMS() int {
 
 func (p *Config) GetDrainTimeout() time.Duration {
 	return time.Duration(p.Blueprints.DrainTimeout) * time.Second
+}
+
+func (p *Config) GetShutdownDrainTimeout() time.Duration {
+	return time.Duration(p.Shutdown.DrainTimeout) * time.Second
 }
 
 // PluginsV1Config provides configuration for the v1 plugin system
@@ -220,12 +227,14 @@ type BlueprintConfig struct {
 // layer used by the deploy engine.
 type StateConfig struct {
 	// The storage engine to use for the state management/persistence layer.
-	// This can be set to "memfile" for in-memory storage with file system persistence
-	// or "postgres" for a PostgreSQL database.
+	// Valid values are "memfile", "postgres", and "objectstore".
 	// Postgres should be used for deploy engine deployments that need to scale
 	// horizontally, the in-memory storage with file system persistence
 	// engine should be used for local deployments, CI environments and production
 	// use cases where the deploy engine is not expected to scale horizontally.
+	// Objectstore (S3, GCS or Azure Blob) should be used when many CI/CD
+	// pipelines or deploy engine instances need to share state safely via
+	// per-entity ETag / generation CAS without a managed database.
 	// If opting for the in-memory storage with file system persistence engine,
 	// it would be a good idea to backup the state files to a remote location
 	// to avoid losing all state in the event of a failure or destruction of the host machine.
@@ -289,6 +298,92 @@ type StateConfig struct {
 	// See: https://pkg.go.dev/time#ParseDuration
 	// Defaults to "1h30m".
 	PostgresPoolMaxConnLifetime string `mapstructure:"postgres_pool_max_conn_lifetime"`
+	// ObjectStore provides configuration for the object-store storage
+	// engine. Used when StorageEngine == "objectstore" to select and
+	// configure a cloud object storage backend (S3, GCS or Azure Blob
+	// Storage) that multiple deploy-engine instances and CI/CD pipelines
+	// can share safely via per-entity ETag / generation CAS.
+	ObjectStore ObjectStoreConfig `mapstructure:"objectstore"`
+}
+
+// ObjectStoreConfig provides configuration for the object-store state
+// backend. Exactly one Provider is active per deploy-engine process; the
+// corresponding provider sub-config is used.
+type ObjectStoreConfig struct {
+	// Provider selects the object store backend to use.
+	// Valid values: "s3", "gcs", "azureblob".
+	Provider string `mapstructure:"provider"`
+	// Prefix is prepended to every storage key, scoping state under a
+	// subpath of the bucket/container. Useful when sharing a bucket
+	// across deploy-engine deployments or with other workloads.
+	// Defaults to "bluelink-state/".
+	Prefix string `mapstructure:"prefix"`
+	// S3 provides configuration for the S3 provider.
+	S3 ObjectStoreS3Config `mapstructure:"s3"`
+	// GCS provides configuration for the Google Cloud Storage provider.
+	GCS ObjectStoreGCSConfig `mapstructure:"gcs"`
+	// AzureBlob provides configuration for the Azure Blob Storage provider.
+	AzureBlob ObjectStoreAzureBlobConfig `mapstructure:"azureblob"`
+}
+
+// ObjectStoreS3Config provides configuration for the S3-backed object
+// store state backend. Credentials fall back to the default AWS SDK
+// credential chain (env vars, shared config, IAM role) when explicit
+// static credentials are not set.
+type ObjectStoreS3Config struct {
+	// Bucket is the name of the S3 bucket that holds state objects.
+	Bucket string `mapstructure:"bucket"`
+	// Region is the AWS region the bucket lives in.
+	Region string `mapstructure:"region"`
+	// Endpoint overrides the default S3 endpoint for S3-compatible
+	// gateways (LocalStack, MinIO etc.). Empty means use the default
+	// AWS endpoint.
+	Endpoint string `mapstructure:"endpoint"`
+	// UsePathStyle switches the addressing style from virtual-hosted
+	// (default) to path-style. Required for LocalStack and many
+	// S3-compatible gateways.
+	UsePathStyle bool `mapstructure:"use_path_style"`
+	// AccessKeyID, when non-empty alongside SecretAccessKey, uses static
+	// credentials instead of the default credential chain.
+	AccessKeyID string `mapstructure:"access_key_id"`
+	// SecretAccessKey pairs with AccessKeyID for static credential auth.
+	SecretAccessKey string `mapstructure:"secret_access_key"`
+}
+
+// ObjectStoreGCSConfig provides configuration for the Google Cloud
+// Storage backed object store state backend. Credentials fall back to
+// Application Default Credentials unless WithoutAuthentication is set.
+type ObjectStoreGCSConfig struct {
+	// Bucket is the name of the GCS bucket that holds state objects.
+	Bucket string `mapstructure:"bucket"`
+	// Endpoint overrides the default GCS endpoint — useful for
+	// fake-gcs-server and any GCS-compatible gateway. Empty means use
+	// the default GCS endpoint.
+	Endpoint string `mapstructure:"endpoint"`
+	// WithoutAuthentication disables ADC-based authentication. Set this
+	// when targeting fake-gcs-server or another emulator that does not
+	// expect credentials.
+	WithoutAuthentication bool `mapstructure:"without_authentication"`
+}
+
+// ObjectStoreAzureBlobConfig provides configuration for the Azure Blob
+// Storage backed object store state backend. A shared-key credential
+// is constructed from AccountName + AccountKey and used to sign
+// requests against ServiceURL (which must be account-qualified for
+// Azurite, e.g. http://localhost:10000/devstoreaccount1).
+type ObjectStoreAzureBlobConfig struct {
+	// ServiceURL is the account-qualified blob service URL, e.g.
+	// "https://<account>.blob.core.windows.net" against real Azure or
+	// "http://localhost:10000/devstoreaccount1" against Azurite.
+	ServiceURL string `mapstructure:"service_url"`
+	// AccountName is the storage account name used for shared-key
+	// signing, e.g. "devstoreaccount1" for Azurite.
+	AccountName string `mapstructure:"account_name"`
+	// AccountKey is the base64-encoded shared key for the account.
+	AccountKey string `mapstructure:"account_key"`
+	// Container is the name of the blob container that holds state
+	// objects.
+	Container string `mapstructure:"container"`
 }
 
 // ResolversConfig provides configuration for the child blueprint resolvers
@@ -368,6 +463,26 @@ type AuthConfig struct {
 // of short-lived resources in the deploy engine.
 // This is used for things like the retention periods for
 // blueprint validations and change sets.
+// ShutdownConfig provides configuration for graceful shutdown behaviour when
+// the deploy engine receives a termination signal.
+type ShutdownConfig struct {
+	// DrainTimeout is the time in seconds to wait for in-flight deploys,
+	// destroys and rollbacks to finish before the process exits.
+	//
+	// Each in-flight operation has its context cancelled at the start of
+	// shutdown, which causes the blueprint library to enter its drain path
+	// and persist a terminal *_FAILED status for the instance. This timeout
+	// bounds how long shutdown will wait for that drain to complete.
+	//
+	// Must be larger than `blueprints.drain_timeout`, otherwise the library
+	// may be cut off mid-drain and the terminal status will not be persisted
+	// (in which case a subsequent deploy can still be forced through with
+	// `Force: true`).
+	//
+	// Defaults to 180 seconds (3 minutes).
+	DrainTimeout int `mapstructure:"drain_timeout"`
+}
+
 type MaintenanceConfig struct {
 	// The retention period in seconds for blueprint validations.
 	// Whenever the clean up process runs,
@@ -531,6 +646,21 @@ func bindEnvVars(viperInstance *viper.Viper) {
 	viperInstance.BindEnv("state.postgres_ssl_mode")
 	viperInstance.BindEnv("state.postgres_pool_max_conns")
 	viperInstance.BindEnv("state.postgres_pool_max_conn_lifetime")
+	viperInstance.BindEnv("state.objectstore.provider")
+	viperInstance.BindEnv("state.objectstore.prefix")
+	viperInstance.BindEnv("state.objectstore.s3.bucket")
+	viperInstance.BindEnv("state.objectstore.s3.region")
+	viperInstance.BindEnv("state.objectstore.s3.endpoint")
+	viperInstance.BindEnv("state.objectstore.s3.use_path_style")
+	viperInstance.BindEnv("state.objectstore.s3.access_key_id")
+	viperInstance.BindEnv("state.objectstore.s3.secret_access_key")
+	viperInstance.BindEnv("state.objectstore.gcs.bucket")
+	viperInstance.BindEnv("state.objectstore.gcs.endpoint")
+	viperInstance.BindEnv("state.objectstore.gcs.without_authentication")
+	viperInstance.BindEnv("state.objectstore.azureblob.service_url")
+	viperInstance.BindEnv("state.objectstore.azureblob.account_name")
+	viperInstance.BindEnv("state.objectstore.azureblob.account_key")
+	viperInstance.BindEnv("state.objectstore.azureblob.container")
 
 	viperInstance.BindEnv("resolvers.s3_endpoint")
 	viperInstance.BindEnv("resolvers.s3_use_path_style")
@@ -590,6 +720,7 @@ func setDefaults(viperInstance *viper.Viper) {
 	viperInstance.SetDefault("state.postgres_ssl_mode", "disable")
 	viperInstance.SetDefault("state.postgres_pool_max_conns", 100)
 	viperInstance.SetDefault("state.postgres_pool_max_conn_lifetime", "1h30m")
+	viperInstance.SetDefault("state.objectstore.prefix", "bluelink-state/")
 
 	viperInstance.SetDefault("resolvers.https_client_timeout", 30)
 
@@ -597,6 +728,8 @@ func setDefaults(viperInstance *viper.Viper) {
 	viperInstance.SetDefault("maintenance.changeset_retention_period", 7*oneDaySeconds)
 	viperInstance.SetDefault("maintenance.events_retention_period", 7*oneDaySeconds)
 	viperInstance.SetDefault("maintenance.reconciliation_results_retention_period", 7*oneDaySeconds)
+
+	viperInstance.SetDefault("shutdown.drain_timeout", 3*oneMinuteSeconds)
 }
 
 func getOSDefaultPluginPath() string {

@@ -554,12 +554,15 @@ _Config field:_ `state.storage_engine`
 _**optional**_
 
 The storage engine to use for the state management/persistence layer.
-This can be set to `memfile` for in-memory storage with file system persistence
-or `postgres` for a PostgreSQL database.
+Valid values are `memfile`, `postgres`, and `objectstore`.
 
 Postgres should be used for deploy engine deployments that need to scale horizontally,
 the in-memory storage with file system persistence engine should be used for local deployments,
 CI environments and production use cases where the deploy engine is not expected to scale horizontally.
+
+Objectstore (S3, GCS or Azure Blob Storage) should be used when many CI/CD pipelines or
+deploy engine instances need to share state safely without a managed database — per-entity
+ETag / generation CAS serialises concurrent writers against a shared bucket/container.
 
 If opting for the in-memory storage with file system persistence engine,
 it would be a good idea to backup the state files to a remote location
@@ -731,6 +734,158 @@ This should be in a format that can be parsed as a Go `time.Duration` value.
 See: [time.Duration](https://pkg.go.dev/time#ParseDuration) for more information.
 
 **default value:** `1h30m`
+
+#### `objectstore` Storage Engine Provider
+
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_PROVIDER`
+
+_Config field:_ `state.objectstore.provider`
+
+_**required, if objectstore storage engine is used**_
+
+The object store backend to use. Valid values are `s3`, `gcs`, and `azureblob`.
+Exactly one provider is active per deploy-engine process; the corresponding
+provider sub-config is used and the others are ignored.
+
+#### `objectstore` Storage Engine Key Prefix
+
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_PREFIX`
+
+_Config field:_ `state.objectstore.prefix`
+
+_**optional**_
+
+Prepended to every storage key, scoping state under a subpath of the
+bucket/container. Useful when sharing a bucket across deploy-engine
+deployments or with other workloads.
+
+**default value:** `bluelink-state/`
+
+#### `objectstore` S3 Bucket
+
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_S3_BUCKET`
+
+_Config field:_ `state.objectstore.s3.bucket`
+
+_**required, if s3 objectstore provider is used**_
+
+The S3 bucket name that holds state objects.
+
+#### `objectstore` S3 Region
+
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_S3_REGION`
+
+_Config field:_ `state.objectstore.s3.region`
+
+_**optional**_
+
+The AWS region the bucket lives in. When empty, the default AWS SDK
+region resolution (env var, shared config) is used.
+
+#### `objectstore` S3 Endpoint
+
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_S3_ENDPOINT`
+
+_Config field:_ `state.objectstore.s3.endpoint`
+
+_**optional**_
+
+Overrides the default S3 endpoint. Required for S3-compatible gateways
+(LocalStack, MinIO etc.).
+
+#### `objectstore` S3 Use Path Style
+
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_S3_USE_PATH_STYLE`
+
+_Config field:_ `state.objectstore.s3.use_path_style`
+
+_**optional**_
+
+Switches addressing from virtual-hosted (default) to path-style.
+Required for LocalStack and many S3-compatible gateways.
+
+**default value:** `false`
+
+#### `objectstore` S3 Access Key ID / Secret Access Key
+
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_S3_ACCESS_KEY_ID`
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_S3_SECRET_ACCESS_KEY`
+
+_Config fields:_ `state.objectstore.s3.access_key_id`, `state.objectstore.s3.secret_access_key`
+
+_**optional**_
+
+Static credentials used in place of the default AWS SDK credential
+chain. Both must be set together. When either is empty, the default
+credential chain (env vars, shared config, IAM role) is used.
+
+#### `objectstore` GCS Bucket
+
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_GCS_BUCKET`
+
+_Config field:_ `state.objectstore.gcs.bucket`
+
+_**required, if gcs objectstore provider is used**_
+
+The Google Cloud Storage bucket name that holds state objects.
+
+#### `objectstore` GCS Endpoint
+
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_GCS_ENDPOINT`
+
+_Config field:_ `state.objectstore.gcs.endpoint`
+
+_**optional**_
+
+Overrides the default GCS endpoint. Required for fake-gcs-server and
+other GCS-compatible gateways.
+
+#### `objectstore` GCS Without Authentication
+
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_GCS_WITHOUT_AUTHENTICATION`
+
+_Config field:_ `state.objectstore.gcs.without_authentication`
+
+_**optional**_
+
+Disables Application Default Credentials. Set this when targeting
+fake-gcs-server or another emulator that does not expect credentials.
+
+**default value:** `false`
+
+#### `objectstore` Azure Blob Service URL
+
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_AZUREBLOB_SERVICE_URL`
+
+_Config field:_ `state.objectstore.azureblob.service_url`
+
+_**required, if azureblob objectstore provider is used**_
+
+The account-qualified blob service URL, e.g.
+`https://<account>.blob.core.windows.net` against real Azure or
+`http://localhost:10000/devstoreaccount1` against Azurite.
+
+#### `objectstore` Azure Blob Account Name / Account Key
+
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_AZUREBLOB_ACCOUNT_NAME`
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_AZUREBLOB_ACCOUNT_KEY`
+
+_Config fields:_ `state.objectstore.azureblob.account_name`, `state.objectstore.azureblob.account_key`
+
+_**required, if azureblob objectstore provider is used**_
+
+The shared-key credential pair used to sign requests against
+ServiceURL. AccountKey is the base64-encoded shared key.
+
+#### `objectstore` Azure Blob Container
+
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_AZUREBLOB_CONTAINER`
+
+_Config field:_ `state.objectstore.azureblob.container`
+
+_**required, if azureblob objectstore provider is used**_
+
+The blob container name that holds state objects.
 
 ### Resolvers
 

@@ -42,7 +42,30 @@
     "postgres_database": "",
     "postgres_ssl_mode": "disable",
     "postgres_pool_max_conns": 100,
-    "postgres_pool_max_conn_lifetime": "1h30m"
+    "postgres_pool_max_conn_lifetime": "1h30m",
+    "objectstore": {
+      "provider": "",
+      "prefix": "bluelink-state/",
+      "s3": {
+        "bucket": "",
+        "region": "",
+        "endpoint": "",
+        "use_path_style": false,
+        "access_key_id": "",
+        "secret_access_key": ""
+      },
+      "gcs": {
+        "bucket": "",
+        "endpoint": "",
+        "without_authentication": false
+      },
+      "azureblob": {
+        "service_url": "",
+        "account_name": "",
+        "account_key": "",
+        "container": ""
+      }
+    }
   },
   "resolvers": {
     "s3_endpoint": "",
@@ -53,5 +76,8 @@
     "blueprint_validation_retention_period": 604800,
     "changeset_retention_period": 604800,
     "events_retention_period": 604800
+  },
+  "shutdown": {
+    "drain_timeout": 180
   }
 }

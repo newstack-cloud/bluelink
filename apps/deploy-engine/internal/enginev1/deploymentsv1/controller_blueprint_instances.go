@@ -746,6 +746,22 @@ func (c *Controller) listenForDeploymentUpdatesWithParams(
 ) {
 	defer cancelCtx()
 
+	unregister, registerErr := c.registerInFlight(cancelCtx)
+	if registerErr != nil {
+		logger.Warn(
+			"failed to register in-flight deployment for graceful shutdown tracking",
+			core.ErrorLogField("error", registerErr),
+		)
+	} else {
+		defer unregister()
+	}
+
+	// ctx.Done() is deliberately not selected here. When ctx is cancelled
+	// (request timeout, deploymentTimeout, or graceful shutdown), the library
+	// drives the operation into its drain path and still emits a terminal
+	// FinishChan message. Staying on the channels until that message arrives
+	// is what guarantees the library's saveInstanceDeploymentStateAndCleanup
+	// has persisted the *_FAILED status before this goroutine exits.
 	finishMsg := (*container.DeploymentFinishedMessage)(nil)
 	var err error
 	for err == nil && finishMsg == nil {
@@ -772,8 +788,6 @@ func (c *Controller) listenForDeploymentUpdatesWithParams(
 			)
 			finishMsg = &msg
 		case err = <-channels.ErrChan:
-		case <-ctx.Done():
-			err = ctx.Err()
 		}
 	}
 

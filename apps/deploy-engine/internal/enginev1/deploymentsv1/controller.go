@@ -1,6 +1,8 @@
 package deploymentsv1
 
 import (
+	"context"
+	"sync"
 	"time"
 
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
@@ -55,6 +57,11 @@ const (
 	eventTypePreRollbackState = "preRollbackState"
 )
 
+type inFlightOp struct {
+	cancel context.CancelFunc
+	done   chan struct{}
+}
+
 // Controller handles deployment-related HTTP requests
 // including change staging and deployment events over Server-Sent Events (SSE).
 type Controller struct {
@@ -80,6 +87,9 @@ type Controller struct {
 	providerMetadataLookup pluginmeta.Lookup
 	clock                  commoncore.Clock
 	logger                 core.Logger
+
+	inFlightMu sync.Mutex
+	inFlight   map[string]*inFlightOp
 }
 
 // NewController creates a new deployments Controller
@@ -112,5 +122,61 @@ func NewController(
 		providerMetadataLookup:               deps.ProviderMetadataLookup,
 		clock:                                deps.Clock,
 		logger:                               deps.Logger,
+		inFlight:                             make(map[string]*inFlightOp),
 	}
+}
+
+func (c *Controller) registerInFlight(cancel context.CancelFunc) (func(), error) {
+	id, err := c.idGenerator.GenerateID()
+	if err != nil {
+		return nil, err
+	}
+
+	op := &inFlightOp{
+		cancel: cancel,
+		done:   make(chan struct{}),
+	}
+
+	c.inFlightMu.Lock()
+	c.inFlight[id] = op
+	c.inFlightMu.Unlock()
+
+	return func() {
+		c.inFlightMu.Lock()
+		delete(c.inFlight, id)
+		c.inFlightMu.Unlock()
+		close(op.done)
+	}, nil
+}
+
+// Shutdown cancels every in-flight deploy/destroy/rollback context and waits
+// for each goroutine to exit. Cancelling each context drives the library's
+// drain path, which persists a terminal *_FAILED instance status and releases
+// the in-progress guard so subsequent deploys can proceed without Force.
+// Returns when all registered ops have finished or when ctx is cancelled,
+// whichever is first. Callers should pass a context with a deadline so a
+// wedged goroutine cannot block process exit indefinitely.
+func (c *Controller) Shutdown(ctx context.Context) {
+	ops := c.snapshotInFlightOps()
+	for _, op := range ops {
+		op.cancel()
+	}
+	for _, op := range ops {
+		select {
+		case <-op.done:
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (c *Controller) snapshotInFlightOps() []*inFlightOp {
+	c.inFlightMu.Lock()
+	defer c.inFlightMu.Unlock()
+
+	ops := make([]*inFlightOp, 0, len(c.inFlight))
+	for _, op := range c.inFlight {
+		ops = append(ops, op)
+	}
+	return ops
 }
