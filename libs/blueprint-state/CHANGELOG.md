@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.1](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.8.0...blueprint-state/v0.8.1) (2026-04-25)
+
+
+### Bug Fixes
+
+* **blueprint-state:** add fix for key builder to support absolute paths ([e087bb9](https://github.com/newstack-cloud/bluelink/commit/e087bb9f2e8a7dff712d044edab087fc85d9bf90))
+
 ## [0.8.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.7.0...blueprint-state/v0.8.0) (2026-04-25)
 
 
