@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.5.0...deploy-engine/v0.6.0) (2026-04-25)
+
+
+### Features
+
+* **deploy-engine:** add support for object store backend and graceful shutdown ([c2f5b70](https://github.com/newstack-cloud/bluelink/commit/c2f5b7001bce965c0e35588bec7058f769622e66))
+
 ## [0.5.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.4.0...deploy-engine/v0.5.0) (2026-04-20)
 
 
