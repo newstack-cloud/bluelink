@@ -7,7 +7,7 @@
   "libs/common": "0.4.0",
   "libs/deploy-engine-client": "0.4.1",
   "libs/plugin-framework": "0.5.2",
-  "tools/blueprint-ls": "0.2.0",
+  "tools/blueprint-ls": "0.2.1",
   "tools/plugin-docgen": "0.1.0",
   "tools/bluelink-manager": "0.1.5"
 }
