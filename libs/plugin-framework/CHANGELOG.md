@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.5.1...plugin-framework/v0.5.2) (2026-04-25)
+
+
+### Dependencies
+
+* **plugin-framework:** bump up blueprint lib to 0.44.0 ([3e58d55](https://github.com/newstack-cloud/bluelink/commit/3e58d55b778eb46f187ba7d1aa87092697071984))
+
 ## [0.5.1](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.5.0...plugin-framework/v0.5.1) (2026-04-20)
 
 
