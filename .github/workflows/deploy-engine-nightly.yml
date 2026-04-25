@@ -145,7 +145,7 @@ jobs:
           cache-dependency-path: apps/deploy-engine/go.sum
 
       - name: Run GoReleaser (snapshot)
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           version: "~> v2"
