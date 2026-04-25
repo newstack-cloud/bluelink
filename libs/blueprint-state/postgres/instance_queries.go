@@ -104,7 +104,8 @@ func blueprintInstanceQuery() string {
 			'metadata', bi.metadata,
 			'exports', bi.exports,
 			'childDependencies', bi.child_dependencies,
-			'durations', bi.durations
+			'durations', bi.durations,
+			'version', bi.version
 		) As instance_json
 	FROM
 		blueprint_instances bi
@@ -159,7 +160,8 @@ func blueprintInstanceDescendantsQuery() string {
 			'metadata', bi.metadata,
 			'exports', bi.exports,
 			'childDependencies', bi.child_dependencies,
-			'durations', bi.durations
+			'durations', bi.durations,
+			'version', bi.version
 		) AS instance_json
 	FROM descendants d
 	INNER JOIN blueprint_instances bi ON bi.id = d.child_instance_id
@@ -185,7 +187,8 @@ func blueprintInstanceChildQuery() string {
 			'metadata', bi.metadata,
 			'exports', bi.exports,
 			'childDependencies', bi.child_dependencies,
-			'durations', bi.durations
+			'durations', bi.durations,
+			'version', bi.version
 		) As instance_json
 	FROM
 		blueprint_instance_children bic
@@ -387,7 +390,8 @@ func blueprintInstanceBatchQuery() string {
 			'metadata', bi.metadata,
 			'exports', bi.exports,
 			'childDependencies', bi.child_dependencies,
-			'durations', bi.durations
+			'durations', bi.durations,
+			'version', bi.version
 		) As instance_json
 	FROM
 		blueprint_instances bi
@@ -396,6 +400,45 @@ func blueprintInstanceBatchQuery() string {
 	WHERE bi.id = ANY(@instanceIds) OR bi.name = ANY(@instanceNames)
 	GROUP BY bi.id
 	`
+}
+
+func claimInstanceForDeploymentQuery() string {
+	return `
+	UPDATE blueprint_instances
+	SET
+		status = @status,
+		version = version + 1,
+		last_status_update_timestamp = NOW()
+	WHERE id = @instanceId AND version = @expectedVersion
+	RETURNING version
+	`
+}
+
+func initialiseAndClaimInstanceQuery() string {
+	return `
+	INSERT INTO blueprint_instances (
+		id,
+		"name",
+		status,
+		last_status_update_timestamp,
+		metadata,
+		exports,
+		version
+	) VALUES (
+		@id,
+		@name,
+		@status,
+		NOW(),
+		'{}'::jsonb,
+		'{}'::jsonb,
+		1
+	) ON CONFLICT (id) DO NOTHING
+	RETURNING version
+	`
+}
+
+func getInstanceVersionQuery() string {
+	return `SELECT version FROM blueprint_instances WHERE id = @instanceId`
 }
 
 func blueprintInstanceBatchDescendantsQuery() string {
@@ -436,7 +479,8 @@ func blueprintInstanceBatchDescendantsQuery() string {
 			'metadata', bi.metadata,
 			'exports', bi.exports,
 			'childDependencies', bi.child_dependencies,
-			'durations', bi.durations
+			'durations', bi.durations,
+			'version', bi.version
 		) AS instance_json
 	FROM descendants d
 	INNER JOIN blueprint_instances bi ON bi.id = d.child_instance_id

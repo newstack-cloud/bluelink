@@ -1524,13 +1524,16 @@
           },
           ChildBlueprints: (map[string]*state.InstanceState) <nil>,
           ChildDependencies: (map[string]*state.DependencyInfo) <nil>,
-          Durations: (*state.InstanceCompletionDuration)(<nil>)
+          Durations: (*state.InstanceCompletionDuration)(<nil>),
+          Version: (int64) 0
         })
       },
       ChildDependencies: (map[string]*state.DependencyInfo) <nil>,
-      Durations: (*state.InstanceCompletionDuration)(<nil>)
+      Durations: (*state.InstanceCompletionDuration)(<nil>),
+      Version: (int64) 0
     })
   },
   ChildDependencies: (map[string]*state.DependencyInfo) <nil>,
-  Durations: (*state.InstanceCompletionDuration)(<nil>)
+  Durations: (*state.InstanceCompletionDuration)(<nil>),
+  Version: (int64) 0
 }

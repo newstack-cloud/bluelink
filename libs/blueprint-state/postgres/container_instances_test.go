@@ -2,9 +2,13 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"path"
+	"sync"
+	"sync/atomic"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/internal"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -448,6 +452,202 @@ func (s *PostgresStateContainerInstancesTestSuite) Test_get_batch_includes_child
 	s.Require().NoError(err)
 	s.Require().Len(result, 1)
 	s.Assert().NotEmpty(result[0].ChildBlueprints)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_claim_for_deployment_succeeds_with_matching_version() {
+	fixture := s.saveBlueprintFixtures[1]
+	instances := s.container.Instances()
+	err := instances.Save(context.Background(), *fixture.InstanceState)
+	s.Require().NoError(err)
+
+	newVersion, err := instances.ClaimForDeployment(
+		context.Background(),
+		fixture.InstanceState.InstanceID,
+		0,
+		core.InstanceStatusDeploying,
+	)
+	s.Require().NoError(err)
+	s.Assert().Equal(int64(1), newVersion)
+
+	savedState, err := instances.Get(context.Background(), fixture.InstanceState.InstanceID)
+	s.Require().NoError(err)
+	s.Assert().Equal(core.InstanceStatusDeploying, savedState.Status)
+	s.Assert().Equal(int64(1), savedState.Version)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_claim_for_deployment_returns_conflict_on_stale_version() {
+	fixture := s.saveBlueprintFixtures[1]
+	instances := s.container.Instances()
+	err := instances.Save(context.Background(), *fixture.InstanceState)
+	s.Require().NoError(err)
+
+	_, err = instances.ClaimForDeployment(
+		context.Background(),
+		fixture.InstanceState.InstanceID,
+		0,
+		core.InstanceStatusDeploying,
+	)
+	s.Require().NoError(err)
+
+	currentVersion, err := instances.ClaimForDeployment(
+		context.Background(),
+		fixture.InstanceState.InstanceID,
+		0,
+		core.InstanceStatusDeploying,
+	)
+	s.Require().Error(err)
+	s.Assert().True(errors.Is(err, state.ErrVersionConflict))
+	s.Assert().Equal(int64(1), currentVersion)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_claim_for_deployment_reports_instance_not_found() {
+	instances := s.container.Instances()
+
+	_, err := instances.ClaimForDeployment(
+		context.Background(),
+		nonExistentInstanceID,
+		0,
+		core.InstanceStatusDeploying,
+	)
+	s.Require().Error(err)
+	stateErr, isStateErr := err.(*state.Error)
+	s.Assert().True(isStateErr)
+	s.Assert().Equal(state.ErrInstanceNotFound, stateErr.Code)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_claim_for_deployment_concurrent_goroutines_only_one_wins() {
+	fixture := s.saveBlueprintFixtures[1]
+	instances := s.container.Instances()
+	err := instances.Save(context.Background(), *fixture.InstanceState)
+	s.Require().NoError(err)
+
+	const workers = 10
+	var wg sync.WaitGroup
+	var successes, conflicts int64
+
+	wg.Add(workers)
+	for range workers {
+		go func() {
+			defer wg.Done()
+			_, err := instances.ClaimForDeployment(
+				context.Background(),
+				fixture.InstanceState.InstanceID,
+				0,
+				core.InstanceStatusDeploying,
+			)
+			if err == nil {
+				atomic.AddInt64(&successes, 1)
+				return
+			}
+			if errors.Is(err, state.ErrVersionConflict) {
+				atomic.AddInt64(&conflicts, 1)
+			}
+		}()
+	}
+	wg.Wait()
+
+	s.Assert().Equal(int64(1), atomic.LoadInt64(&successes))
+	s.Assert().Equal(int64(workers-1), atomic.LoadInt64(&conflicts))
+
+	savedState, err := instances.Get(context.Background(), fixture.InstanceState.InstanceID)
+	s.Require().NoError(err)
+	s.Assert().Equal(int64(1), savedState.Version)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_initialise_and_claim_creates_new_instance_at_version_1() {
+	instances := s.container.Instances()
+	// Per-invocation UUID + name so reruns against the same database
+	// never collide with rows left by prior runs. Name prefix is
+	// uppercase so the sorted-by-name list test still holds — seed
+	// names use uppercase prefixes and Postgres's default collation
+	// mixes case differently from Go's byte comparison.
+	newID := uuid.NewString()
+	newName := "ZFreshPgInstance-" + newID
+
+	version, err := instances.InitialiseAndClaim(
+		context.Background(),
+		state.InstanceState{
+			InstanceID:   newID,
+			InstanceName: newName,
+		},
+		core.InstanceStatusPreparing,
+	)
+	s.Require().NoError(err)
+	s.Assert().Equal(int64(1), version)
+
+	savedState, err := instances.Get(context.Background(), newID)
+	s.Require().NoError(err)
+	s.Assert().Equal(core.InstanceStatusPreparing, savedState.Status)
+	s.Assert().Equal(int64(1), savedState.Version)
+	s.Assert().Equal(newName, savedState.InstanceName)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_initialise_and_claim_returns_already_exists_for_existing_instance() {
+	fixture := s.saveBlueprintFixtures[1]
+	instances := s.container.Instances()
+	err := instances.Save(context.Background(), *fixture.InstanceState)
+	s.Require().NoError(err)
+
+	_, err = instances.InitialiseAndClaim(
+		context.Background(),
+		state.InstanceState{
+			InstanceID:   fixture.InstanceState.InstanceID,
+			InstanceName: "ignored-because-conflict",
+		},
+		core.InstanceStatusPreparing,
+	)
+	s.Require().Error(err)
+	s.Assert().True(errors.Is(err, state.ErrInstanceAlreadyExists))
+
+	savedState, err := instances.Get(context.Background(), fixture.InstanceState.InstanceID)
+	s.Require().NoError(err)
+	s.Assert().NotEqual("ignored-because-conflict", savedState.InstanceName)
+	s.Assert().Equal(int64(0), savedState.Version)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) Test_initialise_and_claim_concurrent_goroutines_only_one_wins() {
+	instances := s.container.Instances()
+	// Per-invocation UUID + name so reruns against the same database
+	// never collide with rows left by prior runs. Name prefix is
+	// uppercase so the sorted-by-name list test still holds — seed
+	// names use uppercase prefixes and Postgres's default collation
+	// mixes case differently from Go's byte comparison.
+	raceID := uuid.NewString()
+	raceName := "ZRacePgInstance-" + raceID
+
+	const workers = 10
+	var wg sync.WaitGroup
+	var successes, conflicts int64
+
+	wg.Add(workers)
+	for range workers {
+		go func() {
+			defer wg.Done()
+			_, err := instances.InitialiseAndClaim(
+				context.Background(),
+				state.InstanceState{
+					InstanceID:   raceID,
+					InstanceName: raceName,
+				},
+				core.InstanceStatusPreparing,
+			)
+			if err == nil {
+				atomic.AddInt64(&successes, 1)
+				return
+			}
+			if errors.Is(err, state.ErrInstanceAlreadyExists) {
+				atomic.AddInt64(&conflicts, 1)
+			}
+		}()
+	}
+	wg.Wait()
+
+	s.Assert().Equal(int64(1), atomic.LoadInt64(&successes))
+	s.Assert().Equal(int64(workers-1), atomic.LoadInt64(&conflicts))
+
+	savedState, err := instances.Get(context.Background(), raceID)
+	s.Require().NoError(err)
+	s.Assert().Equal(int64(1), savedState.Version)
 }
 
 func TestPostgresStateContainerInstancesTestSuite(t *testing.T) {

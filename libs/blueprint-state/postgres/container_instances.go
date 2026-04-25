@@ -768,6 +768,100 @@ func (c *instancesContainerImpl) UpdateStatus(
 	return nil
 }
 
+func (c *instancesContainerImpl) ClaimForDeployment(
+	ctx context.Context,
+	instanceID string,
+	expectedVersion int64,
+	newStatus core.InstanceStatus,
+) (int64, error) {
+	var newVersion int64
+	err := c.connPool.QueryRow(
+		ctx,
+		claimInstanceForDeploymentQuery(),
+		&pgx.NamedArgs{
+			"instanceId":      instanceID,
+			"status":          newStatus,
+			"expectedVersion": expectedVersion,
+		},
+	).Scan(&newVersion)
+	if err == nil {
+		return newVersion, nil
+	}
+
+	var pgErr *pgconn.PgError
+	notFoundPgCode := errors.As(err, &pgErr) && isAltNotFoundPostgresErrorCode(pgErr.Code)
+	if !errors.Is(err, pgx.ErrNoRows) && !notFoundPgCode {
+		return 0, err
+	}
+
+	currentVersion, versionErr := c.getInstanceVersion(ctx, instanceID)
+	if versionErr != nil {
+		if errors.Is(versionErr, pgx.ErrNoRows) {
+			return 0, state.InstanceNotFoundError(instanceID)
+		}
+		return 0, versionErr
+	}
+	return currentVersion, state.ErrVersionConflict
+}
+
+func (c *instancesContainerImpl) getInstanceVersion(
+	ctx context.Context,
+	instanceID string,
+) (int64, error) {
+	var version int64
+	err := c.connPool.QueryRow(
+		ctx,
+		getInstanceVersionQuery(),
+		&pgx.NamedArgs{"instanceId": instanceID},
+	).Scan(&version)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && isAltNotFoundPostgresErrorCode(pgErr.Code) {
+			return 0, pgx.ErrNoRows
+		}
+		return 0, err
+	}
+	return version, nil
+}
+
+func (c *instancesContainerImpl) InitialiseAndClaim(
+	ctx context.Context,
+	instanceState state.InstanceState,
+	newStatus core.InstanceStatus,
+) (int64, error) {
+	var newVersion int64
+	err := c.connPool.QueryRow(
+		ctx,
+		initialiseAndClaimInstanceQuery(),
+		&pgx.NamedArgs{
+			"id":     instanceState.InstanceID,
+			"name":   instanceState.InstanceName,
+			"status": newStatus,
+		},
+	).Scan(&newVersion)
+	if err == nil {
+		return newVersion, nil
+	}
+
+	if errors.Is(err, pgx.ErrNoRows) || isUniqueViolation(err) {
+		return 0, state.ErrInstanceAlreadyExists
+	}
+	return 0, err
+}
+
+// isUniqueViolation returns true when err is a Postgres SQLSTATE 23505
+// (unique_violation). Concurrent InitialiseAndClaim callers racing on
+// the same instance can trip the name unique constraint before the
+// id ON CONFLICT DO NOTHING short-circuit fires, so callers collapse
+// both outcomes onto state.ErrInstanceAlreadyExists.
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return false
+	}
+	return pgErr.Code == "23505"
+}
+
 func (c *instancesContainerImpl) Remove(
 	ctx context.Context,
 	instanceID string,
