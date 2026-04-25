@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.7.0...blueprint-state/v0.8.0) (2026-04-25)
+
+
+### Features
+
+* **blueprint-state:** add atomic claim support for postgres state container ([963bb98](https://github.com/newstack-cloud/bluelink/commit/963bb987d817f5625d3478ef60f75ecd5126ca9e))
+* **blueprint-state:** add object store state container implementation ([059b44a](https://github.com/newstack-cloud/bluelink/commit/059b44a52ba42fd8123f0b43b33b3a70a93a9255))
+
 ## [0.7.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.6.2...blueprint-state/v0.7.0) (2026-04-20)
 
 
