@@ -3,7 +3,6 @@ package statestore
 import (
 	"fmt"
 	"path"
-	"strings"
 )
 
 // KeyBuilder produces the canonical storage keys for each persisted category,
@@ -148,13 +147,14 @@ func (k KeyBuilder) CleanupOperation(operationID string) string {
 	return k.join("cleanup_operations", operationID+".json")
 }
 
-// join prepends the prefix and normalises leading slashes so empty prefixes
-// don't produce absolute-looking object keys.
+// Prepends the prefix to the given parts. The leading "/" of an
+// absolute prefix is preserved so memfile state directories like
+// "/var/lib/bluelink/state" survive intact.
 func (k KeyBuilder) join(parts ...string) string {
 	all := make([]string, 0, len(parts)+1)
 	if k.prefix != "" {
 		all = append(all, k.prefix)
 	}
 	all = append(all, parts...)
-	return strings.TrimPrefix(path.Join(all...), "/")
+	return path.Join(all...)
 }
