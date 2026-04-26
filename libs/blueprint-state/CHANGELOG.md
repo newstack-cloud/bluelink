@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.2](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.8.1...blueprint-state/v0.8.2) (2026-04-26)
+
+
+### Bug Fixes
+
+* **blueprint-state:** add fix to walk from pre-determined absolute path ([be40935](https://github.com/newstack-cloud/bluelink/commit/be4093582febbfc4b49cfe9fa7cff4d5f5b9e923))
+
 ## [0.8.1](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.8.0...blueprint-state/v0.8.1) (2026-04-25)
 
 
