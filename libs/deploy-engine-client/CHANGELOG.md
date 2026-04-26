@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.4.2...deploy-engine-client/v0.4.3) (2026-04-26)
+
+
+### Dependencies
+
+* **deploy-engine-client:** bump up blueprint state to 0.8.2 ([e347859](https://github.com/newstack-cloud/bluelink/commit/e3478599375c70162fb17414349c01b0193083ca))
+
 ## [0.4.2](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.4.1...deploy-engine-client/v0.4.2) (2026-04-25)
 
 
