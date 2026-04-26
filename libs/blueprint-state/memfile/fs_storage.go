@@ -62,8 +62,13 @@ func (s *fsStorage) Delete(ctx context.Context, key string) error {
 }
 
 func (s *fsStorage) List(ctx context.Context, prefix string) ([]string, error) {
+	walkRoot := prefix
+	if walkRoot == "" {
+		walkRoot = "."
+	}
+
 	var keys []string
-	walkErr := afero.Walk(s.fs, ".", func(currentPath string, info fs.FileInfo, err error) error {
+	walkErr := afero.Walk(s.fs, walkRoot, func(currentPath string, info fs.FileInfo, err error) error {
 		if err != nil {
 			if isFsNotFound(err) {
 				return nil
