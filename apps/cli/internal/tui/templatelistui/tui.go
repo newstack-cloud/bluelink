@@ -26,6 +26,7 @@ type MainModel struct {
 	selectWithPreview tea.Model
 
 	searchTerm     string
+	loader         tea.Cmd
 	headless       bool
 	headlessWriter io.Writer
 	printer        *headless.Printer
@@ -43,15 +44,25 @@ type ListAppOptions struct {
 	Styles         *stylespkg.Styles
 	Headless       bool
 	HeadlessWriter io.Writer
+	// Loader optionally overrides the templates load command. Used by tests
+	// to inject a deterministic loader (e.g. one that emits an error msg).
+	// When nil, the default loadTemplatesCmd is used.
+	Loader tea.Cmd
 }
 
 // NewListApp creates a new template list TUI application.
 func NewListApp(opts ListAppOptions) (*MainModel, error) {
 	printer := createHeadlessPrinter(opts.Headless, opts.HeadlessWriter)
 
+	loader := opts.Loader
+	if loader == nil {
+		loader = loadTemplatesCmd(opts.Search)
+	}
+
 	return &MainModel{
 		sessionState:   listLoading,
 		searchTerm:     opts.Search,
+		loader:         loader,
 		headless:       opts.Headless,
 		headlessWriter: opts.HeadlessWriter,
 		printer:        printer,
@@ -61,7 +72,7 @@ func NewListApp(opts ListAppOptions) (*MainModel, error) {
 }
 
 func (m MainModel) Init() tea.Cmd {
-	return loadTemplatesCmd(m.searchTerm)
+	return m.loader
 }
 
 func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

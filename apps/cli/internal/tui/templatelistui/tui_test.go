@@ -127,10 +127,14 @@ func (s *ListTUISuite) Test_headless_outputs_empty_list() {
 
 func (s *ListTUISuite) Test_headless_outputs_error() {
 	headlessOutput := &bytes.Buffer{}
+	loadErr := fmt.Errorf("failed to load templates")
 	model, err := NewListApp(ListAppOptions{
 		Styles:         s.styles,
 		Headless:       true,
 		HeadlessWriter: headlessOutput,
+		Loader: func() tea.Msg {
+			return TemplatesLoadErrorMsg{Err: loadErr}
+		},
 	})
 	s.Require().NoError(err)
 
@@ -140,9 +144,6 @@ func (s *ListTUISuite) Test_headless_outputs_error() {
 		teatest.WithInitialTermSize(300, 100),
 	)
 
-	testModel.Send(TemplatesLoadErrorMsg{
-		Err: fmt.Errorf("failed to load templates"),
-	})
 	testModel.WaitFinished(s.T(), teatest.WithFinalTimeout(5*time.Second))
 
 	finalModel := s.extractFinalModel(testModel.FinalModel(s.T()))

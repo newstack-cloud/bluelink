@@ -82,7 +82,7 @@ set +a
 # Run unit and integration tests
 echo "Running unit and integration tests..."
 echo "" > coverage/unit.txt
-go test -timeout 30000ms -race -coverprofile=coverage/unit.txt -coverpkg=./... -covermode=atomic $(go list ./... | grep -v '/e2e$' | grep -v '/testutils$')
+go test -count=1 -timeout 30000ms -race -coverprofile=coverage/unit.txt -coverpkg=./... -covermode=atomic $(go list ./... | grep -v '/e2e$' | grep -v '/testutils$')
 
 if [ -n "$E2E" ]; then
   echo ""
@@ -105,7 +105,7 @@ if [ -n "$E2E" ]; then
   mkdir -p "$E2E_COVER_DIR"
 
   # Run E2E tests with coverage
-  GOCOVERDIR="$E2E_COVER_DIR" go test -tags=e2e -timeout 120000ms -v ./e2e/...
+  GOCOVERDIR="$E2E_COVER_DIR" go test -count=1 -tags=e2e -timeout 120000ms -v ./e2e/...
 
   # Convert E2E coverage data to text format
   echo "Processing E2E coverage..."
@@ -168,7 +168,7 @@ if [ -n "$GITHUB_ACTION" ]; then
   if [ -n "$E2E" ]; then
     TEST_TAGS="e2e"
   fi
-  go test -timeout 30000ms -json -tags "$TEST_TAGS" $(go list ./... | grep -v '/testutils$') > report.json
+  go test -count=1 -timeout 30000ms -json -tags "$TEST_TAGS" $(go list ./... | grep -v '/testutils$') > report.json
 fi
 
 echo ""
