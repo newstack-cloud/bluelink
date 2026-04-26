@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.6.0...deploy-engine/v0.6.1) (2026-04-26)
+
+
+### Dependencies
+
+* **deploy-engine:** bump up blueprint state to 0.8.2 ([ad17fe5](https://github.com/newstack-cloud/bluelink/commit/ad17fe5671192c789f9e2e5d544f8afdc973ad4f))
+* **deploy-engine:** bump up blueprint state to fix absolute path errors ([3ac0006](https://github.com/newstack-cloud/bluelink/commit/3ac00067f49892a4142ac3de3f469c23adbd16cb))
+
 ## [0.6.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.5.0...deploy-engine/v0.6.0) (2026-04-25)
 
 
