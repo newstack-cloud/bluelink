@@ -3,7 +3,7 @@ module github.com/newstack-cloud/bluelink/tools/plugin-docgen
 go 1.25.0
 
 require (
-	github.com/caarlos0/env/v11 v11.3.1
+	github.com/caarlos0/env/v11 v11.4.0
 	github.com/google/uuid v1.6.0
 	github.com/newstack-cloud/bluelink/libs/blueprint v0.44.0
 	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.5.2
@@ -11,7 +11,7 @@ require (
 	github.com/spf13/afero v1.15.0
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.1
-	google.golang.org/grpc v1.78.0
+	google.golang.org/grpc v1.80.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -23,9 +23,9 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/tailscale/hujson v0.0.0-20250226034555-ec1d1c113d33 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251029180050-ab9386a59fda // indirect
+	golang.org/x/net v0.49.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120221211-b8f7ae30c516 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
