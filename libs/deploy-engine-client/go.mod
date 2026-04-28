@@ -9,7 +9,7 @@ require (
 	github.com/newstack-cloud/bluelink/libs/common v0.4.0
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
 	golang.org/x/oauth2 v0.36.0
 )
 
