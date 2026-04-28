@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.45.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.44.0...blueprint/v0.45.0) (2026-04-28)
+
+
+### Features
+
+* **blueprint:** add helpers to walk sub trees and mapping nodes ([6f0c2c9](https://github.com/newstack-cloud/bluelink/commit/6f0c2c9b7b44aa23ff3480f24a2badb76ec72dc4))
+* **blueprint:** update transform input and output ([04d96dc](https://github.com/newstack-cloud/bluelink/commit/04d96dc2b368a1536004cac8c8f6d2537ca32a32))
+
 ## [0.44.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.43.0...blueprint/v0.44.0) (2026-04-24)
 
 
