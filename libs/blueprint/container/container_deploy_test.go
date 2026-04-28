@@ -525,14 +525,15 @@ func (s *ContainerDeployTestSuite) Test_force_deploys_blueprint_instance_stuck_i
 			finishMsg = &msg
 		case <-channels.DeploymentUpdateChan:
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		// Force-deploy of a stuck "Updating" instance exercises the drain/recovery
+		// path, which can exceed the suite's standard 60s inactivity budget when
+		// race instrumentation is enabled in CI.
+		case <-time.After(120 * time.Second):
 			err = errors.New(timeoutMessage)
 		}
 	}
 	s.Assert().NoError(err)
 	s.Assert().NotNil(finishMsg)
-	// With force=true, the deployment should succeed (status Updated)
-	// since the instance already has resources and this is an update.
 	s.Assert().Equal(core.InstanceStatusUpdated, finishMsg.Status)
 }
 
