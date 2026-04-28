@@ -125,9 +125,17 @@ func (p *blueprintTransformerPluginImpl) Transform(
 		return toBlueprintTransformErrorResponse(err), nil
 	}
 
+	diagnostics, err := sharedtypesv1.ToPBDiagnostics(transformOutput.Diagnostics)
+	if err != nil {
+		return toBlueprintTransformErrorResponse(err), nil
+	}
+
 	return &transformerserverv1.BlueprintTransformResponse{
-		Response: &transformerserverv1.BlueprintTransformResponse_TransformedBlueprint{
-			TransformedBlueprint: transformedBlueprint,
+		Response: &transformerserverv1.BlueprintTransformResponse_Result{
+			Result: &transformerserverv1.BlueprintTransformResult{
+				TransformedBlueprint: transformedBlueprint,
+				Diagnostics:          diagnostics,
+			},
 		},
 	}, nil
 }

@@ -1,7 +1,10 @@
 package transformerv1
 
 import (
+	"fmt"
+
 	"github.com/newstack-cloud/bluelink/libs/blueprint/linktypes"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/serialisation"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/convertv1"
@@ -44,7 +47,7 @@ func fromPBValidateLinksRequest(
 		return nil, err
 	}
 
-	linkGraph, err := fromPBDeclaredLinkGraph(req.LinkGraph)
+	linkGraph, err := fromPBDeclaredLinkGraph(req.LinkGraph, blueprint)
 	if err != nil {
 		return nil, err
 	}
@@ -57,12 +60,13 @@ func fromPBValidateLinksRequest(
 	return &transform.SpecTransformerValidateLinksInput{
 		Blueprint:          blueprint,
 		LinkGraph:          linkGraph,
-		TransformerContext:  transformerCtx,
+		TransformerContext: transformerCtx,
 	}, nil
 }
 
 func fromPBDeclaredLinkGraph(
 	pbGraph *transformerserverv1.DeclaredLinkGraph,
+	blueprint *schema.Blueprint,
 ) (linktypes.DeclaredLinkGraph, error) {
 	if pbGraph == nil {
 		return nil, nil
@@ -75,10 +79,11 @@ func fromPBDeclaredLinkGraph(
 
 	resources := make(map[string]resourceEntry)
 	for name, pbEntry := range pbGraph.Resources {
-		resource, err := serialisation.FromResourcePB(pbEntry.Resource)
-		if err != nil {
-			return nil, err
+		resource, ok := getResource(blueprint, name)
+		if !ok {
+			return nil, fmt.Errorf("resource %q not found in blueprint", name)
 		}
+
 		resources[name] = resourceEntry{
 			schema:         resource,
 			classification: linktypes.ResourceClass(pbEntry.ResourceClass),
@@ -118,4 +123,18 @@ func fromPBTransformerContext(
 	}
 
 	return utils.TransformerContextFromVarMaps(transformerConfigVars, contextVars), nil
+}
+
+func getResource(blueprint *schema.Blueprint, name string) (*schema.Resource, bool) {
+	if blueprint == nil || blueprint.Resources == nil {
+		return nil, false
+	}
+
+	for resourceName, resource := range blueprint.Resources.Values {
+		if resourceName == name {
+			return resource, true
+		}
+	}
+
+	return nil, false
 }

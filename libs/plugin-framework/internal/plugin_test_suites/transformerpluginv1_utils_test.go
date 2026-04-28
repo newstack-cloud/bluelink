@@ -135,10 +135,17 @@ func createValidateLinksInput(
 	edges []*linktypes.ResolvedLink,
 	resources map[string]testResourceEntry,
 ) (*transform.SpecTransformerValidateLinksInput, error) {
-	// Use a minimal blueprint that can be serialised to protobuf.
-	// ValidateLinks operates on the link graph, not the blueprint contents.
+	// The plugin-side link graph reconstruction joins graph resource entries
+	// against blueprint.Resources.Values to recover schemas, so the blueprint
+	// must carry the same resources the graph references.
+	resourceValues := make(map[string]*schema.Resource, len(resources))
+	for name, entry := range resources {
+		resourceValues[name] = entry.schema
+	}
+
 	blueprint := &schema.Blueprint{
-		Version: core.ScalarFromString("2025-02-01"),
+		Version:   core.ScalarFromString("2025-02-01"),
+		Resources: &schema.ResourceMap{Values: resourceValues},
 	}
 
 	return &transform.SpecTransformerValidateLinksInput{

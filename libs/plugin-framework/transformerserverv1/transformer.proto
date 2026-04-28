@@ -115,22 +115,35 @@ message TransformNameInfo {
 message BlueprintTransformRequest {
     // The blueprint that should be transformed.
     schema.Blueprint input_blueprint = 1;
+    // The resolved link graph for the blueprint.
+    DeclaredLinkGraph link_graph = 2;
     // The ID of the host making the request
     // to the transformer.
-    string host_id = 2;
+    string host_id = 3;
     // Runtime configuration for the current environment
     // specific to the current transformer.
-    TransformerContext context = 3;
+    TransformerContext context = 4;
 }
 
 // BlueprintTransformResponse is the response for transforming a blueprint.
 message BlueprintTransformResponse {
     oneof response {
-        // The transformed blueprint.
-        schema.Blueprint transformed_blueprint = 1;
+        // The transformed blueprint result including diagnostics
+        // if any were produced during transformation.
+        BlueprintTransformResult result = 1;
         // An error response if the transformation failed.
         sharedtypesv1.ErrorResponse error_response = 2;
     }
+}
+
+// BlueprintTransformResult holds the result of a blueprint transformation
+// including the transformed blueprint and any diagnostics that were produced during transformation.
+message BlueprintTransformResult {
+    // The transformed blueprint after transformation.
+    schema.Blueprint transformed_blueprint = 1;
+    // Diagnostics that were produced during transformation,
+    // this can include warnings and informational messages.
+    repeated sharedtypesv1.Diagnostic diagnostics = 2;
 }
 
 // AbstractResourceTypesResponse contains the response
@@ -304,13 +317,19 @@ message ResolvedLink {
     repeated string selector_keys = 5;
 }
 
+// ResolvedLinkList represents a list of resolved links, used for
+// representing the edges in the declared link graph that are keyed
+// by source and target resource names for efficient lookup.
+message ResolvedLinkList {
+    repeated ResolvedLink edges = 1;
+}
+
 // DeclaredLinkGraphEntry represents a resource entry
 // in the declared link graph.
+// This contains the resource class
 message DeclaredLinkGraphEntry {
-    // The resource schema.
-    schema.Resource resource = 1;
     // The classification of the resource ("concrete" or "abstract").
-    string resource_class = 2;
+    string resource_class = 1;
 }
 
 // DeclaredLinkGraph represents a serialised view of the declared
@@ -318,8 +337,16 @@ message DeclaredLinkGraphEntry {
 message DeclaredLinkGraph {
     // All edges in the graph.
     repeated ResolvedLink edges = 1;
-    // Resources in the graph, keyed by resource name.
+    // Resources in the graph, resource names are keys
+    // and the entry value contains the resource class.
+    // The resource name key is used to form a DeclaredLinkGraph resource
+    // entry on the client side from looking up the resource name in the parsed
+    // blueprint.
     map<string, DeclaredLinkGraphEntry> resources = 2;
+    // Edges keyed by source resource name.
+    map<string, ResolvedLinkList> edges_from = 3;
+    // Edges keyed by target resource name.
+    map<string, ResolvedLinkList> edges_to = 4;
 }
 
 // ValidateLinksRequest is the request for validating links between

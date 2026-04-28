@@ -94,8 +94,17 @@ func (p *transformerClientWrapper) Transform(
 		)
 	}
 
+	linkGraph, err := toPBDeclaredLinkGraph(input.LinkGraph)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionTransformerTransform,
+		)
+	}
+
 	response, err := p.client.Transform(ctx, &BlueprintTransformRequest{
 		InputBlueprint: blueprintPB,
+		LinkGraph:      linkGraph,
 		HostId:         p.hostID,
 		Context:        transformerCtx,
 	})
@@ -107,8 +116,16 @@ func (p *transformerClientWrapper) Transform(
 	}
 
 	switch result := response.Response.(type) {
-	case *BlueprintTransformResponse_TransformedBlueprint:
-		transformed, err := serialisation.FromSchemaPB(result.TransformedBlueprint)
+	case *BlueprintTransformResponse_Result:
+		transformed, err := serialisation.FromSchemaPB(result.Result.GetTransformedBlueprint())
+		if err != nil {
+			return nil, errorsv1.CreateGeneralError(
+				err,
+				errorsv1.PluginActionTransformerTransform,
+			)
+		}
+
+		diagnostics, err := sharedtypesv1.ToCoreDiagnostics(result.Result.GetDiagnostics())
 		if err != nil {
 			return nil, errorsv1.CreateGeneralError(
 				err,
@@ -118,6 +135,7 @@ func (p *transformerClientWrapper) Transform(
 
 		return &transform.SpecTransformerTransformOutput{
 			TransformedBlueprint: transformed,
+			Diagnostics:          diagnostics,
 		}, nil
 	case *BlueprintTransformResponse_ErrorResponse:
 		return nil, errorsv1.CreateErrorFromResponse(
