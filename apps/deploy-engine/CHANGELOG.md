@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.6.1...deploy-engine/v0.6.2) (2026-04-28)
+
+
+### Dependencies
+
+* **deploy-engine:** bump up blueprint and plugin framework libs ([52c3211](https://github.com/newstack-cloud/bluelink/commit/52c321170d776b86e851afcc43b4282f00c3e1fc))
+
 ## [0.6.1](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.6.0...deploy-engine/v0.6.1) (2026-04-26)
 
 
