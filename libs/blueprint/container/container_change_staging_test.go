@@ -38,9 +38,7 @@ const (
 const timeoutMessage = "timed out waiting for changes to be staged"
 
 // defaultDrainTimeout is the inactivity budget used by container test drain loops
-// (StageChanges / Deploy / Destroy fan-out channels). Sized to accommodate the
-// race-instrumented CI environment, where dead windows between channel messages
-// can comfortably exceed 60s on heavier fixtures and concurrency tests.
+// (StageChanges / Deploy / Destroy fan-out channels).
 const defaultDrainTimeout = 120 * time.Second
 
 type ContainerChangeStagingTestSuite struct {
