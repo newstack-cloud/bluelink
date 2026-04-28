@@ -235,6 +235,7 @@ type AbstractLinkGetCardinalityOutput struct {
 // a blueprint.
 type SpecTransformerTransformInput struct {
 	InputBlueprint     *schema.Blueprint
+	LinkGraph          linktypes.DeclaredLinkGraph
 	TransformerContext Context
 }
 
@@ -242,6 +243,7 @@ type SpecTransformerTransformInput struct {
 // which includes the expanded blueprint.
 type SpecTransformerTransformOutput struct {
 	TransformedBlueprint *schema.Blueprint
+	Diagnostics          []*core.Diagnostic
 }
 
 // AbstractResourceValidateInput provides the input required to validate

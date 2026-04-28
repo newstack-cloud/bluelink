@@ -1103,6 +1103,7 @@ func (l *defaultLoader) validateAndApplyTransforms(
 
 		output, err := transformer.Transform(ctx, &transform.SpecTransformerTransformInput{
 			InputBlueprint:     currentBlueprintSchema,
+			LinkGraph:          declaredLinkGraph,
 			TransformerContext: transformerCtx,
 		})
 		if err != nil {
@@ -1110,6 +1111,10 @@ func (l *defaultLoader) validateAndApplyTransforms(
 				append(validationErrors, err),
 			)
 		}
+		if output != nil && len(output.Diagnostics) > 0 {
+			transformDiagnostics = append(transformDiagnostics, output.Diagnostics...)
+		}
+
 		currentBlueprintSchema = output.TransformedBlueprint
 	}
 
