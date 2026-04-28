@@ -37,6 +37,12 @@ const (
 
 const timeoutMessage = "timed out waiting for changes to be staged"
 
+// defaultDrainTimeout is the inactivity budget used by container test drain loops
+// (StageChanges / Deploy / Destroy fan-out channels). Sized to accommodate the
+// race-instrumented CI environment, where dead windows between channel messages
+// can comfortably exceed 60s on heavier fixtures and concurrency tests.
+const defaultDrainTimeout = 120 * time.Second
+
 type ContainerChangeStagingTestSuite struct {
 	blueprint1Container           BlueprintContainer
 	blueprint2Container           BlueprintContainer
@@ -183,7 +189,7 @@ func (s *ContainerChangeStagingTestSuite) Test_stage_changes_to_existing_bluepri
 			// Increased timeout to allow for
 			// more time in constrained environments as this test
 			// has often timed out in CI environments.
-		case <-time.After(120 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -226,7 +232,7 @@ func (s *ContainerChangeStagingTestSuite) Test_stage_changes_to_existing_bluepri
 		case changeSet := <-channels.CompleteChan:
 			fullChangeSet = &changeSet
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -269,7 +275,7 @@ func (s *ContainerChangeStagingTestSuite) Test_stage_changes_for_a_new_blueprint
 		case changeSet := <-channels.CompleteChan:
 			fullChangeSet = &changeSet
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -303,7 +309,7 @@ func (s *ContainerChangeStagingTestSuite) Test_stage_changes_for_destroying_a_bl
 		case changeSet := <-channels.CompleteChan:
 			fullChangeSet = &changeSet
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -334,7 +340,7 @@ func (s *ContainerChangeStagingTestSuite) Test_stage_changes_fails_for_cyclic_de
 		case <-channels.LinkChangesChan:
 		case <-channels.CompleteChan:
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -368,7 +374,7 @@ func (s *ContainerChangeStagingTestSuite) Test_stage_changes_fails_when_max_blue
 		case <-channels.LinkChangesChan:
 		case <-channels.CompleteChan:
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -418,7 +424,7 @@ func (s *ContainerChangeStagingTestSuite) Test_stage_changes_when_removed_resour
 		case changeSet := <-channels.CompleteChan:
 			fullChangeSet = &changeSet
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -465,7 +471,7 @@ func (s *ContainerChangeStagingTestSuite) Test_stage_changes_when_removed_child_
 		case changeSet := <-channels.CompleteChan:
 			fullChangeSet = &changeSet
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -505,7 +511,7 @@ func (s *ContainerChangeStagingTestSuite) Test_stage_changes_for_blueprint_witho
 		case changeSet := <-channels.CompleteChan:
 			fullChangeSet = &changeSet
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}

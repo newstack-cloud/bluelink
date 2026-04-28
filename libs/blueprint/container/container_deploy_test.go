@@ -184,7 +184,7 @@ func (s *ContainerDeployTestSuite) Test_deploys_updates_to_existing_blueprint_in
 		case msg := <-channels.DeploymentUpdateChan:
 			deploymentUpdateMessages = append(deploymentUpdateMessages, msg)
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -254,7 +254,7 @@ func (s *ContainerDeployTestSuite) Test_deploys_updates_to_existing_blueprint_in
 		case msg := <-channels.DeploymentUpdateChan:
 			deploymentUpdateMessages = append(deploymentUpdateMessages, msg)
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -326,7 +326,7 @@ func (s *ContainerDeployTestSuite) Test_deploys_new_blueprint_instance() {
 		case msg := <-channels.DeploymentUpdateChan:
 			deploymentUpdateMessages = append(deploymentUpdateMessages, msg)
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -428,7 +428,7 @@ func (s *ContainerDeployTestSuite) Test_fails_to_deploy_blueprint_with_cycle() {
 			finishMsg = &msg
 		case <-channels.DeploymentUpdateChan:
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -475,7 +475,7 @@ func (s *ContainerDeployTestSuite) Test_fails_to_deploy_blueprint_instance_alrea
 			finishMsg = &msg
 		case <-channels.DeploymentUpdateChan:
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -525,10 +525,7 @@ func (s *ContainerDeployTestSuite) Test_force_deploys_blueprint_instance_stuck_i
 			finishMsg = &msg
 		case <-channels.DeploymentUpdateChan:
 		case err = <-channels.ErrChan:
-		// Force-deploy of a stuck "Updating" instance exercises the drain/recovery
-		// path, which can exceed the suite's standard 60s inactivity budget when
-		// race instrumentation is enabled in CI.
-		case <-time.After(120 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -579,7 +576,7 @@ func (s *ContainerDeployTestSuite) Test_context_cancellation_drains_in_progress_
 			finishMsg = &msg
 		case <-channels.DeploymentUpdateChan:
 		case channelErr = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			channelErr = errors.New(timeoutMessage)
 		}
 	}
@@ -633,7 +630,7 @@ func (s *ContainerDeployTestSuite) Test_context_timeout_during_deployment_finish
 			finishMsg = &msg
 		case <-channels.DeploymentUpdateChan:
 		case channelErr = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			channelErr = errors.New(timeoutMessage)
 		}
 	}
@@ -675,7 +672,7 @@ func (s *ContainerDeployTestSuite) stageChanges(
 			return changes, nil
 		case err := <-changeStagingChannels.ErrChan:
 			return nil, err
-		case <-time.After(120 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			return nil, errors.New(timeoutMessage)
 		}
 	}

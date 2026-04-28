@@ -276,7 +276,7 @@ func (s *LinkDeployerTestSuite) runDeployTest(
 				finishedMessage = &msg
 			}
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}

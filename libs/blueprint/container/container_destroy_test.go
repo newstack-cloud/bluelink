@@ -143,7 +143,7 @@ func (s *ContainerDestroyTestSuite) Test_destroys_blueprint_instance_with_child_
 		case msg := <-channels.DeploymentUpdateChan:
 			deploymentUpdateMessages = append(deploymentUpdateMessages, msg)
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -198,7 +198,7 @@ func (s *ContainerDestroyTestSuite) Test_destroys_blueprint_instance_with_child_
 		case msg := <-channels.DeploymentUpdateChan:
 			deploymentUpdateMessages = append(deploymentUpdateMessages, msg)
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -253,7 +253,7 @@ func (s *ContainerDestroyTestSuite) Test_destroys_blueprint_instance_as_deployme
 		case msg := <-channels.DeploymentUpdateChan:
 			deploymentUpdateMessages = append(deploymentUpdateMessages, msg)
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -302,7 +302,7 @@ func (s *ContainerDestroyTestSuite) Test_fails_to_destroys_blueprint_instance_du
 			finishedMessage = &msg
 		case <-channels.DeploymentUpdateChan:
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -349,7 +349,7 @@ func (s *ContainerDestroyTestSuite) Test_fails_to_destroys_blueprint_instance_du
 			finishedMessage = &msg
 		case <-channels.DeploymentUpdateChan:
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -396,7 +396,7 @@ func (s *ContainerDestroyTestSuite) Test_fails_to_destroy_blueprint_instance_alr
 			finishMsg = &msg
 		case <-channels.DeploymentUpdateChan:
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -445,7 +445,7 @@ func (s *ContainerDestroyTestSuite) Test_force_destroys_blueprint_instance_stuck
 		case msg := <-channels.DeploymentUpdateChan:
 			deploymentUpdateMessages = append(deploymentUpdateMessages, msg)
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -497,7 +497,7 @@ func (s *ContainerDestroyTestSuite) Test_force_destroys_blueprint_instance_despi
 			finishedMessage = &msg
 		case <-channels.DeploymentUpdateChan:
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
@@ -551,7 +551,7 @@ func (s *ContainerDestroyTestSuite) Test_context_cancellation_drains_in_progress
 			finishMsg = &msg
 		case <-channels.DeploymentUpdateChan:
 		case channelErr = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			channelErr = errors.New(timeoutMessage)
 		}
 	}
@@ -595,7 +595,7 @@ func (s *ContainerDestroyTestSuite) Test_context_timeout_during_destroy_finishes
 			finishMsg = &msg
 		case <-channels.DeploymentUpdateChan:
 		case channelErr = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			channelErr = errors.New(timeoutMessage)
 		}
 	}

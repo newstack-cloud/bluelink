@@ -45,7 +45,7 @@ func (s *ContainerDeployTestSuite) stageDestroyChanges(
 			return &changeSet, nil
 		case err := <-channels.ErrChan:
 			return nil, err
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			return nil, errors.New(timeoutMessage)
 		}
 	}
@@ -263,11 +263,6 @@ func (s *ContainerDeployTestSuite) loadBlueprintContainer(
 // DeploymentFinishedMessage arrives, forwarding through the other
 // per-element channels. Returns the finish message and any error surfaced
 // on ErrChan or a timeout sentinel.
-//
-// The inactivity budget is sized at 120s rather than the 60s used elsewhere
-// in the suite because concurrency tests serialise the claim loser behind
-// the winner, doubling the dead-window risk when race instrumentation is
-// enabled in CI.
 func collectDeployFinish(channels *DeployChannels) (*DeploymentFinishedMessage, error) {
 	for {
 		select {
@@ -279,7 +274,7 @@ func collectDeployFinish(channels *DeployChannels) (*DeploymentFinishedMessage, 
 			return &msg, nil
 		case err := <-channels.ErrChan:
 			return nil, err
-		case <-time.After(120 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			return nil, errors.New(timeoutMessage)
 		}
 	}

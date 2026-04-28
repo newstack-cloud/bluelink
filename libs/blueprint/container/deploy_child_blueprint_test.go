@@ -116,7 +116,7 @@ func (s *ChildBlueprintDeployerTestSuite) runDeployTest(
 		case msg := <-channels.LinkUpdateChan:
 			linkDeployUpdateMessages = append(linkDeployUpdateMessages, msg)
 		case err = <-channels.ErrChan:
-		case <-time.After(60 * time.Second):
+		case <-time.After(defaultDrainTimeout):
 			err = errors.New(timeoutMessage)
 		}
 	}
