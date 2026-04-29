@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.45.1](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.45.0...blueprint/v0.45.1) (2026-04-29)
+
+
+### Bug Fixes
+
+* **blueprint:** add missing output serialisation for sub value refs ([feaa0d5](https://github.com/newstack-cloud/bluelink/commit/feaa0d565af11ec5e1efdf95c8d3721746f51fbe))
+
 ## [0.45.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.44.0...blueprint/v0.45.0) (2026-04-28)
 
 
