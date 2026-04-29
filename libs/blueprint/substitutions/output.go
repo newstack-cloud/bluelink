@@ -53,6 +53,8 @@ func SubstitutionToString(substitutionContext string, substitution *Substitution
 		return subFunctionToString(substitutionContext, substitution.Function)
 	} else if substitution.Variable != nil {
 		return subVariableToString(substitution.Variable)
+	} else if substitution.ValueReference != nil {
+		return subValueRefToString(substitution.ValueReference)
 	} else if substitution.DataSourceProperty != nil {
 		return subDataSourcePropertyToString(substitution.DataSourceProperty)
 	} else if substitution.ResourceProperty != nil {
@@ -135,6 +137,19 @@ func subVariableToString(variable *SubstitutionVariable) (string, error) {
 	return "", errSerialiseSubstitutionInvalidVariableName(variable.VariableName)
 }
 
+func subValueRefToString(valueRef *SubstitutionValueReference) (string, error) {
+	path := "values"
+	if NamePattern.MatchString(valueRef.ValueName) {
+		path += fmt.Sprintf(".%s", valueRef.ValueName)
+	} else if NameStringLiteralPattern.MatchString(valueRef.ValueName) {
+		path += fmt.Sprintf("[\"%s\"]", valueRef.ValueName)
+	} else {
+		return "", errSerialiseSubstitutionInvalidValueReferenceName(valueRef.ValueName)
+	}
+
+	return propertyPathToString(path, valueRef.Path, errSerialiseSubstitutionInvalidPath)
+}
+
 func subDataSourcePropertyToString(prop *SubstitutionDataSourceProperty) (string, error) {
 	path := "datasources"
 	if NamePattern.MatchString(prop.DataSourceName) {
@@ -172,23 +187,33 @@ func SubResourcePropertyToString(prop *SubstitutionResourceProperty) (string, er
 		return "", errSerialiseSubstitutionInvalidResourceName(prop.ResourceName)
 	}
 
+	return propertyPathToString(path, prop.Path, errSerialiseSubstitutionInvalidPath)
+}
+
+func propertyPathToString(
+	base string,
+	propPath []*SubstitutionPathItem,
+	errFunc func(string, string, []error) error,
+) (string, error) {
 	errors := []error{}
-	rawPath := ""
-	for _, pathItem := range prop.Path {
+	var path strings.Builder
+	path.WriteString(base)
+	var rawPath strings.Builder
+	for _, pathItem := range propPath {
 		pathItemStr, err := propertyPathItemToString(pathItem)
 		if err != nil {
 			errors = append(errors, err)
 		} else {
-			path += pathItemStr
+			path.WriteString(pathItemStr)
 		}
-		rawPath += pathItemStr
+		rawPath.WriteString(pathItemStr)
 	}
 
 	if len(errors) > 0 {
-		return "", errSerialiseSubstitutionInvalidChildPath(rawPath, prop.ResourceName, errors)
+		return "", errFunc(rawPath.String(), base, errors)
 	}
 
-	return path, nil
+	return strings.TrimPrefix(path.String(), "."), nil
 }
 
 func propertyPathItemToString(pathItem *SubstitutionPathItem) (string, error) {
@@ -207,11 +232,12 @@ func propertyPathItemToString(pathItem *SubstitutionPathItem) (string, error) {
 // SubChildToString produces a string representation of a substitution
 // component that refers to a child blueprint export.
 func SubChildToString(child *SubstitutionChild) (string, error) {
-	path := "children"
+	var path strings.Builder
+	path.WriteString("children")
 	if NamePattern.MatchString(child.ChildName) {
-		path += fmt.Sprintf(".%s", child.ChildName)
+		fmt.Fprintf(&path, ".%s", child.ChildName)
 	} else if NameStringLiteralPattern.MatchString(child.ChildName) {
-		path += fmt.Sprintf("[\"%s\"]", child.ChildName)
+		fmt.Fprintf(&path, "[\"%s\"]", child.ChildName)
 	} else {
 		return "", errSerialiseSubstitutionInvalidChildName(child.ChildName)
 	}
@@ -220,60 +246,28 @@ func SubChildToString(child *SubstitutionChild) (string, error) {
 		return "", errSerialiseSubstitutionInvalidChildPath("", child.ChildName, []error{})
 	}
 
-	errors := []error{}
-	rawPath := ""
-	for _, pathItem := range child.Path {
-		pathItemStr, err := propertyPathItemToString(pathItem)
-		if err != nil {
-			errors = append(errors, err)
-		} else {
-			path += pathItemStr
-		}
-		rawPath += pathItemStr
-	}
-
-	if len(errors) > 0 {
-		return "", errSerialiseSubstitutionInvalidChildPath(rawPath, child.ChildName, errors)
-	}
-
-	return path, nil
+	return propertyPathToString(
+		path.String(),
+		child.Path,
+		errSerialiseSubstitutionInvalidChildPath,
+	)
 }
 
 // SubElemToString produces a string representation of a substitution
 // component that refers to the current element in an input array for
 // a resource template.
 func SubElemToString(elem *SubstitutionElemReference) (string, error) {
-	errors := []error{}
-	path := "elem"
-	rawPath := ""
-	for _, pathItem := range elem.Path {
-		pathItemStr, err := propertyPathItemToString(pathItem)
-		if err != nil {
-			errors = append(errors, err)
-		} else {
-			path += pathItemStr
-		}
-		rawPath += pathItemStr
-	}
+	var path strings.Builder
+	path.WriteString("elem")
 
-	if len(errors) > 0 {
-		return "", errSerialiseSubstitutionInvalidCurrentElementPath(rawPath, errors)
-	}
-
-	return path, nil
+	return propertyPathToString(
+		path.String(),
+		elem.Path,
+		errSerialiseSubstitutionInvalidCurrentElementPath,
+	)
 }
 
 // PropertyPathToString converts a property path to a string.
 func PropertyPathToString(path []*SubstitutionPathItem) (string, error) {
-	var b strings.Builder
-
-	for _, pathItem := range path {
-		pathItemStr, err := propertyPathItemToString(pathItem)
-		if err != nil {
-			return "", err
-		}
-		b.WriteString(pathItemStr)
-	}
-
-	return strings.TrimPrefix(b.String(), "."), nil
+	return propertyPathToString("", path, errSerialiseSubstitutionInvalidPath)
 }

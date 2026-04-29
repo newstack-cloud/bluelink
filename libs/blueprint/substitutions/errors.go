@@ -128,6 +128,18 @@ func errSerialiseSubstitutionInvalidResourceName(
 	}
 }
 
+func errSerialiseSubstitutionInvalidValueReferenceName(
+	valueReferenceName string,
+) error {
+	return &errors.SerialiseError{
+		ReasonCode: ErrorReasonCodeInvalidReferenceSub,
+		Err: fmt.Errorf(
+			"validation failed due to invalid value reference name \"%s\" having been provided in a reference substitution",
+			valueReferenceName,
+		),
+	}
+}
+
 func errSerialiseSubstitutionInvalidChildName(
 	childName string,
 ) error {
@@ -173,8 +185,45 @@ func errSerialiseSubstitutionInvalidChildPath(
 	}
 }
 
+func errSerialiseSubstitutionInvalidPath(
+	path string,
+	base string,
+	pathItemErrors []error,
+) error {
+	childErrStr := ""
+	for _, err := range pathItemErrors {
+		childErrStr += fmt.Sprintf(childErrorsFormatStr, err.Error())
+	}
+
+	if len(path) == 0 {
+		return &errors.SerialiseError{
+			ReasonCode: ErrorReasonCodeInvalidReferenceSub,
+			Err: fmt.Errorf(
+				"validation failed due to an empty path having been provided for "+
+					"base \"%s\" in a reference substitution, a field must be specified%s",
+				base,
+				childErrStr,
+			),
+		}
+	}
+
+	return &errors.LoadError{
+		ReasonCode: ErrorReasonCodeInvalidReferenceSub,
+		Err: fmt.Errorf(
+			"validation failed due to invalid path \"%s\" for base \"%s\" having been provided in a reference substitution%s",
+			path,
+			base,
+			childErrStr,
+		),
+	}
+}
+
 func errSerialiseSubstitutionInvalidCurrentElementPath(
 	path string,
+	// Unused arg to meet the errFunc signature required by propertyPathToString,
+	// which allows for more specific error messages to be produced for
+	// invalid paths in different substitution components.
+	_ string,
 	pathItemErrors []error,
 ) error {
 	childErrStr := ""

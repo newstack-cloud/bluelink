@@ -2283,3 +2283,117 @@ func (s *ParseSubstitutionsTestSuite) Test_correctly_parses_mixed_quote_bracket_
 		},
 	})
 }
+
+func (s *ParseSubstitutionsTestSuite) Test_correctly_serialises_a_string_with_a_value_ref_sub_1(c *C) {
+	arrIndex := int64(3)
+	output, err := SubstitutionsToString("", &StringOrSubstitutions{
+		Values: []*StringOrSubstitution{
+			{
+				SubstitutionValue: &Substitution{
+					ValueReference: &SubstitutionValueReference{
+						ValueName: "s3Bucket",
+						Path: []*SubstitutionPathItem{
+							{FieldName: "info"},
+							{FieldName: "objectConfig"},
+							{ArrayIndex: &arrIndex},
+						},
+					},
+				},
+			},
+		},
+	})
+	c.Assert(err, IsNil)
+	c.Assert(output, Equals, `${values.s3Bucket.info.objectConfig[3]}`)
+}
+
+func (s *ParseSubstitutionsTestSuite) Test_correctly_serialises_a_string_with_a_value_ref_sub_2(c *C) {
+	output, err := SubstitutionsToString("", &StringOrSubstitutions{
+		Values: []*StringOrSubstitution{
+			{
+				SubstitutionValue: &Substitution{
+					ValueReference: &SubstitutionValueReference{
+						ValueName: "queueUrl",
+						Path:      []*SubstitutionPathItem{},
+					},
+				},
+			},
+		},
+	})
+	c.Assert(err, IsNil)
+	c.Assert(output, Equals, `${values.queueUrl}`)
+}
+
+func (s *ParseSubstitutionsTestSuite) Test_correctly_serialises_a_string_with_a_value_ref_sub_3(c *C) {
+	// Value names containing characters not permitted by NamePattern
+	// (e.g. a '.') must fall back to the bracketed string-literal form.
+	output, err := SubstitutionsToString("", &StringOrSubstitutions{
+		Values: []*StringOrSubstitution{
+			{
+				SubstitutionValue: &Substitution{
+					ValueReference: &SubstitutionValueReference{
+						ValueName: "core.queueUrl.v1",
+						Path: []*SubstitutionPathItem{
+							{FieldName: "endpoint.v2"},
+						},
+					},
+				},
+			},
+		},
+	})
+	c.Assert(err, IsNil)
+	c.Assert(output, Equals, `${values["core.queueUrl.v1"]["endpoint.v2"]}`)
+}
+
+func (s *ParseSubstitutionsTestSuite) Test_correctly_serialises_a_string_mixing_literals_and_value_ref_sub(c *C) {
+	prefix := "queue-"
+	suffix := "-prod"
+	output, err := SubstitutionsToString("", &StringOrSubstitutions{
+		Values: []*StringOrSubstitution{
+			{StringValue: &prefix},
+			{
+				SubstitutionValue: &Substitution{
+					ValueReference: &SubstitutionValueReference{
+						ValueName: "queueName",
+						Path:      []*SubstitutionPathItem{},
+					},
+				},
+			},
+			{StringValue: &suffix},
+		},
+	})
+	c.Assert(err, IsNil)
+	c.Assert(output, Equals, `queue-${values.queueName}-prod`)
+}
+
+func (s *ParseSubstitutionsTestSuite) Test_fails_to_serialise_a_value_ref_sub_with_an_invalid_value_name(c *C) {
+	_, err := SubstitutionsToString("", &StringOrSubstitutions{
+		Values: []*StringOrSubstitution{
+			{
+				SubstitutionValue: &Substitution{
+					ValueReference: &SubstitutionValueReference{
+						// "$" is not permitted in either NamePattern or
+						// NameStringLiteralPattern, so serialisation must fail.
+						ValueName: "invalid$name",
+						Path:      []*SubstitutionPathItem{},
+					},
+				},
+			},
+		},
+	})
+	c.Assert(err, NotNil)
+
+	serialiseErr, isSerialiseErr := err.(*errors.SerialiseError)
+	c.Assert(isSerialiseErr, Equals, true)
+	c.Assert(serialiseErr.ReasonCode, Equals, ErrorReasonCodeInvalidReferenceSub)
+	c.Assert(serialiseErr.ChildErrors, HasLen, 1)
+
+	childErr, isChildErr := serialiseErr.ChildErrors[0].(*errors.SerialiseError)
+	c.Assert(isChildErr, Equals, true)
+	c.Assert(childErr.ReasonCode, Equals, ErrorReasonCodeInvalidReferenceSub)
+	c.Assert(
+		childErr.Err.Error(),
+		Equals,
+		"validation failed due to invalid value reference name \"invalid$name\""+
+			" having been provided in a reference substitution",
+	)
+}
