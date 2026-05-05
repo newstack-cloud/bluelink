@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.6.0...plugin-framework/v0.7.0) (2026-05-05)
+
+
+### Features
+
+* **plugin-framework:** add utils and sub-framework for transformer plugins ([b7037ce](https://github.com/newstack-cloud/bluelink/commit/b7037ce10d8397101243e24878197625fc76896d))
+
 ## [0.6.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.5.2...plugin-framework/v0.6.0) (2026-04-28)
 
 
