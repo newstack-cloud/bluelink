@@ -1,4 +1,4 @@
-package pluginutils
+package transformutils
 
 import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"

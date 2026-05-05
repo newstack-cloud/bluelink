@@ -11,7 +11,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sdk/transformerv1"
 )
 
-func abstractResourceHandler() transform.AbstractResource {
+func abstractResourceHandler() *transformerv1.AbstractResourceDefinition {
 	descriptionInfo := AbstractResourceHandlerTypeDescription()
 	examples := AbstractResourceHandlerExamples()
 	return &transformerv1.AbstractResourceDefinition{
@@ -22,11 +22,11 @@ func abstractResourceHandler() transform.AbstractResource {
 		FormattedDescription: descriptionInfo.MarkdownDescription,
 		PlainTextSummary:     descriptionInfo.PlainTextSummary,
 		FormattedSummary:     descriptionInfo.MarkdownSummary,
-		PlainTextExamples:  examples.PlainTextExamples,
-		FormattedExamples:  examples.MarkdownExamples,
-		IDField:            "id",
-		CustomValidateFunc: customValidateHandler,
-		CommonTerminal:     true,
+		PlainTextExamples:    examples.PlainTextExamples,
+		FormattedExamples:    examples.MarkdownExamples,
+		IDField:              "id",
+		CustomValidateFunc:   customValidateHandler,
+		CommonTerminal:       true,
 	}
 }
 

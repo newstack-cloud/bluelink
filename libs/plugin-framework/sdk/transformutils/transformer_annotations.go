@@ -1,8 +1,9 @@
-package pluginutils
+package transformutils
 
 import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sdk/pluginutils"
 )
 
 const (
@@ -48,9 +49,9 @@ func TransformerBaseAnnotations(
 ) *schema.StringOrSubstitutionsMap {
 	return &schema.StringOrSubstitutionsMap{
 		Values: map[string]*substitutions.StringOrSubstitutions{
-			AnnotationSourceAbstractName: StringToSubstitutions(input.AbstractResourceName),
-			AnnotationSourceAbstractType: StringToSubstitutions(input.AbstractResourceType),
-			AnnotationResourceCategory:   StringToSubstitutions(input.ResourceCategory),
+			AnnotationSourceAbstractName: pluginutils.StringToSubstitutions(input.AbstractResourceName),
+			AnnotationSourceAbstractType: pluginutils.StringToSubstitutions(input.AbstractResourceType),
+			AnnotationResourceCategory:   pluginutils.StringToSubstitutions(input.ResourceCategory),
 		},
 	}
 }

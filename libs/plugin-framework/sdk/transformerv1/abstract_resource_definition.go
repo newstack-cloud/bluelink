@@ -6,6 +6,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sdk/transformutils"
 )
 
 // AbstractResourceDefinition is a template to be used for defining abstract resources
@@ -92,6 +93,44 @@ type AbstractResourceDefinition struct {
 		ctx context.Context,
 		input *transform.AbstractResourceValidateInput,
 	) (*transform.AbstractResourceValidateOutput, error)
+
+	// Resolve is a target-agnostic resolver function for the abstract
+	// resource type. This is auto-registered by the framework against
+	// this definition's Type when the parent TransformerPluginDefinition is
+	// first used.
+	Resolve transformutils.Resolver
+
+	// PropertyMaps registers declarative property maps per target.
+	// PropertyMaps are consumed in two places:
+	//   - The capability matrix is auto-derived from each map (the
+	//     SupportedAbstractPaths set is the union of Renames keys,
+	//     ValueRefs keys, and Custom rule MatchPaths).
+	//   - transformutils.RewriterFromPropertyMap converts a map plus a
+	//     concrete-naming function into a RewriterRegistration suitable
+	//     for the Rewriters field below.
+	// PropertyMaps alone do not produce a rewriter — concrete naming is
+	// per-target and must be supplied via RewriterFromPropertyMap (or a
+	// hand-written TypedRewriter factory).
+	PropertyMaps map[string]transformutils.PropertyMap
+
+	// Emitters registers per-target emit functions.
+	// Each value is expected to be a typed-emitter registration function
+	// produced by transformutils.TypedEmitter[T] to enable your emitter functions
+	// to be written with concrete resolved types while maintaining type safety
+	// in the registry.
+	Emitters map[string]transformutils.EmitterRegistration
+
+	// Rewriters registers per-target rewriter factories.
+	// Each value is a RewriterRegistration produced by either:
+	//   - transformutils.RewriterFromPropertyMap[T] — when rewriting is
+	//     fully described by a PropertyMap plus a per-target concrete
+	//     name. This is the typical path.
+	//   - transformutils.TypedRewriter[T] — when you need a hand-written
+	//     factory, e.g. compound primaries or multi-rewriter contributions.
+	// A target with no Rewriters entry will not have any rewriter
+	// registered for that target — a PropertyMap on its own does not
+	// auto-register.
+	Rewriters map[string]transformutils.RewriterRegistration
 }
 
 func (r *AbstractResourceDefinition) CustomValidate(
