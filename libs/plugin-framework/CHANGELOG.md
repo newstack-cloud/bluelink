@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.7.0...plugin-framework/v0.8.0) (2026-05-07)
+
+
+### Features
+
+* **plugin-framework:** add config extraction helpers ([059f340](https://github.com/newstack-cloud/bluelink/commit/059f3400d4eaa63f87877c4d25b52ac6d0a5bca8))
+* **plugin-framework:** add helpers to extract config maps and sequences ([757c568](https://github.com/newstack-cloud/bluelink/commit/757c5686f7cf38c10249bf0f6b2361391be63080))
+
 ## [0.7.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.6.0...plugin-framework/v0.7.0) (2026-05-05)
 
 
