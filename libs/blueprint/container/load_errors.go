@@ -66,6 +66,13 @@ const (
 	// transformers that aren't supported by the blueprint loader
 	// used to parse the schema.
 	ErrorReasonMissingTransformers errors.ErrorReasonCode = "missing_transformers"
+	// ErrorReasonCodeTransformValidationErrors is provided when one or
+	// more transformers produced error-level diagnostics during the
+	// transform/emit phase. Promoting these to load errors prevents the
+	// deploy engine from acting on a partially expanded blueprint when a
+	// transformer signals a fatal user-input problem (for example, an
+	// unsupported runtime) via diagnostics rather than a Go error.
+	ErrorReasonCodeTransformValidationErrors errors.ErrorReasonCode = "transform_validation_errors"
 )
 
 func errUnsupportedSpecFileExtension(filePath string) error {

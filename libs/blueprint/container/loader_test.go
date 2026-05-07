@@ -29,6 +29,8 @@ type LoaderTestSuite struct {
 	loaderErrorLinks             Loader
 	loaderWarningLinks           Loader
 	loaderGoErrorLinks           Loader
+	loaderErrorEmit              Loader
+	loaderWarningEmit            Loader
 	providersWithoutCore         map[string]provider.Provider
 	specTransformers             map[string]transform.SpecTransformer
 	logger                       core.Logger
@@ -61,6 +63,8 @@ func (s *LoaderTestSuite) SetupSuite() {
 		"transform-error-links":       "__testdata/loader/transform-error-links-blueprint.yml",
 		"transform-warning-links":     "__testdata/loader/transform-warning-links-blueprint.yml",
 		"transform-go-error-links":    "__testdata/loader/transform-go-error-links-blueprint.yml",
+		"transform-error-emit":        "__testdata/loader/transform-error-emit-blueprint.yml",
+		"transform-warning-emit":      "__testdata/loader/transform-warning-emit-blueprint.yml",
 	}
 	s.specFixtureSchemas = make(map[string]*schema.Blueprint)
 
@@ -164,6 +168,28 @@ func (s *LoaderTestSuite) SetupSuite() {
 		providers,
 		map[string]transform.SpecTransformer{
 			"test-go-error-links-2024": &generalErrorLinksTransformer{},
+		},
+		stateContainer,
+		newFSChildResolver(),
+		WithLoaderTransformSpec(true),
+		WithLoaderRefChainCollectorFactory(refgraph.NewRefChainCollector),
+		WithLoaderLogger(logger),
+	)
+	s.loaderErrorEmit = NewDefaultLoader(
+		providers,
+		map[string]transform.SpecTransformer{
+			"test-error-emit-2024": &errorEmitTransformer{},
+		},
+		stateContainer,
+		newFSChildResolver(),
+		WithLoaderTransformSpec(true),
+		WithLoaderRefChainCollectorFactory(refgraph.NewRefChainCollector),
+		WithLoaderLogger(logger),
+	)
+	s.loaderWarningEmit = NewDefaultLoader(
+		providers,
+		map[string]transform.SpecTransformer{
+			"test-warning-emit-2024": &warningEmitTransformer{},
 		},
 		stateContainer,
 		newFSChildResolver(),
@@ -458,6 +484,151 @@ func (s *LoaderTestSuite) Test_reports_error_when_transformer_validate_links_ret
 	s.Require().Error(err)
 	unpackedErr, _ := internal.UnpackError(err)
 	s.Assert().Contains(unpackedErr.Error(), "internal transformer error during link validation")
+}
+
+func (s *LoaderTestSuite) Test_Load_returns_error_when_transformer_emits_error_diagnostic() {
+	container, err := s.loaderErrorEmit.Load(
+		context.TODO(),
+		s.specFixtureFiles["transform-error-emit"],
+		createParams(),
+	)
+	s.Require().Error(err)
+	s.Assert().Nil(container)
+	loadErr, isLoadErr := internal.UnpackLoadError(err)
+	s.Require().True(isLoadErr)
+	s.Assert().Equal(
+		ErrorReasonCodeTransformValidationErrors,
+		loadErr.ReasonCode,
+	)
+	unpackedErr, _ := internal.UnpackError(err)
+	s.Assert().Contains(unpackedErr.Error(), "unsupported runtime in resource saveOrderFunction")
+}
+
+func (s *LoaderTestSuite) Test_LoadString_returns_error_when_transformer_emits_error_diagnostic() {
+	container, err := s.loaderErrorEmit.LoadString(
+		context.TODO(),
+		s.specFixtures["transform-error-emit"],
+		schema.YAMLSpecFormat,
+		createParams(),
+	)
+	s.Require().Error(err)
+	s.Assert().Nil(container)
+	loadErr, isLoadErr := internal.UnpackLoadError(err)
+	s.Require().True(isLoadErr)
+	s.Assert().Equal(
+		ErrorReasonCodeTransformValidationErrors,
+		loadErr.ReasonCode,
+	)
+	unpackedErr, _ := internal.UnpackError(err)
+	s.Assert().Contains(unpackedErr.Error(), "unsupported runtime in resource saveOrderFunction")
+}
+
+func (s *LoaderTestSuite) Test_LoadFromSchema_returns_error_when_transformer_emits_error_diagnostic() {
+	blueprintSchema, err := schema.LoadString(
+		s.specFixtures["transform-error-emit"],
+		schema.YAMLSpecFormat,
+	)
+	s.Require().NoError(err)
+
+	container, err := s.loaderErrorEmit.LoadFromSchema(
+		context.TODO(),
+		blueprintSchema,
+		createParams(),
+	)
+	s.Require().Error(err)
+	s.Assert().Nil(container)
+	loadErr, isLoadErr := internal.UnpackLoadError(err)
+	s.Require().True(isLoadErr)
+	s.Assert().Equal(
+		ErrorReasonCodeTransformValidationErrors,
+		loadErr.ReasonCode,
+	)
+	unpackedErr, _ := internal.UnpackError(err)
+	s.Assert().Contains(unpackedErr.Error(), "unsupported runtime in resource saveOrderFunction")
+}
+
+func (s *LoaderTestSuite) Test_Validate_returns_diagnostics_when_transformer_emits_error_diagnostic() {
+	result, err := s.loaderErrorEmit.Validate(
+		context.TODO(),
+		s.specFixtureFiles["transform-error-emit"],
+		createParams(),
+	)
+	s.Require().NoError(err)
+	s.Require().NotNil(result)
+	s.Assert().True(
+		hasDiagnosticWithMessage(
+			result.Diagnostics,
+			core.DiagnosticLevelError,
+			"unsupported runtime in resource saveOrderFunction",
+		),
+		"expected error diagnostic from transformer emit phase",
+	)
+}
+
+func (s *LoaderTestSuite) Test_ValidateString_returns_diagnostics_when_transformer_emits_error_diagnostic() {
+	result, err := s.loaderErrorEmit.ValidateString(
+		context.TODO(),
+		s.specFixtures["transform-error-emit"],
+		schema.YAMLSpecFormat,
+		createParams(),
+	)
+	s.Require().NoError(err)
+	s.Require().NotNil(result)
+	s.Assert().True(
+		hasDiagnosticWithMessage(
+			result.Diagnostics,
+			core.DiagnosticLevelError,
+			"unsupported runtime in resource saveOrderFunction",
+		),
+		"expected error diagnostic from transformer emit phase",
+	)
+}
+
+func (s *LoaderTestSuite) Test_ValidateFromSchema_returns_diagnostics_when_transformer_emits_error_diagnostic() {
+	blueprintSchema, err := schema.LoadString(
+		s.specFixtures["transform-error-emit"],
+		schema.YAMLSpecFormat,
+	)
+	s.Require().NoError(err)
+
+	result, err := s.loaderErrorEmit.ValidateFromSchema(
+		context.TODO(),
+		blueprintSchema,
+		createParams(),
+	)
+	s.Require().NoError(err)
+	s.Require().NotNil(result)
+	s.Assert().True(
+		hasDiagnosticWithMessage(
+			result.Diagnostics,
+			core.DiagnosticLevelError,
+			"unsupported runtime in resource saveOrderFunction",
+		),
+		"expected error diagnostic from transformer emit phase",
+	)
+}
+
+func (s *LoaderTestSuite) Test_Load_does_not_halt_for_warning_emit_diagnostic() {
+	container, err := s.loaderWarningEmit.Load(
+		context.TODO(),
+		s.specFixtureFiles["transform-warning-emit"],
+		createParams(),
+	)
+	s.Require().NoError(err)
+	s.Assert().NotNil(container)
+}
+
+func hasDiagnosticWithMessage(
+	diagnostics []*core.Diagnostic,
+	level core.DiagnosticLevel,
+	message string,
+) bool {
+	for _, diag := range diagnostics {
+		if diag.Level == level && strings.Contains(diag.Message, message) {
+			return true
+		}
+	}
+	return false
 }
 
 func TestLoaderTestSuite(t *testing.T) {

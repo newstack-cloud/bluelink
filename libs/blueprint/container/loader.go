@@ -601,8 +601,14 @@ func (l *defaultLoader) Load(ctx context.Context, blueprintSpecFile string, para
 	loadInfo := &loadBlueprintInfo{
 		specOrFilePath: blueprintSpecFile,
 	}
-	container, _, err := l.loadSpecAndLinkInfo(ctx, loadInfo, params, schema.Load, deriveSpecFormat)
-	return container, err
+	container, diagnostics, err := l.loadSpecAndLinkInfo(ctx, loadInfo, params, schema.Load, deriveSpecFormat)
+	if err != nil {
+		return container, err
+	}
+	if loadErr := promoteErrorDiagnostics(diagnostics); loadErr != nil {
+		return nil, loadErr
+	}
+	return container, nil
 }
 
 func (l *defaultLoader) Validate(
@@ -1638,8 +1644,14 @@ func (l *defaultLoader) LoadString(
 	loadInfo := &loadBlueprintInfo{
 		specOrFilePath: blueprintSpec,
 	}
-	container, _, err := l.loadSpecAndLinkInfo(ctx, loadInfo, params, schema.LoadString, predefinedFormatFactory(inputFormat))
-	return container, err
+	container, diagnostics, err := l.loadSpecAndLinkInfo(ctx, loadInfo, params, schema.LoadString, predefinedFormatFactory(inputFormat))
+	if err != nil {
+		return container, err
+	}
+	if loadErr := promoteErrorDiagnostics(diagnostics); loadErr != nil {
+		return nil, loadErr
+	}
+	return container, nil
 }
 
 func (l *defaultLoader) ValidateString(
@@ -1674,14 +1686,20 @@ func (l *defaultLoader) LoadFromSchema(
 	loadInfo := &loadBlueprintInfo{
 		preloadedSchema: blueprintSchema,
 	}
-	container, _, err := l.loadSpecAndLinkInfo(
+	container, diagnostics, err := l.loadSpecAndLinkInfo(
 		ctx,
 		loadInfo,
 		params,
 		/* schemaLoader */ nil,
 		/* formatLoader */ nil,
 	)
-	return container, err
+	if err != nil {
+		return container, err
+	}
+	if loadErr := promoteErrorDiagnostics(diagnostics); loadErr != nil {
+		return nil, loadErr
+	}
+	return container, nil
 }
 
 func (l *defaultLoader) ValidateFromSchema(
@@ -1710,6 +1728,17 @@ func (l *defaultLoader) ValidateFromSchema(
 		Schema:      container.BlueprintSpec().Schema(),
 		LinkInfo:    container.SpecLinkInfo(),
 	}, nil
+}
+
+// Halt loads on error-level diagnostics from transformer plugins
+// so the deploy engine never sees a partial blueprint as a result
+// of a partial transformation with errors.
+func promoteErrorDiagnostics(diagnostics []*bpcore.Diagnostic) error {
+	_, err := validation.ExtractDiagnosticsAndErrors(
+		diagnostics,
+		ErrorReasonCodeTransformValidationErrors,
+	)
+	return err
 }
 
 func loadBlueprintSpec(
