@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.4.4...deploy-engine-client/v0.5.0) (2026-05-09)
+
+
+### Features
+
+* **deploy-engine-client:** add validation loader options ([2c8975a](https://github.com/newstack-cloud/bluelink/commit/2c8975a8efbff6d4dde65989b2ddbfb40df08087))
+
 ## [0.4.4](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.4.3...deploy-engine-client/v0.4.4) (2026-04-28)
 
 
