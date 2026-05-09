@@ -197,23 +197,80 @@ func (c *defaultChangeStagingState) MustRecreateResourceOnRemovedDependencies(
 	return false
 }
 
+// CountPendingLinksForGroup returns the number of one-endpoint-in-group
+// pending links that will be unblocked (and therefore staged) by
+// processing the resources in this group.
+//
+// A link contributes to the count only when:
+//  1. Exactly one of its resources is in this group (links with both
+//     resources in the group are counted by countPendingLinksContainedInGroup
+//     instead, to avoid double-counting).
+//  2. The resource NOT in this group has already completed in an earlier
+//     group (i.e. its resourceXPending flag is false).
+//
+// Links whose other endpoint sits in a *later* group must NOT be counted
+// here — those will only be staged when that later group runs, so
+// counting them here makes the listener wait for messages that will
+// not arrive in this group, hanging the staging process.
+//
+// Each link is counted at most once even when both endpoints iterate it
+// via resourceNameLinkMap.
 func (c *defaultChangeStagingState) CountPendingLinksForGroup(group []*DeploymentNode) int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	groupResources := make(map[string]bool, len(group))
+	for _, node := range group {
+		if node.Type() == DeploymentNodeTypeResource && node.ChainLinkNode != nil {
+			groupResources[node.ChainLinkNode.ResourceName] = true
+		}
+	}
+
+	counted := make(map[string]bool)
 	count := 0
 	for _, node := range group {
-		if node.Type() == DeploymentNodeTypeResource {
-			pendingLinkNames := c.resourceNameLinkMap[node.ChainLinkNode.ResourceName]
-			for _, linkName := range pendingLinkNames {
-				if c.pendingLinks[linkName].linkPending {
-					count += 1
-				}
+		if node.Type() != DeploymentNodeTypeResource || node.ChainLinkNode == nil {
+			continue
+		}
+		pendingLinkNames := c.resourceNameLinkMap[node.ChainLinkNode.ResourceName]
+		for _, linkName := range pendingLinkNames {
+			if counted[linkName] {
+				continue
 			}
+			pl, ok := c.pendingLinks[linkName]
+			if !ok || !pl.linkPending {
+				continue
+			}
+			if !pendingLinkUnblockedByGroup(pl, groupResources) {
+				continue
+			}
+			counted[linkName] = true
+			count += 1
 		}
 	}
 
 	return count
+}
+
+// Reports whether processing this group will
+// stage the given pending link. The link is staged if exactly one
+// resource is in the group and the other has already completed (so
+// processing the group's resource flips both resources to non-pending).
+// Both-in-group links are excluded here so they can be tallied by
+// countPendingLinksContainedInGroup without double-counting.
+func pendingLinkUnblockedByGroup(pl *LinkPendingCompletion, groupResources map[string]bool) bool {
+	inGroupA := groupResources[pl.resourceANode.ResourceName]
+	inGroupB := groupResources[pl.resourceBNode.ResourceName]
+	if inGroupA && inGroupB {
+		return false
+	}
+	if !inGroupA && !inGroupB {
+		return false
+	}
+	if inGroupA {
+		return !pl.resourceBPending
+	}
+	return !pl.resourceAPending
 }
 
 func (c *defaultChangeStagingState) ApplyLinkChanges(changes LinkChangesMessage) {
