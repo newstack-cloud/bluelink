@@ -81,28 +81,36 @@ func (c *defaultBlueprintContainer) Deploy(
 	}
 
 	resourceRegistry := c.resourceRegistry.WithParams(paramOverrides)
-	go c.deploy(
-		ctxWithInstanceID,
-		&DeployInput{
-			InstanceID:             instanceID,
-			InstanceName:           input.InstanceName,
-			Changes:                input.Changes,
-			Rollback:               input.Rollback,
-			Force:                  input.Force,
-			TaggingConfig:          input.TaggingConfig,
-			ProviderMetadataLookup: input.ProviderMetadataLookup,
-			DrainTimeout:           input.DrainTimeout,
-		},
-		rewiredChannels,
-		state,
-		isNewInstance,
-		initialised,
-		&deployDeps{
-			resourceRegistry,
-			deployLogger,
-			paramOverrides,
-		},
-	)
+	// deployDone is closed when c.deploy returns — used by the
+	// interceptor below to know that no further events will arrive
+	// (which is the only way to detect a deploy that exited via an
+	// ErrChan path without sending FinishChan).
+	deployDone := make(chan struct{})
+	go func() {
+		defer close(deployDone)
+		c.deploy(
+			ctxWithInstanceID,
+			&DeployInput{
+				InstanceID:             instanceID,
+				InstanceName:           input.InstanceName,
+				Changes:                input.Changes,
+				Rollback:               input.Rollback,
+				Force:                  input.Force,
+				TaggingConfig:          input.TaggingConfig,
+				ProviderMetadataLookup: input.ProviderMetadataLookup,
+				DrainTimeout:           input.DrainTimeout,
+			},
+			rewiredChannels,
+			state,
+			isNewInstance,
+			initialised,
+			&deployDeps{
+				resourceRegistry,
+				deployLogger,
+				paramOverrides,
+			},
+		)
+	}()
 
 	// Intercept the top-level instance deployment events
 	// to ensure that the instance state is updated with status information
@@ -129,6 +137,7 @@ func (c *defaultBlueprintContainer) Deploy(
 		rewiredChannels,
 		channels,
 		resourceRegistry,
+		deployDone,
 	)
 
 	return nil
@@ -487,10 +496,27 @@ func (c *defaultBlueprintContainer) saveInstanceDeploymentStateAndCleanup(
 	listenToChannels *DeployChannels,
 	forwardToChannels *DeployChannels,
 	resourceRegistry resourcehelpers.Registry,
+	deployDone <-chan struct{},
 ) {
+	// Always release resource locks held by this deploy when the
+	// interceptor exits, regardless of how it terminates. Without this,
+	// the locks stay held forever on the orphan-deploy exit paths
+	// detected via deployDone below.
+	defer resourceRegistry.ReleaseResourceLocks(ctx, instanceID)
+
 	finished := false
 	for !finished {
 		select {
+		case <-deployDone:
+			// The deploy goroutine has returned. If it sent FinishChan
+			// before returning, the unbuffered chan send would have
+			// completed before close(deployDone) ran (the sender blocks
+			// until we read), so the FinishChan branch below would
+			// already have fired and we would not be here. Reaching
+			// this branch means the deploy exited via an ErrChan path
+			// (or similar) without sending FinishChan; nothing more to
+			// wait for.
+			return
 		case msg := <-listenToChannels.DeploymentUpdateChan:
 			// Some status updates will have already been persisted at the point the message is sent.
 			// This is especially important for atomic status changes
@@ -519,13 +545,6 @@ func (c *defaultBlueprintContainer) saveInstanceDeploymentStateAndCleanup(
 				ctx,
 				instanceID,
 				statusInfo,
-			)
-			// Regardless of whether or not deployment persistence
-			// was successful, we need to clean up all resource locks
-			// acquired by the deployment process for the current instance ID.
-			resourceRegistry.ReleaseResourceLocks(
-				ctx,
-				instanceID,
 			)
 			if err != nil {
 				forwardToChannels.ErrChan <- err

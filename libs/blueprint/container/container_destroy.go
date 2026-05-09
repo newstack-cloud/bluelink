@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
@@ -369,6 +370,20 @@ func (c *defaultBlueprintContainer) removeGroupedElements(
 	deployCtx *DeployContext,
 ) bool {
 	internalChannels := CreateDeployChannels()
+	// Track every destroyer/retainer goroutine spawned via removeGroupElements
+	// so the background drainer below can keep reading internalChannels
+	// until those goroutines finish, even when their work is long-running
+	// (e.g. a provider Destroy call lasting minutes). Without tracking,
+	// destroyer goroutines that emit a message after the listener exits
+	// (drain deadline / context cancel) block forever on chan send to a
+	// reader that is no longer there, leaking goroutines permanently.
+	removalGoroutines := &sync.WaitGroup{}
+	defer func() {
+		// Drain in the background so removeGroupedElements (and Deploy /
+		// Destroy that called started the process) returns promptly. The drainer keeps
+		// reading until every tracked destroyer reports Done.
+		go drainRemovalChannelsUntilDone(internalChannels, removalGoroutines)
+	}()
 
 	stopProcessing := false
 	i := 0
@@ -383,6 +398,7 @@ func (c *defaultBlueprintContainer) removeGroupedElements(
 				DeployContextWithChannels(deployCtx, internalChannels),
 				i,
 			),
+			removalGoroutines,
 		)
 
 		// listenToAndProcessGroupRemovals handles errors internally via drain
@@ -398,6 +414,34 @@ func (c *defaultBlueprintContainer) removeGroupedElements(
 	}
 
 	return stopProcessing
+}
+
+// Consumes pending sends on the internal
+// removal channels until every tracked destroyer/retainer goroutine has
+// finished. This unblocks senders that hit a chan-send after the
+// listener exited, including senders whose work runs for many minutes
+// inside a slow provider call. The drainer terminates exactly when the
+// tracked goroutines do, never on a fixed timeout, so long-running
+// destroys cannot trigger a premature exit that re-introduces the leak.
+func drainRemovalChannelsUntilDone(
+	internalChannels *DeployChannels,
+	removalGoroutines *sync.WaitGroup,
+) {
+	done := make(chan struct{})
+	go func() {
+		removalGoroutines.Wait()
+		close(done)
+	}()
+	for {
+		select {
+		case <-done:
+			return
+		case <-internalChannels.ResourceUpdateChan:
+		case <-internalChannels.ChildUpdateChan:
+		case <-internalChannels.LinkUpdateChan:
+		case <-internalChannels.ErrChan:
+		}
+	}
 }
 
 func (c *defaultBlueprintContainer) listenToAndProcessGroupRemovals(
@@ -742,6 +786,7 @@ func (c *defaultBlueprintContainer) removeGroupElements(
 	instanceName string,
 	group []state.Element,
 	deployCtx *DeployContext,
+	removalGoroutines *sync.WaitGroup,
 ) {
 	instanceTreePath := getInstanceTreePath(deployCtx.ParamOverrides, instanceID)
 
@@ -750,22 +795,17 @@ func (c *defaultBlueprintContainer) removeGroupElements(
 			resourceLogger := deployCtx.Logger.Named("destroyResource").WithFields(
 				core.StringLogField("resourceName", element.LogicalName()),
 			)
+			elementDeployCtx := DeployContextWithLogger(deployCtx, resourceLogger)
 			if resourceInfo, ok := element.(*ResourceIDInfo); ok && resourceInfo.Retained {
 				resourceLogger.Info("retaining resource")
-				go c.resourceDestroyer.Retain(
-					ctx,
-					element,
-					instanceID,
-					DeployContextWithLogger(deployCtx, resourceLogger),
-				)
+				trackRemoval(removalGoroutines, func() {
+					c.resourceDestroyer.Retain(ctx, element, instanceID, elementDeployCtx)
+				})
 			} else {
 				resourceLogger.Info("destroying resource")
-				go c.resourceDestroyer.Destroy(
-					ctx,
-					element,
-					instanceID,
-					DeployContextWithLogger(deployCtx, resourceLogger),
-				)
+				trackRemoval(removalGoroutines, func() {
+					c.resourceDestroyer.Destroy(ctx, element, instanceID, elementDeployCtx)
+				})
 			}
 		} else if element.Kind() == state.ChildElement {
 			childLogger := deployCtx.Logger.Named("destroyChild").WithFields(
@@ -773,29 +813,41 @@ func (c *defaultBlueprintContainer) removeGroupElements(
 			)
 			childLogger.Info("destroying child")
 			includeTreePath := getIncludeTreePath(deployCtx.ParamOverrides, element.LogicalName())
-			go c.childBlueprintDestroyer.Destroy(
-				ctx,
-				element,
-				instanceID,
-				instanceTreePath,
-				includeTreePath,
-				c,
-				DeployContextWithLogger(deployCtx, childLogger),
-			)
+			elementDeployCtx := DeployContextWithLogger(deployCtx, childLogger)
+			trackRemoval(removalGoroutines, func() {
+				c.childBlueprintDestroyer.Destroy(
+					ctx,
+					element,
+					instanceID,
+					instanceTreePath,
+					includeTreePath,
+					c,
+					elementDeployCtx,
+				)
+			})
 		} else if element.Kind() == state.LinkElement {
 			linkLogger := deployCtx.Logger.Named("destroyLink").WithFields(
 				core.StringLogField("linkName", element.LogicalName()),
 			)
 			linkLogger.Info("destroying link")
-			go c.linkDestroyer.Destroy(
-				ctx,
-				element,
-				instanceID,
-				instanceName,
-				DeployContextWithLogger(deployCtx, linkLogger),
-			)
+			elementDeployCtx := DeployContextWithLogger(deployCtx, linkLogger)
+			trackRemoval(removalGoroutines, func() {
+				c.linkDestroyer.Destroy(ctx, element, instanceID, instanceName, elementDeployCtx)
+			})
 		}
 	}
+}
+
+// Registers a destroyer/retainer goroutine with the supplied
+// WaitGroup so the post-listener drain in removeGroupedElements can wait
+// for it to finish before returning, regardless of how long its work
+// takes.
+func trackRemoval(removalGoroutines *sync.WaitGroup, fn func()) {
+	removalGoroutines.Add(1)
+	go func() {
+		defer removalGoroutines.Done()
+		fn()
+	}()
 }
 
 func (c *defaultBlueprintContainer) collectElementsToRemove(

@@ -236,7 +236,14 @@ func (d *defaultChildBlueprintDeployer) waitForChildDeployment(
 		case msg := <-childChannels.ChildUpdateChan:
 			deployCtx.Channels.ChildUpdateChan <- msg
 		case err := <-childChannels.ErrChan:
+			// ErrChan is terminal in the deploy contract: the child
+			// container's deploy goroutine sends to ErrChan and returns
+			// immediately.
+			// This needs to exit immediately to avoid waiting for the finish channel
+			// to receive a message indefinitely as messages are not likely to be sent
+			// to both the FinishChan and ErrChan in the case of an error.
 			deployCtx.Channels.ErrChan <- err
+			return
 		}
 	}
 }
