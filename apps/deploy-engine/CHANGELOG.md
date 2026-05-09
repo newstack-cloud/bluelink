@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.6.2...deploy-engine/v0.7.0) (2026-05-09)
+
+
+### Features
+
+* **deploy-engine:** add support for transform validation input ([0623ced](https://github.com/newstack-cloud/bluelink/commit/0623cedc3b5491430454652be825b8c8224e011a))
+
 ## [0.6.2](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.6.1...deploy-engine/v0.6.2) (2026-04-28)
 
 
