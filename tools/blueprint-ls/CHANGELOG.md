@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-ls/v0.2.1...blueprint-ls/v0.3.0) (2026-05-09)
+
+
+### Features
+
+* **blueprint-ls:** add transform settings for validation ([f26b038](https://github.com/newstack-cloud/bluelink/commit/f26b038e0de1466116a8c203fd3bb514e94c6c09))
+
 ## [0.2.1](https://github.com/newstack-cloud/bluelink/compare/blueprint-ls/v0.2.0...blueprint-ls/v0.2.1) (2026-04-25)
 
 
