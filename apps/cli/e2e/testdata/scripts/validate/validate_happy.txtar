@@ -12,7 +12,7 @@ wait_engine
 stdout 'Validation complete'
 stdout 'diagnostic'
 stdout 'error'
-stdout 'provider "example" not found for resource type "example/resource"'
+stdout 'provider or transformer "example" not found for resource type "example/resource"'
 
 -- bluelink.config.toml --
 # Empty config file

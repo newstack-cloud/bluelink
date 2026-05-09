@@ -13,7 +13,7 @@ stdout 'Successfully imported 3 instances'
 {
   "state": {
     "storage_engine": "memfile",
-    "memfile_state_dir": "./state"
+    "memfile_state_dir": "state"
   }
 }
 

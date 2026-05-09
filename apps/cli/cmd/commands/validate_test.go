@@ -45,6 +45,24 @@ func (s *ValidateCommandSuite) Test_has_blueprint_file_flag() {
 	s.Equal("project.blueprint.yaml", flag.DefValue)
 }
 
+func (s *ValidateCommandSuite) Test_has_transform_spec_flag() {
+	rootCmd := NewRootCmd()
+	validateCmd, _, _ := rootCmd.Find([]string{"validate"})
+
+	flag := validateCmd.Flag("transform-spec")
+	s.NotNil(flag)
+	s.Equal("true", flag.DefValue)
+}
+
+func (s *ValidateCommandSuite) Test_has_validate_after_transform_flag() {
+	rootCmd := NewRootCmd()
+	validateCmd, _, _ := rootCmd.Find([]string{"validate"})
+
+	flag := validateCmd.Flag("validate-after-transform")
+	s.NotNil(flag)
+	s.Equal("false", flag.DefValue)
+}
+
 // Help text tests
 
 func (s *ValidateCommandSuite) Test_help_contains_usage_info() {

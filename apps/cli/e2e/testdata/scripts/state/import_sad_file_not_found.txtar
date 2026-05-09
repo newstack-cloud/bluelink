@@ -12,6 +12,6 @@ stdout 'failed to read input file'
 {
   "state": {
     "storage_engine": "memfile",
-    "memfile_state_dir": "./state"
+    "memfile_state_dir": "state"
   }
 }

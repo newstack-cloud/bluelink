@@ -37,6 +37,8 @@ func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider)
 				return err
 			}
 			blueprintFile, isDefault := confProvider.GetString("validateBlueprintFile")
+			transformSpecPtr := boolPtrIfSet(confProvider, "validateTransformSpec")
+			validateAfterTransformPtr := boolPtrIfSet(confProvider, "validateValidateAfterTransform")
 
 			if _, err := tea.LogToFile("bluelink-output.log", "simple"); err != nil {
 				log.Fatal(err)
@@ -72,6 +74,8 @@ func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider)
 				Headless:               headless,
 				HeadlessWriter:         os.Stdout,
 				Preflight:              preflightModel,
+				TransformSpec:          transformSpecPtr,
+				ValidateAfterTransform: validateAfterTransformPtr,
 			})
 			if err != nil {
 				return err
@@ -111,5 +115,39 @@ func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider)
 	confProvider.BindPFlag("validateBlueprintFile", validateCmd.PersistentFlags().Lookup("blueprint-file"))
 	confProvider.BindEnvVar("validateBlueprintFile", "BLUELINK_CLI_VALIDATE_BLUEPRINT_FILE")
 
+	validateCmd.PersistentFlags().Bool(
+		"transform-spec",
+		true,
+		"Run transformer plugins during validation so abstract resources are expanded into concrete resources for richer diagnostics. "+
+			"Required for transformer-driven workflows to produce meaningful validation output. "+
+			"When set to false, the blueprint will not be transformed during validation.",
+	)
+	confProvider.BindPFlag("validateTransformSpec", validateCmd.PersistentFlags().Lookup("transform-spec"))
+	confProvider.BindEnvVar("validateTransformSpec", "BLUELINK_CLI_VALIDATE_TRANSFORM_SPEC")
+
+	validateCmd.PersistentFlags().Bool(
+		"validate-after-transform",
+		false,
+		"After transformation, validate resources against the transformed blueprint shape. "+
+			"Catches resource-level issues that only surface once abstract resources have been expanded into their concrete forms, "+
+			"which is typically useful when diagnosing deployment-time issues. "+
+			"Has no effect unless --transform-spec is also true.",
+	)
+	confProvider.BindPFlag("validateValidateAfterTransform", validateCmd.PersistentFlags().Lookup("validate-after-transform"))
+	confProvider.BindEnvVar("validateValidateAfterTransform", "BLUELINK_CLI_VALIDATE_AFTER_TRANSFORM")
+
 	rootCmd.AddCommand(validateCmd)
+}
+
+// Returns a pointer to the resolved bool config value when the
+// user has explicitly provided it (via flag, env var, or config file), and
+// nil when the value comes from the cobra default. The deploy-cli-sdk's
+// validateui uses this distinction to decide whether to show its interactive
+// options form: nil means "ask the user", non-nil means "use this value".
+func boolPtrIfSet(confProvider *config.Provider, key string) *bool {
+	value, isDefault := confProvider.GetBool(key)
+	if isDefault {
+		return nil
+	}
+	return &value
 }
