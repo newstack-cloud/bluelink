@@ -57,6 +57,7 @@ type Controller struct {
 	eventIDGenerator           core.IDGenerator
 	blueprintLoader            container.Loader
 	blueprintLoaderRuntimeVars container.Loader
+	validationLoaderFactory    typesv1.ValidationLoaderFactory
 	// Behaviour used to resolve child blueprints in the blueprint container
 	// package is reused to load the "root" blueprints from multiple sources.
 	blueprintResolver includes.ChildResolver
@@ -85,6 +86,7 @@ func NewController(
 		eventIDGenerator:           deps.EventIDGenerator,
 		blueprintLoader:            deps.ValidationLoader,
 		blueprintLoaderRuntimeVars: deps.DeploymentLoader,
+		validationLoaderFactory:    deps.ValidationLoaderFactory,
 		blueprintResolver:          deps.BlueprintResolver,
 		paramsProvider:             deps.ParamsProvider,
 		pluginConfigPreparer:       deps.PluginConfigPreparer,
@@ -164,6 +166,11 @@ func (c *Controller) CreateBlueprintValidationHandler(
 
 	params := c.paramsProvider.CreateFromRequestConfig(
 		finalConfig,
+	).WithContextVariables(
+		map[string]*core.ScalarValue{
+			core.ValidationContextVariableName: core.ScalarFromBool(true),
+		},
+		/* keepExisting */ true,
 	)
 
 	// Get the last event ID for the validation channel before starting the async operation.
@@ -187,13 +194,14 @@ func (c *Controller) CreateBlueprintValidationHandler(
 	}
 
 	checkBlueprintVars := isTruthy(r.URL.Query().Get("checkBlueprintVars"))
+	loader := c.resolveValidationLoader(payload.LoaderConfig, checkBlueprintVars)
 	go c.startValidationStream(
 		blueprintValidation,
 		blueprintInfo,
 		warningInfoDiagnostics,
 		helpersv1.GetFormat(payload.BlueprintFile),
 		params,
-		checkBlueprintVars,
+		loader,
 		c.logger.Named("validationProcess").WithFields(
 			core.StringLogField("blueprintValidationId", blueprintValidationID),
 			core.StringLogField("blueprintLocation", blueprintLocation),
@@ -392,13 +400,54 @@ func (c *Controller) GetCleanupStatusHandler(
 	httputils.HTTPJSONResponse(w, http.StatusOK, operation)
 }
 
+// resolveValidationLoader picks the loader to use for a single
+// validation request:
+//   - checkBlueprintVars=true: shared deploy loader (runtime-vars path);
+//     loader-config overrides do not apply here, the deploy loader's
+//     defaults govern.
+//   - LoaderConfig with overrides: a one-off validation loader built
+//     via the factory with the requested options applied on top of the
+//     shared validation loader's base defaults.
+//   - Otherwise: the shared validation loader.
+func (c *Controller) resolveValidationLoader(
+	loaderConfig *ValidationLoaderConfig,
+	checkBlueprintVars bool,
+) container.Loader {
+	if checkBlueprintVars {
+		return c.blueprintLoaderRuntimeVars
+	}
+
+	overrides := buildValidationLoaderOptions(loaderConfig)
+	if len(overrides) == 0 {
+		return c.blueprintLoader
+	}
+	return c.validationLoaderFactory(overrides...)
+}
+
+// buildValidationLoaderOptions returns the LoaderOption overrides for
+// a request's optional LoaderConfig. Returns nil when nothing has been
+// set, which signals the caller to use the shared validation loader.
+func buildValidationLoaderOptions(loaderConfig *ValidationLoaderConfig) []container.LoaderOption {
+	if loaderConfig == nil {
+		return nil
+	}
+	var opts []container.LoaderOption
+	if loaderConfig.TransformSpec != nil {
+		opts = append(opts, container.WithLoaderTransformSpec(*loaderConfig.TransformSpec))
+	}
+	if loaderConfig.ValidateAfterTransform != nil {
+		opts = append(opts, container.WithLoaderValidateAfterTransform(*loaderConfig.ValidateAfterTransform))
+	}
+	return opts
+}
+
 func (c *Controller) startValidationStream(
 	blueprintValidation *manage.BlueprintValidation,
 	blueprintInfo *includes.ChildBlueprintInfo,
 	initialDiagnostics []*core.Diagnostic,
 	format schema.SpecFormat,
 	params core.BlueprintParams,
-	checkBlueprintVars bool,
+	loader container.Loader,
 	logger core.Logger,
 ) {
 	ctxWithTimeout, cancel := context.WithTimeout(
@@ -415,11 +464,6 @@ func (c *Controller) startValidationStream(
 	)
 	if earlyExitBefore {
 		return
-	}
-
-	loader := c.blueprintLoader
-	if checkBlueprintVars {
-		loader = c.blueprintLoaderRuntimeVars
 	}
 
 	// The error returned here will be converted into a diagnostic event

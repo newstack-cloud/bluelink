@@ -130,16 +130,22 @@ func Setup(
 		pluginHostService.Manager(),
 	)
 
-	validateLoader := container.NewDefaultLoader(
-		pluginMaps.Providers,
-		pluginMaps.Transformers,
-		/* stateContainer */ nil,
-		/* childResolver */ nil,
-		container.WithLoaderTransformSpec(false),
-		container.WithLoaderValidateAfterTransform(false),
-		container.WithLoaderValidateRuntimeValues(false),
-		container.WithLoaderLogger(logger),
-	)
+	validateLoaderFactory := func(extraOpts ...container.LoaderOption) container.Loader {
+		baseOpts := []container.LoaderOption{
+			container.WithLoaderTransformSpec(false),
+			container.WithLoaderValidateAfterTransform(false),
+			container.WithLoaderValidateRuntimeValues(false),
+			container.WithLoaderLogger(logger),
+		}
+		return container.NewDefaultLoader(
+			pluginMaps.Providers,
+			pluginMaps.Transformers,
+			/* stateContainer */ nil,
+			/* childResolver */ nil,
+			append(baseOpts, extraOpts...)...,
+		)
+	}
+	validateLoader := validateLoaderFactory()
 
 	defaultRetryPolicy := parseDefaultRetryPolicy(
 		config.Blueprints.DefaultRetryPolicy,
@@ -182,6 +188,7 @@ func Setup(
 		IDGenerator:                idGenerator,
 		EventIDGenerator:           utils.NewUUIDv7Generator(),
 		ValidationLoader:           validateLoader,
+		ValidationLoaderFactory:    validateLoaderFactory,
 		DeploymentLoader:           deployLoader,
 		BlueprintResolver:          childResolver,
 		ParamsProvider:             paramsProvider,

@@ -27,6 +27,7 @@ type Dependencies struct {
 	IDGenerator                core.IDGenerator
 	EventIDGenerator           core.IDGenerator
 	ValidationLoader           container.Loader
+	ValidationLoaderFactory    ValidationLoaderFactory
 	DeploymentLoader           container.Loader
 	BlueprintResolver          includes.ChildResolver
 	ParamsProvider             params.Provider
@@ -36,3 +37,9 @@ type Dependencies struct {
 	Clock                      commoncore.Clock
 	Logger                     core.Logger
 }
+
+// ValidationLoaderFactory builds a one-off validation loader with the
+// given option overrides applied on top of the shared validation
+// loader's base defaults. Used by request handlers that need to honour
+// per-request loader flags without mutating the shared loader.
+type ValidationLoaderFactory func(extraOpts ...container.LoaderOption) container.Loader
