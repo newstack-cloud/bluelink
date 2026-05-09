@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.46.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.45.1...blueprint/v0.46.0) (2026-05-09)
+
+
+### Features
+
+* **blueprint:** add context var key for validation context signal ([e92d1e7](https://github.com/newstack-cloud/bluelink/commit/e92d1e770242aa943cba268c201dd70748b7cfc5))
+* **blueprint:** add improvement to halt on transform error diagnostics ([c81a087](https://github.com/newstack-cloud/bluelink/commit/c81a087e62853dba7418c497befe1812716fe0c6))
+
+
+### Bug Fixes
+
+* **blueprint:** add fix to link counting error in change staging ([8487d99](https://github.com/newstack-cloud/bluelink/commit/8487d997445d33b1ab9e3b0ca80d42ba09e052ed))
+* **blueprint:** add fixes for leaking goroutines for deploy and destroy ([260d100](https://github.com/newstack-cloud/bluelink/commit/260d1002b787c164b08bc5b74df0b2c30c920bd1))
+
 ## [0.45.1](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.45.0...blueprint/v0.45.1) (2026-04-29)
 
 
