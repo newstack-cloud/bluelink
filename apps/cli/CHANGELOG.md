@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/newstack-cloud/bluelink/compare/cli/v0.2.0...cli/v0.3.0) (2026-05-09)
+
+
+### Features
+
+* **cli:** add support for transform validation options ([3819380](https://github.com/newstack-cloud/bluelink/commit/3819380ba7f32c77667f08d791b6473dbaf4873c))
+
 ## [0.2.0](https://github.com/newstack-cloud/bluelink/compare/cli/v0.1.1...cli/v0.2.0) (2026-04-26)
 
 
