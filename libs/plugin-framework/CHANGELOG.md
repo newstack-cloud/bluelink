@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.8.0...plugin-framework/v0.9.0) (2026-05-09)
+
+
+### Features
+
+* **plugin-framework:** add helper to check for validation context ([76a23e9](https://github.com/newstack-cloud/bluelink/commit/76a23e9aa6bef27491fcd8a82a089eb4246a4ced))
+
+
+### Dependencies
+
+* **plugin-framework:** bump up blueprint lib to 0.46.0 ([598d66a](https://github.com/newstack-cloud/bluelink/commit/598d66a405aa5ab2451811af8925ddf3c59fa5cb))
+
 ## [0.8.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.7.0...plugin-framework/v0.8.0) (2026-05-07)
 
 
