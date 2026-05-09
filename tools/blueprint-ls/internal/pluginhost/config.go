@@ -133,6 +133,7 @@ func expandEnv(input string) string {
 type InitializationOptions struct {
 	Plugins     *PluginInitOptions      `json:"plugins,omitempty"`
 	Diagnostics *DiagnosticsInitOptions `json:"diagnostics,omitempty"`
+	Blueprints  *BlueprintsInitOptions  `json:"blueprints,omitempty"`
 }
 
 // PluginInitOptions holds plugin-specific initialization options.
@@ -145,4 +146,18 @@ type PluginInitOptions struct {
 // DiagnosticsInitOptions holds diagnostic-related initialization options.
 type DiagnosticsInitOptions struct {
 	ShowAnyTypeWarnings *bool `json:"showAnyTypeWarnings,omitempty"`
+}
+
+// BlueprintsInitOptions holds blueprint-loader initialization options.
+// These control validation behaviour at LSP startup; changes require an
+// LSP/window reload to take effect.
+type BlueprintsInitOptions struct {
+	// TransformSpec enables transformer plugins during validation.
+	// Defaults to false. Requires transformer plugins that handle the
+	// validation context.
+	TransformSpec *bool `json:"transformSpec,omitempty"`
+	// ValidateAfterTransform enables resource validation against the
+	// transformed blueprint shape. Has no effect unless TransformSpec is
+	// also true. Defaults to false.
+	ValidateAfterTransform *bool `json:"validateAfterTransform,omitempty"`
 }

@@ -86,12 +86,7 @@ func (s *DiagnosticsService) ValidateTextDocument(
 		lspCtx.Context,
 		*content,
 		format,
-		core.NewDefaultParams(
-			map[string]map[string]*core.ScalarValue{},
-			map[string]map[string]*core.ScalarValue{},
-			map[string]*core.ScalarValue{},
-			map[string]*core.ScalarValue{},
-		),
+		newValidationParams(),
 	)
 	diagnostics = append(
 		diagnostics,
@@ -148,6 +143,23 @@ func diagnosticKey(diag lsp.Diagnostic) string {
 	)
 }
 
+// Builds BlueprintParams for a language-server
+// validation call, stamping the reserved validation-context flag so
+// transformer plugins can degrade gracefully when external context is
+// unavailable. The flag is set regardless of whether transformers run
+// during validation, transformers that bypass the validation flow
+// simply ignore it.
+func newValidationParams() core.BlueprintParams {
+	return core.NewDefaultParams(
+		map[string]map[string]*core.ScalarValue{},
+		map[string]map[string]*core.ScalarValue{},
+		map[string]*core.ScalarValue{
+			core.ValidationContextVariableName: core.ScalarFromBool(true),
+		},
+		map[string]*core.ScalarValue{},
+	)
+}
+
 // ValidateTextDocumentBackground validates a document without requiring an LSPContext.
 // This is used for debounced validation where the original request context may be cancelled.
 // It uses cached settings or defaults instead of making RPC calls to the client.
@@ -174,12 +186,7 @@ func (s *DiagnosticsService) ValidateTextDocumentBackground(
 		context.Background(),
 		*content,
 		format,
-		core.NewDefaultParams(
-			map[string]map[string]*core.ScalarValue{},
-			map[string]map[string]*core.ScalarValue{},
-			map[string]*core.ScalarValue{},
-			map[string]*core.ScalarValue{},
-		),
+		newValidationParams(),
 	)
 	diagnostics = append(
 		diagnostics,

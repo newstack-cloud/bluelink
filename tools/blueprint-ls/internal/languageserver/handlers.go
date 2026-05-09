@@ -91,6 +91,8 @@ func (a *Application) handleInitialise(ctx *common.LSPContext, params *lsp.Initi
 		)
 	}
 
+	a.applyBlueprintsInitOptions(initOpts)
+
 	// Load plugins if configured (only once per server lifetime)
 	pluginConfig := pluginhost.NewDefaultConfig().WithInitOptions(initOpts)
 	if a.pluginHostService == nil && pluginConfig.IsEnabled() && pluginConfig.GetPluginPath() != "" {
@@ -114,6 +116,18 @@ func (a *Application) handleInitialise(ctx *common.LSPContext, params *lsp.Initi
 	}
 
 	return result, nil
+}
+
+func (a *Application) applyBlueprintsInitOptions(initOpts *pluginhost.InitializationOptions) {
+	if initOpts == nil || initOpts.Blueprints == nil {
+		return
+	}
+	if initOpts.Blueprints.TransformSpec != nil {
+		a.loaderSettings.transformSpec = *initOpts.Blueprints.TransformSpec
+	}
+	if initOpts.Blueprints.ValidateAfterTransform != nil {
+		a.loaderSettings.validateAfterTransform = *initOpts.Blueprints.ValidateAfterTransform
+	}
 }
 
 func (a *Application) handleInitialised(ctx *common.LSPContext, params *lsp.InitializedParams) error {
@@ -670,7 +684,8 @@ func (a *Application) ReinitialiseRegistries(
 		nil, // No state container
 		nil, // No child resolver
 		container.WithLoaderValidateRuntimeValues(false),
-		container.WithLoaderTransformSpec(false),
+		container.WithLoaderTransformSpec(a.loaderSettings.transformSpec),
+		container.WithLoaderValidateAfterTransform(a.loaderSettings.validateAfterTransform),
 	)
 	a.blueprintLoader = blueprintLoader
 

@@ -38,6 +38,11 @@ type Application struct {
 	frameworkLogger     core.Logger
 	pluginHostService   pluginhost.Service
 
+	// Loader settings sourced from LSP initializationOptions.blueprints.
+	// Read once at initialise; consumed when constructing the blueprint
+	// loader inside loadPlugins.
+	loaderSettings loaderSettings
+
 	// Custom variable type registry (used by completion service)
 	customVarTypeRegistry provider.CustomVariableTypeRegistry
 
@@ -49,6 +54,14 @@ type Application struct {
 
 	// JSON-RPC connection for sending notifications outside of request handlers
 	conn *jsonrpc2.Conn
+}
+
+// loaderSettings holds resolved (non-pointer) values from
+// initializationOptions.blueprints, used to construct the blueprint
+// loader. All fields default to false when the client doesn't send them.
+type loaderSettings struct {
+	transformSpec          bool
+	validateAfterTransform bool
 }
 
 func NewApplication(
