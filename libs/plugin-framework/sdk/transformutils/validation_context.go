@@ -8,7 +8,7 @@ import (
 // IsValidationContext reports whether the transformer is being invoked
 // for validation only (no change staging, deploy, or destroy will follow).
 //
-// Plugin authors should call this from Transform / ValidateLinks /
+// Plugin authors should call this from transform, link validation and
 // abstract-resource validation methods to branch on best-effort behaviour
 // when external context required for actions (e.g. build manifests) is
 // unavailable in this mode.
