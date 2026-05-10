@@ -153,6 +153,8 @@ func buildHandlerTransformer() *transformerv1.TransformerPluginDefinition {
 	def := &transformerv1.AbstractResourceDefinition{
 		Type: "celerity/handler",
 		Resolve: func(
+			_ context.Context,
+			_ transform.Context,
 			name string,
 			_ *schema.Resource,
 			_ linktypes.DeclaredLinkGraph,
@@ -179,7 +181,7 @@ func buildHandlerTransformer() *transformerv1.TransformerPluginDefinition {
 			"celerity/handler": def,
 		},
 		Aggregators: map[string]transformutils.Aggregator{
-			integratedDeployTarget: func(resolved []transformutils.ResolvedResource) *transformutils.EmitPlan {
+			integratedDeployTarget: func(_ context.Context, resolved []transformutils.ResolvedResource) *transformutils.EmitPlan {
 				return &transformutils.EmitPlan{Primaries: resolved}
 			},
 		},
@@ -198,6 +200,7 @@ func handlerPropertyMap() *transformutils.PropertyMap {
 }
 
 func emitHandlerToLambda(
+	_ context.Context,
 	r *resolvedHandler,
 	chained transformutils.ResourcePropertyRewriter,
 	_ transform.Context,

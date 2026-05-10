@@ -1,6 +1,7 @@
 package transformutils
 
 import (
+	"context"
 	"fmt"
 	"maps"
 	"reflect"
@@ -18,6 +19,7 @@ import (
 // RunTransformPipeline drives the framework's transformer pipeline
 // for plugins that don't provide their own TransformFunc implementation.
 func RunTransformPipeline(
+	ctx context.Context,
 	inputBlueprint *schema.Blueprint,
 	linkGraph linktypes.DeclaredLinkGraph,
 	target Target,
@@ -41,12 +43,12 @@ func RunTransformPipeline(
 		)
 	}
 
-	resolved, err := resolveResources(inputBlueprint, linkGraph, registry)
+	resolved, err := resolveResources(ctx, inputBlueprint, linkGraph, registry, transformCtx)
 	if err != nil {
 		return nil, err
 	}
 
-	plan := aggregator(resolved)
+	plan := aggregator(ctx, resolved)
 	if plan == nil {
 		plan = &EmitPlan{}
 	}
@@ -63,7 +65,7 @@ func RunTransformPipeline(
 		registry,
 	)
 
-	emitted, emitDiagnostics, err := emitPrimaries(plan.Primaries, resPropRewriter, target, registry, transformCtx)
+	emitted, emitDiagnostics, err := emitPrimaries(ctx, plan.Primaries, resPropRewriter, target, registry, transformCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -106,9 +108,11 @@ func newEmittedAggregate() *emittedAggregate {
 }
 
 func resolveResources(
+	ctx context.Context,
 	blueprint *schema.Blueprint,
 	linkGraph linktypes.DeclaredLinkGraph,
 	registry *TransformerRegistry,
+	transformCtx transform.Context,
 ) ([]ResolvedResource, error) {
 	if blueprint.Resources == nil {
 		return nil, nil
@@ -116,7 +120,7 @@ func resolveResources(
 
 	resolved := make([]ResolvedResource, 0, len(blueprint.Resources.Values))
 	for name, resource := range blueprint.Resources.Values {
-		resolvedResource, err := resolveOneResource(name, resource, linkGraph, blueprint, registry)
+		resolvedResource, err := resolveOneResource(ctx, name, resource, linkGraph, blueprint, registry, transformCtx)
 		if err != nil {
 			return nil, err
 		}
@@ -127,11 +131,13 @@ func resolveResources(
 }
 
 func resolveOneResource(
+	ctx context.Context,
 	name string,
 	resource *schema.Resource,
 	linkGraph linktypes.DeclaredLinkGraph,
 	blueprint *schema.Blueprint,
 	registry *TransformerRegistry,
+	transformCtx transform.Context,
 ) (ResolvedResource, error) {
 	resourceType := resourceTypeOf(resource)
 	resolver, ok := registry.ResolverFor(resourceType)
@@ -143,7 +149,7 @@ func resolveOneResource(
 		)
 	}
 
-	resolvedResource, err := resolver(name, resource, linkGraph, blueprint)
+	resolvedResource, err := resolver(ctx, transformCtx, name, resource, linkGraph, blueprint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve resource %q: %w", name, err)
 	}
@@ -181,6 +187,7 @@ func buildChainedRewriter(
 }
 
 func emitPrimaries(
+	ctx context.Context,
 	primaries []ResolvedResource,
 	chained ResourcePropertyRewriter,
 	target Target,
@@ -200,7 +207,7 @@ func emitPrimaries(
 			)
 		}
 
-		result, err := emitter(primary, chained, transformCtx)
+		result, err := emitter(ctx, primary, chained, transformCtx)
 		if err != nil {
 			return nil, nil, fmt.Errorf(
 				"emit failed for resource %q: %w",

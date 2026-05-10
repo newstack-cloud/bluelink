@@ -1,6 +1,7 @@
 package transformutils
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -14,10 +15,11 @@ type Target string
 
 // Aggregator is a function that produces an emit plan
 // from a list of resources resolved for a particular abstract resource type.
-type Aggregator func([]ResolvedResource) *EmitPlan
+type Aggregator func(ctx context.Context, resolved []ResolvedResource) *EmitPlan
 
 // Emitter produces concrete output for one resolved primary for a specific target.
 type Emitter func(
+	ctx context.Context,
 	r ResolvedResource,
 	resPropRewriter ResourcePropertyRewriter,
 	transformCtx transform.Context,
@@ -32,6 +34,8 @@ type RewriteFactory func(r ResolvedResource) []ResourcePropertyRewriter
 // These resolvers are keyed by abstract resource type in a transformer registry
 // and are not tied to any specific target.
 type Resolver func(
+	ctx context.Context,
+	transformCtx transform.Context,
 	name string,
 	resource *schema.Resource,
 	linkGraph linktypes.DeclaredLinkGraph,
@@ -83,13 +87,19 @@ func (r *TransformerRegistry) RegisterAggregator(
 func RegisterEmit[T any, PR ResolvedPtr[T]](
 	reg *TransformerRegistry,
 	target Target,
-	fn func(r PR, resPropRewriter ResourcePropertyRewriter, transformCtx transform.Context) (*EmitResult, error),
+	fn func(
+		ctx context.Context,
+		r PR,
+		resPropRewriter ResourcePropertyRewriter,
+		transformCtx transform.Context,
+	) (*EmitResult, error),
 ) {
 	if reg.emitters[target] == nil {
 		reg.emitters[target] = make(map[reflect.Type]Emitter)
 	}
 
 	reg.emitters[target][reflect.TypeFor[PR]()] = func(
+		ctx context.Context,
 		r ResolvedResource,
 		resPropRewriter ResourcePropertyRewriter,
 		transformCtx transform.Context,
@@ -98,7 +108,7 @@ func RegisterEmit[T any, PR ResolvedPtr[T]](
 		if !ok {
 			return nil, fmt.Errorf("expected resource of type %T but got %T", (*PR)(nil), r)
 		}
-		return fn(casted, resPropRewriter, transformCtx)
+		return fn(ctx, casted, resPropRewriter, transformCtx)
 	}
 }
 
@@ -106,6 +116,7 @@ func RegisterEmit[T any, PR ResolvedPtr[T]](
 // ensuring type safety on the resolved type. This is intended for use in AbstractResourceDefinition.Emitters maps.
 func TypedEmitter[T any, PR ResolvedPtr[T]](
 	fn func(
+		ctx context.Context,
 		r PR,
 		resPropRewriter ResourcePropertyRewriter,
 		transformCtx transform.Context,

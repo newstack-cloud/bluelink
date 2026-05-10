@@ -137,6 +137,7 @@ func (p *TransformerPluginDefinition) Transform(
 		)
 
 		return transformutils.RunTransformPipeline(
+			ctx,
 			input.InputBlueprint,
 			input.LinkGraph,
 			target,
