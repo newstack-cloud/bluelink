@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.9.0...plugin-framework/v0.10.0) (2026-05-10)
+
+
+### Features
+
+* **plugin-framework:** thread go context through transform pipeline ([ad67837](https://github.com/newstack-cloud/bluelink/commit/ad67837d0b2a9795c826db37ce9ad0079ad73db0))
+
 ## [0.9.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.8.0...plugin-framework/v0.9.0) (2026-05-09)
 
 
