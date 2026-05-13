@@ -7,7 +7,6 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/linktypes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 )
 
 // Target represents a deployment target such as "aws-serverless" or "azure".
@@ -15,14 +14,14 @@ type Target string
 
 // Aggregator is a function that produces an emit plan
 // from a list of resources resolved for a particular abstract resource type.
-type Aggregator func(ctx context.Context, resolved []ResolvedResource) *EmitPlan
+type Aggregator func(ctx context.Context, run *Run, resolved []ResolvedResource) *EmitPlan
 
 // Emitter produces concrete output for one resolved primary for a specific target.
 type Emitter func(
 	ctx context.Context,
+	run *Run,
 	r ResolvedResource,
 	resPropRewriter ResourcePropertyRewriter,
-	transformCtx transform.Context,
 ) (*EmitResult, error)
 
 // RewriteFactory produces a list of rewriters from on resolved primary.
@@ -35,7 +34,7 @@ type RewriteFactory func(r ResolvedResource) []ResourcePropertyRewriter
 // and are not tied to any specific target.
 type Resolver func(
 	ctx context.Context,
-	transformCtx transform.Context,
+	run *Run,
 	name string,
 	resource *schema.Resource,
 	linkGraph linktypes.DeclaredLinkGraph,
@@ -89,9 +88,9 @@ func RegisterEmit[T any, PR ResolvedPtr[T]](
 	target Target,
 	fn func(
 		ctx context.Context,
+		run *Run,
 		r PR,
 		resPropRewriter ResourcePropertyRewriter,
-		transformCtx transform.Context,
 	) (*EmitResult, error),
 ) {
 	if reg.emitters[target] == nil {
@@ -100,15 +99,15 @@ func RegisterEmit[T any, PR ResolvedPtr[T]](
 
 	reg.emitters[target][reflect.TypeFor[PR]()] = func(
 		ctx context.Context,
+		run *Run,
 		r ResolvedResource,
 		resPropRewriter ResourcePropertyRewriter,
-		transformCtx transform.Context,
 	) (*EmitResult, error) {
 		casted, ok := r.(PR)
 		if !ok {
 			return nil, fmt.Errorf("expected resource of type %T but got %T", (*PR)(nil), r)
 		}
-		return fn(ctx, casted, resPropRewriter, transformCtx)
+		return fn(ctx, run, casted, resPropRewriter)
 	}
 }
 
@@ -117,9 +116,9 @@ func RegisterEmit[T any, PR ResolvedPtr[T]](
 func TypedEmitter[T any, PR ResolvedPtr[T]](
 	fn func(
 		ctx context.Context,
+		run *Run,
 		r PR,
 		resPropRewriter ResourcePropertyRewriter,
-		transformCtx transform.Context,
 	) (*EmitResult, error),
 ) EmitterRegistration {
 	return func(registry *TransformerRegistry, target Target) {

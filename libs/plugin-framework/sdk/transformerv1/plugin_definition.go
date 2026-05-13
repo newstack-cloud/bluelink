@@ -66,6 +66,14 @@ type TransformerPluginDefinition struct {
 	// Don't set this if you are implementing your own TransformFunc.
 	Registry *transformutils.TransformerRegistry
 
+	// OnRun, if set, runs once per transform before any phase.
+	// The primary job of OnRun is to load run-scoped state
+	// (e.g. a build manifest for a serverless application)
+	// and store it on the supplied *Run instance.
+	// Phases can retrieve state via the transformutils.Use[T] helper.
+	// A non-nil error aborts the run before any phase fires.
+	OnRun transformutils.OnRun
+
 	// DeployTargetConfigKey allows plugins to specify the config key name
 	// from which the deploy target is read in the default Transform implementation.
 	// If not set, defaults to "deployTarget" based on the convention established
@@ -138,12 +146,15 @@ func (p *TransformerPluginDefinition) Transform(
 
 		return transformutils.RunTransformPipeline(
 			ctx,
-			input.InputBlueprint,
-			input.LinkGraph,
-			target,
-			p.TransformName,
-			registry,
-			input.TransformerContext,
+			&transformutils.RunTransformPipelineParams{
+				TransformerID:    p.TransformName,
+				InputBlueprint:   input.InputBlueprint,
+				LinkGraph:        input.LinkGraph,
+				Target:           target,
+				Registry:         registry,
+				OnRun:            p.OnRun,
+				TransformContext: input.TransformerContext,
+			},
 		)
 	}
 

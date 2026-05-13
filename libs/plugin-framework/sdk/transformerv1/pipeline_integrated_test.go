@@ -2,6 +2,7 @@ package transformerv1_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -135,6 +136,55 @@ func (s *PipelineIntegratedTestSuite) Test_full_pipeline_warns_on_reference_outs
 	s.Assert().Contains(warnings[0].Message, "unknownField")
 }
 
+func (s *PipelineIntegratedTestSuite) Test_full_pipeline_threads_OnRun_state_into_emit_phase() {
+	plugin := buildHandlerTransformerWithOnRunManifest()
+
+	out, err := plugin.Transform(context.Background(), &transform.SpecTransformerTransformInput{
+		InputBlueprint:     blueprintWithHandlerAndExport(),
+		LinkGraph:          &emptyLinkGraph{},
+		TransformerContext: integratedTransformerContext(),
+	})
+	s.Require().NoError(err)
+	s.Require().NotNil(out)
+
+	lambda := out.TransformedBlueprint.Resources.Values["orderHandler_lambda"]
+	s.Require().NotNil(lambda)
+	region := lambda.Spec.Fields["region"]
+	s.Require().NotNil(region, "expected region provided via OnRun to appear in emitted spec")
+	s.Assert().Equal(core.MappingNodeFromString("eu-west-1"), region)
+}
+
+func (s *PipelineIntegratedTestSuite) Test_full_pipeline_aborts_when_OnRun_returns_error() {
+	resolverCalls := 0
+	plugin := buildHandlerTransformer()
+	plugin.AbstractResources["celerity/handler"].Resolve = func(
+		_ context.Context,
+		_ *transformutils.Run,
+		name string,
+		_ *schema.Resource,
+		_ linktypes.DeclaredLinkGraph,
+		_ *schema.Blueprint,
+	) (transformutils.ResolvedResource, error) {
+		resolverCalls++
+		return &resolvedHandler{Name: name}, nil
+	}
+	plugin.OnRun = func(_ context.Context, _ *transformutils.Run) error {
+		return errors.New("manifest load failed")
+	}
+
+	out, err := plugin.Transform(context.Background(), &transform.SpecTransformerTransformInput{
+		InputBlueprint:     blueprintWithHandlerAndExport(),
+		LinkGraph:          &emptyLinkGraph{},
+		TransformerContext: integratedTransformerContext(),
+	})
+
+	s.Require().Error(err)
+	s.Assert().Contains(err.Error(), "OnRun failed")
+	s.Assert().Contains(err.Error(), "manifest load failed")
+	s.Assert().Nil(out)
+	s.Assert().Zero(resolverCalls, "no phase should run when OnRun returns an error")
+}
+
 func TestPipelineIntegratedTestSuite(t *testing.T) {
 	suite.Run(t, new(PipelineIntegratedTestSuite))
 }
@@ -148,13 +198,50 @@ type resolvedHandler struct {
 func (r *resolvedHandler) ResourceName() string { return r.Name }
 func (r *resolvedHandler) ResourceType() string { return "celerity/handler" }
 
+type runManifest struct {
+	Region string
+}
+
+func buildHandlerTransformerWithOnRunManifest() *transformerv1.TransformerPluginDefinition {
+	plugin := buildHandlerTransformer()
+	plugin.OnRun = func(_ context.Context, run *transformutils.Run) error {
+		transformutils.Provide(run, &runManifest{Region: "eu-west-1"})
+		return nil
+	}
+	plugin.AbstractResources["celerity/handler"].Emitters = map[string]transformutils.EmitterRegistration{
+		integratedDeployTarget: transformutils.TypedEmitter(emitHandlerWithManifest),
+	}
+	return plugin
+}
+
+func emitHandlerWithManifest(
+	_ context.Context,
+	run *transformutils.Run,
+	r *resolvedHandler,
+	_ transformutils.ResourcePropertyRewriter,
+) (*transformutils.EmitResult, error) {
+	manifest := transformutils.MustUse[*runManifest](run)
+	return &transformutils.EmitResult{
+		Resources: map[string]*schema.Resource{
+			r.Name + "_lambda": {
+				Type: &schema.ResourceTypeWrapper{Value: "aws/lambda/function"},
+				Spec: &core.MappingNode{
+					Fields: map[string]*core.MappingNode{
+						"region": core.MappingNodeFromString(manifest.Region),
+					},
+				},
+			},
+		},
+	}, nil
+}
+
 func buildHandlerTransformer() *transformerv1.TransformerPluginDefinition {
 	pm := handlerPropertyMap()
 	def := &transformerv1.AbstractResourceDefinition{
 		Type: "celerity/handler",
 		Resolve: func(
 			_ context.Context,
-			_ transform.Context,
+			_ *transformutils.Run,
 			name string,
 			_ *schema.Resource,
 			_ linktypes.DeclaredLinkGraph,
@@ -181,7 +268,7 @@ func buildHandlerTransformer() *transformerv1.TransformerPluginDefinition {
 			"celerity/handler": def,
 		},
 		Aggregators: map[string]transformutils.Aggregator{
-			integratedDeployTarget: func(_ context.Context, resolved []transformutils.ResolvedResource) *transformutils.EmitPlan {
+			integratedDeployTarget: func(_ context.Context, _ *transformutils.Run, resolved []transformutils.ResolvedResource) *transformutils.EmitPlan {
 				return &transformutils.EmitPlan{Primaries: resolved}
 			},
 		},
@@ -201,9 +288,9 @@ func handlerPropertyMap() *transformutils.PropertyMap {
 
 func emitHandlerToLambda(
 	_ context.Context,
+	_ *transformutils.Run,
 	r *resolvedHandler,
 	chained transformutils.ResourcePropertyRewriter,
-	_ transform.Context,
 ) (*transformutils.EmitResult, error) {
 	originalRef := &substitutions.SubstitutionResourceProperty{
 		ResourceName: r.Name,

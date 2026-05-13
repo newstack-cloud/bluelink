@@ -1,6 +1,8 @@
 package transformutils
 
 import (
+	"context"
+
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 )
@@ -71,3 +73,8 @@ type EmitterRegistration func(registry *TransformerRegistry, t Target)
 // while maintaing a valid homogenous map value type for rewriter storage
 // in registries.
 type RewriterRegistration func(registry *TransformerRegistry, t Target)
+
+// OnRun runs once per RunTransformPipeline call, before any phase. A
+// non-nil error aborts the run; no phase registered on the plugin
+// fires when OnRun returns an error.
+type OnRun func(ctx context.Context, run *Run) error

@@ -28,9 +28,23 @@ func (s *RunTransformPipelineTestSuite) SetupTest() {
 	s.transformCtx = testutils.CreateTestTransformerContext(testTransformerID)
 }
 
+func (s *RunTransformPipelineTestSuite) params(
+	bp *schema.Blueprint,
+	registry *TransformerRegistry,
+) *RunTransformPipelineParams {
+	return &RunTransformPipelineParams{
+		TransformerID:    testTransformerID,
+		InputBlueprint:   bp,
+		LinkGraph:        &fakeLinkGraph{},
+		Target:           testTarget,
+		Registry:         registry,
+		TransformContext: s.transformCtx,
+	}
+}
+
 func (s *RunTransformPipelineTestSuite) Test_returns_error_when_input_blueprint_is_nil() {
 	registry := NewTransformerRegistry()
-	out, err := RunTransformPipeline(context.Background(), nil, &fakeLinkGraph{}, testTarget, testTransformerID, registry, s.transformCtx)
+	out, err := RunTransformPipeline(context.Background(), s.params(nil, registry))
 
 	s.Require().Error(err)
 	s.Assert().Contains(err.Error(), "input blueprint is required")
@@ -39,7 +53,7 @@ func (s *RunTransformPipelineTestSuite) Test_returns_error_when_input_blueprint_
 
 func (s *RunTransformPipelineTestSuite) Test_returns_error_when_registry_is_nil() {
 	bp := &schema.Blueprint{}
-	out, err := RunTransformPipeline(context.Background(), bp, &fakeLinkGraph{}, testTarget, testTransformerID, nil, s.transformCtx)
+	out, err := RunTransformPipeline(context.Background(), s.params(bp, nil))
 
 	s.Require().Error(err)
 	s.Assert().Contains(err.Error(), "transformer registry is required")
@@ -49,7 +63,7 @@ func (s *RunTransformPipelineTestSuite) Test_returns_error_when_registry_is_nil(
 func (s *RunTransformPipelineTestSuite) Test_returns_error_when_target_has_no_aggregator() {
 	registry := NewTransformerRegistry()
 	bp := &schema.Blueprint{}
-	out, err := RunTransformPipeline(context.Background(), bp, &fakeLinkGraph{}, testTarget, testTransformerID, registry, s.transformCtx)
+	out, err := RunTransformPipeline(context.Background(), s.params(bp, registry))
 
 	s.Require().Error(err)
 	s.Assert().Contains(err.Error(), "does not support deploy target")
@@ -67,7 +81,7 @@ func (s *RunTransformPipelineTestSuite) Test_returns_error_when_resolver_missing
 		},
 	}
 
-	out, err := RunTransformPipeline(context.Background(), bp, &fakeLinkGraph{}, testTarget, testTransformerID, registry, s.transformCtx)
+	out, err := RunTransformPipeline(context.Background(), s.params(bp, registry))
 
 	s.Require().Error(err)
 	s.Assert().Contains(err.Error(), "no resolver registered for abstract resource type")
@@ -78,7 +92,7 @@ func (s *RunTransformPipelineTestSuite) Test_returns_error_when_resolver_returns
 	registry := newRegistryWithAggregator(passthroughAggregator)
 	registry.RegisterResolver("celerity/handler", func(
 		_ context.Context,
-		_ transform.Context,
+		_ *Run,
 		_ string,
 		_ *schema.Resource,
 		_ linktypes.DeclaredLinkGraph,
@@ -95,7 +109,7 @@ func (s *RunTransformPipelineTestSuite) Test_returns_error_when_resolver_returns
 		},
 	}
 
-	out, err := RunTransformPipeline(context.Background(), bp, &fakeLinkGraph{}, testTarget, testTransformerID, registry, s.transformCtx)
+	out, err := RunTransformPipeline(context.Background(), s.params(bp, registry))
 
 	s.Require().Error(err)
 	s.Assert().Contains(err.Error(), "failed to resolve resource")
@@ -109,7 +123,7 @@ func (s *RunTransformPipelineTestSuite) Test_returns_error_when_no_rewriter_for_
 
 	bp := newBlueprintWithHandler("orderHandler")
 
-	out, err := RunTransformPipeline(context.Background(), bp, &fakeLinkGraph{}, testTarget, testTransformerID, registry, s.transformCtx)
+	out, err := RunTransformPipeline(context.Background(), s.params(bp, registry))
 
 	s.Require().Error(err)
 	s.Assert().Contains(err.Error(), "no rewriter factory registered")
@@ -123,7 +137,7 @@ func (s *RunTransformPipelineTestSuite) Test_returns_error_when_no_emitter_for_p
 
 	bp := newBlueprintWithHandler("orderHandler")
 
-	out, err := RunTransformPipeline(context.Background(), bp, &fakeLinkGraph{}, testTarget, testTransformerID, registry, s.transformCtx)
+	out, err := RunTransformPipeline(context.Background(), s.params(bp, registry))
 
 	s.Require().Error(err)
 	s.Assert().Contains(err.Error(), "no emitter registered")
@@ -136,9 +150,9 @@ func (s *RunTransformPipelineTestSuite) Test_returns_error_on_emit_resource_coll
 	RegisterRewriter(registry, testTarget, rewriterFactoryNoop)
 	RegisterEmit(registry, testTarget, func(
 		_ context.Context,
+		_ *Run,
 		r *resolvedHandler,
 		_ ResourcePropertyRewriter,
-		_ transform.Context,
 	) (*EmitResult, error) {
 		return &EmitResult{
 			Resources: map[string]*schema.Resource{
@@ -156,7 +170,7 @@ func (s *RunTransformPipelineTestSuite) Test_returns_error_on_emit_resource_coll
 		},
 	}
 
-	out, err := RunTransformPipeline(context.Background(), bp, &fakeLinkGraph{}, testTarget, testTransformerID, registry, s.transformCtx)
+	out, err := RunTransformPipeline(context.Background(), s.params(bp, registry))
 
 	s.Require().Error(err)
 	s.Assert().Contains(err.Error(), "produced by multiple primaries")
@@ -169,9 +183,9 @@ func (s *RunTransformPipelineTestSuite) Test_returns_error_when_derived_value_co
 	RegisterRewriter(registry, testTarget, rewriterFactoryNoop)
 	RegisterEmit(registry, testTarget, func(
 		_ context.Context,
+		_ *Run,
 		r *resolvedHandler,
 		_ ResourcePropertyRewriter,
-		_ transform.Context,
 	) (*EmitResult, error) {
 		return &EmitResult{
 			Resources: map[string]*schema.Resource{
@@ -190,7 +204,7 @@ func (s *RunTransformPipelineTestSuite) Test_returns_error_when_derived_value_co
 		},
 	}
 
-	out, err := RunTransformPipeline(context.Background(), bp, &fakeLinkGraph{}, testTarget, testTransformerID, registry, s.transformCtx)
+	out, err := RunTransformPipeline(context.Background(), s.params(bp, registry))
 
 	s.Require().Error(err)
 	s.Assert().Contains(err.Error(), "collides with a user-defined value")
@@ -205,7 +219,7 @@ func (s *RunTransformPipelineTestSuite) Test_emits_concrete_resources_and_derive
 
 	bp := newBlueprintWithHandler("orderHandler")
 
-	out, err := RunTransformPipeline(context.Background(), bp, &fakeLinkGraph{}, testTarget, testTransformerID, registry, s.transformCtx)
+	out, err := RunTransformPipeline(context.Background(), s.params(bp, registry))
 
 	s.Require().NoError(err)
 	s.Require().NotNil(out)
@@ -233,7 +247,7 @@ func (s *RunTransformPipelineTestSuite) Test_strips_current_transformer_id_from_
 		},
 	}
 
-	out, err := RunTransformPipeline(context.Background(), bp, &fakeLinkGraph{}, testTarget, testTransformerID, registry, s.transformCtx)
+	out, err := RunTransformPipeline(context.Background(), s.params(bp, registry))
 
 	s.Require().NoError(err)
 	s.Require().NotNil(out.TransformedBlueprint.Transform)
@@ -251,7 +265,7 @@ func (s *RunTransformPipelineTestSuite) Test_leaves_transform_list_unchanged_whe
 		StringList: schema.StringList{Values: []string{"other-transformer"}},
 	}
 
-	out, err := RunTransformPipeline(context.Background(), bp, &fakeLinkGraph{}, testTarget, testTransformerID, registry, s.transformCtx)
+	out, err := RunTransformPipeline(context.Background(), s.params(bp, registry))
 
 	s.Require().NoError(err)
 	s.Assert().Equal([]string{"other-transformer"}, out.TransformedBlueprint.Transform.Values)
@@ -259,7 +273,7 @@ func (s *RunTransformPipelineTestSuite) Test_leaves_transform_list_unchanged_whe
 
 func (s *RunTransformPipelineTestSuite) Test_assembles_shared_parent_with_merged_contributions() {
 	registry := NewTransformerRegistry()
-	registry.RegisterAggregator(testTarget, func(_ context.Context, resolved []ResolvedResource) *EmitPlan {
+	registry.RegisterAggregator(testTarget, func(_ context.Context, _ *Run, resolved []ResolvedResource) *EmitPlan {
 		return &EmitPlan{
 			Primaries: resolved,
 			SharedParents: []SharedParent{{
@@ -278,9 +292,9 @@ func (s *RunTransformPipelineTestSuite) Test_assembles_shared_parent_with_merged
 	RegisterRewriter(registry, testTarget, rewriterFactoryNoop)
 	RegisterEmit(registry, testTarget, func(
 		_ context.Context,
+		_ *Run,
 		r *resolvedHandler,
 		_ ResourcePropertyRewriter,
-		_ transform.Context,
 	) (*EmitResult, error) {
 		return &EmitResult{
 			Resources: map[string]*schema.Resource{
@@ -309,7 +323,7 @@ func (s *RunTransformPipelineTestSuite) Test_assembles_shared_parent_with_merged
 		},
 	}
 
-	out, err := RunTransformPipeline(context.Background(), bp, &fakeLinkGraph{}, testTarget, testTransformerID, registry, s.transformCtx)
+	out, err := RunTransformPipeline(context.Background(), s.params(bp, registry))
 	s.Require().NoError(err)
 
 	parent := out.TransformedBlueprint.Resources.Values["celerity_function_app"]
@@ -324,7 +338,7 @@ func (s *RunTransformPipelineTestSuite) Test_assembles_shared_parent_with_merged
 
 func (s *RunTransformPipelineTestSuite) Test_emits_diagnostic_on_shared_parent_conflict() {
 	registry := NewTransformerRegistry()
-	registry.RegisterAggregator(testTarget, func(_ context.Context, resolved []ResolvedResource) *EmitPlan {
+	registry.RegisterAggregator(testTarget, func(_ context.Context, _ *Run, resolved []ResolvedResource) *EmitPlan {
 		return &EmitPlan{
 			Primaries: resolved,
 			SharedParents: []SharedParent{{
@@ -339,9 +353,9 @@ func (s *RunTransformPipelineTestSuite) Test_emits_diagnostic_on_shared_parent_c
 	RegisterRewriter(registry, testTarget, rewriterFactoryNoop)
 	RegisterEmit(registry, testTarget, func(
 		_ context.Context,
+		_ *Run,
 		r *resolvedHandler,
 		_ ResourcePropertyRewriter,
-		_ transform.Context,
 	) (*EmitResult, error) {
 		return &EmitResult{
 			Resources: map[string]*schema.Resource{
@@ -366,7 +380,7 @@ func (s *RunTransformPipelineTestSuite) Test_emits_diagnostic_on_shared_parent_c
 		},
 	}
 
-	out, err := RunTransformPipeline(context.Background(), bp, &fakeLinkGraph{}, testTarget, testTransformerID, registry, s.transformCtx)
+	out, err := RunTransformPipeline(context.Background(), s.params(bp, registry))
 
 	s.Require().NoError(err)
 	s.Assert().NotEmpty(out.Diagnostics)
@@ -413,7 +427,7 @@ func (s *RunTransformPipelineTestSuite) Test_warns_when_reference_targets_unsupp
 		},
 	}
 
-	out, err := RunTransformPipeline(context.Background(), bp, &fakeLinkGraph{}, testTarget, testTransformerID, registry, s.transformCtx)
+	out, err := RunTransformPipeline(context.Background(), s.params(bp, registry))
 	s.Require().NoError(err)
 
 	warnings := filterWarnings(out.Diagnostics)
@@ -428,7 +442,7 @@ func (s *RunTransformPipelineTestSuite) Test_passes_through_blueprint_when_no_re
 		Version: core.ScalarFromString("2025-02-01"),
 	}
 
-	out, err := RunTransformPipeline(context.Background(), bp, &fakeLinkGraph{}, testTarget, testTransformerID, registry, s.transformCtx)
+	out, err := RunTransformPipeline(context.Background(), s.params(bp, registry))
 
 	s.Require().NoError(err)
 	s.Require().NotNil(out.TransformedBlueprint)
@@ -459,7 +473,7 @@ func (g *fakeLinkGraph) Resource(_ string) (*schema.Resource, linktypes.Resource
 	return nil, "", false
 }
 
-func passthroughAggregator(_ context.Context, resolved []ResolvedResource) *EmitPlan {
+func passthroughAggregator(_ context.Context, _ *Run, resolved []ResolvedResource) *EmitPlan {
 	return &EmitPlan{Primaries: resolved}
 }
 
@@ -472,7 +486,7 @@ func newRegistryWithAggregator(aggregator Aggregator) *TransformerRegistry {
 func registerHandlerResolver(registry *TransformerRegistry) {
 	registry.RegisterResolver("celerity/handler", func(
 		_ context.Context,
-		_ transform.Context,
+		_ *Run,
 		name string,
 		_ *schema.Resource,
 		_ linktypes.DeclaredLinkGraph,
@@ -492,9 +506,9 @@ func rewriterFactoryNoop(_ *resolvedHandler) []ResourcePropertyRewriter {
 
 func emitHandlerOK(
 	_ context.Context,
+	_ *Run,
 	r *resolvedHandler,
 	_ ResourcePropertyRewriter,
-	_ transform.Context,
 ) (*EmitResult, error) {
 	return &EmitResult{
 		Resources: map[string]*schema.Resource{

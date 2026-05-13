@@ -16,56 +16,70 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 )
 
+type RunTransformPipelineParams struct {
+	InputBlueprint   *schema.Blueprint
+	LinkGraph        linktypes.DeclaredLinkGraph
+	Target           Target
+	TransformerID    string
+	Registry         *TransformerRegistry
+	OnRun            OnRun
+	TransformContext transform.Context
+}
+
 // RunTransformPipeline drives the framework's transformer pipeline
 // for plugins that don't provide their own TransformFunc implementation.
 func RunTransformPipeline(
 	ctx context.Context,
-	inputBlueprint *schema.Blueprint,
-	linkGraph linktypes.DeclaredLinkGraph,
-	target Target,
-	transformerID string,
-	registry *TransformerRegistry,
-	transformCtx transform.Context,
+	params *RunTransformPipelineParams,
 ) (*transform.SpecTransformerTransformOutput, error) {
-	if inputBlueprint == nil {
+	if params.InputBlueprint == nil {
 		return nil, fmt.Errorf("input blueprint is required")
 	}
 
-	if registry == nil {
+	if params.Registry == nil {
 		return nil, fmt.Errorf("transformer registry is required")
 	}
 
-	aggregator, ok := registry.AggregatorFor(target)
+	run := &Run{
+		TransformContext: params.TransformContext,
+	}
+	if params.OnRun != nil {
+		if err := params.OnRun(ctx, run); err != nil {
+			return nil, fmt.Errorf("OnRun failed: %w", err)
+		}
+	}
+
+	aggregator, ok := params.Registry.AggregatorFor(params.Target)
 	if !ok {
 		return nil, fmt.Errorf(
 			"transformer does not support deploy target %q",
-			string(target),
+			string(params.Target),
 		)
 	}
 
-	resolved, err := resolveResources(ctx, inputBlueprint, linkGraph, registry, transformCtx)
+	resolved, err := resolveResources(ctx, params.InputBlueprint, params.LinkGraph, params.Registry, run)
 	if err != nil {
 		return nil, err
 	}
 
-	plan := aggregator(ctx, resolved)
+	plan := aggregator(ctx, run, resolved)
 	if plan == nil {
 		plan = &EmitPlan{}
 	}
 
-	resPropRewriter, err := buildChainedRewriter(plan.Primaries, target, registry)
+	resPropRewriter, err := buildChainedRewriter(plan.Primaries, params.Target, params.Registry)
 	if err != nil {
 		return nil, err
 	}
 
 	diagnostics := validateBlueprintReferences(
-		inputBlueprint,
+		params.InputBlueprint,
 		resolved,
-		target,
-		registry,
+		params.Target,
+		params.Registry,
 	)
 
-	emitted, emitDiagnostics, err := emitPrimaries(ctx, plan.Primaries, resPropRewriter, target, registry, transformCtx)
+	emitted, emitDiagnostics, err := emitPrimaries(ctx, plan.Primaries, resPropRewriter, params.Target, params.Registry, run)
 	if err != nil {
 		return nil, err
 	}
@@ -74,14 +88,14 @@ func RunTransformPipeline(
 	parentDiagnostics := mergeSharedParents(emitted, plan.SharedParents)
 	diagnostics = append(diagnostics, parentDiagnostics...)
 
-	rewritten := RewriteBlueprintRefs(inputBlueprint, RewriteResourcePropertyRefs(resPropRewriter))
+	rewritten := RewriteBlueprintRefs(params.InputBlueprint, RewriteResourcePropertyRefs(resPropRewriter))
 
 	finalValues, err := mergeValues(rewritten.Values, emitted.derivedValues)
 	if err != nil {
 		return nil, err
 	}
 
-	prunedTransform := stripCurrentTransformerID(rewritten.Transform, transformerID)
+	prunedTransform := stripCurrentTransformerID(rewritten.Transform, params.TransformerID)
 
 	output := assembleBlueprint(rewritten, prunedTransform, finalValues, emitted.resources)
 	return &transform.SpecTransformerTransformOutput{
@@ -112,7 +126,7 @@ func resolveResources(
 	blueprint *schema.Blueprint,
 	linkGraph linktypes.DeclaredLinkGraph,
 	registry *TransformerRegistry,
-	transformCtx transform.Context,
+	run *Run,
 ) ([]ResolvedResource, error) {
 	if blueprint.Resources == nil {
 		return nil, nil
@@ -120,7 +134,7 @@ func resolveResources(
 
 	resolved := make([]ResolvedResource, 0, len(blueprint.Resources.Values))
 	for name, resource := range blueprint.Resources.Values {
-		resolvedResource, err := resolveOneResource(ctx, name, resource, linkGraph, blueprint, registry, transformCtx)
+		resolvedResource, err := resolveOneResource(ctx, name, resource, linkGraph, blueprint, registry, run)
 		if err != nil {
 			return nil, err
 		}
@@ -137,7 +151,7 @@ func resolveOneResource(
 	linkGraph linktypes.DeclaredLinkGraph,
 	blueprint *schema.Blueprint,
 	registry *TransformerRegistry,
-	transformCtx transform.Context,
+	run *Run,
 ) (ResolvedResource, error) {
 	resourceType := resourceTypeOf(resource)
 	resolver, ok := registry.ResolverFor(resourceType)
@@ -149,7 +163,7 @@ func resolveOneResource(
 		)
 	}
 
-	resolvedResource, err := resolver(ctx, transformCtx, name, resource, linkGraph, blueprint)
+	resolvedResource, err := resolver(ctx, run, name, resource, linkGraph, blueprint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve resource %q: %w", name, err)
 	}
@@ -192,7 +206,7 @@ func emitPrimaries(
 	chained ResourcePropertyRewriter,
 	target Target,
 	registry *TransformerRegistry,
-	transformCtx transform.Context,
+	run *Run,
 ) (*emittedAggregate, []*core.Diagnostic, error) {
 	aggregate := newEmittedAggregate()
 	diagnostics := []*core.Diagnostic{}
@@ -207,7 +221,7 @@ func emitPrimaries(
 			)
 		}
 
-		result, err := emitter(ctx, primary, chained, transformCtx)
+		result, err := emitter(ctx, run, primary, chained)
 		if err != nil {
 			return nil, nil, fmt.Errorf(
 				"emit failed for resource %q: %w",
