@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.10.0...plugin-framework/v0.11.0) (2026-05-13)
+
+
+### Features
+
+* **plugin-framework:** add support for threading values in a run context through transform pipeline ([a99405f](https://github.com/newstack-cloud/bluelink/commit/a99405f7548dcaaa7429e31dc7b482956a461a62))
+
 ## [0.10.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.9.0...plugin-framework/v0.10.0) (2026-05-10)
 
 
