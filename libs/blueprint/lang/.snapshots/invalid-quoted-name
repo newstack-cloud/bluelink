@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: invalid quoted name "with space": only letters, digits, '_', '-' and '.' are allowed at 1:10
+	  1 | variable "with space": string {}
+	    |          ^
+	- parse error: missing required 'version' directive

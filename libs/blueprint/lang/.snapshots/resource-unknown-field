@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: unknown field "foo" in resource declaration at 1:21
+	  1 | resource r: aws/x { foo = "bar"
+	    |                     ^
+	- parse error: missing required 'version' directive

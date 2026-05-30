@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: unknown field "foo" in data declaration at 1:19
+	  1 | data n: aws/vpc { foo = "bar" }
+	    |                   ^
+	- parse error: missing required 'version' directive

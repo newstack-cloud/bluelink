@@ -1,0 +1,7 @@
+version "2025-11-02"
+
+value canDeploy: boolean {
+    value = variables.deploymentTarget == "serverless"
+        && variables.environment == "production"
+        && values.featureFlags.saveOrderEnabled
+}

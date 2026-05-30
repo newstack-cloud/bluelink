@@ -1,0 +1,17 @@
+version "2025-11-02"
+
+data network: aws/vpc {
+    filter "primary" == true
+
+    export vpcId: string
+    export subnetIds: array {
+        description = "The IDs of the subnets discovered for the VPC"
+    }
+    export region as vpcRegion: string
+}
+
+data routes: aws/ec2/routes {
+    filter "vpcId" == "vpc-123"
+
+    export *
+}

@@ -1,0 +1,4 @@
+blueprint language errors:
+	- parse error: version directive first declared at 1:9, duplicated at 2:9
+	  2 | version "2025-11-02"
+	    |         ^

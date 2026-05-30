@@ -1,0 +1,8 @@
+version "2025-11-02"
+
+metadata {
+    "build.profile" = {
+        target = "es2020",
+        externals = ["aws-sdk", "node:fs"]
+    }
+}

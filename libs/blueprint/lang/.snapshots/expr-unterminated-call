@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: expected an expression, got end of input at 1:34
+	  1 | value x: object { value = object(
+	    |                                  ^
+	- parse error: missing required 'version' directive

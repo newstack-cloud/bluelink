@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: expected '[', got string at 1:43
+	  1 | variable region: string { allowedValues = "a" }
+	    |                                           ^
+	- parse error: missing required 'version' directive

@@ -1,0 +1,10 @@
+version "2025-11-02"
+
+data nodes: aws/eks/node {
+    filter "cpuCount" > 4
+    filter "memoryGB" >= 8
+    filter "priceUsd" < 5.0
+    filter "ageDays" <= 30
+
+    export id: string
+}

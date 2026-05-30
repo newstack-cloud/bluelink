@@ -1,0 +1,5 @@
+version "2025-11-02"
+
+variable "primary.region": string {
+    default = "us-east-1"
+}

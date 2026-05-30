@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: expected an expression, got '}' at 1:43
+	  1 | value x: boolean { value = variables.a && }
+	    |                                           ^
+	- parse error: missing required 'version' directive

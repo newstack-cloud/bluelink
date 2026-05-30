@@ -8,6 +8,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/lang"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/links"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
@@ -20,14 +21,18 @@ import (
 
 func deriveSpecFormat(specFilePath string) (schema.SpecFormat, error) {
 	// Bear in mind this is a somewhat naive check, however if the spec file data
-	// isn't valid YAML or JWCC it will be caught in a failure to unmarshal
-	// the spec.
+	// isn't valid YAML, JWCC or blueprint language it will be caught in a failure
+	// to unmarshal/parse the spec.
 	if strings.HasSuffix(specFilePath, ".yml") || strings.HasSuffix(specFilePath, ".yaml") {
 		return schema.YAMLSpecFormat, nil
 	}
 
-	if strings.HasSuffix(specFilePath, ".jsonc") {
+	if strings.HasSuffix(specFilePath, ".jsonc") || strings.HasSuffix(specFilePath, ".json") {
 		return schema.JWCCSpecFormat, nil
+	}
+
+	if strings.HasSuffix(specFilePath, ".bp") || strings.HasSuffix(specFilePath, ".blueprint") {
+		return schema.BlueprintLangSpecFormat, nil
 	}
 
 	return "", errUnsupportedSpecFileExtension(specFilePath)
@@ -39,6 +44,20 @@ func predefinedFormatFactory(predefinedFormat schema.SpecFormat) func(input stri
 	return func(input string) (schema.SpecFormat, error) {
 		return predefinedFormat, nil
 	}
+}
+
+func loadSpecFile(specFilePath string, inputFormat schema.SpecFormat) (*schema.Blueprint, error) {
+	if inputFormat == schema.BlueprintLangSpecFormat {
+		return lang.ParseFile(specFilePath)
+	}
+	return schema.Load(specFilePath, inputFormat)
+}
+
+func loadSpecString(spec string, inputFormat schema.SpecFormat) (*schema.Blueprint, error) {
+	if inputFormat == schema.BlueprintLangSpecFormat {
+		return lang.ParseString(spec)
+	}
+	return schema.LoadString(spec, inputFormat)
 }
 
 func copyProviderMap(m map[string]provider.Provider) map[string]provider.Provider {

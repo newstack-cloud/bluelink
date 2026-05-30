@@ -71,7 +71,7 @@ type Loader interface {
 }
 ```
 
-The loader deals with loading a spec from a file, a pre-loaded schema or a string, unmarshalling the JSON or YAML
+The loader deals with loading a spec from a file, a pre-loaded schema or a string, parsing a blueprint language document, JSON or YAML
 and validating each resource in the spec with the configured resource providers.
 
 Pre-loaded schemas are useful for caching expanded blueprint schemas to make loading blueprints that have been previously loaded without modifications more efficient. You can implement the [BlueprintCache](#blueprintcache-cacheblueprintcache) interface to store and retrieve expanded blueprint schemas either side of loading a blueprint.
@@ -198,7 +198,7 @@ type BlueprintSpec interface {
 ```
 
 The blueprint spec deals with providing the schema of a blueprint, its resources and a `*core.MappingNode` representation of the resource specification. The resource specification is everything under the the `spec` mapping in the
-YAML or JSON input blueprint. The spec must be a `*core.MappingNode` to allow for the usage of substitutions (with `${..}` syntax); a concrete, user-defined struct would not allow for this.
+blueprint language, YAML or JSON input blueprint. The spec must be a `*core.MappingNode` to allow for the usage of substitutions (with `${..}` syntax); a concrete, user-defined struct would not allow for this.
 
 The core framework comes with a default blueprint spec that should meet all your needs.
 

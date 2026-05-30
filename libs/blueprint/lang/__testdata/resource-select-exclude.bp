@@ -1,0 +1,12 @@
+version "2025-11-02"
+
+resource saveOrderFunction: aws/lambda/function {
+    select by label {
+        service = "ordersApi"
+        exclude = [testOrdersTable, "legacyOrdersTable"]
+    }
+
+    spec {
+        functionName = "saveOrderFunction"
+    }
+}

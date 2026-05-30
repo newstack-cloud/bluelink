@@ -1,0 +1,7 @@
+version "2025-11-02"
+
+data network: aws/vpc {
+    filter "tags" == "primary"
+
+    export vpcId: string
+}

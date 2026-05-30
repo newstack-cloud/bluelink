@@ -217,6 +217,20 @@ func (s *LoaderTestSuite) Test_loads_container_from_input_spec_string_without_an
 	s.Assert().NotNil(container)
 }
 
+func (s *LoaderTestSuite) Test_loads_container_from_input_spec_string_using_blueprint_language_format() {
+	specBytes, err := os.ReadFile("__testdata/loader/valid-blueprint.bp")
+	s.Require().NoError(err)
+
+	container, err := s.loader.LoadString(
+		context.TODO(),
+		string(specBytes),
+		schema.BlueprintLangSpecFormat,
+		createParams(),
+	)
+	s.Require().NoError(err)
+	s.Assert().NotNil(container)
+}
+
 func (s *LoaderTestSuite) Test_validates_spec_from_input_spec_file_without_any_issues() {
 	validationRes, err := s.loader.Validate(context.TODO(), s.specFixtureFiles["valid"], createParams())
 	s.Require().NoError(err)

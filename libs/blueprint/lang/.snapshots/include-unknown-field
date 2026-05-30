@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: unknown field "foo" in include declaration at 1:26
+	  1 | include child "a.yaml" { foo = "bar" }
+	    |                          ^
+	- parse error: missing required 'version' directive

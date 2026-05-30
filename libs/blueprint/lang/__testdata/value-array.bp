@@ -1,0 +1,6 @@
+version "2025-11-02"
+
+value regions: array {
+    value = ["us-east-1", "us-west-2", "eu-west-1"]
+    secret = true
+}

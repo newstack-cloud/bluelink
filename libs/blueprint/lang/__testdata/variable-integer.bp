@@ -1,0 +1,7 @@
+version "2025-11-02"
+
+variable databasePort: integer {
+    default = 5432
+    description = "The database port the Orders API connects to"
+    allowedValues = [5432, 5433, -1]
+}

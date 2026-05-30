@@ -1,0 +1,337 @@
+(*schema.Blueprint)({
+  Version: (*core.ScalarValue)({
+    IntValue: (*int)(<nil>),
+    BoolValue: (*bool)(<nil>),
+    FloatValue: (*float64)(<nil>),
+    BytesValue: (*[]uint8)(<nil>),
+    StringValue: (*string)((len=10) "2025-11-02"),
+    NoneValue: (*bool)(<nil>),
+    SourceMeta: (*source.Meta)({
+      Position: (source.Position) {
+        Line: (int) 1,
+        Column: (int) 9
+      },
+      EndPosition: (*source.Position)({
+        Line: (int) 1,
+        Column: (int) 21
+      }),
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+    })
+  }),
+  Transform: (*schema.TransformValueWrapper)(<nil>),
+  Variables: (*schema.VariableMap)(<nil>),
+  Values: (*schema.ValueMap)(<nil>),
+  Include: (*schema.IncludeMap)(<nil>),
+  Resources: (*schema.ResourceMap)(<nil>),
+  DataSources: (*schema.DataSourceMap)({
+    Values: (map[string]*schema.DataSource) (len=1) {
+      (string) (len=7) "network": (*schema.DataSource)({
+        Type: (*schema.DataSourceTypeWrapper)({
+          Value: (string) (len=7) "aws/vpc",
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 3,
+              Column: (int) 15
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 3,
+              Column: (int) 22
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        DataSourceMetadata: (*schema.DataSourceMetadata)(<nil>),
+        Filter: (*schema.DataSourceFilters)({
+          Filters: ([]*schema.DataSourceFilter) (len=2) {
+            (*schema.DataSourceFilter)({
+              Field: (*core.ScalarValue)({
+                IntValue: (*int)(<nil>),
+                BoolValue: (*bool)(<nil>),
+                FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
+                StringValue: (*string)((len=16) "tags.environment"),
+                NoneValue: (*bool)(<nil>),
+                SourceMeta: (*source.Meta)({
+                  Position: (source.Position) {
+                    Line: (int) 4,
+                    Column: (int) 12
+                  },
+                  EndPosition: (*source.Position)({
+                    Line: (int) 4,
+                    Column: (int) 30
+                  }),
+                  ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+                })
+              }),
+              Operator: (*schema.DataSourceFilterOperatorWrapper)({
+                Value: (schema.DataSourceFilterOperator) (len=1) "=",
+                SourceMeta: (*source.Meta)({
+                  Position: (source.Position) {
+                    Line: (int) 4,
+                    Column: (int) 31
+                  },
+                  EndPosition: (*source.Position)({
+                    Line: (int) 4,
+                    Column: (int) 33
+                  }),
+                  ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+                })
+              }),
+              Search: (*schema.DataSourceFilterSearch)({
+                Values: ([]*substitutions.StringOrSubstitutions) (len=1) {
+                  (*substitutions.StringOrSubstitutions)({
+                    Values: ([]*substitutions.StringOrSubstitution) (len=1) {
+                      (*substitutions.StringOrSubstitution)({
+                        StringValue: (*string)(<nil>),
+                        SubstitutionValue: (*substitutions.Substitution)({
+                          Function: (*substitutions.SubstitutionFunctionExpr)(<nil>),
+                          Variable: (*substitutions.SubstitutionVariable)({
+                            VariableName: (string) (len=11) "environment",
+                            SourceMeta: (*source.Meta)({
+                              Position: (source.Position) {
+                                Line: (int) 4,
+                                Column: (int) 34
+                              },
+                              EndPosition: (*source.Position)({
+                                Line: (int) 4,
+                                Column: (int) 55
+                              }),
+                              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+                            })
+                          }),
+                          ValueReference: (*substitutions.SubstitutionValueReference)(<nil>),
+                          ElemReference: (*substitutions.SubstitutionElemReference)(<nil>),
+                          ElemIndexReference: (*substitutions.SubstitutionElemIndexReference)(<nil>),
+                          DataSourceProperty: (*substitutions.SubstitutionDataSourceProperty)(<nil>),
+                          ResourceProperty: (*substitutions.SubstitutionResourceProperty)(<nil>),
+                          Child: (*substitutions.SubstitutionChild)(<nil>),
+                          StringValue: (*string)(<nil>),
+                          IntValue: (*int64)(<nil>),
+                          FloatValue: (*float64)(<nil>),
+                          BoolValue: (*bool)(<nil>),
+                          NoneValue: (bool) false,
+                          SourceMeta: (*source.Meta)({
+                            Position: (source.Position) {
+                              Line: (int) 4,
+                              Column: (int) 34
+                            },
+                            EndPosition: (*source.Position)({
+                              Line: (int) 4,
+                              Column: (int) 55
+                            }),
+                            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+                          })
+                        }),
+                        SourceMeta: (*source.Meta)({
+                          Position: (source.Position) {
+                            Line: (int) 4,
+                            Column: (int) 34
+                          },
+                          EndPosition: (*source.Position)({
+                            Line: (int) 4,
+                            Column: (int) 55
+                          }),
+                          ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+                        })
+                      })
+                    },
+                    SourceMeta: (*source.Meta)({
+                      Position: (source.Position) {
+                        Line: (int) 4,
+                        Column: (int) 34
+                      },
+                      EndPosition: (*source.Position)({
+                        Line: (int) 4,
+                        Column: (int) 55
+                      }),
+                      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+                    })
+                  })
+                },
+                SourceMeta: (*source.Meta)({
+                  Position: (source.Position) {
+                    Line: (int) 4,
+                    Column: (int) 34
+                  },
+                  EndPosition: (*source.Position)({
+                    Line: (int) 4,
+                    Column: (int) 55
+                  }),
+                  ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+                })
+              }),
+              SourceMeta: (*source.Meta)({
+                Position: (source.Position) {
+                  Line: (int) 4,
+                  Column: (int) 5
+                },
+                EndPosition: (*source.Position)({
+                  Line: (int) 4,
+                  Column: (int) 55
+                }),
+                ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+              })
+            }),
+            (*schema.DataSourceFilter)({
+              Field: (*core.ScalarValue)({
+                IntValue: (*int)(<nil>),
+                BoolValue: (*bool)(<nil>),
+                FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
+                StringValue: (*string)((len=5) "state"),
+                NoneValue: (*bool)(<nil>),
+                SourceMeta: (*source.Meta)({
+                  Position: (source.Position) {
+                    Line: (int) 5,
+                    Column: (int) 12
+                  },
+                  EndPosition: (*source.Position)({
+                    Line: (int) 5,
+                    Column: (int) 19
+                  }),
+                  ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+                })
+              }),
+              Operator: (*schema.DataSourceFilterOperatorWrapper)({
+                Value: (schema.DataSourceFilterOperator) (len=2) "!=",
+                SourceMeta: (*source.Meta)({
+                  Position: (source.Position) {
+                    Line: (int) 5,
+                    Column: (int) 20
+                  },
+                  EndPosition: (*source.Position)({
+                    Line: (int) 5,
+                    Column: (int) 22
+                  }),
+                  ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+                })
+              }),
+              Search: (*schema.DataSourceFilterSearch)({
+                Values: ([]*substitutions.StringOrSubstitutions) (len=1) {
+                  (*substitutions.StringOrSubstitutions)({
+                    Values: ([]*substitutions.StringOrSubstitution) (len=1) {
+                      (*substitutions.StringOrSubstitution)({
+                        StringValue: (*string)((len=7) "deleted"),
+                        SubstitutionValue: (*substitutions.Substitution)(<nil>),
+                        SourceMeta: (*source.Meta)({
+                          Position: (source.Position) {
+                            Line: (int) 5,
+                            Column: (int) 23
+                          },
+                          EndPosition: (*source.Position)({
+                            Line: (int) 5,
+                            Column: (int) 32
+                          }),
+                          ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+                        })
+                      })
+                    },
+                    SourceMeta: (*source.Meta)({
+                      Position: (source.Position) {
+                        Line: (int) 5,
+                        Column: (int) 23
+                      },
+                      EndPosition: (*source.Position)({
+                        Line: (int) 5,
+                        Column: (int) 32
+                      }),
+                      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+                    })
+                  })
+                },
+                SourceMeta: (*source.Meta)({
+                  Position: (source.Position) {
+                    Line: (int) 5,
+                    Column: (int) 23
+                  },
+                  EndPosition: (*source.Position)({
+                    Line: (int) 5,
+                    Column: (int) 32
+                  }),
+                  ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+                })
+              }),
+              SourceMeta: (*source.Meta)({
+                Position: (source.Position) {
+                  Line: (int) 5,
+                  Column: (int) 5
+                },
+                EndPosition: (*source.Position)({
+                  Line: (int) 5,
+                  Column: (int) 32
+                }),
+                ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+              })
+            })
+          }
+        }),
+        Exports: (*schema.DataSourceFieldExportMap)({
+          Values: (map[string]*schema.DataSourceFieldExport) (len=1) {
+            (string) (len=5) "vpcId": (*schema.DataSourceFieldExport)({
+              Type: (*schema.DataSourceFieldTypeWrapper)({
+                Value: (schema.DataSourceFieldType) (len=6) "string",
+                SourceMeta: (*source.Meta)({
+                  Position: (source.Position) {
+                    Line: (int) 7,
+                    Column: (int) 19
+                  },
+                  EndPosition: (*source.Position)({
+                    Line: (int) 7,
+                    Column: (int) 25
+                  }),
+                  ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+                })
+              }),
+              AliasFor: (*core.ScalarValue)(<nil>),
+              Description: (*substitutions.StringOrSubstitutions)(<nil>),
+              SourceMeta: (*source.Meta)({
+                Position: (source.Position) {
+                  Line: (int) 7,
+                  Column: (int) 12
+                },
+                EndPosition: (*source.Position)({
+                  Line: (int) 7,
+                  Column: (int) 17
+                }),
+                ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+              })
+            })
+          },
+          ExportAll: (bool) false,
+          SourceMeta: (map[string]*source.Meta) (len=1) {
+            (string) (len=5) "vpcId": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 7,
+                Column: (int) 12
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 7,
+                Column: (int) 17
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }
+        }),
+        Description: (*substitutions.StringOrSubstitutions)(<nil>),
+        SourceMeta: (*source.Meta)(<nil>),
+        FieldsSourceMeta: (map[string]*source.Meta) {
+        }
+      })
+    },
+    SourceMeta: (map[string]*source.Meta) (len=1) {
+      (string) (len=7) "network": (*source.Meta)({
+        Position: (source.Position) {
+          Line: (int) 3,
+          Column: (int) 6
+        },
+        EndPosition: (*source.Position)({
+          Line: (int) 3,
+          Column: (int) 13
+        }),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+      })
+    }
+  }),
+  Exports: (*schema.ExportMap)(<nil>),
+  Metadata: (*core.MappingNode)(<nil>)
+})

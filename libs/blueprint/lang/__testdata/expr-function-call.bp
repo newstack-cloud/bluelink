@@ -1,0 +1,13 @@
+version "2025-11-02"
+
+value bucketTags: object {
+    value = object(
+        environment = variables.environment,
+        owner = "platform-team",
+        managedBy = "bluelink"
+    )
+}
+
+value combinedRegions: array {
+    value = concat(values.primaryRegions, values.secondaryRegions, ["global"])
+}

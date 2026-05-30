@@ -1,0 +1,3 @@
+version "2025-11-02"
+
+include coreInfra "core-infra.yaml" {}

@@ -1,0 +1,7 @@
+version "2025-11-02"
+
+variable threshold: float {
+    default = 0.75
+    description = "Scaling threshold"
+    allowedValues = [0.5, 0.75, -1.5]
+}

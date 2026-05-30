@@ -601,7 +601,7 @@ func (l *defaultLoader) Load(ctx context.Context, blueprintSpecFile string, para
 	loadInfo := &loadBlueprintInfo{
 		specOrFilePath: blueprintSpecFile,
 	}
-	container, diagnostics, err := l.loadSpecAndLinkInfo(ctx, loadInfo, params, schema.Load, deriveSpecFormat)
+	container, diagnostics, err := l.loadSpecAndLinkInfo(ctx, loadInfo, params, loadSpecFile, deriveSpecFormat)
 	if err != nil {
 		return container, err
 	}
@@ -619,7 +619,7 @@ func (l *defaultLoader) Validate(
 	loadInfo := &loadBlueprintInfo{
 		specOrFilePath: blueprintSpecFile,
 	}
-	container, diagnostics, err := l.loadSpecAndLinkInfo(ctx, loadInfo, params, schema.Load, deriveSpecFormat)
+	container, diagnostics, err := l.loadSpecAndLinkInfo(ctx, loadInfo, params, loadSpecFile, deriveSpecFormat)
 	if err != nil {
 		return &ValidationResult{
 			Diagnostics: diagnostics,
@@ -1644,7 +1644,7 @@ func (l *defaultLoader) LoadString(
 	loadInfo := &loadBlueprintInfo{
 		specOrFilePath: blueprintSpec,
 	}
-	container, diagnostics, err := l.loadSpecAndLinkInfo(ctx, loadInfo, params, schema.LoadString, predefinedFormatFactory(inputFormat))
+	container, diagnostics, err := l.loadSpecAndLinkInfo(ctx, loadInfo, params, loadSpecString, predefinedFormatFactory(inputFormat))
 	if err != nil {
 		return container, err
 	}
@@ -1663,7 +1663,7 @@ func (l *defaultLoader) ValidateString(
 	loadInfo := &loadBlueprintInfo{
 		specOrFilePath: blueprintSpec,
 	}
-	container, diagnostics, err := l.loadSpecAndLinkInfo(ctx, loadInfo, params, schema.LoadString, predefinedFormatFactory(inputFormat))
+	container, diagnostics, err := l.loadSpecAndLinkInfo(ctx, loadInfo, params, loadSpecString, predefinedFormatFactory(inputFormat))
 	if err != nil {
 		return &ValidationResult{
 			Diagnostics: diagnostics,
@@ -1863,7 +1863,7 @@ func (l *defaultLoader) resolveChildBlueprintSchemas(
 			continue
 		}
 
-		childBp, err := schema.Load(resolvedPath, format)
+		childBp, err := loadSpecFile(resolvedPath, format)
 		if err != nil {
 			l.logger.Debug(
 				"Could not load child blueprint for validation",

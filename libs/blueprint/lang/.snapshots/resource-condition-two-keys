@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: condition object must have exactly one of 'and', 'or', or 'not' at 1:33
+	  1 | resource r: aws/x { condition = { and = [variables.x], or = [variables.y] }
+	    |                                 ^
+	- parse error: missing required 'version' directive

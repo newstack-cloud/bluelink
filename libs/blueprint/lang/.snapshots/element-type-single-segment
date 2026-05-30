@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: expected '/', got '{' at 1:24
+	  1 | variable instance: aws {}
+	    |                        ^
+	- parse error: missing required 'version' directive

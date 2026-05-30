@@ -1,0 +1,6 @@
+version "2025-11-02"
+
+export environment: string {
+    field = variables.environment
+    description = "The environment the blueprint is deployed to (${variables.environment})"
+}

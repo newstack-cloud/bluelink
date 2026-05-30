@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: unknown field "foo" in export declaration at 1:20
+	  1 | export x: string { foo = "bar" }
+	    |                    ^
+	- parse error: missing required 'version' directive

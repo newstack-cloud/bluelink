@@ -1,0 +1,9 @@
+version "2025-11-02"
+
+data network: aws/vpc {
+    description = "Discovers the primary VPC for ${variables.environment}"
+
+    filter "tags.environment" == variables.environment
+
+    export vpcId: string
+}

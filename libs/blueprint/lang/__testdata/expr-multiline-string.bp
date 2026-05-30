@@ -1,0 +1,8 @@
+version "2025-11-02"
+
+value greeting: string {
+    value = """
+        Hello, ${variables.name}!
+        Welcome to ${variables.environment}.
+        """
+}

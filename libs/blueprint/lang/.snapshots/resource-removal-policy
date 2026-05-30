@@ -1,0 +1,173 @@
+(*schema.Blueprint)({
+  Version: (*core.ScalarValue)({
+    IntValue: (*int)(<nil>),
+    BoolValue: (*bool)(<nil>),
+    FloatValue: (*float64)(<nil>),
+    BytesValue: (*[]uint8)(<nil>),
+    StringValue: (*string)((len=10) "2025-11-02"),
+    NoneValue: (*bool)(<nil>),
+    SourceMeta: (*source.Meta)({
+      Position: (source.Position) {
+        Line: (int) 1,
+        Column: (int) 9
+      },
+      EndPosition: (*source.Position)({
+        Line: (int) 1,
+        Column: (int) 21
+      }),
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+    })
+  }),
+  Transform: (*schema.TransformValueWrapper)(<nil>),
+  Variables: (*schema.VariableMap)(<nil>),
+  Values: (*schema.ValueMap)(<nil>),
+  Include: (*schema.IncludeMap)(<nil>),
+  Resources: (*schema.ResourceMap)({
+    Values: (map[string]*schema.Resource) (len=1) {
+      (string) (len=11) "ordersTable": (*schema.Resource)({
+        Type: (*schema.ResourceTypeWrapper)({
+          Value: (string) (len=18) "aws/dynamodb/table",
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 3,
+              Column: (int) 23
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 3,
+              Column: (int) 41
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Description: (*substitutions.StringOrSubstitutions)(<nil>),
+        Metadata: (*schema.Metadata)(<nil>),
+        DependsOn: (*schema.DependsOnList)(<nil>),
+        Condition: (*schema.Condition)(<nil>),
+        Each: (*substitutions.StringOrSubstitutions)(<nil>),
+        LinkSelector: (*schema.LinkSelector)(<nil>),
+        RemovalPolicy: (*schema.RemovalPolicyWrapper)({
+          Value: (schema.RemovalPolicy) (len=6) "retain",
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 4,
+              Column: (int) 21
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 4,
+              Column: (int) 29
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Spec: (*core.MappingNode)({
+          Scalar: (*core.ScalarValue)(<nil>),
+          Fields: (map[string]*core.MappingNode) (len=1) {
+            (string) (len=9) "tableName": (*core.MappingNode)({
+              Scalar: (*core.ScalarValue)({
+                IntValue: (*int)(<nil>),
+                BoolValue: (*bool)(<nil>),
+                FloatValue: (*float64)(<nil>),
+                BytesValue: (*[]uint8)(<nil>),
+                StringValue: (*string)((len=6) "Orders"),
+                NoneValue: (*bool)(<nil>),
+                SourceMeta: (*source.Meta)({
+                  Position: (source.Position) {
+                    Line: (int) 7,
+                    Column: (int) 21
+                  },
+                  EndPosition: (*source.Position)({
+                    Line: (int) 7,
+                    Column: (int) 29
+                  }),
+                  ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+                })
+              }),
+              Fields: (map[string]*core.MappingNode) <nil>,
+              Items: ([]*core.MappingNode) <nil>,
+              StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+              SourceMeta: (*source.Meta)({
+                Position: (source.Position) {
+                  Line: (int) 7,
+                  Column: (int) 21
+                },
+                EndPosition: (*source.Position)({
+                  Line: (int) 7,
+                  Column: (int) 29
+                }),
+                ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+              }),
+              FieldsSourceMeta: (map[string]*source.Meta) <nil>
+            })
+          },
+          Items: ([]*core.MappingNode) <nil>,
+          StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 6,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 8,
+              Column: (int) 6
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          FieldsSourceMeta: (map[string]*source.Meta) (len=1) {
+            (string) (len=9) "tableName": (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 7,
+                Column: (int) 9
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 7,
+                Column: (int) 18
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }
+        }),
+        SourceMeta: (*source.Meta)(<nil>),
+        FieldsSourceMeta: (map[string]*source.Meta) (len=2) {
+          (string) (len=13) "removalPolicy": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 4,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 4,
+              Column: (int) 29
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          (string) (len=4) "spec": (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 6,
+              Column: (int) 5
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 8,
+              Column: (int) 6
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }
+      })
+    },
+    SourceMeta: (map[string]*source.Meta) (len=1) {
+      (string) (len=11) "ordersTable": (*source.Meta)({
+        Position: (source.Position) {
+          Line: (int) 3,
+          Column: (int) 10
+        },
+        EndPosition: (*source.Position)({
+          Line: (int) 3,
+          Column: (int) 21
+        }),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+      })
+    }
+  }),
+  DataSources: (*schema.DataSourceMap)(<nil>),
+  Exports: (*schema.ExportMap)(<nil>),
+  Metadata: (*core.MappingNode)(<nil>)
+})

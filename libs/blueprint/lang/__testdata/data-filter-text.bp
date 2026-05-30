@@ -1,0 +1,12 @@
+version "2025-11-02"
+
+data buckets: aws/s3/bucket {
+    filter "name" contains "orders"
+    filter "name" not contains "test"
+    filter "name" starts with "prod-"
+    filter "name" not starts with "tmp-"
+    filter "region" ends with "-east-1"
+    filter "region" not ends with "-1a"
+
+    export name: string
+}

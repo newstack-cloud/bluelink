@@ -1,0 +1,8 @@
+version "2025-11-02"
+
+data network: aws/vpc {
+    filter "tags.environment" == variables.environment
+    filter "state" != "deleted"
+
+    export vpcId: string
+}

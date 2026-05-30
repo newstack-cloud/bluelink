@@ -1,0 +1,16 @@
+version "2025-11-02"
+
+include coreInfra "${cwd()}/core-infra.yaml" {
+    description = "Core infra (including database) for the Orders API"
+
+    variables {
+        environment = variables.environment,
+        databaseName = variables.databaseName
+    }
+
+    metadata {
+        sourceType = "aws/s3",
+        bucket = "order-system-blueprints",
+        region = "eu-west-1"
+    }
+}

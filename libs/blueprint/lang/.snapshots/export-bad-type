@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: expected a valid export type, got identifier at 1:11
+	  1 | export x: notAType { field = variables.x }
+	    |           ^
+	- parse error: missing required 'version' directive

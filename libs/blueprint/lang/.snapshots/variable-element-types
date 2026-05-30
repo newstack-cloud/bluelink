@@ -1,0 +1,152 @@
+(*schema.Blueprint)({
+  Version: (*core.ScalarValue)({
+    IntValue: (*int)(<nil>),
+    BoolValue: (*bool)(<nil>),
+    FloatValue: (*float64)(<nil>),
+    BytesValue: (*[]uint8)(<nil>),
+    StringValue: (*string)((len=10) "2025-11-02"),
+    NoneValue: (*bool)(<nil>),
+    SourceMeta: (*source.Meta)({
+      Position: (source.Position) {
+        Line: (int) 1,
+        Column: (int) 9
+      },
+      EndPosition: (*source.Position)({
+        Line: (int) 1,
+        Column: (int) 21
+      }),
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+    })
+  }),
+  Transform: (*schema.TransformValueWrapper)(<nil>),
+  Variables: (*schema.VariableMap)({
+    Values: (map[string]*schema.Variable) (len=2) {
+      (string) (len=7) "dataset": (*schema.Variable)({
+        Type: (*schema.VariableTypeWrapper)({
+          Value: (schema.VariableType) (len=16) "gcp/data/dataset",
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 8,
+              Column: (int) 19
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 8,
+              Column: (int) 35
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Description: (*core.ScalarValue)({
+          IntValue: (*int)(<nil>),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
+          StringValue: (*string)((len=23) "Target BigQuery dataset"),
+          NoneValue: (*bool)(<nil>),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 9,
+              Column: (int) 19
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 9,
+              Column: (int) 44
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Secret: (*core.ScalarValue)(<nil>),
+        Default: (*core.ScalarValue)(<nil>),
+        AllowedValues: ([]*core.ScalarValue) <nil>,
+        SourceMeta: (*source.Meta)(<nil>)
+      }),
+      (string) (len=12) "instanceSize": (*schema.Variable)({
+        Type: (*schema.VariableTypeWrapper)({
+          Value: (schema.VariableType) (len=20) "aws/ec2/instanceSize",
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 3,
+              Column: (int) 24
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 3,
+              Column: (int) 44
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Description: (*core.ScalarValue)({
+          IntValue: (*int)(<nil>),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
+          StringValue: (*string)((len=52) "The instance size for the background batch processor"),
+          NoneValue: (*bool)(<nil>),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 5,
+              Column: (int) 19
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 5,
+              Column: (int) 73
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Secret: (*core.ScalarValue)(<nil>),
+        Default: (*core.ScalarValue)({
+          IntValue: (*int)(<nil>),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
+          StringValue: (*string)((len=8) "t3.micro"),
+          NoneValue: (*bool)(<nil>),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 4,
+              Column: (int) 15
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 4,
+              Column: (int) 25
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        AllowedValues: ([]*core.ScalarValue) <nil>,
+        SourceMeta: (*source.Meta)(<nil>)
+      })
+    },
+    SourceMeta: (map[string]*source.Meta) (len=2) {
+      (string) (len=7) "dataset": (*source.Meta)({
+        Position: (source.Position) {
+          Line: (int) 8,
+          Column: (int) 10
+        },
+        EndPosition: (*source.Position)({
+          Line: (int) 8,
+          Column: (int) 17
+        }),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+      }),
+      (string) (len=12) "instanceSize": (*source.Meta)({
+        Position: (source.Position) {
+          Line: (int) 3,
+          Column: (int) 10
+        },
+        EndPosition: (*source.Position)({
+          Line: (int) 3,
+          Column: (int) 22
+        }),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+      })
+    }
+  }),
+  Values: (*schema.ValueMap)(<nil>),
+  Include: (*schema.IncludeMap)(<nil>),
+  Resources: (*schema.ResourceMap)(<nil>),
+  DataSources: (*schema.DataSourceMap)(<nil>),
+  Exports: (*schema.ExportMap)(<nil>),
+  Metadata: (*core.MappingNode)(<nil>)
+})

@@ -1,0 +1,9 @@
+version "2025-11-02"
+
+variable region: string {
+    default = "us-east-1"
+    description = """
+        The region to deploy resources in.
+        Must be a region where the service is available.
+        """
+}

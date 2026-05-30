@@ -1,0 +1,4 @@
+blueprint language errors:
+	- parse error: expected string, got integer at 2:41
+	  2 | variable region: string { description = 42 }
+	    |                                         ^

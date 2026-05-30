@@ -1,0 +1,22 @@
+version "2025-11-02"
+
+resource saveOrderFunction: aws/lambda/function {
+    condition = {
+        and = [
+            variables.deploymentTarget == "serverless",
+            {
+                or = [
+                    variables.environment == "production",
+                    variables.environment == "staging"
+                ]
+            },
+            {
+                not = variables.maintenanceMode
+            }
+        ]
+    }
+
+    spec {
+        functionName = "saveOrderFunction"
+    }
+}

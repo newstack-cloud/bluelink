@@ -1,0 +1,20 @@
+version "2025-11-02"
+
+data network: aws/vpc {
+    metadata {
+        displayName = "Network source"
+        annotations = {
+            "aws.vpc.preferred-region" = variables.region,
+            "internal.team" = "platform"
+        }
+        custom = {
+            ui = {
+                color = "blue"
+            }
+        }
+    }
+
+    filter "tags" has key variables.environment
+
+    export vpcId: string
+}

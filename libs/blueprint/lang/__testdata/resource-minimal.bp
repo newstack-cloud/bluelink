@@ -1,0 +1,11 @@
+version "2025-11-02"
+
+resource saveOrderFunction: aws/lambda/function {
+    spec {
+        functionName = "saveOrderFunction"
+        codeUri = "./orders"
+        handler = "save_order.handler"
+        runtime = "python3.12"
+        timeout = 120
+    }
+}

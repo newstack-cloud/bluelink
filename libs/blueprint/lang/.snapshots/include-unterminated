@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: expected '}', got end of input at 1:25
+	  1 | include child "a.yaml" {
+	    |                         ^
+	- parse error: missing required 'version' directive

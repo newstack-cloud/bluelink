@@ -1,0 +1,10 @@
+version "2025-11-02"
+
+variable instanceSize: aws/ec2/instanceSize {
+    default = "t3.micro"
+    description = "The instance size for the background batch processor"
+}
+
+variable dataset: gcp/data/dataset {
+    description = "Target BigQuery dataset"
+}

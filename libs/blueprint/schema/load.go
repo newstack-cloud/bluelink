@@ -18,6 +18,9 @@ type Loader func(string, SpecFormat) (*Blueprint, error)
 
 // Load deals with loading a blueprint specification
 // from a YAML or JSON file on disk.
+// The blueprint language (`.bp`) format is not handled here — callers
+// that need it must dispatch to the `lang` package themselves, since
+// `lang` depends on `schema`. The dispatch lives in `container`.
 func Load(specFilePath string, inputFormat SpecFormat) (*Blueprint, error) {
 	if inputFormat == YAMLSpecFormat {
 		return loadYAMLFromFile(specFilePath)
@@ -85,10 +88,17 @@ const (
 	// or exported should be serialised or deserialised
 	// in the YAML format.
 	YAMLSpecFormat SpecFormat = "yaml"
+	// BlueprintLangSpecFormat determines that a spec being loaded
+	// or exported should be serialised or deserialised
+	// in the Blueprint Language format.
+	BlueprintLangSpecFormat SpecFormat = "bplang"
 )
 
 // LoadString deals with loading a blueprint specification
 // from a given YAML or JSON with Commas and Comments string.
+// The blueprint language (`.bp`) format is not handled here — callers
+// that need it must dispatch to the `lang` package themselves, since
+// `lang` depends on `schema`. The dispatch lives in `container`.
 func LoadString(spec string, inputFormat SpecFormat) (*Blueprint, error) {
 	blueprint := &Blueprint{}
 

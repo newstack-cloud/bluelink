@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: invalid element type segment "aws-x": a segment must be a letter followed by letters or digits at 1:20
+	  1 | variable instance: aws-x/ec2 {}
+	    |                    ^
+	- parse error: missing required 'version' directive

@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: multi-line strings are not allowed in this position at 1:9
+	  1 | version """
+	    |         ^
+	- parse error: missing required 'version' directive

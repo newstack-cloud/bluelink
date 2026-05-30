@@ -1,0 +1,6 @@
+version "2025-11-02"
+
+export saveOrderFunctionArn: string {
+    field = resources.saveOrderFunction.spec.functionArn
+    description = "The ARN of the function used to save orders"
+}

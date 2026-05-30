@@ -1,0 +1,173 @@
+(*schema.Blueprint)({
+  Version: (*core.ScalarValue)({
+    IntValue: (*int)(<nil>),
+    BoolValue: (*bool)(<nil>),
+    FloatValue: (*float64)(<nil>),
+    BytesValue: (*[]uint8)(<nil>),
+    StringValue: (*string)((len=10) "2025-11-02"),
+    NoneValue: (*bool)(<nil>),
+    SourceMeta: (*source.Meta)({
+      Position: (source.Position) {
+        Line: (int) 1,
+        Column: (int) 9
+      },
+      EndPosition: (*source.Position)({
+        Line: (int) 1,
+        Column: (int) 21
+      }),
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+    })
+  }),
+  Transform: (*schema.TransformValueWrapper)(<nil>),
+  Variables: (*schema.VariableMap)({
+    Values: (map[string]*schema.Variable) (len=1) {
+      (string) (len=6) "region": (*schema.Variable)({
+        Type: (*schema.VariableTypeWrapper)({
+          Value: (schema.VariableType) (len=6) "string",
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 5,
+              Column: (int) 18
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 5,
+              Column: (int) 24
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Description: (*core.ScalarValue)({
+          IntValue: (*int)(<nil>),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
+          StringValue: (*string)((len=33) "The region to deploy resources in"),
+          NoneValue: (*bool)(<nil>),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 8,
+              Column: (int) 19
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 8,
+              Column: (int) 54
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Secret: (*core.ScalarValue)(<nil>),
+        Default: (*core.ScalarValue)({
+          IntValue: (*int)(<nil>),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
+          StringValue: (*string)((len=9) "us-east-1"),
+          NoneValue: (*bool)(<nil>),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 7,
+              Column: (int) 15
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 7,
+              Column: (int) 26
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        AllowedValues: ([]*core.ScalarValue) <nil>,
+        SourceMeta: (*source.Meta)(<nil>)
+      })
+    },
+    SourceMeta: (map[string]*source.Meta) (len=1) {
+      (string) (len=6) "region": (*source.Meta)({
+        Position: (source.Position) {
+          Line: (int) 5,
+          Column: (int) 10
+        },
+        EndPosition: (*source.Position)({
+          Line: (int) 5,
+          Column: (int) 16
+        }),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+      })
+    }
+  }),
+  Values: (*schema.ValueMap)({
+    Values: (map[string]*schema.Value) (len=1) {
+      (string) (len=9) "tableName": (*schema.Value)({
+        Type: (*schema.ValueTypeWrapper)({
+          Value: (schema.ValueType) (len=6) "string",
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 13,
+              Column: (int) 18
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 13,
+              Column: (int) 24
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Value: (*core.MappingNode)({
+          Scalar: (*core.ScalarValue)({
+            IntValue: (*int)(<nil>),
+            BoolValue: (*bool)(<nil>),
+            FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
+            StringValue: (*string)((len=6) "orders"),
+            NoneValue: (*bool)(<nil>),
+            SourceMeta: (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 14,
+                Column: (int) 13
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 14,
+                Column: (int) 21
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }),
+          Fields: (map[string]*core.MappingNode) <nil>,
+          Items: ([]*core.MappingNode) <nil>,
+          StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 14,
+              Column: (int) 13
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 14,
+              Column: (int) 21
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          }),
+          FieldsSourceMeta: (map[string]*source.Meta) <nil>
+        }),
+        Description: (*substitutions.StringOrSubstitutions)(<nil>),
+        Secret: (*core.ScalarValue)(<nil>),
+        SourceMeta: (*source.Meta)(<nil>)
+      })
+    },
+    SourceMeta: (map[string]*source.Meta) (len=1) {
+      (string) (len=9) "tableName": (*source.Meta)({
+        Position: (source.Position) {
+          Line: (int) 13,
+          Column: (int) 7
+        },
+        EndPosition: (*source.Position)({
+          Line: (int) 13,
+          Column: (int) 16
+        }),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+      })
+    }
+  }),
+  Include: (*schema.IncludeMap)(<nil>),
+  Resources: (*schema.ResourceMap)(<nil>),
+  DataSources: (*schema.DataSourceMap)(<nil>),
+  Exports: (*schema.ExportMap)(<nil>),
+  Metadata: (*core.MappingNode)(<nil>)
+})

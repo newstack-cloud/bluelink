@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: expected a string value for key "service" at 1:53
+	  1 | resource r: aws/x { metadata { labels = { service = 42 } }
+	    |                                                     ^
+	- parse error: missing required 'version' directive

@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: unexpected identifier at top level at 1:1
+	  1 | notAKeyword
+	    | ^
+	- parse error: missing required 'version' directive

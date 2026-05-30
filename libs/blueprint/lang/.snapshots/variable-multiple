@@ -1,0 +1,299 @@
+(*schema.Blueprint)({
+  Version: (*core.ScalarValue)({
+    IntValue: (*int)(<nil>),
+    BoolValue: (*bool)(<nil>),
+    FloatValue: (*float64)(<nil>),
+    BytesValue: (*[]uint8)(<nil>),
+    StringValue: (*string)((len=10) "2025-11-02"),
+    NoneValue: (*bool)(<nil>),
+    SourceMeta: (*source.Meta)({
+      Position: (source.Position) {
+        Line: (int) 1,
+        Column: (int) 9
+      },
+      EndPosition: (*source.Position)({
+        Line: (int) 1,
+        Column: (int) 21
+      }),
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+    })
+  }),
+  Transform: (*schema.TransformValueWrapper)(<nil>),
+  Variables: (*schema.VariableMap)({
+    Values: (map[string]*schema.Variable) (len=3) {
+      (string) (len=12) "databasePort": (*schema.Variable)({
+        Type: (*schema.VariableTypeWrapper)({
+          Value: (schema.VariableType) (len=7) "integer",
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 8,
+              Column: (int) 24
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 8,
+              Column: (int) 31
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Description: (*core.ScalarValue)(<nil>),
+        Secret: (*core.ScalarValue)(<nil>),
+        Default: (*core.ScalarValue)({
+          IntValue: (*int)(5432),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
+          StringValue: (*string)(<nil>),
+          NoneValue: (*bool)(<nil>),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 9,
+              Column: (int) 15
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 9,
+              Column: (int) 19
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        AllowedValues: ([]*core.ScalarValue) <nil>,
+        SourceMeta: (*source.Meta)(<nil>)
+      }),
+      (string) (len=16) "deploymentTarget": (*schema.Variable)({
+        Type: (*schema.VariableTypeWrapper)({
+          Value: (schema.VariableType) (len=6) "string",
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 12,
+              Column: (int) 28
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 12,
+              Column: (int) 34
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Description: (*core.ScalarValue)({
+          IntValue: (*int)(<nil>),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
+          StringValue: (*string)((len=83) "Whether the Orders API is deployed as a containerised service or as cloud functions"),
+          NoneValue: (*bool)(<nil>),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 15,
+              Column: (int) 19
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 15,
+              Column: (int) 104
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Secret: (*core.ScalarValue)(<nil>),
+        Default: (*core.ScalarValue)({
+          IntValue: (*int)(<nil>),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
+          StringValue: (*string)((len=9) "container"),
+          NoneValue: (*bool)(<nil>),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 13,
+              Column: (int) 15
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 13,
+              Column: (int) 26
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        AllowedValues: ([]*core.ScalarValue) (len=2) {
+          (*core.ScalarValue)({
+            IntValue: (*int)(<nil>),
+            BoolValue: (*bool)(<nil>),
+            FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
+            StringValue: (*string)((len=9) "container"),
+            NoneValue: (*bool)(<nil>),
+            SourceMeta: (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 14,
+                Column: (int) 22
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 14,
+                Column: (int) 33
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }),
+          (*core.ScalarValue)({
+            IntValue: (*int)(<nil>),
+            BoolValue: (*bool)(<nil>),
+            FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
+            StringValue: (*string)((len=14) "cloudFunctions"),
+            NoneValue: (*bool)(<nil>),
+            SourceMeta: (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 14,
+                Column: (int) 35
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 14,
+                Column: (int) 51
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          })
+        },
+        SourceMeta: (*source.Meta)(<nil>)
+      }),
+      (string) (len=11) "environment": (*schema.Variable)({
+        Type: (*schema.VariableTypeWrapper)({
+          Value: (schema.VariableType) (len=6) "string",
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 3,
+              Column: (int) 23
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 3,
+              Column: (int) 29
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Description: (*core.ScalarValue)(<nil>),
+        Secret: (*core.ScalarValue)(<nil>),
+        Default: (*core.ScalarValue)({
+          IntValue: (*int)(<nil>),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
+          StringValue: (*string)((len=3) "dev"),
+          NoneValue: (*bool)(<nil>),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 4,
+              Column: (int) 15
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 4,
+              Column: (int) 20
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        AllowedValues: ([]*core.ScalarValue) (len=3) {
+          (*core.ScalarValue)({
+            IntValue: (*int)(<nil>),
+            BoolValue: (*bool)(<nil>),
+            FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
+            StringValue: (*string)((len=3) "dev"),
+            NoneValue: (*bool)(<nil>),
+            SourceMeta: (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 5,
+                Column: (int) 22
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 5,
+                Column: (int) 27
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }),
+          (*core.ScalarValue)({
+            IntValue: (*int)(<nil>),
+            BoolValue: (*bool)(<nil>),
+            FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
+            StringValue: (*string)((len=7) "staging"),
+            NoneValue: (*bool)(<nil>),
+            SourceMeta: (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 5,
+                Column: (int) 29
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 5,
+                Column: (int) 38
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }),
+          (*core.ScalarValue)({
+            IntValue: (*int)(<nil>),
+            BoolValue: (*bool)(<nil>),
+            FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
+            StringValue: (*string)((len=4) "prod"),
+            NoneValue: (*bool)(<nil>),
+            SourceMeta: (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 5,
+                Column: (int) 40
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 5,
+                Column: (int) 46
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          })
+        },
+        SourceMeta: (*source.Meta)(<nil>)
+      })
+    },
+    SourceMeta: (map[string]*source.Meta) (len=3) {
+      (string) (len=12) "databasePort": (*source.Meta)({
+        Position: (source.Position) {
+          Line: (int) 8,
+          Column: (int) 10
+        },
+        EndPosition: (*source.Position)({
+          Line: (int) 8,
+          Column: (int) 22
+        }),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+      }),
+      (string) (len=16) "deploymentTarget": (*source.Meta)({
+        Position: (source.Position) {
+          Line: (int) 12,
+          Column: (int) 10
+        },
+        EndPosition: (*source.Position)({
+          Line: (int) 12,
+          Column: (int) 26
+        }),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+      }),
+      (string) (len=11) "environment": (*source.Meta)({
+        Position: (source.Position) {
+          Line: (int) 3,
+          Column: (int) 10
+        },
+        EndPosition: (*source.Position)({
+          Line: (int) 3,
+          Column: (int) 21
+        }),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+      })
+    }
+  }),
+  Values: (*schema.ValueMap)(<nil>),
+  Include: (*schema.IncludeMap)(<nil>),
+  Resources: (*schema.ResourceMap)(<nil>),
+  DataSources: (*schema.DataSourceMap)(<nil>),
+  Exports: (*schema.ExportMap)(<nil>),
+  Metadata: (*core.MappingNode)(<nil>)
+})

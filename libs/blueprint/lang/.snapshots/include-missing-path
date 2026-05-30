@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: expected string, got '{' at 1:15
+	  1 | include child {}
+	    |               ^
+	- parse error: missing required 'version' directive

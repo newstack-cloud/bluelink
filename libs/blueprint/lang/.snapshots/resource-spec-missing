@@ -1,0 +1,4 @@
+blueprint language errors:
+	- parse error: resource "r" is missing the required 'spec { ... }' block at 2:10
+	  2 | resource r: aws/x { description = "desc" }
+	    |          ^

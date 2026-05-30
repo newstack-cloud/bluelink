@@ -1,0 +1,15 @@
+version "2025-11-02"
+
+# This is a top-level comment
+
+variable region: string {
+    # comment inside a declaration block
+    default = "us-east-1"
+    description = "The region to deploy resources in"
+}
+
+# Another top-level comment between declarations
+
+value tableName: string {
+    value = "orders" # trailing comment
+}

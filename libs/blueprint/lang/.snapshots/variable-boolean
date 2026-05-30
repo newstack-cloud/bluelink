@@ -1,0 +1,102 @@
+(*schema.Blueprint)({
+  Version: (*core.ScalarValue)({
+    IntValue: (*int)(<nil>),
+    BoolValue: (*bool)(<nil>),
+    FloatValue: (*float64)(<nil>),
+    BytesValue: (*[]uint8)(<nil>),
+    StringValue: (*string)((len=10) "2025-11-02"),
+    NoneValue: (*bool)(<nil>),
+    SourceMeta: (*source.Meta)({
+      Position: (source.Position) {
+        Line: (int) 1,
+        Column: (int) 9
+      },
+      EndPosition: (*source.Position)({
+        Line: (int) 1,
+        Column: (int) 21
+      }),
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+    })
+  }),
+  Transform: (*schema.TransformValueWrapper)(<nil>),
+  Variables: (*schema.VariableMap)({
+    Values: (map[string]*schema.Variable) (len=1) {
+      (string) (len=13) "enableTracing": (*schema.Variable)({
+        Type: (*schema.VariableTypeWrapper)({
+          Value: (schema.VariableType) (len=7) "boolean",
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 3,
+              Column: (int) 25
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 3,
+              Column: (int) 32
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Description: (*core.ScalarValue)({
+          IntValue: (*int)(<nil>),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
+          StringValue: (*string)((len=34) "Whether request tracing is enabled"),
+          NoneValue: (*bool)(<nil>),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 5,
+              Column: (int) 19
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 5,
+              Column: (int) 55
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Secret: (*core.ScalarValue)(<nil>),
+        Default: (*core.ScalarValue)({
+          IntValue: (*int)(<nil>),
+          BoolValue: (*bool)(true),
+          FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
+          StringValue: (*string)(<nil>),
+          NoneValue: (*bool)(<nil>),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 4,
+              Column: (int) 15
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 4,
+              Column: (int) 19
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        AllowedValues: ([]*core.ScalarValue) <nil>,
+        SourceMeta: (*source.Meta)(<nil>)
+      })
+    },
+    SourceMeta: (map[string]*source.Meta) (len=1) {
+      (string) (len=13) "enableTracing": (*source.Meta)({
+        Position: (source.Position) {
+          Line: (int) 3,
+          Column: (int) 10
+        },
+        EndPosition: (*source.Position)({
+          Line: (int) 3,
+          Column: (int) 23
+        }),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+      })
+    }
+  }),
+  Values: (*schema.ValueMap)(<nil>),
+  Include: (*schema.IncludeMap)(<nil>),
+  Resources: (*schema.ResourceMap)(<nil>),
+  DataSources: (*schema.DataSourceMap)(<nil>),
+  Exports: (*schema.ExportMap)(<nil>),
+  Metadata: (*core.MappingNode)(<nil>)
+})

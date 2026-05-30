@@ -1,0 +1,17 @@
+version "2025-11-02"
+
+resource webhookHandler: aws/lambda/function {
+    dependsOn = "auditLogStream"
+
+    spec {
+        functionName = "webhookHandler"
+    }
+}
+
+resource consumer: aws/lambda/function {
+    dependsOn = [queueDrainer, "schemaInitialiser"]
+
+    spec {
+        functionName = "consumer"
+    }
+}

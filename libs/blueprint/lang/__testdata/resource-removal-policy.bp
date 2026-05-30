@@ -1,0 +1,9 @@
+version "2025-11-02"
+
+resource ordersTable: aws/dynamodb/table {
+    removalPolicy = "retain"
+
+    spec {
+        tableName = "Orders"
+    }
+}

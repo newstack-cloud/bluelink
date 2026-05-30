@@ -1,0 +1,4 @@
+blueprint language errors:
+	- parse error: removalPolicy must be one of "delete" or "retain", got "destroy" at 2:37
+	  2 | resource r: aws/x { removalPolicy = "destroy"
+	    |                                     ^

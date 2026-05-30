@@ -1,0 +1,8 @@
+blueprint language errors:
+	- parse error: expected keyword "key", got string at 1:34
+	  1 | data n: aws/vpc { filter "x" has "y"
+	    |                                  ^
+	- parse error: expected '{', got '}' at 2:19
+	  2 | export id: string }
+	    |                   ^
+	- parse error: missing required 'version' directive

@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: expected '}', got end of input at 1:48
+	  1 | variable region: string { default = "us-east-1"
+	    |                                                ^
+	- parse error: missing required 'version' directive

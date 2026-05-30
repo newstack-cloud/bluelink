@@ -1,0 +1,9 @@
+version "2025-11-02"
+
+value firstSubnetId: string {
+    value = resources.network.spec.subnets[0].id
+}
+
+value primaryTableName: string {
+    value = "${resources.ordersTable.spec.tableName}-primary"
+}

@@ -1,0 +1,25 @@
+version "2025-11-02"
+
+export region: string {
+    field = variables.region
+}
+
+export instanceCount: integer {
+    field = values.instanceCount
+}
+
+export weight: float {
+    field = variables.weight
+}
+
+export enabled: boolean {
+    field = values.enabled
+}
+
+export tags: array {
+    field = values.tags
+}
+
+export config: object {
+    field = values.config
+}

@@ -1,0 +1,14 @@
+version "2025-11-02"
+
+resource saveOrderFunction: aws/lambda/function {
+    description = "The function responsible for saving a new order to the system."
+
+    condition = variables.deploymentTarget == "serverless"
+        && variables.environment == "production"
+        && values.featureFlags.saveOrderEnabled
+
+    spec {
+        functionName = "saveOrderFunction"
+        codeUri = "./orders"
+    }
+}

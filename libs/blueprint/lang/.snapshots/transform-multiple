@@ -1,0 +1,60 @@
+(*schema.Blueprint)({
+  Version: (*core.ScalarValue)({
+    IntValue: (*int)(<nil>),
+    BoolValue: (*bool)(<nil>),
+    FloatValue: (*float64)(<nil>),
+    BytesValue: (*[]uint8)(<nil>),
+    StringValue: (*string)((len=10) "2025-11-02"),
+    NoneValue: (*bool)(<nil>),
+    SourceMeta: (*source.Meta)({
+      Position: (source.Position) {
+        Line: (int) 1,
+        Column: (int) 9
+      },
+      EndPosition: (*source.Position)({
+        Line: (int) 1,
+        Column: (int) 21
+      }),
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+    })
+  }),
+  Transform: (*schema.TransformValueWrapper)({
+    StringList: (schema.StringList) {
+      Values: ([]string) (len=2) {
+        (string) (len=19) "celerity-2027-02-01",
+        (string) (len=13) "my-org/macros"
+      },
+      SourceMeta: ([]*source.Meta) (len=2) {
+        (*source.Meta)({
+          Position: (source.Position) {
+            Line: (int) 3,
+            Column: (int) 12
+          },
+          EndPosition: (*source.Position)({
+            Line: (int) 3,
+            Column: (int) 33
+          }),
+          ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+        }),
+        (*source.Meta)({
+          Position: (source.Position) {
+            Line: (int) 3,
+            Column: (int) 35
+          },
+          EndPosition: (*source.Position)({
+            Line: (int) 3,
+            Column: (int) 50
+          }),
+          ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+        })
+      }
+    }
+  }),
+  Variables: (*schema.VariableMap)(<nil>),
+  Values: (*schema.ValueMap)(<nil>),
+  Include: (*schema.IncludeMap)(<nil>),
+  Resources: (*schema.ResourceMap)(<nil>),
+  DataSources: (*schema.DataSourceMap)(<nil>),
+  Exports: (*schema.ExportMap)(<nil>),
+  Metadata: (*core.MappingNode)(<nil>)
+})

@@ -1,0 +1,160 @@
+(*schema.Blueprint)({
+  Version: (*core.ScalarValue)({
+    IntValue: (*int)(<nil>),
+    BoolValue: (*bool)(<nil>),
+    FloatValue: (*float64)(<nil>),
+    BytesValue: (*[]uint8)(<nil>),
+    StringValue: (*string)((len=10) "2025-11-02"),
+    NoneValue: (*bool)(<nil>),
+    SourceMeta: (*source.Meta)({
+      Position: (source.Position) {
+        Line: (int) 1,
+        Column: (int) 9
+      },
+      EndPosition: (*source.Position)({
+        Line: (int) 1,
+        Column: (int) 21
+      }),
+      ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+    })
+  }),
+  Transform: (*schema.TransformValueWrapper)(<nil>),
+  Variables: (*schema.VariableMap)({
+    Values: (map[string]*schema.Variable) (len=1) {
+      (string) (len=12) "databasePort": (*schema.Variable)({
+        Type: (*schema.VariableTypeWrapper)({
+          Value: (schema.VariableType) (len=7) "integer",
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 3,
+              Column: (int) 24
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 3,
+              Column: (int) 31
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Description: (*core.ScalarValue)({
+          IntValue: (*int)(<nil>),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
+          StringValue: (*string)((len=44) "The database port the Orders API connects to"),
+          NoneValue: (*bool)(<nil>),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 5,
+              Column: (int) 19
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 5,
+              Column: (int) 65
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        Secret: (*core.ScalarValue)(<nil>),
+        Default: (*core.ScalarValue)({
+          IntValue: (*int)(5432),
+          BoolValue: (*bool)(<nil>),
+          FloatValue: (*float64)(<nil>),
+          BytesValue: (*[]uint8)(<nil>),
+          StringValue: (*string)(<nil>),
+          NoneValue: (*bool)(<nil>),
+          SourceMeta: (*source.Meta)({
+            Position: (source.Position) {
+              Line: (int) 4,
+              Column: (int) 15
+            },
+            EndPosition: (*source.Position)({
+              Line: (int) 4,
+              Column: (int) 19
+            }),
+            ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+          })
+        }),
+        AllowedValues: ([]*core.ScalarValue) (len=3) {
+          (*core.ScalarValue)({
+            IntValue: (*int)(5432),
+            BoolValue: (*bool)(<nil>),
+            FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
+            StringValue: (*string)(<nil>),
+            NoneValue: (*bool)(<nil>),
+            SourceMeta: (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 6,
+                Column: (int) 22
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 6,
+                Column: (int) 26
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }),
+          (*core.ScalarValue)({
+            IntValue: (*int)(5433),
+            BoolValue: (*bool)(<nil>),
+            FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
+            StringValue: (*string)(<nil>),
+            NoneValue: (*bool)(<nil>),
+            SourceMeta: (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 6,
+                Column: (int) 28
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 6,
+                Column: (int) 32
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          }),
+          (*core.ScalarValue)({
+            IntValue: (*int)(-1),
+            BoolValue: (*bool)(<nil>),
+            FloatValue: (*float64)(<nil>),
+            BytesValue: (*[]uint8)(<nil>),
+            StringValue: (*string)(<nil>),
+            NoneValue: (*bool)(<nil>),
+            SourceMeta: (*source.Meta)({
+              Position: (source.Position) {
+                Line: (int) 6,
+                Column: (int) 34
+              },
+              EndPosition: (*source.Position)({
+                Line: (int) 6,
+                Column: (int) 36
+              }),
+              ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+            })
+          })
+        },
+        SourceMeta: (*source.Meta)(<nil>)
+      })
+    },
+    SourceMeta: (map[string]*source.Meta) (len=1) {
+      (string) (len=12) "databasePort": (*source.Meta)({
+        Position: (source.Position) {
+          Line: (int) 3,
+          Column: (int) 10
+        },
+        EndPosition: (*source.Position)({
+          Line: (int) 3,
+          Column: (int) 22
+        }),
+        ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+      })
+    }
+  }),
+  Values: (*schema.ValueMap)(<nil>),
+  Include: (*schema.IncludeMap)(<nil>),
+  Resources: (*schema.ResourceMap)(<nil>),
+  DataSources: (*schema.DataSourceMap)(<nil>),
+  Exports: (*schema.ExportMap)(<nil>),
+  Metadata: (*core.MappingNode)(<nil>)
+})

@@ -1,0 +1,4 @@
+blueprint language errors:
+	- parse error: 'allowedValues' is not valid on a boolean variable at 2:26
+	  2 | variable flag: boolean { allowedValues = [true, false] }
+	    |                          ^

@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: export 'field' must be a reference path, not a function call or computed expression at 1:28
+	  1 | export x: string { field = jsonencode(variables.x) }
+	    |                            ^
+	- parse error: missing required 'version' directive

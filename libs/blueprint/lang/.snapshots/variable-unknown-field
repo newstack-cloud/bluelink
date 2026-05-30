@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: unknown field "foo" in variable declaration at 1:27
+	  1 | variable region: string { foo = "bar" }
+	    |                           ^
+	- parse error: missing required 'version' directive

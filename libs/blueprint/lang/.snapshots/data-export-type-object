@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: expected a data source export type (string, integer, float, boolean, or array), got keyword "object" at 2:12
+	  2 | export id: object }
+	    |            ^
+	- parse error: missing required 'version' directive

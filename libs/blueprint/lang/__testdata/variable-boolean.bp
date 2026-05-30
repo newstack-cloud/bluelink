@@ -1,0 +1,6 @@
+version "2025-11-02"
+
+variable enableTracing: boolean {
+    default = true
+    description = "Whether request tracing is enabled"
+}

@@ -1,0 +1,10 @@
+version "2025-11-02"
+
+data instances: aws/ec2/instance {
+    filter "state" in ["available", "pending"]
+    filter "instanceType" not in ["t2.nano", "t2.micro"]
+    filter "tags" has key "environment"
+    filter "tags" not has key "deprecated"
+
+    export id: string
+}

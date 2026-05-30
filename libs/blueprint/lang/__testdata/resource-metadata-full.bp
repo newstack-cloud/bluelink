@@ -1,0 +1,27 @@
+version "2025-11-02"
+
+resource saveOrderFunction: aws/lambda/function {
+    metadata {
+        displayName = "Save Order Function"
+        labels = {
+            service = "ordersApi",
+            owner = "platform-team"
+        }
+        annotations = {
+            "aws.lambda.function.populateEnvVars" = true,
+            "celerity.deployment.target" = variables.deploymentTarget
+        }
+        custom = {
+            ui = {
+                position = {
+                    x = 120,
+                    y = 200
+                }
+            }
+        }
+    }
+
+    spec {
+        functionName = "saveOrderFunction"
+    }
+}

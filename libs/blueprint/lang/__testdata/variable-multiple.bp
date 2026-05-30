@@ -1,0 +1,16 @@
+version "2025-11-02"
+
+variable environment: string {
+    default = "dev"
+    allowedValues = ["dev", "staging", "prod"]
+}
+
+variable databasePort: integer {
+    default = 5432
+}
+
+variable deploymentTarget: string {
+    default = "container"
+    allowedValues = ["container", "cloudFunctions"]
+    description = "Whether the Orders API is deployed as a containerised service or as cloud functions"
+}

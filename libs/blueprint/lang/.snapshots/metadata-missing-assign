@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: expected '=', got string at 1:16
+	  1 | metadata { foo "bar" }
+	    |                ^
+	- parse error: missing required 'version' directive

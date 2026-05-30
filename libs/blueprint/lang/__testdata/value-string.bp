@@ -1,0 +1,6 @@
+version "2025-11-02"
+
+value tableName: string {
+    value = "orders-${variables.environment}"
+    description = "The DynamoDB table name for orders"
+}

@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: removalPolicy must be a literal string, got keyword "variables" at 1:37
+	  1 | resource r: aws/x { removalPolicy = variables.policy
+	    |                                     ^
+	- parse error: missing required 'version' directive

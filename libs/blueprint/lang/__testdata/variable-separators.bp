@@ -1,0 +1,3 @@
+version "2025-11-02"
+
+variable region: string { default = "us-east-1", description = "Deploy region", allowedValues = ["us-east-1", "us-west-2",], }

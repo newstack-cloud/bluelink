@@ -1,0 +1,8 @@
+blueprint language errors:
+	- parse error: 'not' is only valid before 'in', 'has key', 'contains', 'starts with', or 'ends with' at 1:30
+	  1 | data n: aws/vpc { filter "x" not == "y"
+	    |                              ^
+	- parse error: expected '{', got '}' at 2:19
+	  2 | export id: string }
+	    |                   ^
+	- parse error: missing required 'version' directive

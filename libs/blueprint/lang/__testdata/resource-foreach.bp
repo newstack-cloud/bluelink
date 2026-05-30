@@ -1,0 +1,19 @@
+version "2025-11-02"
+
+value bucketsToCreate: array {
+    value = [
+        { name = "primary",   lockObjects = true,  number = 1 },
+        { name = "secondary", lockObjects = false, number = 2 }
+    ]
+}
+
+resource contentStoreBucket: aws/s3/bucket {
+    foreach values.bucketsToCreate
+
+    spec {
+        bucketName = elem.name
+        tags = [
+            { Key = "bucketNumber", Value = "bucket-${elem.number}" }
+        ]
+    }
+}

@@ -1,0 +1,5 @@
+blueprint language errors:
+	- parse error: keyword "resource" is reserved and cannot be used as a bare name; wrap it in double quotes to use it as a name at 1:10
+	  1 | variable resource: string {}
+	    |          ^
+	- parse error: missing required 'version' directive

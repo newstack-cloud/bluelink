@@ -1,0 +1,9 @@
+version "2025-11-02"
+
+value featureFlags: object {
+    value = {
+        saveOrderEnabled = true,
+        retryCount = 3,
+        backoffSeconds = 1.5
+    }
+}
