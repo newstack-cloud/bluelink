@@ -17,6 +17,8 @@ func exprToMappingNode(e expr) (*core.MappingNode, error) {
 			Scalar:     n.value,
 			SourceMeta: n.value.SourceMeta,
 		}, nil
+	case *noneExpr:
+		return noneExprToMappingNode(n), nil
 	case *arrayExpr:
 		return arrayExprToMappingNode(n)
 	case *objectExpr:
@@ -38,6 +40,11 @@ func exprToSubstitution(e expr) (*substitutions.Substitution, error) {
 	switch n := e.(type) {
 	case *scalarExpr:
 		return scalarToSubstitution(n.value), nil
+	case *noneExpr:
+		return &substitutions.Substitution{
+			NoneValue:  true,
+			SourceMeta: n.m,
+		}, nil
 	case *refExpr:
 		return n.sub, nil
 	case *callExpr:
@@ -76,6 +83,17 @@ func substitutionToMappingNode(sub *substitutions.Substitution) *core.MappingNod
 	return &core.MappingNode{
 		StringWithSubstitutions: stringOrSubs,
 		SourceMeta:              sub.SourceMeta,
+	}
+}
+
+func noneExprToMappingNode(n *noneExpr) *core.MappingNode {
+	t := true
+	return &core.MappingNode{
+		Scalar: &core.ScalarValue{
+			NoneValue:  &t,
+			SourceMeta: n.m,
+		},
+		SourceMeta: n.m,
 	}
 }
 
