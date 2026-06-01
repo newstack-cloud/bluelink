@@ -30,8 +30,8 @@ github.com/newstack-cloud/bluelink/libs/blueprint v0.47.0 h1:kJXBAveXWT+lTLfCxAG
 github.com/newstack-cloud/bluelink/libs/blueprint v0.47.0/go.mod h1:qd3ABYYlUvwF6ZImUZyJax6h+bEJdzw7Rluns2fKmDI=
 github.com/newstack-cloud/bluelink/libs/common v0.4.0 h1:E72YAjex+VydpaYJXaAwlqeII7jVugEKsfVjHFLaJJY=
 github.com/newstack-cloud/bluelink/libs/common v0.4.0/go.mod h1:09jWAU7PMDJSW0zokebgDZCr59Gg4JpqgF0Yq6kQ8gY=
-github.com/newstack-cloud/bluelink/libs/plugin-framework v0.11.0 h1:jPdrPIhyt1oFWhIkXat/wPRcJOz0ohrfX9bwxYXaqhQ=
-github.com/newstack-cloud/bluelink/libs/plugin-framework v0.11.0/go.mod h1:MqMqSnDNemdqa1rSP8oiz9wGTvZdC/SoxASNfQS1Shc=
+github.com/newstack-cloud/bluelink/libs/plugin-framework v0.12.0 h1:Q3hZ9Mj83C2wtXpcgVVSB1ubu5sJVzQaxrzVi1m7bG8=
+github.com/newstack-cloud/bluelink/libs/plugin-framework v0.12.0/go.mod h1:o0OJFaCtUUJp7A+IFz1axl9J/+539CFSrnGkRuF94T0=
 github.com/newstack-cloud/ls-builder v0.2.5 h1:v+UAtfL+ooRMpJx7z6O+ljcLNHUE1YwQ2YgrGpx+3Jw=
 github.com/newstack-cloud/ls-builder v0.2.5/go.mod h1:NUhPBdxcQ4Zh8lMJdEqNotkmuVLs6xEUoO05eVG40e8=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
