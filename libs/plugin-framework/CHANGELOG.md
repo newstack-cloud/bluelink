@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.12.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.11.0...plugin-framework/v0.12.0) (2026-06-01)
+
+
+### Features
+
+* **plugin-framework:** add helpers for extracting annotations from bp schema ([4f772de](https://github.com/newstack-cloud/bluelink/commit/4f772def8fd42be39d322fa86d9598a54d027455))
+
+
+### Dependencies
+
+* **plugin-framework:** bump blueprint lib to 0.47.0 ([963dc1c](https://github.com/newstack-cloud/bluelink/commit/963dc1c9bf79d236156f850acdb67b36a0aed395))
+
 ## [0.11.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.10.0...plugin-framework/v0.11.0) (2026-05-13)
 
 
