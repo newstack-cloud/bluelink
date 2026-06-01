@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	yamlFilePattern = regexp.MustCompile(`\.ya?ml$`)
+	yamlFilePattern          = regexp.MustCompile(`\.ya?ml$`)
+	blueprintLangFilePattern = regexp.MustCompile(`\.(bp|blueprint)$`)
 )
 
 // GetFormat determines the format of the blueprint file based on its extension.
@@ -17,6 +18,10 @@ func GetFormat(
 ) schema.SpecFormat {
 	if yamlFilePattern.MatchString(blueprintFileName) {
 		return schema.YAMLSpecFormat
+	}
+
+	if blueprintLangFilePattern.MatchString(blueprintFileName) {
+		return schema.BlueprintLangSpecFormat
 	}
 
 	// Any other file extension will be considered JSON with Commas and Comments.
