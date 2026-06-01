@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/newstack-cloud/bluelink/compare/cli/v0.4.0...cli/v0.5.0) (2026-06-01)
+
+
+### Features
+
+* **cli:** add support for the blueprint language ([8b02bab](https://github.com/newstack-cloud/bluelink/commit/8b02bab578dea7684c78b29153cef0110663d122))
+
 ## [0.4.0](https://github.com/newstack-cloud/bluelink/compare/cli/v0.3.0...cli/v0.4.0) (2026-05-09)
 
 
