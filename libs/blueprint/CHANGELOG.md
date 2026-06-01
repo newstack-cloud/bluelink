@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.47.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.46.0...blueprint/v0.47.0) (2026-06-01)
+
+
+### Features
+
+* **blueprint:** add blueprint language implementation ([6dc9527](https://github.com/newstack-cloud/bluelink/commit/6dc952780b3f62f8aaaa074852b68371f806b219))
+* **blueprint:** add tokenize and tokens to public lang interface ([623a9d3](https://github.com/newstack-cloud/bluelink/commit/623a9d3baef44b20d026589dee6da77e9b4f4a89))
+
+
+### Bug Fixes
+
+* **blueprint:** add missing case for none expression ([d80d6ff](https://github.com/newstack-cloud/bluelink/commit/d80d6ff1c1a491ec2cb6f783e74e0692c004f5f7))
+
 ## [0.46.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.45.1...blueprint/v0.46.0) (2026-05-09)
 
 
