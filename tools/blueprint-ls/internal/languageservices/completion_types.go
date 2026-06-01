@@ -611,35 +611,84 @@ func navigateToFieldSchema(
 	rootSchema *provider.ResourceDefinitionsSchema,
 	specPath []docmodel.PathSegment,
 ) *provider.ResourceDefinitionsSchema {
-	if rootSchema == nil || len(specPath) == 0 {
+	if len(specPath) == 0 {
 		return nil
 	}
-
-	currentSchema := rootSchema
-	for _, segment := range specPath {
-		switch segment.Kind {
-		case docmodel.PathSegmentField:
-			if currentSchema.Attributes == nil {
-				return nil
-			}
-			attrSchema, exists := currentSchema.Attributes[segment.FieldName]
-			if !exists {
-				return nil
-			}
-			currentSchema = attrSchema
-
-		case docmodel.PathSegmentIndex:
-			if currentSchema.Items == nil {
-				return nil
-			}
-			currentSchema = currentSchema.Items
-		}
-	}
-
-	return currentSchema
+	return navigateSpecSchema(rootSchema, specPath)
 }
 
-// allowedValuesCompletionItems creates completion items for AllowedValues in a schema field.
+// Walks a spec path through a resource definition schema,
+// descending into object attributes, array items, map values and union branches.
+// It returns the schema at the end of the path, or nil if it cannot be resolved.
+func navigateSpecSchema(
+	rootSchema *provider.ResourceDefinitionsSchema,
+	specPath []docmodel.PathSegment,
+) *provider.ResourceDefinitionsSchema {
+	current := rootSchema
+	for _, segment := range specPath {
+		if current == nil {
+			return nil
+		}
+		current = descendSpecSchema(current, segment)
+	}
+	return current
+}
+
+// Resolves a single path segment against a schema node: object
+// fields via Attributes, map keys via MapValues, array indices via Items, and
+// union branches via the first OneOf member that resolves the segment.
+func descendSpecSchema(
+	schema *provider.ResourceDefinitionsSchema,
+	segment docmodel.PathSegment,
+) *provider.ResourceDefinitionsSchema {
+	switch schema.Type {
+	case provider.ResourceDefinitionsSchemaTypeObject:
+		if segment.Kind == docmodel.PathSegmentField {
+			return schema.Attributes[segment.FieldName]
+		}
+	case provider.ResourceDefinitionsSchemaTypeMap:
+		if segment.Kind == docmodel.PathSegmentField {
+			return schema.MapValues
+		}
+	case provider.ResourceDefinitionsSchemaTypeArray:
+		if segment.Kind == docmodel.PathSegmentIndex {
+			return schema.Items
+		}
+	case provider.ResourceDefinitionsSchemaTypeUnion:
+		for _, branch := range schema.OneOf {
+			if branch == nil {
+				continue
+			}
+			if resolved := descendSpecSchema(branch, segment); resolved != nil {
+				return resolved
+			}
+		}
+	}
+	return nil
+}
+
+// Unwraps a union to its object branch (or returns the schema
+// itself when it is already an object), so callers can read field Attributes.
+func resolveObjectSchema(
+	schema *provider.ResourceDefinitionsSchema,
+) *provider.ResourceDefinitionsSchema {
+	if schema == nil {
+		return nil
+	}
+	switch schema.Type {
+	case provider.ResourceDefinitionsSchemaTypeObject:
+		return schema
+	case provider.ResourceDefinitionsSchemaTypeUnion:
+		for _, branch := range schema.OneOf {
+			if obj := resolveObjectSchema(branch); obj != nil {
+				return obj
+			}
+		}
+	}
+	return nil
+}
+
+// Creates completion items for AllowedValues in a schema field.
 func allowedValuesCompletionItems(
 	fieldSchema *provider.ResourceDefinitionsSchema,
 	position *lsp.Position,

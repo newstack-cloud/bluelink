@@ -146,6 +146,24 @@ func (s *CompletionService) getCompletionItemsByContext(
 		return []*lsp.CompletionItem{}, nil
 	}
 
+	// The blueprint language uses declaration keywords and "field = value" blocks
+	// rather than YAML/JSON section keys, so field-name/declaration completions are
+	// served from blueprint-specific tables. Other kinds (provider spec fields,
+	// types, references, values) fall through to the shared handlers.
+	if format == docmodel.FormatBlueprintLang {
+		if items, handled := s.getBlueprintFieldNameCompletions(completionCtx.Kind, position, completionCtx); handled {
+			return items, nil
+		}
+		// At a value position with no more specific context, offer bare literals
+		// (true/false/none). Schema spec-field values and references are handled
+		// by their own contexts before reaching here.
+		if completionCtx.Kind == docmodel.CompletionContextUnknown &&
+			cursorCtx != nil && cursorCtx.IsAtValuePosition() {
+			typedPrefix := cursorCtx.GetTypedPrefix()
+			return blueprintValueLiteralCompletions(position, typedPrefix), nil
+		}
+	}
+
 	switch completionCtx.Kind {
 	// Registry-based type completions (completion_types.go)
 	case docmodel.CompletionContextResourceType:
@@ -179,13 +197,13 @@ func (s *CompletionService) getCompletionItemsByContext(
 
 	// Schema/definition field completions (completion_schema.go)
 	case docmodel.CompletionContextResourceSpecField:
-		return s.getResourceSpecFieldCompletionItems(ctx, position, blueprint, completionCtx)
+		return s.getResourceSpecFieldCompletionItems(ctx, position, blueprint, completionCtx, format)
 	case docmodel.CompletionContextResourceSpecFieldValue:
 		return s.getResourceSpecFieldValueCompletionItems(ctx, position, blueprint, completionCtx, format)
 	case docmodel.CompletionContextResourceMetadataField:
 		return s.getResourceMetadataFieldCompletionItems(position, completionCtx)
 	case docmodel.CompletionContextResourceAnnotationKey:
-		return s.getResourceAnnotationKeyCompletionItems(ctx, position, blueprint, completionCtx)
+		return s.getResourceAnnotationKeyCompletionItems(ctx, position, blueprint, completionCtx, format)
 	case docmodel.CompletionContextResourceLabelKey:
 		return s.getResourceLabelKeyCompletionItems(position, blueprint, completionCtx)
 	case docmodel.CompletionContextResourceAnnotationValue:

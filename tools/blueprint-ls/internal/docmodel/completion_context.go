@@ -84,9 +84,9 @@ const (
 	CompletionContextStringSubChildRef
 	CompletionContextStringSubElemRef
 	CompletionContextStringSubChildProperty         // After children.{name}., suggest child exports
-	CompletionContextStringSubValueProperty          // After values.{name}., suggest value fields/indices
-	CompletionContextStringSubPartialPath            // Typing a partial path (no completions)
-	CompletionContextStringSubPotentialResourceProp  // Potential standalone resource property (needs blueprint validation)
+	CompletionContextStringSubValueProperty         // After values.{name}., suggest value fields/indices
+	CompletionContextStringSubPartialPath           // Typing a partial path (no completions)
+	CompletionContextStringSubPotentialResourceProp // Potential standalone resource property (needs blueprint validation)
 
 	// Data source annotation contexts
 	CompletionContextDataSourceAnnotationKey   // Inside data source metadata.annotations, suggest annotation keys
@@ -140,14 +140,14 @@ var (
 	valuePropertyTextPattern        = regexp.MustCompile(`values\.([A-Za-z0-9_-]+)\.$`)
 	valuePropertyPartialTextPattern = regexp.MustCompile(`values\.([A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+$`)
 	// children. or children.{name}. or children.{name}.{partial}
-	childRefTextPattern              = regexp.MustCompile(`children\.$`)
-	childPropertyTextPattern         = regexp.MustCompile(`children\.([A-Za-z0-9_-]+)\.$`)
-	childPropertyPartialTextPattern  = regexp.MustCompile(`children\.([A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+$`)
+	childRefTextPattern             = regexp.MustCompile(`children\.$`)
+	childPropertyTextPattern        = regexp.MustCompile(`children\.([A-Za-z0-9_-]+)\.$`)
+	childPropertyPartialTextPattern = regexp.MustCompile(`children\.([A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+$`)
 	// elem. or elem.{partial}
 	elemRefTextPattern        = regexp.MustCompile(`elem\.$`)
 	elemRefPartialTextPattern = regexp.MustCompile(`elem\.[A-Za-z][A-Za-z0-9_-]*$`)
-	subOpenTextPattern = regexp.MustCompile(`\${$`)
-	inSubTextPattern   = regexp.MustCompile(`\${[^\}]*$`)
+	subOpenTextPattern        = regexp.MustCompile(`\${$`)
+	inSubTextPattern          = regexp.MustCompile(`\${[^\}]*$`)
 
 	// Partial segment patterns - match when typing a name after a namespace separator
 	// e.g., ${resources.ordersT or ${variables.env (no trailing dot)
@@ -174,7 +174,7 @@ var (
 	// Annotation keys can contain dots (e.g., aws.lambda.dynamodb.accessType)
 	// Matches: annotationKey: or "annotationKey": at the end (with optional trailing space)
 	// Captures: group 1 = the quoted annotation key, group 2 = the unquoted annotation key
-	annotationKeyFieldPattern = regexp.MustCompile(`(?:"([A-Za-z][A-Za-z0-9_.\-<>]*)"|([A-Za-z][A-Za-z0-9_.\-<>]*)):\s*$`)
+	annotationKeyFieldPattern = regexp.MustCompile(`(?:"([A-Za-z][A-Za-z0-9_.\-<>]*)"|([A-Za-z][A-Za-z0-9_.\-<>]*))\s*[:=]\s*$`)
 
 	// Export field reference patterns (no ${} wrapping, used in blueprint exports field property)
 	// These patterns match paths at any depth, capturing the element name for context.
@@ -1018,8 +1018,10 @@ func determineSubstitutionContext(cursorCtx *CursorContext) substitutionContextR
 		return substitutionContextResult{kind: CompletionContextStringSub}
 	}
 
-	// Must be in a substitution context for other checks
-	if !cursorCtx.InSubstitution() {
+	// References must be inside a ${...} substitution with an exception being
+	//  in the blueprint language, where expressions (and thus references) appear bare at value
+	// positions (e.g. `field = variables.x`).
+	if !cursorCtx.InSubstitution() && !cursorCtx.allowsBareReference() {
 		return substitutionContextResult{kind: CompletionContextUnknown}
 	}
 
@@ -1213,10 +1215,10 @@ var completionContextKindNames = map[CompletionContextKind]string{
 	CompletionContextVersionField:                    "versionField",
 	CompletionContextTransformField:                  "transformField",
 	CompletionContextCustomVariableTypeValue:         "customVariableTypeValue",
-	CompletionContextResourceMetadataField:            "resourceMetadataField",
-	CompletionContextResourceAnnotationKey:            "resourceAnnotationKey",
-	CompletionContextResourceAnnotationValue:          "resourceAnnotationValue",
-	CompletionContextResourceDefinitionField:          "resourceDefinitionField",
+	CompletionContextResourceMetadataField:           "resourceMetadataField",
+	CompletionContextResourceAnnotationKey:           "resourceAnnotationKey",
+	CompletionContextResourceAnnotationValue:         "resourceAnnotationValue",
+	CompletionContextResourceDefinitionField:         "resourceDefinitionField",
 	CompletionContextLinkSelectorField:               "linkSelectorField",
 	CompletionContextLinkSelectorExcludeValue:        "linkSelectorExcludeValue",
 	CompletionContextVariableDefinitionField:         "variableDefinitionField",
@@ -1236,7 +1238,7 @@ var completionContextKindNames = map[CompletionContextKind]string{
 	CompletionContextStringSubElemRef:                "stringSubElemRef",
 	CompletionContextStringSubChildProperty:          "stringSubChildProperty",
 	CompletionContextStringSubValueProperty:          "stringSubValueProperty",
-	CompletionContextStringSubPartialPath:             "stringSubPartialPath",
+	CompletionContextStringSubPartialPath:            "stringSubPartialPath",
 	CompletionContextStringSubPotentialResourceProp:  "stringSubPotentialResourceProp",
 	CompletionContextDataSourceAnnotationKey:         "dataSourceAnnotationKey",
 	CompletionContextDataSourceAnnotationValue:       "dataSourceAnnotationValue",

@@ -120,11 +120,60 @@ func (f *JSONCFormatter) GetFormat() docmodel.DocumentFormat {
 	return docmodel.FormatJSONC
 }
 
+// BlueprintFormatter implements CompletionFormatter for the blueprint language.
+// Mappings are "{ }" blocks of "field = value" entries and arrays are "[ ]".
+// Element/builtin type references are inserted bare; other string values are
+// double-quoted.
+type BlueprintFormatter struct{}
+
+// FormatValue formats a value for blueprint-language insertion.
+func (f *BlueprintFormatter) FormatValue(value string, hasLeadingQuote, _ bool) string {
+	if hasLeadingQuote {
+		return value + `"`
+	}
+	if f.NeedsQuoting(value) {
+		return `"` + value + `"`
+	}
+	return value
+}
+
+// FormatKey formats a field name for blueprint-language insertion: "field = ".
+func (f *BlueprintFormatter) FormatKey(keyName string) string {
+	return keyName + " = "
+}
+
+// FormatArrayItem formats an array item for blueprint-language insertion.
+func (f *BlueprintFormatter) FormatArrayItem(value string) string {
+	if f.NeedsQuoting(value) {
+		return `"` + value + `"`
+	}
+	return value
+}
+
+// GetInsertRange returns the range to replace with the completion.
+func (f *BlueprintFormatter) GetInsertRange(position *lsp.Position, prefixLen int) *lsp.Range {
+	return getItemInsertRangeWithPrefix(position, prefixLen)
+}
+
+// NeedsQuoting returns true for values that must be double-quoted in the
+// blueprint language. Numeric/boolean/none literals and element/builtin type
+// references (which appear bare, e.g. after ":") are not quoted.
+func (f *BlueprintFormatter) NeedsQuoting(value string) bool {
+	return needsBlueprintQuoting(value)
+}
+
+// GetFormat returns FormatBlueprintLang.
+func (f *BlueprintFormatter) GetFormat() docmodel.DocumentFormat {
+	return docmodel.FormatBlueprintLang
+}
+
 // NewCompletionFormatter creates the appropriate formatter for a document format.
 func NewCompletionFormatter(format docmodel.DocumentFormat) CompletionFormatter {
 	switch format {
 	case docmodel.FormatJSONC:
 		return &JSONCFormatter{}
+	case docmodel.FormatBlueprintLang:
+		return &BlueprintFormatter{}
 	default:
 		return &YAMLFormatter{}
 	}

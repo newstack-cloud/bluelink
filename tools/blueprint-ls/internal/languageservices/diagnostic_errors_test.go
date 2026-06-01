@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/lang"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
@@ -413,4 +414,94 @@ func (s *DiagnosticErrorServiceSuite) Test_error_with_context_uses_existing_cont
 	s.Require().NotNil(enhanced[0].ErrorContext)
 	s.Assert().Equal(errors.ErrorReasonCode("context_reason"), enhanced[0].ErrorContext.ReasonCode)
 	s.Assert().Equal("value", enhanced[0].ErrorContext.Metadata["key"])
+}
+
+func langSourceMeta(line, column int) *source.Meta {
+	return &source.Meta{
+		Position: source.Position{Line: line, Column: column},
+	}
+}
+
+func (s *DiagnosticErrorServiceSuite) Test_lang_parse_error_maps_to_positioned_diagnostic() {
+	// A blueprint-language parse error must land on its tracked line/column,
+	// not collapse to the position-less whole-document fallback.
+	parseErr := &lang.ParseError{
+		Message:    "unexpected token",
+		SourceMeta: langSourceMeta(3, 5),
+	}
+
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(parseErr, "file:///test.bp")
+
+	s.Require().Len(diagnostics, 1)
+	diag := diagnostics[0]
+	// LSP positions are 0-indexed, blueprint positions are 1-indexed.
+	s.Assert().Equal(lsp.UInteger(2), diag.Range.Start.Line)
+	s.Assert().Equal(lsp.UInteger(4), diag.Range.Start.Character)
+	s.Assert().Contains(diag.Message, "unexpected token")
+}
+
+func (s *DiagnosticErrorServiceSuite) Test_lang_lex_error_maps_to_positioned_diagnostic() {
+	lexErr := &lang.LexError{
+		Message:    "unterminated string",
+		SourceMeta: langSourceMeta(7, 2),
+	}
+
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(lexErr, "file:///test.bp")
+
+	s.Require().Len(diagnostics, 1)
+	diag := diagnostics[0]
+	s.Assert().Equal(lsp.UInteger(6), diag.Range.Start.Line)
+	s.Assert().Equal(lsp.UInteger(1), diag.Range.Start.Character)
+	s.Assert().Contains(diag.Message, "unterminated string")
+}
+
+func (s *DiagnosticErrorServiceSuite) Test_lang_errors_envelope_maps_each_child() {
+	// The lang parser returns a *lang.Errors envelope aggregating per-error
+	// diagnostics; each child must surface as its own positioned diagnostic.
+	langErrs := &lang.Errors{
+		ChildErrors: []error{
+			&lang.ParseError{Message: "first", SourceMeta: langSourceMeta(2, 1)},
+			&lang.LexError{Message: "second", SourceMeta: langSourceMeta(9, 4)},
+		},
+	}
+
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(langErrs, "file:///test.bp")
+
+	s.Require().Len(diagnostics, 2)
+	s.Assert().Equal(lsp.UInteger(1), diagnostics[0].Range.Start.Line)
+	s.Assert().Equal(lsp.UInteger(0), diagnostics[0].Range.Start.Character)
+	s.Assert().Equal(lsp.UInteger(8), diagnostics[1].Range.Start.Line)
+	s.Assert().Equal(lsp.UInteger(3), diagnostics[1].Range.Start.Character)
+}
+
+func (s *DiagnosticErrorServiceSuite) Test_lang_parse_error_without_position_still_diagnoses() {
+	// Some parse errors (e.g. the missing 'version' directive) carry no source
+	// position; these must still produce a diagnostic rather than be dropped.
+	parseErr := &lang.ParseError{Message: "missing required 'version' directive"}
+
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(parseErr, "file:///test.bp")
+
+	s.Require().Len(diagnostics, 1)
+	s.Assert().Contains(diagnostics[0].Message, "missing required 'version' directive")
+}
+
+func (s *DiagnosticErrorServiceSuite) Test_real_lang_parse_failure_flows_to_diagnostics() {
+	// End-to-end: a genuinely invalid .bp parsed by the library must produce a
+	// *lang.Errors envelope that the converter unwraps into per-child diagnostics.
+	src := "version \"2025-05-12\"\n\nvariable region: string {\n    default = \"unterminated\n}\n"
+
+	_, err := lang.ParseString(src)
+	s.Require().Error(err)
+
+	langErrs, ok := err.(*lang.Errors)
+	s.Require().True(ok, "expected lang.ParseString to return *lang.Errors, got %T", err)
+	s.Require().NotEmpty(langErrs.ChildErrors)
+
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(err, "file:///test.bp")
+
+	// Each aggregated child error surfaces as its own diagnostic with a message.
+	s.Require().Len(diagnostics, len(langErrs.ChildErrors))
+	for _, diag := range diagnostics {
+		s.Assert().NotEmpty(diag.Message)
+	}
 }

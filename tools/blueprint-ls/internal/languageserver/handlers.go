@@ -295,13 +295,7 @@ func (a *Application) updateDocumentContextOnly(uri lsp.URI) {
 		return
 	}
 
-	specFormat := blueprint.DetermineDocFormat(uri)
-	var docFormat docmodel.DocumentFormat
-	if specFormat == schema.JWCCSpecFormat {
-		docFormat = docmodel.FormatJSONC
-	} else {
-		docFormat = docmodel.FormatYAML
-	}
+	docFormat := docmodel.DocumentFormatFromSpecFormat(blueprint.DetermineDocFormat(uri))
 
 	existingDocCtx := a.state.GetDocumentContext(uri)
 	docCtx := docmodel.NewDocumentContext(string(uri), *content, docFormat, a.logger)
@@ -377,13 +371,7 @@ func (a *Application) StoreDocumentAndDerivedStructures(
 	parsed *schema.Blueprint,
 	content string,
 ) error {
-	specFormat := blueprint.DetermineDocFormat(uri)
-	var docFormat docmodel.DocumentFormat
-	if specFormat == schema.JWCCSpecFormat {
-		docFormat = docmodel.FormatJSONC
-	} else {
-		docFormat = docmodel.FormatYAML
-	}
+	docFormat := docmodel.DocumentFormatFromSpecFormat(blueprint.DetermineDocFormat(uri))
 
 	// Get existing DocumentContext to preserve last-known-good state
 	existingDocCtx := a.state.GetDocumentContext(uri)
@@ -530,13 +518,9 @@ func (a *Application) handleDocumentSymbols(
 			return []lsp.DocumentSymbol{}, nil
 		}
 
-		format := blueprint.DetermineDocFormat(params.TextDocument.URI)
-		var docFormat docmodel.DocumentFormat
-		if format == schema.JWCCSpecFormat {
-			docFormat = docmodel.FormatJSONC
-		} else {
-			docFormat = docmodel.FormatYAML
-		}
+		docFormat := docmodel.DocumentFormatFromSpecFormat(
+			blueprint.DetermineDocFormat(params.TextDocument.URI),
+		)
 
 		docCtx = docmodel.NewDocumentContext(
 			string(params.TextDocument.URI),

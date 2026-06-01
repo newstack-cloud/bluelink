@@ -3,6 +3,8 @@ package docmodel
 import (
 	"testing"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/lang"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/common/testhelpers"
 	"github.com/stretchr/testify/suite"
@@ -31,6 +33,44 @@ resources:
 
 	err := testhelpers.Snapshot(toSnapshotAST(ctx.CurrentAST))
 	s.Require().NoError(err)
+}
+
+func (s *DocumentContextSuite) TestDocumentFormatFromSpecFormat() {
+	s.Assert().Equal(FormatYAML, DocumentFormatFromSpecFormat(schema.YAMLSpecFormat))
+	s.Assert().Equal(FormatJSONC, DocumentFormatFromSpecFormat(schema.JWCCSpecFormat))
+	s.Assert().Equal(FormatBlueprintLang, DocumentFormatFromSpecFormat(schema.BlueprintLangSpecFormat))
+}
+
+func (s *DocumentContextSuite) TestNewDocumentContext_BlueprintLang() {
+	content := `version "2025-05-12"
+
+resource myTable: aws/dynamodb/table {
+    spec {
+        tableName = "test-table"
+    }
+}
+`
+
+	ctx := NewDocumentContext("file:///test.bp", content, FormatBlueprintLang, nil)
+
+	s.Require().NotNil(ctx)
+	s.Assert().Equal(FormatBlueprintLang, ctx.Format)
+	// The blueprint language now produces a canonical UnifiedNode CST from the
+	// token stream, driving completion-context, symbols and duplicate-key checks.
+	s.Require().NotNil(ctx.CurrentAST)
+	s.Assert().Equal(NodeKindMapping, ctx.CurrentAST.Kind)
+	resourceType := nodeAtPath(ctx.CurrentAST, "resources", "myTable", "type")
+	s.Require().NotNil(resourceType)
+	s.Assert().Equal("aws/dynamodb/table", resourceType.Value)
+
+	// Schema is attached separately via the validation flow; once present the
+	// schema-driven features have what they need.
+	blueprint, err := lang.ParseString(content)
+	s.Require().NoError(err)
+	ctx.UpdateSchema(blueprint, schema.SchemaToTree(blueprint))
+
+	s.Assert().True(ctx.HasSchema())
+	s.Assert().NotNil(ctx.GetEffectiveSchema())
 }
 
 func (s *DocumentContextSuite) TestNewDocumentContext_JSONC() {

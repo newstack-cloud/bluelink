@@ -9,9 +9,15 @@ import (
 
 // DetermineDocFormat determines the document format based on the file extension.
 func DetermineDocFormat(docURI lsp.URI) schema.SpecFormat {
-	if strings.HasSuffix(string(docURI), ".jsonc") ||
-		strings.HasSuffix(string(docURI), ".hujson") ||
-		strings.HasSuffix(string(docURI), ".json") {
+	uri := string(docURI)
+
+	if strings.HasSuffix(uri, ".bp") || strings.HasSuffix(uri, ".blueprint") {
+		return schema.BlueprintLangSpecFormat
+	}
+
+	if strings.HasSuffix(uri, ".jsonc") ||
+		strings.HasSuffix(uri, ".hujson") ||
+		strings.HasSuffix(uri, ".json") {
 		return schema.JWCCSpecFormat
 	}
 

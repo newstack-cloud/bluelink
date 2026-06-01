@@ -37,6 +37,16 @@ func (s *FormatSuite) TestDetermineDocFormat_HuJSONExtension() {
 	s.Equal(schema.JWCCSpecFormat, result)
 }
 
+func (s *FormatSuite) TestDetermineDocFormat_BPExtension() {
+	result := DetermineDocFormat(lsp.URI("file:///path/to/file.bp"))
+	s.Equal(schema.BlueprintLangSpecFormat, result)
+}
+
+func (s *FormatSuite) TestDetermineDocFormat_BlueprintExtension() {
+	result := DetermineDocFormat(lsp.URI("file:///path/to/file.blueprint"))
+	s.Equal(schema.BlueprintLangSpecFormat, result)
+}
+
 func (s *FormatSuite) TestDetermineDocFormat_UnknownExtensionDefaultsToYAML() {
 	result := DetermineDocFormat(lsp.URI("file:///path/to/file.txt"))
 	s.Equal(schema.YAMLSpecFormat, result)

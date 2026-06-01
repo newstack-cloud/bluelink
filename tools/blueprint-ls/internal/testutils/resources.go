@@ -212,6 +212,43 @@ func (r *LambdaFunctionResource) GetSpecDefinition(
 					"handler": {
 						Type: provider.ResourceDefinitionsSchemaTypeString,
 					},
+					"tracingEnabled": {
+						Type: provider.ResourceDefinitionsSchemaTypeBoolean,
+					},
+					"throughput": {
+						Type: provider.ResourceDefinitionsSchemaTypeObject,
+						Attributes: map[string]*provider.ResourceDefinitionsSchema{
+							"readCapacity":  {Type: provider.ResourceDefinitionsSchemaTypeInteger},
+							"writeCapacity": {Type: provider.ResourceDefinitionsSchemaTypeInteger},
+							"autoScaling": {
+								Type: provider.ResourceDefinitionsSchemaTypeObject,
+								Attributes: map[string]*provider.ResourceDefinitionsSchema{
+									"minCapacity": {Type: provider.ResourceDefinitionsSchemaTypeInteger},
+									"maxCapacity": {Type: provider.ResourceDefinitionsSchemaTypeInteger},
+								},
+							},
+						},
+					},
+					"layers": {
+						Type: provider.ResourceDefinitionsSchemaTypeArray,
+						Items: &provider.ResourceDefinitionsSchema{
+							Type: provider.ResourceDefinitionsSchemaTypeObject,
+							Attributes: map[string]*provider.ResourceDefinitionsSchema{
+								"layerName":    {Type: provider.ResourceDefinitionsSchemaTypeString},
+								"layerVersion": {Type: provider.ResourceDefinitionsSchemaTypeInteger},
+							},
+						},
+					},
+					"tags": {
+						Type: provider.ResourceDefinitionsSchemaTypeMap,
+						MapValues: &provider.ResourceDefinitionsSchema{
+							Type: provider.ResourceDefinitionsSchemaTypeObject,
+							Attributes: map[string]*provider.ResourceDefinitionsSchema{
+								"value":     {Type: provider.ResourceDefinitionsSchemaTypeString},
+								"protected": {Type: provider.ResourceDefinitionsSchemaTypeBoolean},
+							},
+						},
+					},
 				},
 			},
 		},

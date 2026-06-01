@@ -15,7 +15,21 @@ type DocumentFormat int
 const (
 	FormatYAML DocumentFormat = iota
 	FormatJSONC
+	FormatBlueprintLang
 )
+
+// DocumentFormatFromSpecFormat maps a blueprint library spec format to the
+// document format used by the language server.
+func DocumentFormatFromSpecFormat(specFormat schema.SpecFormat) DocumentFormat {
+	switch specFormat {
+	case schema.JWCCSpecFormat:
+		return FormatJSONC
+	case schema.BlueprintLangSpecFormat:
+		return FormatBlueprintLang
+	default:
+		return FormatYAML
+	}
+}
 
 // DocumentStatus indicates the validity state of a document.
 type DocumentStatus int
@@ -89,6 +103,8 @@ func (ctx *DocumentContext) parseContent() {
 		ast, err = ParseYAMLToUnified(ctx.Content)
 	case FormatJSONC:
 		ast, err = ParseJSONCToUnified(ctx.Content)
+	case FormatBlueprintLang:
+		ast, err = ParseBlueprintLangToUnified(ctx.Content)
 	}
 
 	ctx.ParseError = err
@@ -347,6 +363,8 @@ func (f DocumentFormat) String() string {
 		return "yaml"
 	case FormatJSONC:
 		return "jsonc"
+	case FormatBlueprintLang:
+		return "blueprint"
 	default:
 		return "unknown"
 	}

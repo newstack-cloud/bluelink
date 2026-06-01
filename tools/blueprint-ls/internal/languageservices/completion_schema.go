@@ -162,6 +162,7 @@ func (s *CompletionService) getResourceSpecFieldCompletionItems(
 	position *lsp.Position,
 	blueprint *schema.Blueprint,
 	completionCtx *docmodel.CompletionContext,
+	format docmodel.DocumentFormat,
 ) ([]*lsp.CompletionItem, error) {
 	resourceName := completionCtx.ResourceName
 	if resourceName == "" {
@@ -193,19 +194,11 @@ func (s *CompletionService) getResourceSpecFieldCompletionItems(
 	}
 
 	specPath := completionCtx.CursorCtx.StructuralPath.GetSpecPath()
-	currentSchema := specDefOutput.SpecDefinition.Schema
-
-	for i := 0; i < len(specPath) && currentSchema != nil; i++ {
-		segment := specPath[i]
-		if segment.Kind != docmodel.PathSegmentField {
-			continue
-		}
-		if currentSchema.Type != provider.ResourceDefinitionsSchemaTypeObject {
-			currentSchema = nil
-			break
-		}
-		currentSchema = currentSchema.Attributes[segment.FieldName]
-	}
+	// Resolve the schema for the cursor's container, descending through nested
+	// objects, arrays, maps and unions; then unwrap any union to its object form.
+	currentSchema := resolveObjectSchema(
+		navigateSpecSchema(specDefOutput.SpecDefinition.Schema, specPath),
+	)
 
 	if currentSchema == nil || currentSchema.Attributes == nil {
 		return []*lsp.CompletionItem{}, nil
@@ -221,6 +214,7 @@ func (s *CompletionService) getResourceSpecFieldCompletionItems(
 		position,
 		"Resource spec field",
 		typedPrefix,
+		format,
 	), nil
 }
 
@@ -276,15 +270,22 @@ func (s *CompletionService) getResourceSpecFieldValueCompletionItems(
 		return []*lsp.CompletionItem{}, nil
 	}
 
-	if len(fieldSchema.AllowedValues) == 0 {
-		return []*lsp.CompletionItem{}, nil
-	}
-
 	typedPrefix := ""
 	textBefore := ""
 	if completionCtx.CursorCtx != nil {
 		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 		textBefore = completionCtx.CursorCtx.TextBefore
+	}
+
+	// In the blueprint language a boolean field's value is a bare true/false/none
+	// literal (no schema AllowedValues), so offer those directly.
+	if format == docmodel.FormatBlueprintLang &&
+		fieldSchema.Type == provider.ResourceDefinitionsSchemaTypeBoolean {
+		return blueprintValueLiteralCompletions(position, typedPrefix), nil
+	}
+
+	if len(fieldSchema.AllowedValues) == 0 {
+		return []*lsp.CompletionItem{}, nil
 	}
 
 	return allowedValuesCompletionItems(fieldSchema, position, typedPrefix, textBefore, format), nil
@@ -1036,12 +1037,14 @@ func resourceDefAttributesSchemaCompletionItemsForSubstitution(
 }
 
 // resourceDefAttributesSchemaCompletionItemsWithPrefix creates completion items for resource
-// spec fields based on the provider schema. Note: Only used for YAML - JSONC is disabled.
+// spec fields based on the provider schema. Insert text is format-aware (YAML "key: ",
+// blueprint "field = " / "{ }" blocks); JSONC key completions are disabled upstream.
 func resourceDefAttributesSchemaCompletionItemsWithPrefix(
 	attributes map[string]*provider.ResourceDefinitionsSchema,
 	position *lsp.Position,
 	attrDetail string,
 	typedPrefix string,
+	format docmodel.DocumentFormat,
 ) []*lsp.CompletionItem {
 	completionItems := []*lsp.CompletionItem{}
 	prefixLen := len(typedPrefix)
@@ -1054,7 +1057,7 @@ func resourceDefAttributesSchemaCompletionItemsWithPrefix(
 
 		fieldKind := lsp.CompletionItemKindField
 		insertRange := getItemInsertRangeWithPrefix(position, prefixLen)
-		insertText := attrName + ": "
+		insertText, isSnippet := specFieldInsertText(attrName, attrSchema, format)
 		edit := lsp.TextEdit{
 			NewText: insertText,
 			Range:   insertRange,
@@ -1076,6 +1079,23 @@ func resourceDefAttributesSchemaCompletionItemsWithPrefix(
 			},
 		}
 
+		if isSnippet {
+			snippetFormat := lsp.InsertTextFormatSnippet
+			item.InsertTextFormat = &snippetFormat
+		}
+
+		// After inserting "field = " for a blueprint field whose schema constrains
+		// the value to a known set. A fixed allowed-value list or a boolean
+		// (true/false/none), re-trigger completion so the value list appears
+		// immediately. Gated so it only fires where there is something specific to
+		// suggest.
+		if format == docmodel.FormatBlueprintLang && hasSuggestibleValues(attrSchema) {
+			item.Command = &lsp.Command{
+				Title:   "Trigger Suggestions",
+				Command: "editor.action.triggerSuggest",
+			}
+		}
+
 		if attrSchema != nil {
 			if attrSchema.FormattedDescription != "" {
 				item.Documentation = lsp.MarkupContent{
@@ -1091,4 +1111,41 @@ func resourceDefAttributesSchemaCompletionItemsWithPrefix(
 	}
 
 	return completionItems
+}
+
+// Builds the insert text for a resource/data-source spec
+// field. For the blueprint language every spec field is an assignment: object/map
+// fields are object literals ("field = { }"), arrays use "= [ ]" and scalars use
+// "= ", only the fixed resource-body sub-blocks (spec, metadata, select by label)
+// are brace blocks. The boolean result reports whether the text is an LSP snippet.
+// hasSuggestibleValues reports whether a spec field's schema constrains its value
+// to a set the language server can suggest after inserting "field = ": a fixed
+// allowed-value list or a boolean (true/false/none).
+func hasSuggestibleValues(attrSchema *provider.ResourceDefinitionsSchema) bool {
+	if attrSchema == nil {
+		return false
+	}
+	return len(attrSchema.AllowedValues) > 0 ||
+		attrSchema.Type == provider.ResourceDefinitionsSchemaTypeBoolean
+}
+
+func specFieldInsertText(
+	attrName string,
+	attrSchema *provider.ResourceDefinitionsSchema,
+	format docmodel.DocumentFormat,
+) (string, bool) {
+	if format != docmodel.FormatBlueprintLang {
+		return attrName + ": ", false
+	}
+
+	if attrSchema != nil {
+		switch attrSchema.Type {
+		case provider.ResourceDefinitionsSchemaTypeObject, provider.ResourceDefinitionsSchemaTypeMap:
+			return attrName + " = {\n\t$0\n}", true
+		case provider.ResourceDefinitionsSchemaTypeArray:
+			return attrName + " = [$0]", true
+		}
+	}
+
+	return attrName + " = ", false
 }

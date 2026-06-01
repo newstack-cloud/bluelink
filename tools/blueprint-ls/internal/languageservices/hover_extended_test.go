@@ -3,6 +3,7 @@ package languageservices
 import (
 	"testing"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/lang"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
@@ -87,6 +88,56 @@ func (s *HoverExtendedSuite) loadInlineBlueprint(content string) *docmodel.Docum
 	s.Require().NoError(err)
 	tree := schema.SchemaToTree(blueprint)
 	return docmodel.NewDocumentContextFromSchema(string(blueprintURI), blueprint, tree)
+}
+
+func (s *HoverExtendedSuite) loadBlueprintLang(content string) *docmodel.DocumentContext {
+	blueprint, err := lang.ParseString(content)
+	s.Require().NoError(err)
+	tree := schema.SchemaToTree(blueprint)
+	return docmodel.NewDocumentContextFromSchema(string(blueprintURI), blueprint, tree)
+}
+
+func (s *HoverExtendedSuite) lambdaHoverService() *HoverService {
+	logger, err := zap.NewDevelopment()
+	s.Require().NoError(err)
+	funcRegistry := &testutils.FunctionRegistryMock{Functions: map[string]provider.Function{}}
+	resourceRegistry := &testutils.ResourceRegistryMock{
+		Resources: map[string]provider.Resource{
+			"aws/lambda/function": &testutils.LambdaFunctionResource{},
+		},
+	}
+	return NewHoverService(
+		funcRegistry,
+		resourceRegistry,
+		&testutils.DataSourceRegistryMock{},
+		nil,
+		NewSignatureService(funcRegistry, logger),
+		nil,
+		logger,
+	)
+}
+
+func (s *HoverExtendedSuite) Test_hover_bp_spec_field_inside_array() {
+	bp := "version \"2025-11-02\"\n" +
+		"resource fn: aws/lambda/function {\n" +
+		"    spec {\n" +
+		"        layers = [\n" +
+		"            {\n" +
+		"                layerName = \"shared\"\n" +
+		"            }\n        ]\n    }\n}\n"
+	docCtx := s.loadBlueprintLang(bp)
+
+	// Hover over "layerName" (line 6, 0-based 5) inside the array-element object.
+	content, err := s.lambdaHoverService().GetHoverContent(
+		&common.LSPContext{}, docCtx,
+		&lsp.TextDocumentPositionParams{
+			TextDocument: lsp.TextDocumentIdentifier{URI: blueprintURI},
+			Position:     lsp.Position{Line: 5, Character: 18},
+		},
+	)
+	s.Require().NoError(err)
+	s.Assert().NotEmpty(content.Value, "expected hover content for a field inside a spec array")
+	s.Assert().Contains(content.Value, "layerName")
 }
 
 // -- Export field value hover tests (fixture-based) --

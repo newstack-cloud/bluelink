@@ -12,6 +12,10 @@ import (
 // For YAML documents, it examines ancestors to find the nearest flow or block
 // container. For JSONC documents, it always returns JSONC style.
 func DetectSyntacticStyle(ancestors []*UnifiedNode, format DocumentFormat) SyntacticStyle {
+	if format == FormatBlueprintLang {
+		return SyntacticStyleBlueprint
+	}
+
 	if format == FormatJSONC {
 		return SyntacticStyleJSONC
 	}
@@ -48,12 +52,64 @@ func DetectSyntacticPosition(
 	switch style {
 	case SyntacticStyleBlockYAML:
 		return detectBlockYAMLPosition(node, ancestors, textBefore)
+	case SyntacticStyleBlueprint:
+		return detectBlueprintPosition(ancestors, textBefore)
 	case SyntacticStyleFlowYAML, SyntacticStyleJSONC:
 		// Flow YAML and JSONC share the same delimiter-based syntax
 		return detectFlowPosition(ancestors, textBefore)
 	default:
 		return SyntacticPositionUnknown
 	}
+}
+
+// Handles position detection for the blueprint language.
+// Mappings are "{ }" blocks of "field = value" entries and arrays are "[ ]"; the
+// key/value separator is "=" (not ":"), and declarations at the top level are
+// introduced by bare keywords (typed at a key position).
+func detectBlueprintPosition(
+	ancestors []*UnifiedNode,
+	textBefore string,
+) SyntacticPosition {
+	currentLineText := extractCurrentLine(textBefore)
+	trimmed := strings.TrimLeft(currentLineText, " \t")
+
+	// Empty line or whitespace-only that is determined from the nearest container:
+	// inside a mapping (or at the document root) this is a key/keyword position.
+	if trimmed == "" {
+		return determineEmptyLinePosition(ancestors)
+	}
+
+	// Inside an unclosed array literal "[ ..." we're entering a sequence item.
+	if isInsideUnclosedBracket(currentLineText) {
+		return SyntacticPositionSequenceItem
+	}
+
+	// "field = " (nothing meaningful after the "=") is a value position.
+	if eqIdx := strings.LastIndex(currentLineText, "="); eqIdx >= 0 {
+		if !isComparisonOperatorAt(currentLineText, eqIdx) {
+			return SyntacticPositionValueField
+		}
+	}
+
+	// Otherwise the user is typing a field name / declaration keyword.
+	return SyntacticPositionKeyField
+}
+
+func isInsideUnclosedBracket(currentLine string) bool {
+	return strings.Count(currentLine, "[") > strings.Count(currentLine, "]")
+}
+
+func isComparisonOperatorAt(line string, idx int) bool {
+	if idx > 0 {
+		switch line[idx-1] {
+		case '=', '!', '<', '>':
+			return true
+		}
+	}
+	if idx+1 < len(line) && line[idx+1] == '=' {
+		return true
+	}
+	return false
 }
 
 // detectBlockYAMLPosition handles position detection for block-style YAML.
@@ -287,11 +343,23 @@ func ExtractTypedPrefix(
 		return extractKeyFieldPrefix(currentLine)
 
 	case SyntacticPositionValueField:
+		if style == SyntacticStyleBlueprint {
+			return extractBlueprintValueFieldPrefix(currentLine)
+		}
 		return extractValueFieldPrefix(currentLine)
 
 	default:
 		return extractWordAtEnd(currentLine)
 	}
+}
+
+// Extracts the text after the assignment "="
+// (the value being typed) for the blueprint language.
+func extractBlueprintValueFieldPrefix(currentLine string) string {
+	if idx := strings.LastIndex(currentLine, "="); idx >= 0 {
+		return strings.TrimSpace(currentLine[idx+1:])
+	}
+	return ""
 }
 
 // extractSequenceItemPrefix extracts prefix for sequence item positions.

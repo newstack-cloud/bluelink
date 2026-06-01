@@ -4,6 +4,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 )
 
@@ -164,6 +165,60 @@ func (l blueprintErrorLocationLexErr) UseColumnAccuracy() bool {
 
 func (l blueprintErrorLocationLexErr) ColumnAccuracy() *substitutions.ColumnAccuracy {
 	return &l.err.ColumnAccuracy
+}
+
+////////////////////////////////////////////////////////////////
+// Error location wrapper for blueprint-language source.Meta
+// (shared by lang.ParseError and lang.LexError)
+////////////////////////////////////////////////////////////////
+
+type blueprintErrorLocationLangMeta struct {
+	meta *source.Meta
+}
+
+func (l blueprintErrorLocationLangMeta) Line() *int {
+	if l.meta == nil {
+		return nil
+	}
+	line := l.meta.Line
+	return &line
+}
+
+func (l blueprintErrorLocationLangMeta) Column() *int {
+	if l.meta == nil {
+		return nil
+	}
+	column := l.meta.Column
+	return &column
+}
+
+func (l blueprintErrorLocationLangMeta) EndLine() *int {
+	if l.meta == nil || l.meta.EndPosition == nil {
+		return nil
+	}
+	line := l.meta.EndPosition.Line
+	return &line
+}
+
+func (l blueprintErrorLocationLangMeta) EndColumn() *int {
+	if l.meta == nil || l.meta.EndPosition == nil {
+		return nil
+	}
+	column := l.meta.EndPosition.Column
+	return &column
+}
+
+func (l blueprintErrorLocationLangMeta) UseColumnAccuracy() bool {
+	return l.meta != nil && l.meta.ColumnAccuracy != nil
+}
+
+func (l blueprintErrorLocationLangMeta) ColumnAccuracy() *substitutions.ColumnAccuracy {
+	if l.meta == nil || l.meta.ColumnAccuracy == nil {
+		return nil
+	}
+	// source.ColumnAccuracy and substitutions.ColumnAccuracy are the same type
+	ca := substitutions.ColumnAccuracy(*l.meta.ColumnAccuracy)
+	return &ca
 }
 
 ////////////////////////////////////////////////////////////////

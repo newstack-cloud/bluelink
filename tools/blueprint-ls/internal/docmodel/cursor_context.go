@@ -119,6 +119,58 @@ func (cursorCtx *CursorContext) resolveStructuralContext(
 	if ctx.Format == FormatYAML {
 		cursorCtx.tryIndentationBasedEnhancement(ctx, pos)
 	}
+
+	// For the blueprint language, a partial field name being typed inside a block
+	// is attached as a leaf field by the CST builder, which would add a spurious
+	// path segment. Re-parent it to its enclosing block so field-name completions
+	// resolve against the container (e.g. /resources/<name> rather than
+	// /resources/<name>/desc).
+	if ctx.Format == FormatBlueprintLang {
+		cursorCtx.tryBlueprintKeyContainerEnhancement(ctx, pos)
+	}
+}
+
+// Re-parents the cursor from a partial
+// field-name leaf to its enclosing block mapping when the cursor is at a key
+// position (no "=" on the current line yet). Value positions ("field = |") and
+// array items are left untouched.
+func (cursorCtx *CursorContext) tryBlueprintKeyContainerEnhancement(
+	ctx *DocumentContext,
+	pos source.Position,
+) {
+	node := cursorCtx.UnifiedNode
+	if node == nil || node.Kind != NodeKindScalar || node.FieldName == "" || node.Index >= 0 {
+		return
+	}
+
+	// "=" means we're past the key (value position); ":" means we're in a
+	// declaration header (e.g. `name: type`), where the type is a real field.
+	// In either case the leaf is the intended target, so leave it untouched.
+	if strings.ContainsAny(currentLinePrefix(ctx.Content, pos), "=:") {
+		return
+	}
+
+	container := node.Parent
+	if container == nil {
+		return
+	}
+
+	cursorCtx.UnifiedNode = container
+	cursorCtx.StructuralPath = StructuredPath(container.AncestorPath())
+	if n := len(cursorCtx.AncestorNodes); n > 0 {
+		cursorCtx.AncestorNodes = cursorCtx.AncestorNodes[:n-1]
+	}
+}
+
+func currentLinePrefix(content string, pos source.Position) string {
+	lines := strings.Split(content, "\n")
+	lineIndex := pos.Line - 1
+	if lineIndex < 0 || lineIndex >= len(lines) {
+		return ""
+	}
+	line := lines[lineIndex]
+	col := min(max(pos.Column-1, 0), len(line))
+	return line[:col]
 }
 
 // tryIndentationBasedEnhancement attempts to enhance context using indentation
@@ -469,6 +521,16 @@ func (ctx *CursorContext) isAtKeyPositionFallback() bool {
 	}
 
 	return false
+}
+
+// Reports whether bare (non-${...}) references are valid at
+// the cursor. In the blueprint language, expressions appear bare at value
+// positions (e.g. `field = variables.x`), unlike YAML/JWCC where references only
+// appear inside ${...}.
+func (ctx *CursorContext) allowsBareReference() bool {
+	return ctx.DocumentCtx != nil &&
+		ctx.DocumentCtx.Format == FormatBlueprintLang &&
+		ctx.IsAtValuePosition()
 }
 
 // IsAtValuePosition returns true if the cursor is at a value position.

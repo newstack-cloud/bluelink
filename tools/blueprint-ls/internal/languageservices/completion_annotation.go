@@ -21,6 +21,7 @@ func (s *CompletionService) getResourceAnnotationKeyCompletionItems(
 	position *lsp.Position,
 	blueprint *schema.Blueprint,
 	completionCtx *docmodel.CompletionContext,
+	format docmodel.DocumentFormat,
 ) ([]*lsp.CompletionItem, error) {
 	if s.linkSource == nil {
 		return []*lsp.CompletionItem{}, nil
@@ -45,7 +46,7 @@ func (s *CompletionService) getResourceAnnotationKeyCompletionItems(
 		typedPrefix = completionCtx.CursorCtx.GetTypedPrefix()
 	}
 
-	return s.createAnnotationKeyCompletionItems(annotationDefs, linkedResources, position, typedPrefix), nil
+	return s.createAnnotationKeyCompletionItems(annotationDefs, linkedResources, position, typedPrefix, format), nil
 }
 
 // linkedResourceInfo holds information about a resource that may be linked to the current resource.
@@ -319,6 +320,7 @@ func (s *CompletionService) createAnnotationKeyCompletionItems(
 	linkedResources []linkedResourceInfo,
 	position *lsp.Position,
 	typedPrefix string,
+	format docmodel.DocumentFormat,
 ) []*lsp.CompletionItem {
 	prefixLower := strings.ToLower(typedPrefix)
 	prefixLen := len(typedPrefix)
@@ -348,12 +350,23 @@ func (s *CompletionService) createAnnotationKeyCompletionItems(
 				continue
 			}
 
-			item := createAnnotationCompletionItem(defCtx.definition, annotationName, position, prefixLen, fieldKind)
+			item := createAnnotationCompletionItem(defCtx.definition, annotationName, position, prefixLen, fieldKind, format)
 			items = append(items, item)
 		}
 	}
 
 	return items
+}
+
+// Builds the inserted text for an annotation key.
+// Annotation keys can contain dots, so the blueprint language inserts a quoted
+// key assignment (`"key" = `) to keep the key a single token; YAML inserts
+// `key: `. (JSONC key completion is disabled, so it never reaches here.)
+func annotationKeyInsertText(annotationName string, format docmodel.DocumentFormat) string {
+	if format == docmodel.FormatBlueprintLang {
+		return `"` + annotationName + `" = `
+	}
+	return annotationName + ": "
 }
 
 // createAnnotationCompletionItem creates a single completion item for an annotation key.
@@ -363,9 +376,10 @@ func createAnnotationCompletionItem(
 	position *lsp.Position,
 	prefixLen int,
 	fieldKind lsp.CompletionItemKind,
+	format docmodel.DocumentFormat,
 ) *lsp.CompletionItem {
 	insertRange := getItemInsertRangeWithPrefix(position, prefixLen)
-	insertText := annotationName + ": "
+	insertText := annotationKeyInsertText(annotationName, format)
 	detail := "Link annotation"
 
 	item := &lsp.CompletionItem{

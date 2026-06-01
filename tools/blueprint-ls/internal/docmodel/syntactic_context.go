@@ -100,6 +100,18 @@ const (
 	// Examples:
 	//   {"resources": {"myResource": {"type": "aws/lambda/function"}}}
 	SyntacticStyleJSONC
+
+	// SyntacticStyleBlueprint indicates the first-class blueprint language syntax.
+	// Mappings are "{ }" blocks of "field = value" entries (newline/comma
+	// separated), arrays are "[ ]", and declarations are introduced by bare
+	// keywords. The key/value separator is "=" rather than ":".
+	// Examples:
+	//   resource saveOrder: aws/lambda/function {
+	//       spec {
+	//           handler = "save_order.handler"
+	//       }
+	//   }
+	SyntacticStyleBlueprint
 )
 
 // String returns a human-readable name for the syntactic style.
@@ -113,6 +125,8 @@ func (s SyntacticStyle) String() string {
 		return "flowYAML"
 	case SyntacticStyleJSONC:
 		return "jsonc"
+	case SyntacticStyleBlueprint:
+		return "blueprint"
 	default:
 		return "unknown"
 	}
@@ -125,9 +139,10 @@ func (s SyntacticStyle) IsFlowStyle() bool {
 	return s == SyntacticStyleFlowYAML || s == SyntacticStyleJSONC
 }
 
-// IsBlockStyle returns true if the style uses indentation-based syntax (block YAML).
+// IsBlockStyle returns true if the style uses block-structured (non-flow) syntax:
+// indentation-based block YAML or the brace-delimited blueprint language.
 func (s SyntacticStyle) IsBlockStyle() bool {
-	return s == SyntacticStyleBlockYAML
+	return s == SyntacticStyleBlockYAML || s == SyntacticStyleBlueprint
 }
 
 // QuoteType indicates the type of quotes enclosing a string value.

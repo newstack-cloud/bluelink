@@ -88,6 +88,51 @@ func needsYAMLQuoting(value string) bool {
 	return false
 }
 
+// The built-in type keywords that, like element types
+// (e.g. aws/lambda/function), are written bare in the blueprint language.
+var blueprintBuiltinTypes = map[string]bool{
+	"string": true, "integer": true, "float": true,
+	"boolean": true, "array": true, "object": true,
+}
+
+func needsBlueprintQuoting(value string) bool {
+	if value == "" {
+		return true
+	}
+
+	lowerValue := strings.ToLower(value)
+	if lowerValue == "true" || lowerValue == "false" || lowerValue == "none" {
+		return false
+	}
+	if isNumericLiteral(value) {
+		return false
+	}
+	// Element types contain "/" and builtin type keywords are bare.
+	if strings.Contains(value, "/") || blueprintBuiltinTypes[value] {
+		return false
+	}
+
+	return true
+}
+
+func isNumericLiteral(value string) bool {
+	if value == "" {
+		return false
+	}
+	dotSeen := false
+	for i, c := range value {
+		switch {
+		case c >= '0' && c <= '9':
+		case c == '-' && i == 0:
+		case c == '.' && !dotSeen:
+			dotSeen = true
+		default:
+			return false
+		}
+	}
+	return value != "-" && value != "."
+}
+
 // getItemInsertRange returns a range at the current cursor position.
 func getItemInsertRange(position *lsp.Position) *lsp.Range {
 	return &lsp.Range{

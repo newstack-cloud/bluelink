@@ -2,6 +2,7 @@ package languageservices
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
@@ -771,9 +772,14 @@ func buildSpecSubstitutionPath(
 ) []*substitutions.SubstitutionPathItem {
 	items := make([]*substitutions.SubstitutionPathItem, 0, len(fieldParts))
 	for _, part := range fieldParts {
-		items = append(items, &substitutions.SubstitutionPathItem{
-			FieldName: part,
-		})
+		item := &substitutions.SubstitutionPathItem{FieldName: part}
+		// A numeric segment is an array index: set ArrayIndex so the schema
+		// navigator can descend into array item schemas. FieldName is retained so
+		// object/map segments (including numeric map keys) still resolve.
+		if idx, err := strconv.ParseInt(part, 10, 64); err == nil {
+			item.ArrayIndex = &idx
+		}
+		items = append(items, item)
 	}
 	return items
 }

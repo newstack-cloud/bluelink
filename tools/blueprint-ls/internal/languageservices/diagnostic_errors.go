@@ -6,6 +6,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/lang"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
@@ -68,7 +69,59 @@ func (s *DiagnosticErrorService) BlueprintErrorToDiagnostics(
 		return diagnostics, enhanced
 	}
 
+	if s.collectLangErrors(err, &diagnostics, docURI) {
+		return diagnostics, enhanced
+	}
+
 	return getGeneralErrorDiagnostics(err), enhanced
+}
+
+// Handles the blueprint-language parse/lex error types, mapping
+// each child's source.Meta to a positioned diagnostic. It returns true when err
+// was one of the lang error types (and therefore fully handled).
+func (s *DiagnosticErrorService) collectLangErrors(
+	err error,
+	diagnostics *[]lsp.Diagnostic,
+	docURI lsp.URI,
+) bool {
+	switch typedErr := err.(type) {
+	case *lang.Errors:
+		for _, childErr := range typedErr.ChildErrors {
+			s.collectLangErrors(childErr, diagnostics, docURI)
+		}
+		return true
+	case *lang.LexErrors:
+		for _, childErr := range typedErr.ChildErrors {
+			s.collectLangErrors(childErr, diagnostics, docURI)
+		}
+		return true
+	case *lang.ParseError:
+		s.collectLangMetaError(typedErr.SourceMeta, typedErr.Error(), diagnostics, docURI)
+		return true
+	case *lang.LexError:
+		s.collectLangMetaError(typedErr.SourceMeta, typedErr.Error(), diagnostics, docURI)
+		return true
+	default:
+		return false
+	}
+}
+
+func (s *DiagnosticErrorService) collectLangMetaError(
+	meta *source.Meta,
+	message string,
+	diagnostics *[]lsp.Diagnostic,
+	docURI lsp.URI,
+) {
+	severity := lsp.DiagnosticSeverityError
+	*diagnostics = append(*diagnostics, lsp.Diagnostic{
+		Range: s.rangeFromBlueprintErrorLocation(
+			blueprintErrorLocationLangMeta{meta},
+			nil,
+			docURI,
+		),
+		Severity: &severity,
+		Message:  message,
+	})
 }
 
 func getGeneralErrorDiagnostics(err error) []lsp.Diagnostic {
@@ -136,11 +189,15 @@ func (s *DiagnosticErrorService) collectLoadErrors(
 
 		_, isRunErr := childErr.(*errors.RunError)
 
+		// A lang error may appear nested in a LoadError (e.g. a child blueprint
+		// include parsed via lang); position it from its source.Meta.
+		isLangErr := s.collectLangErrors(childErr, diagnostics, docURI)
+
 		// Skip capturing run errors during validation,
 		// they are useful at runtime but may appear during validation
 		// in loading provider and transformer plugins.
 		if !isRunErr && !isLoadErr && !isParseErrs && !isParseErr &&
-			!isCoreErr && !isLexErrs && !isLexErr {
+			!isCoreErr && !isLexErrs && !isLexErr && !isLangErr {
 			s.collectGeneralError(childErr, diagnostics, err, docURI)
 		}
 	}
