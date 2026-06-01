@@ -27,7 +27,7 @@ The blueprint framework is an implementation of the [Bluelink Blueprint Specific
 
 The language server can be used with any language server protocol compatible editor such as Visual Studio Code, NeoVim,  Atom etc.
 
-The language server supports `yaml` and `jsonc` formats. `jsonc` refers to the [JSON with Commas and Comments](https://nigeltao.github.io/blog/2021/json-with-commas-comments.html) extension to provide a more intuitive experience for writing blueprints with a JSON-based syntax. This can also be referred to as "Human JSON" and editor-specific extensions that are clients of the language server will usually support the `.jsonc` and `.hujson` file extensions.
+The language server supports the [`blueprint language`](https://www.bluelink.dev/docs/bluelink/blueprints/language), `yaml` and `jsonc` formats. `jsonc` refers to the [JSON with Commas and Comments](https://nigeltao.github.io/blog/2021/json-with-commas-comments.html) extension to provide a more intuitive experience for writing blueprints with a JSON-based syntax. This can also be referred to as "Human JSON" and editor-specific extensions that are clients of the language server will usually support the `.jsonc` and `.hujson` file extensions.
 
 [Blueprint Language Server](./tools/blueprint-ls)
 

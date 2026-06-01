@@ -25,6 +25,6 @@ This document provides an overview of all projects in the Bluelink monorepo.
 | Project | Path | Description |
 |---------|------|-------------|
 | [Bluelink Manager](../tools/bluelink-manager) | `tools/bluelink-manager` | Cross-platform CLI for installing, updating, and managing Bluelink components |
-| [Blueprint Language Server](../tools/blueprint-ls) | `tools/blueprint-ls` | LSP-compatible language server for `.blueprint.(yaml\|yml\|jsonc)` files |
+| [Blueprint Language Server](../tools/blueprint-ls) | `tools/blueprint-ls` | LSP-compatible language server for `.(bp|blueprint)|(blueprint.(yaml\|yml\|jsonc))` files |
 | [Plugin Docgen](../tools/plugin-docgen) | `tools/plugin-docgen` | Generates JSON documentation from plugins for the Bluelink Registry |
 | [Windows Installer](../tools/windows-installer) | `tools/windows-installer` | WiX-based MSI installer for Windows |
