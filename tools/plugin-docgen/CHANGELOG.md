@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/newstack-cloud/bluelink/compare/plugin-docgen/v0.2.0...plugin-docgen/v0.2.1) (2026-06-01)
+
+
+### Dependencies
+
+* **plugin-docgen:** bump up plugin framework and blueprint lib to latest ([808d3fe](https://github.com/newstack-cloud/bluelink/commit/808d3fefa4f39ae7ae5b8e1d71752ccebd1bee9c))
+
 ## [0.2.0](https://github.com/newstack-cloud/bluelink/compare/plugin-docgen/v0.1.0...plugin-docgen/v0.2.0) (2026-04-25)
 
 
