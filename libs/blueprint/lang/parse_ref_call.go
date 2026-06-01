@@ -9,32 +9,32 @@ import (
 
 func (p *parser) parseReferenceOrCall() (expr, error) {
 	tkn := p.peek()
-	switch tkn.tokenType {
-	case tokenKeywordVariables:
+	switch tkn.Type {
+	case TokenKeywordVariables:
 		// variables.<name>
 		return p.parseVariableReference()
-	case tokenKeywordValues:
+	case TokenKeywordValues:
 		// values.<name>{ accessor }
 		return p.parseValueReference()
-	case tokenKeywordResources:
+	case TokenKeywordResources:
 		// resources.<name>[ idx ]?.<spec|metadata>...
 		return p.parseResourceReference()
-	case tokenKeywordDatasources:
+	case TokenKeywordDatasources:
 		// datasources.<name>.<field>[ idx ]?
 		return p.parseDataSourceReference()
-	case tokenKeywordChildren:
+	case TokenKeywordChildren:
 		// children.<name>.<output>{ accessor }
 		return p.parseChildReference()
-	case tokenKeywordElem:
+	case TokenKeywordElem:
 		// elem{ accessor }
 		return p.parseElemReference()
-	case tokenKeywordI:
+	case TokenKeywordI:
 		// i - bare element index
 		return p.parseElemIndexReference()
-	case tokenIdent:
+	case TokenIdent:
 		// `name(` → function call;
 		// `name`, `name.`, `name[` → bare  resource reference.
-		if p.peekAt(1).tokenType == tokenLeftParen {
+		if p.peekAt(1).Type == TokenLeftParen {
 			return p.parseFunctionCall()
 		}
 		return p.parseBareResourceReference()
@@ -42,10 +42,10 @@ func (p *parser) parseReferenceOrCall() (expr, error) {
 		// Some core functions (object, list, string, etc.) share names with
 		// reserved words. Allow them as function names when followed by '('.
 		// The namespace-keyword cases above take precedence and already returned.
-		if isKeyword(tkn.tokenType) && p.peekAt(1).tokenType == tokenLeftParen {
+		if isKeyword(tkn.Type) && p.peekAt(1).Type == TokenLeftParen {
 			return p.parseFunctionCall()
 		}
-		return nil, p.errf(tkn.pos, "expected an expression, got %s", tkn.tokenType)
+		return nil, p.errf(tkn.Start, "expected an expression, got %s", tkn.Type)
 	}
 }
 
@@ -58,15 +58,15 @@ func (p *parser) parseVariableReference() (expr, error) {
 	}
 
 	tkn := p.peek()
-	if tkn.tokenType == tokenPeriod || tkn.tokenType == tokenLeftBracket {
+	if tkn.Type == TokenPeriod || tkn.Type == TokenLeftBracket {
 		return nil, p.errf(
-			tkn.pos,
+			tkn.Start,
 			"variables resolve to scalars and cannot have nested values",
 		)
 	}
 
 	sourceMeta := &source.Meta{
-		Position:    keyword.pos,
+		Position:    keyword.Start,
 		EndPosition: nameMeta.EndPosition,
 	}
 
@@ -99,7 +99,7 @@ func (p *parser) parseValueReference() (expr, error) {
 		endPos = path[n-1].SourceMeta.EndPosition
 	}
 	sourceMeta := &source.Meta{
-		Position:    keyword.pos,
+		Position:    keyword.Start,
 		EndPosition: endPos,
 	}
 
@@ -137,7 +137,7 @@ func (p *parser) parseChildReference() (expr, error) {
 	}
 
 	sourceMeta := &source.Meta{
-		Position:    keyword.pos,
+		Position:    keyword.Start,
 		EndPosition: path[len(path)-1].SourceMeta.EndPosition,
 	}
 
@@ -168,7 +168,7 @@ func (p *parser) parseDataSourceReference() (expr, error) {
 
 	var arrIdx *int64
 	endMeta := fieldMeta
-	if p.peek().tokenType == tokenLeftBracket {
+	if p.peek().Type == TokenLeftBracket {
 		item, err := p.parseBracketAccessor()
 		if err != nil {
 			return nil, err
@@ -187,16 +187,16 @@ func (p *parser) parseDataSourceReference() (expr, error) {
 	}
 
 	tkn := p.peek()
-	if tkn.tokenType == tokenPeriod || tkn.tokenType == tokenLeftBracket {
+	if tkn.Type == TokenPeriod || tkn.Type == TokenLeftBracket {
 		return nil, p.errf(
-			tkn.pos,
+			tkn.Start,
 			"data source references end after the field name (and optional index); got %s",
-			tkn.tokenType,
+			tkn.Type,
 		)
 	}
 
 	sourceMeta := &source.Meta{
-		Position:    keyword.pos,
+		Position:    keyword.Start,
 		EndPosition: endMeta.EndPosition,
 	}
 
@@ -221,12 +221,12 @@ func (p *parser) parseElemReference() (expr, error) {
 		return nil, err
 	}
 
-	endPos := &keyword.endPos
+	endPos := &keyword.End
 	if n := len(path); n > 0 && path[n-1].SourceMeta != nil {
 		endPos = path[n-1].SourceMeta.EndPosition
 	}
 	sourceMeta := &source.Meta{
-		Position:    keyword.pos,
+		Position:    keyword.Start,
 		EndPosition: endPos,
 	}
 
@@ -245,12 +245,12 @@ func (p *parser) parseElemIndexReference() (expr, error) {
 	keyword := p.advance() // 'i'
 
 	tkn := p.peek()
-	if tkn.tokenType == tokenPeriod || tkn.tokenType == tokenLeftBracket {
+	if tkn.Type == TokenPeriod || tkn.Type == TokenLeftBracket {
 		tkn := p.peek()
 		return nil, p.errf(
-			tkn.pos,
+			tkn.Start,
 			"'i' is the iteration index and cannot have accessors; got %s",
-			tkn.tokenType,
+			tkn.Type,
 		)
 	}
 
@@ -273,18 +273,18 @@ func (p *parser) parseResourceReference() (expr, error) {
 		return nil, err
 	}
 
-	return p.finishResourceReference(keyword.pos, name, nameMeta)
+	return p.finishResourceReference(keyword.Start, name, nameMeta)
 }
 
 func (p *parser) parseBareResourceReference() (expr, error) {
-	nameTkn, err := p.expect(tokenIdent)
+	nameTkn, err := p.expect(TokenIdent)
 	if err != nil {
 		return nil, err
 	}
 
 	return p.finishResourceReference(
-		nameTkn.pos,
-		nameTkn.value,
+		nameTkn.Start,
+		nameTkn.Value,
 		sourceMetaFromToken(nameTkn),
 	)
 }
@@ -330,14 +330,14 @@ func (p *parser) finishResourceReference(
 }
 
 func (p *parser) parseOptionalEachIndex() (*int64, *source.Meta, error) {
-	if p.peek().tokenType != tokenLeftBracket {
+	if p.peek().Type != TokenLeftBracket {
 		return nil, nil, nil
 	}
 
 	// A `["quotedName"]` immediately after the resource name is not an
 	// each-template index — it's the quoted-name form of a regular field
 	// accessor. Leave it for parseAccessorChain to consume.
-	if p.peekAt(1).tokenType == tokenStringStart {
+	if p.peekAt(1).Type == TokenStringStart {
 		return nil, nil, nil
 	}
 
@@ -356,10 +356,10 @@ func (p *parser) parseAccessorChain() ([]*substitutions.SubstitutionPathItem, er
 		var item *substitutions.SubstitutionPathItem
 		var err error
 
-		switch p.peek().tokenType {
-		case tokenPeriod:
+		switch p.peek().Type {
+		case TokenPeriod:
 			item, err = p.parseDotAccessor()
-		case tokenLeftBracket:
+		case TokenLeftBracket:
 			item, err = p.parseBracketAccessor()
 		default:
 			return path, nil
@@ -376,20 +376,20 @@ func (p *parser) parseDotAccessor() (*substitutions.SubstitutionPathItem, error)
 	dot := p.advance()
 
 	nameTkn := p.peek()
-	if nameTkn.tokenType != tokenIdent && !isKeyword(nameTkn.tokenType) {
+	if nameTkn.Type != TokenIdent && !isKeyword(nameTkn.Type) {
 		return nil, p.errf(
-			nameTkn.pos,
+			nameTkn.Start,
 			"expected a field name, got %s",
-			nameTkn.tokenType,
+			nameTkn.Type,
 		)
 	}
 	p.advance()
 
 	return &substitutions.SubstitutionPathItem{
-		FieldName: nameTkn.value,
+		FieldName: nameTkn.Value,
 		SourceMeta: &source.Meta{
-			Position:    dot.pos,
-			EndPosition: &nameTkn.endPos,
+			Position:    dot.Start,
+			EndPosition: &nameTkn.End,
 		},
 	}, nil
 }
@@ -401,25 +401,25 @@ func (p *parser) parseBracketAccessor() (*substitutions.SubstitutionPathItem, er
 	open := p.advance()
 
 	item := &substitutions.SubstitutionPathItem{}
-	switch p.peek().tokenType {
-	case tokenStringStart:
+	switch p.peek().Type {
+	case TokenStringStart:
 		name, _, err := p.parseQuotedName()
 		if err != nil {
 			return nil, err
 		}
 		item.FieldName = name
-	case tokenIntLiteral:
+	case TokenIntLiteral:
 		intTkn := p.advance()
-		idx, _ := strconv.ParseInt(intTkn.value, 10, 64)
+		idx, _ := strconv.ParseInt(intTkn.Value, 10, 64)
 		if idx < 0 {
 			return nil, p.errf(
-				intTkn.pos,
+				intTkn.Start,
 				"array index must be a non-negative integer, got %d",
 				idx,
 			)
 		}
 		item.ArrayIndex = &idx
-	case tokenRightBracket:
+	case TokenRightBracket:
 		// '[]' defaults to index 0 as per spec, there's no AST representation for
 		// an empty index (nil means absent), so the YAML/JWCC parser encodes it
 		// as 0 at parse time and we match.
@@ -428,20 +428,20 @@ func (p *parser) parseBracketAccessor() (*substitutions.SubstitutionPathItem, er
 	default:
 		tkn := p.peek()
 		return nil, p.errf(
-			tkn.pos,
+			tkn.Start,
 			"expected a quoted name, an index or ']', got %s",
-			tkn.tokenType,
+			tkn.Type,
 		)
 	}
 
-	closeTkn, err := p.expect(tokenRightBracket)
+	closeTkn, err := p.expect(TokenRightBracket)
 	if err != nil {
 		return nil, err
 	}
 
 	item.SourceMeta = &source.Meta{
-		Position:    open.pos,
-		EndPosition: &closeTkn.endPos,
+		Position:    open.Start,
+		EndPosition: &closeTkn.End,
 	}
 
 	return item, nil
@@ -451,56 +451,56 @@ func (p *parser) parseBracketAccessor() (*substitutions.SubstitutionPathItem, er
 // (which loops) and parseBracketAccessor (which also accepts indexes). Used by
 // every reference parser to read its required leading name(s).
 func (p *parser) parseNameAccessor() (string, *source.Meta, error) {
-	switch p.peek().tokenType {
-	case tokenPeriod:
+	switch p.peek().Type {
+	case TokenPeriod:
 		dot := p.advance()
-		nameTkn, err := p.expect(tokenIdent)
+		nameTkn, err := p.expect(TokenIdent)
 		if err != nil {
 			return "", nil, err
 		}
 
-		return nameTkn.value, &source.Meta{
-			Position:    dot.pos,
-			EndPosition: &nameTkn.endPos,
+		return nameTkn.Value, &source.Meta{
+			Position:    dot.Start,
+			EndPosition: &nameTkn.End,
 		}, nil
-	case tokenLeftBracket:
+	case TokenLeftBracket:
 		open := p.advance()
 		name, _, err := p.parseQuotedName()
 		if err != nil {
 			return "", nil, err
 		}
 
-		closeTkn, err := p.expect(tokenRightBracket)
+		closeTkn, err := p.expect(TokenRightBracket)
 		if err != nil {
 			return "", nil, err
 		}
 
 		return name, &source.Meta{
-			Position:    open.pos,
-			EndPosition: &closeTkn.endPos,
+			Position:    open.Start,
+			EndPosition: &closeTkn.End,
 		}, nil
 	default:
 		tkn := p.peek()
 		return "", nil, p.errf(
-			tkn.pos,
+			tkn.Start,
 			"expected '.<name>' or '[\"<name>\"]', got %s",
-			tkn.tokenType,
+			tkn.Type,
 		)
 	}
 }
 
 func (p *parser) parseFunctionCall() (expr, error) {
 	nameTkn := p.peek()
-	if nameTkn.tokenType != tokenIdent && !isKeyword(nameTkn.tokenType) {
+	if nameTkn.Type != TokenIdent && !isKeyword(nameTkn.Type) {
 		return nil, p.errf(
-			nameTkn.pos,
+			nameTkn.Start,
 			"expected a function name, got %s",
-			nameTkn.tokenType,
+			nameTkn.Type,
 		)
 	}
 	p.advance()
 
-	if _, err := p.expect(tokenLeftParen); err != nil {
+	if _, err := p.expect(TokenLeftParen); err != nil {
 		return nil, err
 	}
 
@@ -509,7 +509,7 @@ func (p *parser) parseFunctionCall() (expr, error) {
 		return nil, err
 	}
 
-	closeTkn, err := p.expect(tokenRightParen)
+	closeTkn, err := p.expect(TokenRightParen)
 	if err != nil {
 		return nil, err
 	}
@@ -519,17 +519,17 @@ func (p *parser) parseFunctionCall() (expr, error) {
 		return nil, err
 	}
 
-	endPos := &closeTkn.endPos
+	endPos := &closeTkn.End
 	if n := len(path); n > 0 && path[n-1].SourceMeta != nil {
 		endPos = path[n-1].SourceMeta.EndPosition
 	}
 
 	return &callExpr{
-		name: nameTkn.value,
+		name: nameTkn.Value,
 		args: args,
 		path: path,
 		m: &source.Meta{
-			Position:    nameTkn.pos,
+			Position:    nameTkn.Start,
 			EndPosition: endPos,
 		},
 	}, nil
@@ -539,7 +539,7 @@ func (p *parser) parseFunctionCall() (expr, error) {
 // Stops at ')'.
 func (p *parser) parseCallArgs() ([]callArg, error) {
 	var args []callArg
-	if p.peek().tokenType == tokenRightParen {
+	if p.peek().Type == TokenRightParen {
 		return args, nil
 	}
 
@@ -550,12 +550,12 @@ func (p *parser) parseCallArgs() ([]callArg, error) {
 		}
 		args = append(args, arg)
 
-		if !p.match(tokenComma) {
+		if !p.match(TokenComma) {
 			return args, nil
 		}
 
 		// Trailing comma support: if next is ')', stop.
-		if p.peek().tokenType == tokenRightParen {
+		if p.peek().Type == TokenRightParen {
 			return args, nil
 		}
 	}
@@ -566,7 +566,7 @@ func (p *parser) parseCallArgs() ([]callArg, error) {
 // for '=' — an ident alone is a bare resource reference (positional).
 func (p *parser) parseCallArg() (callArg, error) {
 	start := p.peek()
-	if start.tokenType == tokenIdent && p.peekAt(1).tokenType == tokenAssign {
+	if start.Type == TokenIdent && p.peekAt(1).Type == TokenAssign {
 		nameTkn := p.advance()
 		p.advance() // '='
 		value, err := p.parseExpr()
@@ -574,12 +574,12 @@ func (p *parser) parseCallArg() (callArg, error) {
 			return callArg{}, err
 		}
 
-		meta := &source.Meta{Position: nameTkn.pos}
+		meta := &source.Meta{Position: nameTkn.Start}
 		if valueMeta := value.meta(); valueMeta != nil {
 			meta.EndPosition = valueMeta.EndPosition
 		}
 		return callArg{
-			name:  nameTkn.value,
+			name:  nameTkn.Value,
 			value: value,
 			meta:  meta,
 		}, nil

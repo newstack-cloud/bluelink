@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -62,9 +63,7 @@ func loadSpecString(spec string, inputFormat schema.SpecFormat) (*schema.Bluepri
 
 func copyProviderMap(m map[string]provider.Provider) map[string]provider.Provider {
 	copy := make(map[string]provider.Provider, len(m))
-	for k, v := range m {
-		copy[k] = v
-	}
+	maps.Copy(copy, m)
 	return copy
 }
 

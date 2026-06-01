@@ -8,20 +8,20 @@ import (
 )
 
 func (p *parser) parseDataDeclEntry(ds *schema.DataSource) error {
-	switch p.peek().tokenType {
-	case tokenKeywordMetadata:
+	switch p.peek().Type {
+	case TokenKeywordMetadata:
 		return p.parseDataSourceMetadataBlock(ds)
-	case tokenKeywordFilter:
+	case TokenKeywordFilter:
 		return p.parseFilterStatement(ds)
-	case tokenKeywordExport:
+	case TokenKeywordExport:
 		return p.parseDataSourceExportStatement(ds)
-	case tokenIdent:
+	case TokenIdent:
 		return p.parseDataSourceFieldAssignment(ds)
 	default:
 		return p.errf(
-			p.peek().pos,
+			p.peek().Start,
 			"expected 'metadata', 'filter', 'export', or a field assignment in data declaration, got %s",
-			p.peek().tokenType,
+			p.peek().Type,
 		)
 	}
 }
@@ -129,7 +129,7 @@ func (p *parser) parseFilterStatement(ds *schema.DataSource) error {
 		Operator: op,
 		Search:   search,
 		SourceMeta: &source.Meta{
-			Position:    open.pos,
+			Position:    open.Start,
 			EndPosition: &endPos,
 		},
 	}
@@ -142,11 +142,11 @@ func (p *parser) parseFilterStatement(ds *schema.DataSource) error {
 }
 
 func (p *parser) parseFilterField() (*core.ScalarValue, error) {
-	if p.peek().tokenType != tokenStringStart {
+	if p.peek().Type != TokenStringStart {
 		return nil, p.errf(
-			p.peek().pos,
+			p.peek().Start,
 			"expected a string literal naming the filter field, got %s",
-			p.peek().tokenType,
+			p.peek().Type,
 		)
 	}
 
@@ -162,9 +162,9 @@ func (p *parser) parseFilterField() (*core.ScalarValue, error) {
 }
 
 func (p *parser) parseFilterOperator() (*schema.DataSourceFilterOperatorWrapper, error) {
-	start := p.peek().pos
+	start := p.peek().Start
 	negated := false
-	if p.peek().tokenType == tokenKeywordNot {
+	if p.peek().Type == TokenKeywordNot {
 		p.advance()
 		negated = true
 	}
@@ -190,35 +190,35 @@ func (p *parser) parseFilterOperatorBody(
 	negated bool,
 	notPos source.Position,
 ) (string, source.Position, error) {
-	switch p.peek().tokenType {
-	case tokenKeywordIn:
-		return "in", p.advance().endPos, nil
-	case tokenKeywordContains:
-		return "contains", p.advance().endPos, nil
-	case tokenKeywordHas:
+	switch p.peek().Type {
+	case TokenKeywordIn:
+		return "in", p.advance().End, nil
+	case TokenKeywordContains:
+		return "contains", p.advance().End, nil
+	case TokenKeywordHas:
 		p.advance()
-		keyTkn, err := p.expect(tokenKeywordKey)
+		keyTkn, err := p.expect(TokenKeywordKey)
 		if err != nil {
 			return "", source.Position{}, err
 		}
 
-		return "has key", keyTkn.endPos, nil
-	case tokenKeywordStarts:
+		return "has key", keyTkn.End, nil
+	case TokenKeywordStarts:
 		p.advance()
-		withTkn, err := p.expect(tokenKeywordWith)
+		withTkn, err := p.expect(TokenKeywordWith)
 		if err != nil {
 			return "", source.Position{}, err
 		}
 
-		return "starts with", withTkn.endPos, nil
-	case tokenKeywordEnds:
+		return "starts with", withTkn.End, nil
+	case TokenKeywordEnds:
 		p.advance()
-		withTkn, err := p.expect(tokenKeywordWith)
+		withTkn, err := p.expect(TokenKeywordWith)
 		if err != nil {
 			return "", source.Position{}, err
 		}
 
-		return "ends with", withTkn.endPos, nil
+		return "ends with", withTkn.End, nil
 	}
 
 	if negated {
@@ -228,25 +228,25 @@ func (p *parser) parseFilterOperatorBody(
 		)
 	}
 
-	switch p.peek().tokenType {
-	case tokenEq:
-		return "=", p.advance().endPos, nil
-	case tokenNeq:
-		return "!=", p.advance().endPos, nil
-	case tokenGt:
-		return ">", p.advance().endPos, nil
-	case tokenLt:
-		return "<", p.advance().endPos, nil
-	case tokenGte:
-		return ">=", p.advance().endPos, nil
-	case tokenLte:
-		return "<=", p.advance().endPos, nil
+	switch p.peek().Type {
+	case TokenEq:
+		return "=", p.advance().End, nil
+	case TokenNeq:
+		return "!=", p.advance().End, nil
+	case TokenGt:
+		return ">", p.advance().End, nil
+	case TokenLt:
+		return "<", p.advance().End, nil
+	case TokenGte:
+		return ">=", p.advance().End, nil
+	case TokenLte:
+		return "<=", p.advance().End, nil
 	}
 
 	return "", source.Position{}, p.errf(
-		p.peek().pos,
+		p.peek().Start,
 		"expected a filter operator, got %s",
-		p.peek().tokenType,
+		p.peek().Type,
 	)
 }
 
@@ -298,7 +298,7 @@ func (p *parser) parseDataSourceExportStatement(ds *schema.DataSource) error {
 		}
 	}
 
-	if p.peek().tokenType == tokenStar {
+	if p.peek().Type == TokenStar {
 		p.advance()
 		ds.Exports.ExportAll = true
 		return nil
@@ -312,7 +312,7 @@ func (p *parser) parseDataSourceExportStatement(ds *schema.DataSource) error {
 	exposedName := sourceName
 	exposedMeta := nameMeta
 	var aliasFor *core.ScalarValue
-	if p.peek().tokenType == tokenKeywordAs {
+	if p.peek().Type == TokenKeywordAs {
 		p.advance()
 		aliasName, aliasMeta, err := p.parseElementName()
 		if err != nil {
@@ -327,7 +327,7 @@ func (p *parser) parseDataSourceExportStatement(ds *schema.DataSource) error {
 		exposedMeta = aliasMeta
 	}
 
-	if _, err := p.expect(tokenColon); err != nil {
+	if _, err := p.expect(TokenColon); err != nil {
 		return err
 	}
 
@@ -345,7 +345,7 @@ func (p *parser) parseDataSourceExportStatement(ds *schema.DataSource) error {
 		SourceMeta: exposedMeta,
 	}
 
-	if p.peek().tokenType == tokenLeftBrace {
+	if p.peek().Type == TokenLeftBrace {
 		_, err := p.parseBraceBlock(func() error {
 			return p.parseDataSourceExportField(exportEntry)
 		})
@@ -375,16 +375,16 @@ func (p *parser) parseDataSourceExportField(e *schema.DataSourceFieldExport) err
 }
 
 func (p *parser) parseDataSourceFieldType() (schema.DataSourceFieldType, *source.Meta, error) {
-	switch p.peek().tokenType {
-	case tokenKeywordString, tokenKeywordInteger, tokenKeywordFloat,
-		tokenKeywordBoolean, tokenKeywordArray:
+	switch p.peek().Type {
+	case TokenKeywordString, TokenKeywordInteger, TokenKeywordFloat,
+		TokenKeywordBoolean, TokenKeywordArray:
 		tkn := p.advance()
-		return schema.DataSourceFieldType(tkn.value), sourceMetaFromToken(tkn), nil
+		return schema.DataSourceFieldType(tkn.Value), sourceMetaFromToken(tkn), nil
 	default:
 		return "", nil, p.errf(
-			p.peek().pos,
+			p.peek().Start,
 			"expected a data source export type (string, integer, float, boolean, or array), got %s",
-			p.peek().tokenType,
+			p.peek().Type,
 		)
 	}
 }

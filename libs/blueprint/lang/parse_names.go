@@ -2,31 +2,31 @@ package lang
 
 import "github.com/newstack-cloud/bluelink/libs/blueprint/source"
 
-// parseElementName reads a declaration name. Grammar: name | quoted name.
+// Reads a declaration name. Grammar: name | quoted name.
 // A reserved word is rejected in the bare form: a declaration header requires a
 // non-keyword identifier, so a name colliding with a keyword must be quoted.
 func (p *parser) parseElementName() (string, *source.Meta, error) {
 	tkn := p.peek()
-	switch tkn.tokenType {
-	case tokenIdent:
+	switch tkn.Type {
+	case TokenIdent:
 		p.advance()
-		return tkn.value, sourceMetaFromToken(tkn), nil
+		return tkn.Value, sourceMetaFromToken(tkn), nil
 
-	case tokenStringStart:
+	case TokenStringStart:
 		return p.parseQuotedName()
 
 	default:
 		// Consume the offending token so a reserved word in name position is
 		// not re-dispatched as a fresh declaration by the recovery in Parse.
 		bad := p.advance()
-		if isKeyword(bad.tokenType) {
+		if isKeyword(bad.Type) {
 			return "", nil, p.errf(
-				bad.pos,
+				bad.Start,
 				"%s is reserved and cannot be used as a bare name; wrap it in double quotes to use it as a name",
-				bad.tokenType,
+				bad.Type,
 			)
 		}
-		return "", nil, p.errf(bad.pos, "expected element name, got %s", bad.tokenType)
+		return "", nil, p.errf(bad.Start, "expected element name, got %s", bad.Type)
 	}
 }
 
@@ -37,13 +37,13 @@ func (p *parser) parseElementName() (string, *source.Meta, error) {
 func (p *parser) parseFieldKey() (string, *source.Meta, error) {
 	tkn := p.peek()
 	switch {
-	case tkn.tokenType == tokenIdent || isKeyword(tkn.tokenType):
+	case tkn.Type == TokenIdent || isKeyword(tkn.Type):
 		p.advance()
-		return tkn.value, sourceMetaFromToken(tkn), nil
-	case tkn.tokenType == tokenStringStart:
+		return tkn.Value, sourceMetaFromToken(tkn), nil
+	case tkn.Type == TokenStringStart:
 		return p.parseQuotedName()
 	default:
-		return "", nil, p.errf(tkn.pos, "expected a field name, got %s", tkn.tokenType)
+		return "", nil, p.errf(tkn.Start, "expected a field name, got %s", tkn.Type)
 	}
 }
 
@@ -54,13 +54,13 @@ func (p *parser) parseFieldKey() (string, *source.Meta, error) {
 func (p *parser) parseObjectKey() (string, *source.Meta, error) {
 	tkn := p.peek()
 	switch {
-	case tkn.tokenType == tokenIdent || isKeyword(tkn.tokenType):
+	case tkn.Type == TokenIdent || isKeyword(tkn.Type):
 		p.advance()
-		return tkn.value, sourceMetaFromToken(tkn), nil
-	case tkn.tokenType == tokenStringStart:
+		return tkn.Value, sourceMetaFromToken(tkn), nil
+	case tkn.Type == TokenStringStart:
 		return p.parsePlainStringLiteral()
 	default:
-		return "", nil, p.errf(tkn.pos, "expected an object key, got %s", tkn.tokenType)
+		return "", nil, p.errf(tkn.Start, "expected an object key, got %s", tkn.Type)
 	}
 }
 
@@ -96,7 +96,7 @@ func isValidQuotedName(s string) bool {
 	return true
 }
 
-func isKeyword(tt tokenType) bool {
+func isKeyword(tt TokenType) bool {
 	_, ok := keywordWords[tt]
 	return ok
 }

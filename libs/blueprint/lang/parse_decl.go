@@ -27,16 +27,16 @@ func (p *parser) parseVariableDecl(bp *schema.Blueprint) error {
 	bp.Variables.Values[name] = variable
 	bp.Variables.SourceMeta[name] = meta
 
-	if _, err := p.expect(tokenColon); err != nil {
+	if _, err := p.expect(TokenColon); err != nil {
 		return err
 	}
 
 	var varType string
 	var varTypeMeta *source.Meta
-	switch p.peek().tokenType {
-	case tokenKeywordString, tokenKeywordInteger, tokenKeywordFloat, tokenKeywordBoolean:
+	switch p.peek().Type {
+	case TokenKeywordString, TokenKeywordInteger, TokenKeywordFloat, TokenKeywordBoolean:
 		tkn := p.advance()
-		varType = tkn.value
+		varType = tkn.Value
 		varTypeMeta = sourceMetaFromToken(tkn)
 	default:
 		elementType, meta, err := p.parseElementType()
@@ -104,23 +104,23 @@ func (p *parser) parseValueDecl(bp *schema.Blueprint) error {
 	bp.Values.Values[name] = value
 	bp.Values.SourceMeta[name] = meta
 
-	if _, err := p.expect(tokenColon); err != nil {
+	if _, err := p.expect(TokenColon); err != nil {
 		return err
 	}
 
 	var valType string
 	var valTypeMeta *source.Meta
-	switch p.peek().tokenType {
-	case tokenKeywordString, tokenKeywordInteger, tokenKeywordFloat,
-		tokenKeywordBoolean, tokenKeywordArray, tokenKeywordObject:
+	switch p.peek().Type {
+	case TokenKeywordString, TokenKeywordInteger, TokenKeywordFloat,
+		TokenKeywordBoolean, TokenKeywordArray, TokenKeywordObject:
 		tkn := p.advance()
-		valType = tkn.value
+		valType = tkn.Value
 		valTypeMeta = sourceMetaFromToken(tkn)
 	default:
 		return p.errf(
-			p.peek().pos,
+			p.peek().Start,
 			"expected a valid value type, got %s",
-			p.peek().tokenType,
+			p.peek().Type,
 		)
 	}
 
@@ -175,7 +175,7 @@ func (p *parser) parseDataDecl(bp *schema.Blueprint) error {
 		return err
 	}
 
-	if _, err := p.expect(tokenColon); err != nil {
+	if _, err := p.expect(TokenColon); err != nil {
 		return err
 	}
 
@@ -215,7 +215,7 @@ func (p *parser) parseResourceDecl(bp *schema.Blueprint) error {
 		return err
 	}
 
-	if _, err := p.expect(tokenColon); err != nil {
+	if _, err := p.expect(TokenColon); err != nil {
 		return err
 	}
 
@@ -292,7 +292,7 @@ func (p *parser) parseIncludeField(inc *schema.Include) error {
 
 	switch field {
 	case "description":
-		if _, err := p.expect(tokenAssign); err != nil {
+		if _, err := p.expect(TokenAssign); err != nil {
 			return err
 		}
 
@@ -359,7 +359,7 @@ func (p *parser) parseExportDecl(bp *schema.Blueprint) error {
 	bp.Exports.Values[name] = export
 	bp.Exports.SourceMeta[name] = meta
 
-	if _, err := p.expect(tokenColon); err != nil {
+	if _, err := p.expect(TokenColon); err != nil {
 		return err
 	}
 
@@ -379,16 +379,16 @@ func (p *parser) parseExportDecl(bp *schema.Blueprint) error {
 }
 
 func (p *parser) parseExportType() (string, *source.Meta, error) {
-	switch p.peek().tokenType {
-	case tokenKeywordString, tokenKeywordInteger, tokenKeywordFloat,
-		tokenKeywordBoolean, tokenKeywordArray, tokenKeywordObject:
+	switch p.peek().Type {
+	case TokenKeywordString, TokenKeywordInteger, TokenKeywordFloat,
+		TokenKeywordBoolean, TokenKeywordArray, TokenKeywordObject:
 		tkn := p.advance()
-		return tkn.value, sourceMetaFromToken(tkn), nil
+		return tkn.Value, sourceMetaFromToken(tkn), nil
 	default:
 		return "", nil, p.errf(
-			p.peek().pos,
+			p.peek().Start,
 			"expected a valid export type, got %s",
-			p.peek().tokenType,
+			p.peek().Type,
 		)
 	}
 }
@@ -412,7 +412,7 @@ func (p *parser) parseExportField(e *schema.Export) error {
 }
 
 func (p *parser) parseExportFieldValue() (*core.ScalarValue, error) {
-	if p.peek().tokenType == tokenStringStart {
+	if p.peek().Type == TokenStringStart {
 		value, meta, err := p.collectStringLiteral(false)
 		if err != nil {
 			return nil, err
@@ -453,7 +453,7 @@ func (p *parser) parseFieldAssignment() (string, *source.Meta, error) {
 		return "", nil, err
 	}
 
-	if _, err := p.expect(tokenAssign); err != nil {
+	if _, err := p.expect(TokenAssign); err != nil {
 		return "", nil, err
 	}
 
@@ -469,11 +469,11 @@ func (p *parser) parseElementType() (string, *source.Meta, error) {
 	if err != nil {
 		return "", nil, err
 	}
-	sb.WriteString(first.value)
-	start := first.pos
-	end := first.endPos
+	sb.WriteString(first.Value)
+	start := first.Start
+	end := first.End
 
-	if _, err := p.expect(tokenSlash); err != nil {
+	if _, err := p.expect(TokenSlash); err != nil {
 		return "", nil, err
 	}
 	sb.WriteByte('/')
@@ -482,18 +482,18 @@ func (p *parser) parseElementType() (string, *source.Meta, error) {
 	if err != nil {
 		return "", nil, err
 	}
-	sb.WriteString(second.value)
-	end = second.endPos
+	sb.WriteString(second.Value)
+	end = second.End
 
-	for p.match(tokenSlash) {
+	for p.match(TokenSlash) {
 		sb.WriteByte('/')
 		seg, err := p.parseTypeSegment()
 		if err != nil {
 			return "", nil, err
 		}
 
-		sb.WriteString(seg.value)
-		end = seg.endPos
+		sb.WriteString(seg.Value)
+		end = seg.End
 	}
 
 	return sb.String(), &source.Meta{
@@ -507,28 +507,28 @@ func (p *parser) parseElementType() (string, *source.Meta, error) {
 // (e.g. "data", "object"), so it is accepted by token kind and then validated
 // against the stricter type-segment grammar (letters and digits only, no '_' or
 // '-'), which is narrower than an identifier.
-func (p *parser) parseTypeSegment() (*token, error) {
+func (p *parser) parseTypeSegment() (*Token, error) {
 	tkn := p.peek()
-	if !isSegmentToken(tkn.tokenType) {
+	if !isSegmentToken(tkn.Type) {
 		return nil, p.errf(
-			tkn.pos,
+			tkn.Start,
 			"expected an element type segment, got %s",
-			tkn.tokenType,
+			tkn.Type,
 		)
 	}
 	p.advance()
-	if !isValidTypeSegment(tkn.value) {
+	if !isValidTypeSegment(tkn.Value) {
 		return nil, p.errf(
-			tkn.pos,
+			tkn.Start,
 			"invalid element type segment %q: a segment must be a letter followed by letters or digits",
-			tkn.value,
+			tkn.Value,
 		)
 	}
 	return tkn, nil
 }
 
-func isSegmentToken(tt tokenType) bool {
-	if tt == tokenIdent || tt == tokenBoolLiteral || tt == tokenNoneLiteral {
+func isSegmentToken(tt TokenType) bool {
+	if tt == TokenIdent || tt == TokenBoolLiteral || tt == TokenNoneLiteral {
 		return true
 	}
 	_, isKeyword := keywordWords[tt]

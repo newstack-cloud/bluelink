@@ -6,22 +6,22 @@ import (
 )
 
 func (p *parser) parseResourceDeclEntry(r *schema.Resource) error {
-	switch p.peek().tokenType {
-	case tokenKeywordMetadata:
+	switch p.peek().Type {
+	case TokenKeywordMetadata:
 		return p.parseResourceMetadataBlock(r)
-	case tokenKeywordSelect:
+	case TokenKeywordSelect:
 		return p.parseSelectStatement(r)
-	case tokenKeywordSpec:
+	case TokenKeywordSpec:
 		return p.parseSpecBlock(r)
-	case tokenKeywordForeach:
+	case TokenKeywordForeach:
 		return p.parseForeachStatement(r)
-	case tokenIdent:
+	case TokenIdent:
 		return p.parseResourceFieldAssignment(r)
 	default:
 		return p.errf(
-			p.peek().pos,
+			p.peek().Start,
 			"expected 'metadata', 'select', 'spec', 'foreach', or a field assignment in resource declaration, got %s",
-			p.peek().tokenType,
+			p.peek().Type,
 		)
 	}
 }
@@ -91,10 +91,10 @@ func (p *parser) parseResourceMetadataField(m *schema.Metadata) error {
 func (p *parser) parseSelectStatement(r *schema.Resource) error {
 	open := p.advance() // 'select'
 
-	if _, err := p.expect(tokenKeywordBy); err != nil {
+	if _, err := p.expect(TokenKeywordBy); err != nil {
 		return err
 	}
-	if _, err := p.expect(tokenKeywordLabel); err != nil {
+	if _, err := p.expect(TokenKeywordLabel); err != nil {
 		return err
 	}
 
@@ -114,7 +114,7 @@ func (p *parser) parseSelectStatement(r *schema.Resource) error {
 	}
 
 	selector.SourceMeta = &source.Meta{
-		Position:    open.pos,
+		Position:    open.Start,
 		EndPosition: blockMeta.EndPosition,
 	}
 	r.LinkSelector = selector
@@ -128,7 +128,7 @@ func (p *parser) parseSelectByLabelEntry(s *schema.LinkSelector) error {
 		return err
 	}
 
-	if _, err := p.expect(tokenAssign); err != nil {
+	if _, err := p.expect(TokenAssign); err != nil {
 		return err
 	}
 
@@ -148,11 +148,11 @@ func (p *parser) parseSelectByLabelEntry(s *schema.LinkSelector) error {
 		return nil
 	}
 
-	if p.peek().tokenType != tokenStringStart {
+	if p.peek().Type != TokenStringStart {
 		return p.errf(
-			p.peek().pos,
+			p.peek().Start,
 			"label value for %q must be a string literal, got %s",
-			key, p.peek().tokenType,
+			key, p.peek().Type,
 		)
 	}
 
@@ -174,7 +174,7 @@ func (p *parser) parseSpecBlock(r *schema.Resource) error {
 		return err
 	}
 
-	spec.SourceMeta.Position = open.pos
+	spec.SourceMeta.Position = open.Start
 	r.Spec = spec
 	r.FieldsSourceMeta["spec"] = spec.SourceMeta
 	return nil
@@ -195,7 +195,7 @@ func (p *parser) parseForeachStatement(r *schema.Resource) error {
 
 	r.Each = sos
 	r.FieldsSourceMeta["each"] = &source.Meta{
-		Position:    open.pos,
+		Position:    open.Start,
 		EndPosition: e.meta().EndPosition,
 	}
 	return nil
@@ -277,11 +277,11 @@ func mergeEnd(fieldMeta *source.Meta, valueEnd *source.Position) *source.Meta {
 }
 
 func (p *parser) parseRemovalPolicyValue() (string, *source.Meta, error) {
-	if p.peek().tokenType != tokenStringStart {
+	if p.peek().Type != TokenStringStart {
 		return "", nil, p.errf(
-			p.peek().pos,
+			p.peek().Start,
 			"removalPolicy must be a literal string, got %s",
-			p.peek().tokenType,
+			p.peek().Type,
 		)
 	}
 

@@ -12,7 +12,7 @@ func (p *parser) parseMetadataBlock(bp *schema.Blueprint) error {
 
 	if bp.Metadata != nil {
 		return p.errf(
-			open.pos,
+			open.Start,
 			"top-level 'metadata' block already declared at %d:%d",
 			bp.Metadata.SourceMeta.Position.Line,
 			bp.Metadata.SourceMeta.Position.Column,
@@ -24,7 +24,7 @@ func (p *parser) parseMetadataBlock(bp *schema.Blueprint) error {
 		return err
 	}
 
-	mapping.SourceMeta.Position = open.pos
+	mapping.SourceMeta.Position = open.Start
 	bp.Metadata = mapping
 
 	return nil
@@ -61,7 +61,7 @@ func (p *parser) parseFreeFormMapEntry(
 		return err
 	}
 
-	if _, err := p.expect(tokenAssign); err != nil {
+	if _, err := p.expect(TokenAssign); err != nil {
 		return err
 	}
 
@@ -95,14 +95,14 @@ func (p *parser) parseMetadataKeywordBlock(parseField func() error) (*source.Met
 	}
 
 	return &source.Meta{
-		Position:    open.pos,
+		Position:    open.Start,
 		EndPosition: blockMeta.EndPosition,
 	}, nil
 }
 
 // Reads the `= <interpolated-string>` for a `displayName` field.
 func (p *parser) parseDisplayNameField() (*substitutions.StringOrSubstitutions, error) {
-	if _, err := p.expect(tokenAssign); err != nil {
+	if _, err := p.expect(TokenAssign); err != nil {
 		return nil, err
 	}
 	return p.parseInterpolatedString()
@@ -120,7 +120,7 @@ func (p *parser) parseAnnotationsField() (*schema.StringOrSubstitutionsMap, erro
 // Reads `= <expr>` for a `custom` field; the value may be any expression
 // that lowers to a MappingNode (typically an object literal).
 func (p *parser) parseCustomField() (*core.MappingNode, error) {
-	if _, err := p.expect(tokenAssign); err != nil {
+	if _, err := p.expect(TokenAssign); err != nil {
 		return nil, err
 	}
 	e, err := p.parseExpr()
@@ -135,7 +135,7 @@ func (p *parser) parseCustomField() (*core.MappingNode, error) {
 // lowering. Used by fields whose schema shape (StringMap,
 // StringOrSubstitutionsMap, etc.) only makes sense for an object literal.
 func (p *parser) parseObjectLiteralAssignment(field string) (*objectExpr, error) {
-	if _, err := p.expect(tokenAssign); err != nil {
+	if _, err := p.expect(TokenAssign); err != nil {
 		return nil, err
 	}
 
@@ -159,7 +159,7 @@ func (p *parser) parseObjectLiteralAssignment(field string) (*objectExpr, error)
 // Runs the brace + separator mechanics shared by every
 // declaration block and by object literals, calling parseEntry once per entry.
 func (p *parser) parseBraceBlock(parseEntry func() error) (*source.Meta, error) {
-	open, err := p.expect(tokenLeftBrace)
+	open, err := p.expect(TokenLeftBrace)
 	if err != nil {
 		return nil, err
 	}
@@ -167,8 +167,8 @@ func (p *parser) parseBraceBlock(parseEntry func() error) (*source.Meta, error) 
 	// Leading newlines after '{'
 	p.consumeSeparators()
 
-	for p.peek().tokenType != tokenRightBrace &&
-		p.peek().tokenType != tokenEOF {
+	for p.peek().Type != TokenRightBrace &&
+		p.peek().Type != TokenEOF {
 		if err := parseEntry(); err != nil {
 			return nil, err
 		}
@@ -179,13 +179,13 @@ func (p *parser) parseBraceBlock(parseEntry func() error) (*source.Meta, error) 
 		}
 	}
 
-	close, err := p.expect(tokenRightBrace)
+	close, err := p.expect(TokenRightBrace)
 	if err != nil {
 		return nil, err
 	}
 
 	return &source.Meta{
-		Position:    open.pos,
-		EndPosition: &close.endPos,
+		Position:    open.Start,
+		EndPosition: &close.End,
 	}, nil
 }

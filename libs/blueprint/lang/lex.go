@@ -59,7 +59,7 @@ func newLexer(src string) *lexer {
 	}
 }
 
-func (l *lexer) nextToken() *token {
+func (l *lexer) nextToken() *Token {
 	for !l.atEOF() {
 		startPos := l.currentPos()
 		tkn, err := l.nextTokenInner()
@@ -77,7 +77,7 @@ func (l *lexer) nextToken() *token {
 	return l.eofToken()
 }
 
-func (l *lexer) nextTokenInner() (*token, error) {
+func (l *lexer) nextTokenInner() (*Token, error) {
 	mode := l.currentMode()
 
 	switch mode {
@@ -92,7 +92,7 @@ func (l *lexer) nextTokenInner() (*token, error) {
 	return nil, l.errf("invalid lexer mode: %d", mode)
 }
 
-func (l *lexer) nextExprToken() (*token, error) {
+func (l *lexer) nextExprToken() (*Token, error) {
 	l.skipSpacesAndTabs()
 	if l.atEOF() {
 		return l.eofToken(), nil
@@ -121,17 +121,17 @@ func (l *lexer) skipSpacesAndTabs() {
 	})
 }
 
-func (l *lexer) eofToken() *token {
-	return makeToken(tokenEOF, "", l.currentPos(), l)
+func (l *lexer) eofToken() *Token {
+	return makeToken(TokenEOF, "", l.currentPos(), l)
 }
 
-func (l *lexer) lexIdentOrKeyword() *token {
+func (l *lexer) lexIdentOrKeyword() *Token {
 	start := l.currentPos()
 	word := l.takeWhile(isIdentChar)
 	return classifyIdentOrKeyword(word, start, l)
 }
 
-func (l *lexer) lexNumber() (*token, error) {
+func (l *lexer) lexNumber() (*Token, error) {
 	start := l.currentPos()
 	sb := strings.Builder{}
 	if l.consumeChar('-') {
@@ -152,46 +152,46 @@ func (l *lexer) lexNumber() (*token, error) {
 			return nil, l.errf("expected digit after decimal point")
 		}
 		sb.WriteString(fracPart)
-		return makeToken(tokenFloatLiteral, sb.String(), start, l), nil
+		return makeToken(TokenFloatLiteral, sb.String(), start, l), nil
 	}
 
-	return makeToken(tokenIntLiteral, sb.String(), start, l), nil
+	return makeToken(TokenIntLiteral, sb.String(), start, l), nil
 }
 
-func (l *lexer) lexPunctOrOperator() (*token, error) {
+func (l *lexer) lexPunctOrOperator() (*Token, error) {
 	start := l.currentPos()
 	// Try multi-char operators first, in longest-to-shortest order.
 	switch {
 	case l.consumePrefix("=="):
-		return makeToken(tokenEq, "==", start, l), nil
+		return makeToken(TokenEq, "==", start, l), nil
 	case l.consumePrefix("!="):
-		return makeToken(tokenNeq, "!=", start, l), nil
+		return makeToken(TokenNeq, "!=", start, l), nil
 	case l.consumePrefix("<="):
-		return makeToken(tokenLte, "<=", start, l), nil
+		return makeToken(TokenLte, "<=", start, l), nil
 	case l.consumePrefix(">="):
-		return makeToken(tokenGte, ">=", start, l), nil
+		return makeToken(TokenGte, ">=", start, l), nil
 	case l.consumePrefix("&&"):
-		return makeToken(tokenAnd, "&&", start, l), nil
+		return makeToken(TokenAnd, "&&", start, l), nil
 	case l.consumePrefix("||"):
-		return makeToken(tokenOr, "||", start, l), nil
+		return makeToken(TokenOr, "||", start, l), nil
 	}
 
 	// Now try single-char tokens.
 	char := l.consume()
 	switch char {
 	case '[':
-		return makeToken(tokenLeftBracket, "[", start, l), nil
+		return makeToken(TokenLeftBracket, "[", start, l), nil
 	case ']':
-		return makeToken(tokenRightBracket, "]", start, l), nil
+		return makeToken(TokenRightBracket, "]", start, l), nil
 	case '(':
-		return makeToken(tokenLeftParen, "(", start, l), nil
+		return makeToken(TokenLeftParen, "(", start, l), nil
 	case ')':
-		return makeToken(tokenRightParen, ")", start, l), nil
+		return makeToken(TokenRightParen, ")", start, l), nil
 	case '{':
 		if l.currentMode() == modeInterpolation {
 			l.interpBraceDepth[len(l.interpBraceDepth)-1]++
 		}
-		return makeToken(tokenLeftBrace, "{", start, l), nil
+		return makeToken(TokenLeftBrace, "{", start, l), nil
 	case '}':
 		if l.currentMode() == modeInterpolation {
 			top := len(l.interpBraceDepth) - 1
@@ -199,49 +199,49 @@ func (l *lexer) lexPunctOrOperator() (*token, error) {
 			if l.interpBraceDepth[top] == 0 {
 				l.interpBraceDepth = l.interpBraceDepth[:top]
 				l.popMode()
-				return makeToken(tokenInterpolationEnd, "}", start, l), nil
+				return makeToken(TokenInterpolationEnd, "}", start, l), nil
 			}
 		}
-		return makeToken(tokenRightBrace, "}", start, l), nil
+		return makeToken(TokenRightBrace, "}", start, l), nil
 	case ':':
-		return makeToken(tokenColon, ":", start, l), nil
+		return makeToken(TokenColon, ":", start, l), nil
 	case '=':
-		return makeToken(tokenAssign, "=", start, l), nil
+		return makeToken(TokenAssign, "=", start, l), nil
 	case ',':
-		return makeToken(tokenComma, ",", start, l), nil
+		return makeToken(TokenComma, ",", start, l), nil
 	case '.':
-		return makeToken(tokenPeriod, ".", start, l), nil
+		return makeToken(TokenPeriod, ".", start, l), nil
 	case '<':
-		return makeToken(tokenLt, "<", start, l), nil
+		return makeToken(TokenLt, "<", start, l), nil
 	case '>':
-		return makeToken(tokenGt, ">", start, l), nil
+		return makeToken(TokenGt, ">", start, l), nil
 	case '*':
-		return makeToken(tokenStar, "*", start, l), nil
+		return makeToken(TokenStar, "*", start, l), nil
 	case '/':
-		return makeToken(tokenSlash, "/", start, l), nil
+		return makeToken(TokenSlash, "/", start, l), nil
 	case '!':
-		return makeToken(tokenNot, "!", start, l), nil
+		return makeToken(TokenNot, "!", start, l), nil
 	}
 
 	return nil, l.errfAt(start, "unexpected character: %q", string(char))
 }
 
-func (l *lexer) lexComment() *token {
+func (l *lexer) lexComment() *Token {
 	start := l.currentPos()
 	l.consume() // Consume the '#'
 	commentText := l.takeWhile(func(r rune) bool {
 		return r != '\n'
 	})
-	return makeToken(tokenComment, commentText, start, l)
+	return makeToken(TokenComment, commentText, start, l)
 }
 
-func (l *lexer) lexNewline() *token {
+func (l *lexer) lexNewline() *Token {
 	start := l.currentPos()
 	l.consume() // Consume the '\n'
-	return makeToken(tokenNewline, "\n", start, l)
+	return makeToken(TokenNewline, "\n", start, l)
 }
 
-func (l *lexer) openString() (*token, error) {
+func (l *lexer) openString() (*Token, error) {
 	start := l.currentPos()
 
 	if l.consumePrefix("\"\"\"") {
@@ -261,15 +261,15 @@ func (l *lexer) openString() (*token, error) {
 		}
 
 		l.pushMode(modeMultistring)
-		return makeToken(tokenStringStart, "\"\"\"", start, l), nil
+		return makeToken(TokenStringStart, "\"\"\"", start, l), nil
 	}
 
 	l.consume()
 	l.pushMode(modeSinglestring)
-	return makeToken(tokenStringStart, "\"", start, l), nil
+	return makeToken(TokenStringStart, "\"", start, l), nil
 }
 
-func (l *lexer) nextStringContent(isMultiline bool) (*token, error) {
+func (l *lexer) nextStringContent(isMultiline bool) (*Token, error) {
 	start := l.currentPos()
 	var sb strings.Builder
 
@@ -281,9 +281,9 @@ func (l *lexer) nextStringContent(isMultiline bool) (*token, error) {
 					// The line break immediately before the closing """
 					// is not part of the value (spec).
 					value = strings.TrimSuffix(value, "\n")
-					return makeToken(tokenMultilineStringLiteral, value, start, l), nil
+					return makeToken(TokenMultilineStringLiteral, value, start, l), nil
 				}
-				return makeToken(tokenStringLiteral, value, start, l), nil
+				return makeToken(TokenStringLiteral, value, start, l), nil
 			}
 			return l.closeString(start, isMultiline), nil
 		}
@@ -299,7 +299,7 @@ func (l *lexer) nextStringContent(isMultiline bool) (*token, error) {
 			l.consumePrefix("${")
 			l.pushMode(modeInterpolation)
 			l.interpBraceDepth = append(l.interpBraceDepth, 1)
-			return makeToken(tokenInterpolationStart, "${", start, l), nil
+			return makeToken(TokenInterpolationStart, "${", start, l), nil
 		}
 
 		// Only \" is recognised as an escape (spec); every other char is
@@ -330,7 +330,7 @@ func (l *lexer) atStringClose(isMultiline bool) bool {
 	return l.peek() == '"'
 }
 
-func (l *lexer) closeString(start source.Position, isMultiline bool) *token {
+func (l *lexer) closeString(start source.Position, isMultiline bool) *Token {
 	closer := "\""
 	if isMultiline {
 		closer = "\"\"\""
@@ -338,14 +338,14 @@ func (l *lexer) closeString(start source.Position, isMultiline bool) *token {
 	}
 	l.consumePrefix(closer)
 	l.popMode()
-	return makeToken(tokenStringEnd, closer, start, l)
+	return makeToken(TokenStringEnd, closer, start, l)
 }
 
-func stringContentTokenType(isMultiline bool) tokenType {
+func stringContentTokenType(isMultiline bool) TokenType {
 	if isMultiline {
-		return tokenMultilineStringLiteral
+		return TokenMultilineStringLiteral
 	}
-	return tokenStringLiteral
+	return TokenStringLiteral
 }
 
 func (l *lexer) hasPrefix(prefix string) bool {
@@ -530,71 +530,71 @@ func (l *lexer) errfAt(pos source.Position, format string, args ...any) error {
 	}
 }
 
-func classifyIdentOrKeyword(word string, pos source.Position, l *lexer) *token {
+func classifyIdentOrKeyword(word string, pos source.Position, l *lexer) *Token {
 	switch word {
 	case "true", "false":
-		return makeToken(tokenBoolLiteral, word, pos, l)
+		return makeToken(TokenBoolLiteral, word, pos, l)
 	case "none":
-		return makeToken(tokenNoneLiteral, word, pos, l)
+		return makeToken(TokenNoneLiteral, word, pos, l)
 	}
 
-	if tokenType, isKeyword := keywordTable[word]; isKeyword {
-		return makeToken(tokenType, word, pos, l)
+	if TokenType, isKeyword := keywordTable[word]; isKeyword {
+		return makeToken(TokenType, word, pos, l)
 	}
 
-	return makeToken(tokenIdent, word, pos, l)
+	return makeToken(TokenIdent, word, pos, l)
 }
 
 func makeToken(
-	tokenType tokenType,
+	TokenType TokenType,
 	value string,
 	pos source.Position,
 	l *lexer,
-) *token {
-	return &token{
-		tokenType: tokenType,
-		value:     value,
-		pos:       pos,
-		endPos:    l.currentPos(),
+) *Token {
+	return &Token{
+		Type:  TokenType,
+		Value: value,
+		Start: pos,
+		End:   l.currentPos(),
 	}
 }
 
-var keywordTable = map[string]tokenType{
-	"variable":    tokenKeywordVariable,
-	"value":       tokenKeywordValue,
-	"data":        tokenKeywordData,
-	"resource":    tokenKeywordResource,
-	"include":     tokenKeywordInclude,
-	"export":      tokenKeywordExport,
-	"metadata":    tokenKeywordMetadata,
-	"spec":        tokenKeywordSpec,
-	"select":      tokenKeywordSelect,
-	"filter":      tokenKeywordFilter,
-	"foreach":     tokenKeywordForeach,
-	"as":          tokenKeywordAs,
-	"by":          tokenKeywordBy,
-	"label":       tokenKeywordLabel,
-	"version":     tokenKeywordVersion,
-	"transform":   tokenKeywordTransform,
-	"not":         tokenKeywordNot,
-	"in":          tokenKeywordIn,
-	"has":         tokenKeywordHas,
-	"key":         tokenKeywordKey,
-	"contains":    tokenKeywordContains,
-	"starts":      tokenKeywordStarts,
-	"with":        tokenKeywordWith,
-	"ends":        tokenKeywordEnds,
-	"string":      tokenKeywordString,
-	"integer":     tokenKeywordInteger,
-	"float":       tokenKeywordFloat,
-	"boolean":     tokenKeywordBoolean,
-	"array":       tokenKeywordArray,
-	"object":      tokenKeywordObject,
-	"variables":   tokenKeywordVariables,
-	"values":      tokenKeywordValues,
-	"datasources": tokenKeywordDatasources,
-	"resources":   tokenKeywordResources,
-	"children":    tokenKeywordChildren,
-	"elem":        tokenKeywordElem,
-	"i":           tokenKeywordI,
+var keywordTable = map[string]TokenType{
+	"variable":    TokenKeywordVariable,
+	"value":       TokenKeywordValue,
+	"data":        TokenKeywordData,
+	"resource":    TokenKeywordResource,
+	"include":     TokenKeywordInclude,
+	"export":      TokenKeywordExport,
+	"metadata":    TokenKeywordMetadata,
+	"spec":        TokenKeywordSpec,
+	"select":      TokenKeywordSelect,
+	"filter":      TokenKeywordFilter,
+	"foreach":     TokenKeywordForeach,
+	"as":          TokenKeywordAs,
+	"by":          TokenKeywordBy,
+	"label":       TokenKeywordLabel,
+	"version":     TokenKeywordVersion,
+	"transform":   TokenKeywordTransform,
+	"not":         TokenKeywordNot,
+	"in":          TokenKeywordIn,
+	"has":         TokenKeywordHas,
+	"key":         TokenKeywordKey,
+	"contains":    TokenKeywordContains,
+	"starts":      TokenKeywordStarts,
+	"with":        TokenKeywordWith,
+	"ends":        TokenKeywordEnds,
+	"string":      TokenKeywordString,
+	"integer":     TokenKeywordInteger,
+	"float":       TokenKeywordFloat,
+	"boolean":     TokenKeywordBoolean,
+	"array":       TokenKeywordArray,
+	"object":      TokenKeywordObject,
+	"variables":   TokenKeywordVariables,
+	"values":      TokenKeywordValues,
+	"datasources": TokenKeywordDatasources,
+	"resources":   TokenKeywordResources,
+	"children":    TokenKeywordChildren,
+	"elem":        TokenKeywordElem,
+	"i":           TokenKeywordI,
 }

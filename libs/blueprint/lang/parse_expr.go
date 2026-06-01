@@ -22,7 +22,7 @@ func (p *parser) parseOr() (expr, error) {
 	for {
 		// `||` may sit at a line boundary, when the newline is a continuation,
 		// not a separator.
-		if _, ok := p.matchAcrossNewlines(tokenOr); !ok {
+		if _, ok := p.matchAcrossNewlines(TokenOr); !ok {
 			return left, nil
 		}
 
@@ -46,7 +46,7 @@ func (p *parser) parseAnd() (expr, error) {
 	}
 
 	for {
-		if _, ok := p.matchAcrossNewlines(tokenAnd); !ok {
+		if _, ok := p.matchAcrossNewlines(TokenAnd); !ok {
 			return left, nil
 		}
 
@@ -70,7 +70,7 @@ func (p *parser) parseEq() (expr, error) {
 	}
 
 	for {
-		op, ok := p.matchAcrossNewlines(tokenEq, tokenNeq)
+		op, ok := p.matchAcrossNewlines(TokenEq, TokenNeq)
 		if !ok {
 			return left, nil
 		}
@@ -80,14 +80,14 @@ func (p *parser) parseEq() (expr, error) {
 			return nil, err
 		}
 
-		switch op.tokenType {
-		case tokenEq:
+		switch op.Type {
+		case TokenEq:
 			left = &opExpr{
 				fn:   substitutions.SubstitutionFunctionEq,
 				args: []expr{left, right},
 				m:    exprSpan(left, right),
 			}
-		case tokenNeq:
+		case TokenNeq:
 			// not(eq(left, right)) - we don't have a native "not equal" operator
 			// in the substitutions language, but we can desugar it to a "not" of an "eq"
 			left = &opExpr{
@@ -103,9 +103,9 @@ func (p *parser) parseEq() (expr, error) {
 			}
 		default:
 			return nil, p.errf(
-				op.pos,
+				op.Start,
 				"unexpected equality operator %s",
-				op.tokenType,
+				op.Type,
 			)
 		}
 	}
@@ -118,7 +118,7 @@ func (p *parser) parseComp() (expr, error) {
 	}
 
 	for {
-		op, ok := p.matchAcrossNewlines(tokenLt, tokenLte, tokenGt, tokenGte)
+		op, ok := p.matchAcrossNewlines(TokenLt, TokenLte, TokenGt, TokenGte)
 		if !ok {
 			return left, nil
 		}
@@ -129,20 +129,20 @@ func (p *parser) parseComp() (expr, error) {
 		}
 
 		var fn substitutions.SubstitutionFunctionName
-		switch op.tokenType {
-		case tokenLt:
+		switch op.Type {
+		case TokenLt:
 			fn = substitutions.SubstitutionFunctionLT
-		case tokenLte:
+		case TokenLte:
 			fn = substitutions.SubstitutionFunctionLE
-		case tokenGt:
+		case TokenGt:
 			fn = substitutions.SubstitutionFunctionGT
-		case tokenGte:
+		case TokenGte:
 			fn = substitutions.SubstitutionFunctionGE
 		default:
 			return nil, p.errf(
-				op.pos,
+				op.Start,
 				"unexpected comparison operator %s",
-				op.tokenType,
+				op.Type,
 			)
 		}
 
@@ -155,7 +155,7 @@ func (p *parser) parseComp() (expr, error) {
 }
 
 func (p *parser) parseUnary() (expr, error) {
-	if p.match(tokenNot) {
+	if p.match(TokenNot) {
 		operand, err := p.parsePrimary()
 		if err != nil {
 			return nil, err
@@ -173,18 +173,18 @@ func (p *parser) parseUnary() (expr, error) {
 
 func (p *parser) parsePrimary() (expr, error) {
 	tkn := p.peek()
-	switch tkn.tokenType {
-	case tokenFloatLiteral, tokenIntLiteral, tokenBoolLiteral:
+	switch tkn.Type {
+	case TokenFloatLiteral, TokenIntLiteral, TokenBoolLiteral:
 		return p.parseScalarExpr()
-	case tokenStringStart:
+	case TokenStringStart:
 		return p.parseStringExpr()
-	case tokenNoneLiteral:
+	case TokenNoneLiteral:
 		return p.parseNoneExpr()
-	case tokenLeftBracket:
+	case TokenLeftBracket:
 		return p.parseArrayExpr()
-	case tokenLeftBrace:
+	case TokenLeftBrace:
 		return p.parseObjectExpr()
-	case tokenLeftParen:
+	case TokenLeftParen:
 		return p.parseGroup()
 	default:
 		return p.parseReferenceOrCall()
@@ -203,7 +203,7 @@ func (p *parser) parseScalarExpr() (expr, error) {
 }
 
 func (p *parser) parseStringExpr() (expr, error) {
-	start, err := p.expect(tokenStringStart)
+	start, err := p.expect(TokenStringStart)
 	if err != nil {
 		return nil, err
 	}
@@ -211,31 +211,31 @@ func (p *parser) parseStringExpr() (expr, error) {
 	var parts []interpolationPart
 	for {
 		tkn := p.peek()
-		switch tkn.tokenType {
-		case tokenStringLiteral, tokenMultilineStringLiteral:
+		switch tkn.Type {
+		case TokenStringLiteral, TokenMultilineStringLiteral:
 			p.advance()
 			parts = append(
 				parts,
 				&stringPart{
-					value: tkn.value,
+					value: tkn.Value,
 					m:     sourceMetaFromToken(tkn),
 				},
 			)
-		case tokenInterpolationStart:
+		case TokenInterpolationStart:
 			part, err := p.parseInterpolationPart()
 			if err != nil {
 				return nil, err
 			}
 			parts = append(parts, part)
-		case tokenStringEnd:
+		case TokenStringEnd:
 			end := p.advance()
 			span := &source.Meta{
-				Position:    start.pos,
-				EndPosition: &end.endPos,
+				Position:    start.Start,
+				EndPosition: &end.End,
 			}
 			return finishStringExpr(parts, span), nil
 		default:
-			return nil, p.errf(tkn.pos, "unterminated string literal")
+			return nil, p.errf(tkn.Start, "unterminated string literal")
 		}
 	}
 }
@@ -246,15 +246,15 @@ func (p *parser) parseInterpolationPart() (interpolationPart, error) {
 	if err != nil {
 		return nil, err
 	}
-	closeTkn, err := p.expect(tokenInterpolationEnd)
+	closeTkn, err := p.expect(TokenInterpolationEnd)
 	if err != nil {
 		return nil, err
 	}
 	return &substitutionPart{
 		value: value,
 		m: &source.Meta{
-			Position:    open.pos,
-			EndPosition: &closeTkn.endPos,
+			Position:    open.Start,
+			EndPosition: &closeTkn.End,
 		},
 	}, nil
 }
@@ -288,7 +288,7 @@ func joinStringParts(parts []interpolationPart) (string, bool) {
 }
 
 func (p *parser) parseNoneExpr() (expr, error) {
-	tkn, err := p.expect(tokenNoneLiteral)
+	tkn, err := p.expect(TokenNoneLiteral)
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +327,7 @@ func (p *parser) parseObjectExpr() (expr, error) {
 			return err
 		}
 
-		if _, err := p.expect(tokenAssign); err != nil {
+		if _, err := p.expect(TokenAssign); err != nil {
 			return err
 		}
 
@@ -363,7 +363,7 @@ func (p *parser) parseGroup() (expr, error) {
 		return nil, err
 	}
 
-	if _, err := p.expect(tokenRightParen); err != nil {
+	if _, err := p.expect(TokenRightParen); err != nil {
 		return nil, err
 	}
 
@@ -387,14 +387,14 @@ func (p *parser) parseScalarLiteralArray() ([]*core.ScalarValue, error) {
 }
 
 func (p *parser) parseArray(parseElement func() error) (*source.Meta, error) {
-	open, err := p.expect(tokenLeftBracket)
+	open, err := p.expect(TokenLeftBracket)
 	if err != nil {
 		return nil, err
 	}
 
 	p.consumeSeparators()
-	for p.peek().tokenType != tokenRightBracket &&
-		p.peek().tokenType != tokenEOF {
+	for p.peek().Type != TokenRightBracket &&
+		p.peek().Type != TokenEOF {
 		if err := parseElement(); err != nil {
 			return nil, err
 		}
@@ -403,14 +403,14 @@ func (p *parser) parseArray(parseElement func() error) (*source.Meta, error) {
 		}
 	}
 
-	closeTkn, err := p.expect(tokenRightBracket)
+	closeTkn, err := p.expect(TokenRightBracket)
 	if err != nil {
 		return nil, err
 	}
 
 	return &source.Meta{
-		Position:    open.pos,
-		EndPosition: &closeTkn.endPos,
+		Position:    open.Start,
+		EndPosition: &closeTkn.End,
 	}, nil
 }
 
@@ -456,17 +456,17 @@ func (p *parser) parseInterpolatedString() (*substitutions.StringOrSubstitutions
 
 func (p *parser) parseScalarLiteral() (*core.ScalarValue, error) {
 	tkn := p.peek()
-	switch tkn.tokenType {
-	case tokenStringStart:
+	switch tkn.Type {
+	case TokenStringStart:
 		return p.parseStringLiteral()
-	case tokenFloatLiteral:
+	case TokenFloatLiteral:
 		return p.parseFloatLiteral()
-	case tokenIntLiteral:
+	case TokenIntLiteral:
 		return p.parseIntLiteral()
-	case tokenBoolLiteral:
+	case TokenBoolLiteral:
 		return p.parseBoolLiteral()
 	default:
-		return nil, p.errf(tkn.pos, "expected scalar literal, got %s", tkn.tokenType)
+		return nil, p.errf(tkn.Start, "expected scalar literal, got %s", tkn.Type)
 	}
 }
 
@@ -483,14 +483,14 @@ func (p *parser) parseStringLiteral() (*core.ScalarValue, error) {
 }
 
 func (p *parser) parseFloatLiteral() (*core.ScalarValue, error) {
-	tkn, err := p.expect(tokenFloatLiteral)
+	tkn, err := p.expect(TokenFloatLiteral)
 	if err != nil {
 		return nil, err
 	}
 
-	// The lexer guarantees this will succeed since it only produces a tokenFloatLiteral
+	// The lexer guarantees this will succeed since it only produces a TokenFloatLiteral
 	// if the text matches a valid float format.
-	floatVal, _ := strconv.ParseFloat(tkn.value, 64)
+	floatVal, _ := strconv.ParseFloat(tkn.Value, 64)
 
 	return &core.ScalarValue{
 		FloatValue: &floatVal,
@@ -499,14 +499,14 @@ func (p *parser) parseFloatLiteral() (*core.ScalarValue, error) {
 }
 
 func (p *parser) parseIntLiteral() (*core.ScalarValue, error) {
-	tkn, err := p.expect(tokenIntLiteral)
+	tkn, err := p.expect(TokenIntLiteral)
 	if err != nil {
 		return nil, err
 	}
 
-	// The lexer guarantees this will succeed since it only produces a tokenIntLiteral
+	// The lexer guarantees this will succeed since it only produces a TokenIntLiteral
 	// if the text matches a valid int format.
-	int64Val, _ := strconv.ParseInt(tkn.value, 10, 64)
+	int64Val, _ := strconv.ParseInt(tkn.Value, 10, 64)
 	intVal := int(int64Val)
 
 	return &core.ScalarValue{
@@ -516,12 +516,12 @@ func (p *parser) parseIntLiteral() (*core.ScalarValue, error) {
 }
 
 func (p *parser) parseBoolLiteral() (*core.ScalarValue, error) {
-	tkn, err := p.expect(tokenBoolLiteral)
+	tkn, err := p.expect(TokenBoolLiteral)
 	if err != nil {
 		return nil, err
 	}
 
-	boolVal := tkn.value == "true"
+	boolVal := tkn.Value == "true"
 
 	return &core.ScalarValue{
 		BoolValue:  &boolVal,
