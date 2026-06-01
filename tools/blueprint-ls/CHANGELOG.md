@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-ls/v0.3.0...blueprint-ls/v0.4.0) (2026-06-01)
+
+
+### Features
+
+* **blueprint-ls:** add blueprint language support ([9ade512](https://github.com/newstack-cloud/bluelink/commit/9ade51275d7d2c23398accbfb8a93bd2812bb3a6))
+
+
+### Dependencies
+
+* **blueprint-ls:** bump up plugin framework to 0.12.0 ([250f109](https://github.com/newstack-cloud/bluelink/commit/250f109cfb7659b94de951b7941cf258fb24eacc))
+
 ## [0.3.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-ls/v0.2.1...blueprint-ls/v0.3.0) (2026-05-09)
 
 
