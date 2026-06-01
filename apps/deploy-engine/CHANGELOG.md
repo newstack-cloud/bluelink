@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.7.0...deploy-engine/v0.8.0) (2026-06-01)
+
+
+### Features
+
+* **deploy-engine:** add support for blueprint language ([1684535](https://github.com/newstack-cloud/bluelink/commit/168453588727ac2b408cf4a565beb4010ebf7e9a))
+
 ## [0.7.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.6.2...deploy-engine/v0.7.0) (2026-05-09)
 
 
