@@ -10,7 +10,7 @@ func NewTransformer() transform.SpecTransformer {
 	return &transformerv1.TransformerPluginDefinition{
 		TransformName:               "celerity-2025-04-01",
 		TransformerConfigDefinition: transformerConfigDefinition(),
-		AbstractResources: map[string]transform.AbstractResource{
+		AbstractResources: map[string]*transformerv1.AbstractResourceDefinition{
 			"celerity/handler":   handlerAbstractResource(),
 			"celerity/datastore": datastoreAbstractResource(),
 		},

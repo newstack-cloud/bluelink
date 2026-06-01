@@ -3,11 +3,10 @@ package transformertest
 import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sdk/transformerv1"
 )
 
-func handlerAbstractResource() transform.AbstractResource {
+func handlerAbstractResource() *transformerv1.AbstractResourceDefinition {
 	return &transformerv1.AbstractResourceDefinition{
 		Type:                 "test/celerity/handler",
 		Label:                "Celerity Handler",
