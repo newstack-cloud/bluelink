@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
 	bluelinkpreflight "github.com/newstack-cloud/bluelink/apps/cli/internal/preflight"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/project"
 	"github.com/newstack-cloud/deploy-cli-sdk/config"
 	"github.com/newstack-cloud/deploy-cli-sdk/engine"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
@@ -104,7 +105,7 @@ func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider)
 
 	validateCmd.PersistentFlags().String(
 		"blueprint-file",
-		"project.blueprint.yaml",
+		project.DetectBlueprintFile("."),
 		"The blueprint file to validate. "+
 			"This can be a local file, a public URL or a path to a file in an object storage bucket. "+
 			"Local files can be specified as a relative or absolute path to the file. "+

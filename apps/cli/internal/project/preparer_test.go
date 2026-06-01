@@ -144,6 +144,34 @@ func (s *PreparerSuite) Test_SelectBlueprintFormat_jsonc_removes_yaml_file() {
 	s.True(os.IsNotExist(err))
 }
 
+func (s *PreparerSuite) Test_SelectBlueprintFormat_bp_removes_serialised_files() {
+	// Create all three blueprint template files
+	yamlPath := filepath.Join(s.tempDir, "project.blueprint.yaml.tmpl")
+	jsoncPath := filepath.Join(s.tempDir, "project.blueprint.jsonc.tmpl")
+	bpPath := filepath.Join(s.tempDir, "project.bp.tmpl")
+
+	err := os.WriteFile(yamlPath, []byte("version: 1.0"), 0644)
+	s.Require().NoError(err)
+	err = os.WriteFile(jsoncPath, []byte(`{"version": "1.0"}`), 0644)
+	s.Require().NoError(err)
+	err = os.WriteFile(bpPath, []byte(`version = "1.0"`), 0644)
+	s.Require().NoError(err)
+
+	// Select blueprint language format
+	err = s.preparer.SelectBlueprintFormat(s.tempDir, "bp")
+	s.NoError(err)
+
+	// Verify bp file still exists
+	_, err = os.Stat(bpPath)
+	s.NoError(err)
+
+	// Verify both serialised files are removed
+	_, err = os.Stat(yamlPath)
+	s.True(os.IsNotExist(err))
+	_, err = os.Stat(jsoncPath)
+	s.True(os.IsNotExist(err))
+}
+
 func (s *PreparerSuite) Test_SelectBlueprintFormat_returns_error_for_unsupported_format() {
 	err := s.preparer.SelectBlueprintFormat(s.tempDir, "xml")
 	s.Error(err)

@@ -132,6 +132,7 @@ func NewInputFormModel(
 				Options(
 					huh.NewOption("YAML", "yaml"),
 					huh.NewOption("JSON with Comments", "jsonc"),
+					huh.NewOption("Blueprint Language", "bp"),
 				).
 				Value(&model.blueprintFormat),
 

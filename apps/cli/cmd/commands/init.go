@@ -122,7 +122,7 @@ func setupInitCommand(rootCmd *cobra.Command, confProvider *config.Provider) {
 		"blueprint-format",
 		"yaml",
 		"The format of the blueprint file to use for the new project. "+
-			"The default format is yaml, but can be set to json or toml.",
+			"The default format is yaml, but can be set to jsonc or bp (the blueprint language).",
 	)
 	confProvider.BindPFlag("initBlueprintFormat", initCmd.PersistentFlags().Lookup("blueprint-format"))
 	confProvider.BindEnvVar("initBlueprintFormat", "BLUELINK_CLI_INIT_BLUEPRINT_FORMAT")

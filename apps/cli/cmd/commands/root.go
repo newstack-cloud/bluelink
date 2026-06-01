@@ -7,6 +7,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/apps/cli/cmd/utils"
 	bluelinkpreflight "github.com/newstack-cloud/bluelink/apps/cli/internal/preflight"
+	"github.com/newstack-cloud/bluelink/apps/cli/internal/project"
 	sdkcommands "github.com/newstack-cloud/deploy-cli-sdk/commands"
 	"github.com/newstack-cloud/deploy-cli-sdk/config"
 	stylespkg "github.com/newstack-cloud/deploy-cli-sdk/styles"
@@ -118,7 +119,7 @@ This CLI validates, stages changes for, and deploys blueprints.`,
 	cliConfig := &sdkcommands.CLIConfig{
 		CLIName:              "bluelink",
 		EnvVarPrefix:         "BLUELINK_CLI",
-		DefaultBlueprintFile: "project.blueprint.yaml",
+		DefaultBlueprintFile: project.DetectBlueprintFile("."),
 		DefaultDeployConfig:  "bluelink.deploy.json",
 		DefaultConfigFile:    "bluelink.config.toml",
 		Palette:              stylespkg.NewBluelinkPalette(),

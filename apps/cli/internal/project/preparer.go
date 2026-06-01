@@ -109,35 +109,46 @@ func (p *preparerImpl) RemoveMaintainerFiles(directory string) error {
 	return nil
 }
 
-// SelectBlueprintFormat removes the unused blueprint template file.
-// Template files use the naming convention: project.blueprint.{format}.tmpl
-func (p *preparerImpl) SelectBlueprintFormat(directory string, format string) error {
-	// Define the blueprint template file names
-	yamlFile := filepath.Join(directory, "project.blueprint.yaml.tmpl")
-	jsoncFile := filepath.Join(directory, "project.blueprint.jsonc.tmpl")
+// A map of each supported blueprint format to its template
+// file name. The blueprint language (bp) deliberately does not follow the
+// project.blueprint.{format}.tmpl convention used by the serialised formats; it
+// produces project.bp.
+var blueprintFormatTemplates = map[string]string{
+	"yaml":  "project.blueprint.yaml.tmpl",
+	"jsonc": "project.blueprint.jsonc.tmpl",
+	"bp":    "project.bp.tmpl",
+}
 
-	// Determine which file to remove based on selected format
-	var fileToRemove string
-	var fileToKeep string
-	switch format {
-	case "yaml":
-		fileToRemove = jsoncFile
-		fileToKeep = yamlFile
-	case "jsonc":
-		fileToRemove = yamlFile
-		fileToKeep = jsoncFile
-	default:
+// SelectBlueprintFormat keeps the template for the selected blueprint format and
+// removes the templates for every other known format.
+func (p *preparerImpl) SelectBlueprintFormat(directory string, format string) error {
+	keepFile, ok := blueprintFormatTemplates[format]
+	if !ok {
 		return fmt.Errorf("unsupported blueprint format: %s", format)
 	}
 
-	// Check if the file to keep exists
-	if _, err := os.Stat(fileToKeep); os.IsNotExist(err) {
-		return fmt.Errorf("blueprint template for format %q not found: %s", format, fileToKeep)
+	keepPath := filepath.Join(directory, keepFile)
+	if _, err := os.Stat(keepPath); os.IsNotExist(err) {
+		return fmt.Errorf("blueprint template for format %q not found: %s", format, keepPath)
 	}
 
-	// Remove the unused blueprint file (ignore if it doesn't exist)
-	if _, err := os.Stat(fileToRemove); err == nil {
-		if err := os.Remove(fileToRemove); err != nil {
+	return p.removeUnusedBlueprintTemplates(directory, format)
+}
+
+// Deletes the template files for all known
+// blueprint formats other than the selected one, ignoring any that are absent.
+func (p *preparerImpl) removeUnusedBlueprintTemplates(directory string, selectedFormat string) error {
+	for format, templateFile := range blueprintFormatTemplates {
+		if format == selectedFormat {
+			continue
+		}
+
+		path := filepath.Join(directory, templateFile)
+		if _, err := os.Stat(path); err != nil {
+			continue
+		}
+
+		if err := os.Remove(path); err != nil {
 			return fmt.Errorf("failed to remove unused blueprint file: %w", err)
 		}
 	}
