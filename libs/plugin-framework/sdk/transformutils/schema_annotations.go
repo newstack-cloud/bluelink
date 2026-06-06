@@ -14,7 +14,7 @@ import (
 // unresolved substitutions. `pluginutils` provides equivalent helpers
 // targeted at provider plugins that extract annotations from resources after
 // substitutions have been resolved.
-
+//
 // Provide an empty string for fallbackKey if you don't want to use
 // a fallback.
 func GetAnnotation(
