@@ -23,6 +23,7 @@
   "abstractResources": [
     {
       "type": "test/celerity/handler",
+      "group": "celerity",
       "label": "Celerity Handler",
       "summary": "An abstract resource for managing a Celerity application handler.",
       "description": "The abstract resource type used to define a [Celerity Handler](https://www.celerityframework.io/docs/applications/resources/celerity-handler).",
@@ -202,6 +203,7 @@
     },
     {
       "type": "test/celerity/datastore",
+      "group": "celerity",
       "label": "Celerity Datastore",
       "summary": "A resource for managing a NoSQL data store.",
       "description": "The resource type used to define a NoSQL data store used by a Celerity application.",
@@ -246,6 +248,7 @@
   "abstractLinks": [
     {
       "type": "test/celerity/handler::test/celerity/datastore",
+      "group": "celerity",
       "summary": "A link between a Celerity handler and a NoSQL data store.",
       "description": "Links a [Celerity Handler](https://www.celerityframework.io/docs/applications/resources/celerity-handler) to a Celerity datastore.",
       "cardinalityA": {
@@ -267,6 +270,12 @@
           "required": false
         }
       }
+    }
+  ],
+  "groups": [
+    {
+      "key": "celerity",
+      "label": "Celerity"
     }
   ]
 }

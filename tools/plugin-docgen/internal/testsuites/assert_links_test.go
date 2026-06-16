@@ -16,6 +16,7 @@ func assertPluginDocLinksEqual(
 	for i, expectedLink := range expected {
 		actualLink := actual[i]
 		testSuite.Equal(expectedLink.Type, actualLink.Type)
+		testSuite.Equal(expectedLink.Group, actualLink.Group)
 		testSuite.Equal(expectedLink.Summary, actualLink.Summary)
 		testSuite.Equal(expectedLink.Description, actualLink.Description)
 		testSuite.Equal(expectedLink.CardinalityA, actualLink.CardinalityA)

@@ -21,6 +21,7 @@ func GeneratePluginDocs(
 	pluginInstance any,
 	manager pluginservicev1.Manager,
 	envConfig *env.Config,
+	groupConfig *GroupConfig,
 ) (*PluginDocs, error) {
 	ctx, cancel := context.WithTimeout(
 		context.Background(),
@@ -32,12 +33,12 @@ func GeneratePluginDocs(
 
 	providerPlugin, isProvider := pluginInstance.(provider.Provider)
 	if isProvider {
-		return generateProviderDocs(ctx, pluginID, providerPlugin, manager, params)
+		return generateProviderDocs(ctx, pluginID, providerPlugin, manager, params, groupConfig)
 	}
 
 	transformerPlugin, isTransformer := pluginInstance.(transform.SpecTransformer)
 	if isTransformer {
-		return generateTransformerDocs(ctx, pluginID, transformerPlugin, manager, params)
+		return generateTransformerDocs(ctx, pluginID, transformerPlugin, manager, params, groupConfig)
 	}
 
 	return nil, ErrInvalidPluginType
@@ -49,6 +50,7 @@ func generateProviderDocs(
 	providerPlugin provider.Provider,
 	manager pluginservicev1.Manager,
 	params core.BlueprintParams,
+	groupConfig *GroupConfig,
 ) (*PluginDocs, error) {
 	namespace := pfutils.ExtractPluginNamespace(pluginID)
 
@@ -116,7 +118,7 @@ func generateProviderDocs(
 		return nil, err
 	}
 
-	return &PluginDocs{
+	docs := &PluginDocs{
 		ID:               pluginID,
 		DisplayName:      metadata.DisplayName,
 		Version:          metadata.PluginVersion,
@@ -130,7 +132,10 @@ func generateProviderDocs(
 		DataSources:      docsForDataSources,
 		CustomVarTypes:   docsForCustomVarTypes,
 		Functions:        docsForFunctions,
-	}, nil
+	}
+	docs.Groups = buildProviderServiceGroups(docs, groupConfig)
+
+	return docs, nil
 }
 
 func generateTransformerDocs(
@@ -139,6 +144,7 @@ func generateTransformerDocs(
 	transformerPlugin transform.SpecTransformer,
 	manager pluginservicev1.Manager,
 	params core.BlueprintParams,
+	groupConfig *GroupConfig,
 ) (*PluginDocs, error) {
 	namespace := pfutils.ExtractPluginNamespace(pluginID)
 
@@ -183,7 +189,7 @@ func generateTransformerDocs(
 		return nil, err
 	}
 
-	return &PluginDocs{
+	docs := &PluginDocs{
 		ID:                pluginID,
 		DisplayName:       metadata.DisplayName,
 		Version:           metadata.PluginVersion,
@@ -195,7 +201,10 @@ func generateTransformerDocs(
 		TransformName:     transformName,
 		AbstractResources: docsForAbstractResources,
 		AbstractLinks:     docsForAbstractLinks,
-	}, nil
+	}
+	docs.Groups = buildTransformerServiceGroups(docs, groupConfig)
+
+	return docs, nil
 }
 
 func getPluginMetadataDescription(
@@ -279,6 +288,7 @@ func getProviderResourcesDocs(
 			return nil, err
 		}
 
+		resourceDocs.Group = extractServiceGroupKey(resourceDocs.Type)
 		docsForResources[i] = resourceDocs
 	}
 
@@ -307,6 +317,7 @@ func getProviderLinksDocs(
 			return nil, err
 		}
 
+		linkDocs.Group = linkGroupKey(linkDocs.Type)
 		docsForLinks[i] = linkDocs
 	}
 
@@ -337,6 +348,7 @@ func getProviderDataSourcesDocs(
 			return nil, err
 		}
 
+		dataSourceDocs.Group = extractServiceGroupKey(dataSourceDocs.Type)
 		docsForDataSources[i] = dataSourceDocs
 	}
 
@@ -367,6 +379,7 @@ func getProviderCustomVarTypesDocs(
 			return nil, err
 		}
 
+		customVarTypeDocs.Group = extractServiceGroupKey(customVarTypeDocs.Type)
 		docsForCustomVarTypes = append(docsForCustomVarTypes, customVarTypeDocs)
 	}
 
@@ -425,6 +438,7 @@ func getTransformerAbstractResourcesDocs(
 			return nil, err
 		}
 
+		resourceDocs.Group = extractServiceGroupKey(resourceDocs.Type)
 		docsForAbstractResources[i] = resourceDocs
 	}
 
@@ -455,6 +469,7 @@ func getTransformerAbstractLinksDocs(
 			return nil, err
 		}
 
+		linkDocs.Group = linkGroupKey(linkDocs.Type)
 		docsForAbstractLinks[i] = linkDocs
 	}
 

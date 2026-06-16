@@ -83,10 +83,48 @@ func (s *ProviderDocGenTestSuite) TestGenerateTransformerDocs() {
 	)
 }
 
-func (s *ProviderDocGenTestSuite) runGenerateDocsTest(
+func (s *ProviderDocGenTestSuite) TestGenerateProviderDocsWithGroupOverrides() {
+	groupConfig := &docgen.GroupConfig{
+		Groups: map[string]docgen.GroupOverride{
+			"lambda": {Label: "AWS Lambda", Description: "Serverless compute."},
+		},
+	}
+
+	pluginDocs := s.generateDocs("newstack-cloud/test", groupConfig)
+
+	groupsByKey := groupsByKey(pluginDocs.Groups)
+
+	lambda, ok := groupsByKey["lambda"]
+	s.Require().True(ok, "expected a lambda group")
+	s.Equal("AWS Lambda", lambda.Label)
+	s.Equal("Serverless compute.", lambda.Description)
+
+	// No override -> title-cased fallback.
+	dynamodb, ok := groupsByKey["dynamodb"]
+	s.Require().True(ok, "expected a dynamodb group")
+	s.Equal("Dynamodb", dynamodb.Label)
+	s.Empty(dynamodb.Description)
+
+	// Cross-service link group derives its label from the overridden service.
+	fromLambda, ok := groupsByKey["from:lambda"]
+	s.Require().True(ok, "expected a from:lambda group for the cross-service link")
+	s.Equal("From AWS Lambda", fromLambda.Label)
+}
+
+func groupsByKey(
+	groups []*docgen.PluginDocsServiceGroup,
+) map[string]*docgen.PluginDocsServiceGroup {
+	byKey := make(map[string]*docgen.PluginDocsServiceGroup, len(groups))
+	for _, group := range groups {
+		byKey[group.Key] = group
+	}
+	return byKey
+}
+
+func (s *ProviderDocGenTestSuite) generateDocs(
 	pluginID string,
-	expectedDocs *docgen.PluginDocs,
-) {
+	groupConfig *docgen.GroupConfig,
+) *docgen.PluginDocs {
 	pluginInstance, err := host.LaunchAndResolvePlugin(
 		pluginID,
 		s.hostContainer.Launcher,
@@ -101,8 +139,18 @@ func (s *ProviderDocGenTestSuite) runGenerateDocsTest(
 		pluginInstance,
 		s.hostContainer.Manager,
 		s.envConfig,
+		groupConfig,
 	)
 	s.Require().NoError(err)
+
+	return pluginDocs
+}
+
+func (s *ProviderDocGenTestSuite) runGenerateDocsTest(
+	pluginID string,
+	expectedDocs *docgen.PluginDocs,
+) {
+	pluginDocs := s.generateDocs(pluginID, nil)
 
 	// Serialise and deserialise to ensure all the JSON tags are correct
 	// and ultimately, that valid JSON is produced.

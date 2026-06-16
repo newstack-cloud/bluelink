@@ -16,6 +16,7 @@ func assertPluginDocResourcesEqual(
 	for i, expectedResource := range expected {
 		actualResource := actual[i]
 		testSuite.Equal(expectedResource.Type, actualResource.Type)
+		testSuite.Equal(expectedResource.Group, actualResource.Group)
 		testSuite.Equal(expectedResource.Label, actualResource.Label)
 		testSuite.Equal(expectedResource.Description, actualResource.Description)
 		testSuite.Equal(expectedResource.Summary, actualResource.Summary)

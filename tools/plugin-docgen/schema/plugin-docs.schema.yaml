@@ -38,6 +38,14 @@ properties:
     description: Source repository URL
   config:
     $ref: "#/$defs/pluginConfig"
+  groups:
+    type: array
+    items:
+      $ref: "#/$defs/serviceGroup"
+    description: >-
+      Ordered index of the service-like groups that elements (resources, data
+      sources, links and custom variable types) are organised into for sidebar
+      navigation in the registry.
   resources:
     type: array
     items:
@@ -78,6 +86,25 @@ properties:
     description: Abstract link definitions (transformers only)
 
 $defs:
+  serviceGroup:
+    type: object
+    required:
+      - key
+      - label
+    properties:
+      key:
+        type: string
+        description: >-
+          Group key. Either the service segment of a type
+          (the {service} in {provider}/{service}/{resource}) or
+          "from:{service}" for links that connect two different services.
+      label:
+        type: string
+        description: Human-readable label rendered in navigation.
+      description:
+        type: string
+        description: Optional description of the group (markdown preferred).
+
   pluginConfig:
     type: object
     required:
@@ -135,6 +162,11 @@ $defs:
       type:
         type: string
         description: Namespaced resource type (e.g., aws/lambda/function)
+      group:
+        type: string
+        description: >-
+          Service group key this resource belongs to. Matches a "key" in the
+          top-level "groups" index.
       label:
         type: string
       summary:
@@ -259,6 +291,12 @@ $defs:
       type:
         type: string
         description: Link type in format resourceTypeA::resourceTypeB
+      group:
+        type: string
+        description: >-
+          Service group key this link belongs to. Matches a "key" in the
+          top-level "groups" index (the shared service for same-service links,
+          or "from:{service}" for links connecting two different services).
       summary:
         type: string
       description:
@@ -285,6 +323,11 @@ $defs:
       type:
         type: string
         description: Abstract link type in format resourceTypeA::resourceTypeB
+      group:
+        type: string
+        description: >-
+          Service group key this abstract link belongs to. Matches a "key" in
+          the top-level "groups" index.
       summary:
         type: string
       description:
@@ -362,6 +405,11 @@ $defs:
     properties:
       type:
         type: string
+      group:
+        type: string
+        description: >-
+          Service group key this data source belongs to. Matches a "key" in the
+          top-level "groups" index.
       label:
         type: string
       summary:
@@ -461,6 +509,11 @@ $defs:
     properties:
       type:
         type: string
+      group:
+        type: string
+        description: >-
+          Service group key this custom variable type belongs to. Matches a
+          "key" in the top-level "groups" index.
       label:
         type: string
       summary:

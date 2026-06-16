@@ -51,6 +51,14 @@ func assertPluginDocsEqual(
 		testSuite,
 	)
 
+	// The groups index has a deterministic (key-sorted) order, so it is
+	// compared as an ordered slice.
+	assertPluginDocServiceGroupsEqual(
+		expected.Groups,
+		actual.Groups,
+		testSuite,
+	)
+
 	// Transformer-specific assertions.
 	testSuite.Equal(expected.TransformName, actual.TransformName)
 	assertPluginDocResourcesEqual(
@@ -63,6 +71,20 @@ func assertPluginDocsEqual(
 		sortLinks(actual.AbstractLinks),
 		testSuite,
 	)
+}
+
+func assertPluginDocServiceGroupsEqual(
+	expected []*docgen.PluginDocsServiceGroup,
+	actual []*docgen.PluginDocsServiceGroup,
+	testSuite *suite.Suite,
+) {
+	testSuite.Equal(len(expected), len(actual))
+	for i, expectedGroup := range expected {
+		actualGroup := actual[i]
+		testSuite.Equal(expectedGroup.Key, actualGroup.Key)
+		testSuite.Equal(expectedGroup.Label, actualGroup.Label)
+		testSuite.Equal(expectedGroup.Description, actualGroup.Description)
+	}
 }
 
 func assertPluginDocsConfigEqual(

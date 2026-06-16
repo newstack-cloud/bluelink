@@ -31,6 +31,19 @@ type PluginDocs struct {
 	AbstractResources []*PluginDocsResource `json:"abstractResources,omitempty"`
 	// Required for transformers, should be empty for providers.
 	AbstractLinks []*PluginDocsLink `json:"abstractLinks,omitempty"`
+
+	// Groups is the ordered index of service-like groups that elements are
+	// organised into for sidebar navigation in the registry.
+	Groups []*PluginDocsServiceGroup `json:"groups,omitempty"`
+}
+
+// PluginDocsServiceGroup describes a single service-like group that elements
+// are organised into for navigation. The Key matches the "group" field set on
+// resources, data sources, links and custom variable types.
+type PluginDocsServiceGroup struct {
+	Key         string `json:"key"`
+	Label       string `json:"label"`
+	Description string `json:"description,omitempty"`
 }
 
 type PluginDocsVersionConfig struct {
@@ -51,6 +64,7 @@ type PluginDocsVersionConfigField struct {
 
 type PluginDocsResource struct {
 	Type          string                 `json:"type"`
+	Group         string                 `json:"group,omitempty"`
 	Label         string                 `json:"label"`
 	Summary       string                 `json:"summary"`
 	Description   string                 `json:"description"`
@@ -107,6 +121,7 @@ type PluginDocResourceSpecSchema struct {
 
 type PluginDocsLink struct {
 	Type                  string                                         `json:"type"`
+	Group                 string                                         `json:"group,omitempty"`
 	Summary               string                                         `json:"summary"`
 	Description           string                                         `json:"description"`
 	AnnotationDefinitions map[string]*PluginDocsLinkAnnotationDefinition `json:"annotationDefinitions"`
@@ -133,6 +148,7 @@ type PluginDocsLinkCardinality struct {
 
 type PluginDocsDataSource struct {
 	Type          string                    `json:"type"`
+	Group         string                    `json:"group,omitempty"`
 	Label         string                    `json:"label"`
 	Summary       string                    `json:"summary"`
 	Description   string                    `json:"description"`
@@ -162,6 +178,7 @@ type PluginDocsDataSourceFilterFieldSpec struct {
 
 type PluginDocsCustomVarType struct {
 	Type        string                                    `json:"type"`
+	Group       string                                    `json:"group,omitempty"`
 	Label       string                                    `json:"label"`
 	Summary     string                                    `json:"summary"`
 	Description string                                    `json:"description"`

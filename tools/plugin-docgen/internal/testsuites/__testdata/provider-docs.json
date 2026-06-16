@@ -38,6 +38,7 @@
   "resources": [
     {
       "type": "test/dynamodb/table",
+      "group": "dynamodb",
       "label": "AWS DynamoDB Table",
       "summary": "A resource for managing an AWS DynamoDB table.",
       "description": "The resource type used to define a DynamoDB table that is deployed to AWS.",
@@ -79,6 +80,7 @@
     },
     {
       "type": "test/lambda/function",
+      "group": "lambda",
       "label": "AWS Lambda Function",
       "summary": "A resource for managing an AWS Lambda function.",
       "description": "The resource type used to define a [Lambda function](https://docs.aws.amazon.com/lambda/latest/api/API_GetFunction.html) that is deployed to AWS.",
@@ -262,6 +264,7 @@
   "links": [
     {
       "type": "test/lambda/function::test2/dynamodb/table",
+      "group": "from:lambda",
       "summary": "A link between an AWS Lambda function and an AWS DynamoDB table.",
       "description": "A link between an AWS Lambda function and an AWS DynamoDB table.",
       "cardinalityA": {
@@ -296,6 +299,7 @@
   "dataSources": [
     {
       "type": "test/lambda/function",
+      "group": "lambda",
       "label": "AWS Lambda Function",
       "summary": "An external data source for an AWS Lambda function.",
       "description": "An external data source that can be used to retrieve information about an AWS Lambda function.",
@@ -330,6 +334,7 @@
   "customVarTypes": [
     {
       "type": "test/ec2/instanceType",
+      "group": "ec2",
       "label": "Amazon EC2 Instance Type",
       "summary": "An Amazon EC2 instance type for a VM.",
       "description": "A custom variable type that represents an Amazon EC2 instance type for a virtual machine.",
@@ -686,6 +691,24 @@
       "name": "filter",
       "summary": "Filters a list of values based on a predicate function.",
       "description": "Filters a list of values based on a predicate function.\n\n**Examples:**\n\n```plaintext\n${filter(\n  datasources.network.subnets,\n  has_prefix_g(\"subnet-402948-\")\n)}\n```"
+    }
+  ],
+  "groups": [
+    {
+      "key": "dynamodb",
+      "label": "Dynamodb"
+    },
+    {
+      "key": "ec2",
+      "label": "Ec2"
+    },
+    {
+      "key": "from:lambda",
+      "label": "From Lambda"
+    },
+    {
+      "key": "lambda",
+      "label": "Lambda"
     }
   ]
 }

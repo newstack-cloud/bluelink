@@ -16,6 +16,7 @@ func assertPluginDocCustomVarTypesEqual(
 	for i, expectedCustomVarType := range expected {
 		actualCustomVarType := actual[i]
 		testSuite.Equal(expectedCustomVarType.Type, actualCustomVarType.Type)
+		testSuite.Equal(expectedCustomVarType.Group, actualCustomVarType.Group)
 		testSuite.Equal(expectedCustomVarType.Label, actualCustomVarType.Label)
 		testSuite.Equal(expectedCustomVarType.Summary, actualCustomVarType.Summary)
 		testSuite.Equal(expectedCustomVarType.Description, actualCustomVarType.Description)

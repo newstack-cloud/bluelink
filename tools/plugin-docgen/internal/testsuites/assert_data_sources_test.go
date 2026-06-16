@@ -16,6 +16,7 @@ func assertPluginDocDataSourcesEqual(
 	for i, expectedDataSource := range expected {
 		actualDataSource := actual[i]
 		testSuite.Equal(expectedDataSource.Type, actualDataSource.Type)
+		testSuite.Equal(expectedDataSource.Group, actualDataSource.Group)
 		testSuite.Equal(expectedDataSource.Label, actualDataSource.Label)
 		testSuite.Equal(expectedDataSource.Summary, actualDataSource.Summary)
 		testSuite.Equal(expectedDataSource.Description, actualDataSource.Description)

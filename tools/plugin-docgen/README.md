@@ -62,6 +62,27 @@ Replace `{plugin}` with the unique ID of your plugin. (e.g. `newstack-cloud/aws`
 
 4) If the tool was successful, it will generate a `docs.json` file in the current working directory. This should then be published as a part of the release workflow so it can be used by a registry (e.g. the official Bluelink Registry) to render HTML documentation.
 
+### Grouping elements by service
+
+Resources, data sources, links and custom variable types are grouped by the service segment of their type (the `{service}` in `{provider}/{service}/{resource}`). Each element is given a `group` key and the document includes a top-level `groups` index that a registry can use to render service-like navigation in a sidebar.
+
+Group labels default to a title-cased version of the service key (e.g. `lambda` becomes `Lambda`). Because that produces awkward labels for acronyms (e.g. `iam` becomes `Iam`), you can optionally supply friendly labels and descriptions with a group config file:
+
+```bash
+bluelink-plugin-docgen -plugin={plugin} -group-config=groups.json
+```
+
+```json
+{
+  "groups": {
+    "iam": { "label": "IAM", "description": "AWS Identity and Access Management resources." },
+    "lambda": { "label": "AWS Lambda", "description": "Serverless compute." }
+  }
+}
+```
+
+Links between two resources of the same service are placed in that service's group; links that cross services are placed in a `from:{service}` group labelled `From {service label}`.
+
 ## Environment Configuration
 
 ### Plugin Path

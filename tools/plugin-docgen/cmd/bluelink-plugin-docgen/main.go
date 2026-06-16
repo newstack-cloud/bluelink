@@ -17,7 +17,14 @@ import (
 
 func main() {
 	var pluginID string
+	var groupConfigPath string
 	flag.StringVar(&pluginID, "plugin", "", "The ID of the plugin to generate documentation for.")
+	flag.StringVar(
+		&groupConfigPath,
+		"group-config",
+		"",
+		"Optional path to a JSON file with service group label/description overrides.",
+	)
 	flag.Parse()
 
 	if pluginID == "" {
@@ -33,6 +40,11 @@ func main() {
 	}
 
 	fs := afero.NewOsFs()
+
+	groupConfig, err := docgen.LoadGroupConfig(fs, groupConfigPath)
+	if err != nil {
+		log.Fatalf("Failed to load group config: %v", err)
+	}
 
 	// Create an empty set of providers and transformers to be populated after launching.
 	// We need to instantiate the maps so they can be used to create the services
@@ -73,6 +85,7 @@ func main() {
 		pluginInstance,
 		hostContainer.Manager,
 		&envConfig,
+		groupConfig,
 	)
 	if err != nil {
 		log.Fatalf("Failed to generate plugin documentation: %v", err)

@@ -140,6 +140,7 @@ func (s *SchemaValidationTestSuite) validateGeneratedDocs(pluginID string) {
 		pluginInstance,
 		s.hostContainer.Manager,
 		s.envConfig,
+		nil,
 	)
 	s.Require().NoError(err)
 
