@@ -270,7 +270,7 @@ func renderObject(fields map[string]*core.MappingNode, depth int) (string, error
 		if i == len(keys)-1 {
 			comma = ""
 		}
-		fmt.Fprintf(&b, "%s%s = %s%s\n", indent(depth+1), key, value, comma)
+		fmt.Fprintf(&b, "%s%s = %s%s\n", indent(depth+1), keyToken(key), value, comma)
 	}
 
 	b.WriteString(indent(depth) + "}")
