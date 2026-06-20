@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.48.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.47.0...blueprint/v0.48.0) (2026-06-20)
+
+
+### Features
+
+* **blueprint:** add support for serialising blueprint to blueprint lang ([095cb89](https://github.com/newstack-cloud/bluelink/commit/095cb89ba1ad8c311ed8a98b98aa06b3300f92ab))
+
+
+### Bug Fixes
+
+* **blueprint:** add fix to allow outputting unquoted object keys ([5cbefe7](https://github.com/newstack-cloud/bluelink/commit/5cbefe76ba65cd32e7bd2825ac10125ed1c804ca))
+
 ## [0.47.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.46.0...blueprint/v0.47.0) (2026-06-01)
 
 
