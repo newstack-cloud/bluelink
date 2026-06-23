@@ -543,7 +543,11 @@ func (p *blueprintProviderPluginImpl) ResourceHasStabilised(
 		return convertv1.ToPBResourceHasStabilisedErrorResponse(err), nil
 	}
 
-	return convertv1.ToPBResourceHasStabilisedResponse(output), nil
+	response, err := convertv1.ToPBResourceHasStabilisedResponse(output)
+	if err != nil {
+		return convertv1.ToPBResourceHasStabilisedErrorResponse(err), nil
+	}
+	return response, nil
 }
 
 func (p *blueprintProviderPluginImpl) GetResourceExternalState(

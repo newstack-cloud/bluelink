@@ -228,22 +228,28 @@ func ToPBDestroyResourceRequest(
 // ResourceHasStabilisedResponse protobuf message that can be sent over gRPC.
 func ToPBResourceHasStabilisedResponse(
 	output *provider.ResourceHasStabilisedOutput,
-) *sharedtypesv1.ResourceHasStabilisedResponse {
+) (*sharedtypesv1.ResourceHasStabilisedResponse, error) {
 	if output == nil {
 		return &sharedtypesv1.ResourceHasStabilisedResponse{
 			Response: &sharedtypesv1.ResourceHasStabilisedResponse_ErrorResponse{
 				ErrorResponse: sharedtypesv1.NoResponsePBError(),
 			},
-		}
+		}, nil
+	}
+
+	computedFieldValues, err := ToPBMappingNodeMap(output.ComputedFieldValues)
+	if err != nil {
+		return nil, err
 	}
 
 	return &sharedtypesv1.ResourceHasStabilisedResponse{
 		Response: &sharedtypesv1.ResourceHasStabilisedResponse_ResourceStabilisationInfo{
 			ResourceStabilisationInfo: &sharedtypesv1.ResourceStabilisationInfo{
-				Stabilised: output.Stabilised,
+				Stabilised:          output.Stabilised,
+				ComputedFieldValues: computedFieldValues,
 			},
 		},
-	}
+	}, nil
 }
 
 // ToPBResourceHasStabilisedErrorResponse converts an error from a resource stabilisation check to a

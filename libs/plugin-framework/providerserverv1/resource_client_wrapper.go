@@ -558,8 +558,18 @@ func (r *resourceProviderClientWrapper) HasStabilised(
 
 	switch result := response.Response.(type) {
 	case *sharedtypesv1.ResourceHasStabilisedResponse_ResourceStabilisationInfo:
+		computedFieldValues, err := convertv1.FromPBMappingNodeMap(
+			result.ResourceStabilisationInfo.ComputedFieldValues,
+		)
+		if err != nil {
+			return nil, errorsv1.CreateGeneralError(
+				err,
+				errorsv1.PluginActionProviderCheckResourceHasStabilised,
+			)
+		}
 		return &provider.ResourceHasStabilisedOutput{
-			Stabilised: result.ResourceStabilisationInfo.Stabilised,
+			Stabilised:          result.ResourceStabilisationInfo.Stabilised,
+			ComputedFieldValues: computedFieldValues,
 		}, nil
 	case *sharedtypesv1.ResourceHasStabilisedResponse_ErrorResponse:
 		return nil, errorsv1.CreateErrorFromResponse(
