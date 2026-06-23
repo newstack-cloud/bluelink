@@ -301,6 +301,12 @@ func validateResourceDefinitionMap(
 		}
 	}
 
+	// A map with no declared value schema is an open/free-form object. Its keys and
+	// values are arbitrary (e.g. an IAM policy document), so the values are accepted as-is without further validation.
+	if validateAgainstSchema.MapValues == nil {
+		return diagnostics, nil
+	}
+
 	var errs []error
 
 	for fieldName, fieldNode := range node.Fields {

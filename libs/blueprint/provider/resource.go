@@ -350,6 +350,12 @@ type ResourceHasStabilisedInput struct {
 // has stabilised after being deployed.
 type ResourceHasStabilisedOutput struct {
 	Stabilised bool
+	// ComputedFieldValues holds computed field values that only become available
+	// once the resource has finished provisioning (e.g. a database endpoint address
+	// that is not assigned until the instance is up). When a resource reports it has
+	// stabilised, any values provided here are merged into the persisted resource
+	// state, finalising computed fields that could not be captured at deploy time.
+	ComputedFieldValues map[string]*core.MappingNode
 }
 
 // ResourceGetExternalStateInput provides the input data needed for a resource to

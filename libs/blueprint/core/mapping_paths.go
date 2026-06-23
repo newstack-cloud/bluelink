@@ -21,6 +21,7 @@ import (
 // - "[\"<field>\"]" for fields with special characters
 // - "[<index>]" for array items
 // - "[@.<key> = \"<value>\"]" To target a specific item in an array of objects by a unique attribute
+// - "[@ = \"<value>\"]" To target a specific scalar item in an array by its own value
 //
 // "$" represents the root of the path and must always be the first character
 // in the path.
@@ -59,6 +60,7 @@ func GetPathValue(path string, node *MappingNode, maxTraverseDepth int) (*Mappin
 			)
 			if targetItemIndex < 0 {
 				pathExists = false
+				current = nil
 			} else {
 				current = current.Items[targetItemIndex]
 			}
@@ -93,6 +95,7 @@ func GetPathValue(path string, node *MappingNode, maxTraverseDepth int) (*Mappin
 // - "[\"<field>\"]" for fields with special characters
 // - "[<index>]" for array items
 // - "[@.<key> = \"<value>\"]" To target a specific item in an array of objects by a unique attribute
+// - "[@ = \"<value>\"]" To target a specific scalar item in an array by its own value
 //
 // "$" represents the root of the path and must always be the first character
 // in the path.
@@ -136,6 +139,7 @@ func InjectPathValue(
 // - "[\"<field>\"]" for fields with special characters
 // - "[<index>]" for array items
 // - "[@.<key> = \"<value>\"]" To target a specific item in an array of objects by a unique attribute
+// - "[@ = \"<value>\"]" To target a specific scalar item in an array by its own value
 //
 // "$" represents the root of the path and must always be the first character
 // in the path.
@@ -245,6 +249,12 @@ func injectIntoItemsWithSelector(
 		),
 	)
 	if targetItemIndex < 0 {
+		// A scalar selector ("[@ = \"x\"]") fully describes the item to inject (the
+		// value is the item itself), so a missing item can be appended.
+		if pathItem.arrayItemSelector.key == "" && i == len(parsedPath)-1 {
+			target.Items = append(target.Items, valueToInject)
+			return len(target.Items) - 1
+		}
 		// If there is no item in the array that matches the selector,
 		// the value can not be injected.
 		return -1
@@ -258,6 +268,12 @@ func injectIntoItemsWithSelector(
 
 func objectHasPropertyWithValue(selector *arrayItemSelector) func(*MappingNode) bool {
 	return func(item *MappingNode) bool {
+		// An empty key is a scalar selector. Match the array item by its own value
+		// (e.g. "[@ = \"x\"]" against an array of strings).
+		if selector.key == "" {
+			return StringValue(item) == selector.value
+		}
+
 		if item.Fields == nil {
 			return false
 		}
@@ -443,6 +459,8 @@ type pathItem struct {
 }
 
 type arrayItemSelector struct {
+	// key is the object attribute to match on; an empty key means the selector
+	// matches a scalar array item by its own value ("[@ = \"<value>\"]").
 	key   string
 	value string
 }
@@ -711,7 +729,10 @@ func (p *pathParser) indexAccessor() *pathItem {
 	return nil
 }
 
-// selector = "[" , "@" , "." , name , "=" , stringLiteral , "]" ;
+// selector = "[" , "@" , [ "." , name ] , "=" , stringLiteral , "]" ;
+// The optional ".name" targets an item in an array of objects by a unique
+// attribute (e.g. "[@.id = \"x\"]"); omitting it targets a scalar array item by its
+// own value (e.g. "[@ = \"x\"]").
 func (p *pathParser) selector() *pathItem {
 	// As a selector is not the only rule that can start with a "[",
 	// we need to save the current position in the sequence so that we can revert
@@ -733,19 +754,23 @@ func (p *pathParser) selector() *pathItem {
 		return nil
 	}
 
-	if !p.match('.') {
-		p.backtrack()
-		return nil
-	}
-
-	name := p.name()
-	if name == nil {
-		p.backtrack()
-		return nil
-	}
-
-	// There can be white space before the "=" character in a selector.
+	// There can be white space after the "@" character (before "." or "=").
 	p.consumeWhiteSpace()
+
+	// An optional ".name" makes this an object-attribute selector; without it the
+	// selector matches a scalar array item by its own value (key stays empty).
+	name := ""
+	if p.match('.') {
+		parsedName := p.name()
+		if parsedName == nil {
+			p.backtrack()
+			return nil
+		}
+		name = *parsedName
+
+		// There can be white space before the "=" character in a selector.
+		p.consumeWhiteSpace()
+	}
 
 	if !p.match('=') {
 		p.backtrack()
@@ -772,7 +797,7 @@ func (p *pathParser) selector() *pathItem {
 	p.popPos()
 	return &pathItem{
 		arrayItemSelector: &arrayItemSelector{
-			key:   *name,
+			key:   name,
 			value: *stringLiteral,
 		},
 	}

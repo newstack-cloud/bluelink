@@ -304,16 +304,18 @@ func (r *dataSourceRegistryFromProviders) getDataSourceType(
 	ctx context.Context,
 	dataSourceType string,
 ) (DataSource, Provider, error) {
-	dataSource, cached := r.dataSourceCache.Get(dataSourceType)
-	if cached {
-		return dataSource, nil, nil
-	}
-
 	providerNamespace := ExtractProviderFromItemType(dataSourceType)
 	provider, ok := r.providers[providerNamespace]
 	if !ok {
 		return nil, nil, errDataSourceTypeProviderNotFound(providerNamespace, dataSourceType)
 	}
+
+	// Only the resolved data source implementation is cached, so resolve the
+	// provider on every call and return it for both cache hits and misses.
+	if dataSource, cached := r.dataSourceCache.Get(dataSourceType); cached {
+		return dataSource, provider, nil
+	}
+
 	dataSourceImpl, err := provider.DataSource(ctx, dataSourceType)
 	if err != nil {
 		return nil, nil, errProviderDataSourceTypeNotFound(dataSourceType, providerNamespace)

@@ -836,6 +836,10 @@ message DestroyResourceResult {
 // has stabilised after being deployed.
 message ResourceStabilisationInfo {
     bool stabilised = 1;
+    // Computed field values that only become available once the resource has
+    // finished provisioning (e.g. an endpoint address). These are merged into the
+    // persisted resource state when the resource reports it has stabilised.
+    map<string, schema.MappingNode> computed_field_values = 2;
 }
 
 // Changes provides a set of modified fields along with a version of the resource

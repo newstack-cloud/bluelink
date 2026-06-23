@@ -658,6 +658,12 @@ func collectComputedFields(
 	schema *provider.ResourceDefinitionsSchema,
 	fieldChangeCtx *fieldChangeContext,
 ) {
+	// A free-form map or an array with no declared item schema has no
+	// sub-schema to descend into, so there are no nested computed fields to collect.
+	if schema == nil {
+		return
+	}
+
 	if schema.Computed {
 		changes.ComputedFields = append(changes.ComputedFields, fieldChangeCtx.currentPath)
 		return

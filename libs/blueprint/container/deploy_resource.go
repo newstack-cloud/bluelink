@@ -365,6 +365,41 @@ func (d *defaultResourceDeployer) deployResource(
 	return nil
 }
 
+// Merges any computed field values reported once a
+// resource has stabilised into the persisted resource state.
+func (d *defaultResourceDeployer) persistStabilisedComputedFields(
+	resourceInfo *resourceDeployInfo,
+	resolvedResource *provider.ResolvedResource,
+	output *provider.ResourceHasStabilisedOutput,
+	deployCtx *DeployContext,
+) error {
+	if len(output.ComputedFieldValues) == 0 {
+		return nil
+	}
+
+	mergedSpecState, err := specmerge.MergeResourceSpec(
+		resolvedResource,
+		resourceInfo.resourceName,
+		output.ComputedFieldValues,
+		resourceInfo.changes.ComputedFields,
+	)
+	if err != nil {
+		return err
+	}
+
+	deployCtx.State.SetResourceData(
+		resourceInfo.resourceName,
+		&CollectedResourceData{
+			Spec: mergedSpecState,
+			Metadata: resolvedMetadataToState(
+				extractResolvedMetadataFromResourceInfo(resourceInfo),
+			),
+			ComputedFields: resourceInfo.changes.ComputedFields,
+		},
+	)
+	return nil
+}
+
 func (d *defaultResourceDeployer) pollForResourceStability(
 	ctx context.Context,
 	resourceInfo *resourceDeployInfo,
@@ -435,6 +470,16 @@ func (d *defaultResourceDeployer) pollForResourceStability(
 			}
 
 			if output.Stabilised {
+				if err := d.persistStabilisedComputedFields(
+					resourceInfo,
+					resolvedResource,
+					output,
+					deployCtx,
+				); err != nil {
+					deployCtx.Channels.ErrChan <- err
+					return
+				}
+
 				deployCtx.Channels.ResourceUpdateChan <- d.createResourceStabilisedMessage(
 					resourceInfo,
 					resourceRetryInfo,

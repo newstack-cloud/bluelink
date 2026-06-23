@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -383,11 +384,12 @@ func fixtureInjectMappingNode3() *MappingNode {
 
 func fixtureDeepMappingNode(depth int) (*MappingNode, string) {
 	node := &MappingNode{}
-	path := "$"
+	var path strings.Builder
+	path.WriteString("$")
 	current := node
-	for i := 0; i < depth; i++ {
+	for i := range depth {
 		fieldName := fmt.Sprintf("field%d", i)
-		path += "." + fieldName
+		path.WriteString("." + fieldName)
 		current.Fields = map[string]*MappingNode{
 			fieldName: {
 				Fields: map[string]*MappingNode{},
@@ -396,7 +398,63 @@ func fixtureDeepMappingNode(depth int) (*MappingNode, string) {
 		current = current.Fields[fieldName]
 	}
 
-	return node, path
+	return node, path.String()
+}
+
+func fixtureScalarArrayNode() *MappingNode {
+	return &MappingNode{
+		Fields: map[string]*MappingNode{
+			"managedPolicyArns": {
+				Items: []*MappingNode{
+					MappingNodeFromString("arn:aws:iam::aws:policy/ReadOnlyAccess"),
+					MappingNodeFromString("arn:aws:iam::123456789012:policy/bluelink-link-access-1"),
+				},
+			},
+		},
+	}
+}
+
+func (s *MappingPathsTestSuite) Test_get_value_by_path_for_scalar_array_selector() {
+	path := "$.managedPolicyArns[@ = \"arn:aws:iam::123456789012:policy/bluelink-link-access-1\"]"
+	value, err := GetPathValue(path, fixtureScalarArrayNode(), 10)
+	s.Require().NoError(err)
+	s.Assert().Equal(
+		MappingNodeFromString("arn:aws:iam::123456789012:policy/bluelink-link-access-1"),
+		value,
+	)
+}
+
+func (s *MappingPathsTestSuite) Test_get_value_returns_nil_for_scalar_array_selector_miss() {
+	path := "$.managedPolicyArns[@ = \"arn:aws:iam::123456789012:policy/absent\"]"
+	value, err := GetPathValue(path, fixtureScalarArrayNode(), 10)
+	s.Require().NoError(err)
+	s.Assert().Nil(value)
+}
+
+func (s *MappingPathsTestSuite) Test_inject_value_for_existing_scalar_array_selector() {
+	arn := "arn:aws:iam::123456789012:policy/bluelink-link-access-1"
+	path := fmt.Sprintf("$.managedPolicyArns[@ = %q]", arn)
+	node := fixtureScalarArrayNode()
+	err := InjectPathValue(path, MappingNodeFromString(arn), node, 10)
+	s.Require().NoError(err)
+	// The array length is unchanged; the matching item is still present.
+	s.Assert().Len(node.Fields["managedPolicyArns"].Items, 2)
+	value, err := GetPathValue(path, node, 10)
+	s.Require().NoError(err)
+	s.Assert().Equal(MappingNodeFromString(arn), value)
+}
+
+func (s *MappingPathsTestSuite) Test_inject_value_appends_missing_scalar_array_item() {
+	arn := "arn:aws:iam::123456789012:policy/bluelink-link-access-2"
+	path := fmt.Sprintf("$.managedPolicyArns[@ = %q]", arn)
+	node := fixtureScalarArrayNode()
+	err := InjectPathValue(path, MappingNodeFromString(arn), node, 10)
+	s.Require().NoError(err)
+	// The missing scalar item is appended so the path now resolves.
+	s.Assert().Len(node.Fields["managedPolicyArns"].Items, 3)
+	value, err := GetPathValue(path, node, 10)
+	s.Require().NoError(err)
+	s.Assert().Equal(MappingNodeFromString(arn), value)
 }
 
 func TestMappingPathsTestSuite(t *testing.T) {
