@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.49.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.48.0...blueprint/v0.49.0) (2026-06-23)
+
+
+### Features
+
+* **blueprint:** add support for capturing computed fields when stable ([e1d9098](https://github.com/newstack-cloud/bluelink/commit/e1d9098a7e3fedbce6a352642e96293bb5b6e6ec))
+
 ## [0.48.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.47.0...blueprint/v0.48.0) (2026-06-20)
 
 
