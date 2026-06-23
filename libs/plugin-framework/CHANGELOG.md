@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.13.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.12.0...plugin-framework/v0.13.0) (2026-06-23)
+
+
+### Features
+
+* **blueprint:** add support for capturing computed fields when stable ([e1d9098](https://github.com/newstack-cloud/bluelink/commit/e1d9098a7e3fedbce6a352642e96293bb5b6e6ec))
+* **plugin-framework:** ensure computed fields are carried over grpc for stablised resources ([4449f88](https://github.com/newstack-cloud/bluelink/commit/4449f884ea71b8895b25b5142488ca58d0649de8))
+
+
+### Dependencies
+
+* **plugin-framework:** bump blueprint lib version to 0.49.0 ([0a033ef](https://github.com/newstack-cloud/bluelink/commit/0a033ef4eb19e727eeee4414ce42bcdc4ebb001a))
+
 ## [0.12.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.11.0...plugin-framework/v0.12.0) (2026-06-01)
 
 
