@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/newstack-cloud/bluelink/compare/plugin-docgen/v0.2.1...plugin-docgen/v0.3.0) (2026-06-25)
+
+
+### Features
+
+* **plugin-docgen:** add doc generation for fields that activate links on reference in resources ([daa7488](https://github.com/newstack-cloud/bluelink/commit/daa7488fae0439803a7e61aa33d1ba50dce16180))
+* **plugin-docgen:** add support for element sub-grouping ([b1f0cef](https://github.com/newstack-cloud/bluelink/commit/b1f0cef8fb90d17a85ab7048d848f41176e3e1dd))
+
 ## [0.2.1](https://github.com/newstack-cloud/bluelink/compare/plugin-docgen/v0.2.0...plugin-docgen/v0.2.1) (2026-06-01)
 
 
