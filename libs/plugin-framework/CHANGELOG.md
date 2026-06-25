@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.13.0...plugin-framework/v0.14.0) (2026-06-25)
+
+
+### Features
+
+* **plugin-framework:** add support for carrying link activating resource fields ([ec54a49](https://github.com/newstack-cloud/bluelink/commit/ec54a49d923450bf12b7251b74fb0c4a212e2099))
+
 ## [0.13.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.12.0...plugin-framework/v0.13.0) (2026-06-23)
 
 
