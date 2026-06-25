@@ -9,6 +9,7 @@ import (
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/specmerge"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	"github.com/newstack-cloud/bluelink/libs/common/core"
@@ -106,13 +107,9 @@ func (s *defaultResourceChangeGenerator) GenerateChanges(
 			depth:                   0,
 		},
 	)
-	collectComputedFields(
-		changes,
-		specDefinitionOutput.SpecDefinition.Schema,
-		&fieldChangeContext{
-			currentPath: "spec",
-			depth:       0,
-		},
+	changes.ComputedFields = append(
+		changes.ComputedFields,
+		specmerge.CollectComputedFields(specDefinitionOutput.SpecDefinition.Schema, "spec")...,
 	)
 
 	return changes, nil
@@ -649,69 +646,6 @@ func collectMetadataAnnotationChanges(
 					renderMetadataAnnotationFieldPath(key),
 				)
 			}
-		}
-	}
-}
-
-func collectComputedFields(
-	changes *provider.Changes,
-	schema *provider.ResourceDefinitionsSchema,
-	fieldChangeCtx *fieldChangeContext,
-) {
-	// A free-form map or an array with no declared item schema has no
-	// sub-schema to descend into, so there are no nested computed fields to collect.
-	if schema == nil {
-		return
-	}
-
-	if schema.Computed {
-		changes.ComputedFields = append(changes.ComputedFields, fieldChangeCtx.currentPath)
-		return
-	}
-
-	if schema.Type == provider.ResourceDefinitionsSchemaTypeObject {
-		for fieldName, fieldSchema := range schema.Attributes {
-			collectComputedFields(
-				changes,
-				fieldSchema,
-				&fieldChangeContext{
-					currentPath: substitutions.RenderFieldPath(fieldChangeCtx.currentPath, fieldName),
-					depth:       fieldChangeCtx.depth + 1,
-				},
-			)
-		}
-	}
-
-	if schema.Type == provider.ResourceDefinitionsSchemaTypeMap {
-		collectComputedFields(
-			changes,
-			schema.MapValues,
-			&fieldChangeContext{
-				currentPath: substitutions.RenderFieldPath(fieldChangeCtx.currentPath, "<key>"),
-				depth:       fieldChangeCtx.depth + 1,
-			},
-		)
-	}
-
-	if schema.Type == provider.ResourceDefinitionsSchemaTypeArray {
-		collectComputedFields(
-			changes,
-			schema.Items,
-			&fieldChangeContext{
-				// 0 is a placeholder for any array index.
-				currentPath: renderFieldArrayPath(fieldChangeCtx.currentPath, 0),
-				depth:       fieldChangeCtx.depth + 1,
-			},
-		)
-	}
-
-	if schema.Type == provider.ResourceDefinitionsSchemaTypeUnion {
-		for _, unionSchema := range schema.OneOf {
-			collectComputedFields(
-				changes,
-				unionSchema,
-				fieldChangeCtx,
-			)
 		}
 	}
 }

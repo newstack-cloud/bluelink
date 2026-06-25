@@ -301,12 +301,28 @@ func (r *testSQSQueueResource) CustomValidate(
 	}, nil
 }
 
-// GetSpecDefinition is not used for spec link info!
+// GetSpecDefinition exposes a "wiring slot" field (targetFunctionArn) used to
+// exercise reference-implied link activation.
 func (r *testSQSQueueResource) GetSpecDefinition(
 	ctx context.Context,
 	input *provider.ResourceGetSpecDefinitionInput,
 ) (*provider.ResourceGetSpecDefinitionOutput, error) {
-	return &provider.ResourceGetSpecDefinitionOutput{}, nil
+	return &provider.ResourceGetSpecDefinitionOutput{
+		SpecDefinition: &provider.ResourceSpecDefinition{
+			Schema: &provider.ResourceDefinitionsSchema{
+				Type: provider.ResourceDefinitionsSchemaTypeObject,
+				Attributes: map[string]*provider.ResourceDefinitionsSchema{
+					"targetFunctionArn": {
+						Type:                     provider.ResourceDefinitionsSchemaTypeString,
+						ActivatesLinkOnReference: true,
+					},
+					"plainValue": {
+						Type: provider.ResourceDefinitionsSchemaTypeString,
+					},
+				},
+			},
+		},
+	}, nil
 }
 
 // Deploy is not used for spec link info!

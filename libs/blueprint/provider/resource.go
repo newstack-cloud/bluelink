@@ -636,6 +636,12 @@ type ResourceDefinitionsSchema struct {
 	// This is only used for user-provided values, it will be ignored
 	// for computed values.
 	MustRecreate bool
+	// ActivatesLinkOnReference marks this field as a "wiring slot": when a
+	// reference to another resource is placed at this field (e.g. an EventBridge
+	// rule's `targets[].arn` referencing a Lambda function), the blueprint
+	// framework activates a registered link between the two resource types
+	// without requiring a `linkSelector`.
+	ActivatesLinkOnReference bool
 	// Sensitive specifies whether the value is sensitive and should be kept
 	// out of logs and other outputs.
 	Sensitive bool

@@ -7,6 +7,7 @@ import (
 
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/speccore"
 	"github.com/newstack-cloud/bluelink/libs/common/core"
@@ -77,6 +78,8 @@ type defaultSpecLinkInfo struct {
 	linkMap                  map[string]*ChainLinkNode
 	linksToCleanFromTopLevel []*ChainLinkNode
 	blueprintParams          bpcore.BlueprintParams
+	refChainCollector        refgraph.RefChainCollector
+	activatingSlotCache      map[string]map[string]bool
 }
 
 // NewDefaultLinkInfoProvider creates a new instance of
@@ -90,6 +93,7 @@ func NewDefaultLinkInfoProvider(
 	linkRegistry provider.LinkRegistry,
 	spec speccore.BlueprintSpec,
 	blueprintParams bpcore.BlueprintParams,
+	refChainCollector refgraph.RefChainCollector,
 ) (SpecLinkInfo, error) {
 	return &defaultSpecLinkInfo{
 		resourceProviders:        resourceTypeProviderMap,
@@ -99,6 +103,8 @@ func NewDefaultLinkInfoProvider(
 		linkMap:                  make(map[string]*ChainLinkNode),
 		linksToCleanFromTopLevel: []*ChainLinkNode{},
 		blueprintParams:          blueprintParams,
+		refChainCollector:        refChainCollector,
+		activatingSlotCache:      make(map[string]map[string]bool),
 	}, nil
 }
 
@@ -128,6 +134,14 @@ func (l *defaultSpecLinkInfo) buildChainLinkNodes(
 		if err != nil {
 			return err
 		}
+	}
+
+	// Derive additional links from references placed at "wiring slot" fields
+	// (schema fields marked with ActivatesLinkOnReference), so a reference can
+	// activate a link without a link selector. This runs after the selector pass
+	// so it can de-duplicate against selector-derived links.
+	if err := l.activateReferenceImpliedLinks(ctx); err != nil {
+		return err
 	}
 
 	standaloneResources := l.extractStandaloneResources()

@@ -658,6 +658,7 @@ func (l *defaultLoader) loadSpecAndLinkInfo(
 		l.linkRegistry,
 		loadSpecRes.spec,
 		params,
+		refChainCollector,
 	)
 	if err != nil {
 		// Ensure the spec is returned when parsing and
