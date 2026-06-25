@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.50.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.49.0...blueprint/v0.50.0) (2026-06-25)
+
+
+### Features
+
+* **blueprint:** add support for link activating references ([73e05b3](https://github.com/newstack-cloud/bluelink/commit/73e05b30997f12618d6581c73bbb3d1ea78c5eac))
+
+
+### Bug Fixes
+
+* **blueprint:** add various fixes to the deployment process ([b0a6928](https://github.com/newstack-cloud/bluelink/commit/b0a69283d49d972d42659c915f83ca8cfc56edc1))
+
 ## [0.49.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.48.0...blueprint/v0.49.0) (2026-06-23)
 
 
