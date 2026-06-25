@@ -1348,6 +1348,10 @@ message ResourceDefinitionsSchema {
     // a string value in a resource spec that uses this schema.
     // This is only used for "string" types.
     string pattern = 24;
+    // Marks this field as a "wiring slot": placing a reference to another
+    // resource here activates a registered link between the two resource types
+    // without requiring a linkSelector.
+    bool activates_link_on_reference = 25;
 }
 
 // CanLinkTo holds a list of resource types that a given resource type
