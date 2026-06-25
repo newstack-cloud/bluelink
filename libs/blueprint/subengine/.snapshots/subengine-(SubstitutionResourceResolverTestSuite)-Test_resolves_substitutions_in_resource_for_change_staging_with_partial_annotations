@@ -340,6 +340,6 @@
   }),
   ResolveOnDeploy: ([]string) (len=2) {
     (string) (len=42) "resources.ordersTable.metadata.annotations",
-    (string) (len=36) "resources.ordersTable.spec[\"region\"]"
+    (string) (len=33) "resources.ordersTable.spec.region"
   }
 })

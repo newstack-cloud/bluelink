@@ -452,7 +452,11 @@ func (r *registryFromProviders) waitForStabilisedDependencies(
 ) error {
 	resolvedResource := getResolvedResourceFromChanges(deployInput.Changes)
 	resourceName := getResourceNameFromChanges(deployInput.Changes)
-	expectedComputedFields := getComputedFieldsFromChanges(deployInput.Changes)
+	expectedComputedFields, err := r.getExpectedComputedFields(ctx, resourceImpl, deployInput)
+	if err != nil {
+		return err
+	}
+
 	resourceSpec, err := specmerge.MergeResourceSpec(
 		resolvedResource,
 		resourceName,
@@ -492,6 +496,28 @@ func (r *registryFromProviders) waitForStabilisedDependencies(
 			}
 		}
 	}
+}
+
+func (r *registryFromProviders) getExpectedComputedFields(
+	ctx context.Context,
+	resourceImpl provider.Resource,
+	deployInput *provider.ResourceDeployInput,
+) ([]string, error) {
+	specDefOutput, err := resourceImpl.GetSpecDefinition(
+		ctx,
+		&provider.ResourceGetSpecDefinitionInput{
+			ProviderContext: deployInput.ProviderContext,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if specDefOutput.SpecDefinition == nil {
+		return []string{}, nil
+	}
+
+	return specmerge.CollectComputedFields(specDefOutput.SpecDefinition.Schema, "spec"), nil
 }
 
 func (r *registryFromProviders) Destroy(
@@ -783,14 +809,6 @@ func getResourceNameFromChanges(changes *provider.Changes) string {
 	}
 
 	return changes.AppliedResourceInfo.ResourceName
-}
-
-func getComputedFieldsFromChanges(changes *provider.Changes) []string {
-	if changes == nil {
-		return []string{}
-	}
-
-	return changes.ComputedFields
 }
 
 func metadataStateFromResolvedResource(

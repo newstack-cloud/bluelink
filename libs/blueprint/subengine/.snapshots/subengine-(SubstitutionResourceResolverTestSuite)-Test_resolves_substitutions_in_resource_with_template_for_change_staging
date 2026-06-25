@@ -343,7 +343,7 @@
     (string) (len=33) "datasources.network.filter.search",
     (string) (len=44) "resources.ordersTable_0.metadata.annotations",
     (string) (len=44) "resources.ordersTable_0.metadata.annotations",
-    (string) (len=38) "resources.ordersTable_0.spec[\"region\"]",
+    (string) (len=35) "resources.ordersTable_0.spec.region",
     (string) (len=36) "values.prefixedCoreInfraRegion.value"
   }
 })

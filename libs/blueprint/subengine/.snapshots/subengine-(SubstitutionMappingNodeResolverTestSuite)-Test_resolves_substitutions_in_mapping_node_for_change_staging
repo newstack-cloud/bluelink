@@ -207,10 +207,10 @@
   ResolveOnDeploy: ([]string) (len=7) {
     (string) (len=33) "datasources.network.filter.search",
     (string) (len=33) "datasources.network.filter.search",
-    (string) (len=48) "metadata[\"networkingSummary\"][\"coreInfraRegion\"]",
-    (string) (len=43) "metadata[\"networkingSummary\"][\"mainSubnet\"]",
-    (string) (len=51) "metadata[\"networkingSummary\"][\"suffixedRegions\"][1]",
-    (string) (len=36) "metadata[\"networkingSummary\"][\"vpc\"]",
-    (string) (len=25) "metadata[\"ordersTableId\"]"
+    (string) (len=42) "metadata.networkingSummary.coreInfraRegion",
+    (string) (len=37) "metadata.networkingSummary.mainSubnet",
+    (string) (len=45) "metadata.networkingSummary.suffixedRegions[1]",
+    (string) (len=30) "metadata.networkingSummary.vpc",
+    (string) (len=22) "metadata.ordersTableId"
   }
 })

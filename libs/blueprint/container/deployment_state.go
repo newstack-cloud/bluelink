@@ -2,6 +2,7 @@ package container
 
 import (
 	"maps"
+	"slices"
 	"sync"
 	"time"
 
@@ -534,10 +535,14 @@ func copyLinkIntermediaryResourceState(
 
 	return &state.LinkIntermediaryResourceState{
 		ResourceID:                 linkResourceState.ResourceID,
+		ResourceType:               linkResourceState.ResourceType,
 		InstanceID:                 linkResourceState.InstanceID,
+		Status:                     linkResourceState.Status,
+		PreciseStatus:              linkResourceState.PreciseStatus,
 		LastDeployedTimestamp:      linkResourceState.LastDeployedTimestamp,
 		LastDeployAttemptTimestamp: linkResourceState.LastDeployAttemptTimestamp,
 		ResourceSpecData:           core.CopyMappingNode(linkResourceState.ResourceSpecData),
+		FailureReasons:             slices.Clone(linkResourceState.FailureReasons),
 	}
 }
 

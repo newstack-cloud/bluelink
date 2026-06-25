@@ -1155,7 +1155,13 @@ func (r *defaultSubstitutionResolver) resolveInMappingNodeFields(
 
 	for fieldName, field := range fields {
 		partiallyResolvedField := getField(partiallyResolvedFields, fieldName)
-		propertyPath := fmt.Sprintf("%s[\"%s\"]", resolveCtx.currentElementProperty, fieldName)
+		// Use the canonical field-path renderer (dot notation for identifier-style
+		// names, bracket notation otherwise) so resolve-on-deploy paths match the paths
+		// the change generator produces when it walks the same mapping node. A mismatch
+		// (e.g. spec["role"] vs spec.role) would drop the field from
+		// FieldChangesKnownOnDeploy, so a dependant referencing a computed value
+		// would deploy with a null value.
+		propertyPath := substitutions.RenderFieldPath(resolveCtx.currentElementProperty, fieldName)
 		resolvedField, err := r.resolveInMappingNode(
 			ctx,
 			field,

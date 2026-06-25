@@ -268,6 +268,29 @@ func (r *testExampleResource) Destroy(
 	return nil
 }
 
+// A test resource that deploys a computed field value for a path
+// that its spec definition does not declare as computed, exercising the rejection
+// path in the service-level deploy stabilisation check.
+type testUndeclaredComputedFieldResource struct {
+	*testExampleResource
+}
+
+func newTestUndeclaredComputedFieldResource() provider.Resource {
+	base := newTestExampleResource().(*testExampleResource)
+	return &testUndeclaredComputedFieldResource{testExampleResource: base}
+}
+
+func (r *testUndeclaredComputedFieldResource) Deploy(
+	ctx context.Context,
+	input *provider.ResourceDeployInput,
+) (*provider.ResourceDeployOutput, error) {
+	return &provider.ResourceDeployOutput{
+		ComputedFieldValues: map[string]*core.MappingNode{
+			"spec.undeclared": core.MappingNodeFromString("should-be-rejected"),
+		},
+	}, nil
+}
+
 // //////////////////////////////////////
 // Spec transformer
 // //////////////////////////////////////
@@ -435,4 +458,3 @@ func (l *testExampleAbstractLink) GetCardinality(
 ) (*transform.AbstractLinkGetCardinalityOutput, error) {
 	return &transform.AbstractLinkGetCardinalityOutput{}, nil
 }
-

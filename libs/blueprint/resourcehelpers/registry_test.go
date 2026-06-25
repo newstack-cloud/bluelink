@@ -12,6 +12,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/mockclock"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/specmerge"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	. "gopkg.in/check.v1"
@@ -32,7 +33,8 @@ func (s *RegistryTestSuite) SetUpTest(c *C) {
 	providers := map[string]provider.Provider{
 		"test": &testProvider{
 			resources: map[string]provider.Resource{
-				"test/exampleResource": testRes,
+				"test/exampleResource":                 testRes,
+				"test/undeclaredComputedFieldResource": newTestUndeclaredComputedFieldResource(),
 			},
 			namespace: "test",
 		},
@@ -195,6 +197,68 @@ func (s *RegistryTestSuite) Test_deploy_resource(c *C) {
 			"spec.id": core.MappingNodeFromString("test-example-resource-item-id-1"),
 		},
 	})
+}
+
+func (s *RegistryTestSuite) Test_deploy_resource_accepts_computed_field_omitted_from_caller_changes(c *C) {
+	deployInput := &provider.ResourceDeployInput{
+		InstanceID: "test-blueprint-id",
+		ResourceID: "test-resource-id",
+		Changes: &provider.Changes{
+			AppliedResourceInfo: provider.ResourceInfo{
+				ResourceID:               "test-resource-id",
+				ResourceName:             "testResource",
+				InstanceID:               "test-blueprint-id",
+				ResourceWithResolvedSubs: &provider.ResolvedResource{},
+			},
+			// The caller did not declare spec.id up front, but the resource's spec
+			// definition declares it as computed, so the deployed value is accepted.
+			ComputedFields: []string{},
+		},
+	}
+
+	output, err := s.resourceRegistry.Deploy(
+		context.TODO(),
+		"test/exampleResource",
+		&provider.ResourceDeployServiceInput{
+			DeployInput:     deployInput,
+			WaitUntilStable: true,
+		},
+	)
+	c.Assert(err, IsNil)
+	c.Assert(output, DeepEquals, &provider.ResourceDeployOutput{
+		ComputedFieldValues: map[string]*core.MappingNode{
+			"spec.id": core.MappingNodeFromString("test-example-resource-item-id-1"),
+		},
+	})
+}
+
+func (s *RegistryTestSuite) Test_deploy_resource_rejects_computed_field_not_declared_in_schema(c *C) {
+	deployInput := &provider.ResourceDeployInput{
+		InstanceID: "test-blueprint-id",
+		ResourceID: "test-resource-id",
+		Changes: &provider.Changes{
+			AppliedResourceInfo: provider.ResourceInfo{
+				ResourceID:               "test-resource-id",
+				ResourceName:             "testResource",
+				InstanceID:               "test-blueprint-id",
+				ResourceWithResolvedSubs: &provider.ResolvedResource{},
+			},
+			ComputedFields: []string{},
+		},
+	}
+
+	_, err := s.resourceRegistry.Deploy(
+		context.TODO(),
+		"test/undeclaredComputedFieldResource",
+		&provider.ResourceDeployServiceInput{
+			DeployInput:     deployInput,
+			WaitUntilStable: true,
+		},
+	)
+	c.Assert(err, NotNil)
+	runErr, isRunErr := err.(*errors.RunError)
+	c.Assert(isRunErr, Equals, true)
+	c.Assert(runErr.ReasonCode, Equals, specmerge.ErrorReasonCodeUnexpectedComputedField)
 }
 
 func (s *RegistryTestSuite) Test_look_up_resource_in_state_by_external_id(c *C) {

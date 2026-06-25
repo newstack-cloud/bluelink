@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
@@ -70,10 +71,12 @@ func (d *defaultLinkDeployer) Deploy(
 	resourceAInfo := getResourceInfoFromStateForLinkDeployment(
 		deployCtx.InstanceStateSnapshot,
 		linkDependencyInfo.resourceAName,
+		getResolvedResourceFromInputChanges(deployCtx.InputChanges, linkDependencyInfo.resourceAName),
 	)
 	resourceBInfo := getResourceInfoFromStateForLinkDeployment(
 		deployCtx.InstanceStateSnapshot,
 		linkDependencyInfo.resourceBName,
+		getResolvedResourceFromInputChanges(deployCtx.InputChanges, linkDependencyInfo.resourceBName),
 	)
 
 	var currentLinkState *state.LinkState
@@ -1032,6 +1035,7 @@ func (d *defaultLinkDeployer) createLinkUpdatingIntermediaryResourcesMessage(
 func getResourceInfoFromStateForLinkDeployment(
 	instanceState *state.InstanceState,
 	resourceName string,
+	resolvedResource *provider.ResolvedResource,
 ) *provider.ResourceInfo {
 	resourceState := getResourceStateByName(instanceState, resourceName)
 	if resourceState == nil {
@@ -1039,11 +1043,28 @@ func getResourceInfoFromStateForLinkDeployment(
 	}
 
 	return &provider.ResourceInfo{
-		ResourceID:           resourceState.ResourceID,
-		ResourceName:         resourceName,
-		InstanceID:           instanceState.InstanceID,
-		CurrentResourceState: resourceState,
+		ResourceID:               resourceState.ResourceID,
+		ResourceName:             resourceName,
+		InstanceID:               instanceState.InstanceID,
+		CurrentResourceState:     resourceState,
+		ResourceWithResolvedSubs: resolvedResource,
 	}
+}
+
+func getResolvedResourceFromInputChanges(
+	inputChanges *changes.BlueprintChanges,
+	resourceName string,
+) *provider.ResolvedResource {
+	if inputChanges == nil {
+		return nil
+	}
+	if resourceChanges, ok := inputChanges.NewResources[resourceName]; ok {
+		return resourceChanges.AppliedResourceInfo.ResourceWithResolvedSubs
+	}
+	if resourceChanges, ok := inputChanges.ResourceChanges[resourceName]; ok {
+		return resourceChanges.AppliedResourceInfo.ResourceWithResolvedSubs
+	}
+	return nil
 }
 
 func createLinkDeployResult(
