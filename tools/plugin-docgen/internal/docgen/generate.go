@@ -118,6 +118,8 @@ func generateProviderDocs(
 		return nil, err
 	}
 
+	correlateReferenceActivation(docsForResources, docsForLinks)
+
 	docs := &PluginDocs{
 		ID:               pluginID,
 		DisplayName:      metadata.DisplayName,
@@ -188,6 +190,8 @@ func generateTransformerDocs(
 	if err != nil {
 		return nil, err
 	}
+
+	correlateReferenceActivation(docsForAbstractResources, docsForAbstractLinks)
 
 	docs := &PluginDocs{
 		ID:                pluginID,

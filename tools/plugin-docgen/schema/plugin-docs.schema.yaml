@@ -223,6 +223,12 @@ $defs:
       mustRecreate:
         type: boolean
         description: Change triggers resource recreation
+      activatesLinkOnReference:
+        type: boolean
+        description: >-
+          This field is a link "wiring slot": placing a reference to another
+          resource here activates the registered link between the two resource
+          types, so no linkSelector is required.
       default:
         description: Default value
       examples:
@@ -307,6 +313,9 @@ $defs:
       cardinalityB:
         $ref: "#/$defs/linkCardinality"
         description: How many A resources may link to each B.
+      referenceActivation:
+        $ref: "#/$defs/linkReferenceActivation"
+        description: Reference-based activation info; absent when the link is selector-only.
       annotationDefinitions:
         type: object
         additionalProperties:
@@ -338,10 +347,29 @@ $defs:
       cardinalityB:
         $ref: "#/$defs/linkCardinality"
         description: How many A abstract resources may link to each B.
+      referenceActivation:
+        $ref: "#/$defs/linkReferenceActivation"
+        description: Reference-based activation info; absent when the link is selector-only.
       annotationDefinitions:
         type: object
         additionalProperties:
           $ref: "#/$defs/linkAnnotation"
+
+  linkReferenceActivation:
+    type: object
+    description: >-
+      Present when this link is activated by a reference placed at a wiring-slot
+      field, rather than by a linkSelector. Reference the linked resource at one
+      of fieldPaths on resourceType to activate the link.
+    properties:
+      resourceType:
+        type: string
+        description: The resource type (resourceTypeA) that carries the wiring-slot field(s).
+      fieldPaths:
+        type: array
+        items:
+          type: string
+        description: Wiring-slot field paths on resourceType (e.g. "targets[].arn").
 
   linkCardinality:
     type: object

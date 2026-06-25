@@ -80,14 +80,15 @@ type PluginDocResourceSpec struct {
 }
 
 type PluginDocResourceSpecSchema struct {
-	Type         string              `json:"type"`
-	Label        string              `json:"label"`
-	Description  string              `json:"description"`
-	Nullable     bool                `json:"nullable"`
-	Computed     bool                `json:"computed"`
-	MustRecreate bool                `json:"mustRecreate"`
-	Default      *core.MappingNode   `json:"default,omitempty"`
-	Examples     []*core.MappingNode `json:"examples,omitempty"`
+	Type                     string              `json:"type"`
+	Label                    string              `json:"label"`
+	Description              string              `json:"description"`
+	Nullable                 bool                `json:"nullable"`
+	Computed                 bool                `json:"computed"`
+	MustRecreate             bool                `json:"mustRecreate"`
+	ActivatesLinkOnReference bool                `json:"activatesLinkOnReference,omitempty"`
+	Default                  *core.MappingNode   `json:"default,omitempty"`
+	Examples                 []*core.MappingNode `json:"examples,omitempty"`
 
 	// Validation constraints
 	Minimum       *core.ScalarValue   `json:"minimum,omitempty"`
@@ -127,6 +128,14 @@ type PluginDocsLink struct {
 	AnnotationDefinitions map[string]*PluginDocsLinkAnnotationDefinition `json:"annotationDefinitions"`
 	CardinalityA          *PluginDocsLinkCardinality                     `json:"cardinalityA,omitempty"`
 	CardinalityB          *PluginDocsLinkCardinality                     `json:"cardinalityB,omitempty"`
+	ReferenceActivation   *PluginDocsLinkReferenceActivation             `json:"referenceActivation,omitempty"`
+}
+
+// PluginDocsLinkReferenceActivation is set when a link is activated by a
+// reference placed at a wiring-slot field rather than by a linkSelector.
+type PluginDocsLinkReferenceActivation struct {
+	ResourceType string   `json:"resourceType"`
+	FieldPaths   []string `json:"fieldPaths"`
 }
 
 type PluginDocsLinkAnnotationDefinition struct {

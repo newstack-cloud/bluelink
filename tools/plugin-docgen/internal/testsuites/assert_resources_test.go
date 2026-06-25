@@ -62,6 +62,7 @@ func assertPluginDocResourceSpecSchemasEqual(
 	testSuite.Equal(expected.Nullable, actual.Nullable)
 	testSuite.Equal(expected.Computed, actual.Computed)
 	testSuite.Equal(expected.MustRecreate, actual.MustRecreate)
+	testSuite.Equal(expected.ActivatesLinkOnReference, actual.ActivatesLinkOnReference)
 	assertMappingNodeEqual(
 		expected.Default,
 		actual.Default,

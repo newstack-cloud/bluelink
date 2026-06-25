@@ -29,10 +29,11 @@ func lambdaFunctionResourceSpec() *provider.ResourceDefinitionsSchema {
 		Description: "The definition of an AWS Lambda function.",
 		Attributes: map[string]*provider.ResourceDefinitionsSchema{
 			"functionName": {
-				Type:        provider.ResourceDefinitionsSchemaTypeString,
-				Description: "The name of the Lambda function stored in the AWS system.",
-				Computed:    false,
-				Nullable:    false,
+				Type:                     provider.ResourceDefinitionsSchemaTypeString,
+				Description:              "The name of the Lambda function stored in the AWS system.",
+				Computed:                 false,
+				Nullable:                 false,
+				ActivatesLinkOnReference: true,
 				Examples: []*core.MappingNode{
 					core.MappingNodeFromString("ProcessOrders"),
 				},

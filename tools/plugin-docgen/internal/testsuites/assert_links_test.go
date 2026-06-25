@@ -21,6 +21,7 @@ func assertPluginDocLinksEqual(
 		testSuite.Equal(expectedLink.Description, actualLink.Description)
 		testSuite.Equal(expectedLink.CardinalityA, actualLink.CardinalityA)
 		testSuite.Equal(expectedLink.CardinalityB, actualLink.CardinalityB)
+		testSuite.Equal(expectedLink.ReferenceActivation, actualLink.ReferenceActivation)
 		assertPluginDocLinkAnnotationDefinitionsEqual(
 			expectedLink.AnnotationDefinitions,
 			actualLink.AnnotationDefinitions,

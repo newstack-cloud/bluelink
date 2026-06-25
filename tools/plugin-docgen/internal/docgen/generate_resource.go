@@ -163,14 +163,15 @@ func convertSpecSchema(
 	}
 
 	convertedSchema := &PluginDocResourceSpecSchema{
-		Type:         string(schema.Type),
-		Label:        schema.Label,
-		Description:  getSchemaDescription(schema.FormattedDescription, schema.Description),
-		Nullable:     schema.Nullable,
-		Computed:     schema.Computed,
-		MustRecreate: schema.MustRecreate,
-		Default:      schema.Default,
-		Examples:     schema.Examples,
+		Type:                     string(schema.Type),
+		Label:                    schema.Label,
+		Description:              getSchemaDescription(schema.FormattedDescription, schema.Description),
+		Nullable:                 schema.Nullable,
+		Computed:                 schema.Computed,
+		MustRecreate:             schema.MustRecreate,
+		ActivatesLinkOnReference: schema.ActivatesLinkOnReference,
+		Default:                  schema.Default,
+		Examples:                 schema.Examples,
 		// Validation constraints
 		Minimum:       schema.Minimum,
 		Maximum:       schema.Maximum,

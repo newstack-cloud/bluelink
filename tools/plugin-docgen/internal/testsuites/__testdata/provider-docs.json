@@ -125,6 +125,7 @@
               "nullable": false,
               "computed": false,
               "mustRecreate": false,
+              "activatesLinkOnReference": true,
               "examples": ["ProcessOrders"]
             },
             "mapField": {
@@ -274,6 +275,10 @@
       "cardinalityB": {
         "min": 1,
         "max": 0
+      },
+      "referenceActivation": {
+        "resourceType": "test/lambda/function",
+        "fieldPaths": ["functionName"]
       },
       "annotationDefinitions": {
         "test/lambda/function::aws.lambda.dynamodb.accessTables": {
