@@ -457,6 +457,56 @@ func (s *MappingPathsTestSuite) Test_inject_value_appends_missing_scalar_array_i
 	s.Assert().Equal(MappingNodeFromString(arn), value)
 }
 
+func (s *MappingPathsTestSuite) Test_get_value_by_path_with_compound_array_selector() {
+	// Two array items share the "function" attribute, so neither attribute alone is
+	// unique; the compound selector targets the item by "function" AND "event".
+	node := fixtureCompoundSelectorNode()
+	path := "$.lambdaConfigurations[@.function = \"arn:fn\" && @.event = \"s3:ObjectRemoved:*\"].event"
+	value, err := GetPathValue(path, node, 10)
+	s.Require().NoError(err)
+	s.Assert().Equal(MappingNodeFromString("s3:ObjectRemoved:*"), value)
+}
+
+func (s *MappingPathsTestSuite) Test_inject_value_with_compound_array_selector() {
+	node := fixtureCompoundSelectorNode()
+	// Replace the (function=arn:fn, event=ObjectCreated) item's filter via the compound key.
+	path := "$.lambdaConfigurations[@.function = \"arn:fn\" && @.event = \"s3:ObjectCreated:*\"].filterPrefix"
+	err := InjectPathValue(path, MappingNodeFromString("incoming/"), node, 10)
+	s.Require().NoError(err)
+
+	value, err := GetPathValue(path, node, 10)
+	s.Require().NoError(err)
+	s.Assert().Equal(MappingNodeFromString("incoming/"), value)
+
+	// The sibling item (same function, different event) is left untouched.
+	other, err := GetPathValue(
+		"$.lambdaConfigurations[@.function = \"arn:fn\" && @.event = \"s3:ObjectRemoved:*\"].filterPrefix",
+		node,
+		10,
+	)
+	s.Require().NoError(err)
+	s.Assert().Nil(other)
+}
+
+func fixtureCompoundSelectorNode() *MappingNode {
+	return &MappingNode{
+		Fields: map[string]*MappingNode{
+			"lambdaConfigurations": {
+				Items: []*MappingNode{
+					{Fields: map[string]*MappingNode{
+						"function": MappingNodeFromString("arn:fn"),
+						"event":    MappingNodeFromString("s3:ObjectCreated:*"),
+					}},
+					{Fields: map[string]*MappingNode{
+						"function": MappingNodeFromString("arn:fn"),
+						"event":    MappingNodeFromString("s3:ObjectRemoved:*"),
+					}},
+				},
+			},
+		},
+	}
+}
+
 func TestMappingPathsTestSuite(t *testing.T) {
 	suite.Run(t, new(MappingPathsTestSuite))
 }

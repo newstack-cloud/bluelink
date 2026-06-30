@@ -251,7 +251,7 @@ func injectIntoItemsWithSelector(
 	if targetItemIndex < 0 {
 		// A scalar selector ("[@ = \"x\"]") fully describes the item to inject (the
 		// value is the item itself), so a missing item can be appended.
-		if pathItem.arrayItemSelector.key == "" && i == len(parsedPath)-1 {
+		if pathItem.arrayItemSelector.isScalar() && i == len(parsedPath)-1 {
 			target.Items = append(target.Items, valueToInject)
 			return len(target.Items) - 1
 		}
@@ -268,28 +268,30 @@ func injectIntoItemsWithSelector(
 
 func objectHasPropertyWithValue(selector *arrayItemSelector) func(*MappingNode) bool {
 	return func(item *MappingNode) bool {
-		// An empty key is a scalar selector. Match the array item by its own value
+		// A scalar selector matches the array item by its own value
 		// (e.g. "[@ = \"x\"]" against an array of strings).
-		if selector.key == "" {
-			return StringValue(item) == selector.value
+		if selector.isScalar() {
+			return StringValue(item) == selector.conditions[0].value
 		}
 
 		if item.Fields == nil {
 			return false
 		}
 
-		value, exists := item.Fields[selector.key]
-		if !exists {
-			return false
-		}
-		// Only string matching is supported for now,
-		// the path parser will need to be updated
-		// to support other types of values if needed in the future.
-		if StringValue(value) == selector.value {
-			return true
+		// Every condition must hold (AND semantics) for the item to match.
+		for _, condition := range selector.conditions {
+			value, exists := item.Fields[condition.key]
+			if !exists {
+				return false
+			}
+			// Only string matching is supported for now, the path parser will need to be
+			// updated to support other types of values if needed in the future.
+			if StringValue(value) != condition.value {
+				return false
+			}
 		}
 
-		return false
+		return true
 	}
 }
 
@@ -459,10 +461,24 @@ type pathItem struct {
 }
 
 type arrayItemSelector struct {
-	// key is the object attribute to match on; an empty key means the selector
-	// matches a scalar array item by its own value ("[@ = \"<value>\"]").
+	// conditions are matched against an array item with AND semantics: an item is
+	// selected only when every condition holds. A single condition with an empty key is
+	// a scalar selector that matches an array item by its own value ("[@ = \"<value>\"]");
+	// otherwise each condition matches an object attribute ("[@.<key> = \"<value>\"]"),
+	// and multiple conditions are joined with "&&" to target an item by a composite key
+	// ("[@.<k1> = \"<v1>\" && @.<k2> = \"<v2>\"]").
+	conditions []arrayItemSelectorCondition
+}
+
+type arrayItemSelectorCondition struct {
 	key   string
 	value string
+}
+
+// Reports whether the selector matches a scalar array item by its own value,
+// i.e. a single condition with an empty key ("[@ = \"<value>\"]").
+func (s *arrayItemSelector) isScalar() bool {
+	return len(s.conditions) == 1 && s.conditions[0].key == ""
 }
 
 func parsePath(path string, allowPatterns bool) ([]*pathItem, error) {
@@ -746,44 +762,27 @@ func (p *pathParser) selector() *pathItem {
 	// Consume the opening bracket.
 	p.advance()
 
-	// There can be white space before the "@" character in a selector.
-	p.consumeWhiteSpace()
-
-	if !p.match('@') {
+	condition := p.selectorCondition()
+	if condition == nil {
 		p.backtrack()
 		return nil
 	}
+	conditions := []arrayItemSelectorCondition{*condition}
 
-	// There can be white space after the "@" character (before "." or "=").
-	p.consumeWhiteSpace()
-
-	// An optional ".name" makes this an object-attribute selector; without it the
-	// selector matches a scalar array item by its own value (key stays empty).
-	name := ""
-	if p.match('.') {
-		parsedName := p.name()
-		if parsedName == nil {
+	// Additional conditions are joined with "&&" to form a composite selector that
+	// targets an item by more than one attribute, e.g.
+	// "[@.<k1> = \"<v1>\" && @.<k2> = \"<v2>\"]".
+	for {
+		p.consumeWhiteSpace()
+		if !p.matchDoubleAmpersand() {
+			break
+		}
+		next := p.selectorCondition()
+		if next == nil {
 			p.backtrack()
 			return nil
 		}
-		name = *parsedName
-
-		// There can be white space before the "=" character in a selector.
-		p.consumeWhiteSpace()
-	}
-
-	if !p.match('=') {
-		p.backtrack()
-		return nil
-	}
-
-	// There can be white space before the string literal in a selector.
-	p.consumeWhiteSpace()
-
-	stringLiteral := p.stringLiteral()
-	if stringLiteral == nil {
-		p.backtrack()
-		return nil
+		conditions = append(conditions, *next)
 	}
 
 	// There can be white space before the closing bracket in a selector.
@@ -796,11 +795,65 @@ func (p *pathParser) selector() *pathItem {
 
 	p.popPos()
 	return &pathItem{
-		arrayItemSelector: &arrayItemSelector{
-			key:   name,
-			value: *stringLiteral,
-		},
+		arrayItemSelector: &arrayItemSelector{conditions: conditions},
 	}
+}
+
+// Parses a single "@.<name> = \"<value>\"" condition (or the scalar
+// "@ = \"<value>\"" form, where the key stays empty). It does not manage backtracking; the
+// caller owns the saved position and reverts on a nil result.
+func (p *pathParser) selectorCondition() *arrayItemSelectorCondition {
+	// There can be white space before the "@" character in a condition.
+	p.consumeWhiteSpace()
+
+	if !p.match('@') {
+		return nil
+	}
+
+	// There can be white space after the "@" character (before "." or "=").
+	p.consumeWhiteSpace()
+
+	// An optional ".name" makes this an object-attribute condition; without it the
+	// condition matches a scalar array item by its own value (key stays empty).
+	name := ""
+	if p.match('.') {
+		parsedName := p.name()
+		if parsedName == nil {
+			return nil
+		}
+		name = *parsedName
+
+		// There can be white space before the "=" character in a condition.
+		p.consumeWhiteSpace()
+	}
+
+	if !p.match('=') {
+		return nil
+	}
+
+	// There can be white space before the string literal in a condition.
+	p.consumeWhiteSpace()
+
+	stringLiteral := p.stringLiteral()
+	if stringLiteral == nil {
+		return nil
+	}
+
+	return &arrayItemSelectorCondition{key: name, value: *stringLiteral}
+}
+
+func (p *pathParser) matchDoubleAmpersand() bool {
+	if p.peek() != '&' {
+		return false
+	}
+	save := p.pos
+	p.advance()
+	if p.peek() != '&' {
+		p.pos = save
+		return false
+	}
+	p.advance()
+	return true
 }
 
 func (p *pathParser) consumeWhiteSpace() {
