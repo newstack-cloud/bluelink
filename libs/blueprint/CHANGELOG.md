@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.51.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.50.0...blueprint/v0.51.0) (2026-06-30)
+
+
+### Features
+
+* **blueprint:** add support for querying arrays by multiple values ([6bcb327](https://github.com/newstack-cloud/bluelink/commit/6bcb3275d75e978fe3a4ed24e4735c3ba59c5bc6))
+
 ## [0.50.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.49.0...blueprint/v0.50.0) (2026-06-25)
 
 
