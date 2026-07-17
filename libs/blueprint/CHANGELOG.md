@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.51.1](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.51.0...blueprint/v0.51.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* **blueprint:** add fix to make sure abstract namespaces do not cause hard failures ([385ef27](https://github.com/newstack-cloud/bluelink/commit/385ef2799ed6fbd542233725c0ad707df4a5fed8))
+* **blueprint:** add fix to prevent infinite recursion for self-referential schemas ([169386b](https://github.com/newstack-cloud/bluelink/commit/169386b0d0ad30cb0b94c67793ee38e3f3278c37))
+* **blueprint:** add transformer provider adapter for resource resolution ([bb98e0e](https://github.com/newstack-cloud/bluelink/commit/bb98e0eb6e56bb9c320d4dd5acaedec02f3296f4))
+* **blueprint:** make sure loader does not discard transformed blueprints ([40ab4dc](https://github.com/newstack-cloud/bluelink/commit/40ab4dc22a8c7713d9a9df4c09c91c4915964e42))
+* **blueprint:** makes sure original nil values are preserved in sub walk ([21f2981](https://github.com/newstack-cloud/bluelink/commit/21f2981c28c87c339980015562c16f36168b832f))
+
 ## [0.51.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.50.0...blueprint/v0.51.0) (2026-06-30)
 
 
