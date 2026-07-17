@@ -39,6 +39,7 @@ type LoaderTestSuite struct {
 
 const (
 	validServerlessBlueprintName = "valid-serverless"
+	validCelerityBlueprintName   = "valid-celerity"
 )
 
 func (s *LoaderTestSuite) SetupSuite() {
@@ -49,6 +50,7 @@ func (s *LoaderTestSuite) SetupSuite() {
 		"invalid-schema":              "__testdata/loader/invalid-schema-blueprint.yml",
 		"unsupported-var-type":        "__testdata/loader/unsupported-var-type-blueprint.yml",
 		validServerlessBlueprintName:  "__testdata/loader/valid-serverless-blueprint.yml",
+		validCelerityBlueprintName:    "__testdata/loader/valid-celerity-blueprint.yml",
 		"missing-transform":           "__testdata/loader/missing-transform-blueprint.yml",
 		"cyclic-ref":                  "__testdata/loader/cyclic-ref-blueprint.yml",
 		"cyclic-ref-2":                "__testdata/loader/cyclic-ref-2-blueprint.yml",
@@ -101,6 +103,7 @@ func (s *LoaderTestSuite) SetupSuite() {
 	}
 	specTransformers := map[string]transform.SpecTransformer{
 		"serverless-2024": &internal.ServerlessTransformer{},
+		"celerity-2026":   &internal.CelerityTransformer{},
 	}
 	s.specTransformers = specTransformers
 	logger := core.NewNopLogger()
@@ -259,6 +262,57 @@ func (s *LoaderTestSuite) Test_loads_and_transforms_input_blueprint_validating_a
 	container, err := s.loaderValidateAfterTransform.Load(context.TODO(), s.specFixtureFiles[validServerlessBlueprintName], createParams())
 	s.Require().NoError(err)
 	s.Assert().NotNil(container)
+}
+
+func (s *LoaderTestSuite) Test_load_produces_container_with_the_transformed_blueprint() {
+	container, err := s.loader.Load(context.TODO(), s.specFixtureFiles[validServerlessBlueprintName], createParams())
+	s.Require().NoError(err)
+
+	// The container must hold the transformer's output, staging changes or
+	// deploying the pre-transform blueprint would fail as abstract resource
+	// types have no deployable implementation.
+	loadedSchema := container.BlueprintSpec().Schema()
+	s.Require().NotNil(loadedSchema.Resources)
+	resource, hasResource := loadedSchema.Resources.Values["saveOrderFunction"]
+	s.Require().True(hasResource)
+	s.Require().NotNil(resource.Type)
+	s.Assert().Equal("aws/lambda/function", resource.Type.Value)
+}
+
+func (s *LoaderTestSuite) Test_loads_and_transforms_blueprint_with_non_provider_prefix_abstract_resource() {
+	container, err := s.loader.Load(context.TODO(), s.specFixtureFiles[validCelerityBlueprintName], createParams())
+	s.Require().NoError(err)
+
+	loadedSchema := container.BlueprintSpec().Schema()
+	s.Require().NotNil(loadedSchema.Resources)
+	resource, hasResource := loadedSchema.Resources.Values["saveOrderHandler"]
+	s.Require().True(hasResource)
+	s.Require().NotNil(resource.Type)
+	s.Assert().Equal("aws/lambda/function", resource.Type.Value)
+}
+
+func (s *LoaderTestSuite) Test_validates_blueprint_with_non_provider_prefix_abstract_resource_without_transforming() {
+	// Validation-only hosts (e.g. a language server) load blueprints with
+	// spec transformation disabled, so the link info engine must be able to
+	// resolve abstract resource types through transformers instead of
+	// failing on a namespace that has no registered provider.
+	loaderNoTransform := NewDefaultLoader(
+		s.providersWithoutCore,
+		s.specTransformers,
+		/* stateContainer */ nil,
+		newFSChildResolver(),
+		WithLoaderTransformSpec(false),
+		WithLoaderRefChainCollectorFactory(refgraph.NewRefChainCollector),
+		WithLoaderLogger(s.logger),
+	)
+
+	validationRes, err := loaderNoTransform.Validate(
+		context.TODO(),
+		s.specFixtureFiles[validCelerityBlueprintName],
+		createParams(),
+	)
+	s.Require().NoError(err)
+	s.Assert().NotNil(validationRes)
 }
 
 func (s *LoaderTestSuite) Test_validates_spec_from_input_schema_without_any_issues() {

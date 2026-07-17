@@ -652,7 +652,12 @@ func (l *defaultLoader) loadSpecAndLinkInfo(
 		), loadSpecRes.diagnostics, err
 	}
 
-	resourceTypeProviderMap := createResourceTypeProviderMap(loadSpecRes.spec, l.providers)
+	resourceTypeProviderMap := createResourceTypeProviderMap(
+		ctx,
+		loadSpecRes.spec,
+		l.providers,
+		l.specTransformers,
+	)
 	linkInfo, err := links.NewDefaultLinkInfoProvider(
 		resourceTypeProviderMap,
 		l.linkRegistry,
@@ -1014,7 +1019,7 @@ func (l *defaultLoader) loadSpec(
 	}
 
 	l.logger.Info("Validating and applying blueprint transforms")
-	transformers, transformDiagnostics, err := l.validateAndApplyTransforms(
+	transformers, transformedSchema, transformDiagnostics, err := l.validateAndApplyTransforms(
 		ctx,
 		blueprintSchema,
 		valCtx,
@@ -1034,8 +1039,10 @@ func (l *defaultLoader) loadSpec(
 		// Validate after transformations to help with catching bugs in transformer implementations.
 		// This ultimately prevents transformers from expanding their abstractions into invalid
 		// representations of the lower level resources.
+		postTransformValCtx := *valCtx
+		postTransformValCtx.BpSchema = transformedSchema
 		var resourceDiagnostics []*bpcore.Diagnostic
-		resourceDiagnostics, err = l.validateResources(ctx, valCtx)
+		resourceDiagnostics, err = l.validateResources(ctx, &postTransformValCtx)
 		diagnostics = append(diagnostics, resourceDiagnostics...)
 		if err != nil {
 			validationErrors = append(validationErrors, err)
@@ -1044,14 +1051,14 @@ func (l *defaultLoader) loadSpec(
 
 	if len(validationErrors) > 0 {
 		return &loadSpecResult{
-			spec:              speccore.BlueprintSpecFromSchema(blueprintSchema),
+			spec:              speccore.BlueprintSpecFromSchema(transformedSchema),
 			diagnostics:       diagnostics,
 			declaredLinkGraph: declaredLinkGraph,
 		}, validation.ErrMultipleValidationErrors(validationErrors)
 	}
 
 	return &loadSpecResult{
-		spec:              speccore.BlueprintSpecFromSchema(blueprintSchema),
+		spec:              speccore.BlueprintSpecFromSchema(transformedSchema),
 		diagnostics:       diagnostics,
 		declaredLinkGraph: declaredLinkGraph,
 	}, nil
@@ -1062,7 +1069,7 @@ func (l *defaultLoader) validateAndApplyTransforms(
 	blueprintSchema *schema.Blueprint,
 	valCtx *validation.ValidationContext,
 	declaredLinkGraph linktypes.DeclaredLinkGraph,
-) (map[string]transform.SpecTransformer, []*bpcore.Diagnostic, error) {
+) (map[string]transform.SpecTransformer, *schema.Blueprint, []*bpcore.Diagnostic, error) {
 	// Apply some validation to get diagnostics about non-standard transformers
 	// that may not be present at runtime.
 	var transformDiagnostics []*bpcore.Diagnostic
@@ -1075,14 +1082,14 @@ func (l *defaultLoader) validateAndApplyTransforms(
 
 	if !l.transformSpec {
 		if len(validationErrors) > 0 {
-			return nil, transformDiagnostics, validation.ErrMultipleValidationErrors(validationErrors)
+			return nil, blueprintSchema, transformDiagnostics, validation.ErrMultipleValidationErrors(validationErrors)
 		}
-		return nil, transformDiagnostics, nil
+		return nil, blueprintSchema, transformDiagnostics, nil
 	}
 
 	transformers, err := l.collectTransformers(blueprintSchema)
 	if err != nil {
-		return nil, transformDiagnostics, validation.ErrMultipleValidationErrors(
+		return nil, blueprintSchema, transformDiagnostics, validation.ErrMultipleValidationErrors(
 			append(validationErrors, err),
 		)
 	}
@@ -1103,7 +1110,7 @@ func (l *defaultLoader) validateAndApplyTransforms(
 		)
 		transformDiagnostics = append(transformDiagnostics, validateLinksDiagnostics...)
 		if err != nil {
-			return transformers, transformDiagnostics, validation.ErrMultipleValidationErrors(
+			return transformers, currentBlueprintSchema, transformDiagnostics, validation.ErrMultipleValidationErrors(
 				append(validationErrors, err),
 			)
 		}
@@ -1114,7 +1121,7 @@ func (l *defaultLoader) validateAndApplyTransforms(
 			TransformerContext: transformerCtx,
 		})
 		if err != nil {
-			return transformers, transformDiagnostics, validation.ErrMultipleValidationErrors(
+			return transformers, currentBlueprintSchema, transformDiagnostics, validation.ErrMultipleValidationErrors(
 				append(validationErrors, err),
 			)
 		}
@@ -1122,10 +1129,12 @@ func (l *defaultLoader) validateAndApplyTransforms(
 			transformDiagnostics = append(transformDiagnostics, output.Diagnostics...)
 		}
 
-		currentBlueprintSchema = output.TransformedBlueprint
+		if output != nil && output.TransformedBlueprint != nil {
+			currentBlueprintSchema = output.TransformedBlueprint
+		}
 	}
 
-	return transformers, transformDiagnostics, nil
+	return transformers, currentBlueprintSchema, transformDiagnostics, nil
 }
 
 func (l *defaultLoader) validateTransformerLinks(
