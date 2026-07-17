@@ -189,21 +189,29 @@ func (l *defaultSpecLinkInfo) activatingSlotsForType(
 	}
 
 	if output != nil && output.SpecDefinition != nil {
-		collectActivatingSlots(output.SpecDefinition.Schema, "", slots)
+		visited := map[*provider.ResourceDefinitionsSchema]bool{}
+		collectActivatingSlots(output.SpecDefinition.Schema, "", slots, visited)
 	}
 
 	l.activatingSlotCache[resourceType] = slots
 	return slots, nil
 }
 
+// visited tracks the schemas on the current traversal path so that
+// self-referential schema definitions (e.g. an "any JSON" schema that nests
+// itself under Items or OneOf) terminate instead of recursing indefinitely,
+// while still allowing a non-cyclic schema to be reused under multiple paths.
 func collectActivatingSlots(
 	schema *provider.ResourceDefinitionsSchema,
 	path string,
 	out map[string]bool,
+	visited map[*provider.ResourceDefinitionsSchema]bool,
 ) {
-	if schema == nil {
+	if schema == nil || visited[schema] {
 		return
 	}
+	visited[schema] = true
+	defer delete(visited, schema)
 
 	if schema.ActivatesLinkOnReference && path != "" {
 		out[path] = true
@@ -214,15 +222,15 @@ func collectActivatingSlots(
 		if path != "" {
 			attrPath = fmt.Sprintf("%s.%s", path, attrName)
 		}
-		collectActivatingSlots(attr, attrPath, out)
+		collectActivatingSlots(attr, attrPath, out, visited)
 	}
 
 	if schema.Items != nil {
-		collectActivatingSlots(schema.Items, fmt.Sprintf("%s[]", path), out)
+		collectActivatingSlots(schema.Items, fmt.Sprintf("%s[]", path), out, visited)
 	}
 
 	for _, oneOf := range schema.OneOf {
-		collectActivatingSlots(oneOf, path, out)
+		collectActivatingSlots(oneOf, path, out, visited)
 	}
 }
 
