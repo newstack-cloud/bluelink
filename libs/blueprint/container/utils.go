@@ -17,6 +17,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/speccore"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/subengine"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/validation"
 )
 
@@ -437,8 +438,10 @@ func createContextVarsForChildBlueprint(
 }
 
 func createResourceTypeProviderMap(
+	ctx context.Context,
 	blueprintSpec speccore.BlueprintSpec,
 	providers map[string]provider.Provider,
+	transformers map[string]transform.SpecTransformer,
 ) map[string]provider.Provider {
 	resourceTypeProviderMap := map[string]provider.Provider{}
 	resources := map[string]*schema.Resource{}
@@ -447,10 +450,39 @@ func createResourceTypeProviderMap(
 	}
 
 	for _, resource := range resources {
-		namespace := strings.Split(resource.Type.Value, "/")[0]
-		resourceTypeProviderMap[resource.Type.Value] = providers[namespace]
+		if resource.Type == nil {
+			continue
+		}
+		resourceType := resource.Type.Value
+		namespace := strings.Split(resourceType, "/")[0]
+		if resourceProvider, hasProvider := providers[namespace]; hasProvider {
+			resourceTypeProviderMap[resourceType] = resourceProvider
+			continue
+		}
+		// A resource type prefix that doesn't match a provider namespace may be
+		// a transformer's abstract resource type (e.g. "celerity/handler").
+		// Resource types that match neither are left out of the map so the link
+		// info engine can skip them instead of failing on a nil provider.
+		abstractProvider := findTransformerResourceProvider(ctx, resourceType, transformers)
+		if abstractProvider != nil {
+			resourceTypeProviderMap[resourceType] = abstractProvider
+		}
 	}
 	return resourceTypeProviderMap
+}
+
+func findTransformerResourceProvider(
+	ctx context.Context,
+	resourceType string,
+	transformers map[string]transform.SpecTransformer,
+) provider.Provider {
+	for _, transformer := range transformers {
+		abstractResource, err := transformer.AbstractResource(ctx, resourceType)
+		if err == nil && abstractResource != nil {
+			return newTransformerResourceProvider(transformer)
+		}
+	}
+	return nil
 }
 
 func createResourceProviderMap(
