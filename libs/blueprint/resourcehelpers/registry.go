@@ -354,7 +354,11 @@ func (r *registryFromProviders) hasProviderResourceType(ctx context.Context, res
 	resourceImpl, err := r.getResourceType(ctx, resourceType)
 	if err != nil {
 		if runErr, isRunErr := err.(*errors.RunError); isRunErr {
-			if runErr.ReasonCode == ErrorReasonCodeProviderResourceTypeNotFound {
+			// An unknown namespace must not be treated as a hard failure,
+			// the resource type prefix may belong to a transformer's abstract
+			// resource types (e.g. "celerity/handler") instead of a provider.
+			if runErr.ReasonCode == ErrorReasonCodeProviderResourceTypeNotFound ||
+				runErr.ReasonCode == provider.ErrorReasonCodeItemTypeProviderNotFound {
 				return false, nil
 			}
 		}

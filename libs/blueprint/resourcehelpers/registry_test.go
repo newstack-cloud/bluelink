@@ -46,6 +46,10 @@ func (s *RegistryTestSuite) SetUpTest(c *C) {
 		"celerity-test": &testSpecTransformer{
 			abstractResources: map[string]transform.AbstractResource{
 				"test/exampleAbstractResource": testAbstractRes,
+				// An abstract resource type with a prefix that does not match
+				// any provider namespace, to cover resolution that must fall
+				// back to transformers when the namespace is unknown.
+				"celerity/exampleHandler": newTestExampleAbstractResource(),
 			},
 			abstractLinks: map[string]transform.AbstractLink{
 				"test/exampleAbstractResource::test/exampleAbstractResource": &testExampleAbstractLink{},
@@ -106,6 +110,12 @@ func (s *RegistryTestSuite) Test_has_resource_type(c *C) {
 	hasResourceType, err = s.resourceRegistry.HasResourceType(context.TODO(), "test/otherResource")
 	c.Assert(err, IsNil)
 	c.Assert(hasResourceType, Equals, false)
+}
+
+func (s *RegistryTestSuite) Test_has_resource_type_for_abstract_type_with_non_provider_namespace(c *C) {
+	hasResourceType, err := s.resourceRegistry.HasResourceType(context.TODO(), "celerity/exampleHandler")
+	c.Assert(err, IsNil)
+	c.Assert(hasResourceType, Equals, true)
 }
 
 func (s *RegistryTestSuite) Test_get_type_description(c *C) {
@@ -437,13 +447,25 @@ func (s *RegistryTestSuite) Test_check_missing_resource_in_state_by_external_id_
 	)
 }
 
+func (s *RegistryTestSuite) Test_reports_resource_type_as_missing_for_unknown_namespace(c *C) {
+	// An unknown namespace must not be a hard error for a resource type
+	// existence check, the prefix of a resource type may belong to a
+	// transformer's abstract resource types rather than a provider.
+	hasResourceType, err := s.resourceRegistry.HasResourceType(context.TODO(), "otherProvider/otherResource")
+	c.Assert(err, IsNil)
+	c.Assert(hasResourceType, Equals, false)
+}
+
 func (s *RegistryTestSuite) Test_produces_error_for_missing_provider(c *C) {
-	_, err := s.resourceRegistry.HasResourceType(context.TODO(), "otherProvider/otherResource")
+	_, err := s.resourceRegistry.GetSpecDefinition(
+		context.TODO(),
+		"otherProvider/otherResource",
+		&provider.ResourceGetSpecDefinitionInput{},
+	)
 	c.Assert(err, NotNil)
 	runErr, isRunErr := err.(*errors.RunError)
 	c.Assert(isRunErr, Equals, true)
-	c.Assert(runErr.ReasonCode, Equals, provider.ErrorReasonCodeItemTypeProviderNotFound)
-	c.Assert(runErr.Error(), Equals, "run error: provider or transformer \"otherProvider\" not found for resource type \"otherProvider/otherResource\"")
+	c.Assert(runErr.ReasonCode, Equals, ErrorReasonCodeMultipleRunErrors)
 }
 
 func (s *RegistryTestSuite) Test_resource_locking_behaviour(c *C) {
