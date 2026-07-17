@@ -176,6 +176,41 @@ func (s *WalkTestSuite) Test_walks_preserves_scalar_only_mapping_nodes() {
 	s.Assert().Equal(node.Scalar, out.Scalar)
 }
 
+func (s *WalkTestSuite) Test_walks_preserves_nil_fields_and_items() {
+	// Consumers rely on nil Fields/Items to tell an unresolved reference node
+	// apart from an empty mapping or list, the walker must not normalise
+	// nil to empty.
+	plain := "unresolved-reference"
+	node := &core.MappingNode{
+		StringWithSubstitutions: &substitutions.StringOrSubstitutions{
+			Values: []*substitutions.StringOrSubstitution{
+				{StringValue: &plain},
+			},
+		},
+	}
+
+	out := WalkMappingNode(node, identityVisitor)
+
+	s.Require().NotNil(out)
+	s.Assert().Nil(out.Fields)
+	s.Assert().Nil(out.Items)
+}
+
+func (s *WalkTestSuite) Test_walks_preserves_empty_fields_and_items() {
+	node := &core.MappingNode{
+		Fields: map[string]*core.MappingNode{},
+		Items:  []*core.MappingNode{},
+	}
+
+	out := WalkMappingNode(node, identityVisitor)
+
+	s.Require().NotNil(out)
+	s.Require().NotNil(out.Fields)
+	s.Assert().Len(out.Fields, 0)
+	s.Require().NotNil(out.Items)
+	s.Assert().Len(out.Items, 0)
+}
+
 func (s *WalkTestSuite) Test_walks_visits_substitutions_inside_mapping_node_fields() {
 	leaf := &core.MappingNode{
 		StringWithSubstitutions: &substitutions.StringOrSubstitutions{

@@ -100,6 +100,13 @@ func expandServerlessFunction(
 func removeServerlessTransform(
 	transform *schema.TransformValueWrapper,
 ) *schema.TransformValueWrapper {
+	return removeTransform(transform, ServerlessTransformName)
+}
+
+func removeTransform(
+	transform *schema.TransformValueWrapper,
+	transformName string,
+) *schema.TransformValueWrapper {
 	if transform == nil {
 		return nil
 	}
@@ -107,7 +114,7 @@ func removeServerlessTransform(
 	values := []string{}
 	sourceMeta := []*source.Meta{}
 	for i, value := range transform.Values {
-		if value != ServerlessTransformName {
+		if value != transformName {
 			values = append(values, value)
 			sourceMeta = append(sourceMeta, transform.SourceMeta[i])
 		}

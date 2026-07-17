@@ -1,0 +1,15 @@
+version: 2025-11-02
+transform:
+  - celerity-2026
+resources:
+  ordersTable:
+    type: aws/dynamodb/table
+    description: "Table that stores orders for an application."
+    spec:
+      tableName: "Orders"
+
+  saveOrderHandler:
+    type: celerity/handler
+    description: "Handler that saves an order to the database."
+    spec:
+      handler: "src/saveOrder.handler"

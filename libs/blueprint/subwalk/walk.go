@@ -107,7 +107,10 @@ func WalkMappingNode(
 		return nil
 	}
 
-	newFields := map[string]*core.MappingNode{}
+	// nil and empty must be preserved as distinct values, downstream consumers
+	// use nil Fields/Items to tell an unresolved reference node apart from an
+	// empty mapping or list.
+	var newFields map[string]*core.MappingNode
 	if node.Fields != nil {
 		newFields = make(map[string]*core.MappingNode, len(node.Fields))
 		for k, v := range node.Fields {
@@ -115,7 +118,7 @@ func WalkMappingNode(
 		}
 	}
 
-	newItems := []*core.MappingNode{}
+	var newItems []*core.MappingNode
 	if node.Items != nil {
 		newItems = make([]*core.MappingNode, len(node.Items))
 		for i, item := range node.Items {
