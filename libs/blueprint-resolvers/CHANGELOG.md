@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/newstack-cloud/bluelink/compare/blueprint-resolvers/v0.1.3...blueprint-resolvers/v0.1.4) (2026-07-19)
+
+
+### Dependencies
+
+* **blueprint-resolvers:** bump blueprint lib to 0.51.2 ([af78dd6](https://github.com/newstack-cloud/bluelink/commit/af78dd67915bca0ef2dc065a12512013ba3b108d))
+
 ## [0.1.3](https://github.com/newstack-cloud/bluelink/compare/blueprint-resolvers/v0.1.2...blueprint-resolvers/v0.1.3) (2026-04-19)
 
 
