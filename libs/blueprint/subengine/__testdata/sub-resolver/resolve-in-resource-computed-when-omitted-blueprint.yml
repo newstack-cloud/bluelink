@@ -1,0 +1,26 @@
+version: 2025-11-02
+resources:
+  ordersTable:
+    type: aws/dynamodb/table
+    description: "Table that stores orders, relying on a name computed during deployment."
+    spec:
+      region: "eu-west-1"
+
+  namedOrdersTable:
+    type: aws/dynamodb/table
+    description: "Table that stores orders with an explicit name."
+    spec:
+      tableName: "explicit-orders"
+      region: "eu-west-1"
+
+  saveOrderFunction:
+    type: aws/lambda/function
+    description: "Function that references a table name only known after deployment."
+    spec:
+      handler: "${resources.ordersTable.spec.tableName}"
+
+  saveNamedOrderFunction:
+    type: aws/lambda/function
+    description: "Function that references an explicitly named table."
+    spec:
+      handler: "${resources.namedOrdersTable.spec.tableName}"

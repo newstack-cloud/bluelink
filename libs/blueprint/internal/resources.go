@@ -106,7 +106,8 @@ func (r *DynamoDBTableResource) GetSpecDefinition(
 						Computed: true,
 					},
 					"tableName": {
-						Type: provider.ResourceDefinitionsSchemaTypeString,
+						Type:                provider.ResourceDefinitionsSchemaTypeString,
+						ComputedWhenOmitted: true,
 					},
 					"region": {
 						Type: provider.ResourceDefinitionsSchemaTypeString,

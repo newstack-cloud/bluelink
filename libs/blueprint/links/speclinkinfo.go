@@ -499,9 +499,18 @@ func (l *defaultSpecLinkInfo) connectCandidateIfMeetsConditions(
 		return errMissingLinkImplementation(startLinkResource, candidateLinkedResource)
 	}
 
+	// A label-matched candidate that the start link can not link to
+	// (e.g. no link implementation is registered for the type pair)
+	// must be left untouched; registering it in the link map would exclude it
+	// from standalone resource extraction and it would silently disappear
+	// from the chains used for change staging and deployment.
+	if !candidateLinkCheckInfo.canLinkTo {
+		return nil
+	}
+
 	linkToChainLinkNode, candidateLinkExists := l.linkMap[candidateLinkedResource.Name]
 
-	if candidateLinkExists && candidateLinkCheckInfo.canLinkTo {
+	if candidateLinkExists {
 		// When the candidate already exists and can be linked to by the given start link,
 		// it may have been assigned as a start of a chain
 		// as it could've been added before a resource that links to it.
@@ -522,7 +531,7 @@ func (l *defaultSpecLinkInfo) connectCandidateIfMeetsConditions(
 			// in the clean up process.
 			core.Filter(l.chains, checkLinkHasResourceName(candidateLinkedResource.Name))...,
 		)
-	} else if !candidateLinkExists {
+	} else {
 		linkToChainLinkNode = &ChainLinkNode{
 			ResourceName: candidateLinkedResource.Name,
 			Resource:     candidateLinkedResource.Resource,
@@ -542,8 +551,7 @@ func (l *defaultSpecLinkInfo) connectCandidateIfMeetsConditions(
 		checkLinkHasResourceName(candidateLinkedResource.Name),
 	)) > 0
 
-	if candidateLinkCheckInfo.canLinkTo && !alreadyLinkedTo {
-
+	if !alreadyLinkedTo {
 		startLink.LinksTo = append(startLink.LinksTo, linkToChainLinkNode)
 		alreadyInLinkedFrom := len(core.Filter(
 			linkToChainLinkNode.LinkedFrom,

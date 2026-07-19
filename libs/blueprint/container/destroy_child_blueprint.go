@@ -55,10 +55,23 @@ func (d *defaultChildBlueprintDestroyer) Destroy(
 ) {
 	childState := getChildStateByName(deployCtx.InstanceStateSnapshot, childBlueprintElement.LogicalName())
 	if childState == nil {
-		deployCtx.Channels.ErrChan <- errChildNotFoundInState(
-			childBlueprintElement.LogicalName(),
-			parentInstanceID,
+		// A child blueprint in the removal set with no persisted state was
+		// never deployed (e.g. a previous deploy failed before reaching it),
+		// so there is nothing to destroy. It is reported as destroyed so the
+		// removal process can run to completion for the elements that do
+		// have persisted state.
+		deployCtx.Logger.Info(
+			"skipping destruction for a child blueprint with no persisted state",
 		)
+		deployCtx.Channels.ChildUpdateChan <- ChildDeployUpdateMessage{
+			ParentInstanceID: parentInstanceID,
+			ChildInstanceID:  childBlueprintElement.ID(),
+			ChildName:        childBlueprintElement.LogicalName(),
+			Group:            deployCtx.CurrentGroupIndex,
+			Status:           determineInstanceDestroyedStatus(deployCtx.Rollback),
+			UpdateTimestamp:  core.SystemClock{}.Now().Unix(),
+			MissingFromState: true,
+		}
 		return
 	}
 	destroyChildChanges := getOrCreateChildDestroyChanges(

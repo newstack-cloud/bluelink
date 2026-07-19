@@ -4,7 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/common/testhelpers"
 	"github.com/stretchr/testify/suite"
 )
@@ -53,6 +56,65 @@ func (s *ResourceChangeGeneratorTestSuite) Test_generates_changes_for_new_resour
 
 	err = testhelpers.Snapshot(internal.NormaliseResourceChanges(changes, false /* excludeResourceInfo */))
 	s.Require().NoError(err)
+}
+
+func (s *ResourceChangeGeneratorTestSuite) Test_omitted_computed_when_omitted_field_is_treated_as_computed() {
+	changes, err := s.resourceChangeGenerator.GenerateChanges(
+		context.Background(),
+		s.tableResourceInfo( /* tableName */ nil),
+		&internal.DynamoDBTableResource{},
+		[]string{},
+		nil,
+	)
+	s.Require().NoError(err)
+	s.Contains(changes.ComputedFields, "spec.tableName")
+}
+
+func (s *ResourceChangeGeneratorTestSuite) Test_set_computed_when_omitted_field_is_not_treated_as_computed() {
+	tableName := "explicit-orders"
+	changes, err := s.resourceChangeGenerator.GenerateChanges(
+		context.Background(),
+		// Table name is provided by the user so it should not be treated as computed.
+		s.tableResourceInfo(&tableName),
+		&internal.DynamoDBTableResource{},
+		[]string{},
+		nil,
+	)
+	s.Require().NoError(err)
+	s.NotContains(changes.ComputedFields, "spec.tableName")
+	// The schema-level computed id field must always be present.
+	s.Contains(changes.ComputedFields, "spec.id")
+}
+
+func (s *ResourceChangeGeneratorTestSuite) tableResourceInfo(tableName *string) *provider.ResourceInfo {
+	region := "eu-west-1"
+	specFields := map[string]*core.MappingNode{
+		"region": {
+			Scalar: &core.ScalarValue{
+				StringValue: &region,
+			},
+		},
+	}
+	if tableName != nil {
+		specFields["tableName"] = &core.MappingNode{
+			Scalar: &core.ScalarValue{
+				StringValue: tableName,
+			},
+		}
+	}
+
+	return &provider.ResourceInfo{
+		InstanceID:   "test-instance-1",
+		ResourceName: "ordersTable",
+		ResourceWithResolvedSubs: &provider.ResolvedResource{
+			Type: &schema.ResourceTypeWrapper{
+				Value: "aws/dynamodb/table",
+			},
+			Spec: &core.MappingNode{
+				Fields: specFields,
+			},
+		},
+	}
 }
 
 func (s *ResourceChangeGeneratorTestSuite) Test_does_not_generate_changes_for_fields_exceeding_max_depth() {

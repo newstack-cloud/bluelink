@@ -1,0 +1,19 @@
+version: 2025-11-02
+resources:
+  nightlyRule:
+    type: aws/events2/rule
+    description: "Rule linked to the sync function."
+    linkSelector:
+      byLabel:
+        app: sync
+    spec:
+      targetArn: "static-arn-v1"
+
+  syncFunction:
+    type: aws/lambda2/function
+    description: "Function that will later gain a link to a new function."
+    metadata:
+      labels:
+        app: sync
+    spec:
+      handler: "src/sync_v1.handler"

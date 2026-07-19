@@ -653,6 +653,30 @@ func finishedFailureMessages(deployCtx *DeployContext, failedElements []string) 
 	return messages
 }
 
+func finishedFailureMessagesFromElements(
+	deployCtx *DeployContext,
+	failedElements []*failedElementInfo,
+) []string {
+	operation := determineOperation(deployCtx)
+	messages := []string{
+		fmt.Sprintf(
+			"failed to %s the blueprint instance due to %d %s",
+			operation,
+			len(failedElements),
+			pluralise("failure", "failures", len(failedElements)),
+		),
+	}
+	for _, element := range failedElements {
+		message := fmt.Sprintf("failed to %s %q", operation, element.elementName)
+		if element.detail != "" {
+			message = fmt.Sprintf("%s: %s", message, element.detail)
+		}
+		messages = append(messages, message)
+	}
+
+	return messages
+}
+
 func determineOperation(deployCtx *DeployContext) string {
 	if deployCtx.Destroying && !deployCtx.Rollback {
 		return "destroy"
@@ -1429,19 +1453,38 @@ func getFailedRemovalsAndUpdateState(
 	return failed
 }
 
+// Holds the namespaced name of an element that failed to
+// deploy along with an optional detail explaining the nature of the failure
+// to be included in the finish message.
+type failedElementInfo struct {
+	elementName string
+	detail      string
+}
+
+func failedElementsWithoutDetail(elementNames []string) []*failedElementInfo {
+	failedElements := []*failedElementInfo{}
+	for _, elementName := range elementNames {
+		failedElements = append(
+			failedElements,
+			&failedElementInfo{elementName: elementName},
+		)
+	}
+	return failedElements
+}
+
 func getFailedElementDeploymentsAndUpdateState(
 	finished map[string]*deployUpdateMessageWrapper,
 	changes *changes.BlueprintChanges,
 	deployCtx *DeployContext,
-) []string {
-	failed := []string{}
+) []*failedElementInfo {
+	failed := []*failedElementInfo{}
 
 	failedResources := getFailedResourceDeploymentsAndUpdateState(
 		finished,
 		changes,
 		deployCtx,
 	)
-	failed = append(failed, failedResources...)
+	failed = append(failed, failedElementsWithoutDetail(failedResources)...)
 
 	failedLinks := getFailedLinkDeploymentsAndUpdateState(
 		finished,
@@ -1455,7 +1498,7 @@ func getFailedElementDeploymentsAndUpdateState(
 		changes,
 		deployCtx,
 	)
-	failed = append(failed, failedChildren...)
+	failed = append(failed, failedElementsWithoutDetail(failedChildren)...)
 
 	return failed
 }
@@ -1519,8 +1562,8 @@ func getFailedLinkDeploymentsAndUpdateState(
 	finished map[string]*deployUpdateMessageWrapper,
 	changes *changes.BlueprintChanges,
 	deployCtx *DeployContext,
-) []string {
-	failed := []string{}
+) []*failedElementInfo {
+	failed := []*failedElementInfo{}
 
 	for resourceName, updateResourceChanges := range changes.ResourceChanges {
 		linkCreationFailed := checkLinkDeploymentsFailedAndUpdateState(
@@ -1551,8 +1594,8 @@ func checkLinkDeploymentsFailedAndUpdateState(
 	finished map[string]*deployUpdateMessageWrapper,
 	deployCtx *DeployContext,
 	wasSuccessful func(*deployUpdateMessageWrapper, bool) bool,
-) []string {
-	failedLinks := []string{}
+) []*failedElementInfo {
+	failedLinks := []*failedElementInfo{}
 
 	for linkToResourceName := range linkChanges {
 		linkName := core.LogicalLinkName(linkFromResourceName, linkToResourceName)
@@ -1566,10 +1609,20 @@ func checkLinkDeploymentsFailedAndUpdateState(
 					LinkName: linkName,
 				})
 			} else {
-				failedLinks = append(failedLinks, linkElementName)
+				failedLinks = append(
+					failedLinks,
+					&failedElementInfo{elementName: linkElementName},
+				)
 			}
 		} else {
-			failedLinks = append(failedLinks, linkElementName)
+			// The link never reported completion, meaning it was never
+			// scheduled for deployment. Include a detail in the failure so
+			// consumers of the finish message are not left without any
+			// diagnostics for the link.
+			failedLinks = append(failedLinks, &failedElementInfo{
+				elementName: linkElementName,
+				detail:      "the element never started deploying",
+			})
 		}
 	}
 
@@ -1917,6 +1970,49 @@ func prepareResourceChangesForDeployment(
 		OutboundLinkChanges:       changes.OutboundLinkChanges,
 		RemovedOutboundLinks:      changes.RemovedOutboundLinks,
 	}
+}
+
+// filterLinksInChangeSet narrows a list of links that are ready to be
+// deployed down to those that are a part of the staged change set.
+// This must use the same change buckets as countElementsToDeploy so that
+// every link that is deployed is also counted as an element to deploy.
+func filterLinksInChangeSet(
+	readyToDeploy []*LinkPendingCompletion,
+	blueprintChanges *changes.BlueprintChanges,
+) []*LinkPendingCompletion {
+	if blueprintChanges == nil {
+		return readyToDeploy
+	}
+
+	linksInChangeSet := []*LinkPendingCompletion{}
+	for _, pendingLink := range readyToDeploy {
+		if linkInChangeSet(pendingLink, blueprintChanges) {
+			linksInChangeSet = append(linksInChangeSet, pendingLink)
+		}
+	}
+
+	return linksInChangeSet
+}
+
+func linkInChangeSet(
+	pendingLink *LinkPendingCompletion,
+	blueprintChanges *changes.BlueprintChanges,
+) bool {
+	resourceAName := getResourceNameFromLinkChainNode(pendingLink.resourceANode)
+	resourceBName := getResourceNameFromLinkChainNode(pendingLink.resourceBNode)
+
+	if newResourceChanges, isNew := blueprintChanges.NewResources[resourceAName]; isNew {
+		_, hasNewLink := newResourceChanges.NewOutboundLinks[resourceBName]
+		return hasNewLink
+	}
+
+	if resourceChanges, hasChanges := blueprintChanges.ResourceChanges[resourceAName]; hasChanges {
+		_, hasNewLink := resourceChanges.NewOutboundLinks[resourceBName]
+		_, hasLinkChanges := resourceChanges.OutboundLinkChanges[resourceBName]
+		return hasNewLink || hasLinkChanges
+	}
+
+	return false
 }
 
 func countElementsToDeploy(changes *changes.BlueprintChanges) int {
@@ -2301,13 +2397,15 @@ func getFailedElementsFromFinished(
 }
 
 // drainFailureMessagesWithInterrupted generates failure messages for a drained
-// deployment that includes both failed and interrupted elements.
+// deployment that includes both failed and interrupted elements along with
+// the error that triggered the drain.
 // Interrupted elements are shown separately from failures to provide
 // an accurate failure count while still communicating unknown state.
 func drainFailureMessagesWithInterrupted(
 	deployCtx *DeployContext,
 	failed []string,
 	interrupted []string,
+	drainErr error,
 ) []string {
 	operation := determineOperation(deployCtx)
 
@@ -2321,6 +2419,17 @@ func drainFailureMessagesWithInterrupted(
 		),
 	}
 
+	// Surface the error that put the event loop into drain mode,
+	// this is essential for diagnosing failures that are not attributed
+	// to a specific element (e.g. an unwrapped error from a provider plugin).
+	if drainErr != nil {
+		messages = append(messages, fmt.Sprintf(
+			"the %s process was drained due to an unexpected error: %s",
+			operation,
+			drainErr.Error(),
+		))
+	}
+
 	messageTemplate := "failed to %s %q"
 	for _, elementName := range failed {
 		messages = append(messages, fmt.Sprintf(messageTemplate, operation, elementName))
@@ -2329,9 +2438,10 @@ func drainFailureMessagesWithInterrupted(
 	// Show interrupted elements separately if there are any
 	if len(interrupted) > 0 {
 		messages = append(messages, fmt.Sprintf(
-			"%d %s interrupted (state unknown)",
+			"%d %s interrupted (state unknown): %s",
 			len(interrupted),
 			pluralise("element was", "elements were", len(interrupted)),
+			strings.Join(interrupted, ", "),
 		))
 	}
 
@@ -2568,21 +2678,21 @@ func createClaimDeploymentFinishedFailureMessage(params *claimDeploymentParams) 
 		params.action,
 		params.rollback,
 	)
+	failedStatus := determineInstanceDestroyFailedStatus(params.rollback)
 	if params.action == deployClaimAction {
-		return params.container.createDeploymentFinishedMessage(
-			params.currentInstanceState.InstanceID,
-			determineInstanceDeployFailedStatus(params.rollback, params.isNewInstance),
-			[]string{rejectionReason},
-			params.container.clock.Since(params.startTime),
-			/* prepareElapsedTime */ nil,
-		)
+		failedStatus = determineInstanceDeployFailedStatus(params.rollback, params.isNewInstance)
 	}
 
-	return params.container.createDeploymentFinishedMessage(
+	msg := params.container.createDeploymentFinishedMessage(
 		params.currentInstanceState.InstanceID,
-		determineInstanceDestroyFailedStatus(params.rollback),
+		failedStatus,
 		[]string{rejectionReason},
 		params.container.clock.Since(params.startTime),
 		/* prepareElapsedTime */ nil,
 	)
+	// The operation that won the claim holds the in-progress status for the
+	// instance, it must not be overwritten with the failed status of this
+	// rejected attempt.
+	msg.SkipPersist = true
+	return msg
 }

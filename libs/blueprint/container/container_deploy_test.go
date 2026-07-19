@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"os"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	bperrors "github.com/newstack-cloud/bluelink/libs/blueprint/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/memstate"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/providerhelpers"
@@ -351,6 +353,442 @@ func (s *ContainerDeployTestSuite) Test_deploys_new_blueprint_instance() {
 		&instanceState,
 		&s.Suite,
 	)
+}
+
+func (s *ContainerDeployTestSuite) Test_releases_in_progress_claim_when_deploy_exits_via_error_channel() {
+	channels := CreateDeployChannels()
+	changes, changeStagingErr := s.stageChanges(
+		context.Background(),
+		/* instanceID */ "",
+		s.blueprint2Fixture.blueprintContainer,
+		s.fixture2Params,
+	)
+	s.Require().NoError(changeStagingErr)
+
+	// An instance tree path at the maximum depth makes the deploy goroutine
+	// exit via the error channel after the new instance record has been
+	// initialised and claimed with an in-progress status.
+	treePath := "instance-1/instance-2/instance-3/instance-4/instance-5"
+	params := s.fixture2Params.WithContextVariables(
+		map[string]*core.ScalarValue{
+			"instanceTreePath": {StringValue: &treePath},
+		},
+		/* keepExisting */ true,
+	)
+
+	err := s.blueprint2Fixture.blueprintContainer.Deploy(
+		context.Background(),
+		&DeployInput{
+			InstanceName: "BlueprintInstance2Stranded",
+			Changes:      changes,
+			Rollback:     false,
+		},
+		channels,
+		params,
+	)
+	s.Require().NoError(err)
+
+	var deployErr error
+	for deployErr == nil {
+		select {
+		case <-channels.ResourceUpdateChan:
+		case <-channels.ChildUpdateChan:
+		case <-channels.LinkUpdateChan:
+		case <-channels.FinishChan:
+			s.Require().FailNow("expected the deployment to fail via the error channel")
+		case <-channels.DeploymentUpdateChan:
+		case deployErr = <-channels.ErrChan:
+		case <-time.After(defaultDrainTimeout):
+			s.Require().FailNow(timeoutMessage)
+		}
+	}
+
+	instances := s.stateContainer.Instances()
+	instanceID, err := instances.LookupIDByName(context.Background(), "BlueprintInstance2Stranded")
+	s.Require().NoError(err)
+
+	// The stranded claim release runs asynchronously after the deploy
+	// goroutine exits, so poll until the in-progress status is released.
+	s.Require().Eventually(func() bool {
+		instanceState, err := instances.Get(context.Background(), instanceID)
+		return err == nil && instanceState.Status == core.InstanceStatusDeployFailed
+	}, 5*time.Second, 10*time.Millisecond)
+}
+
+// Regression test that ensures a dependant is not deployed before a direct
+// dependency that has not started yet. resourceC depends on resourceA (fast,
+// first group) and resourceB (starts later as it depends on resourceQ, which
+// is gated by the test). When resourceA completes, resourceC must keep
+// waiting for resourceB instead of treating the not-yet-started dependency
+// as satisfied.
+func (s *ContainerDeployTestSuite) Test_waits_for_unstarted_dependency_before_deploying_dependant() {
+	releaseGate := make(chan struct{})
+	stateContainer := memstate.NewMemoryStateContainer()
+	providers := map[string]provider.Provider{
+		"aws": &internal.ProviderMock{
+			NamespaceValue: "aws",
+			Resources: map[string]provider.Resource{
+				"aws/lambda2/function": &gatedDeployResource{
+					Lambda2FunctionResource: &internal.Lambda2FunctionResource{},
+					gatedResourceName:       "resourceQ",
+					gate:                    releaseGate,
+				},
+			},
+		},
+	}
+	loader := NewDefaultLoader(
+		providers,
+		map[string]transform.SpecTransformer{},
+		stateContainer,
+		newFSChildResolver(),
+		WithLoaderTransformSpec(false),
+		WithLoaderValidateRuntimeValues(true),
+		WithLoaderRefChainCollectorFactory(refgraph.NewRefChainCollector),
+		WithLoaderLogger(core.NewNopLogger()),
+	)
+	params := core.NewDefaultParams(
+		map[string]map[string]*core.ScalarValue{},
+		map[string]map[string]*core.ScalarValue{},
+		map[string]*core.ScalarValue{},
+		map[string]*core.ScalarValue{},
+	)
+	blueprintContainer, err := loader.Load(
+		context.Background(),
+		"__testdata/container/deploy/blueprint6.yml",
+		params,
+	)
+	s.Require().NoError(err)
+
+	deployChanges, err := s.stageChanges(
+		context.Background(),
+		/* instanceID */ "",
+		blueprintContainer,
+		params,
+	)
+	s.Require().NoError(err)
+
+	channels := CreateDeployChannels()
+	err = blueprintContainer.Deploy(
+		context.Background(),
+		&DeployInput{
+			InstanceName: "OrderedDependenciesInstance",
+			Changes:      deployChanges,
+			Rollback:     false,
+		},
+		channels,
+		params,
+	)
+	s.Require().NoError(err)
+
+	resourceUpdateMessages := []ResourceDeployUpdateMessage{}
+	finishedMessage := (*DeploymentFinishedMessage)(nil)
+	gateReleased := false
+	for err == nil && finishedMessage == nil {
+		select {
+		case msg := <-channels.ResourceUpdateChan:
+			resourceUpdateMessages = append(resourceUpdateMessages, msg)
+			if msg.ResourceName == "resourceA" &&
+				msg.PreciseStatus == core.PreciseResourceStatusCreated &&
+				!gateReleased {
+				// resourceA has fully completed, release the gate so
+				// resourceQ (and then resourceB) can complete.
+				close(releaseGate)
+				gateReleased = true
+			}
+		case <-channels.ChildUpdateChan:
+		case <-channels.LinkUpdateChan:
+		case msg := <-channels.FinishChan:
+			finishedMessage = &msg
+		case <-channels.DeploymentUpdateChan:
+		case err = <-channels.ErrChan:
+		case <-time.After(defaultDrainTimeout):
+			err = errors.New(timeoutMessage)
+		}
+	}
+	s.Require().NoError(err)
+	s.Require().NotNil(finishedMessage)
+	s.Assert().Equal(core.InstanceStatusDeployed, finishedMessage.Status)
+
+	firstCIndex := slices.IndexFunc(
+		resourceUpdateMessages,
+		func(msg ResourceDeployUpdateMessage) bool {
+			return msg.ResourceName == "resourceC"
+		},
+	)
+	bConfigCompleteIndex := slices.IndexFunc(
+		resourceUpdateMessages,
+		func(msg ResourceDeployUpdateMessage) bool {
+			return msg.ResourceName == "resourceB" &&
+				msg.PreciseStatus == core.PreciseResourceStatusConfigComplete
+		},
+	)
+	s.Require().GreaterOrEqual(firstCIndex, 0)
+	s.Require().GreaterOrEqual(bConfigCompleteIndex, 0)
+	s.Assert().Greater(firstCIndex, bConfigCompleteIndex)
+}
+
+// Regression test for dependencies routed through derived values:
+// resourceC's spec references `values.derivedId`, which is defined with a
+// reference to resourceQ's computed ID. resourceC must not be deployed
+// until resourceQ has at least reached the config complete stage, even
+// though resourceC never references resourceQ directly.
+func (s *ContainerDeployTestSuite) Test_waits_for_dependency_referenced_through_derived_value() {
+	releaseGate := make(chan struct{})
+	stateContainer := memstate.NewMemoryStateContainer()
+	providers := map[string]provider.Provider{
+		"aws": &internal.ProviderMock{
+			NamespaceValue: "aws",
+			Resources: map[string]provider.Resource{
+				"aws/lambda2/function": &gatedDeployResource{
+					Lambda2FunctionResource: &internal.Lambda2FunctionResource{},
+					gatedResourceName:       "resourceQ",
+					gate:                    releaseGate,
+				},
+			},
+		},
+	}
+	loader := NewDefaultLoader(
+		providers,
+		map[string]transform.SpecTransformer{},
+		stateContainer,
+		newFSChildResolver(),
+		WithLoaderTransformSpec(false),
+		WithLoaderValidateRuntimeValues(true),
+		WithLoaderRefChainCollectorFactory(refgraph.NewRefChainCollector),
+		WithLoaderLogger(core.NewNopLogger()),
+	)
+	params := core.NewDefaultParams(
+		map[string]map[string]*core.ScalarValue{},
+		map[string]map[string]*core.ScalarValue{},
+		map[string]*core.ScalarValue{},
+		map[string]*core.ScalarValue{},
+	)
+	blueprintContainer, err := loader.Load(
+		context.Background(),
+		"__testdata/container/deploy/blueprint10.yml",
+		params,
+	)
+	s.Require().NoError(err)
+
+	deployChanges, err := s.stageChanges(
+		context.Background(),
+		/* instanceID */ "",
+		blueprintContainer,
+		params,
+	)
+	s.Require().NoError(err)
+
+	channels := CreateDeployChannels()
+	err = blueprintContainer.Deploy(
+		context.Background(),
+		&DeployInput{
+			InstanceName: "DerivedValueDependencyInstance",
+			Changes:      deployChanges,
+			Rollback:     false,
+		},
+		channels,
+		params,
+	)
+	s.Require().NoError(err)
+
+	resourceUpdateMessages := []ResourceDeployUpdateMessage{}
+	finishedMessage := (*DeploymentFinishedMessage)(nil)
+	gateReleased := false
+	for err == nil && finishedMessage == nil {
+		select {
+		case msg := <-channels.ResourceUpdateChan:
+			resourceUpdateMessages = append(resourceUpdateMessages, msg)
+			if msg.ResourceName == "resourceQ" && !gateReleased {
+				// resourceQ has started deploying, release the gate so it
+				// can complete after the readiness of resourceC has been
+				// evaluated at least once.
+				close(releaseGate)
+				gateReleased = true
+			}
+		case <-channels.ChildUpdateChan:
+		case <-channels.LinkUpdateChan:
+		case msg := <-channels.FinishChan:
+			finishedMessage = &msg
+		case <-channels.DeploymentUpdateChan:
+		case err = <-channels.ErrChan:
+		case <-time.After(defaultDrainTimeout):
+			err = errors.New(timeoutMessage)
+		}
+	}
+	s.Require().NoError(err)
+	s.Require().NotNil(finishedMessage)
+	s.Assert().Equal(core.InstanceStatusDeployed, finishedMessage.Status)
+
+	firstCIndex := slices.IndexFunc(
+		resourceUpdateMessages,
+		func(msg ResourceDeployUpdateMessage) bool {
+			return msg.ResourceName == "resourceC"
+		},
+	)
+	qConfigCompleteIndex := slices.IndexFunc(
+		resourceUpdateMessages,
+		func(msg ResourceDeployUpdateMessage) bool {
+			return msg.ResourceName == "resourceQ" &&
+				msg.PreciseStatus == core.PreciseResourceStatusConfigComplete
+		},
+	)
+	s.Require().GreaterOrEqual(firstCIndex, 0)
+	s.Require().GreaterOrEqual(qConfigCompleteIndex, 0)
+	s.Assert().Greater(firstCIndex, qConfigCompleteIndex)
+}
+
+// Regression test for phantom field changes on restaging an unchanged
+// blueprint: a spec field referencing another resource's computed field must
+// not be reported as a modification with an unknown new value when the
+// referenced resource is already deployed and its computed field value is
+// available in the instance state.
+func (s *ContainerDeployTestSuite) Test_restage_of_unchanged_blueprint_plans_no_phantom_field_changes() {
+	instanceID := "phantom-diff-instance-1"
+	lambdaAID := "arn:aws:lambda:us-east-1:123456789012:function:resourceA"
+	lambdaBID := "arn:aws:lambda:us-east-1:123456789012:function:resourceB"
+	stateContainer := memstate.NewMemoryStateContainer()
+	err := stateContainer.Instances().Save(context.Background(), state.InstanceState{
+		InstanceID:   instanceID,
+		InstanceName: "PhantomDiffInstance",
+		Status:       core.InstanceStatusDeployed,
+		ResourceIDs: map[string]string{
+			"resourceA": "resource-a-id",
+			"resourceB": "resource-b-id",
+			"resourceC": "resource-c-id",
+		},
+		Resources: map[string]*state.ResourceState{
+			"resource-a-id": {
+				ResourceID: "resource-a-id",
+				Name:       "resourceA",
+				Type:       "aws/lambda2/function",
+				InstanceID: instanceID,
+				Status:     core.ResourceStatusCreated,
+				SpecData: &core.MappingNode{
+					Fields: map[string]*core.MappingNode{
+						"handler": core.MappingNodeFromString("src/a.handler"),
+						"id":      core.MappingNodeFromString(lambdaAID),
+					},
+				},
+			},
+			"resource-b-id": {
+				ResourceID: "resource-b-id",
+				Name:       "resourceB",
+				Type:       "aws/lambda2/function",
+				InstanceID: instanceID,
+				Status:     core.ResourceStatusCreated,
+				SpecData: &core.MappingNode{
+					Fields: map[string]*core.MappingNode{
+						// The deployed value of the reference to resourceA's
+						// computed ID.
+						"handler": core.MappingNodeFromString(lambdaAID),
+						"id":      core.MappingNodeFromString(lambdaBID),
+					},
+				},
+			},
+			"resource-c-id": {
+				ResourceID: "resource-c-id",
+				Name:       "resourceC",
+				Type:       "aws/lambda2/function",
+				InstanceID: instanceID,
+				Status:     core.ResourceStatusCreated,
+				SpecData: &core.MappingNode{
+					Fields: map[string]*core.MappingNode{
+						// The deployed value of the interpolated string that
+						// embeds resourceA's computed ID.
+						"handler": core.MappingNodeFromString("prefix-" + lambdaAID + "-suffix"),
+						"id":      core.MappingNodeFromString("arn:aws:lambda:us-east-1:123456789012:function:resourceC"),
+					},
+				},
+			},
+		},
+	})
+	s.Require().NoError(err)
+
+	providers := map[string]provider.Provider{
+		"aws": &internal.ProviderMock{
+			NamespaceValue: "aws",
+			Resources: map[string]provider.Resource{
+				"aws/lambda2/function": &internal.Lambda2FunctionResource{},
+			},
+		},
+	}
+	loader := NewDefaultLoader(
+		providers,
+		map[string]transform.SpecTransformer{},
+		stateContainer,
+		newFSChildResolver(),
+		WithLoaderTransformSpec(false),
+		WithLoaderValidateRuntimeValues(true),
+		WithLoaderRefChainCollectorFactory(refgraph.NewRefChainCollector),
+		WithLoaderLogger(core.NewNopLogger()),
+	)
+	params := core.NewDefaultParams(
+		map[string]map[string]*core.ScalarValue{},
+		map[string]map[string]*core.ScalarValue{},
+		map[string]*core.ScalarValue{},
+		map[string]*core.ScalarValue{},
+	)
+	blueprintContainer, err := loader.Load(
+		context.Background(),
+		"__testdata/container/deploy/blueprint11.yml",
+		params,
+	)
+	s.Require().NoError(err)
+
+	stagedChanges, err := s.stageChanges(
+		context.Background(),
+		instanceID,
+		blueprintContainer,
+		params,
+	)
+	s.Require().NoError(err)
+
+	// Neither the whole-value reference (resourceB) nor the interpolated
+	// string embedding a computed reference (resourceC) must produce
+	// phantom modifications for the unchanged blueprint.
+	shouldNotBeModified := []string{"resourceB", "resourceC"}
+	for _, resourceName := range shouldNotBeModified {
+		resourceChanges, hasResourceChanges := stagedChanges.ResourceChanges[resourceName]
+		if !hasResourceChanges {
+			continue
+		}
+		for _, modified := range resourceChanges.ModifiedFields {
+			s.Assert().NotNilf(
+				modified.NewValue,
+				"unexpected phantom modification with unknown new value for %q on %q",
+				modified.FieldPath,
+				resourceName,
+			)
+			s.Assert().NotEqualf(
+				"spec.handler",
+				modified.FieldPath,
+				"unexpected modification planned for the unchanged reference field on %q",
+				resourceName,
+			)
+		}
+	}
+}
+
+type gatedDeployResource struct {
+	*internal.Lambda2FunctionResource
+	gatedResourceName string
+	gate              <-chan struct{}
+}
+
+// Deploy blocks the gated resource until the test releases the gate,
+// emulating a dependency that takes longer to complete than its peers.
+func (r *gatedDeployResource) Deploy(
+	ctx context.Context,
+	input *provider.ResourceDeployInput,
+) (*provider.ResourceDeployOutput, error) {
+	if input.Changes.AppliedResourceInfo.ResourceName == r.gatedResourceName {
+		select {
+		case <-r.gate:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	return r.Lambda2FunctionResource.Deploy(ctx, input)
 }
 
 func (s *ContainerDeployTestSuite) Test_fails_to_deploy_new_blueprint_instance_when_name_is_missing() {

@@ -111,6 +111,16 @@ func (s *defaultResourceChangeGenerator) GenerateChanges(
 		changes.ComputedFields,
 		specmerge.CollectComputedFields(specDefinitionOutput.SpecDefinition.Schema, "spec")...,
 	)
+	// Computed-when-omitted fields (e.g. auto-generated resource names) are only
+	// computed for this change set when the blueprint provides no value for them.
+	changes.ComputedFields = append(
+		changes.ComputedFields,
+		specmerge.CollectComputedWhenOmittedFields(
+			specDefinitionOutput.SpecDefinition.Schema,
+			newSpec,
+			"spec",
+		)...,
+	)
 
 	return changes, nil
 }

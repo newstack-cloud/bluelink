@@ -1536,6 +1536,7 @@ func (r *defaultSubstitutionResolver) resolveSubstitutions(
 	}
 
 	sb := &strings.Builder{}
+	resolveOnDeployErrs := []*resolveOnDeployError{}
 	for _, value := range stringOrSubs.Values {
 		// A set of dependencies needed to make function calls with a call stack
 		// scoped to the current substitution.
@@ -1551,7 +1552,23 @@ func (r *defaultSubstitutionResolver) resolveSubstitutions(
 			resolveCtx,
 		)
 		if err != nil {
-			return nil, err
+			finalErr := handleCollectResolveError(err, &resolveOnDeployErrs)
+			if finalErr != nil {
+				return nil, finalErr
+			}
+			// A resolve-on-deploy marker can carry a value resolved from
+			// existing instance state (e.g. a reference to an already-deployed
+			// resource's computed field during update change staging).
+			// The value is interpolated so the full string can be compared
+			// against current state during change staging, the property is
+			// still marked to be resolved during deployment.
+			// Without a carried value, the full string can not be built during
+			// change staging and can only be resolved during deployment.
+			if resolvedValue == nil {
+				return nil, &resolveOnDeployErrors{
+					errors: resolveOnDeployErrs,
+				}
+			}
 		}
 
 		if stringValue, err := resolvedValueToString(resolvedValue); err == nil {
@@ -1562,11 +1579,17 @@ func (r *defaultSubstitutionResolver) resolveSubstitutions(
 	}
 
 	resolvedStr := sb.String()
-	return &bpcore.MappingNode{
+	resolvedNode := &bpcore.MappingNode{
 		Scalar: &bpcore.ScalarValue{
 			StringValue: &resolvedStr,
 		},
-	}, nil
+	}
+	if len(resolveOnDeployErrs) > 0 {
+		return resolvedNode, &resolveOnDeployErrors{
+			errors: resolveOnDeployErrs,
+		}
+	}
+	return resolvedNode, nil
 }
 
 func (r *defaultSubstitutionResolver) ResolveSubstitution(
@@ -2149,7 +2172,16 @@ func (r *defaultSubstitutionResolver) resolveResourceSpecProperty(
 	}
 
 	if definition.Computed && resolveCtx.resolveFor == ResolveForChangeStaging {
-		return nil, errMustResolveOnDeploy(
+		// For update change staging, the current value of the computed field is
+		// resolved from the existing instance state (best-effort) so that change
+		// staging compares concrete values instead of reporting phantom
+		// modifications with unknown new values for every reference to an
+		// already-deployed resource.
+		// The property is still marked to be resolved on deploy, deploy-time
+		// resolution against fresh state remains authoritative as the computed
+		// field of the referenced resource can change during deployment.
+		stateValue := r.resolveComputedPropertyFromExistingState(ctx, prop, definition, resolveCtx)
+		return stateValue, errMustResolveOnDeploy(
 			resolveCtx.currentElementName,
 			resolveCtx.currentElementProperty,
 		)
@@ -2173,6 +2205,36 @@ func (r *defaultSubstitutionResolver) resolveResourceSpecProperty(
 	}
 
 	return resolved, nil
+}
+
+func (r *defaultSubstitutionResolver) resolveComputedPropertyFromExistingState(
+	ctx context.Context,
+	prop *substitutions.SubstitutionResourceProperty,
+	definition *provider.ResourceDefinitionsSchema,
+	resolveCtx *resolveContext,
+) *bpcore.MappingNode {
+	instanceID, err := bpcore.BlueprintInstanceIDFromContext(ctx)
+	if err != nil || instanceID == "" {
+		return nil
+	}
+
+	resourceName := getFinalResourceName(prop)
+	resources := r.stateContainer.Resources()
+	resourceState, err := resources.GetByName(ctx, instanceID, resourceName)
+	if err != nil {
+		return nil
+	}
+
+	value, err := getResourceSpecPropertyFromState(
+		&resourceState,
+		prop,
+		definition,
+		resolveCtx,
+	)
+	if err != nil {
+		return nil
+	}
+	return value
 }
 
 func (r *defaultSubstitutionResolver) resolveResourceSpecPropertyFromStateOrDefault(
@@ -2209,6 +2271,16 @@ func (r *defaultSubstitutionResolver) resolveResourceSpecPropertyFromStateOrDefa
 			prop,
 			definition,
 			resolveCtx,
+		)
+	}
+
+	// A computed-when-omitted property (e.g. an auto-generated resource name)
+	// with no value defined in the blueprint only becomes known once the
+	// provider deploys the resource.
+	if definition.ComputedWhenOmitted && resolveCtx.resolveFor == ResolveForChangeStaging {
+		return nil, errMustResolveOnDeploy(
+			resolveCtx.currentElementName,
+			resolveCtx.currentElementProperty,
 		)
 	}
 

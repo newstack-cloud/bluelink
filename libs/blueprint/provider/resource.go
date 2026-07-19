@@ -631,6 +631,15 @@ type ResourceDefinitionsSchema struct {
 	// Computed values are expected to be populated by resource implementations
 	// in a provider in the deployment process.
 	Computed bool
+	// ComputedWhenOmitted specifies that the user may set the value, but when
+	// it is omitted from a blueprint the provider computes it during deployment
+	// (for example, an auto-generated resource name that doubles as the
+	// resource's identifier).
+	// During change staging, a reference to a field with no value defined in
+	// the blueprint resolves as a value that is only known after deployment
+	// instead of failing with a missing property error.
+	// This has no effect when `Computed` is set to true.
+	ComputedWhenOmitted bool
 	// MustRecreate specifies whether the resource must be recreated
 	// if a change to the field is detected in the resource state.
 	// This is only used for user-provided values, it will be ignored

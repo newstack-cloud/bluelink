@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"slices"
 	"testing"
 	"time"
 
@@ -320,6 +321,10 @@ func (s *ContainerDestroyTestSuite) Test_fails_to_destroys_blueprint_instance_du
 	instance, err := s.stateContainer.Instances().Get(context.Background(), "blueprint-instance-3")
 	s.Assert().NoError(err)
 	s.Assert().Equal("blueprint-instance-3", instance.InstanceID)
+	// The failed status must be persisted so the in-progress claim taken for
+	// the destroy is released and subsequent destroy attempts are not
+	// rejected as "already in progress".
+	s.Assert().Equal(core.InstanceStatusDestroyFailed, instance.Status)
 }
 
 func (s *ContainerDestroyTestSuite) Test_fails_to_destroys_blueprint_instance_due_to_terminal_link_impl_error() {
@@ -605,6 +610,68 @@ func (s *ContainerDestroyTestSuite) Test_context_timeout_during_destroy_finishes
 	s.Assert().NoError(channelErr)
 	s.Assert().NotNil(finishMsg)
 	s.Assert().Equal(core.InstanceStatusDestroyFailed, finishMsg.Status)
+}
+
+// Regression test for destroys after a partially failed deploy: the removal
+// change set can include elements that were never deployed and so have no
+// persisted state. The destroy must run to completion for the elements that
+// do exist instead of aborting with an error and leaving deployed elements
+// in an unknown state.
+func (s *ContainerDestroyTestSuite) Test_destroys_blueprint_instance_with_elements_missing_from_state() {
+	channels := CreateDeployChannels()
+	removalChanges := blueprint1RemovalChanges()
+	removalChanges.RemovedResources = append(
+		removalChanges.RemovedResources,
+		"neverDeployedFunction",
+	)
+	removalChanges.RemovedLinks = append(
+		removalChanges.RemovedLinks,
+		"neverDeployedFunction::ordersTable_0",
+	)
+	s.blueprint1Fixture.blueprintContainer.Destroy(
+		context.Background(),
+		&DestroyInput{
+			InstanceID: "blueprint-instance-1",
+			Changes:    removalChanges,
+			Rollback:   false,
+		},
+		channels,
+		blueprintDestroyParams(),
+	)
+
+	resourceUpdateMessages := []ResourceDeployUpdateMessage{}
+	finishedMessage := (*DeploymentFinishedMessage)(nil)
+	var err error
+	for err == nil && finishedMessage == nil {
+		select {
+		case msg := <-channels.ResourceUpdateChan:
+			resourceUpdateMessages = append(resourceUpdateMessages, msg)
+		case <-channels.ChildUpdateChan:
+		case <-channels.LinkUpdateChan:
+		case msg := <-channels.FinishChan:
+			finishedMessage = &msg
+		case <-channels.DeploymentUpdateChan:
+		case err = <-channels.ErrChan:
+		case <-time.After(defaultDrainTimeout):
+			err = errors.New(timeoutMessage)
+		}
+	}
+	s.Require().NoError(err)
+	s.Require().NotNil(finishedMessage)
+	s.Assert().Equal(core.InstanceStatusDestroyed, finishedMessage.Status)
+
+	// Elements with no persisted state are skipped when collecting elements
+	// to remove, they must not produce any update messages or errors.
+	neverDeployedIndex := slices.IndexFunc(
+		resourceUpdateMessages,
+		func(msg ResourceDeployUpdateMessage) bool {
+			return msg.ResourceName == "neverDeployedFunction"
+		},
+	)
+	s.Assert().Equal(-1, neverDeployedIndex)
+
+	_, err = s.stateContainer.Instances().Get(context.Background(), "blueprint-instance-1")
+	s.Assert().Error(err)
 }
 
 func blueprint1RemovalChanges() *changes.BlueprintChanges {

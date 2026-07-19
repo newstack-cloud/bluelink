@@ -3,6 +3,7 @@ package specmerge
 import (
 	"fmt"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 )
@@ -16,6 +17,59 @@ func CollectComputedFields(schema *provider.ResourceDefinitionsSchema, rootPath 
 	fields := []string{}
 	collectComputedFields(schema, rootPath, &fields)
 	return fields
+}
+
+// CollectComputedWhenOmittedFields walks a resource spec definition schema
+// alongside a resolved spec and returns the paths of every field marked as
+// computed-when-omitted that has no value in the resolved spec, rooted at the
+// given path (usually "spec").
+//
+// Such fields are treated as computed for the current change set so that a
+// provider-assigned value (e.g. an auto-generated resource name) can be merged
+// into the persisted resource state after deployment.
+func CollectComputedWhenOmittedFields(
+	schema *provider.ResourceDefinitionsSchema,
+	spec *core.MappingNode,
+	rootPath string,
+) []string {
+	fields := []string{}
+	collectComputedWhenOmittedFields(schema, spec, rootPath, &fields)
+	return fields
+}
+
+func collectComputedWhenOmittedFields(
+	schema *provider.ResourceDefinitionsSchema,
+	spec *core.MappingNode,
+	currentPath string,
+	fields *[]string,
+) {
+	if schema == nil ||
+		schema.Computed ||
+		schema.Type != provider.ResourceDefinitionsSchemaTypeObject {
+		return
+	}
+
+	for fieldName, fieldSchema := range schema.Attributes {
+		if fieldSchema == nil {
+			continue
+		}
+		fieldPath := substitutions.RenderFieldPath(currentPath, fieldName)
+		fieldValue := specObjectField(spec, fieldName)
+		if fieldSchema.ComputedWhenOmitted &&
+			!fieldSchema.Computed &&
+			core.IsNilMappingNode(fieldValue) {
+			*fields = append(*fields, fieldPath)
+			continue
+		}
+		collectComputedWhenOmittedFields(fieldSchema, fieldValue, fieldPath, fields)
+	}
+}
+
+func specObjectField(spec *core.MappingNode, fieldName string) *core.MappingNode {
+	if spec == nil || spec.Fields == nil {
+		return nil
+	}
+	return spec.Fields[fieldName]
 }
 
 func collectComputedFields(

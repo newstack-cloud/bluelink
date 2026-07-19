@@ -161,6 +161,19 @@ func validateResourceDefinitionObject(
 		return diagnostics, nil
 	}
 
+	// A whole-value substitution reference can resolve to an object at change
+	// staging time, so the substitution is validated against the expected
+	// resolved type instead of rejecting the unresolved value.
+	if node.Fields == nil && node.StringWithSubstitutions != nil {
+		return validateResourceDefinitionSubstitution(
+			ctx,
+			params,
+			node.StringWithSubstitutions,
+			substitutions.ResolvedSubExprTypeObject,
+			path,
+		)
+	}
+
 	invalidType := node.Fields == nil
 	if invalidType {
 		specType := deriveMappingNodeResourceDefinitionsType(node)
@@ -258,6 +271,19 @@ func validateResourceDefinitionMap(
 
 	if isEmpty && validateAgainstSchema.Nullable {
 		return diagnostics, nil
+	}
+
+	// A whole-value substitution reference can resolve to a mapping at change
+	// staging time, so the substitution is validated against the expected
+	// resolved type instead of rejecting the unresolved value.
+	if node.Fields == nil && node.StringWithSubstitutions != nil {
+		return validateResourceDefinitionSubstitution(
+			ctx,
+			params,
+			node.StringWithSubstitutions,
+			substitutions.ResolvedSubExprTypeObject,
+			path,
+		)
 	}
 
 	invalidType := node.Fields == nil
@@ -359,6 +385,19 @@ func validateResourceDefinitionArray(
 
 	if isEmpty && validateAgainstSchema.Nullable {
 		return diagnostics, nil
+	}
+
+	// A whole-value substitution reference (e.g. "${resources.myVpc.spec.subnetIds}")
+	// can resolve to an array at change staging time, so the substitution is validated
+	// against the expected resolved type instead of rejecting the unresolved value.
+	if node.Items == nil && node.StringWithSubstitutions != nil {
+		return validateResourceDefinitionSubstitution(
+			ctx,
+			params,
+			node.StringWithSubstitutions,
+			substitutions.ResolvedSubExprTypeArray,
+			path,
+		)
 	}
 
 	invalidType := node.Items == nil
@@ -957,8 +996,8 @@ func validateResourceDefinitionSubstitution(
 			// StringOrSubstitutions with multiple values is an
 			// interpolated string.
 			string(substitutions.ResolvedSubExprTypeString),
-			params.ResourceType,
 			path,
+			params.ResourceType,
 			string(expectedResolvedType),
 			value.SourceMeta,
 		)
@@ -990,8 +1029,8 @@ func validateResourceDefinitionSubstitution(
 					resolvedType != string(substitutions.ResolvedSubExprTypeAny) {
 					errs = append(errs, errInvalidResourceDefSubType(
 						resolvedType,
-						params.ResourceType,
 						path,
+						params.ResourceType,
 						string(expectedResolvedType),
 						stringOrSub.SourceMeta,
 					))

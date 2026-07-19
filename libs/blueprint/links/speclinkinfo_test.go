@@ -192,6 +192,33 @@ func (s *SpecLinkInfoTestSuite) Test_get_link_warnings_from_spec_for_a_blueprint
 	})
 }
 
+func (s *SpecLinkInfoTestSuite) Test_get_links_keeps_label_matched_candidate_without_link_implementation_standalone(c *C) {
+	specLinkInfo, err := NewDefaultLinkInfoProvider(
+		s.resourceProviders, s.linkRegistry, &testBlueprintSpec{
+			schema: testSpecLinkInfoBlueprintSchemaNoLinkImpl,
+		}, nil, nil)
+	c.Assert(err, IsNil)
+
+	chains, err := specLinkInfo.Links(context.Background())
+	c.Assert(err, IsNil)
+
+	// There is no link implementation for aws/apigateway/api -> aws/dynamodb/table,
+	// so the label-matched table must remain a standalone chain instead of
+	// silently disappearing from the set of chains.
+	chainResourceNames := core.Map(
+		chains,
+		func(chain *ChainLinkNode, _ int) string {
+			return chain.ResourceName
+		},
+	)
+	sort.Strings(chainResourceNames)
+	c.Assert(chainResourceNames, DeepEquals, []string{"orderApi", "orderTable"})
+
+	for _, chain := range chains {
+		c.Assert(chain.LinksTo, HasLen, 0)
+	}
+}
+
 // Acts as a normaliser as ordering does not matter in chain links but does matter when comparing
 // snapshots!
 // Also, to simplify the structure that is snapshotted we will convert linked from references to strings
@@ -697,6 +724,35 @@ var testSpecLinkInfoBlueprintSchema5 = &schema.Blueprint{
 					ByLabel: &schema.StringMap{
 						Values: map[string]string{
 							"purpose": "retrieveStats",
+						},
+					},
+				},
+			},
+		},
+	},
+}
+
+// A blueprint where a link selector label-matches a candidate resource
+// for which no link implementation is registered for the type pair.
+var testSpecLinkInfoBlueprintSchemaNoLinkImpl = &schema.Blueprint{
+	Resources: &schema.ResourceMap{
+		Values: map[string]*schema.Resource{
+			"orderApi": {
+				Type: &schema.ResourceTypeWrapper{Value: "aws/apigateway/api"},
+				LinkSelector: &schema.LinkSelector{
+					ByLabel: &schema.StringMap{
+						Values: map[string]string{
+							"app": "orderStorage",
+						},
+					},
+				},
+			},
+			"orderTable": {
+				Type: &schema.ResourceTypeWrapper{Value: "aws/dynamodb/table"},
+				Metadata: &schema.Metadata{
+					Labels: &schema.StringMap{
+						Values: map[string]string{
+							"app": "orderStorage",
 						},
 					},
 				},

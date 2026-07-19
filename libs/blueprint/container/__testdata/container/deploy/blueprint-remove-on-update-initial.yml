@@ -1,0 +1,19 @@
+version: 2025-11-02
+resources:
+  syncFunction:
+    type: aws/lambda2/function
+    description: "Function linked to the old function that will later be removed."
+    linkSelector:
+      byLabel:
+        app: exec
+    spec:
+      handler: "src/sync_v1.handler"
+
+  oldFunction:
+    type: aws/old2/function
+    description: "Function that is dropped from the updated blueprint."
+    metadata:
+      labels:
+        app: exec
+    spec:
+      handler: "src/old.handler"

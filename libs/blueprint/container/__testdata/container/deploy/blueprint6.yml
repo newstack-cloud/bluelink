@@ -1,0 +1,30 @@
+version: 2025-11-02
+resources:
+  resourceA:
+    type: aws/lambda2/function
+    description: "Fast function with no dependencies."
+    spec:
+      handler: "src/a.handler"
+
+  resourceQ:
+    type: aws/lambda2/function
+    description: "Slow function with no dependencies."
+    spec:
+      handler: "src/q.handler"
+
+  resourceB:
+    type: aws/lambda2/function
+    description: "Function that depends on the slow function."
+    dependsOn:
+      - resourceQ
+    spec:
+      handler: "src/b.handler"
+
+  resourceC:
+    type: aws/lambda2/function
+    description: "Function that depends on functions completing at different times."
+    dependsOn:
+      - resourceA
+      - resourceB
+    spec:
+      handler: "src/c.handler"

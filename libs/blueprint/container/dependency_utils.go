@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"strings"
 
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/links"
@@ -88,13 +89,21 @@ func checkHasDependencyOnResource(
 			},
 		)
 		if linksToDependencyNode != nil {
-			return linkedToResourceHasPriority(
+			hasPriority, err := linkedToResourceHasPriority(
 				ctx,
 				node.ChainLinkNode,
 				dependsOnResourceName,
 				provider.LinkPriorityResourceB,
 				params,
 			)
+			if err != nil || hasPriority {
+				return hasPriority, err
+			}
+			// A link relationship without the dependency as the priority
+			// resource does not determine ordering on its own, fall through
+			// to the reference check as the node may still reference the
+			// linked resource (e.g. a link activated by a reference to a
+			// property of the linked resource).
 		}
 
 		linkedFrom := node.ChainLinkNode.LinkedFrom
@@ -105,13 +114,18 @@ func checkHasDependencyOnResource(
 			},
 		)
 		if linkedFromDependencyNode != nil {
-			return linkedToResourceHasPriority(
+			hasPriority, err := linkedToResourceHasPriority(
 				ctx,
 				linkedFromDependencyNode,
 				node.ChainLinkNode.ResourceName,
 				provider.LinkPriorityResourceA,
 				params,
 			)
+			if err != nil || hasPriority {
+				return hasPriority, err
+			}
+			// Same as above, fall through to the reference check when the
+			// link priority does not make the linked resource a dependency.
 		}
 	}
 
@@ -134,20 +148,48 @@ func nodeReferencesElement(
 	dependsOnElementName string,
 ) (bool, error) {
 	refChainNode := getRefChainNode(node, refChainCollector)
+	if refChainNode == nil {
+		return false, nil
+	}
 
-	if refChainNode != nil {
-		referencedChainNode := core.Find(
-			refChainNode.References,
-			func(node *refgraph.ReferenceChainNode, _ int) bool {
-				return node.ElementName == dependsOnElementName
-			},
-		)
-		if referencedChainNode != nil {
-			return true, nil
+	return referencesElementThroughDerivedValues(
+		refChainNode,
+		dependsOnElementName,
+		map[string]bool{},
+	), nil
+}
+
+func referencesElementThroughDerivedValues(
+	refChainNode *refgraph.ReferenceChainNode,
+	dependsOnElementName string,
+	visited map[string]bool,
+) bool {
+	for _, reference := range refChainNode.References {
+		if reference.ElementName == dependsOnElementName {
+			return true
+		}
+		if visited[reference.ElementName] {
+			continue
+		}
+		visited[reference.ElementName] = true
+
+		// References to other resources or child blueprints are dependency
+		// edges in their own right, ordering through them is handled by
+		// their own dependency relationships.
+		if isDeploymentElementName(reference.ElementName) {
+			continue
+		}
+		if referencesElementThroughDerivedValues(reference, dependsOnElementName, visited) {
+			return true
 		}
 	}
 
-	return false, nil
+	return false
+}
+
+func isDeploymentElementName(elementName string) bool {
+	return strings.HasPrefix(elementName, "resources.") ||
+		strings.HasPrefix(elementName, "children.")
 }
 
 func getRefChainNode(

@@ -1,0 +1,19 @@
+version: 2025-11-02
+resources:
+  syncFunction:
+    type: aws/lambda2/function
+    description: "Modified function that now links to the new jobs function."
+    linkSelector:
+      byLabel:
+        app: jobs
+    spec:
+      handler: "src/sync_v2.handler"
+
+  jobsFunction:
+    type: aws/jobs2/function
+    description: "New function added in the updated blueprint."
+    metadata:
+      labels:
+        app: jobs
+    spec:
+      handler: "src/jobs.handler"

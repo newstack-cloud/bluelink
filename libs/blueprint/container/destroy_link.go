@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
@@ -52,10 +53,26 @@ func (d *defaultLinkDestroyer) Destroy(
 		element.LogicalName(),
 	)
 	if linkState == nil {
-		deployCtx.Channels.ErrChan <- errLinkNotFoundInState(
-			element.LogicalName(),
-			instanceID,
+		// A link in the removal set with no persisted state was never
+		// deployed (e.g. a previous deploy failed before reaching it), so
+		// there is nothing to destroy. It is reported as destroyed so the
+		// removal process can run to completion for the elements that do
+		// have persisted state.
+		deployCtx.Logger.Info(
+			"skipping destruction for a link with no persisted state",
 		)
+		d.reportLinkDestroyedWithoutState(element, instanceID, deployCtx)
+		return
+	}
+
+	if linkResourceStateMissing(element.LogicalName(), deployCtx.InstanceStateSnapshot) {
+		// Without the persisted state of both resources in the link, the
+		// link plugin implementation can not be resolved and there is no
+		// meaningful resource state left to clean up.
+		deployCtx.Logger.Info(
+			"skipping destruction for a link with a linked resource that has no persisted state",
+		)
+		d.reportLinkDestroyedWithoutState(element, instanceID, deployCtx)
 		return
 	}
 
@@ -96,6 +113,33 @@ func (d *defaultLinkDestroyer) Destroy(
 	if err != nil {
 		deployCtx.Channels.ErrChan <- err
 	}
+}
+
+func (d *defaultLinkDestroyer) reportLinkDestroyedWithoutState(
+	element state.Element,
+	instanceID string,
+	deployCtx *DeployContext,
+) {
+	deployCtx.Channels.LinkUpdateChan <- LinkDeployUpdateMessage{
+		InstanceID: instanceID,
+		LinkID:     element.ID(),
+		LinkName:   element.LogicalName(),
+		Status: determineLinkOperationSuccessfullyFinishedStatus(
+			deployCtx.Rollback,
+			provider.LinkUpdateTypeDestroy,
+		),
+		UpdateTimestamp:  core.SystemClock{}.Now().Unix(),
+		MissingFromState: true,
+	}
+}
+
+func linkResourceStateMissing(linkName string, currentState *state.InstanceState) bool {
+	linkDependencyInfo := extractLinkDirectDependencies(linkName)
+	if linkDependencyInfo == nil {
+		return false
+	}
+	return getResourceStateByName(currentState, linkDependencyInfo.resourceAName) == nil ||
+		getResourceStateByName(currentState, linkDependencyInfo.resourceBName) == nil
 }
 
 func (d *defaultLinkDestroyer) getProviderLinkImplementation(

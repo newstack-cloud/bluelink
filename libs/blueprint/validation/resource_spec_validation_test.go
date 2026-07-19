@@ -828,6 +828,121 @@ func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_invalid_mapping
 	)
 }
 
+func (s *ResourceSpecValidationTestSuite) Test_allows_whole_value_substitution_for_array_field(c *C) {
+	resource := createTestValidResource()
+	itemVal := "item1"
+	resource.Spec.Fields["array"] = substitutionFunctionNode(
+		"list",
+		&substitutions.Substitution{StringValue: &itemVal},
+	)
+
+	diagnostics, err := s.validateTestResource(resource)
+	c.Assert(err, IsNil)
+	c.Assert(diagnostics, HasLen, 0)
+}
+
+func (s *ResourceSpecValidationTestSuite) Test_allows_whole_value_substitution_for_map_field(c *C) {
+	resource := createTestValidResource()
+	resource.Spec.Fields["map"] = substitutionFunctionNode("object")
+
+	diagnostics, err := s.validateTestResource(resource)
+	c.Assert(err, IsNil)
+	c.Assert(diagnostics, HasLen, 0)
+}
+
+func (s *ResourceSpecValidationTestSuite) Test_allows_whole_value_substitution_for_object_field_in_union(c *C) {
+	resource := createTestValidResource()
+	resource.Spec.Fields["array"] = &core.MappingNode{
+		Items: []*core.MappingNode{
+			substitutionFunctionNode("object"),
+		},
+	}
+
+	_, err := s.validateTestResource(resource)
+	c.Assert(err, IsNil)
+}
+
+func (s *ResourceSpecValidationTestSuite) Test_reports_error_for_array_field_substitution_with_non_array_resolved_type(c *C) {
+	resource := createTestValidResource()
+	strVal := "  padded  "
+	resource.Spec.Fields["array"] = substitutionFunctionNode(
+		"trim",
+		&substitutions.Substitution{StringValue: &strVal},
+	)
+
+	diagnostics, err := s.validateTestResource(resource)
+	c.Assert(diagnostics, HasLen, 0)
+	c.Assert(err, NotNil)
+	loadErr, isLoadErr := internal.UnpackLoadError(err)
+	c.Assert(isLoadErr, Equals, true)
+	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeInvalidResource)
+	c.Assert(
+		loadErr.Error(),
+		Equals,
+		"blueprint load error: validation failed due to an invalid resource item "+
+			"at path \"resources.testHandler.spec.array\" where a value of type "+
+			"array was expected, but type string was found",
+	)
+}
+
+func (s *ResourceSpecValidationTestSuite) validateTestResource(
+	resource *schema.Resource,
+) ([]*core.Diagnostic, error) {
+	resourceMap := &schema.ResourceMap{
+		Values: map[string]*schema.Resource{
+			"testHandler": resource,
+		},
+	}
+
+	blueprint := &schema.Blueprint{
+		Resources: resourceMap,
+	}
+
+	return ValidateResource(
+		context.Background(),
+		"testHandler",
+		resource,
+		resourceMap,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
+		/* resourceDerivedFromTemplate */ false,
+		core.NewNopLogger(),
+	)
+}
+
+func substitutionFunctionNode(
+	functionName substitutions.SubstitutionFunctionName,
+	args ...*substitutions.Substitution,
+) *core.MappingNode {
+	functionArgs := []*substitutions.SubstitutionFunctionArg{}
+	for _, arg := range args {
+		functionArgs = append(functionArgs, &substitutions.SubstitutionFunctionArg{
+			Value: arg,
+		})
+	}
+
+	return &core.MappingNode{
+		StringWithSubstitutions: &substitutions.StringOrSubstitutions{
+			Values: []*substitutions.StringOrSubstitution{
+				{
+					SubstitutionValue: &substitutions.Substitution{
+						Function: &substitutions.SubstitutionFunctionExpr{
+							FunctionName: functionName,
+							Arguments:    functionArgs,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 //////////////////////////////////////////////////
 // Test resources
 //////////////////////////////////////////////////

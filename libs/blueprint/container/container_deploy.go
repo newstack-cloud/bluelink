@@ -204,13 +204,18 @@ func (c *defaultBlueprintContainer) deploy(
 	if !initialised {
 		if !input.Force && isInstanceInProgress(&currentInstanceState, input.Rollback) {
 			deployLogger.Info("instance is already in progress, exiting deployment early")
-			channels.FinishChan <- c.createDeploymentFinishedMessage(
+			rejectionMsg := c.createDeploymentFinishedMessage(
 				input.InstanceID,
 				determineInstanceDeployFailedStatus(input.Rollback, isNewInstance),
 				[]string{instanceInProgressFailedMessage(input.InstanceID, deployClaimAction, input.Rollback)},
 				c.clock.Since(startTime),
 				/* prepareElapsedTime */ nil,
 			)
+			// Another operation holds the claim for the instance, its
+			// in-progress status must not be overwritten with the failed
+			// status of this rejected attempt.
+			rejectionMsg.SkipPersist = true
+			channels.FinishChan <- rejectionMsg
 			return
 		}
 
@@ -514,8 +519,17 @@ func (c *defaultBlueprintContainer) saveInstanceDeploymentStateAndCleanup(
 			// until we read), so the FinishChan branch below would
 			// already have fired and we would not be here. Reaching
 			// this branch means the deploy exited via an ErrChan path
-			// (or similar) without sending FinishChan; nothing more to
-			// wait for.
+			// (or similar) without sending FinishChan, so no terminal
+			// status was persisted. Release the in-progress claim by
+			// marking the deployment as failed, otherwise all subsequent
+			// deploy and destroy attempts for the instance are rejected
+			// as "already in progress" forever.
+			c.releaseStrandedInstanceClaim(
+				ctx,
+				instanceID,
+				rollingBack,
+				determineInstanceDeployFailedStatus(rollingBack, isNewInstance),
+			)
 			return
 		case msg := <-listenToChannels.DeploymentUpdateChan:
 			// Some status updates will have already been persisted at the point the message is sent.
@@ -540,19 +554,62 @@ func (c *defaultBlueprintContainer) saveInstanceDeploymentStateAndCleanup(
 			forwardToChannels.DeploymentUpdateChan <- msg
 
 		case msg := <-listenToChannels.FinishChan:
-			statusInfo := createDeployFinishedInstanceStatusInfo(&msg, rollingBack, isNewInstance)
-			err := c.stateContainer.Instances().UpdateStatus(
-				ctx,
-				instanceID,
-				statusInfo,
-			)
-			if err != nil {
-				forwardToChannels.ErrChan <- err
-				return
+			if !msg.SkipPersist {
+				statusInfo := createDeployFinishedInstanceStatusInfo(&msg, rollingBack, isNewInstance)
+				err := c.stateContainer.Instances().UpdateStatus(
+					ctx,
+					instanceID,
+					statusInfo,
+				)
+				if err != nil {
+					forwardToChannels.ErrChan <- err
+					return
+				}
 			}
 			forwardToChannels.FinishChan <- msg
 			finished = true
 		}
+	}
+}
+
+// Marks a blueprint instance as failed when an
+// operation exits without persisting a terminal status (e.g. a deploy that
+// ends via the error channel without sending a finished message).
+// The in-progress guard ensures a terminal status persisted by another path
+// is never overwritten.
+func (c *defaultBlueprintContainer) releaseStrandedInstanceClaim(
+	ctx context.Context,
+	instanceID string,
+	rollingBack bool,
+	failedStatus core.InstanceStatus,
+) {
+	if instanceID == "" {
+		return
+	}
+
+	instances := c.stateContainer.Instances()
+	currentInstanceState, err := instances.Get(ctx, instanceID)
+	if err != nil {
+		c.logger.Debug(
+			"failed to load instance state while releasing a stranded in-progress claim",
+			core.ErrorLogField("error", err),
+		)
+		return
+	}
+	if !isInstanceInProgress(&currentInstanceState, rollingBack) {
+		return
+	}
+
+	updateTimestamp := int(c.clock.Now().Unix())
+	err = instances.UpdateStatus(ctx, instanceID, state.InstanceStatusInfo{
+		Status:                    failedStatus,
+		LastStatusUpdateTimestamp: &updateTimestamp,
+	})
+	if err != nil {
+		c.logger.Debug(
+			"failed to release a stranded in-progress claim for the instance",
+			core.ErrorLogField("error", err),
+		)
 	}
 }
 
@@ -1093,7 +1150,7 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 						/* destroyingInstance */ false,
 						deployCtx.Rollback,
 					),
-					drainFailureMessagesWithInterrupted(deployCtx, failed, interrupted),
+					drainFailureMessagesWithInterrupted(deployCtx, failed, interrupted, state.err),
 					c.clock.Since(deployCtx.StartTime),
 					deployCtx.State.GetPrepareDuration(),
 				)
@@ -1143,7 +1200,7 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 					/* destroyingInstance */ false,
 					deployCtx.Rollback,
 				),
-				drainFailureMessagesWithInterrupted(deployCtx, failed, interrupted),
+				drainFailureMessagesWithInterrupted(deployCtx, failed, interrupted, state.err),
 				c.clock.Since(deployCtx.StartTime),
 				deployCtx.State.GetPrepareDuration(),
 			)
@@ -1163,7 +1220,7 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 				/* destroyingInstance */ false,
 				deployCtx.Rollback,
 			),
-			finishedFailureMessages(deployCtx, failed),
+			finishedFailureMessagesFromElements(deployCtx, failed),
 			c.clock.Since(deployCtx.StartTime),
 			/* prepareElapsedTime */
 			deployCtx.State.GetPrepareDuration(),
@@ -1466,7 +1523,18 @@ func (c *defaultBlueprintContainer) prepareAndDeployLinks(
 	deployCtx *DeployContext,
 	internalChannels *DeployChannels,
 ) {
-	if len(linksReadyToBeDeployed) == 0 {
+	// Only deploy links that are a part of the staged change set.
+	// The pending link tracking follows every link adjacent to resources
+	// deployed in the current deployment, including links that change staging
+	// determined to have no changes.
+	// Deploying links that are not in the change set would produce
+	// completions that the deployment event loop does not count, allowing the
+	// loop to exit before all of the planned elements have been deployed.
+	linksToDeploy := filterLinksInChangeSet(
+		linksReadyToBeDeployed,
+		deployCtx.InputChanges,
+	)
+	if len(linksToDeploy) == 0 {
 		// Make sure that the latest instance state is only loaded
 		// if it is needed for links ready to be deployed.
 		return
@@ -1485,7 +1553,7 @@ func (c *defaultBlueprintContainer) prepareAndDeployLinks(
 	// For deployment, multiple links could be modifying the same resource,
 	// to ensure consistency in state, links involving the same resource will be
 	// both staged and deployed synchronously.
-	for _, readyToDeploy := range linksReadyToBeDeployed {
+	for _, readyToDeploy := range linksToDeploy {
 		linkImpl, _, err := getLinkImplementation(
 			readyToDeploy.resourceANode,
 			readyToDeploy.resourceBNode,
@@ -1636,11 +1704,12 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterResource(
 				return
 			}
 
-			otherDependenciesInProgress := c.checkDependenciesInProgress(
+			hasBlockedDependencies := c.checkBlockedDependencies(
 				node,
 				stabilisedDependencies,
 				[]string{elementName},
 				deployCtx.State,
+				deployCtx.InputChanges,
 			)
 
 			readyToDeployAfterResource := readyToDeployAfterDependency(
@@ -1651,9 +1720,9 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterResource(
 			)
 
 			dependenciesComplete := (isDependant &&
-				!otherDependenciesInProgress &&
+				!hasBlockedDependencies &&
 				readyToDeployAfterResource) ||
-				(!isDependant && !otherDependenciesInProgress)
+				(!isDependant && !hasBlockedDependencies)
 
 			canDeploy := c.checkUpdateNodeCanDeploy(
 				node,
@@ -1729,53 +1798,53 @@ func (c *defaultBlueprintContainer) checkUpdateNodeCanDeploy(
 	return !deploymentStarted && otherConditionToStart
 }
 
-func (c *defaultBlueprintContainer) checkDependenciesInProgress(
+// checkBlockedDependencies reports whether any direct dependency of the
+// dependant (other than those in ignoreElements) is not yet in a state
+// that allows the dependant to be deployed. A dependency that has not
+// started must block the dependant just like one that is in progress,
+// otherwise dependants are deployed before dependencies that are scheduled
+// to start later in the deployment process and reads of the dependency
+// state fail or produce stale values.
+func (c *defaultBlueprintContainer) checkBlockedDependencies(
 	dependant *DeploymentNode,
 	dependantStabilisedDeps []string,
 	ignoreElements []string,
-	state DeploymentState,
+	deployState DeploymentState,
+	inputChanges *changes.BlueprintChanges,
 ) bool {
-	atLeastOneInProgress := false
-	i := 0
-	for !atLeastOneInProgress && i < len(dependant.DirectDependencies) {
-		dependency := dependant.DirectDependencies[i]
-		if !slices.Contains(ignoreElements, dependency.Name()) {
-			dependencyElement := createElementFromDeploymentNode(dependency)
-			inProgress := state.IsElementInProgress(dependencyElement)
-			if inProgress {
-				atLeastOneInProgress = true
-			} else {
-				// The dependency is considered in progress if it has a "config complete"
-				// status and the dependant is a resource that requires the dependency to be stable
-				// before it can be deployed.
-				atLeastOneInProgress = c.configCompleteDependencyMustStabilise(
-					state,
-					dependant,
-					dependantStabilisedDeps,
-					dependencyElement,
-					dependency,
-				)
-			}
+	for _, dependency := range dependant.DirectDependencies {
+		if slices.Contains(ignoreElements, dependency.Name()) {
+			continue
 		}
-		i += 1
-	}
-
-	return atLeastOneInProgress
-}
-
-func (c *defaultBlueprintContainer) configCompleteDependencyMustStabilise(
-	state DeploymentState,
-	dependant *DeploymentNode,
-	dependantStabilisedDeps []string,
-	dependencyElement state.Element,
-	dependency *DeploymentNode,
-) bool {
-	configComplete := state.IsElementConfigComplete(dependencyElement)
-	if configComplete {
-		return dependencyMustStabilise(dependant, dependency, dependantStabilisedDeps)
+		// Dependencies with no pending changes are not deployed in the
+		// current deployment process and must not block the dependant.
+		if !nodeHasChanges(dependency, inputChanges) {
+			continue
+		}
+		if !c.dependencySatisfied(dependant, dependency, dependantStabilisedDeps, deployState) {
+			return true
+		}
 	}
 
 	return false
+}
+
+func (c *defaultBlueprintContainer) dependencySatisfied(
+	dependant *DeploymentNode,
+	dependency *DeploymentNode,
+	dependantStabilisedDeps []string,
+	deployState DeploymentState,
+) bool {
+	dependencyElement := createElementFromDeploymentNode(dependency)
+	if deployState.WasElementCompleted(dependencyElement) {
+		return true
+	}
+
+	// A dependency that has reached the "config complete" stage only
+	// satisfies the dependant if the dependant does not require it
+	// to be stable before deployment.
+	return deployState.IsElementConfigComplete(dependencyElement) &&
+		!dependencyMustStabilise(dependant, dependency, dependantStabilisedDeps)
 }
 
 func (c *defaultBlueprintContainer) handleResourceCreationEvent(
@@ -2207,11 +2276,12 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterChild(
 				return
 			}
 
-			otherDependenciesInProgress := c.checkDependenciesInProgress(
+			hasBlockedDependencies := c.checkBlockedDependencies(
 				node,
 				stabilisedDependencies,
 				[]string{elementName},
 				deployCtx.State,
+				deployCtx.InputChanges,
 			)
 
 			readyToDeployAfterChild := readyToDeployAfterDependency(
@@ -2222,9 +2292,9 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterChild(
 			)
 
 			dependenciesComplete := (isDependant &&
-				!otherDependenciesInProgress &&
+				!hasBlockedDependencies &&
 				readyToDeployAfterChild) ||
-				(!isDependant && !otherDependenciesInProgress)
+				(!isDependant && !hasBlockedDependencies)
 
 			canDeploy := c.checkUpdateNodeCanDeploy(
 				node,

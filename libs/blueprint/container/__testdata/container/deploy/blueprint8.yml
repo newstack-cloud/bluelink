@@ -1,0 +1,33 @@
+version: 2025-11-02
+resources:
+  goodFunction:
+    type: aws/lambda2/function
+    description: "Function that deploys successfully."
+    metadata:
+      labels:
+        app: linked
+    spec:
+      handler: "src/good.handler"
+
+  badFunction:
+    type: aws/lambda2/function
+    description: "Function that fails to deploy with an unwrapped error."
+    spec:
+      handler: "src/bad.handler"
+
+  dependantFunction:
+    type: aws/lambda2/function
+    description: "Function that never starts because its dependency fails."
+    dependsOn:
+      - badFunction
+    spec:
+      handler: "src/dependant.handler"
+
+  eventsRule:
+    type: aws/events2/rule
+    description: "Rule linked to the good function."
+    linkSelector:
+      byLabel:
+        app: linked
+    spec:
+      targetArn: "static-arn"

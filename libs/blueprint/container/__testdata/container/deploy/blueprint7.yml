@@ -1,0 +1,38 @@
+version: 2025-11-02
+resources:
+  slowBase:
+    type: aws/lambda2/function
+    description: "Slow function that delays the start of syncFunction."
+    spec:
+      handler: "src/base.handler"
+
+  fastFunction:
+    type: aws/lambda2/function
+    description: "Fast function with no dependencies."
+    spec:
+      handler: "src/fast.handler"
+
+  syncFunction:
+    type: aws/lambda2/function
+    description: "Function that an events rule references and links to."
+    dependsOn:
+      - slowBase
+    metadata:
+      labels:
+        app: sync
+    spec:
+      handler: "src/sync.handler"
+
+  eventsRule:
+    type: aws/events2/rule
+    description: >
+      Rule that references the computed id of a function it is also linked to
+      with a link that has no priority resource. It also references the fast
+      function so that the fast function's completion triggers an evaluation
+      of the rule's readiness while syncFunction has not started yet.
+    linkSelector:
+      byLabel:
+        app: sync
+    spec:
+      targetArn: "${resources.syncFunction.spec.id}"
+      otherArn: "${resources.fastFunction.spec.id}"

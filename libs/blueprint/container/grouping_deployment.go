@@ -71,21 +71,66 @@ func hasReferenceInGroup(
 		return false
 	}
 
-	hasReferenceInGroup := false
-	i := 0
-	for !hasReferenceInGroup && i < len(refChainNode.References) {
-		reference := refChainNode.References[i]
-		if groupIndex, ok := nodeGroupMap[reference.ElementName]; ok {
-			hasReferenceInGroup = groupIndex == currentGroupIndex &&
-				slices.ContainsFunc(reference.Tags, func(tag string) bool {
-					return tag == validation.CreateSubRefTag(refChainNode.ElementName) ||
-						tag == validation.CreateDependencyRefTag(refChainNode.ElementName)
-				})
+	return hasReferenceInGroupTransitively(
+		refChainNode,
+		nodeGroupMap,
+		currentGroupIndex,
+		map[string]bool{},
+	)
+}
+
+// Checks references to deployment nodes in the
+// current group both directly and through elements that are not deployed
+// themselves (values and data sources). A resource referencing a derived
+// value that is defined with a reference to another resource must not share
+// a group with that resource, otherwise both are deployed concurrently and
+// the derived value resolves before the resource it depends on has been
+// deployed.
+func hasReferenceInGroupTransitively(
+	refChainNode *refgraph.ReferenceChainNode,
+	nodeGroupMap map[string]int,
+	currentGroupIndex int,
+	visited map[string]bool,
+) bool {
+	for _, reference := range refChainNode.References {
+		if visited[reference.ElementName] {
+			continue
 		}
-		i += 1
+		visited[reference.ElementName] = true
+
+		referencedByCurrent := slices.ContainsFunc(reference.Tags, func(tag string) bool {
+			return tag == validation.CreateSubRefTag(refChainNode.ElementName) ||
+				tag == validation.CreateDependencyRefTag(refChainNode.ElementName)
+		})
+		if !referencedByCurrent {
+			continue
+		}
+
+		if groupIndex, ok := nodeGroupMap[reference.ElementName]; ok {
+			if groupIndex == currentGroupIndex {
+				return true
+			}
+			continue
+		}
+
+		// Deployment nodes that are not in the group map yet cannot be
+		// traversed through, ordering guarantees they are only encountered
+		// here when they are not part of the current deployment.
+		if isDeploymentElementName(reference.ElementName) {
+			continue
+		}
+
+		if hasReferenceInGroupTransitively(
+			reference,
+			nodeGroupMap,
+			currentGroupIndex,
+			visited,
+		) {
+			return true
+		}
 	}
 
-	return hasReferenceInGroup
+	return false
 }
 
 func hasLinkInGroup(

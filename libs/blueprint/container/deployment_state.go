@@ -41,6 +41,9 @@ type DeploymentState interface {
 	// IsElementConfigComplete checks if an element has had its configuration
 	// completed in the deployment process.
 	IsElementConfigComplete(element state.Element) bool
+	// WasElementCompleted checks if an element has been successfully
+	// created or updated in the current deployment process.
+	WasElementCompleted(element state.Element) bool
 	// CheckUpdateElementDeploymentStarted checks if the deployment of an element has already started
 	// and updates the deployment state at the same time.
 	// This makes checking and writing the deployment started state atomic while taking into account
@@ -289,6 +292,16 @@ func (d *defaultDeploymentState) IsElementConfigComplete(element state.Element) 
 
 	_, isConfigComplete := d.configComplete[getNamespacedLogicalName(element)]
 	return isConfigComplete
+}
+
+func (d *defaultDeploymentState) WasElementCompleted(element state.Element) bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	elementName := getNamespacedLogicalName(element)
+	_, wasCreated := d.created[elementName]
+	_, wasUpdated := d.updated[elementName]
+	return wasCreated || wasUpdated
 }
 
 func (d *defaultDeploymentState) CheckUpdateElementDeploymentStarted(

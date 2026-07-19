@@ -48,12 +48,144 @@ func (c *defaultBlueprintContainer) Destroy(
 ) {
 	ctxWithInstanceID := context.WithValue(ctx, core.BlueprintInstanceIDKey, input.InstanceID)
 	state := c.createDeploymentState()
-	go c.destroy(
+
+	// Top-level destroy events are intercepted in the same way as deployment
+	// events so failed destroy statuses are persisted before reaching the
+	// caller. Without this, a failed destroy would leave the instance with
+	// the in-progress status persisted when the destroy was claimed and all
+	// subsequent deploy and destroy attempts would be rejected as
+	// "already in progress" forever.
+	interceptUpdateChan := make(chan DeploymentUpdateMessage)
+	interceptFinishChan := make(chan DeploymentFinishedMessage)
+	rewiredChannels := &DeployChannels{
+		ResourceUpdateChan:   channels.ResourceUpdateChan,
+		ChildUpdateChan:      channels.ChildUpdateChan,
+		LinkUpdateChan:       channels.LinkUpdateChan,
+		ErrChan:              channels.ErrChan,
+		DeploymentUpdateChan: interceptUpdateChan,
+		FinishChan:           interceptFinishChan,
+	}
+
+	destroyDone := make(chan struct{})
+	go func() {
+		defer close(destroyDone)
+		c.destroy(
+			ctxWithInstanceID,
+			input,
+			rewiredChannels,
+			state,
+			paramOverrides,
+		)
+	}()
+
+	go c.saveInstanceDestroyStateAndCleanup(
 		ctxWithInstanceID,
 		input,
+		rewiredChannels,
 		channels,
-		state,
-		paramOverrides,
+		destroyDone,
+	)
+}
+
+func (c *defaultBlueprintContainer) saveInstanceDestroyStateAndCleanup(
+	ctx context.Context,
+	input *DestroyInput,
+	listenToChannels *DeployChannels,
+	forwardToChannels *DeployChannels,
+	destroyDone <-chan struct{},
+) {
+	finished := false
+	for !finished {
+		select {
+		case <-destroyDone:
+			// The destroy exited via an ErrChan path without sending a
+			// finished message, so no terminal status was persisted.
+			// Release the in-progress claim by marking the removal as
+			// failed, otherwise all subsequent deploy and destroy attempts
+			// for the instance are rejected as "already in progress" forever.
+			c.releaseStrandedDestroyClaim(ctx, input)
+			return
+		case msg := <-listenToChannels.DeploymentUpdateChan:
+			if !msg.SkipPersist {
+				updateTimestamp := int(msg.UpdateTimestamp)
+				err := c.stateContainer.Instances().UpdateStatus(
+					ctx,
+					msg.InstanceID,
+					state.InstanceStatusInfo{
+						Status:                    msg.Status,
+						LastStatusUpdateTimestamp: &updateTimestamp,
+					},
+				)
+				if err != nil {
+					forwardToChannels.ErrChan <- err
+					return
+				}
+			}
+			forwardToChannels.DeploymentUpdateChan <- msg
+		case msg := <-listenToChannels.FinishChan:
+			err := c.persistDestroyFinishedStatus(ctx, &msg)
+			if err != nil {
+				forwardToChannels.ErrChan <- err
+				return
+			}
+			forwardToChannels.FinishChan <- msg
+			finished = true
+		}
+	}
+}
+
+// Persists failed destroy finish statuses.
+// Successful destroys remove the instance record entirely, so there is
+// nothing to persist for success statuses. Instance-not-found errors are
+// tolerated for failures that occur before the instance was resolved
+// (e.g. destroying an instance that does not exist).
+func (c *defaultBlueprintContainer) persistDestroyFinishedStatus(
+	ctx context.Context,
+	msg *DeploymentFinishedMessage,
+) error {
+	if msg.SkipPersist || msg.InstanceID == "" || instanceDestroySucceeded(msg.Status) {
+		return nil
+	}
+
+	updateTimestamp := int(msg.UpdateTimestamp)
+	err := c.stateContainer.Instances().UpdateStatus(
+		ctx,
+		msg.InstanceID,
+		state.InstanceStatusInfo{
+			Status:                    msg.Status,
+			FailureReasons:            msg.FailureReasons,
+			Durations:                 msg.Durations,
+			LastStatusUpdateTimestamp: &updateTimestamp,
+		},
+	)
+	if err != nil && !state.IsInstanceNotFound(err) {
+		return err
+	}
+	return nil
+}
+
+func instanceDestroySucceeded(status core.InstanceStatus) bool {
+	return status == core.InstanceStatusDestroyed ||
+		status == core.InstanceStatusDeployRollbackComplete
+}
+
+func (c *defaultBlueprintContainer) releaseStrandedDestroyClaim(
+	ctx context.Context,
+	input *DestroyInput,
+) {
+	instanceID, err := c.getInstanceID(ctx, input.InstanceID, input.InstanceName)
+	if err != nil {
+		c.logger.Debug(
+			"failed to resolve instance ID while releasing a stranded in-progress claim",
+			core.ErrorLogField("error", err),
+		)
+		return
+	}
+	c.releaseStrandedInstanceClaim(
+		ctx,
+		instanceID,
+		input.Rollback,
+		determineInstanceDestroyFailedStatus(input.Rollback),
 	)
 }
 
@@ -115,13 +247,18 @@ func (c *defaultBlueprintContainer) destroy(
 	}
 
 	if !input.Force && isInstanceInProgress(&currentInstanceState, input.Rollback) {
-		channels.FinishChan <- c.createDeploymentFinishedMessage(
+		rejectionMsg := c.createDeploymentFinishedMessage(
 			resolvedInstanceID,
 			determineInstanceDestroyFailedStatus(input.Rollback),
 			[]string{instanceInProgressFailedMessage(resolvedInstanceID, destroyClaimAction, input.Rollback)},
 			c.clock.Since(startTime),
 			/* prepareElapsedTime */ nil,
 		)
+		// Another operation holds the claim for the instance, its
+		// in-progress status must not be overwritten with the failed
+		// status of this rejected attempt.
+		rejectionMsg.SkipPersist = true
+		channels.FinishChan <- rejectionMsg
 		return
 	}
 
@@ -494,7 +631,7 @@ func (c *defaultBlueprintContainer) listenToAndProcessGroupRemovals(
 			deployCtx.Channels.FinishChan <- c.createDeploymentFinishedMessage(
 				instanceID,
 				determineFinishedFailureStatus(deployCtx.Destroying, deployCtx.Rollback),
-				drainFailureMessagesWithInterrupted(deployCtx, failed, interrupted),
+				drainFailureMessagesWithInterrupted(deployCtx, failed, interrupted, state.err),
 				c.clock.Since(deployCtx.StartTime),
 				deployCtx.State.GetPrepareDuration(),
 			)
@@ -570,7 +707,7 @@ func (c *defaultBlueprintContainer) listenToAndProcessGroupRemovals(
 		deployCtx.Channels.FinishChan <- c.createDeploymentFinishedMessage(
 			instanceID,
 			determineFinishedFailureStatus(deployCtx.Destroying, deployCtx.Rollback),
-			drainFailureMessagesWithInterrupted(deployCtx, failed, interrupted),
+			drainFailureMessagesWithInterrupted(deployCtx, failed, interrupted, state.err),
 			c.clock.Since(deployCtx.StartTime),
 			deployCtx.State.GetPrepareDuration(),
 		)
@@ -630,7 +767,10 @@ func (c *defaultBlueprintContainer) handleResourceDestroyEvent(
 				ctx,
 				msg.ResourceID,
 			)
-			if err != nil {
+			// A resource that was never persisted (e.g. it was reported as
+			// destroyed because a previous deploy failed before reaching it)
+			// has no state record to remove.
+			if err != nil && !state.IsResourceNotFound(err) {
 				return err
 			}
 		} else {
@@ -677,7 +817,11 @@ func (c *defaultBlueprintContainer) handleChildDestroyEvent(
 				Status: msg.Status,
 			},
 		)
-		if err != nil {
+		// The child destroy owns the child instance record and removes it on
+		// success, status updates mirrored here are best-effort and a child
+		// that has already completed and removed its record must not fail
+		// the parent's destroy.
+		if err != nil && !state.IsInstanceNotFound(err) {
 			return err
 		}
 	}
@@ -693,7 +837,10 @@ func (c *defaultBlueprintContainer) handleChildDestroyEvent(
 				msg.ParentInstanceID,
 				msg.ChildName,
 			)
-			if err != nil {
+			// A child that was never persisted (e.g. it was reported as
+			// destroyed because a previous deploy failed before reaching it)
+			// has no parent-child relation to detach.
+			if err != nil && !state.IsInstanceNotFound(err) {
 				return err
 			}
 		} else {
@@ -705,7 +852,7 @@ func (c *defaultBlueprintContainer) handleChildDestroyEvent(
 					Durations: msg.Durations,
 				},
 			)
-			if err != nil {
+			if err != nil && !state.IsInstanceNotFound(err) {
 				return err
 			}
 		}
@@ -756,7 +903,10 @@ func (c *defaultBlueprintContainer) handleLinkDestroyEvent(
 				ctx,
 				msg.LinkID,
 			)
-			if err != nil {
+			// A link that was never persisted (e.g. it was reported as
+			// destroyed because a previous deploy failed before reaching it)
+			// has no state record to remove.
+			if err != nil && !state.IsLinkNotFound(err) {
 				return err
 			}
 		} else {

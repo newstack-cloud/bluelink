@@ -65,7 +65,7 @@ func (s *DestroyResourceRetainTestSuite) Test_retain_emits_retained_status_and_s
 	}
 }
 
-func (s *DestroyResourceRetainTestSuite) Test_retain_reports_error_when_resource_missing_from_state() {
+func (s *DestroyResourceRetainTestSuite) Test_retain_reports_retained_when_resource_missing_from_state() {
 	destroyer := NewDefaultResourceDestroyer(&mockclock.StaticClock{}, nil)
 
 	channels := CreateDeployChannels()
@@ -87,13 +87,60 @@ func (s *DestroyResourceRetainTestSuite) Test_retain_reports_error_when_resource
 
 	go destroyer.Retain(context.Background(), element, "instance-abc", deployCtx)
 
+	// A resource with no persisted state has nothing to remove from state,
+	// it must still be reported as retained so the removal process can run
+	// to completion instead of aborting the whole removal with an error.
+	// MissingFromState distinguishes this from the retention of a resource
+	// that is known in state. The resource may have already been removed
+	// or was never created.
 	select {
-	case <-channels.ResourceUpdateChan:
-		s.Fail("did not expect a status update when resource is missing from state")
+	case msg := <-channels.ResourceUpdateChan:
+		s.Assert().Equal(core.ResourceStatusRetained, msg.Status)
+		s.Assert().Equal(core.PreciseResourceStatusRetained, msg.PreciseStatus)
+		s.Assert().Equal("missing", msg.ResourceName)
+		s.Assert().True(msg.MissingFromState)
 	case err := <-channels.ErrChan:
-		s.Require().Error(err)
+		s.Require().NoError(err)
 	case <-time.After(time.Second):
-		s.Fail("timed out waiting for error from Retain")
+		s.Fail("timed out waiting for retained status update from Retain")
+	}
+}
+
+func (s *DestroyResourceRetainTestSuite) Test_destroy_reports_destroyed_when_resource_missing_from_state() {
+	destroyer := NewDefaultResourceDestroyer(&mockclock.StaticClock{}, nil)
+
+	channels := CreateDeployChannels()
+	deployCtx := &DeployContext{
+		Channels: channels,
+		State:    &defaultDeploymentState{},
+		Logger:   core.NewNopLogger(),
+		InstanceStateSnapshot: &state.InstanceState{
+			InstanceID: "instance-abc",
+			Resources:  map[string]*state.ResourceState{},
+		},
+	}
+
+	element := &ResourceIDInfo{
+		ResourceID:   "missing",
+		ResourceName: "missing",
+	}
+
+	go destroyer.Destroy(context.Background(), element, "instance-abc", deployCtx)
+
+	// A resource with no persisted state was never deployed so there is
+	// nothing to destroy, it must be reported as destroyed (flagged as
+	// missing from state) so the removal process can run to completion
+	// instead of aborting the whole removal with an error.
+	select {
+	case msg := <-channels.ResourceUpdateChan:
+		s.Assert().Equal(core.ResourceStatusDestroyed, msg.Status)
+		s.Assert().Equal(core.PreciseResourceStatusDestroyed, msg.PreciseStatus)
+		s.Assert().Equal("missing", msg.ResourceName)
+		s.Assert().True(msg.MissingFromState)
+	case err := <-channels.ErrChan:
+		s.Require().NoError(err)
+	case <-time.After(time.Second):
+		s.Fail("timed out waiting for destroyed status update from Destroy")
 	}
 }
 

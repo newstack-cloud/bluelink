@@ -57,10 +57,25 @@ func (d *defaultResourceDestroyer) Destroy(
 		resourceElement.LogicalName(),
 	)
 	if resourceState == nil {
-		deployCtx.Channels.ErrChan <- errResourceNotFoundInState(
-			resourceElement.LogicalName(),
-			instanceID,
+		// A resource in the removal set with no persisted state was never
+		// deployed (e.g. a previous deploy failed before reaching it), so
+		// there is nothing to destroy. It is reported as destroyed so the
+		// removal process can run to completion for the elements that do
+		// have persisted state.
+		deployCtx.Logger.Info(
+			"skipping destruction for a resource with no persisted state",
 		)
+		deployCtx.Channels.ResourceUpdateChan <- ResourceDeployUpdateMessage{
+			InstanceID:       instanceID,
+			ResourceID:       resourceElement.ID(),
+			ResourceName:     resourceElement.LogicalName(),
+			Group:            deployCtx.CurrentGroupIndex,
+			Status:           determineResourceDestroyedStatus(deployCtx.Rollback),
+			PreciseStatus:    determinePreciseResourceDestroyedStatus(deployCtx.Rollback),
+			UpdateTimestamp:  d.clock.Now().Unix(),
+			Attempt:          1,
+			MissingFromState: true,
+		}
 		return
 	}
 
@@ -115,26 +130,27 @@ func (d *defaultResourceDestroyer) Retain(
 		resourceElement.LogicalName(),
 	)
 	if resourceState == nil {
-		// Matches the existing Destroy path argument ordering for consistency.
-		deployCtx.Channels.ErrChan <- errResourceNotFoundInState(
-			resourceElement.LogicalName(),
-			instanceID,
+		// A resource with no persisted state was never deployed, there is
+		// nothing to remove from state so it is reported as retained to
+		// allow the removal process to run to completion.
+		deployCtx.Logger.Info(
+			"skipping retention for a resource with no persisted state",
 		)
-		return
+	} else {
+		deployCtx.Logger.Info(
+			"retaining resource, removing from blueprint state without destroying " +
+				"the underlying infrastructure",
+		)
 	}
-
-	deployCtx.Logger.Info(
-		"retaining resource — removing from blueprint state without destroying " +
-			"the underlying infrastructure",
-	)
 	deployCtx.Channels.ResourceUpdateChan <- ResourceDeployUpdateMessage{
-		InstanceID:      instanceID,
-		ResourceID:      resourceElement.ID(),
-		ResourceName:    resourceElement.LogicalName(),
-		Group:           deployCtx.CurrentGroupIndex,
-		Status:          core.ResourceStatusRetained,
-		PreciseStatus:   core.PreciseResourceStatusRetained,
-		UpdateTimestamp: d.clock.Now().Unix(),
+		InstanceID:       instanceID,
+		ResourceID:       resourceElement.ID(),
+		ResourceName:     resourceElement.LogicalName(),
+		Group:            deployCtx.CurrentGroupIndex,
+		Status:           core.ResourceStatusRetained,
+		PreciseStatus:    core.PreciseResourceStatusRetained,
+		UpdateTimestamp:  d.clock.Now().Unix(),
+		MissingFromState: resourceState == nil,
 	}
 }
 

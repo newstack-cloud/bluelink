@@ -62,6 +62,11 @@ type ResourceDeployUpdateMessage struct {
 	// - PreciseResourceStatusUpdateRollbackConfigComplete
 	// - PreciseResourceStatusUpdateRollbackComplete
 	Durations *state.ResourceCompletionDurations `json:"durations,omitempty"`
+	// MissingFromState indicates that the terminal status was reported
+	// without any operation being carried out because the resource has no
+	// persisted state. It may have already been removed or was never
+	// created (e.g. a previous deploy failed before reaching it).
+	MissingFromState bool `json:"missingFromState,omitempty"`
 }
 
 // ResourceChangesMessage provides a message containing status updates
@@ -113,6 +118,12 @@ type LinkDeployUpdateMessage struct {
 	// - PreciseLinkStatusIntermediaryResourceUpdateRollbackFailed
 	// - PreciseLinkStatusIntermediaryResourceUpdateRollbackComplete
 	Durations *state.LinkCompletionDurations `json:"durations,omitempty"`
+	// MissingFromState indicates that the terminal status was reported
+	// without any operation being carried out because the link (or the
+	// state of a resource in the link) has no persisted state. It may have
+	// already been removed or was never created (e.g. a previous deploy
+	// failed before reaching it).
+	MissingFromState bool `json:"missingFromState,omitempty"`
 }
 
 // ChildDeployUpdateMessage provides a message containing status updates
@@ -149,6 +160,11 @@ type ChildDeployUpdateMessage struct {
 	// - InstanceStatusUpdated
 	// - InstanceStatusUpdateFailed
 	Durations *state.InstanceCompletionDuration `json:"durations,omitempty"`
+	// MissingFromState indicates that the terminal status was reported
+	// without any operation being carried out because the child blueprint
+	// has no persisted state. It may have already been removed or was
+	// never deployed (e.g. a previous deploy failed before reaching it).
+	MissingFromState bool `json:"missingFromState,omitempty"`
 }
 
 // DeploymentUpdateMessage provides a message containing a blueprint-wide status update
@@ -210,6 +226,13 @@ type DeploymentFinishedMessage struct {
 	// auto-rollback because they were not in a safe state to rollback.
 	// This is only populated for rollback completion events.
 	SkippedRollbackItems []SkippedRollbackItem `json:"skippedRollbackItems,omitempty"`
+	// SkipPersist signals to the in-process status persister that this
+	// finish status must not be written to state. This is set on rejection
+	// messages produced when another operation holds the claim for the
+	// instance, so the failed status for the rejected attempt does not
+	// overwrite the in-progress status of the operation that holds the claim.
+	// Never serialised; this is an in-process routing hint only.
+	SkipPersist bool `json:"-"`
 }
 
 // SkippedRollbackItem represents a resource or link that was skipped during

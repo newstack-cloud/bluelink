@@ -1,0 +1,15 @@
+version: 2025-11-02
+resources:
+  ordersTable:
+    type: aws/dynamodb/table
+    description: "Table that stores orders for an application."
+    spec:
+      tableName: "orders"
+
+  saveOrderFunction:
+    type: aws/lambda/function
+    description: "Function that references the computed ID of the orders table."
+    spec:
+      handler: "src/saveOrder.handler"
+      tableId: "${resources.ordersTable.spec.id}"
+      tableEndpoint: "https://${resources.ordersTable.spec.id}.example.com"

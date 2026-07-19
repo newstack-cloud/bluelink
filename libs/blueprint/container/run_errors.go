@@ -215,28 +215,6 @@ func errResourceNotFoundInState(instanceID string, resourceName string) error {
 	}
 }
 
-func errLinkNotFoundInState(instanceID string, linkName string) error {
-	return &errors.RunError{
-		ReasonCode: ErrorReasonCodeLinkNotFoundInState,
-		Err: fmt.Errorf(
-			"link %q not found in state for blueprint instance %q",
-			linkName,
-			instanceID,
-		),
-	}
-}
-
-func errChildNotFoundInState(instanceID string, childName string) error {
-	return &errors.RunError{
-		ReasonCode: ErrorReasonCodeChildNotFoundInState,
-		Err: fmt.Errorf(
-			"child %q not found in state for blueprint instance %q",
-			childName,
-			instanceID,
-		),
-	}
-}
-
 func errInvalidLogicalLinkName(linkName string, instanceID string) error {
 	return &errors.RunError{
 		ReasonCode: ErrorReasonCodeInvalidLogicalLinkName,

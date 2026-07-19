@@ -1,0 +1,19 @@
+version: 2025-11-02
+resources:
+  resourceA:
+    type: aws/lambda2/function
+    description: "Function whose computed ID is referenced by another function."
+    spec:
+      handler: "src/a.handler"
+
+  resourceB:
+    type: aws/lambda2/function
+    description: "Function that references the computed ID of resource A."
+    spec:
+      handler: "${resources.resourceA.spec.id}"
+
+  resourceC:
+    type: aws/lambda2/function
+    description: "Function that embeds the computed ID of resource A in an interpolated string."
+    spec:
+      handler: "prefix-${resources.resourceA.spec.id}-suffix"

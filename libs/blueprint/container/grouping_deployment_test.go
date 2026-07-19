@@ -82,6 +82,62 @@ func (s *GroupOrderedNodesTestSuite) Test_group_links_for_deployment_based_on_re
 	s.assertExpectedGroups(groups, s.groupFixture3.expectedPresent)
 }
 
+// Regression test for resources connected only through a derived value:
+// a resource referencing `values.<v>` where <v> is defined with a reference
+// to another resource must not share a deployment group with that resource,
+// otherwise both are deployed concurrently.
+func (s *GroupOrderedNodesTestSuite) Test_group_separates_resources_connected_through_derived_values() {
+	secretStoreNode := &DeploymentNode{
+		ChainLinkNode: &links.ChainLinkNode{
+			ResourceName:        "secretStore",
+			LinksTo:             []*links.ChainLinkNode{},
+			LinkedFrom:          []*links.ChainLinkNode{},
+			LinkImplementations: map[string]provider.Link{},
+		},
+	}
+	configFunctionNode := &DeploymentNode{
+		ChainLinkNode: &links.ChainLinkNode{
+			ResourceName:        "configFunction",
+			LinksTo:             []*links.ChainLinkNode{},
+			LinkedFrom:          []*links.ChainLinkNode{},
+			LinkImplementations: map[string]provider.Link{},
+		},
+	}
+	orderedNodes := []*DeploymentNode{
+		secretStoreNode,
+		configFunctionNode,
+	}
+
+	collector := refgraph.NewRefChainCollector()
+	err := collector.Collect("resources.secretStore", nil, "", []string{})
+	s.Require().NoError(err)
+	err = collector.Collect("resources.configFunction", nil, "", []string{})
+	s.Require().NoError(err)
+	// configFunction references values.secretId, which is derived from
+	// the secretStore resource's computed field.
+	err = collector.Collect(
+		"values.secretId",
+		nil,
+		"resources.configFunction",
+		[]string{validation.CreateSubRefTag("resources.configFunction")},
+	)
+	s.Require().NoError(err)
+	err = collector.Collect(
+		"resources.secretStore",
+		nil,
+		"values.secretId",
+		[]string{validation.CreateSubRefTag("values.secretId")},
+	)
+	s.Require().NoError(err)
+
+	groups, err := GroupOrderedNodes(orderedNodes, collector)
+	s.Require().NoError(err)
+	s.assertExpectedGroups(groups, [][]string{
+		{"resources.secretStore"},
+		{"resources.configFunction"},
+	})
+}
+
 func (s *GroupOrderedNodesTestSuite) assertExpectedGroups(
 	groups [][]*DeploymentNode,
 	expectedPresent [][]string,

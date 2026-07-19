@@ -1,0 +1,19 @@
+version: 2025-11-02
+values:
+  derivedId:
+    type: string
+    description: "A value derived from the computed ID of the slow function."
+    value: "${resources.resourceQ.spec.id}"
+
+resources:
+  resourceQ:
+    type: aws/lambda2/function
+    description: "Slow function that the derived value depends on."
+    spec:
+      handler: "src/q.handler"
+
+  resourceC:
+    type: aws/lambda2/function
+    description: "Function that depends on the slow function through a derived value."
+    spec:
+      handler: "${values.derivedId}"

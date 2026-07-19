@@ -57,6 +57,70 @@ func (s *DependencyUtilsTestSuite) Test_populates_dependency_for_linked_to_resou
 	})
 }
 
+// Regression test for dependencies routed through derived values:
+// a resource referencing `values.<v>` where <v> is defined with a reference
+// to another resource's computed field must get a direct dependency edge
+// on that resource.
+func (s *DependencyUtilsTestSuite) Test_populates_dependency_for_resource_referenced_through_derived_value() {
+	configFunctionNode := &DeploymentNode{
+		ChainLinkNode: &links.ChainLinkNode{
+			ResourceName:        "configFunction",
+			LinksTo:             []*links.ChainLinkNode{},
+			LinkedFrom:          []*links.ChainLinkNode{},
+			LinkImplementations: map[string]provider.Link{},
+		},
+		DirectDependencies: []*DeploymentNode{},
+	}
+	secretStoreNode := &DeploymentNode{
+		ChainLinkNode: &links.ChainLinkNode{
+			ResourceName:        "secretStore",
+			LinksTo:             []*links.ChainLinkNode{},
+			LinkedFrom:          []*links.ChainLinkNode{},
+			LinkImplementations: map[string]provider.Link{},
+		},
+		DirectDependencies: []*DeploymentNode{},
+	}
+	nodes := []*DeploymentNode{
+		secretStoreNode,
+		configFunctionNode,
+	}
+
+	collector := refgraph.NewRefChainCollector()
+	err := collector.Collect("resources.secretStore", nil, "", []string{})
+	s.Require().NoError(err)
+	err = collector.Collect("resources.configFunction", nil, "", []string{})
+	s.Require().NoError(err)
+	// configFunction references values.secretId, which is derived from
+	// the secretStore resource's computed field.
+	err = collector.Collect(
+		"values.secretId",
+		nil,
+		"resources.configFunction",
+		[]string{"subRef:resources.configFunction"},
+	)
+	s.Require().NoError(err)
+	err = collector.Collect(
+		"resources.secretStore",
+		nil,
+		"values.secretId",
+		[]string{"subRef:values.secretId"},
+	)
+	s.Require().NoError(err)
+
+	err = PopulateDirectDependencies(
+		context.Background(),
+		nodes,
+		collector,
+		s.createBlueprintParams(),
+	)
+	s.Require().NoError(err)
+	s.Assert().Equal(
+		[]*DeploymentNode{secretStoreNode},
+		configFunctionNode.DirectDependencies,
+	)
+	s.Assert().Empty(secretStoreNode.DirectDependencies)
+}
+
 func (s *DependencyUtilsTestSuite) Test_does_not_populate_direct_deps_when_there_is_no_direct_dependency() {
 	saveOrderFunctionNode := &DeploymentNode{
 		ChainLinkNode: &links.ChainLinkNode{

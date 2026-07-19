@@ -370,10 +370,15 @@ func (c *defaultBlueprintContainer) stageLinkRemovals(
 		resourceAName := linkParts[0]
 		resourceBName := linkParts[1]
 
+		// A link is only retained when the link relationship still exists in
+		// the blueprint being staged, meaning resource A must still link to
+		// resource B. The presence of one of the resources on its own is not
+		// enough, a resource can remain in the blueprint after the resource
+		// it linked to has been removed.
 		inDeployNodes := slices.ContainsFunc(flattenedNodes, func(node *DeploymentNode) bool {
 			return node.ChainLinkNode != nil &&
-				(node.ChainLinkNode.ResourceName == resourceAName ||
-					node.ChainLinkNode.ResourceName == resourceBName)
+				node.ChainLinkNode.ResourceName == resourceAName &&
+				chainLinkNodeLinksTo(node.ChainLinkNode, resourceBName)
 		})
 		if !inDeployNodes {
 			changes := LinkChangesMessage{
@@ -385,6 +390,15 @@ func (c *defaultBlueprintContainer) stageLinkRemovals(
 			channels.LinkChangesChan <- changes
 		}
 	}
+}
+
+func chainLinkNodeLinksTo(
+	node *links.ChainLinkNode,
+	resourceBName string,
+) bool {
+	return slices.ContainsFunc(node.LinksTo, func(linksToNode *links.ChainLinkNode) bool {
+		return linksToNode.ResourceName == resourceBName
+	})
 }
 
 func (c *defaultBlueprintContainer) stageChildRemovals(

@@ -251,6 +251,9 @@ func (c *memoryInstancesContainer) InitialiseAndClaim(
 	instanceState.Version = 1
 	instanceState.LastStatusUpdateTimestamp = int(time.Now().Unix())
 	c.instances[instanceState.InstanceID] = &instanceState
+	if instanceState.InstanceName != "" {
+		c.instanceNameIDLookup[instanceState.InstanceName] = instanceState.InstanceID
+	}
 
 	return instanceState.Version, nil
 }
