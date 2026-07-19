@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.5.0...deploy-engine-client/v0.5.1) (2026-07-19)
+
+
+### Dependencies
+
+* **deploy-engine-client:** bump core libs ([1ced5dd](https://github.com/newstack-cloud/bluelink/commit/1ced5dd4d2bd4b4a4b68cb095ab03d25e21bd321))
+
 ## [0.5.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.4.4...deploy-engine-client/v0.5.0) (2026-05-09)
 
 
