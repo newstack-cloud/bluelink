@@ -40,6 +40,8 @@ func (c *CleanupOperationsContainer) Get(
 	if !ok {
 		return nil, manage.CleanupOperationNotFoundError(id)
 	}
+	c.state.RLock()
+	defer c.state.RUnlock()
 	return copyCleanupOperation(op), nil
 }
 

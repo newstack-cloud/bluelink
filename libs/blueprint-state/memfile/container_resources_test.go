@@ -291,6 +291,18 @@ func (s *MemFileStateContainerResourcesTestSuite) Test_removes_resource() {
 	s.Assert().True(isStateErr)
 	s.Assert().Equal(state.ErrResourceNotFound, stateErr.Code)
 
+	// The removal must also prune the instance's name→ID index because a
+	// dangling ResourceIDs entry makes the removed resource visible to
+	// name-based lookups and instance state listings. The fixture maps
+	// "ordersTable_0" to existingResourceID.
+	instanceState, err := s.container.Instances().Get(
+		context.Background(),
+		existingBlueprintInstanceID,
+	)
+	s.Require().NoError(err)
+	s.Assert().NotContains(instanceState.ResourceIDs, "ordersTable_0")
+	s.Assert().NotContains(instanceState.Resources, existingResourceID)
+
 	s.assertResourceRemovedFromPersistence(existingResourceID)
 }
 

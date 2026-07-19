@@ -35,6 +35,11 @@ func (c *ChildrenContainer) Get(
 	if !ok {
 		return state.InstanceState{}, state.InstanceNotFoundError(instanceID)
 	}
+	// Lookup* methods return shared pointers, so the child lookup and copy
+	// must happen under the state read lock to avoid racing mutators that
+	// update the instance and its nested maps while holding the write lock.
+	c.state.RLock()
+	defer c.state.RUnlock()
 	child, ok := inst.ChildBlueprints[childName]
 	if !ok {
 		return state.InstanceState{}, state.InstanceNotFoundError(

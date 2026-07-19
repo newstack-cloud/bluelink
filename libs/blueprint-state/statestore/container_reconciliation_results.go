@@ -52,6 +52,8 @@ func (c *ReconciliationResultsContainer) Get(
 	if !ok {
 		return nil, manage.ReconciliationResultNotFoundError(id)
 	}
+	c.state.RLock()
+	defer c.state.RUnlock()
 	return copyReconciliationResult(r)
 }
 

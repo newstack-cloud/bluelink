@@ -2,6 +2,7 @@ package statestore
 
 import (
 	"context"
+	"maps"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
@@ -40,8 +41,12 @@ func (c *MetadataContainer) Get(
 	}
 	// Metadata values are mapping nodes of variable depth — a deep copy can
 	// be expensive and in-place mutation is not an expected usage pattern,
-	// so we return the live reference rather than copying.
-	return inst.Metadata, nil
+	// so only the top-level map is cloned. The clone happens under the state
+	// read lock so concurrent Save/Remove calls that swap the metadata map
+	// while holding the write lock can not race the read.
+	c.state.RLock()
+	defer c.state.RUnlock()
+	return maps.Clone(inst.Metadata), nil
 }
 
 func (c *MetadataContainer) Save(

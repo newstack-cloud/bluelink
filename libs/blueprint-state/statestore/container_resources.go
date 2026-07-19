@@ -37,6 +37,11 @@ func (c *ResourcesContainer) Get(
 	if !ok {
 		return state.ResourceState{}, state.ResourceNotFoundError(resourceID)
 	}
+	// Lookup* methods return shared pointers, so the copy must happen under
+	// the state read lock to avoid racing mutators that update entities
+	// in place while holding the write lock.
+	c.state.RLock()
+	defer c.state.RUnlock()
 	return copyResource(r), nil
 }
 
@@ -50,11 +55,10 @@ func (c *ResourcesContainer) GetByName(
 		return state.ResourceState{}, err
 	}
 	if ok {
+		c.state.RLock()
+		defer c.state.RUnlock()
 		if resourceID, ok := inst.ResourceIDs[resourceName]; ok {
-			c.state.RLock()
-			resource := c.state.resources[resourceID]
-			c.state.RUnlock()
-			if resource != nil {
+			if resource := c.state.resources[resourceID]; resource != nil {
 				return copyResource(resource), nil
 			}
 		}
@@ -150,6 +154,10 @@ func (c *ResourcesContainer) Remove(
 			instanceNotFoundForResourceMessage(resource.InstanceID, resourceID),
 		)
 	}
+	// The name→ID index must be pruned alongside the resource entry, because
+	// a dangling ResourceIDs entry makes the removed resource visible to
+	// every consumer of instance state (lookups by name, list-by-prefix).
+	delete(inst.ResourceIDs, resource.Name)
 	delete(inst.Resources, resourceID)
 	delete(c.state.resources, resourceID)
 
@@ -177,6 +185,8 @@ func (c *ResourcesContainer) GetDrift(
 		// Empty drift state is valid for a resource that hasn't drifted.
 		return state.ResourceDriftState{}, nil
 	}
+	c.state.RLock()
+	defer c.state.RUnlock()
 	return copyResourceDrift(drift), nil
 }
 

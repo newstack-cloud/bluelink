@@ -36,6 +36,11 @@ func (c *ChangesetsContainer) Get(
 	if !ok {
 		return nil, manage.ChangesetNotFoundError(id)
 	}
+	// Lookup* methods return shared pointers, so the copy must happen under
+	// the state read lock to avoid racing mutators that update entities
+	// in place while holding the write lock.
+	c.state.RLock()
+	defer c.state.RUnlock()
 	copied, err := copyChangeset(cs)
 	if err != nil {
 		return nil, err

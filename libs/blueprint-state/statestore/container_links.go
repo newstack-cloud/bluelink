@@ -46,6 +46,11 @@ func (c *LinksContainer) Get(
 	if !ok {
 		return state.LinkState{}, state.LinkNotFoundError(linkID)
 	}
+	// Lookup* methods return shared pointers, so the copy must happen under
+	// the state read lock to avoid racing mutators that update entities
+	// in place while holding the write lock.
+	c.state.RLock()
+	defer c.state.RUnlock()
 	return copyLink(l), nil
 }
 
@@ -59,6 +64,8 @@ func (c *LinksContainer) GetByName(
 		return state.LinkState{}, err
 	}
 	if ok {
+		c.state.RLock()
+		defer c.state.RUnlock()
 		if linkState, ok := inst.Links[linkName]; ok {
 			return copyLink(linkState), nil
 		}
@@ -241,6 +248,8 @@ func (c *LinksContainer) GetDrift(
 		return state.LinkDriftState{}, nil
 	}
 
+	c.state.RLock()
+	defer c.state.RUnlock()
 	return copyLinkDrift(drift), nil
 }
 

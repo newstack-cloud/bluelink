@@ -75,6 +75,8 @@ func (c *EventsContainer) Get(ctx context.Context, id string) (manage.Event, err
 		return manage.Event{}, manage.EventNotFoundError(id)
 	}
 
+	c.state.RLock()
+	defer c.state.RUnlock()
 	return copyEvent(e), nil
 }
 

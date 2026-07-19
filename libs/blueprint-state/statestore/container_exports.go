@@ -34,6 +34,11 @@ func (c *ExportsContainer) GetAll(
 	if !ok {
 		return nil, state.InstanceNotFoundError(instanceID)
 	}
+	// Lookup* methods return shared pointers, so the copy must happen under
+	// the state read lock to avoid racing mutators that update the exports
+	// map in place while holding the write lock.
+	c.state.RLock()
+	defer c.state.RUnlock()
 	return copyExports(inst.Exports), nil
 }
 
@@ -51,6 +56,8 @@ func (c *ExportsContainer) Get(
 		return state.ExportState{}, state.InstanceNotFoundError(instanceID)
 	}
 
+	c.state.RLock()
+	defer c.state.RUnlock()
 	export, ok := inst.Exports[exportName]
 	if !ok {
 		return state.ExportState{}, state.ExportNotFoundError(instanceID, exportName)

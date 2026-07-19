@@ -42,11 +42,11 @@ type InitialiseAndClaimFunc func(
 // (ClaimForDeployment, InitialiseAndClaim) delegate to backend-supplied
 // funcs; everything else is backend-agnostic.
 type InstancesContainer struct {
-	state             *State
-	persister         *Persister
-	claim             ClaimFunc
+	state              *State
+	persister          *Persister
+	claim              ClaimFunc
 	initialiseAndClaim InitialiseAndClaimFunc
-	logger            core.Logger
+	logger             core.Logger
 }
 
 func NewInstancesContainer(
@@ -79,6 +79,11 @@ func (c *InstancesContainer) Get(
 	if !ok {
 		return state.InstanceState{}, state.InstanceNotFoundError(instanceID)
 	}
+	// Lookup* methods return shared pointers, so the copy must happen under
+	// the state read lock to avoid racing mutators that update the instance
+	// and its nested maps in place while holding the write lock.
+	c.state.RLock()
+	defer c.state.RUnlock()
 	return copyInstance(inst, instanceID), nil
 }
 

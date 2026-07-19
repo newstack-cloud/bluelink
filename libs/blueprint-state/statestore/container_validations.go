@@ -34,6 +34,8 @@ func (c *ValidationsContainer) Get(
 	if !ok {
 		return nil, manage.BlueprintValidationNotFoundError(id)
 	}
+	c.state.RLock()
+	defer c.state.RUnlock()
 	copied := copyBlueprintValidation(v)
 	return &copied, nil
 }
