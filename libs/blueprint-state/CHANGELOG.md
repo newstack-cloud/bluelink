@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.3](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.8.2...blueprint-state/v0.8.3) (2026-07-19)
+
+
+### Bug Fixes
+
+* **blueprint-state:** add fixes for data races in statestore-backed engines ([770c5a3](https://github.com/newstack-cloud/bluelink/commit/770c5a3f913a713b04a2717690a519eb6bf010c4))
+
+
+### Dependencies
+
+* **blueprint-state:** bump blueprint lib to 0.51.2 ([cc1f3ad](https://github.com/newstack-cloud/bluelink/commit/cc1f3ad54cfb1e1d3b74ff183d331627487dda65))
+
 ## [0.8.2](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.8.1...blueprint-state/v0.8.2) (2026-04-26)
 
 
