@@ -6,49 +6,60 @@
   ],
   "packageRules": [
     {
-      "description": "Per-component commit scopes so release-please attributes each go.mod bump to the right component (separate-pull-requests mode).",
+      "description": "Per-component commit scope (so release-please attributes each go.mod bump to the right component in separate-pull-requests mode) and per-component grouping (so a component's simultaneous bumps land in one PR with no go.sum conflicts). Each component MUST use a unique groupName so groups never cross component boundaries.",
       "matchFileNames": ["libs/blueprint/**"],
-      "semanticCommitScope": "blueprint"
+      "semanticCommitScope": "blueprint",
+      "groupName": "blueprint go modules"
     },
     {
       "matchFileNames": ["libs/blueprint-resolvers/**"],
-      "semanticCommitScope": "blueprint-resolvers"
+      "semanticCommitScope": "blueprint-resolvers",
+      "groupName": "blueprint-resolvers go modules"
     },
     {
       "matchFileNames": ["libs/blueprint-state/**"],
-      "semanticCommitScope": "blueprint-state"
+      "semanticCommitScope": "blueprint-state",
+      "groupName": "blueprint-state go modules"
     },
     {
       "matchFileNames": ["libs/common/**"],
-      "semanticCommitScope": "common"
+      "semanticCommitScope": "common",
+      "groupName": "common go modules"
     },
     {
       "matchFileNames": ["libs/deploy-engine-client/**"],
-      "semanticCommitScope": "deploy-engine-client"
+      "semanticCommitScope": "deploy-engine-client",
+      "groupName": "deploy-engine-client go modules"
     },
     {
       "matchFileNames": ["libs/plugin-framework/**"],
-      "semanticCommitScope": "plugin-framework"
+      "semanticCommitScope": "plugin-framework",
+      "groupName": "plugin-framework go modules"
     },
     {
       "matchFileNames": ["apps/cli/**"],
-      "semanticCommitScope": "cli"
+      "semanticCommitScope": "cli",
+      "groupName": "cli go modules"
     },
     {
       "matchFileNames": ["apps/deploy-engine/**"],
-      "semanticCommitScope": "deploy-engine"
+      "semanticCommitScope": "deploy-engine",
+      "groupName": "deploy-engine go modules"
     },
     {
       "matchFileNames": ["tools/blueprint-ls/**"],
-      "semanticCommitScope": "blueprint-ls"
+      "semanticCommitScope": "blueprint-ls",
+      "groupName": "blueprint-ls go modules"
     },
     {
       "matchFileNames": ["tools/bluelink-manager/**"],
-      "semanticCommitScope": "bluelink-manager"
+      "semanticCommitScope": "bluelink-manager",
+      "groupName": "bluelink-manager go modules"
     },
     {
       "matchFileNames": ["tools/plugin-docgen/**"],
-      "semanticCommitScope": "plugin-docgen"
+      "semanticCommitScope": "plugin-docgen",
+      "groupName": "plugin-docgen go modules"
     },
     {
       "description": "plugin-docgen embeds core lib versions in a committed generated file (internal/env/versions.go) for logs/telemetry. Regenerate it whenever any internal Bluelink module bumps so it never goes stale. Requires a matching entry in RENOVATE_ALLOWED_COMMANDS on the runner.",
@@ -73,10 +84,11 @@
       }
     },
     {
-      "description": "Docker base images for the deploy engine (mirror the deps(docker) convention).",
+      "description": "Docker base images for the deploy engine (mirror the deps(docker) convention). Own group so image bumps don't ride the deploy-engine go-modules PR.",
       "matchManagers": ["dockerfile"],
       "matchFileNames": ["apps/deploy-engine/**"],
-      "semanticCommitScope": "docker"
+      "semanticCommitScope": "docker",
+      "groupName": "deploy-engine docker"
     }
   ]
 }
