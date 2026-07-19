@@ -1034,6 +1034,7 @@ func fromPBResourceDefinitionsSchema(
 		MaxLength:                int(pbSchema.MaxLength),
 		Pattern:                  pbSchema.Pattern,
 		Computed:                 pbSchema.Computed,
+		ComputedWhenOmitted:      pbSchema.ComputedWhenOmitted,
 		MustRecreate:             pbSchema.MustRecreate,
 		ActivatesLinkOnReference: pbSchema.ActivatesLinkOnReference,
 		Sensitive:                pbSchema.Sensitive,

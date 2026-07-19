@@ -95,6 +95,7 @@ func ToPBResourceDefinitionsSchema(
 		MaxLength:                int32(schema.MaxLength),
 		Pattern:                  schema.Pattern,
 		Computed:                 schema.Computed,
+		ComputedWhenOmitted:      schema.ComputedWhenOmitted,
 		MustRecreate:             schema.MustRecreate,
 		ActivatesLinkOnReference: schema.ActivatesLinkOnReference,
 		Sensitive:                schema.Sensitive,
