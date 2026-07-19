@@ -4,18 +4,18 @@ go 1.25.0
 
 require (
 	github.com/coreos/go-json v0.0.0-20231102161613-e49c8866685a
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.47.0
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.51.2
 	github.com/newstack-cloud/bluelink/libs/common v0.4.0
-	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.12.0
+	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.15.0
 	github.com/newstack-cloud/ls-builder v0.2.5
 	github.com/sourcegraph/jsonrpc2 v0.2.1
 	github.com/spf13/afero v1.15.0
 	github.com/stretchr/testify v1.11.1
-	github.com/tailscale/hujson v0.0.0-20250226034555-ec1d1c113d33
+	github.com/tailscale/hujson v0.0.0-20260718110524-10d7940d4c87
 	github.com/tree-sitter-grammars/tree-sitter-yaml v0.7.2
 	github.com/tree-sitter/go-tree-sitter v0.25.0
 	github.com/tree-sitter/tree-sitter-json v0.24.8
-	go.uber.org/zap v1.27.1
+	go.uber.org/zap v1.28.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
