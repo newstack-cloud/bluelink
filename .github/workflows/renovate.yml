@@ -36,5 +36,8 @@ jobs:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           RENOVATE_ONBOARDING: "false"
           RENOVATE_REQUIRE_CONFIG: "required"
+          # Allow-list for postUpgradeTasks (repo config cannot grant this).
+          # Enables regenerating each artifact's committed versions.go after core lib bumps.
+          RENOVATE_ALLOWED_COMMANDS: '["^cd tools/plugin-docgen && go generate", "^cd apps/deploy-engine && go generate"]'
           RENOVATE_DRY_RUN: ${{ inputs.dryRun || 'null' }}
           LOG_LEVEL: ${{ inputs.logLevel || 'info' }}

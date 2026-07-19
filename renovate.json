@@ -51,6 +51,28 @@
       "semanticCommitScope": "plugin-docgen"
     },
     {
+      "description": "plugin-docgen embeds core lib versions in a committed generated file (internal/env/versions.go) for logs/telemetry. Regenerate it whenever any internal Bluelink module bumps so it never goes stale. Requires a matching entry in RENOVATE_ALLOWED_COMMANDS on the runner.",
+      "matchFileNames": ["tools/plugin-docgen/**"],
+      "matchDatasources": ["go"],
+      "matchPackageNames": ["/^github\\.com/newstack-cloud/bluelink//"],
+      "postUpgradeTasks": {
+        "commands": ["cd tools/plugin-docgen && go generate ./internal/env/..."],
+        "fileFilters": ["tools/plugin-docgen/internal/env/versions.go"],
+        "executionMode": "branch"
+      }
+    },
+    {
+      "description": "deploy-engine embeds core lib versions in a committed generated file (core/versions.go) for logs/telemetry, via the same genversions mechanism as plugin-docgen.",
+      "matchFileNames": ["apps/deploy-engine/**"],
+      "matchDatasources": ["go"],
+      "matchPackageNames": ["/^github\\.com/newstack-cloud/bluelink//"],
+      "postUpgradeTasks": {
+        "commands": ["cd apps/deploy-engine && go generate ./core/..."],
+        "fileFilters": ["apps/deploy-engine/core/versions.go"],
+        "executionMode": "branch"
+      }
+    },
+    {
       "description": "Docker base images for the deploy engine (mirror the deps(docker) convention).",
       "matchManagers": ["dockerfile"],
       "matchFileNames": ["apps/deploy-engine/**"],

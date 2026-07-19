@@ -37,6 +37,12 @@ jobs:
       run: go install honnef.co/go/tools/cmd/staticcheck@latest && go get -u golang.org/x/sys/unix
       working-directory: ${{env.working-directory}}
 
+    # versions.go is a committed generated file (from go.mod). Fail if it is stale
+    # so a dependency bump that forgets to regenerate it cannot be merged.
+    - name: Verify generated versions.go is up to date
+      run: go generate ./internal/env/... && git diff --exit-code internal/env/versions.go
+      working-directory: ${{env.working-directory}}
+
     # SonarCloud scan runs in a docker container where the workspace directory gets mounted to /github/workspace
     # so we need to replace all references to the github workspace directory with /github/workspace.
     - name: Linting

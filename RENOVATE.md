@@ -61,6 +61,27 @@ blueprint release published
           → deploy-cli-sdk release → deps(cli): bump deploy-cli-sdk in bluelink
 ```
 
+## Generated version files
+
+Some executable artifacts embed the core Bluelink dependency versions into a
+**committed generated** `versions.go` (via `go generate` → `tools/genversions`) so
+they can surface those versions in logs and runtime telemetry. Today that is
+`tools/plugin-docgen` (`internal/env/versions.go`) and `apps/deploy-engine`
+(`core/versions.go`). It must stay committed because `go install` does not run
+`go generate`.
+
+A go.mod bump would leave these stale, so:
+
+- **Renovate regenerates them in the same PR** via `postUpgradeTasks` (see the
+  per-artifact rules in `renovate.json`), gated by the `RENOVATE_ALLOWED_COMMANDS`
+  allow-list on the runner.
+- **CI guards enforce the invariant** regardless of how a bump arrives — each
+  artifact's CI runs `go generate` + `git diff --exit-code` on its `versions.go`,
+  so a stale file fails the PR and blocks auto-merge.
+
+When a new artifact adopts this mechanism, add a `postUpgradeTasks` rule + an
+`RENOVATE_ALLOWED_COMMANDS` entry + a CI guard for it.
+
 ## One-time setup
 
 1. **Create the org preset repo.** Publish the staged
