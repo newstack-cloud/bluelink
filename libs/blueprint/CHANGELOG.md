@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.51.2](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.51.1...blueprint/v0.51.2) (2026-07-19)
+
+
+### Bug Fixes
+
+* **blueprint:** add various fixes to deployment, change staging and validation ([86c1b9b](https://github.com/newstack-cloud/bluelink/commit/86c1b9b581f15161efbe8d045e1bff49683e73aa))
+
 ## [0.51.1](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.51.0...blueprint/v0.51.1) (2026-07-17)
 
 
