@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.7
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.95.1
 	github.com/gorilla/mux v1.8.1
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.42.1
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.51.2
 	github.com/spf13/afero v1.15.0
 	github.com/stretchr/testify v1.11.1
 	google.golang.org/api v0.262.0
