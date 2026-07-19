@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/newstack-cloud/bluelink/compare/cli/v0.5.0...cli/v0.5.1) (2026-07-19)
+
+
+### Dependencies
+
+* **cli:** update deploy-cli-sdk and deploy-engine-client ([0c6745a](https://github.com/newstack-cloud/bluelink/commit/0c6745a377cdf492ea01a63d524550b227459373))
+
 ## [0.5.0](https://github.com/newstack-cloud/bluelink/compare/cli/v0.4.0...cli/v0.5.0) (2026-06-01)
 
 
