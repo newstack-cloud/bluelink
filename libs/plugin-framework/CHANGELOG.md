@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.15.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.14.0...plugin-framework/v0.15.0) (2026-07-19)
+
+
+### Features
+
+* **plugin-framework:** add support for computed when omitted fields ([13aa742](https://github.com/newstack-cloud/bluelink/commit/13aa7428aceba402524f4f873391f0b5b29cce4b))
+
+
+### Dependencies
+
+* **plugin-framework:** bump blueprint lib to 0.51.2 ([7260f6c](https://github.com/newstack-cloud/bluelink/commit/7260f6cf1081205206383f37ae82388eaffa1579))
+
 ## [0.14.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.13.0...plugin-framework/v0.14.0) (2026-06-25)
 
 
