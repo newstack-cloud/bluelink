@@ -1,0 +1,60 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>newstack-cloud/renovate-config",
+    "github>newstack-cloud/bluelink//renovate/bluelink-consumers"
+  ],
+  "packageRules": [
+    {
+      "description": "Per-component commit scopes so release-please attributes each go.mod bump to the right component (separate-pull-requests mode).",
+      "matchFileNames": ["libs/blueprint/**"],
+      "semanticCommitScope": "blueprint"
+    },
+    {
+      "matchFileNames": ["libs/blueprint-resolvers/**"],
+      "semanticCommitScope": "blueprint-resolvers"
+    },
+    {
+      "matchFileNames": ["libs/blueprint-state/**"],
+      "semanticCommitScope": "blueprint-state"
+    },
+    {
+      "matchFileNames": ["libs/common/**"],
+      "semanticCommitScope": "common"
+    },
+    {
+      "matchFileNames": ["libs/deploy-engine-client/**"],
+      "semanticCommitScope": "deploy-engine-client"
+    },
+    {
+      "matchFileNames": ["libs/plugin-framework/**"],
+      "semanticCommitScope": "plugin-framework"
+    },
+    {
+      "matchFileNames": ["apps/cli/**"],
+      "semanticCommitScope": "cli"
+    },
+    {
+      "matchFileNames": ["apps/deploy-engine/**"],
+      "semanticCommitScope": "deploy-engine"
+    },
+    {
+      "matchFileNames": ["tools/blueprint-ls/**"],
+      "semanticCommitScope": "blueprint-ls"
+    },
+    {
+      "matchFileNames": ["tools/bluelink-manager/**"],
+      "semanticCommitScope": "bluelink-manager"
+    },
+    {
+      "matchFileNames": ["tools/plugin-docgen/**"],
+      "semanticCommitScope": "plugin-docgen"
+    },
+    {
+      "description": "Docker base images for the deploy engine (mirror the deps(docker) convention).",
+      "matchManagers": ["dockerfile"],
+      "matchFileNames": ["apps/deploy-engine/**"],
+      "semanticCommitScope": "docker"
+    }
+  ]
+}

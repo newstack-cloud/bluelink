@@ -1,0 +1,15 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Bluelink-scoped Renovate preset for the release cascade. Extended (in addition to the org preset) ONLY by repos in the Bluelink dependency graph: bluelink itself, celerity-provider-aws, and deploy-cli-sdk.",
+  "packageRules": [
+    {
+      "description": "The release cascade for internal Bluelink modules. React promptly (ignore the weekly schedule) and auto-merge once CI passes so the deps(...) bump lands on main; the downstream release-please/release PR stays as the human gate.",
+      "matchDatasources": ["go"],
+      "matchPackageNames": ["/^github\\.com/newstack-cloud/bluelink//"],
+      "schedule": ["at any time"],
+      "prPriority": 10,
+      "automerge": true,
+      "addLabels": ["internal-cascade"]
+    }
+  ]
+}
