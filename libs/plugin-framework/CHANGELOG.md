@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.15.0...plugin-framework/v0.15.1) (2026-07-20)
+
+
+### Dependencies
+
+* **plugin-framework:** update module google.golang.org/grpc to v1.82.1 ([#260](https://github.com/newstack-cloud/bluelink/issues/260)) ([9eff48d](https://github.com/newstack-cloud/bluelink/commit/9eff48d7249a757f7d3606adec8fc4fe2cfdf5a2))
+
 ## [0.15.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.14.0...plugin-framework/v0.15.0) (2026-07-19)
 
 
