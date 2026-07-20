@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.5.1...deploy-engine-client/v0.5.2) (2026-07-20)
+
+
+### Dependencies
+
+* **deploy-engine-client:** update module go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp to v0.69.0 ([#258](https://github.com/newstack-cloud/bluelink/issues/258)) ([ee2d76f](https://github.com/newstack-cloud/bluelink/commit/ee2d76f59fb482f1f21f75fc8b635fedafe3f8f6))
+
 ## [0.5.1](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.5.0...deploy-engine-client/v0.5.1) (2026-07-19)
 
 
