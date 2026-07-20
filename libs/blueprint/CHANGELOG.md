@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.51.3](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.51.2...blueprint/v0.51.3) (2026-07-20)
+
+
+### Dependencies
+
+* **blueprint:** update blueprint go modules ([#249](https://github.com/newstack-cloud/bluelink/issues/249)) ([17eff8c](https://github.com/newstack-cloud/bluelink/commit/17eff8cc540e02db41b354db0c930ec492d24465))
+
 ## [0.51.2](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.51.1...blueprint/v0.51.2) (2026-07-19)
 
 
