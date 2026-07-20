@@ -9,5 +9,5 @@
   "libs/plugin-framework": "0.15.0",
   "tools/blueprint-ls": "0.4.0",
   "tools/plugin-docgen": "0.3.1",
-  "tools/bluelink-manager": "0.1.5"
+  "tools/bluelink-manager": "0.1.6"
 }
