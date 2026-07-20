@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.6](https://github.com/newstack-cloud/bluelink/compare/bluelink-manager/v0.1.5...bluelink-manager/v0.1.6) (2026-07-20)
+
+
+### Dependencies
+
+* **bluelink-manager:** bump the go-deps group across 1 directory with 3 updates ([54ef151](https://github.com/newstack-cloud/bluelink/commit/54ef151ff5b0d41fa1fa7c8c3341372a263e41fa))
+* **bluelink-manager:** update bluelink-manager go modules ([#256](https://github.com/newstack-cloud/bluelink/issues/256)) ([f66eac1](https://github.com/newstack-cloud/bluelink/commit/f66eac13e344e6fdb9c9362f84682f65ea0e6fcf))
+
 ## [0.1.5](https://github.com/newstack-cloud/bluelink/compare/bluelink-manager/v0.1.4...bluelink-manager/v0.1.5) (2025-12-06)
 
 
