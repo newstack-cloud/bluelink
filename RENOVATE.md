@@ -14,7 +14,8 @@ newstack-cloud/renovate-config//default              ← org-wide policy; ALL re
 newstack-cloud/bluelink//renovate/bluelink-consumers  ← Bluelink cascade only
         ▲
         │ extends
-bluelink · celerity-provider-aws · deploy-cli-sdk
+bluelink · celerity-provider-aws · deploy-cli-sdk · celerity
+        (celerity extends it scoped to apps/cli via includePaths)
         (celerity-node-sdk extends ONLY the org preset — no Bluelink dependency)
 ```
 
