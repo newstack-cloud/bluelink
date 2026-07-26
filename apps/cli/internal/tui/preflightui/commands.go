@@ -20,7 +20,7 @@ type preflightCheckResultMsg struct {
 	manager      *plugins.Manager
 }
 
-func checkPluginsCmd(confProvider *config.Provider) tea.Cmd {
+func checkPluginsCmd(ctx context.Context, confProvider *config.Provider) tea.Cmd {
 	return func() tea.Msg {
 		if !isLocalEngine(confProvider) {
 			return preflight.SatisfiedMsg{}
@@ -43,7 +43,7 @@ func checkPluginsCmd(confProvider *config.Provider) tea.Cmd {
 			return preflight.SatisfiedMsg{}
 		}
 
-		allToInstall, err := manager.ResolveDependencies(context.TODO(), unsatisfied)
+		allToInstall, err := manager.ResolveDependencies(ctx, unsatisfied)
 		if err != nil {
 			return preflight.ErrorMsg{Err: err}
 		}

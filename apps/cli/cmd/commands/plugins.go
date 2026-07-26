@@ -68,14 +68,14 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			cmd.SilenceErrors = true
-			return runPluginsLogin(args[0])
+			return runPluginsLogin(cmd.Context(), args[0])
 		},
 	}
 
 	pluginsCmd.AddCommand(loginCmd)
 }
 
-func runPluginsLogin(registryHost string) error {
+func runPluginsLogin(ctx context.Context, registryHost string) error {
 	// Detect if running in a terminal
 	inTerminal := term.IsTerminal(int(os.Stdout.Fd()))
 	headlessMode := !inTerminal
@@ -88,7 +88,7 @@ func runPluginsLogin(registryHost string) error {
 
 	// Create the login app
 	loginApp, err := pluginloginui.NewLoginApp(
-		context.Background(),
+		ctx,
 		pluginloginui.LoginAppOptions{
 			RegistryHost:   registryHost,
 			Styles:         styles,
@@ -101,7 +101,7 @@ func runPluginsLogin(registryHost string) error {
 	}
 
 	// Run the TUI
-	var teaOpts []tea.ProgramOption
+	teaOpts := []tea.ProgramOption{tea.WithContext(ctx)}
 	if headlessMode {
 		teaOpts = append(teaOpts, tea.WithoutRenderer(), tea.WithInput(nil))
 	} else {
@@ -173,14 +173,14 @@ Examples:
 			cmd.SilenceUsage = true
 			cmd.SilenceErrors = true
 			deployConfigFile, _ := confProvider.GetString("deployConfigFile")
-			return runPluginsInstall(args, deployConfigFile)
+			return runPluginsInstall(cmd.Context(), args, deployConfigFile)
 		},
 	}
 
 	pluginsCmd.AddCommand(installCmd)
 }
 
-func runPluginsInstall(args []string, deployConfigFile string) error {
+func runPluginsInstall(ctx context.Context, args []string, deployConfigFile string) error {
 	var pluginIDs []*plugins.PluginID
 
 	if len(args) == 0 {
@@ -212,7 +212,7 @@ func runPluginsInstall(args []string, deployConfigFile string) error {
 
 	manager := createPluginManager()
 
-	resolvedPlugins, err := manager.ResolveDependencies(context.TODO(), pluginIDs)
+	resolvedPlugins, err := manager.ResolveDependencies(ctx, pluginIDs)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to resolve plugin dependencies: %v\n", err)
 		return errInstallFailed
@@ -232,7 +232,7 @@ func runPluginsInstall(args []string, deployConfigFile string) error {
 	)
 
 	installApp, err := plugininstallui.NewInstallApp(
-		context.Background(),
+		ctx,
 		plugininstallui.InstallAppOptions{
 			PluginIDs:        resolvedPlugins,
 			UserRequestedIDs: pluginIDs,
@@ -247,7 +247,7 @@ func runPluginsInstall(args []string, deployConfigFile string) error {
 	}
 
 	// Run the TUI
-	var teaOpts []tea.ProgramOption
+	teaOpts := []tea.ProgramOption{tea.WithContext(ctx)}
 	if headlessMode {
 		teaOpts = append(teaOpts, tea.WithoutRenderer(), tea.WithInput(nil))
 	} else {

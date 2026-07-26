@@ -18,7 +18,7 @@ import (
 type preflightStage int
 
 const (
-	preflightChecking   preflightStage = iota
+	preflightChecking preflightStage = iota
 	preflightInstalling
 	preflightComplete
 	preflightError
@@ -32,6 +32,7 @@ type PreflightErrorMsg = preflight.ErrorMsg
 
 // PreflightOptions contains options for creating a new preflight model.
 type PreflightOptions struct {
+	Context        context.Context
 	ConfProvider   *config.Provider
 	CommandName    string
 	Styles         *stylespkg.Styles
@@ -44,6 +45,7 @@ type PreflightOptions struct {
 // dependencies and installs them before the main command runs.
 type PreflightModel struct {
 	stage        preflightStage
+	ctx          context.Context
 	confProvider *config.Provider
 
 	installModel *plugininstallui.MainModel
@@ -63,6 +65,15 @@ type PreflightModel struct {
 	Error error
 }
 
+// Returns the model's bound context, defaulting to context.Background()
+// when none was supplied (e.g. constructed directly in tests).
+func (m PreflightModel) reqCtx() context.Context {
+	if m.ctx != nil {
+		return m.ctx
+	}
+	return context.Background()
+}
+
 // NewPreflightModel creates a new preflight check sub-model.
 func NewPreflightModel(opts PreflightOptions) *PreflightModel {
 	s := spinner.New()
@@ -73,6 +84,7 @@ func NewPreflightModel(opts PreflightOptions) *PreflightModel {
 
 	return &PreflightModel{
 		stage:          preflightChecking,
+		ctx:            opts.Context,
 		confProvider:   opts.ConfProvider,
 		commandName:    opts.CommandName,
 		headless:       opts.Headless,
@@ -84,7 +96,7 @@ func NewPreflightModel(opts PreflightOptions) *PreflightModel {
 }
 
 func (m PreflightModel) Init() tea.Cmd {
-	cmds := []tea.Cmd{m.spinner.Tick, checkPluginsCmd(m.confProvider)}
+	cmds := []tea.Cmd{m.spinner.Tick, checkPluginsCmd(m.reqCtx(), m.confProvider)}
 
 	if m.headless {
 		fmt.Fprintf(m.headlessWriter, "Checking plugin dependencies...\n")
@@ -163,7 +175,7 @@ func (m *PreflightModel) handleCheckResult(msg preflightCheckResultMsg) (Preflig
 			len(msg.unsatisfied))
 	}
 
-	installModel, err := plugininstallui.NewInstallApp(context.TODO(), plugininstallui.InstallAppOptions{
+	installModel, err := plugininstallui.NewInstallApp(m.reqCtx(), plugininstallui.InstallAppOptions{
 		PluginIDs:        msg.allToInstall,
 		UserRequestedIDs: msg.unsatisfied,
 		Styles:           m.styles,

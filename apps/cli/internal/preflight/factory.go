@@ -1,6 +1,7 @@
 package preflight
 
 import (
+	"context"
 	"io"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,6 +16,7 @@ import (
 type BluelinkPreflightFactory struct{}
 
 func (f *BluelinkPreflightFactory) CreatePreflight(
+	ctx context.Context,
 	confProvider *config.Provider,
 	commandName string,
 	s *styles.Styles,
@@ -23,6 +25,7 @@ func (f *BluelinkPreflightFactory) CreatePreflight(
 	jsonMode bool,
 ) tea.Model {
 	inner := preflightui.NewPreflightModel(preflightui.PreflightOptions{
+		Context:        ctx,
 		ConfProvider:   confProvider,
 		CommandName:    commandName,
 		Styles:         s,

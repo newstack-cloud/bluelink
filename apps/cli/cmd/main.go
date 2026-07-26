@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/newstack-cloud/bluelink/apps/cli/cmd/commands"
 )
@@ -25,8 +28,15 @@ func isSilentError(err error) bool {
 }
 
 func main() {
+	// Establish a root context that is cancelled on interrupt/terminate so
+	// long-running engine calls (validation, change staging, deployment) can
+	// stop promptly when the user presses Ctrl+C. Commands read this via
+	// cmd.Context().
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	rootCmd := commands.NewRootCmd()
-	if err := rootCmd.Execute(); err != nil {
+	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		// If it's a sentinel error, exit silently with error code 1
 		// (detailed error was already displayed by the TUI)
 		if isSilentError(err) {

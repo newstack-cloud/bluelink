@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -79,7 +80,7 @@ func setupInitCommand(rootCmd *cobra.Command, confProvider *config.Provider) {
 				return err
 			}
 
-			options := []tea.ProgramOption{}
+			options := []tea.ProgramOption{tea.WithContext(cmd.Context())}
 			if inTerminal {
 				options = append(options, tea.WithAltScreen(), tea.WithMouseCellMotion())
 			} else {
@@ -90,7 +91,10 @@ func setupInitCommand(rootCmd *cobra.Command, confProvider *config.Provider) {
 			if err != nil {
 				return err
 			}
-			finalApp := finalModel.(initui.InitModel)
+			finalApp, ok := finalModel.(initui.InitModel)
+			if !ok {
+				return fmt.Errorf("internal error: unexpected init model type %T", finalModel)
+			}
 
 			if finalApp.Error != nil {
 				return finalApp.Error

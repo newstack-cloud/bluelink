@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -62,7 +63,7 @@ func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider)
 			if !skipCheck {
 				factory := &bluelinkpreflight.BluelinkPreflightFactory{}
 				preflightModel = factory.CreatePreflight(
-					confProvider, "validate", styles, headless, os.Stdout, false,
+					cmd.Context(), confProvider, "validate", styles, headless, os.Stdout, false,
 				)
 			}
 
@@ -82,7 +83,7 @@ func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider)
 				return err
 			}
 
-			options := []tea.ProgramOption{}
+			options := []tea.ProgramOption{tea.WithContext(cmd.Context())}
 			if inTerminal {
 				options = append(options, tea.WithAltScreen(), tea.WithMouseCellMotion())
 			} else {
@@ -93,7 +94,10 @@ func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider)
 			if err != nil {
 				return err
 			}
-			finalApp := finalModel.(validateui.MainModel)
+			finalApp, ok := finalModel.(validateui.MainModel)
+			if !ok {
+				return fmt.Errorf("internal error: unexpected validate model type %T", finalModel)
+			}
 
 			if finalApp.Error != nil {
 				return finalApp.Error
