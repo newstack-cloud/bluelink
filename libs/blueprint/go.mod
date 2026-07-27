@@ -1,6 +1,6 @@
 module github.com/newstack-cloud/bluelink/libs/blueprint
 
-go 1.23.0
+go 1.26
 
 toolchain go1.26.5
 
@@ -12,7 +12,7 @@ require (
 	github.com/newstack-cloud/bluelink/libs/common v0.4.0
 	github.com/spf13/afero v1.15.0
 	github.com/stretchr/testify v1.11.1
-	github.com/tailscale/hujson v0.0.0-20260718110524-10d7940d4c87
+	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f
 	go.uber.org/zap v1.28.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
