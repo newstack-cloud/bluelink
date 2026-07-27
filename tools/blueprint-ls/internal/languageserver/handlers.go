@@ -591,15 +591,7 @@ func (a *Application) loadPlugins(ctx context.Context, config pluginhost.Config)
 		zap.String("logFileRootDir", config.GetLogFileRootDir()),
 	)
 
-	pluginHostService, err := pluginhost.LoadDefaultService(
-		&pluginhost.LoadDependencies{
-			Executor:         plugin.NewOSCmdExecutor(config.GetLogFileRootDir(), nil),
-			InstanceFactory:  plugin.CreatePluginInstance,
-			PluginHostConfig: config,
-		},
-		pluginhost.WithServiceLogger(a.frameworkLogger),
-		pluginhost.WithInitialProviders(a.builtInProviders),
-	)
+	pluginHostService, err := a.startPluginHostService(config)
 	if err != nil {
 		a.logger.Warn("Failed to initialize plugin host", zap.Error(err))
 		return
@@ -634,6 +626,40 @@ func (a *Application) loadPlugins(ctx context.Context, config pluginhost.Config)
 
 	// Reinitialize registries with merged providers
 	a.ReinitialiseRegistries(mergedProviders, mergedTransformers)
+}
+
+// The listener is created up front rather than left to the plugin service so
+// that the port it lands on can be passed to spawned plugins, which would
+// otherwise dial the framework default port owned by the deploy engine.
+func (a *Application) startPluginHostService(
+	config pluginhost.Config,
+) (pluginhost.Service, error) {
+	listener, err := pluginhost.StartPluginServiceListener()
+	if err != nil {
+		return nil, err
+	}
+
+	executor := plugin.NewOSCmdExecutor(
+		config.GetLogFileRootDir(),
+		pluginhost.PluginExecutorEnvVars(listener),
+	)
+
+	pluginHostService, err := pluginhost.LoadDefaultService(
+		&pluginhost.LoadDependencies{
+			Executor:         executor,
+			InstanceFactory:  plugin.CreatePluginInstance,
+			PluginHostConfig: config,
+		},
+		pluginhost.WithPluginServiceListener(listener),
+		pluginhost.WithServiceLogger(a.frameworkLogger),
+		pluginhost.WithInitialProviders(a.builtInProviders),
+	)
+	if err != nil {
+		listener.Close()
+		return nil, err
+	}
+
+	return pluginHostService, nil
 }
 
 // ReinitialiseRegistries updates all registries and services with new providers and transformers.
