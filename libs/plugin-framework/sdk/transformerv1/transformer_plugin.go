@@ -107,10 +107,16 @@ func (p *blueprintTransformerPluginImpl) Transform(
 		return toBlueprintTransformErrorResponse(err), nil
 	}
 
+	linkGraph, err := fromPBDeclaredLinkGraph(req.LinkGraph, inputBlueprint)
+	if err != nil {
+		return toBlueprintTransformErrorResponse(err), nil
+	}
+
 	transformOutput, err := p.bpTransformer.Transform(
 		ctx,
 		&transform.SpecTransformerTransformInput{
 			InputBlueprint:     inputBlueprint,
+			LinkGraph:          linkGraph,
 			TransformerContext: transformerContext,
 		},
 	)
