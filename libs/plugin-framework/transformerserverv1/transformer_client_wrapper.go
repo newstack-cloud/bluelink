@@ -9,6 +9,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/convertv1"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/errorsv1"
 	sharedtypesv1 "github.com/newstack-cloud/bluelink/libs/plugin-framework/sharedtypesv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/utils"
 )
 
 // WrapTransformerClient wraps a transformer plugin v1 TransformerClient
@@ -17,15 +18,21 @@ import (
 // with the blueprint framework and is agnostic to the underlying
 // communication protocol.
 func WrapTransformerClient(client TransformerClient, hostID string) transform.SpecTransformer {
-	return &transformerClientWrapper{
+	wrapper := &transformerClientWrapper{
 		client: client,
 		hostID: hostID,
 	}
+	wrapper.abstractResourceTypes = utils.NewTypeSetCache(
+		wrapper.ListAbstractResourceTypes,
+	)
+
+	return wrapper
 }
 
 type transformerClientWrapper struct {
-	client TransformerClient
-	hostID string
+	client                TransformerClient
+	hostID                string
+	abstractResourceTypes *utils.TypeSetCache
 }
 
 func (p *transformerClientWrapper) GetTransformName(ctx context.Context) (string, error) {
@@ -226,6 +233,11 @@ func (p *transformerClientWrapper) AbstractResource(
 	ctx context.Context,
 	abstractResourceType string,
 ) (transform.AbstractResource, error) {
+	hasResourceType, err := p.abstractResourceTypes.Has(ctx, abstractResourceType)
+	if err == nil && !hasResourceType {
+		return nil, errorsv1.ErrAbstractResourceTypeNotFound(abstractResourceType)
+	}
+
 	return &abstractResourceTransformerClientWrapper{
 		client:               p.client,
 		abstractResourceType: abstractResourceType,

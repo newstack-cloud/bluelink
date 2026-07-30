@@ -278,6 +278,53 @@ func ErrResourceNotDestroyed(resourceType string, action PluginAction) error {
 	)
 }
 
+// ErrResourceTypeNotFound is returned when a provider plugin does not support
+// the given resource type.
+func ErrResourceTypeNotFound(resourceType string) error {
+	return fmt.Errorf(
+		"resource type %q is not supported by the provider plugin",
+		resourceType,
+	)
+}
+
+// ErrDataSourceTypeNotFound is returned when a provider plugin does not support
+// the given data source type.
+func ErrDataSourceTypeNotFound(dataSourceType string) error {
+	return fmt.Errorf(
+		"data source type %q is not supported by the provider plugin",
+		dataSourceType,
+	)
+}
+
+// ErrCustomVariableTypeNotFound is returned when a provider plugin does not support
+// the given custom variable type.
+func ErrCustomVariableTypeNotFound(customVariableType string) error {
+	return fmt.Errorf(
+		"custom variable type %q is not supported by the provider plugin",
+		customVariableType,
+	)
+}
+
+// ErrLinkTypeNotFound is returned when a provider plugin does not support links
+// between the given pair of resource types.
+func ErrLinkTypeNotFound(resourceTypeA string, resourceTypeB string) error {
+	return fmt.Errorf(
+		"links from resource type %q to resource type %q are not supported"+
+			" by the provider plugin",
+		resourceTypeA,
+		resourceTypeB,
+	)
+}
+
+// ErrAbstractResourceTypeNotFound is returned when a transformer plugin does not
+// support the given abstract resource type.
+func ErrAbstractResourceTypeNotFound(resourceType string) error {
+	return fmt.Errorf(
+		"abstract resource type %q is not supported by the transformer plugin",
+		resourceType,
+	)
+}
+
 // ErrInvalidHostID is returned when an invalid host ID is provided in a request.
 // An invalid host ID indicates that a host making calls to a plugin is not the one
 // that the plugin was registered with.

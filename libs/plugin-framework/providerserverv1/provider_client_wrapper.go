@@ -8,6 +8,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/convertv1"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/errorsv1"
 	sharedtypesv1 "github.com/newstack-cloud/bluelink/libs/plugin-framework/sharedtypesv1"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/utils"
 )
 
 // WrapProviderClient wraps a provider plugin v1 ProviderClient
@@ -16,15 +17,25 @@ import (
 // with the blueprint framework and is agnostic to the underlying
 // communication protocol.
 func WrapProviderClient(client ProviderClient, hostID string) provider.Provider {
-	return &providerClientWrapper{
+	wrapper := &providerClientWrapper{
 		client: client,
 		hostID: hostID,
 	}
+	wrapper.resourceTypes = utils.NewTypeSetCache(wrapper.ListResourceTypes)
+	wrapper.dataSourceTypes = utils.NewTypeSetCache(wrapper.ListDataSourceTypes)
+	wrapper.customVarTypes = utils.NewTypeSetCache(wrapper.ListCustomVariableTypes)
+	wrapper.linkTypes = utils.NewTypeSetCache(wrapper.ListLinkTypes)
+
+	return wrapper
 }
 
 type providerClientWrapper struct {
-	client ProviderClient
-	hostID string
+	client          ProviderClient
+	hostID          string
+	resourceTypes   *utils.TypeSetCache
+	dataSourceTypes *utils.TypeSetCache
+	customVarTypes  *utils.TypeSetCache
+	linkTypes       *utils.TypeSetCache
 }
 
 func (p *providerClientWrapper) Namespace(ctx context.Context) (string, error) {
@@ -74,6 +85,11 @@ func (p *providerClientWrapper) ConfigDefinition(ctx context.Context) (*core.Con
 }
 
 func (p *providerClientWrapper) Resource(ctx context.Context, resourceType string) (provider.Resource, error) {
+	hasResourceType, err := p.resourceTypes.Has(ctx, resourceType)
+	if err == nil && !hasResourceType {
+		return nil, errorsv1.ErrResourceTypeNotFound(resourceType)
+	}
+
 	return &resourceProviderClientWrapper{
 		client:       p.client,
 		resourceType: resourceType,
@@ -82,6 +98,11 @@ func (p *providerClientWrapper) Resource(ctx context.Context, resourceType strin
 }
 
 func (p *providerClientWrapper) DataSource(ctx context.Context, dataSourceType string) (provider.DataSource, error) {
+	hasDataSourceType, err := p.dataSourceTypes.Has(ctx, dataSourceType)
+	if err == nil && !hasDataSourceType {
+		return nil, errorsv1.ErrDataSourceTypeNotFound(dataSourceType)
+	}
+
 	return &dataSourceProviderClientWrapper{
 		client:         p.client,
 		dataSourceType: dataSourceType,
@@ -90,6 +111,11 @@ func (p *providerClientWrapper) DataSource(ctx context.Context, dataSourceType s
 }
 
 func (p *providerClientWrapper) Link(ctx context.Context, resourceTypeA string, resourceTypeB string) (provider.Link, error) {
+	hasLinkType, err := p.linkTypes.Has(ctx, core.LinkType(resourceTypeA, resourceTypeB))
+	if err == nil && !hasLinkType {
+		return nil, errorsv1.ErrLinkTypeNotFound(resourceTypeA, resourceTypeB)
+	}
+
 	return &linkProviderClientWrapper{
 		client:        p.client,
 		resourceTypeA: resourceTypeA,
@@ -102,6 +128,11 @@ func (p *providerClientWrapper) CustomVariableType(
 	ctx context.Context,
 	customVariableType string,
 ) (provider.CustomVariableType, error) {
+	hasCustomVarType, err := p.customVarTypes.Has(ctx, customVariableType)
+	if err == nil && !hasCustomVarType {
+		return nil, errorsv1.ErrCustomVariableTypeNotFound(customVariableType)
+	}
+
 	return &customVarTypeProviderClientWrapper{
 		client:             p.client,
 		customVariableType: customVariableType,

@@ -35,6 +35,18 @@ func (s *TransformerPluginV1Suite) Test_custom_validate_abstract_resource() {
 	)
 }
 
+func (s *TransformerPluginV1Suite) Test_abstract_resource_not_found_for_unsupported_type() {
+	_, err := s.transformer.AbstractResource(
+		context.Background(),
+		"celerity/notImplemented",
+	)
+	s.Require().Error(err)
+	s.Assert().Contains(
+		err.Error(),
+		"abstract resource type \"celerity/notImplemented\" is not supported",
+	)
+}
+
 func (s *TransformerPluginV1Suite) Test_custom_validate_abstract_resource_fails_for_unexpected_host() {
 	abstractResource, err := s.transformerWrongHost.AbstractResource(
 		context.Background(),

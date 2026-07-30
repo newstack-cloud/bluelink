@@ -13,6 +13,15 @@ const (
 	vpcDataSourceType = "aws/vpc"
 )
 
+func (s *ProviderPluginV1Suite) Test_data_source_not_found_for_unsupported_type() {
+	_, err := s.provider.DataSource(context.Background(), "aws/notImplemented")
+	s.Require().Error(err)
+	s.Assert().Contains(
+		err.Error(),
+		"data source type \"aws/notImplemented\" is not supported",
+	)
+}
+
 func (s *ProviderPluginV1Suite) Test_custom_validate_data_source() {
 	dataSource, err := s.provider.DataSource(context.Background(), vpcDataSourceType)
 	s.Require().NoError(err)

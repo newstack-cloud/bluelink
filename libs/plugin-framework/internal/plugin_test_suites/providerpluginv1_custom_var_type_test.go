@@ -13,6 +13,18 @@ const (
 	instanceTypeCustomVarType = "aws/ec2/instanceType"
 )
 
+func (s *ProviderPluginV1Suite) Test_custom_variable_type_not_found_for_unsupported_type() {
+	_, err := s.provider.CustomVariableType(
+		context.Background(),
+		"aws/ec2/notImplemented",
+	)
+	s.Require().Error(err)
+	s.Assert().Contains(
+		err.Error(),
+		"custom variable type \"aws/ec2/notImplemented\" is not supported",
+	)
+}
+
 func (s *ProviderPluginV1Suite) Test_custom_variable_type_get_type() {
 	customVarType, err := s.provider.CustomVariableType(
 		context.Background(),

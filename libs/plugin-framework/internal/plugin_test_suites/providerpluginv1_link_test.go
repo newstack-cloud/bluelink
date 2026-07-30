@@ -16,6 +16,35 @@ const (
 	testResource2ID = "test-resource-2"
 )
 
+func (s *ProviderPluginV1Suite) Test_link_not_found_for_unsupported_resource_type_pair() {
+	_, err := s.provider.Link(
+		context.Background(),
+		lambdaFunctionResourceType,
+		"aws/sqs/queue",
+	)
+	s.Require().Error(err)
+	s.Assert().Contains(err.Error(), "are not supported by the provider plugin")
+}
+
+// A resource with a label that matches a link selector is filtered out when there
+// is no link implementation for the pair of resource types, so the link registry
+// must report the pair as having no implementation rather than failing.
+func (s *ProviderPluginV1Suite) Test_link_registry_reports_no_implementation_for_unsupported_pair() {
+	linkRegistry := provider.NewLinkRegistry(
+		map[string]provider.Provider{
+			"aws": s.provider,
+		},
+	)
+
+	_, err := linkRegistry.Link(
+		context.Background(),
+		lambdaFunctionResourceType,
+		"aws/sqs/queue",
+	)
+	s.Require().Error(err)
+	s.Assert().True(provider.IsLinkImplementationNotFoundError(err))
+}
+
 func (s *ProviderPluginV1Suite) Test_stage_link_changes() {
 	link, err := s.provider.Link(
 		context.Background(),

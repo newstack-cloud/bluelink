@@ -21,6 +21,15 @@ const (
 	testResource2Name          = "ordersTable"
 )
 
+func (s *ProviderPluginV1Suite) Test_resource_not_found_for_unsupported_type() {
+	_, err := s.provider.Resource(context.Background(), "aws/lambda/notImplemented")
+	s.Require().Error(err)
+	s.Assert().Contains(
+		err.Error(),
+		"resource type \"aws/lambda/notImplemented\" is not supported",
+	)
+}
+
 func (s *ProviderPluginV1Suite) Test_custom_validate_resource() {
 	resource, err := s.provider.Resource(context.Background(), lambdaFunctionResourceType)
 	s.Require().NoError(err)
