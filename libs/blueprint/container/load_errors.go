@@ -2,12 +2,16 @@ package container
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/links"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/validation"
 	"github.com/newstack-cloud/bluelink/libs/common/core"
 )
 
@@ -133,6 +137,175 @@ func errExportValidationError(errorMap map[string]error) error {
 	}
 }
 
+// Link errors carry the resources involved in the link, use them to attribute the
+// failure to a location in the source blueprint document.
+// Without this, the error is reported without a location and tools that surface
+// diagnostics (e.g. the language server) fall back to the start of the document.
+func positionedLinkError(err error) error {
+	linkErr, isLinkErr := err.(*links.LinkError)
+	if !isLinkErr {
+		return err
+	}
+
+	fromResource, toResource := linkErrorResources(linkErr)
+	if fromResource == nil {
+		return positionedLinkErrorChildren(linkErr)
+	}
+
+	sourceMetas := linkErrorSourceMetas(linkErr, fromResource, toResource)
+	if len(sourceMetas) == 1 {
+		return linkErrorAtSourceMeta(linkErr, sourceMetas[0])
+	}
+
+	childErrors := []error{}
+	for _, sourceMeta := range sourceMetas {
+		childErrors = append(childErrors, linkErrorAtSourceMeta(linkErr, sourceMeta))
+	}
+
+	return &errors.LoadError{
+		ReasonCode:  errors.ErrorReasonCode(linkErr.ReasonCode),
+		Err:         linkErr.Err,
+		ChildErrors: childErrors,
+	}
+}
+
+// Wrappers such as the error reported for a set of circular links hold an error
+// for each link, position each one against the resources that declare that link.
+func positionedLinkErrorChildren(linkErr *links.LinkError) error {
+	if len(linkErr.ChildErrors) == 0 {
+		return linkErr
+	}
+
+	childErrors := core.Map(
+		linkErr.ChildErrors,
+		func(childErr error, _ int) error {
+			return positionedLinkError(childErr)
+		},
+	)
+
+	return &errors.LoadError{
+		ReasonCode:  errors.ErrorReasonCode(linkErr.ReasonCode),
+		Err:         linkErr.Err,
+		ChildErrors: childErrors,
+	}
+}
+
+func linkErrorResources(linkErr *links.LinkError) (*schema.Resource, *schema.Resource) {
+	if linkErr.FromResource != nil {
+		return linkErr.FromResource.Resource, selectedResourceSchema(linkErr.ToResource)
+	}
+
+	if linkErr.FromLink != nil {
+		return linkErr.FromLink.Resource, chainLinkResourceSchema(linkErr.ToLink)
+	}
+
+	return nil, nil
+}
+
+func selectedResourceSchema(resource *links.ResourceWithNameAndSelectors) *schema.Resource {
+	if resource == nil {
+		return nil
+	}
+
+	return resource.Resource
+}
+
+func chainLinkResourceSchema(link *links.ChainLinkNode) *schema.Resource {
+	if link == nil {
+		return nil
+	}
+
+	return link.Resource
+}
+
+func linkErrorSourceMetas(
+	linkErr *links.LinkError,
+	fromResource *schema.Resource,
+	toResource *schema.Resource,
+) []*source.Meta {
+	if toResource == nil {
+		return []*source.Meta{resourceTypeSourceMeta(fromResource)}
+	}
+
+	selectorSourceMeta, labelSourceMeta := linkSelectionSourceMeta(
+		fromResource,
+		toResource,
+	)
+
+	sourceMetas := []*source.Meta{}
+	if selectorSourceMeta != nil {
+		sourceMetas = append(sourceMetas, selectorSourceMeta)
+	}
+	if labelSourceMeta != nil {
+		sourceMetas = append(sourceMetas, labelSourceMeta)
+	}
+
+	if len(sourceMetas) == 0 {
+		return []*source.Meta{resourceTypeSourceMeta(linkErr.FromResource.Resource)}
+	}
+
+	return sourceMetas
+}
+
+func linkSelectionSourceMeta(
+	selectorResource *schema.Resource,
+	selectedResource *schema.Resource,
+) (*source.Meta, *source.Meta) {
+	selectorLabels := linkSelectorLabels(selectorResource)
+	labels := resourceLabels(selectedResource)
+	if selectorLabels == nil || labels == nil {
+		return nil, nil
+	}
+
+	for _, labelKey := range slices.Sorted(maps.Keys(selectorLabels.Values)) {
+		if labels.Values[labelKey] != selectorLabels.Values[labelKey] {
+			continue
+		}
+
+		return selectorLabels.SourceMeta[labelKey], labels.SourceMeta[labelKey]
+	}
+
+	return nil, nil
+}
+
+func linkErrorAtSourceMeta(linkErr *links.LinkError, sourceMeta *source.Meta) error {
+	posRange := source.PositionRangeFromSourceMeta(sourceMeta)
+
+	return &errors.LoadError{
+		ReasonCode:     errors.ErrorReasonCode(linkErr.ReasonCode),
+		Err:            linkErr.Err,
+		Line:           posRange.Line,
+		EndLine:        posRange.EndLine,
+		Column:         posRange.Column,
+		EndColumn:      posRange.EndColumn,
+		ColumnAccuracy: posRange.ColumnAccuracy,
+	}
+}
+
+func resourceTypeSourceMeta(resource *schema.Resource) *source.Meta {
+	if resource == nil || resource.Type == nil {
+		return nil
+	}
+
+	return resource.Type.SourceMeta
+}
+
+func linkSelectorLabels(resource *schema.Resource) *schema.StringMap {
+	if resource == nil || resource.LinkSelector == nil {
+		return nil
+	}
+
+	return resource.LinkSelector.ByLabel
+}
+
+func resourceLabels(resource *schema.Resource) *schema.StringMap {
+	if resource == nil || resource.Metadata == nil {
+		return nil
+	}
+
+	return resource.Metadata.Labels
+}
+
 func errTransformersMissing(missingTransformers []string, childErrors []error, line *int, column *int) error {
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonMissingTransformers,
@@ -231,7 +404,13 @@ func errMissingVariableType(variableName string, location *source.Meta) error {
 	}
 }
 
-func errInvalidCustomVariableType(variableName string, variableType schema.VariableType, line *int, column *int) error {
+func errInvalidCustomVariableType(
+	variableName string,
+	variableType schema.VariableType,
+	availableTypes []string,
+	line *int,
+	column *int,
+) error {
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeVariableValidationErrors,
 		Err: fmt.Errorf(
@@ -256,11 +435,15 @@ func errInvalidCustomVariableType(variableName string, variableType schema.Varia
 					Priority:    2,
 				},
 			},
-			Metadata: map[string]any{
-				"variableName":      variableName,
-				"variableType":      variableType,
-				"providerNamespace": provider.ExtractProviderFromItemType(string(variableType)),
-			},
+			Metadata: validation.AddSuggestionsToMetadata(
+				map[string]any{
+					"variableName":      variableName,
+					"variableType":      variableType,
+					"providerNamespace": provider.ExtractProviderFromItemType(string(variableType)),
+				},
+				string(variableType),
+				availableTypes,
+			),
 		},
 	}
 }

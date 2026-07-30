@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
@@ -20,19 +21,22 @@ type LinkRegistry interface {
 type linkRegistryFromProviders struct {
 	providers         map[string]Provider
 	linkProviderCache *core.Cache[Provider]
+	linkTypesCache    *core.Cache[[]string]
 }
 
 // NewLinkRegistry creates a new LinkRegistry from a map of providers,
 // each provider will be checked for a given link implementation
 // on the first request to retrieve a link for a given resource type pair.
 // As links are not tied to the providers of each of the resource types in the link,
-// a trial-and-error approach is used to find the correct provider for a link.
+// the link types reported by each provider are used to find the correct provider
+// for a link.
 func NewLinkRegistry(
 	providers map[string]Provider,
 ) LinkRegistry {
 	return &linkRegistryFromProviders{
 		providers:         providers,
 		linkProviderCache: core.NewCache[Provider](),
+		linkTypesCache:    core.NewCache[[]string](),
 	}
 }
 
@@ -67,7 +71,15 @@ func (r *linkRegistryFromProviders) getProviderForLink(
 		return provider, nil
 	}
 
-	for _, provider := range r.providers {
+	for namespace, provider := range r.providers {
+		// Providers are asked which link types they implement rather than being
+		// checked for presence with Provider.Link, as plugin-backed providers return a client
+		// stub for any link type and would claim links that belong to another
+		// plugin or to a transformer.
+		if !r.providerHasLinkType(ctx, namespace, provider, linkType) {
+			continue
+		}
+
 		link, err := provider.Link(ctx, resourceTypeA, resourceTypeB)
 		if err == nil && link != nil {
 			r.linkProviderCache.Set(linkType, provider)
@@ -76,4 +88,29 @@ func (r *linkRegistryFromProviders) getProviderForLink(
 	}
 
 	return nil, errLinkImplementationNotFound(resourceTypeA, resourceTypeB)
+}
+
+func (r *linkRegistryFromProviders) providerHasLinkType(
+	ctx context.Context,
+	namespace string,
+	provider Provider,
+	linkType string,
+) bool {
+	linkTypes, cached := r.linkTypesCache.Get(namespace)
+	if !cached {
+		var err error
+		linkTypes, err = provider.ListLinkTypes(ctx)
+		if err != nil {
+			linkTypes = nil
+		}
+		r.linkTypesCache.Set(namespace, linkTypes)
+	}
+
+	// A provider that doesn't report its link types is probed as before,
+	// the reported list is only used to rule a provider out.
+	if len(linkTypes) == 0 {
+		return true
+	}
+
+	return slices.Contains(linkTypes, linkType)
 }

@@ -41,7 +41,27 @@ const (
 	// in the process of building our chains to be used the blueprint container
 	// for deployment orchestration.
 	LinkErrorReasonCodeCircularLink LinkErrorReasonCode = "circular_link"
+	// LinkErrorReasonCodeResourceTypeLookup is provided when the type of a resource
+	// in a blueprint could not be looked up in the resource registry while
+	// collecting the declared links for the blueprint.
+	// The resource that could not be resolved is provided in the error so that
+	// callers can attribute the failure to a location in the source blueprint
+	// document.
+	LinkErrorReasonCodeResourceTypeLookup LinkErrorReasonCode = "resource_type_lookup"
 )
+
+func errResourceTypeLookup(resource *ResourceWithNameAndSelectors, lookupErr error) error {
+	return &LinkError{
+		ReasonCode: LinkErrorReasonCodeResourceTypeLookup,
+		Err: fmt.Errorf(
+			"failed to look up the type of resource \"%s\": %s",
+			resource.Name,
+			lookupErr.Error(),
+		),
+		FromResource: resource,
+		ChildErrors:  []error{lookupErr},
+	}
+}
 
 func errMissingLinkImplementation(linkFromResource *ResourceWithNameAndSelectors, linkToResource *ResourceWithNameAndSelectors) error {
 	return &LinkError{

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/memstate"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/links"
@@ -389,6 +390,52 @@ func (s *LoaderTestSuite) Test_reports_expected_error_when_transform_is_missing(
 	s.Require().Error(err)
 }
 
+func (s *LoaderTestSuite) Test_reports_diagnostic_when_transform_is_missing_without_transforming() {
+	// Validation-only hosts (e.g. a language server) load blueprints with spec
+	// transformation disabled, transforms that are not available must still be
+	// reported so that users can see whether the transforms they have declared
+	// are supported by their current installation.
+	loaderNoTransform := NewDefaultLoader(
+		s.providersWithoutCore,
+		s.specTransformers,
+		/* stateContainer */ nil,
+		newFSChildResolver(),
+		WithLoaderTransformSpec(false),
+		WithLoaderRefChainCollectorFactory(refgraph.NewRefChainCollector),
+		WithLoaderLogger(s.logger),
+	)
+
+	validationRes, err := loaderNoTransform.Validate(
+		context.TODO(),
+		s.specFixtureFiles["missing-transform"],
+		createParams(),
+	)
+	s.Require().NoError(err)
+	s.Require().NotNil(validationRes)
+
+	transformDiagnostics := filterDiagnosticsContaining(
+		validationRes.Diagnostics,
+		"serverless-2027",
+	)
+	s.Require().Len(transformDiagnostics, 1)
+	s.Assert().Equal(core.DiagnosticLevelError, transformDiagnostics[0].Level)
+	s.Assert().Equal(4, transformDiagnostics[0].Range.Start.Line)
+}
+
+func filterDiagnosticsContaining(
+	diagnostics []*core.Diagnostic,
+	substr string,
+) []*core.Diagnostic {
+	matching := []*core.Diagnostic{}
+	for _, diagnostic := range diagnostics {
+		if strings.Contains(diagnostic.Message, substr) {
+			matching = append(matching, diagnostic)
+		}
+	}
+
+	return matching
+}
+
 func (s *LoaderTestSuite) Test_reports_error_for_blueprint_with_cyclic_references() {
 	_, err := s.loader.Load(context.TODO(), s.specFixtureFiles["cyclic-ref"], createParams())
 	s.Require().Error(err)
@@ -412,13 +459,45 @@ func (s *LoaderTestSuite) Test_reports_error_for_blueprint_with_cyclic_link_and_
 }
 
 func (s *LoaderTestSuite) Test_reports_error_for_blueprint_with_hard_cyclic_link() {
+	// A link is declared by the label selector on one resource matching a label on
+	// another, an error for the link must be reported at both ends so that it can be
+	// acted on from either resource in the document.
 	_, err := s.loader.Load(context.TODO(), s.specFixtureFiles["cyclic-ref-3"], createParams())
 	s.Require().Error(err)
-	linkErr, isLinkErr := err.(*links.LinkError)
-	s.Assert().True(isLinkErr)
+	loadErr, isLoadErr := err.(*errors.LoadError)
+	s.Require().True(isLoadErr)
 	s.Assert().Equal(
-		links.LinkErrorReasonCodeCircularLinks,
-		linkErr.ReasonCode,
+		errors.ErrorReasonCode(links.LinkErrorReasonCodeCircularLinks),
+		loadErr.ReasonCode,
+	)
+
+	circularLinkErr, isCircularLinkErr := loadErr.ChildErrors[0].(*errors.LoadError)
+	s.Require().True(isCircularLinkErr)
+	s.Assert().Equal(
+		errors.ErrorReasonCode(links.LinkErrorReasonCodeCircularLink),
+		circularLinkErr.ReasonCode,
+	)
+	s.Require().Len(circularLinkErr.ChildErrors, 2)
+
+	selectorErr, isSelectorErr := circularLinkErr.ChildErrors[0].(*errors.LoadError)
+	s.Require().True(isSelectorErr)
+	labelErr, isLabelErr := circularLinkErr.ChildErrors[1].(*errors.LoadError)
+	s.Require().True(isLabelErr)
+
+	// Both resources in the fixture select each other, which of the two directions
+	// is reported for the cycle depends on the order that the chain links are built
+	// in. Either direction must report the "app" entry of the "linkSelector.byLabel"
+	// map of the selecting resource along with the "app" entry of the
+	// "metadata.labels" map of the resource it selects.
+	reported := []int{*selectorErr.Line, *labelErr.Line}
+	s.Assert().Contains(
+		[][]int{
+			// ordersTable selects saveOrderFunction.
+			{45, 57},
+			// saveOrderFunction selects ordersTable.
+			{60, 42},
+		},
+		reported,
 	)
 }
 

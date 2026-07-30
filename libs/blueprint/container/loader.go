@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -23,6 +24,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/speccore"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/subengine"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/validation"
 	"github.com/newstack-cloud/bluelink/libs/common/core"
@@ -657,6 +659,7 @@ func (l *defaultLoader) loadSpecAndLinkInfo(
 		loadSpecRes.spec,
 		l.providers,
 		l.specTransformers,
+		params,
 	)
 	linkInfo, err := links.NewDefaultLinkInfoProvider(
 		resourceTypeProviderMap,
@@ -692,7 +695,7 @@ func (l *defaultLoader) loadSpecAndLinkInfo(
 	// a link and the other resource references a property of the first resource.
 	err = l.collectLinksAsReferences(ctx, linkInfo, refChainCollector, params)
 	if err != nil {
-		return container, loadSpecRes.diagnostics, err
+		return container, loadSpecRes.diagnostics, positionedLinkError(err)
 	}
 
 	refCycleRoots := refChainCollector.FindCircularReferences()
@@ -702,7 +705,7 @@ func (l *defaultLoader) loadSpecAndLinkInfo(
 
 	linkChains, err := linkInfo.Links(ctx)
 	if err != nil {
-		return container, loadSpecRes.diagnostics, err
+		return container, loadSpecRes.diagnostics, positionedLinkError(err)
 	}
 
 	linkConstraintDiags, err := validation.ValidateLinkConstraints(
@@ -1014,7 +1017,7 @@ func (l *defaultLoader) loadSpec(
 			declaredLinkGraph: declaredLinkGraph,
 		}
 		return loadSpecRes, validation.ErrMultipleValidationErrors(
-			append(validationErrors, err),
+			append(validationErrors, positionedLinkError(err)),
 		)
 	}
 
@@ -1070,8 +1073,9 @@ func (l *defaultLoader) validateAndApplyTransforms(
 	valCtx *validation.ValidationContext,
 	declaredLinkGraph linktypes.DeclaredLinkGraph,
 ) (map[string]transform.SpecTransformer, *schema.Blueprint, []*bpcore.Diagnostic, error) {
-	// Apply some validation to get diagnostics about non-standard transformers
-	// that may not be present at runtime.
+	// Check the transform strings themselves for issues that hold regardless of
+	// whether the spec will be transformed, such as empty transforms
+	// and the use of ${..} substitutions.
 	var transformDiagnostics []*bpcore.Diagnostic
 	var validationErrors []error
 	validateDiagnostics, err := l.validateTransforms(ctx, blueprintSchema)
@@ -1081,6 +1085,15 @@ func (l *defaultLoader) validateAndApplyTransforms(
 	}
 
 	if !l.transformSpec {
+		// Transformers are not collected in this path, so report missing transformers
+		// as diagnostics instead. This allows tools such as the language server
+		// to surface transforms that are not available in the current installation,
+		// without failing to load a blueprint that will never be transformed.
+		transformDiagnostics = append(
+			transformDiagnostics,
+			l.transformerAvailabilityDiagnostics(blueprintSchema)...,
+		)
+
 		if len(validationErrors) > 0 {
 			return nil, blueprintSchema, transformDiagnostics, validation.ErrMultipleValidationErrors(validationErrors)
 		}
@@ -1204,6 +1217,61 @@ func (l *defaultLoader) collectTransformers(schema *schema.Blueprint) (map[strin
 		return nil, errTransformersMissing(missingTransformers, childErrors, line, col)
 	}
 	return usedBySpec, nil
+}
+
+func (l *defaultLoader) transformerAvailabilityDiagnostics(
+	bpSchema *schema.Blueprint,
+) []*bpcore.Diagnostic {
+	diagnostics := []*bpcore.Diagnostic{}
+	if bpSchema.Transform == nil {
+		return diagnostics
+	}
+
+	for i, name := range bpSchema.Transform.Values {
+		if !isResolvableTransformName(name) {
+			continue
+		}
+
+		if _, exists := l.specTransformers[name]; exists {
+			continue
+		}
+
+		diagnostics = append(diagnostics, &bpcore.Diagnostic{
+			Level: bpcore.DiagnosticLevelError,
+			Message: fmt.Sprintf(
+				"The %q transform is not available, make sure the transformer plugin"+
+					" that provides it is installed.",
+				name,
+			),
+			Range: transformDiagnosticRange(bpSchema.Transform, i),
+		})
+	}
+
+	return diagnostics
+}
+
+func isResolvableTransformName(name string) bool {
+	return strings.TrimSpace(name) != "" &&
+		!substitutions.ContainsSubstitution(name)
+}
+
+func transformDiagnosticRange(
+	transform *schema.TransformValueWrapper,
+	index int,
+) *bpcore.DiagnosticRange {
+	if index >= len(transform.SourceMeta) {
+		return bpcore.DiagnosticRangeFromSourceMeta(nil, nil)
+	}
+
+	nextLocation := (*source.Meta)(nil)
+	if index+1 < len(transform.SourceMeta) {
+		nextLocation = transform.SourceMeta[index+1]
+	}
+
+	return bpcore.DiagnosticRangeFromSourceMeta(
+		transform.SourceMeta[index],
+		nextLocation,
+	)
 }
 
 func (l *defaultLoader) validateBlueprint(ctx context.Context, bpSchema *schema.Blueprint) ([]*bpcore.Diagnostic, error) {
@@ -1462,7 +1530,7 @@ func (l *defaultLoader) validateCustomVariableType(
 	if providerCustomVarType == nil {
 		line, col := source.PositionFromSourceMeta(varSchema.SourceMeta)
 		return []*bpcore.Diagnostic{}, errInvalidCustomVariableType(
-			varName, varSchema.Type.Value, line, col,
+			varName, varSchema.Type.Value /* availableTypes */, nil, line, col,
 		)
 	}
 
@@ -1483,7 +1551,9 @@ func (l *defaultLoader) deriveProviderCustomVarType(ctx context.Context, varName
 	parts := strings.Split(string(varSchema.Type.Value), "/")
 	if len(parts) == 0 {
 		line, col := source.PositionFromSourceMeta(varSchema.SourceMeta)
-		return nil, errInvalidCustomVariableType(varName, varSchema.Type.Value, line, col)
+		return nil, errInvalidCustomVariableType(
+			varName, varSchema.Type.Value /* availableTypes */, nil, line, col,
+		)
 	}
 
 	providerKey := parts[0]
@@ -1494,12 +1564,31 @@ func (l *defaultLoader) deriveProviderCustomVarType(ctx context.Context, varName
 		return nil, errMissingProviderForCustomVarType(providerKey, varName, varSchema.Type.Value, line, col)
 	}
 
+	// A provider reports an error for a custom variable type that it does not
+	// support, treat it as an invalid type for the variable so that the failure is
+	// attributed to the variable in the source blueprint document.
 	customVarType, err := provider.CustomVariableType(ctx, string(varSchema.Type.Value))
-	if err != nil {
-		return nil, err
+	if err != nil || customVarType == nil {
+		line, col := source.PositionFromSourceMeta(varSchema.SourceMeta)
+		return nil, errInvalidCustomVariableType(
+			varName,
+			varSchema.Type.Value,
+			listCustomVariableTypes(ctx, provider),
+			line,
+			col,
+		)
 	}
 
 	return customVarType, nil
+}
+
+func listCustomVariableTypes(ctx context.Context, prov provider.Provider) []string {
+	customVarTypes, err := prov.ListCustomVariableTypes(ctx)
+	if err != nil {
+		return nil
+	}
+
+	return customVarTypes
 }
 
 func (l *defaultLoader) validateDataSources(

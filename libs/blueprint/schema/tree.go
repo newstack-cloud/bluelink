@@ -99,6 +99,12 @@ const (
 )
 
 // SchemaToTree converts a blueprint schema to a tree representation.
+//
+// The blueprint must have been parsed from a document, as the tree maps schema
+// elements back to their source positions. A blueprint constructed in memory,
+// such as the output of a transformer, carries no source metadata and will
+// panic here; callers holding one should build the tree from the source
+// blueprint it was derived from instead.
 func SchemaToTree(blueprint *Blueprint) *TreeNode {
 	if blueprint == nil {
 		return nil

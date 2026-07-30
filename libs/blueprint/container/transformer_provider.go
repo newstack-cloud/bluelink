@@ -9,20 +9,23 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 )
 
-// transformerResourceProvider adapts a spec transformer to the provider.Provider
+// Adapts a spec transformer to the provider.Provider
 // interface so the link info engine can resolve transformer abstract resource
 // types (e.g. "celerity/handler") that do not belong to a provider namespace.
 // Only the resource resolution surface is functional, everything else is
 // out of scope for abstract resources.
 type transformerResourceProvider struct {
 	transformer transform.SpecTransformer
+	params      core.BlueprintParams
 }
 
 func newTransformerResourceProvider(
 	transformer transform.SpecTransformer,
+	params core.BlueprintParams,
 ) provider.Provider {
 	return &transformerResourceProvider{
 		transformer: transformer,
+		params:      params,
 	}
 }
 
@@ -48,7 +51,11 @@ func (p *transformerResourceProvider) Resource(
 			resourceType,
 		)
 	}
-	return &abstractResourceAdapter{abstract: abstractResource}, nil
+	return &abstractResourceAdapter{
+		abstract:     abstractResource,
+		resourceType: resourceType,
+		params:       p.params,
+	}, nil
 }
 
 func (p *transformerResourceProvider) DataSource(
@@ -104,13 +111,22 @@ func (p *transformerResourceProvider) RetryPolicy(ctx context.Context) (*provide
 	return nil, nil
 }
 
-// abstractResourceAdapter exposes a transformer abstract resource through the
+// This exposes a transformer abstract resource through the
 // provider.Resource interface for pre-transform surfaces such as link
 // information (spec definitions, link metadata and type information).
 // Deploy-time methods error as abstract resources must be transformed into
 // concrete resources before staging changes or deploying.
 type abstractResourceAdapter struct {
-	abstract transform.AbstractResource
+	abstract     transform.AbstractResource
+	resourceType string
+	params       core.BlueprintParams
+}
+
+func (r *abstractResourceAdapter) transformerContext() transform.Context {
+	return transform.NewTransformerContextFromParams(
+		transform.ExtractTransformerFromItemType(r.resourceType),
+		r.params,
+	)
 }
 
 func (r *abstractResourceAdapter) CustomValidate(
@@ -129,7 +145,9 @@ func (r *abstractResourceAdapter) GetSpecDefinition(
 ) (*provider.ResourceGetSpecDefinitionOutput, error) {
 	output, err := r.abstract.GetSpecDefinition(
 		ctx,
-		&transform.AbstractResourceGetSpecDefinitionInput{},
+		&transform.AbstractResourceGetSpecDefinitionInput{
+			TransformerContext: r.transformerContext(),
+		},
 	)
 	if err != nil {
 		return nil, err
@@ -145,7 +163,9 @@ func (r *abstractResourceAdapter) CanLinkTo(
 ) (*provider.ResourceCanLinkToOutput, error) {
 	output, err := r.abstract.CanLinkTo(
 		ctx,
-		&transform.AbstractResourceCanLinkToInput{},
+		&transform.AbstractResourceCanLinkToInput{
+			TransformerContext: r.transformerContext(),
+		},
 	)
 	if err != nil {
 		return nil, err
@@ -168,7 +188,9 @@ func (r *abstractResourceAdapter) IsCommonTerminal(
 ) (*provider.ResourceIsCommonTerminalOutput, error) {
 	output, err := r.abstract.IsCommonTerminal(
 		ctx,
-		&transform.AbstractResourceIsCommonTerminalInput{},
+		&transform.AbstractResourceIsCommonTerminalInput{
+			TransformerContext: r.transformerContext(),
+		},
 	)
 	if err != nil {
 		return nil, err
@@ -182,7 +204,9 @@ func (r *abstractResourceAdapter) GetType(
 	ctx context.Context,
 	input *provider.ResourceGetTypeInput,
 ) (*provider.ResourceGetTypeOutput, error) {
-	output, err := r.abstract.GetType(ctx, &transform.AbstractResourceGetTypeInput{})
+	output, err := r.abstract.GetType(ctx, &transform.AbstractResourceGetTypeInput{
+		TransformerContext: r.transformerContext(),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +222,9 @@ func (r *abstractResourceAdapter) GetTypeDescription(
 ) (*provider.ResourceGetTypeDescriptionOutput, error) {
 	output, err := r.abstract.GetTypeDescription(
 		ctx,
-		&transform.AbstractResourceGetTypeDescriptionInput{},
+		&transform.AbstractResourceGetTypeDescriptionInput{
+			TransformerContext: r.transformerContext(),
+		},
 	)
 	if err != nil {
 		return nil, err
@@ -217,7 +243,9 @@ func (r *abstractResourceAdapter) GetExamples(
 ) (*provider.ResourceGetExamplesOutput, error) {
 	output, err := r.abstract.GetExamples(
 		ctx,
-		&transform.AbstractResourceGetExamplesInput{},
+		&transform.AbstractResourceGetExamplesInput{
+			TransformerContext: r.transformerContext(),
+		},
 	)
 	if err != nil {
 		return nil, err

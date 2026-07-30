@@ -846,7 +846,17 @@
             })
           }
         }),
-        SourceMeta: (*source.Meta)(<nil>),
+        SourceMeta: (*source.Meta)({
+          Position: (source.Position) {
+            Line: (int) 10,
+            Column: (int) 10
+          },
+          EndPosition: (*source.Position)({
+            Line: (int) 10,
+            Column: (int) 28
+          }),
+          ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+        }),
         FieldsSourceMeta: (map[string]*source.Meta) (len=2) {
           (string) (len=4) "each": (*source.Meta)({
             Position: (source.Position) {

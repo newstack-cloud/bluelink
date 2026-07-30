@@ -50,7 +50,7 @@ func GetPathValue(path string, node *MappingNode, maxTraverseDepth int) (*Mappin
 		if pathItem.fieldName != "" && current.Fields != nil {
 			current = current.Fields[pathItem.fieldName]
 		} else if pathItem.arrayIndex != nil && current.Items != nil {
-			current = current.Items[*pathItem.arrayIndex]
+			current, pathExists = itemAtIndex(current.Items, *pathItem.arrayIndex)
 		} else if pathItem.arrayItemSelector != nil && current.Items != nil {
 			targetItemIndex := slices.IndexFunc(
 				current.Items,
@@ -64,8 +64,13 @@ func GetPathValue(path string, node *MappingNode, maxTraverseDepth int) (*Mappin
 			} else {
 				current = current.Items[targetItemIndex]
 			}
-		} else if IsNilMappingNode(current) {
+		} else {
+			// The path item cannot be applied to this node, for example a field
+			// lookup against a scalar. Without this the node would be left
+			// untouched and returned as though the path had resolved, which
+			// silently yields the wrong value rather than reporting a miss.
 			pathExists = false
+			current = nil
 		}
 
 		i += 1
@@ -76,6 +81,17 @@ func GetPathValue(path string, node *MappingNode, maxTraverseDepth int) (*Mappin
 	}
 
 	return current, nil
+}
+
+// Safely indexes into array items, treating an out-of-range index
+// as a path miss rather than panicking on a path a caller cannot validate up
+// front.
+func itemAtIndex(items []*MappingNode, index int) (*MappingNode, bool) {
+	if index < 0 || index >= len(items) {
+		return nil, false
+	}
+
+	return items[index], true
 }
 
 // InjectPathValue injects a value into a MappingNode using a path.

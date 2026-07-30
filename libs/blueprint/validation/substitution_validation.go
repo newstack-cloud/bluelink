@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/function"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
@@ -1221,6 +1222,39 @@ func validateFunctionReturnPath(
 	return currentType, diagnostics, nil
 }
 
+// The available functions are only listed for a function that could not be
+// resolved, listing them requires a call to every loaded provider.
+func unknownFunctionContext(
+	ctx context.Context,
+	funcName string,
+	funcRegistry provider.FunctionRegistry,
+) *errors.ErrorContext {
+	availableFunctions, err := funcRegistry.ListFunctions(ctx)
+	if err != nil {
+		availableFunctions = nil
+	}
+
+	return &errors.ErrorContext{
+		Category:   errors.ErrorCategoryFunction,
+		ReasonCode: ErrorReasonCodeInvalidSubstitution,
+		SuggestedActions: []errors.SuggestedAction{
+			{
+				Type:        string(errors.ActionTypeCheckFunctionName),
+				Title:       "Check Function Name",
+				Description: "Verify the function name is correct",
+				Priority:    1,
+			},
+		},
+		Metadata: AddSuggestionsToMetadata(
+			map[string]any{
+				"functionName": funcName,
+			},
+			funcName,
+			availableFunctions,
+		),
+	}
+}
+
 func validateFunction(
 	ctx context.Context,
 	funcName string,
@@ -1250,7 +1284,8 @@ func validateFunction(
 						" you will need to make sure the provider is loaded.",
 					funcName,
 				),
-				Range: bpcore.DiagnosticRangeFromSourceMeta(subFunc.SourceMeta, nextLocation),
+				Range:   bpcore.DiagnosticRangeFromSourceMeta(subFunc.SourceMeta, nextLocation),
+				Context: unknownFunctionContext(ctx, funcName, funcRegistry),
 			},
 		)
 	}

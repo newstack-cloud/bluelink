@@ -469,15 +469,17 @@ func FromResourcePB(resourcePB *schemapb.Resource) (*schema.Resource, error) {
 	}
 
 	return &schema.Resource{
-		Type:          &schema.ResourceTypeWrapper{Value: resourcePB.Type},
-		Description:   description,
-		Each:          each,
-		Condition:     condition,
-		DependsOn:     dependsOn,
-		Metadata:      resourceMetadata,
-		LinkSelector:  FromLinkSelectorPB(resourcePB.LinkSelector),
-		Spec:          spec,
-		RemovalPolicy: removalPolicy,
+		Type:             &schema.ResourceTypeWrapper{Value: resourcePB.Type},
+		Description:      description,
+		Each:             each,
+		Condition:        condition,
+		DependsOn:        dependsOn,
+		Metadata:         resourceMetadata,
+		LinkSelector:     FromLinkSelectorPB(resourcePB.LinkSelector),
+		Spec:             spec,
+		RemovalPolicy:    removalPolicy,
+		SourceMeta:       FromSourceMetaPB(resourcePB.SourceMeta),
+		FieldsSourceMeta: FromFieldsSourceMetaPB(resourcePB.FieldsSourceMeta),
 	}, nil
 }
 
@@ -658,6 +660,18 @@ func FromMappingNodePB(mappingNodePB *schemapb.MappingNode, optional bool) (*cor
 		return nil, errMappingNodeIsNil()
 	}
 
+	mappingNode, err := fromMappingNodeValuePB(mappingNodePB)
+	if err != nil {
+		return nil, err
+	}
+
+	mappingNode.SourceMeta = FromSourceMetaPB(mappingNodePB.SourceMeta)
+	mappingNode.FieldsSourceMeta = FromFieldsSourceMetaPB(mappingNodePB.FieldsSourceMeta)
+
+	return mappingNode, nil
+}
+
+func fromMappingNodeValuePB(mappingNodePB *schemapb.MappingNode) (*core.MappingNode, error) {
 	if mappingNodePB.Scalar != nil {
 		scalar, err := FromScalarValuePB(mappingNodePB.Scalar, false)
 		if err != nil {
@@ -1032,6 +1046,17 @@ func FromScalarValuePB(scalarValue *schemapb.ScalarValue, optional bool) (*core.
 		return nil, nil
 	}
 
+	converted, err := fromScalarValueOnlyPB(scalarValue)
+	if err != nil {
+		return nil, err
+	}
+
+	converted.SourceMeta = FromSourceMetaPB(scalarValue.SourceMeta)
+
+	return converted, nil
+}
+
+func fromScalarValueOnlyPB(scalarValue *schemapb.ScalarValue) (*core.ScalarValue, error) {
 	if stringVal, isString := scalarValue.Value.(*schemapb.ScalarValue_StringValue); isString {
 		return &core.ScalarValue{
 			StringValue: &stringVal.StringValue,

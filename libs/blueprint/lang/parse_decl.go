@@ -229,6 +229,10 @@ func (p *parser) parseResourceDecl(bp *schema.Blueprint) error {
 			Value:      typeStr,
 			SourceMeta: typeMeta,
 		},
+		// Set on the resource as well as the map so that consumers holding a
+		// resource on its own can still locate it, matching what the YAML and
+		// JWCC parsers do.
+		SourceMeta:       meta,
 		FieldsSourceMeta: map[string]*source.Meta{},
 	}
 	bp.Resources.Values[name] = resource

@@ -52,6 +52,66 @@ func (s *MappingPathsTestSuite) Test_returns_nil_for_non_existent_path() {
 	s.Assert().Nil(value)
 }
 
+// A field lookup cannot be applied to a scalar, so it is a miss. Returning the
+// scalar instead makes callers act on an unrelated value: a plugin checking for
+// an optional config object on each item of a list of protocol names would find
+// the name itself and treat it as the config.
+func (s *MappingPathsTestSuite) Test_returns_nil_for_field_lookup_against_a_scalar() {
+	scalar := &MappingNode{Scalar: ScalarFromString("http")}
+
+	value, err := GetPathValue("$.websocketConfig", scalar, 10)
+
+	s.Require().NoError(err)
+	s.Assert().Nil(value)
+}
+
+func (s *MappingPathsTestSuite) Test_returns_nil_for_field_lookup_against_an_array() {
+	array := &MappingNode{Items: []*MappingNode{
+		{Scalar: ScalarFromString("http")},
+	}}
+
+	value, err := GetPathValue("$.someField", array, 10)
+
+	s.Require().NoError(err)
+	s.Assert().Nil(value)
+}
+
+func (s *MappingPathsTestSuite) Test_returns_nil_for_index_lookup_against_a_scalar() {
+	scalar := &MappingNode{Scalar: ScalarFromString("http")}
+
+	value, err := GetPathValue("$[0]", scalar, 10)
+
+	s.Require().NoError(err)
+	s.Assert().Nil(value)
+}
+
+// An index beyond the end of an array is a miss rather than a crash, since
+// callers cannot always validate a path against the data up front.
+func (s *MappingPathsTestSuite) Test_returns_nil_for_out_of_range_array_index() {
+	array := &MappingNode{Items: []*MappingNode{
+		{Scalar: ScalarFromString("first")},
+		{Scalar: ScalarFromString("second")},
+	}}
+
+	value, err := GetPathValue("$[5]", array, 10)
+
+	s.Require().NoError(err)
+	s.Assert().Nil(value)
+}
+
+func (s *MappingPathsTestSuite) Test_returns_nil_for_nested_path_beyond_a_scalar() {
+	node := &MappingNode{Fields: map[string]*MappingNode{
+		"protocols": {Items: []*MappingNode{
+			{Scalar: ScalarFromString("http")},
+		}},
+	}}
+
+	value, err := GetPathValue("$.protocols[0].websocketConfig.authStrategy", node, 10)
+
+	s.Require().NoError(err)
+	s.Assert().Nil(value)
+}
+
 func (s *MappingPathsTestSuite) Test_returns_nil_for_path_that_goes_beyond_max_depth() {
 	node, path := fixtureDeepMappingNode(30)
 	value, err := GetPathValue(path, node, 10)

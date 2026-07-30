@@ -144,7 +144,17 @@
             })
           }
         }),
-        SourceMeta: (*source.Meta)(<nil>),
+        SourceMeta: (*source.Meta)({
+          Position: (source.Position) {
+            Line: (int) 11,
+            Column: (int) 10
+          },
+          EndPosition: (*source.Position)({
+            Line: (int) 11,
+            Column: (int) 18
+          }),
+          ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+        }),
         FieldsSourceMeta: (map[string]*source.Meta) (len=2) {
           (string) (len=9) "dependsOn": (*source.Meta)({
             Position: (source.Position) {
@@ -278,7 +288,17 @@
             })
           }
         }),
-        SourceMeta: (*source.Meta)(<nil>),
+        SourceMeta: (*source.Meta)({
+          Position: (source.Position) {
+            Line: (int) 3,
+            Column: (int) 10
+          },
+          EndPosition: (*source.Position)({
+            Line: (int) 3,
+            Column: (int) 24
+          }),
+          ColumnAccuracy: (*source.ColumnAccuracy)(<nil>)
+        }),
         FieldsSourceMeta: (map[string]*source.Meta) (len=2) {
           (string) (len=9) "dependsOn": (*source.Meta)({
             Position: (source.Position) {

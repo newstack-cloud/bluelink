@@ -180,9 +180,17 @@ func validateDataSourceType(
 	}
 
 	if !hasType {
+		// The available data source types are only listed when a type could not be
+		// resolved, listing them requires a call to every loaded provider.
+		availableTypes, listErr := dataSourceRegistry.ListDataSourceTypes(ctx)
+		if listErr != nil {
+			availableTypes = nil
+		}
+
 		return diagnostics, errDataSourceTypeNotSupported(
 			dataSourceName,
 			dataSourceType.Value,
+			availableTypes,
 			location,
 		)
 	}

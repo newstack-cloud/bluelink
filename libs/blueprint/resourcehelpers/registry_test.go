@@ -129,6 +129,23 @@ func (s *RegistryTestSuite) Test_get_type_description(c *C) {
 	c.Assert(output.PlainTextDescription, Equals, s.testResource.plainTextDescription)
 }
 
+func (s *RegistryTestSuite) Test_get_type_description_for_abstract_type_with_non_provider_namespace(c *C) {
+	// The registry is created without params, as is the case for hosts that
+	// only need type information (e.g. a language server), the transformer
+	// context derived for abstract resources must still be usable.
+	output, err := s.resourceRegistry.GetTypeDescription(
+		context.TODO(),
+		"celerity/exampleHandler",
+		&provider.ResourceGetTypeDescriptionInput{},
+	)
+	c.Assert(err, IsNil)
+	c.Assert(
+		output.PlainTextDescription,
+		Equals,
+		"Abstract resource with 0 transformer config variables",
+	)
+}
+
 func (s *RegistryTestSuite) Test_list_resource_types(c *C) {
 	resourceTypes, err := s.resourceRegistry.ListResourceTypes(
 		context.TODO(),

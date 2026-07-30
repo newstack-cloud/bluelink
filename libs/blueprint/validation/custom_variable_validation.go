@@ -54,6 +54,7 @@ func ValidateCustomVariable(
 			varSchema.Type.Value,
 			varName,
 			*varSchema.Default.StringValue,
+			optionLabels,
 			getVarSourceMeta(varMap, varName),
 		)
 	}
@@ -88,6 +89,7 @@ func ValidateCustomVariable(
 			varSchema.Type.Value,
 			varName,
 			finalValue,
+			optionLabels,
 			getVarSourceMeta(varMap, varName),
 			usingDefault,
 		)
@@ -147,7 +149,7 @@ func validateCustomVariableOptions(
 	optionLabels := keysToSlice(optionsOutput.Options)
 	if len(varSchema.AllowedValues) > 0 {
 		err := validateCustomVariableAllowedValues(
-			ctx, varName, varSchema, varMap, params, optionLabels,
+			varName, varSchema, varMap, optionLabels,
 		)
 
 		if err != nil {
@@ -159,11 +161,9 @@ func validateCustomVariableOptions(
 }
 
 func validateCustomVariableAllowedValues(
-	ctx context.Context,
 	varName string,
 	varSchema *schema.Variable,
 	varMap *schema.VariableMap,
-	params bpcore.BlueprintParams,
 	optionLabels []string,
 ) error {
 	// Collect all invalid allowed values in one go to help

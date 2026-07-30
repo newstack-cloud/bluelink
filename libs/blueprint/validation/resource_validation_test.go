@@ -204,6 +204,67 @@ func (s *ResourceValidationTestSuite) Test_reports_errors_when_resource_type_is_
 	)
 }
 
+func (s *ResourceValidationTestSuite) Test_suggests_similar_resource_types_for_an_unsupported_type(c *C) {
+	name := "Orders Service"
+	handler := "orders.handler"
+
+	resource := &schema.Resource{
+		Type: &schema.ResourceTypeWrapper{Value: "aws/ecs/servic"},
+		Metadata: &schema.Metadata{
+			DisplayName: &substitutions.StringOrSubstitutions{
+				Values: []*substitutions.StringOrSubstitution{
+					{
+						StringValue: &name,
+					},
+				},
+			},
+		},
+		Spec: &core.MappingNode{
+			Fields: map[string]*core.MappingNode{
+				"handler": {
+					Scalar: &core.ScalarValue{
+						StringValue: &handler,
+					},
+				},
+			},
+		},
+	}
+	resourceMap := &schema.ResourceMap{
+		Values: map[string]*schema.Resource{
+			"ordersService": resource,
+		},
+	}
+
+	_, err := ValidateResource(
+		context.Background(),
+		"ordersService",
+		resource,
+		resourceMap,
+		&ValidationContext{
+			BpSchema:           &schema.Blueprint{Resources: resourceMap},
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.funcRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
+		/* resourceDerivedFromTemplate */ false,
+		core.NewNopLogger(),
+	)
+	c.Assert(err, NotNil)
+	loadErr, isLoadErr := internal.UnpackLoadError(err)
+	c.Assert(isLoadErr, Equals, true)
+	c.Assert(loadErr.Context, NotNil)
+
+	suggestions, hasSuggestions := loadErr.Context.Metadata[SuggestionsMetadataKey].([]string)
+	c.Assert(hasSuggestions, Equals, true)
+	c.Assert(suggestions, DeepEquals, []string{"aws/ecs/service"})
+
+	availableValues, hasAvailableValues := loadErr.Context.Metadata[AvailableValuesMetadataKey].([]string)
+	c.Assert(hasAvailableValues, Equals, true)
+	c.Assert(availableValues, DeepEquals, []string{"aws/ecs/service"})
+}
+
 func (s *ResourceValidationTestSuite) Test_reports_error_when_providing_a_display_name_with_wrong_sub_type(c *C) {
 	resource := newTestInvalidDisplayNameResource()
 	resourceMap := &schema.ResourceMap{

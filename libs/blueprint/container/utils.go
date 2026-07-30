@@ -442,6 +442,7 @@ func createResourceTypeProviderMap(
 	blueprintSpec speccore.BlueprintSpec,
 	providers map[string]provider.Provider,
 	transformers map[string]transform.SpecTransformer,
+	params core.BlueprintParams,
 ) map[string]provider.Provider {
 	resourceTypeProviderMap := map[string]provider.Provider{}
 	resources := map[string]*schema.Resource{}
@@ -463,7 +464,7 @@ func createResourceTypeProviderMap(
 		// a transformer's abstract resource type (e.g. "celerity/handler").
 		// Resource types that match neither are left out of the map so the link
 		// info engine can skip them instead of failing on a nil provider.
-		abstractProvider := findTransformerResourceProvider(ctx, resourceType, transformers)
+		abstractProvider := findTransformerResourceProvider(ctx, resourceType, transformers, params)
 		if abstractProvider != nil {
 			resourceTypeProviderMap[resourceType] = abstractProvider
 		}
@@ -475,11 +476,12 @@ func findTransformerResourceProvider(
 	ctx context.Context,
 	resourceType string,
 	transformers map[string]transform.SpecTransformer,
+	params core.BlueprintParams,
 ) provider.Provider {
 	for _, transformer := range transformers {
 		abstractResource, err := transformer.AbstractResource(ctx, resourceType)
 		if err == nil && abstractResource != nil {
-			return newTransformerResourceProvider(transformer)
+			return newTransformerResourceProvider(transformer, params)
 		}
 	}
 	return nil

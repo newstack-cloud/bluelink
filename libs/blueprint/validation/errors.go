@@ -756,6 +756,7 @@ func errCustomVariableValueNotInOptions(
 	varType schema.VariableType,
 	varName string,
 	value *bpcore.ScalarValue,
+	optionLabels []string,
 	varSourceMeta *source.Meta,
 	usingDefault bool,
 ) error {
@@ -764,12 +765,13 @@ func errCustomVariableValueNotInOptions(
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeCustomVarValueNotInOptions,
 		Err: fmt.Errorf(
-			"validation failed due to an invalid %s \"%s\" being provided for variable \"%s\","+
-				" which is not a valid %s option, see the custom type documentation for more details",
+			"validation failed due to an invalid %s \"%s\" being provided for variable \"%s\""+
+				" of custom type \"%s\", %s",
 			valueLabel,
 			deriveScalarValueAsString(value),
 			varName,
 			varType,
+			OptionsSummary(optionLabels),
 		),
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
@@ -778,14 +780,19 @@ func errCustomVariableValueNotInOptions(
 				{
 					Type:        string(errors.ActionTypeCheckCustomVariableOptions),
 					Title:       "Check Custom Variable Options",
-					Description: "Check the options for the custom variable type.",
+					Description: "Set the value to one of the options for the custom variable type.",
 					Priority:    1,
 				},
 			},
-			Metadata: map[string]any{
-				"variableName": varName,
-				"variableType": varType,
-			},
+			Metadata: AddSuggestionsOnlyToMetadata(
+				map[string]any{
+					"variableName":  varName,
+					"variableType":  varType,
+					"variableValue": deriveScalarValueAsString(value),
+				},
+				deriveScalarValueAsString(value),
+				optionLabels,
+			),
 		},
 		Line:           posRange.Line,
 		EndLine:        posRange.EndLine,
@@ -976,17 +983,19 @@ func errCustomVariableDefaultValueNotInOptions(
 	varType schema.VariableType,
 	varName string,
 	defaultValue string,
+	optionLabels []string,
 	varSourceMeta *source.Meta,
 ) error {
 	posRange := source.PositionRangeFromSourceMeta(varSourceMeta)
 	return &errors.LoadError{
 		ReasonCode: ErrorReasonCodeCustomVarDefaultValueNotInOptions,
 		Err: fmt.Errorf(
-			"validation failed due to an invalid default value for variable \"%s\" "+
-				"of custom type \"%s\". See custom type documentation for possible values. Invalid default value provided: %s",
+			"validation failed due to an invalid default value %q for variable \"%s\" "+
+				"of custom type \"%s\", %s",
+			defaultValue,
 			varName,
 			varType,
-			defaultValue,
+			OptionsSummary(optionLabels),
 		),
 		Context: &errors.ErrorContext{
 			Category:   errors.ErrorCategoryVariableType,
@@ -995,14 +1004,19 @@ func errCustomVariableDefaultValueNotInOptions(
 				{
 					Type:        string(errors.ActionTypeCheckCustomVariableOptions),
 					Title:       "Check Custom Variable Options",
-					Description: "Check the options for the custom variable type.",
+					Description: "Set the value to one of the options for the custom variable type.",
 					Priority:    1,
 				},
 			},
-			Metadata: map[string]any{
-				"variableName": varName,
-				"variableType": varType,
-			},
+			Metadata: AddSuggestionsOnlyToMetadata(
+				map[string]any{
+					"variableName":  varName,
+					"variableType":  varType,
+					"variableValue": defaultValue,
+				},
+				defaultValue,
+				optionLabels,
+			),
 		},
 		Line:           posRange.Line,
 		EndLine:        posRange.EndLine,
@@ -3148,6 +3162,7 @@ func errDataSourceExportTypeMissing(
 func errDataSourceTypeNotSupported(
 	dataSourceName string,
 	dataSourceType string,
+	availableDataSourceTypes []string,
 	wrapperLocation *source.Meta,
 ) error {
 	posRange := source.PositionRangeFromSourceMeta(wrapperLocation)
@@ -3182,11 +3197,15 @@ func errDataSourceTypeNotSupported(
 					Priority:    2,
 				},
 			},
-			Metadata: map[string]any{
-				"providerNamespace": providerNamespace,
-				"dataSourceName":    dataSourceName,
-				"dataSourceType":    dataSourceType,
-			},
+			Metadata: AddSuggestionsToMetadata(
+				map[string]any{
+					"providerNamespace": providerNamespace,
+					"dataSourceName":    dataSourceName,
+					"dataSourceType":    dataSourceType,
+				},
+				dataSourceType,
+				availableDataSourceTypes,
+			),
 		},
 	}
 }
@@ -3216,6 +3235,7 @@ func errDataSourceAnnotationKeyContainsSubstitution(
 func errResourceTypeNotSupported(
 	resourceName string,
 	resourceType string,
+	availableResourceTypes []string,
 	wrapperLocation *source.Meta,
 ) error {
 	posRange := source.PositionRangeFromSourceMeta(wrapperLocation)
@@ -3250,12 +3270,16 @@ func errResourceTypeNotSupported(
 					Priority:    2,
 				},
 			},
-			Metadata: map[string]any{
-				"providerNamespace": pluginNamespace,
-				"resourceName":      resourceName,
-				"resourceType":      resourceType,
-				"category":          "resource",
-			},
+			Metadata: AddSuggestionsToMetadata(
+				map[string]any{
+					"providerNamespace": pluginNamespace,
+					"resourceName":      resourceName,
+					"resourceType":      resourceType,
+					"category":          "resource",
+				},
+				resourceType,
+				availableResourceTypes,
+			),
 		},
 	}
 }
@@ -3698,7 +3722,10 @@ func positionFromScalarValue(
 	value *bpcore.ScalarValue,
 	parentSourceMeta *source.Meta,
 ) *source.PositionRange {
-	if value == nil {
+	// A value that was provided at runtime (e.g. in the parameters passed in for a
+	// validation or a deployment) has no location in the source document, report it
+	// against the element that the value was provided for.
+	if value == nil || value.SourceMeta == nil {
 		if parentSourceMeta != nil {
 			return source.PositionRangeFromSourceMeta(parentSourceMeta)
 		}

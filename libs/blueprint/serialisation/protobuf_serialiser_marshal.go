@@ -465,15 +465,17 @@ func ToResourcePB(resource *schema.Resource) (*schemapb.Resource, error) {
 	}
 
 	return &schemapb.Resource{
-		Type:          resType,
-		Description:   descriptionPB,
-		Condition:     conditionPB,
-		Each:          eachPB,
-		Metadata:      resourceMetadataPB,
-		DependsOn:     dependsOn,
-		LinkSelector:  ToLinkSelectorPB(resource.LinkSelector),
-		Spec:          specPB,
-		RemovalPolicy: removalPolicy,
+		Type:             resType,
+		Description:      descriptionPB,
+		Condition:        conditionPB,
+		Each:             eachPB,
+		Metadata:         resourceMetadataPB,
+		DependsOn:        dependsOn,
+		LinkSelector:     ToLinkSelectorPB(resource.LinkSelector),
+		Spec:             specPB,
+		RemovalPolicy:    removalPolicy,
+		SourceMeta:       ToSourceMetaPB(resource.SourceMeta),
+		FieldsSourceMeta: ToFieldsSourceMetaPB(resource.FieldsSourceMeta),
 	}, nil
 }
 
@@ -655,6 +657,21 @@ func ToMappingNodePB(mappingNode *core.MappingNode, optional bool) (*schemapb.Ma
 		return nil, errMappingNodeIsNil()
 	}
 
+	mappingNodePB, err := toMappingNodeValuePB(mappingNode)
+	if err != nil {
+		return nil, err
+	}
+
+	// Attached after the value so every shape of mapping node carries its
+	// position, which is what allows a diagnostic to point at a specific field
+	// of a resource spec.
+	mappingNodePB.SourceMeta = ToSourceMetaPB(mappingNode.SourceMeta)
+	mappingNodePB.FieldsSourceMeta = ToFieldsSourceMetaPB(mappingNode.FieldsSourceMeta)
+
+	return mappingNodePB, nil
+}
+
+func toMappingNodeValuePB(mappingNode *core.MappingNode) (*schemapb.MappingNode, error) {
 	if mappingNode.Scalar != nil {
 		scalarPB, err := ToScalarValuePB(mappingNode.Scalar, false)
 		if err != nil {
@@ -1080,6 +1097,17 @@ func ToScalarValuePB(scalarValue *core.ScalarValue, optional bool) (*schemapb.Sc
 		return nil, errScalarValueIsNil()
 	}
 
+	scalarValuePB, err := toScalarValueOnlyPB(scalarValue)
+	if err != nil {
+		return nil, err
+	}
+
+	scalarValuePB.SourceMeta = ToSourceMetaPB(scalarValue.SourceMeta)
+
+	return scalarValuePB, nil
+}
+
+func toScalarValueOnlyPB(scalarValue *core.ScalarValue) (*schemapb.ScalarValue, error) {
 	if scalarValue.StringValue != nil {
 		return &schemapb.ScalarValue{
 			Value: &schemapb.ScalarValue_StringValue{StringValue: *scalarValue.StringValue},

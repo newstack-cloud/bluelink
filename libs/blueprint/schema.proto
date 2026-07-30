@@ -3,6 +3,25 @@ package schema;
 
 option go_package = "github.com/newstack-cloud/bluelink/libs/blueprint/schemapb";
 
+message Position {
+    int64 line = 1;
+    int64 column = 2;
+}
+
+enum ColumnAccuracy {
+    // protobuf enums must have a zero value. ColumnAccuracy starts at 1 as per
+    // the Blueprint framework.
+    COLUMN_ACCURACY_NONE = 0;
+    COLUMN_ACCURACY_EXACT = 1;
+    COLUMN_ACCURACY_APPROXIMATE = 2;
+}
+
+message SourceMeta {
+    Position position = 1;
+    optional Position end_position = 2;
+    optional ColumnAccuracy column_accuracy = 3;
+}
+
 message Blueprint {
     ScalarValue version = 1;
     repeated string transform = 2;
@@ -45,6 +64,7 @@ message ScalarValue {
         bytes bytes_value = 5;
         bool none_value = 6;
     }
+    optional SourceMeta source_meta = 7;
 }
 
 message Include {
@@ -64,6 +84,8 @@ message Resource {
     optional LinkSelector link_selector = 7;
     MappingNode spec = 8;
     optional string removal_policy = 9;
+    optional SourceMeta source_meta = 10;
+    map<string, SourceMeta> fields_source_meta = 11;
 }
 
 message LinkSelector {
@@ -124,6 +146,11 @@ message MappingNode {
     map<string, MappingNode> fields = 2;
     repeated MappingNode items = 3;
     StringOrSubstitutions string_with_substitutions = 4;
+    optional SourceMeta source_meta = 5;
+    // Positions of this node's own field keys, keyed by field name. Mapping
+    // nodes are how resource specs are represented, so this is what lets a
+    // diagnostic point at a specific spec field.
+    map<string, SourceMeta> fields_source_meta = 6;
 }
 
 message StringOrSubstitutions {

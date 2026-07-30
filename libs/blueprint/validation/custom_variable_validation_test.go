@@ -369,9 +369,10 @@ func (s *CustomVariableValidationTestSuite) Test_reports_error_when_provided_def
 	c.Assert(
 		loadErr.Error(),
 		Equals,
-		"blueprint load error: validation failed due to an invalid default value "+
-			"for variable \"instanceType\" of custom type \"aws/ec2/instanceType\". "+
-			"See custom type documentation for possible values. Invalid default value provided: z4.large",
+		"blueprint load error: validation failed due to an invalid default value \"z4.large\" "+
+			"for variable \"instanceType\" of custom type \"aws/ec2/instanceType\", "+
+			"the options for the type are: t2.2xlarge, t2.large, t2.medium, t2.micro, "+
+			"t2.nano, t2.small, t2.xlarge",
 	)
 }
 
@@ -623,8 +624,68 @@ func (s *CustomVariableValidationTestSuite) Test_reports_error_when_provided_val
 		loadErr.Error(),
 		Equals,
 		"blueprint load error: validation failed due to an invalid value \"eu-central-4\" being provided for "+
-			"variable \"region\", which is not a valid aws/region option, see the custom type documentation for more details",
+			"variable \"region\" of custom type \"aws/region\", the options for the type are: "+
+			"eu-central-1, eu-west-1, eu-west-2, us-east-1, us-east-2, us-west-1, us-west-2",
 	)
+}
+
+func (s *CustomVariableValidationTestSuite) Test_suggests_similar_options_when_provided_value_is_not_an_option(c *C) {
+	region := "eu-central-4"
+	params := &core.ParamsImpl{
+		BlueprintVariables: map[string]*core.ScalarValue{
+			"region": {
+				StringValue: &region,
+			},
+		},
+	}
+
+	description := "The region to deploy the application to."
+	variableSchema := &schema.Variable{
+		Type:        &schema.VariableTypeWrapper{Value: schema.VariableType("aws/region")},
+		Description: &core.ScalarValue{StringValue: &description},
+	}
+	varMap := &schema.VariableMap{
+		Values: map[string]*schema.Variable{
+			"region": variableSchema,
+		},
+		SourceMeta: map[string]*source.Meta{
+			"region": {Position: source.Position{
+				Line:   1,
+				Column: 1,
+			}},
+		},
+	}
+
+	_, err := ValidateCustomVariable(
+		context.Background(),
+		"region",
+		variableSchema,
+		varMap,
+		params,
+		&testRegionCustomVariableType{},
+		true,
+	)
+	c.Assert(err, NotNil)
+	loadErr, isLoadErr := err.(*errors.LoadError)
+	c.Assert(isLoadErr, Equals, true)
+	c.Assert(loadErr.Context, NotNil)
+
+	suggestions, hasSuggestions := loadErr.Context.Metadata[SuggestionsMetadataKey].([]string)
+	c.Assert(hasSuggestions, Equals, true)
+	c.Assert(suggestions, DeepEquals, []string{"eu-central-1"})
+	c.Assert(loadErr.Context.Metadata["variableValue"], Equals, "eu-central-4")
+
+	// The options are listed in the message of the error, recording them in the
+	// metadata as well would lead to tools reporting the same list twice.
+	_, hasAvailableValues := loadErr.Context.Metadata[AvailableValuesMetadataKey]
+	c.Assert(hasAvailableValues, Equals, false)
+
+	// The value was provided at runtime and has no location of its own, the error
+	// must be reported against the definition of the variable it was provided for.
+	c.Assert(loadErr.Line, NotNil)
+	c.Assert(*loadErr.Line, Equals, 1)
+	c.Assert(loadErr.Column, NotNil)
+	c.Assert(*loadErr.Column, Equals, 1)
 }
 
 func (s *CustomVariableValidationTestSuite) Test_reports_error_when_provided_value_is_one_of_the_custom_type_options_but_is_not_an_allowed_value(c *C) {

@@ -10,10 +10,12 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 )
 
-// ValidateTransforms checks for non-standard transforms and reports warnings
-// when the spec is not going to be transformed (e.g. dry run validation).
-// This is intended for validation of the transform string list only, more advanced
-// validation that requires the transformer implementation is carried out a different stage.
+// ValidateTransforms checks the transform strings for a blueprint when the spec is
+// not going to be transformed (e.g. dry run validation), reporting diagnostics for
+// transforms that are empty or contain ${..} substitutions.
+// This is intended for validation of the transform string list only, checking that
+// each transform is available and any validation that requires the transformer
+// implementation is carried out at a different stage.
 func ValidateTransforms(
 	ctx context.Context,
 	blueprint *schema.Blueprint,
@@ -21,8 +23,9 @@ func ValidateTransforms(
 ) ([]*bpcore.Diagnostic, error) {
 	diagnostics := []*bpcore.Diagnostic{}
 	if specWillBeTransformed || blueprint.Transform == nil {
-		// Errors for missing or invalid transforms will
-		// be caught on collection of transform implementations.
+		// When the spec will be transformed, errors for invalid transforms will be
+		// caught on collection of transform implementations, which fails the load
+		// with a more precise error than the diagnostics produced here.
 		return diagnostics, nil
 	}
 

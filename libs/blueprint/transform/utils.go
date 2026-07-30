@@ -30,6 +30,13 @@ func NewTransformerContextFromParams(
 	transformerNamespace string,
 	blueprintParams core.BlueprintParams,
 ) Context {
+	// Hosts that have no environment configuration to provide (e.g. a language
+	// server) pass nil params, an empty set keeps the context usable instead of
+	// panicking the first time a transformer reads from it.
+	if blueprintParams == nil {
+		blueprintParams = core.NewDefaultParams(nil, nil, nil, nil)
+	}
+
 	return &transformerCtxFromParams{
 		transformerNamespace: transformerNamespace,
 		blueprintParams:      blueprintParams,

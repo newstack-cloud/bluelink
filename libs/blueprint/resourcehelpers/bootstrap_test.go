@@ -3,6 +3,7 @@ package resourcehelpers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -385,7 +386,16 @@ func (r *testExampleAbstractResource) GetTypeDescription(
 	ctx context.Context,
 	input *transform.AbstractResourceGetTypeDescriptionInput,
 ) (*transform.AbstractResourceGetTypeDescriptionOutput, error) {
-	return &transform.AbstractResourceGetTypeDescriptionOutput{}, nil
+	// Reading from the context mirrors what the plugin client wrapper does when
+	// marshalling the input for a transformer plugin, an unusable context must
+	// not make it this far.
+	configVars := input.TransformerContext.TransformerConfigVariables()
+	return &transform.AbstractResourceGetTypeDescriptionOutput{
+		PlainTextDescription: fmt.Sprintf(
+			"Abstract resource with %d transformer config variables",
+			len(configVars),
+		),
+	}, nil
 }
 
 func (r *testExampleAbstractResource) GetExamples(

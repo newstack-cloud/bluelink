@@ -96,7 +96,6 @@ func ValidateResource(
 
 	logger.Debug("Validating resource dependencies")
 	validateResDepsDiagnostics, validateResDepsErr := validateResourceDependencies(
-		ctx,
 		name,
 		resource.DependsOn,
 		valCtx.BpSchema,
@@ -222,9 +221,17 @@ func validateResourceType(
 	}
 
 	if !hasType {
+		// The available resource types are only listed when a type could not be
+		// resolved, listing them requires a call to every loaded plugin.
+		availableTypes, listErr := resourceRegistry.ListResourceTypes(ctx)
+		if listErr != nil {
+			availableTypes = nil
+		}
+
 		return diagnostics, errResourceTypeNotSupported(
 			resourceName,
 			resourceType.Value,
+			availableTypes,
 			location,
 		)
 	}
@@ -424,7 +431,6 @@ func validateResourceMetadataAnnotations(
 }
 
 func validateResourceDependencies(
-	ctx context.Context,
 	resourceName string,
 	dependsOn *schema.DependsOnList,
 	blueprint *schema.Blueprint,

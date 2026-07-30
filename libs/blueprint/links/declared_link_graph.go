@@ -155,7 +155,7 @@ func addResourceToGraph(
 			sourceResourceType,
 		)
 		if err != nil {
-			return err
+			return errResourceTypeLookup(resourceInfo, err)
 		}
 
 		if isAbstract {
