@@ -7,6 +7,12 @@ import (
 )
 
 func toPBTransformerContext(transformerCtx transform.Context) (*TransformerContext, error) {
+	// A missing context is tolerated on the receiving end, so it is converted to
+	// an absent message instead of panicking on the caller's behalf.
+	if transformerCtx == nil {
+		return nil, nil
+	}
+
 	transformerConfigVars, err := convertv1.ToPBScalarMap(transformerCtx.TransformerConfigVariables())
 	if err != nil {
 		return nil, err
