@@ -224,6 +224,7 @@ func (l *linkProviderClientWrapper) buildUpdateResourceRequest(
 		Changes:           linkChangesPB,
 		ResourceInfo:      resourceInfoPB,
 		OtherResourceInfo: otherResourceInfoPB,
+		LinkId:            input.LinkID,
 		InstanceName:      input.InstanceName,
 		UpdateType:        LinkUpdateType(input.LinkUpdateType),
 		CurrentLinkState:  currentLinkStatePB,
@@ -453,6 +454,44 @@ func (l *linkProviderClientWrapper) GetCardinality(
 			errorsv1.PluginActionProviderGetLinkCardinality,
 		),
 		errorsv1.PluginActionProviderGetLinkCardinality,
+	)
+}
+
+func (l *linkProviderClientWrapper) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	request, err := l.buildLinkRequest(input.LinkContext)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionProviderGetLinkCapabilities,
+		)
+	}
+
+	response, err := l.client.GetLinkCapabilities(ctx, request)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionProviderGetLinkCapabilities,
+		)
+	}
+
+	switch result := response.Response.(type) {
+	case *sharedtypesv1.LinkCapabilitiesResponse_CapabilitiesInfo:
+		return convertv1.FromPBLinkCapabilitiesResponse(result), nil
+	case *sharedtypesv1.LinkCapabilitiesResponse_ErrorResponse:
+		return nil, errorsv1.CreateErrorFromResponse(
+			result.ErrorResponse,
+			errorsv1.PluginActionProviderGetLinkCapabilities,
+		)
+	}
+
+	return nil, errorsv1.CreateGeneralError(
+		errorsv1.ErrUnexpectedResponseType(
+			errorsv1.PluginActionProviderGetLinkCapabilities,
+		),
+		errorsv1.PluginActionProviderGetLinkCapabilities,
 	)
 }
 

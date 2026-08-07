@@ -63,6 +63,24 @@ type LinkDefinition struct {
 	// Zero value means no constraint.
 	CardinalityB provider.LinkCardinality
 
+	// Provides lists the guarantees this link establishes about the resources in
+	// its relationship once it has been deployed. A link that requires the same
+	// capability on the same resource is deployed after this one, and destroyed
+	// before it.
+	//
+	// Most links establish nothing that another link depends on and leave this
+	// empty.
+	Provides []provider.LinkCapability
+
+	// Requires lists the guarantees this link needs established before it runs,
+	// for example a Lambda function's VPC attachment being in place before the
+	// link reads it to decide whether an endpoint is needed.
+	//
+	// A requirement that nothing in the blueprint provides is satisfied by
+	// absence, so it is safe to declare unconditionally. Set MustExist on a
+	// capability only where its absence makes the link itself invalid.
+	Requires []provider.LinkCapability
+
 	// ValidateFunc is a custom validation function that runs at blueprint
 	// validation time (pre-deploy). It receives the resource specs and
 	// annotations for the link pair and returns diagnostics.
@@ -257,6 +275,16 @@ func (l *LinkDefinition) GetCardinality(
 	return &provider.LinkGetCardinalityOutput{
 		CardinalityA: l.CardinalityA,
 		CardinalityB: l.CardinalityB,
+	}, nil
+}
+
+func (l *LinkDefinition) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{
+		Provides: l.Provides,
+		Requires: l.Requires,
 	}, nil
 }
 

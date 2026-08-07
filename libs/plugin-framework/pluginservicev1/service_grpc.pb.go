@@ -93,9 +93,11 @@ type ServiceClient interface {
 	// are modifying the resource at the same time.
 	// This is useful for links that need to update existing resources
 	// in the same blueprint as a part of the intermediary resources update phase.
-	// The blueprint container will ensure that the lock is released after the
-	// update intermediary resources phase is complete for the current link.
-	// The lock will be released if the link update fails or a lock timeout occurs.
+	// The blueprint container releases the lock when the phase that acquired it
+	// finishes, including when the link update fails, and attributes it to the link
+	// that took it so the release matches. A held lock is never taken from its holder:
+	// a caller that cannot acquire one within the lock timeout fails with an error
+	// naming the holder rather than proceeding without it.
 	AcquireResourceLock(ctx context.Context, in *AcquireResourceLockRequest, opts ...grpc.CallOption) (*AcquireResourceLockResponse, error)
 }
 
@@ -267,9 +269,11 @@ type ServiceServer interface {
 	// are modifying the resource at the same time.
 	// This is useful for links that need to update existing resources
 	// in the same blueprint as a part of the intermediary resources update phase.
-	// The blueprint container will ensure that the lock is released after the
-	// update intermediary resources phase is complete for the current link.
-	// The lock will be released if the link update fails or a lock timeout occurs.
+	// The blueprint container releases the lock when the phase that acquired it
+	// finishes, including when the link update fails, and attributes it to the link
+	// that took it so the release matches. A held lock is never taken from its holder:
+	// a caller that cannot acquire one within the lock timeout fails with an error
+	// naming the holder rather than proceeding without it.
 	AcquireResourceLock(context.Context, *AcquireResourceLockRequest) (*AcquireResourceLockResponse, error)
 	mustEmbedUnimplementedServiceServer()
 }

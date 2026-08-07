@@ -70,3 +70,61 @@ func fromPBLinkCardinality(
 		Max: int(pbCardinality.Max),
 	}
 }
+
+// FromPBLinkCapabilitiesResponse converts a protobuf LinkCapabilitiesInfo response
+// to a provider LinkGetCapabilitiesOutput.
+func FromPBLinkCapabilitiesResponse(
+	pbResponse *sharedtypesv1.LinkCapabilitiesResponse_CapabilitiesInfo,
+) *provider.LinkGetCapabilitiesOutput {
+	if pbResponse == nil || pbResponse.CapabilitiesInfo == nil {
+		return &provider.LinkGetCapabilitiesOutput{}
+	}
+
+	return &provider.LinkGetCapabilitiesOutput{
+		Provides: fromPBLinkCapabilities(pbResponse.CapabilitiesInfo.Provides),
+		Requires: fromPBLinkCapabilities(pbResponse.CapabilitiesInfo.Requires),
+	}
+}
+
+// ToPBLinkCapabilities converts a list of provider link capabilities to their
+// protobuf representation.
+func ToPBLinkCapabilities(
+	capabilities []provider.LinkCapability,
+) []*sharedtypesv1.LinkCapability {
+	if len(capabilities) == 0 {
+		return nil
+	}
+
+	pbCapabilities := make([]*sharedtypesv1.LinkCapability, 0, len(capabilities))
+	for _, capability := range capabilities {
+		pbCapabilities = append(pbCapabilities, &sharedtypesv1.LinkCapability{
+			Name:      capability.Name,
+			Resource:  int32(capability.Resource),
+			MustExist: capability.MustExist,
+		})
+	}
+
+	return pbCapabilities
+}
+
+func fromPBLinkCapabilities(
+	pbCapabilities []*sharedtypesv1.LinkCapability,
+) []provider.LinkCapability {
+	if len(pbCapabilities) == 0 {
+		return nil
+	}
+
+	capabilities := make([]provider.LinkCapability, 0, len(pbCapabilities))
+	for _, pbCapability := range pbCapabilities {
+		if pbCapability == nil {
+			continue
+		}
+		capabilities = append(capabilities, provider.LinkCapability{
+			Name:      pbCapability.Name,
+			Resource:  provider.LinkPriorityResource(pbCapability.Resource),
+			MustExist: pbCapability.MustExist,
+		})
+	}
+
+	return capabilities
+}

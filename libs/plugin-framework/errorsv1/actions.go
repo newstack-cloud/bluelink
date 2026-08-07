@@ -42,6 +42,7 @@ const (
 	PluginActionProviderGetLinkKind                      = PluginAction("Provider::GetLinkKind")
 	PluginActionProviderGetLinkIntermediaryExternalState = PluginAction("Provider::GetLinkIntermediaryExternalState")
 	PluginActionProviderGetLinkCardinality               = PluginAction("Provider::GetLinkCardinality")
+	PluginActionProviderGetLinkCapabilities              = PluginAction("Provider::GetLinkCapabilities")
 	PluginActionProviderValidateLink                     = PluginAction("Provider::ValidateLink")
 
 	PluginActionProviderGetDataSourceType            = PluginAction("Provider::GetDataSourceType")

@@ -217,6 +217,7 @@ func fromPBLinkComponentCompletionDurations(
 
 func fromPBUpdateLinkResourceRequest(
 	req *providerserverv1.UpdateLinkResourceRequest,
+	resourceService provider.ResourceService,
 ) (*provider.LinkUpdateResourceInput, error) {
 	changes, err := convertv1.FromPBLinkChanges(req.Changes)
 	if err != nil {
@@ -247,10 +248,12 @@ func fromPBUpdateLinkResourceRequest(
 		Changes:           &changes,
 		ResourceInfo:      &resourceInfo,
 		OtherResourceInfo: &otherResourceInfo,
+		LinkID:            req.LinkId,
 		LinkUpdateType:    provider.LinkUpdateType(req.UpdateType),
 		CurrentLinkState:  currentLinkState,
 		InstanceName:      req.InstanceName,
 		LinkContext:       linkContext,
+		ResourceService:   resourceService,
 	}, nil
 }
 
@@ -357,6 +360,19 @@ func fromPBLinkRequestForCardinality(
 	}
 
 	return &provider.LinkGetCardinalityInput{
+		LinkContext: linkContext,
+	}, nil
+}
+
+func fromPBLinkRequestForCapabilities(
+	req *providerserverv1.LinkRequest,
+) (*provider.LinkGetCapabilitiesInput, error) {
+	linkContext, err := fromPBLinkContext(req.Context)
+	if err != nil {
+		return nil, err
+	}
+
+	return &provider.LinkGetCapabilitiesInput{
 		LinkContext: linkContext,
 	}, nil
 }

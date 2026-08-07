@@ -2,6 +2,7 @@ package testprovider
 
 import (
 	"context"
+	"errors"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
@@ -23,6 +24,8 @@ func linkLambdaFunctionDynamoDBTable() provider.Link {
 		AnnotationDefinitions:            LinkLambdaFunctionDDBTableAnnotations(),
 		CardinalityA:                     LinkLambdaFunctionDDBTableCardinalityA(),
 		CardinalityB:                     LinkLambdaFunctionDDBTableCardinalityB(),
+		Provides:                         LinkLambdaFunctionDDBTableProvides(),
+		Requires:                         LinkLambdaFunctionDDBTableRequires(),
 		ValidateFunc:                     linkLambdaFunctionDDBTableValidate,
 		StageChangesFunc:                 linkLambdaFunctionDDBTableStageChanges,
 		UpdateResourceAFunc:              linkLambdaFunctionDDBTableUpdateResourceA,
@@ -92,14 +95,58 @@ func linkLambdaFunctionDDBTableUpdateResourceA(
 	ctx context.Context,
 	input *provider.LinkUpdateResourceInput,
 ) (*provider.LinkUpdateResourceOutput, error) {
-	return LinkLambdaDynamoDBUpdateResourceAOutput(), nil
+	// A link often has to modify a shared intermediary resource, under a lock, before it
+	// can touch resource A at all, so the resource service and the link ID that scopes
+	// its locks have to reach the plugin here and not only in the intermediaries phase.
+	err := checkLinkResourceServiceAccess(ctx, input, input.ResourceInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return LinkLambdaDynamoDBUpdateResourceAOutput(input.LinkID), nil
 }
 
-func LinkLambdaDynamoDBUpdateResourceAOutput() *provider.LinkUpdateResourceOutput {
+// Exercises the resource service the way a real link would, so the test fails if the
+// service is not reachable from a resource update rather than only from the
+// intermediaries update.
+// lookupTarget is always the lambda function of the pair, as the test host has no
+// implementation registered for the dynamodb table.
+func checkLinkResourceServiceAccess(
+	ctx context.Context,
+	input *provider.LinkUpdateResourceInput,
+	lookupTarget *provider.ResourceInfo,
+) error {
+	if input.ResourceService == nil {
+		return errors.New("no resource service was provided to the link resource update")
+	}
+
+	_, err := input.ResourceService.LookupResourceInState(
+		ctx,
+		&provider.ResourceLookupInput{
+			InstanceID: lookupTarget.InstanceID,
+			ExternalID: core.StringValue(
+				lookupTarget.CurrentResourceState.SpecData.Fields["arn"],
+			),
+			ResourceType: lookupTarget.CurrentResourceState.Type,
+			ProviderContext: provider.NewProviderContextFromLinkContext(
+				input.LinkContext,
+				"aws",
+			),
+		},
+	)
+
+	return err
+}
+
+func LinkLambdaDynamoDBUpdateResourceAOutput(linkID string) *provider.LinkUpdateResourceOutput {
 	return &provider.LinkUpdateResourceOutput{
 		LinkData: &core.MappingNode{
 			Fields: map[string]*core.MappingNode{
 				"environmentVariables.TABLE_NAME_ordersTable": core.MappingNodeFromString("orders-updated"),
+				// Echoed back so the test can assert the link ID survived the trip to the
+				// plugin. Locks acquired here are released by the container against this
+				// same ID, so an empty one would leak every lock the link takes.
+				"observedLinkId": core.MappingNodeFromString(linkID),
 			},
 		},
 		ResourceDataMappings: map[string]string{
@@ -112,6 +159,11 @@ func linkLambdaFunctionDDBTableUpdateResourceB(
 	ctx context.Context,
 	input *provider.LinkUpdateResourceInput,
 ) (*provider.LinkUpdateResourceOutput, error) {
+	err := checkLinkResourceServiceAccess(ctx, input, input.OtherResourceInfo)
+	if err != nil {
+		return nil, err
+	}
+
 	return LinkLambdaDynamoDBUpdateResourceBOutput(), nil
 }
 
@@ -306,6 +358,29 @@ func LinkLambdaDynamoDBGetIntermediaryExternalStateOutput() *provider.LinkGetInt
 				},
 				Exists: true,
 			},
+		},
+	}
+}
+
+// LinkLambdaFunctionDDBTableProvides returns the capabilities the link establishes,
+// used to verify that capability declarations survive the plugin protocol.
+func LinkLambdaFunctionDDBTableProvides() []provider.LinkCapability {
+	return []provider.LinkCapability{
+		{
+			Name:     "test.provider/table-access-granted",
+			Resource: provider.LinkPriorityResourceB,
+		},
+	}
+}
+
+// LinkLambdaFunctionDDBTableRequires returns the capabilities the link depends on,
+// used to verify that capability declarations survive the plugin protocol.
+func LinkLambdaFunctionDDBTableRequires() []provider.LinkCapability {
+	return []provider.LinkCapability{
+		{
+			Name:      "test.provider/network-attached",
+			Resource:  provider.LinkPriorityResourceA,
+			MustExist: true,
 		},
 	}
 }

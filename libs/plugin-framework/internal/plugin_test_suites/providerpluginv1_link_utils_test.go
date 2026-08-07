@@ -23,6 +23,7 @@ func linkUpdateResourceAInput() *provider.LinkUpdateResourceInput {
 		Changes:           testprovider.LinkLambdaDynamoDBChangesOutput().Changes,
 		ResourceInfo:      createLinkResourceAInfo(),
 		OtherResourceInfo: createLinkResourceBInfo(),
+		LinkID:            testLinkID,
 		LinkUpdateType:    provider.LinkUpdateTypeCreate,
 		CurrentLinkState:  createCurrentLinkState(),
 		LinkContext:       testutils.CreateTestLinkContext(),
@@ -34,6 +35,7 @@ func linkUpdateResourceBInput() *provider.LinkUpdateResourceInput {
 		Changes:           testprovider.LinkLambdaDynamoDBChangesOutput().Changes,
 		ResourceInfo:      createLinkResourceBInfo(),
 		OtherResourceInfo: createLinkResourceAInfo(),
+		LinkID:            testLinkID,
 		LinkUpdateType:    provider.LinkUpdateTypeCreate,
 		CurrentLinkState:  createCurrentLinkState(),
 		LinkContext:       testutils.CreateTestLinkContext(),
@@ -221,6 +223,12 @@ func linkGetKindInput() *provider.LinkGetKindInput {
 
 func linkGetCardinalityInput() *provider.LinkGetCardinalityInput {
 	return &provider.LinkGetCardinalityInput{
+		LinkContext: testutils.CreateTestLinkContext(),
+	}
+}
+
+func linkGetCapabilitiesInput() *provider.LinkGetCapabilitiesInput {
+	return &provider.LinkGetCapabilitiesInput{
 		LinkContext: testutils.CreateTestLinkContext(),
 	}
 }

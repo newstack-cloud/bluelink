@@ -1565,6 +1565,37 @@ message LinkCardinalityInfo {
     LinkItemCardinality cardinality_b = 2;
 }
 
+// LinkCapabilitiesResponse is the response containing the capabilities
+// a link provides and requires.
+message LinkCapabilitiesResponse {
+    oneof response {
+        LinkCapabilitiesInfo capabilities_info = 1;
+        ErrorResponse error_response = 2;
+    }
+}
+
+// LinkCapabilitiesInfo provides the guarantees a link establishes about the resources
+// in its relationship, and the guarantees it needs established before it runs.
+message LinkCapabilitiesInfo {
+    repeated LinkCapability provides = 1;
+    repeated LinkCapability requires = 2;
+}
+
+// LinkCapability identifies a guarantee about one of the resources in a link
+// relationship, used to order link deployment.
+message LinkCapability {
+    // A stable, provider-namespaced identifier for the guarantee,
+    // e.g. "aws.flexvpc/network-attached".
+    string name = 1;
+    // Which resource in the relationship the capability applies to.
+    // 1 = ResourceA, 2 = ResourceB. Any other value leaves the capability
+    // unmatched and so undeclared.
+    int32 resource = 2;
+    // Marks a requirement the link cannot function without. Meaningless on a
+    // capability listed under provides.
+    bool must_exist = 3;
+}
+
 // LinkItemCardinality provides the cardinality for an item in a link relationship
 // in relation to the other item in the link.
 message LinkItemCardinality {

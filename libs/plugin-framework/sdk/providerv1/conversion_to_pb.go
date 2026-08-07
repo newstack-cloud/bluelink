@@ -873,6 +873,37 @@ func toPBGetLinkCardinalityResponse(
 	}
 }
 
+func toGetLinkCapabilitiesErrorResponse(
+	err error,
+) *sharedtypesv1.LinkCapabilitiesResponse {
+	return &sharedtypesv1.LinkCapabilitiesResponse{
+		Response: &sharedtypesv1.LinkCapabilitiesResponse_ErrorResponse{
+			ErrorResponse: errorsv1.CreateResponseFromError(err),
+		},
+	}
+}
+
+func toPBGetLinkCapabilitiesResponse(
+	output *provider.LinkGetCapabilitiesOutput,
+) *sharedtypesv1.LinkCapabilitiesResponse {
+	if output == nil {
+		return &sharedtypesv1.LinkCapabilitiesResponse{
+			Response: &sharedtypesv1.LinkCapabilitiesResponse_ErrorResponse{
+				ErrorResponse: sharedtypesv1.NoResponsePBError(),
+			},
+		}
+	}
+
+	return &sharedtypesv1.LinkCapabilitiesResponse{
+		Response: &sharedtypesv1.LinkCapabilitiesResponse_CapabilitiesInfo{
+			CapabilitiesInfo: &sharedtypesv1.LinkCapabilitiesInfo{
+				Provides: convertv1.ToPBLinkCapabilities(output.Provides),
+				Requires: convertv1.ToPBLinkCapabilities(output.Requires),
+			},
+		},
+	}
+}
+
 func toValidateLinkErrorResponse(
 	err error,
 ) *providerserverv1.ValidateLinkResponse {

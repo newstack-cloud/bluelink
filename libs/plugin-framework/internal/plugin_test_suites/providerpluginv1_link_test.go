@@ -115,7 +115,7 @@ func (s *ProviderPluginV1Suite) Test_link_update_resource_a() {
 		linkUpdateResourceAInput(),
 	)
 	s.Require().NoError(err)
-	expected := testprovider.LinkLambdaDynamoDBUpdateResourceAOutput()
+	expected := testprovider.LinkLambdaDynamoDBUpdateResourceAOutput(testLinkID)
 	s.Assert().Equal(expected, output)
 }
 
@@ -639,6 +639,67 @@ func (s *ProviderPluginV1Suite) Test_link_get_cardinality_reports_expected_error
 	s.Assert().Contains(
 		err.Error(),
 		"internal error occurred when retrieving cardinality for link",
+	)
+}
+
+func (s *ProviderPluginV1Suite) Test_link_get_capabilities() {
+	link, err := s.provider.Link(
+		context.Background(),
+		lambdaFunctionResourceType,
+		dynamoDBTableResourceType,
+	)
+	s.Require().NoError(err)
+
+	output, err := link.GetCapabilities(
+		context.Background(),
+		linkGetCapabilitiesInput(),
+	)
+	s.Require().NoError(err)
+	s.Assert().Equal(
+		&provider.LinkGetCapabilitiesOutput{
+			Provides: testprovider.LinkLambdaFunctionDDBTableProvides(),
+			Requires: testprovider.LinkLambdaFunctionDDBTableRequires(),
+		},
+		output,
+	)
+}
+
+func (s *ProviderPluginV1Suite) Test_link_get_capabilities_fails_for_unexpected_host() {
+	link, err := s.providerWrongHost.Link(
+		context.Background(),
+		lambdaFunctionResourceType,
+		dynamoDBTableResourceType,
+	)
+	s.Require().NoError(err)
+
+	_, err = link.GetCapabilities(
+		context.Background(),
+		linkGetCapabilitiesInput(),
+	)
+	testutils.AssertInvalidHost(
+		err,
+		errorsv1.PluginActionProviderGetLinkCapabilities,
+		testWrongHostID,
+		&s.Suite,
+	)
+}
+
+func (s *ProviderPluginV1Suite) Test_link_get_capabilities_reports_expected_error_for_failure() {
+	link, err := s.failingProvider.Link(
+		context.Background(),
+		lambdaFunctionResourceType,
+		dynamoDBTableResourceType,
+	)
+	s.Require().NoError(err)
+
+	_, err = link.GetCapabilities(
+		context.Background(),
+		linkGetCapabilitiesInput(),
+	)
+	s.Assert().Error(err)
+	s.Assert().Contains(
+		err.Error(),
+		"internal error occurred when retrieving capabilities for link",
 	)
 }
 

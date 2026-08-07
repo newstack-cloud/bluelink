@@ -717,7 +717,13 @@ func (p *blueprintProviderPluginImpl) updateLinkResource(
 		return toUpdateLinkResourceErrorResponse(err), nil
 	}
 
-	updateLinkResourceInput, err := fromPBUpdateLinkResourceRequest(req)
+	resourceService := pluginservicev1.ResourceServiceFromClient(
+		p.serviceClient,
+	)
+	updateLinkResourceInput, err := fromPBUpdateLinkResourceRequest(
+		req,
+		resourceService,
+	)
 	if err != nil {
 		return toUpdateLinkResourceErrorResponse(err), nil
 	}
@@ -1028,6 +1034,45 @@ func (p *blueprintProviderPluginImpl) GetLinkCardinality(
 	}
 
 	return toPBGetLinkCardinalityResponse(output), nil
+}
+
+func (p *blueprintProviderPluginImpl) GetLinkCapabilities(
+	ctx context.Context,
+	req *providerserverv1.LinkRequest,
+) (*sharedtypesv1.LinkCapabilitiesResponse, error) {
+	err := p.checkHostID(req.HostId)
+	if err != nil {
+		return toGetLinkCapabilitiesErrorResponse(err), nil
+	}
+
+	linkTypeInfo, err := extractLinkTypeInfo(req.LinkType)
+	if err != nil {
+		return toGetLinkCapabilitiesErrorResponse(err), nil
+	}
+
+	link, err := p.bpProvider.Link(
+		ctx,
+		linkTypeInfo.resourceTypeA,
+		linkTypeInfo.resourceTypeB,
+	)
+	if err != nil {
+		return toGetLinkCapabilitiesErrorResponse(err), nil
+	}
+
+	capabilitiesInput, err := fromPBLinkRequestForCapabilities(req)
+	if err != nil {
+		return toGetLinkCapabilitiesErrorResponse(err), nil
+	}
+
+	output, err := link.GetCapabilities(
+		ctx,
+		capabilitiesInput,
+	)
+	if err != nil {
+		return toGetLinkCapabilitiesErrorResponse(err), nil
+	}
+
+	return toPBGetLinkCapabilitiesResponse(output), nil
 }
 
 func (p *blueprintProviderPluginImpl) ValidateLink(

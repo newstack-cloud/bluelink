@@ -50,6 +50,7 @@ const (
 	Provider_GetLinkKind_FullMethodName                      = "/providerserverv1.Provider/GetLinkKind"
 	Provider_GetLinkIntermediaryExternalState_FullMethodName = "/providerserverv1.Provider/GetLinkIntermediaryExternalState"
 	Provider_GetLinkCardinality_FullMethodName               = "/providerserverv1.Provider/GetLinkCardinality"
+	Provider_GetLinkCapabilities_FullMethodName              = "/providerserverv1.Provider/GetLinkCapabilities"
 	Provider_ValidateLink_FullMethodName                     = "/providerserverv1.Provider/ValidateLink"
 	Provider_GetDataSourceType_FullMethodName                = "/providerserverv1.Provider/GetDataSourceType"
 	Provider_GetDataSourceTypeDescription_FullMethodName     = "/providerserverv1.Provider/GetDataSourceTypeDescription"
@@ -238,6 +239,10 @@ type ProviderClient interface {
 	GetLinkIntermediaryExternalState(ctx context.Context, in *GetLinkIntermediaryExternalStateRequest, opts ...grpc.CallOption) (*GetLinkIntermediaryExternalStateResponse, error)
 	// GetLinkCardinality retrieves the cardinality for the link between two resources.
 	GetLinkCardinality(ctx context.Context, in *LinkRequest, opts ...grpc.CallOption) (*sharedtypesv1.LinkCardinalityResponse, error)
+	// GetLinkCapabilities retrieves the guarantees the link between two resources
+	// establishes and the guarantees it needs established before it runs, which
+	// determine the order links are deployed and destroyed in.
+	GetLinkCapabilities(ctx context.Context, in *LinkRequest, opts ...grpc.CallOption) (*sharedtypesv1.LinkCapabilitiesResponse, error)
 	// ValidateLink carries out custom validation for the link between two resources.
 	ValidateLink(ctx context.Context, in *ValidateLinkRequest, opts ...grpc.CallOption) (*ValidateLinkResponse, error)
 	// GetDataSourceType retrieves the type of a data source in a blueprint spec
@@ -606,6 +611,16 @@ func (c *providerClient) GetLinkCardinality(ctx context.Context, in *LinkRequest
 	return out, nil
 }
 
+func (c *providerClient) GetLinkCapabilities(ctx context.Context, in *LinkRequest, opts ...grpc.CallOption) (*sharedtypesv1.LinkCapabilitiesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(sharedtypesv1.LinkCapabilitiesResponse)
+	err := c.cc.Invoke(ctx, Provider_GetLinkCapabilities_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *providerClient) ValidateLink(ctx context.Context, in *ValidateLinkRequest, opts ...grpc.CallOption) (*ValidateLinkResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ValidateLinkResponse)
@@ -918,6 +933,10 @@ type ProviderServer interface {
 	GetLinkIntermediaryExternalState(context.Context, *GetLinkIntermediaryExternalStateRequest) (*GetLinkIntermediaryExternalStateResponse, error)
 	// GetLinkCardinality retrieves the cardinality for the link between two resources.
 	GetLinkCardinality(context.Context, *LinkRequest) (*sharedtypesv1.LinkCardinalityResponse, error)
+	// GetLinkCapabilities retrieves the guarantees the link between two resources
+	// establishes and the guarantees it needs established before it runs, which
+	// determine the order links are deployed and destroyed in.
+	GetLinkCapabilities(context.Context, *LinkRequest) (*sharedtypesv1.LinkCapabilitiesResponse, error)
 	// ValidateLink carries out custom validation for the link between two resources.
 	ValidateLink(context.Context, *ValidateLinkRequest) (*ValidateLinkResponse, error)
 	// GetDataSourceType retrieves the type of a data source in a blueprint spec
@@ -1075,6 +1094,9 @@ func (UnimplementedProviderServer) GetLinkIntermediaryExternalState(context.Cont
 }
 func (UnimplementedProviderServer) GetLinkCardinality(context.Context, *LinkRequest) (*sharedtypesv1.LinkCardinalityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLinkCardinality not implemented")
+}
+func (UnimplementedProviderServer) GetLinkCapabilities(context.Context, *LinkRequest) (*sharedtypesv1.LinkCapabilitiesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLinkCapabilities not implemented")
 }
 func (UnimplementedProviderServer) ValidateLink(context.Context, *ValidateLinkRequest) (*ValidateLinkResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ValidateLink not implemented")
@@ -1679,6 +1701,24 @@ func _Provider_GetLinkCardinality_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Provider_GetLinkCapabilities_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProviderServer).GetLinkCapabilities(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Provider_GetLinkCapabilities_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProviderServer).GetLinkCapabilities(ctx, req.(*LinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Provider_ValidateLink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ValidateLinkRequest)
 	if err := dec(in); err != nil {
@@ -2057,6 +2097,10 @@ var Provider_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetLinkCardinality",
 			Handler:    _Provider_GetLinkCardinality_Handler,
+		},
+		{
+			MethodName: "GetLinkCapabilities",
+			Handler:    _Provider_GetLinkCapabilities_Handler,
 		},
 		{
 			MethodName: "ValidateLink",

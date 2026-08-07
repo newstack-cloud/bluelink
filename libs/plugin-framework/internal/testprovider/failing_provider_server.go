@@ -314,6 +314,16 @@ func (p *failingProviderServer) GetLinkCardinality(
 	)
 }
 
+func (p *failingProviderServer) GetLinkCapabilities(
+	ctx context.Context,
+	req *providerserverv1.LinkRequest,
+) (*sharedtypesv1.LinkCapabilitiesResponse, error) {
+	return nil, status.Error(
+		codes.Unknown,
+		"internal error occurred when retrieving capabilities for link",
+	)
+}
+
 func (p *failingProviderServer) ValidateLink(
 	ctx context.Context,
 	req *providerserverv1.ValidateLinkRequest,

@@ -193,6 +193,11 @@ service Provider {
 		returns (GetLinkIntermediaryExternalStateResponse) {}
     // GetLinkCardinality retrieves the cardinality for the link between two resources.
     rpc GetLinkCardinality(LinkRequest) returns (sharedtypesv1.LinkCardinalityResponse) {}
+
+    // GetLinkCapabilities retrieves the guarantees the link between two resources
+    // establishes and the guarantees it needs established before it runs, which
+    // determine the order links are deployed and destroyed in.
+    rpc GetLinkCapabilities(LinkRequest) returns (sharedtypesv1.LinkCapabilitiesResponse) {}
     // ValidateLink carries out custom validation for the link between two resources.
     rpc ValidateLink(ValidateLinkRequest) returns (ValidateLinkResponse) {}
 
@@ -600,6 +605,10 @@ message UpdateLinkResourceRequest {
     LinkUpdateType update_type = 7;
     LinkState current_link_state = 8;
     LinkContext context = 9;
+    // A handle for the link being deployed that can be used for tasks
+    // like acquiring locks on resources that are being updated
+    // in the same blueprint instance.
+    string link_id = 10;
 }
 
 // UpdateLinkResourceResponse is the response
