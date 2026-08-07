@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.16.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.15.0...plugin-framework/v0.16.0) (2026-08-07)
+
+
+### Features
+
+* **plugin-framework:** add support for link capabilities ([75bb124](https://github.com/newstack-cloud/bluelink/commit/75bb124129d6f4d01bc124c2286e8ea029cde03d))
+
+
+### Bug Fixes
+
+* **plugin-framework:** pass declared link graph to transformers ([14f9ebd](https://github.com/newstack-cloud/bluelink/commit/14f9ebd145485419ab72d490af174b46cc603575))
+* **plugin-framework:** report unsupported plugin item types as not found ([2bd07ef](https://github.com/newstack-cloud/bluelink/commit/2bd07ef24ea8842222eef99779f7f2a5d32fdf84))
+* **plugin-framework:** tolerate nil transformer context in pb conversion ([3e758f6](https://github.com/newstack-cloud/bluelink/commit/3e758f6b0a0b66b0072ce8d518630b3dfe5c16d6))
+
+
+### Dependencies
+
+* **plugin-framework:** update module google.golang.org/grpc to v1.82.1 ([#260](https://github.com/newstack-cloud/bluelink/issues/260)) ([9eff48d](https://github.com/newstack-cloud/bluelink/commit/9eff48d7249a757f7d3606adec8fc4fe2cfdf5a2))
+* **plugin-framework:** update module google.golang.org/grpc to v1.83.0 ([#268](https://github.com/newstack-cloud/bluelink/issues/268)) ([77fdb4b](https://github.com/newstack-cloud/bluelink/commit/77fdb4bba1d1ab0506287d7c32282907568b1a97))
+
 ## [0.15.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.14.0...plugin-framework/v0.15.0) (2026-07-19)
 
 
