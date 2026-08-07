@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.52.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.51.2...blueprint/v0.52.0) (2026-08-07)
+
+
+### Features
+
+* **blueprint:** order link deployment by declared capabilities ([28e233e](https://github.com/newstack-cloud/bluelink/commit/28e233ef4bde2d98a688c93bf570dc60c2db17fd))
+
+
+### Bug Fixes
+
+* **blueprint:** position diagnostics accurately and suggest corrections ([50c96ee](https://github.com/newstack-cloud/bluelink/commit/50c96ee6d67cea140bd72d605cd18bcea8ab4bd6))
+* **blueprint:** resolve references into computed maps and map keys ([9e6f2e0](https://github.com/newstack-cloud/bluelink/commit/9e6f2e05a5ceb7af26193601859faac29c30af1a))
+
+
+### Dependencies
+
+* **blueprint:** update blueprint go modules ([#249](https://github.com/newstack-cloud/bluelink/issues/249)) ([17eff8c](https://github.com/newstack-cloud/bluelink/commit/17eff8cc540e02db41b354db0c930ec492d24465))
+
 ## [0.51.2](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.51.1...blueprint/v0.51.2) (2026-07-19)
 
 
