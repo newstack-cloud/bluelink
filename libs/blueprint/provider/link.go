@@ -115,6 +115,19 @@ type Link interface {
 		input *LinkGetCardinalityInput,
 	) (*LinkGetCardinalityOutput, error)
 
+	// GetCapabilities retrieves the guarantees this link establishes about the
+	// resources in its relationship, and the guarantees it needs established
+	// before it runs. These order link deployment: a link that requires a
+	// capability is deployed after every link that provides the same capability
+	// on the same resource, and destroyed before them.
+	//
+	// A link that neither establishes a precondition for other links nor depends
+	// on one should return an empty output, which is the common case.
+	GetCapabilities(
+		ctx context.Context,
+		input *LinkGetCapabilitiesInput,
+	) (*LinkGetCapabilitiesOutput, error)
+
 	// ValidateLink runs custom validation logic for this link at blueprint
 	// validation time (pre-deploy). This is distinct from StageChanges which
 	// runs when staging changes for a deployment. ValidateLink receives the resource specs
@@ -148,12 +161,30 @@ type LinkUpdateResourceInput struct {
 	Changes           *LinkChanges
 	ResourceInfo      *ResourceInfo
 	OtherResourceInfo *ResourceInfo
+	// A handle for the link being deployed that can be used for tasks
+	// like acquiring locks on resources that are being updated
+	// in the same blueprint instance.
+	LinkID string
 	// Additional user-defined blueprint instance name
 	// that can be used in ID/unique name generation and for debugging.
 	InstanceName     string
 	LinkUpdateType   LinkUpdateType
 	CurrentLinkState *state.LinkState
 	LinkContext      LinkContext
+	// ResourceService allows a link implementation to hook into
+	// the framework's existing mechanism to manage resource deployments,
+	// look up resources and acquire locks when updating existing resources
+	// in the same blueprint.
+	//
+	// This carries the same capabilities as the equivalent field on
+	// LinkUpdateIntermediaryResourcesInput. It is available here because a link
+	// often has to modify a shared intermediary resource before it can touch
+	// resource A or B at all, rather than afterwards. For example, in AWS an
+	// AWS Lambda function cannot be attached to a VPC until its IAM role already
+	// grants the network interface permissions, so the link must reconcile the
+	// role, under a lock shared with every other link modifying that role,
+	// before updating the function itself.
+	ResourceService ResourceService
 }
 
 // LinkUpdateType represents the type of update that is being carried out
@@ -376,6 +407,64 @@ type LinkGetCardinalityOutput struct {
 	CardinalityB LinkCardinality
 }
 
+// LinkGetCapabilitiesInput provides the input for retrieving the capabilities
+// a link provides and requires.
+type LinkGetCapabilitiesInput struct {
+	LinkContext LinkContext
+}
+
+// LinkGetCapabilitiesOutput provides the output for retrieving the capabilities
+// a link provides and requires.
+type LinkGetCapabilitiesOutput struct {
+	// Provides holds the guarantees this link establishes once deployed.
+	Provides []LinkCapability
+	// Requires holds the guarantees this link needs established before it runs.
+	Requires []LinkCapability
+}
+
+// LinkCapability identifies a guarantee about one of the resources in a link
+// relationship.
+//
+// Capabilities exist to order links that are otherwise independent. Most links
+// are self-contained and declare none. A minority establish a fact about a
+// resource that other links must observe before they can do their own work
+// correctly, and the direction of a link does not carry that information: the
+// framework provides both UpdateResourceA and UpdateResourceB precisely because
+// "A links to B" describes a relationship rather than which side is written to.
+//
+// The primary example is an AWS Lambda function placed in a VPC. The placement
+// link sets the function's network attachment; the links granting the function
+// access to a queue or a table read that live attachment to decide whether to
+// provision an endpoint. Run in the wrong order, an access link sees an
+// unattached function, provisions nothing, and reports success, leaving a
+// deployment that completes but does not work.
+type LinkCapability struct {
+	// Name is a stable, provider-namespaced identifier for the guarantee,
+	// e.g. "aws.flexvpc/network-attached". It names what is true once the
+	// providing link has run, not how the link achieves it.
+	//
+	// There is no registry of valid names. Declare them as exported constants
+	// and have both sides reference the same constant, so that a mismatch is a
+	// compile error rather than a link that silently deploys unordered.
+	Name string
+	// Resource selects which resource in this relationship the capability
+	// applies to: LinkPriorityResourceA or LinkPriorityResourceB.
+	//
+	// Capabilities are matched on the resource instance the selector names,
+	// so two functions in the same blueprint never order each other: a
+	// placement link provides the capability only on the function it places.
+	Resource LinkPriorityResource
+	// MustExist marks a requirement the link cannot function without. It is
+	// meaningless on a capability listed under Provides.
+	//
+	// Defaults to false, and the default value is important.
+	// For example, an access link
+	// requiring "network-attached" must still deploy for a function that was
+	// never placed in a VPC. Only set this where the absence of a provider
+	// makes the link itself invalid rather than merely unordered.
+	MustExist bool
+}
+
 // LinkValidateInput provides the input for running custom validation logic for a link at blueprint
 // validation time (pre-deploy).
 type LinkValidateInput struct {
@@ -538,4 +627,16 @@ type LinkContext interface {
 	// ContextVariables returns all context variables
 	// for the current environment.
 	ContextVariables() map[string]*core.ScalarValue
+}
+
+// LinkNoCapabilities can be embedded in a link implementation that neither
+// establishes a precondition for other links nor depends on one, which is the
+// common case. It supplies a GetCapabilities that declares nothing.
+type LinkNoCapabilities struct{}
+
+func (l *LinkNoCapabilities) GetCapabilities(
+	ctx context.Context,
+	input *LinkGetCapabilitiesInput,
+) (*LinkGetCapabilitiesOutput, error) {
+	return &LinkGetCapabilitiesOutput{}, nil
 }

@@ -1,6 +1,9 @@
 package mockclock
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 // Thursday, 7th September 2023 14:43:44
 const CurrentTimeUnixMock int64 = 1694097824
@@ -17,7 +20,12 @@ func (c *StaticClock) Since(t time.Time) time.Duration {
 
 // AdvanceableClock is a mock implementation of the core.Clock interface
 // that allows for advancing the clock by a specified duration.
+//
+// Safe for concurrent use: code under test can poll the clock from one goroutine while
+// the test advances it from another, which is how a timeout that is waited on rather
+// than simulated has to be exercised.
 type AdvanceableClock struct {
+	mu  sync.RWMutex
 	now time.Time
 }
 
@@ -34,6 +42,9 @@ func NewAdvanceableClock(
 }
 
 func (c *AdvanceableClock) Now() time.Time {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	return c.now
 }
 
@@ -46,5 +57,8 @@ func (c *AdvanceableClock) Since(t time.Time) time.Duration {
 // scenarios where the clock needs to be advanced to simulate
 // the passage of time.
 func (c *AdvanceableClock) Advance(d time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	c.now = c.now.Add(d)
 }

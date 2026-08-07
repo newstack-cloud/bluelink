@@ -2247,3 +2247,87 @@ type snapshotChainLinkNode struct {
 	// there is a relationship between two links at any depth in the chain.
 	Paths []string
 }
+
+func (l *testApiGatewayLambdaLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testSQSQueueLambdaLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testLambdaDynamoDBTableLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testStratosLambdaDynamoDBTableLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testLambdaSQSQueueLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testDynamoDBTableStreamLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testDynamoDBStreamLambdaLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testDynamoDBStreamStratosLambdaLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testIAMRoleLambdaLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testStratosIAMRoleLambdaLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testLambdaIAMRoleLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testLambdaStratosIAMRoleLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}

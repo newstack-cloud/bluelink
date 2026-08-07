@@ -95,10 +95,10 @@ type Registry interface {
 	// are modifying the resource at the same time.
 	// This is useful for links that need to update existing resources
 	// in the same blueprint as a part of the intermediary resources update phase.
-	// The blueprint container will ensure that the lock is released after the
-	// update intermediary resources phase is complete for the current link.
-	// The lock will be released if the link update fails or by the resource registry
-	// if a lock timeout occurs.
+	// The blueprint container releases the lock when the phase that acquired it
+	// finishes, including when the link update fails. A held lock is never taken from
+	// its holder, so a caller that cannot acquire one within the lock timeout fails
+	// with an error naming the holder rather than proceeding without it.
 	AcquireResourceLock(
 		ctx context.Context,
 		input *provider.AcquireResourceLockInput,
@@ -120,8 +120,9 @@ type Registry interface {
 
 	// ReleaseResourceLocksAcquiredBy releases all resource locks
 	// that have been acquired by a specific caller (e.g. a link).
-	// This is useful for releasing locks proactively instead of waiting
-	// for the lock timeout to occur.
+	// This is how a link's locks are released when its phase ends, and the only way
+	// they are released: nothing expires a lock on age. A lock recorded under a
+	// different acquirer than the one passed here is therefore never released by it.
 	ReleaseResourceLocksAcquiredBy(ctx context.Context, instanceID string, acquiredBy string)
 
 	// WithParams creates a new registry derived from the current registry
@@ -139,16 +140,35 @@ type resourceLock struct {
 	instanceID string
 	// The name of the resource that the lock is acquired on.
 	resourceName string
-	// The time when the lock was acquired.
-	// This is used to determine if the lock has timed out.
+	// The time when the lock was acquired, kept for diagnostics. A lock is not
+	// expired on age; it is held until released.
 	lockTime time.Time
-	// Optional field to track who acquired the lock.
+	// Who acquired the lock, which is the link ID for locks taken during link
+	// deployment. Used to release a link's locks together, and to allow the holder to
+	// re-acquire. Empty means unidentified, which is never treated as re-entrant.
 	acquiredBy string
 }
 
 const (
-	// DefaultResourceLockTimeout is the default timeout for acquiring a resource lock.
-	DefaultResourceLockTimeout = 3 * time.Minute
+	// DefaultResourceLockTimeout is the default time a caller waits for a resource lock
+	// before giving up. It bounds waiting only: the holder is never interrupted, and a
+	// caller that times out fails rather than proceeding without the lock.
+	//
+	// The value balances two things that pull in opposite directions.
+	//
+	// It has to exceed the longest legitimate hold, because exceeding it fails a
+	// deployment that was doing nothing wrong. A link can hold a lock across a slow
+	// upstream operation: waiting for a cloud provider to release network interfaces,
+	// or deploying an intermediary resource that takes minutes to become available.
+	// Locks are released at the end of every link deployment phase, including on the
+	// failure path, so a hold spans a single attempt rather than a whole retry chain
+	// with its backoff.
+	//
+	// It also should not be unbounded, because it is what turns a lock cycle into a
+	// diagnosable error naming both links rather than a deployment that hangs with no
+	// explanation. Fifteen minutes leaves generous room above the slow operations above
+	// while still surfacing a genuine deadlock within a single run.
+	DefaultResourceLockTimeout = 15 * time.Minute
 	// DefaultResourceLockCheckInterval is the default interval at which the resource lock
 	// will be checked for availability when acquiring a lock.
 	DefaultResourceLockCheckInterval = 100 * time.Millisecond
@@ -177,8 +197,10 @@ type registryFromProviders struct {
 // to allow for additional configuration options when creating a new registry.
 type RegistryOption func(*registryFromProviders)
 
-// WithResourceLockTimeout sets the timeout for acquiring a resource lock.
-// If not provided, the default timeout is 180 seconds (3 minutes).
+// WithResourceLockTimeout sets how long a caller waits for a resource lock before
+// giving up with an error naming the holder. The holder is never interrupted, so this
+// must be longer than the slowest operation a link performs while holding a lock.
+// If not provided, the default is 15 minutes.
 func WithResourceLockTimeout(timeout time.Duration) RegistryOption {
 	return func(r *registryFromProviders) {
 		r.resourceLockTimeout = timeout
@@ -634,14 +656,17 @@ func (r *registryFromProviders) AcquireResourceLock(
 	ctx context.Context,
 	input *provider.AcquireResourceLockInput,
 ) error {
+	deadline := r.clock.Now().Add(r.resourceLockTimeout)
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			r.resourceLocksMu.Lock()
 			lockKey := createResourceLockKey(input.InstanceID, input.ResourceName)
-			if r.checkLock(lockKey) {
+
+			r.resourceLocksMu.Lock()
+			holder, held := r.lockHolder(lockKey, input.AcquiredBy)
+			if !held {
 				r.resourceLocks[lockKey] = &resourceLock{
 					instanceID:   input.InstanceID,
 					resourceName: input.ResourceName,
@@ -652,24 +677,52 @@ func (r *registryFromProviders) AcquireResourceLock(
 				return nil
 			}
 			r.resourceLocksMu.Unlock()
+
+			// Giving up is the only safe outcome. Taking the lock from whoever
+			// holds it would let two writers modify the same resource at once,
+			// which is precisely what the lock exists to prevent, and it would do
+			// so silently.
+			if !r.clock.Now().Before(deadline) {
+				return errResourceLockTimeout(
+					input.ResourceName,
+					holder,
+					input.AcquiredBy,
+					r.resourceLockTimeout,
+				)
+			}
+
 			time.Sleep(r.resourceLockCheckInterval)
 		}
 	}
 }
 
+// Reports who holds the lock, treating a lock already held by the same acquirer as
+// free.
+//
+// A lock is never taken from its holder, however long it has been held. Locks are
+// released together by acquirer at the end of every link deployment phase, including
+// on the failure and cancellation paths, so a lock outliving its work would be a defect
+// to fix rather than something to route around by expiring it.
+//
+// Re-entrancy matters because the link deployer holds a resource's lock across a call
+// into a link implementation, and that implementation is free to ask for a lock on the
+// same resource. Without this, a link would wait on itself until the acquire deadline.
+//
 // The resource locks mutex must be held when calling this method.
-func (r *registryFromProviders) checkLock(lockKey string) bool {
-	if lock, exists := r.resourceLocks[lockKey]; exists {
-		// If the lock exists, check if it has timed out.
-		if r.clock.Now().Sub(lock.lockTime) < r.resourceLockTimeout {
-			// Lock is still held, cannot acquire.
-			return false
-		}
-		// Lock has timed out, remove it.
-		delete(r.resourceLocks, lockKey)
+// An unidentified acquirer is never treated as re-entrant. Two callers that both leave
+// the field empty are not the same caller, and matching them would hand out a lock that
+// is already held.
+func (r *registryFromProviders) lockHolder(lockKey string, acquiredBy string) (string, bool) {
+	lock, exists := r.resourceLocks[lockKey]
+	if !exists {
+		return "", false
 	}
 
-	return true
+	if acquiredBy != "" && lock.acquiredBy == acquiredBy {
+		return "", false
+	}
+
+	return lock.acquiredBy, true
 }
 
 func (r *registryFromProviders) ReleaseResourceLock(

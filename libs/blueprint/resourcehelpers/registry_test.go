@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -485,7 +486,100 @@ func (s *RegistryTestSuite) Test_produces_error_for_missing_provider(c *C) {
 	c.Assert(runErr.ReasonCode, Equals, ErrorReasonCodeMultipleRunErrors)
 }
 
-func (s *RegistryTestSuite) Test_resource_locking_behaviour(c *C) {
+// A lock is never taken from whoever holds it, however long it has been held.
+//
+// It used to expire: a lock older than the timeout was deleted and handed to the next
+// caller. That turned a slow holder into two concurrent writers on the same resource
+// silently, which is the one outcome the lock exists to prevent. Waiting callers now
+// give up instead, and say who they were waiting for.
+func (s *RegistryTestSuite) Test_a_held_lock_is_never_taken_from_its_holder(c *C) {
+	held := &provider.AcquireResourceLockInput{
+		InstanceID:   "test-blueprint-id",
+		ResourceName: "test-resource-id-1",
+		AcquiredBy:   "link-a",
+	}
+	contending := &provider.AcquireResourceLockInput{
+		InstanceID:   "test-blueprint-id",
+		ResourceName: "test-resource-id-1",
+		AcquiredBy:   "link-b",
+	}
+
+	err := s.resourceRegistry.AcquireResourceLock(context.TODO(), held)
+	c.Assert(err, IsNil)
+
+	// Well past the lock timeout, which is when the lock used to be stolen.
+	s.advanceableClock.Advance(10 * time.Second)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	err = s.resourceRegistry.AcquireResourceLock(ctx, contending)
+	c.Assert(err, NotNil)
+
+	// Released explicitly, which is the only way a lock is given up.
+	s.resourceRegistry.ReleaseResourceLock(
+		context.TODO(),
+		held.InstanceID,
+		held.ResourceName,
+	)
+
+	err = s.resourceRegistry.AcquireResourceLock(context.TODO(), contending)
+	c.Assert(err, IsNil)
+}
+
+// Giving up names the holder, because a deployment that stalls on a lock is otherwise
+// very hard to attribute.
+func (s *RegistryTestSuite) Test_waiting_for_a_lock_times_out_with_the_holder_named(c *C) {
+	err := s.resourceRegistry.AcquireResourceLock(
+		context.TODO(),
+		&provider.AcquireResourceLockInput{
+			InstanceID:   "test-blueprint-id",
+			ResourceName: "test-resource-id-1",
+			AcquiredBy:   "link-a",
+		},
+	)
+	c.Assert(err, IsNil)
+
+	// The acquire deadline is measured on the registry's clock, so advancing it from
+	// another goroutine is what ends the wait.
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		s.advanceableClock.Advance(10 * time.Second)
+	}()
+
+	err = s.resourceRegistry.AcquireResourceLock(
+		context.TODO(),
+		&provider.AcquireResourceLockInput{
+			InstanceID:   "test-blueprint-id",
+			ResourceName: "test-resource-id-1",
+			AcquiredBy:   "link-b",
+		},
+	)
+	c.Assert(err, NotNil)
+
+	runErr, isRunErr := err.(*errors.RunError)
+	c.Assert(isRunErr, Equals, true)
+	c.Assert(runErr.ReasonCode, Equals, ErrorReasonCodeResourceLockTimeout)
+	c.Assert(strings.Contains(runErr.Error(), "link-a"), Equals, true)
+	c.Assert(strings.Contains(runErr.Error(), "test-resource-id-1"), Equals, true)
+}
+
+// The link deployer holds a resource's lock across the call into a link
+// implementation, and that implementation may ask for a lock on the same resource.
+// Without re-entrancy a link would wait on itself until the acquire deadline.
+func (s *RegistryTestSuite) Test_the_holder_of_a_lock_can_reacquire_it(c *C) {
+	lockInput := &provider.AcquireResourceLockInput{
+		InstanceID:   "test-blueprint-id",
+		ResourceName: "test-resource-id-1",
+		AcquiredBy:   "link-a",
+	}
+
+	c.Assert(s.resourceRegistry.AcquireResourceLock(context.TODO(), lockInput), IsNil)
+	c.Assert(s.resourceRegistry.AcquireResourceLock(context.TODO(), lockInput), IsNil)
+}
+
+// Re-entrancy keys on the acquirer, so two callers that both leave it unset must not be
+// mistaken for one another.
+func (s *RegistryTestSuite) Test_unidentified_acquirers_are_not_treated_as_the_same_holder(c *C) {
 	lockInput := &provider.AcquireResourceLockInput{
 		InstanceID:   "test-blueprint-id",
 		ResourceName: "test-resource-id-1",
@@ -494,31 +588,10 @@ func (s *RegistryTestSuite) Test_resource_locking_behaviour(c *C) {
 	err := s.resourceRegistry.AcquireResourceLock(context.TODO(), lockInput)
 	c.Assert(err, IsNil)
 
-	// Subsequent lock acquisition should fail with a timeout error.
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	defer cancel()
-
 	err = s.resourceRegistry.AcquireResourceLock(ctx, lockInput)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "context deadline exceeded")
-
-	// Advance the clock to allow the lock to be released.
-	s.advanceableClock.Advance(200 * time.Millisecond)
-
-	// Now we should be able to acquire a new lock on the same resource.
-	err = s.resourceRegistry.AcquireResourceLock(context.TODO(), lockInput)
-	c.Assert(err, IsNil)
-
-	// Manually release the lock early.
-	s.resourceRegistry.ReleaseResourceLock(
-		context.TODO(),
-		lockInput.InstanceID,
-		lockInput.ResourceName,
-	)
-
-	// We should be able to acquire the lock again immediately.
-	err = s.resourceRegistry.AcquireResourceLock(context.TODO(), lockInput)
-	c.Assert(err, IsNil)
 }
 
 func (s *RegistryTestSuite) Test_resource_locking_behaviour_release_all_for_instance(c *C) {
@@ -581,18 +654,23 @@ func (s *RegistryTestSuite) Test_resource_locking_behaviour_release_all_for_inst
 			err := s.resourceRegistry.AcquireResourceLock(context.TODO(), lockInput)
 			c.Assert(err, IsNil)
 		} else {
-			// For caller-1, it should still fail to acquire the lock.
+			// caller-1 still holds these, and re-acquiring a lock you already hold is
+			// allowed. A third caller is what must be kept out.
 			lockInput := &provider.AcquireResourceLockInput{
 				InstanceID:   "test-blueprint-id",
 				ResourceName: fmt.Sprintf("test-resource-id-%d", i+1),
 				AcquiredBy:   "caller-1",
 			}
+			c.Assert(s.resourceRegistry.AcquireResourceLock(context.TODO(), lockInput), IsNil)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 			defer cancel()
-			err := s.resourceRegistry.AcquireResourceLock(ctx, lockInput)
+			err := s.resourceRegistry.AcquireResourceLock(ctx, &provider.AcquireResourceLockInput{
+				InstanceID:   "test-blueprint-id",
+				ResourceName: fmt.Sprintf("test-resource-id-%d", i+1),
+				AcquiredBy:   "caller-2",
+			})
 			c.Assert(err, NotNil)
-			c.Assert(err.Error(), Equals, "context deadline exceeded")
 		}
 	}
 }

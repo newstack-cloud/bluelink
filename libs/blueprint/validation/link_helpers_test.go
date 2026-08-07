@@ -279,3 +279,17 @@ func (l *testConfigurableLink) ValidateLink(
 	}
 	return &provider.LinkValidateOutput{}, nil
 }
+
+func (l *testResourceTypeAResourceTypeBLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testConfigurableLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}

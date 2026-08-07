@@ -134,9 +134,9 @@ func (d *defaultLinkChangeStager) StageChanges(
 
 // isLinkNewForStaging determines if a link should be treated as "new"
 // (requiring creation) during change staging. A link is considered new if:
-// - No persisted state exists, OR
-// - The persisted state indicates the link was never successfully created
-//   (e.g., previous creation attempt failed or was interrupted)
+//   - No persisted state exists, OR
+//   - The persisted state indicates the link was never successfully created
+//     (e.g., previous creation attempt failed or was interrupted)
 func isLinkNewForStaging(currentState *state.LinkState) bool {
 	if currentState == nil {
 		return true

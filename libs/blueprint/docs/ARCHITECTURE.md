@@ -489,6 +489,66 @@ Finally, a provider is also responsible for implementing link implementations fo
 
 In the case where there are links between resources that span multiple providers (e.g. AWS and Google Cloud), a provider needs to be implemented that represents the relationship between providers. In most cases this would be an abstraction that fulfils the provider interface that internally holds multiple providers. This will have it's own set of link implementations for resource types across providers.
 
+### Link deployment phases
+
+Deploying a link runs three phases in a fixed order, each of which the link deployer retries independently under the provider's retry policy:
+
+1. `UpdateResourceA` — modify the first resource in the link relationship.
+2. `UpdateResourceB` — modify the second resource in the link relationship.
+3. `UpdateIntermediaryResources` — create, update or remove resources that exist only to support the link, such as an IAM role policy shared with other links.
+
+All three phases receive a `ResourceService` and a `LinkID`. The resource service is the link implementation's route back into the framework's own machinery for deploying resources, looking up resources in state, and acquiring locks on resources that other links in the same blueprint instance may be modifying concurrently. The link ID identifies the link holding a lock, and is what the deployer matches on when releasing.
+
+### Ordering between links
+
+A resource finishing starts a batch of the links it made ready. The links within a batch
+are deployed concurrently, since a batch only runs links whose required capabilities are
+already established and there is nothing to order between them. Batches are serialised
+against each other: a batch takes the deferred links, deploys what it can and hands the
+rest back, so two running at once could have one take a link the other was about to
+release and leave it with nothing to run it.
+
+Keeping two links off the same resource is a separate concern from ordering, handled by
+the resource locks the deployer holds around each of `UpdateResourceA` and
+`UpdateResourceB`, and by the locks a link takes on shared intermediaries such as an
+execution role that several links write policy permissions to. A lock is attributed to the link that
+takes it and released when its phase ends; it is never taken from its holder, since
+expiring a lock would let two links write the same resource at once without saying so.
+
+Order within and across those batches comes from the capabilities links declare, through
+`GetCapabilities` on the link interface. A capability is a named guarantee about one of
+the resources in the relationship: a link lists what it establishes under `Provides` and
+what it needs established under `Requires`, and a link that requires a capability is
+deployed after every link that provides the same capability on the same resource.
+
+Nothing is inferred from the direction of a link, which cannot carry that information: the
+framework provides both `UpdateResourceA` and `UpdateResourceB` precisely because "A links
+to B" describes a relationship rather than which side is written to. Most links establish
+nothing another link depends on, declare neither, and are unordered.
+
+This matters whenever a link reads live state that another link is responsible for
+setting. The case it was built for is an AWS Lambda function placed in a VPC: the
+placement link provides `aws.flexvpc/network-attached` on the function, and the links
+granting the function access to a queue or a table require it, because they read that
+attachment to decide whether to provision a VPC endpoint. A consumer running first sees an
+unattached function, provisions nothing, and reports success, leaving a deployment that
+looks complete and fails at runtime.
+
+Capabilities are matched on the resource instance rather than the resource type, so two
+functions in the same blueprint never order each other's links. A requirement that nothing
+in the blueprint provides is satisfied by absence, which is what lets an access link
+declare it unconditionally and still deploy for a function that was never placed in a VPC;
+`MustExist` marks the rarer case where absence makes the link invalid, and is checked
+during validation. Links excluded from the change set never run, so no edge is created to
+them, and a set of links whose requirements form a cycle is reported as an error rather
+than resolved arbitrarily.
+
+Ordering inverts on teardown where a link that requires a capability is destroyed before the
+links providing it, so an access link revokes its rules while the function is still
+attached to the network.
+
+Locks are scoped to the phase that took them. After each phase the deployer releases every lock acquired by that link, whether the phase succeeded, failed, or was cancelled, so a lock never survives into the next phase or into a retry. A link is therefore free to acquire locks in any phase, but must not rely on one it acquired in an earlier phase still being held.
+
 The interface for a provider includes `context.Context` and returns an `error` to allow for provider implementations over the network boundary like with an RPC-based plugin system.
 
 The core framework does NOT come with any provider implementations, you must implement them yourself or use provider libraries that can be used to extend the blueprint framework.

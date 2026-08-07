@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -207,6 +208,141 @@ func (s *LinkDeployerTestSuite) Test_releases_lock_when_context_cancelled_after_
 
 	// Verify lock was released.
 	s.Assert().False(mockRegistry.HasLocks(), "locks should be released after context cancellation")
+}
+
+// A link often has to modify a shared intermediary resource, under a lock, before it can
+// touch resource A or B at all. Attaching an AWS Lambda function to a VPC is one example:
+// the function's IAM role has to grant the network interface permissions first, or the
+// attachment is rejected outright.
+func (s *LinkDeployerTestSuite) Test_resource_updates_can_lock_intermediary_resources() {
+	fixture := s.fixtures[1]
+	link := &lockAcquiringLink{
+		testLambdaDynamoDBTableLink: &testLambdaDynamoDBTableLink{
+			resourceAUpdateAttempts:      map[string]int{},
+			skipRetryFailuresForInstance: []string{fixture.instanceID},
+		},
+	}
+
+	s.runDeployWithLink(fixture, link)
+
+	// Both phases have to see the link ID, otherwise the lock each one takes is recorded
+	// against an empty owner and the deployer's release, which matches on the link ID,
+	// silently leaves it held.
+	s.Assert().Equal(
+		[]string{fixture.linkElement.ID(), fixture.linkElement.ID()},
+		link.observedLinkIDs,
+		"resource A and resource B updates should both receive the link ID",
+	)
+	s.Assert().False(
+		s.resourceRegistry.(*internal.ResourceRegistryMock).HasLocks(),
+		"locks taken during the resource updates should be released by the deployer",
+	)
+}
+
+// Takes a lock on a shared intermediary resource from both resource updates, the way a
+// link that has to grant permissions before touching a resource would.
+type lockAcquiringLink struct {
+	*testLambdaDynamoDBTableLink
+	observedLinkIDs []string
+	mu              sync.Mutex
+}
+
+func (l *lockAcquiringLink) UpdateResourceA(
+	ctx context.Context,
+	input *provider.LinkUpdateResourceInput,
+) (*provider.LinkUpdateResourceOutput, error) {
+	err := l.lockIntermediary(ctx, input, "testRoleForResourceA")
+	if err != nil {
+		return nil, &provider.LinkUpdateResourceAError{
+			FailureReasons: []string{err.Error()},
+		}
+	}
+
+	return l.testLambdaDynamoDBTableLink.UpdateResourceA(ctx, input)
+}
+
+func (l *lockAcquiringLink) UpdateResourceB(
+	ctx context.Context,
+	input *provider.LinkUpdateResourceInput,
+) (*provider.LinkUpdateResourceOutput, error) {
+	err := l.lockIntermediary(ctx, input, "testRoleForResourceB")
+	if err != nil {
+		return nil, &provider.LinkUpdateResourceBError{
+			FailureReasons: []string{err.Error()},
+		}
+	}
+
+	return l.testLambdaDynamoDBTableLink.UpdateResourceB(ctx, input)
+}
+
+// Each phase locks a resource of its own, so that a release the deployer fails to make
+// after resource A surfaces as a leaked lock at the end rather than as resource B blocking
+// on it until the lock times out.
+func (l *lockAcquiringLink) lockIntermediary(
+	ctx context.Context,
+	input *provider.LinkUpdateResourceInput,
+	resourceName string,
+) error {
+	l.mu.Lock()
+	l.observedLinkIDs = append(l.observedLinkIDs, input.LinkID)
+	l.mu.Unlock()
+
+	if input.ResourceService == nil {
+		return errors.New("no resource service was provided to the link resource update")
+	}
+
+	return input.ResourceService.AcquireResourceLock(
+		ctx,
+		&provider.AcquireResourceLockInput{
+			InstanceID:   input.ResourceInfo.InstanceID,
+			ResourceName: resourceName,
+			AcquiredBy:   input.LinkID,
+		},
+	)
+}
+
+func (s *LinkDeployerTestSuite) runDeployWithLink(
+	fixture *linkDeployerFixture,
+	link provider.Link,
+) {
+	channels := CreateDeployChannels()
+	deployState := NewDefaultDeploymentState()
+	go func() {
+		s.deployer.Deploy(
+			context.Background(),
+			fixture.linkElement,
+			fixture.instanceID,
+			fixture.instanceName,
+			provider.LinkUpdateTypeCreate,
+			link,
+			&DeployContext{
+				Channels:              channels,
+				State:                 deployState,
+				InstanceStateSnapshot: fixture.instanceStateSnapshot,
+				ParamOverrides:        deployLinkParams(),
+				ResourceTemplates:     map[string]string{},
+				ResourceRegistry:      s.resourceRegistry,
+				Logger:                s.logger,
+			},
+			provider.DefaultRetryPolicy,
+		)
+	}()
+
+	var err error
+	finished := false
+	for err == nil && !finished {
+		select {
+		case msg := <-channels.LinkUpdateChan:
+			finished = isLinkDeployFinishedMessage(
+				msg,
+				/* rollingBack */ false,
+			)
+		case err = <-channels.ErrChan:
+		case <-time.After(defaultDrainTimeout):
+			err = errors.New(timeoutMessage)
+		}
+	}
+	s.Require().NoError(err)
 }
 
 func (s *LinkDeployerTestSuite) runDeployTest(

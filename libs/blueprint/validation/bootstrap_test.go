@@ -394,6 +394,16 @@ func (r *testExampleResource) GetSpecDefinition(
 					"name": {
 						Type: provider.ResourceDefinitionsSchemaTypeString,
 					},
+					// A map keyed by names the author chooses, of the kind a provider
+					// uses to hand back IDs for things it created on the author's
+					// behalf. The keys are data, so no schema can enumerate them.
+					"idsByName": {
+						Type:     provider.ResourceDefinitionsSchemaTypeMap,
+						Computed: true,
+						MapValues: &provider.ResourceDefinitionsSchema{
+							Type: provider.ResourceDefinitionsSchemaTypeString,
+						},
+					},
 					"ids": {
 						Type: provider.ResourceDefinitionsSchemaTypeArray,
 						Items: &provider.ResourceDefinitionsSchema{

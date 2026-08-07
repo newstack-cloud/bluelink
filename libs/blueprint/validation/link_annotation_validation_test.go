@@ -319,14 +319,14 @@ func (s *LinkAnnotationValidationTestSuite) Test_does_not_panic_for_missing_opti
 }
 
 type fixtureConfig struct {
-	includeSubstitutions              bool
-	omitRequiredAnnotations           bool
-	omitOptionalAnnotations           bool
-	invalidTypes                      bool
-	invalidPlaceholderTypes           bool
-	invalidPlaceholderTypesUnlinked   bool
-	invalidAllowedValues              bool
-	failsCustomValidation             bool
+	includeSubstitutions            bool
+	omitRequiredAnnotations         bool
+	omitOptionalAnnotations         bool
+	invalidTypes                    bool
+	invalidPlaceholderTypes         bool
+	invalidPlaceholderTypesUnlinked bool
+	invalidAllowedValues            bool
+	failsCustomValidation           bool
 }
 
 func createTestLinkChain(

@@ -30,6 +30,12 @@ const (
 	// during deployment or change staging is due to
 	// a cyclic blueprint inclusion detected.
 	ErrorReasonCodeBlueprintCycleDetected errors.ErrorReasonCode = "blueprint_cycle_detected"
+	// ErrorReasonCodeLinkCapabilityCycleDetected
+	// is provided when the reason for an error
+	// during deployment is due to a set of links whose declared
+	// capabilities require each other, leaving no order that
+	// satisfies all of them.
+	ErrorReasonCodeLinkCapabilityCycleDetected errors.ErrorReasonCode = "link_capability_cycle_detected"
 	// ErrorReasonCodeMaxBlueprintDepthExceeded
 	// is provided when the reason for an error
 	// during deployment or change staging is due to
@@ -136,6 +142,17 @@ func errResourceTemplateLinkLengthMismatch(
 				"when the resolved items list from the `each` property of both templates is of the same length",
 			linkFrom,
 			linkTo,
+		),
+	}
+}
+
+func errLinkCapabilityCycle(cycle []string) error {
+	return &errors.RunError{
+		ReasonCode: ErrorReasonCodeLinkCapabilityCycleDetected,
+		Err: fmt.Errorf(
+			"the capabilities declared by the following links require each other, "+
+				"so there is no order in which all of them can be deployed: %s",
+			strings.Join(cycle, " -> "),
 		),
 	}
 }

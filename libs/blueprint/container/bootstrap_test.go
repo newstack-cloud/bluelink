@@ -1552,3 +1552,87 @@ func (l *testRouteInternetGatewayLink) ValidateLink(
 ) (*provider.LinkValidateOutput, error) {
 	return &provider.LinkValidateOutput{}, nil
 }
+
+func (l *testApiGatewayLambdaLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testLambdaDynamoDBTableLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testDynamoDBTableStreamLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testDynamoDBStreamLambdaLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testDynamoDBTableLambdaLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testLambdaLambdaLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testLambdaLambda2Link) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testSubnetVPCLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testSecurityGroupVPCLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testRouteTableVPCLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testRouteRouteTableLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}
+
+func (l *testRouteInternetGatewayLink) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}

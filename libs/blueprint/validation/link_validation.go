@@ -30,6 +30,10 @@ func ValidateLinkConstraints(
 	}
 
 	diagnostics := ValidateLinkCardinality(declaredLinkGraph, linkImplInfo.cardinalityRules)
+	diagnostics = append(
+		diagnostics,
+		ValidateLinkCapabilities(linkImplInfo.linkCapabilities)...,
+	)
 
 	customDiags, err := runCustomLinkValidation(ctx, linkImplInfo.linkInstances, spec, params)
 	if err != nil {
@@ -45,6 +49,7 @@ func ValidateLinkConstraints(
 type linkImplCollected struct {
 	cardinalityRules map[string]provider.LinkGetCardinalityOutput
 	linkInstances    []*linkInstanceInfo
+	linkCapabilities []*LinkInstanceCapabilities
 }
 
 // linkInstanceInfo holds information about a specific link instance
@@ -65,6 +70,7 @@ func collectLinkImplInfo(
 	result := &linkImplCollected{
 		cardinalityRules: map[string]provider.LinkGetCardinalityOutput{},
 		linkInstances:    []*linkInstanceInfo{},
+		linkCapabilities: []*LinkInstanceCapabilities{},
 	}
 
 	for _, node := range linkChains {
@@ -107,6 +113,19 @@ func collectLinkImplInfoFromNode(
 			resourceBName: targetName,
 		})
 
+		capabilities, err := collectLinkInstanceCapabilities(
+			ctx,
+			linkImpl,
+			linkCtx,
+			linkType,
+			node.ResourceName,
+			targetName,
+		)
+		if err != nil {
+			return err
+		}
+		result.linkCapabilities = append(result.linkCapabilities, capabilities)
+
 		if _, exists := result.cardinalityRules[linkType]; !exists {
 			cardinalityOutput, err := linkImpl.GetCardinality(
 				ctx,
@@ -132,6 +151,36 @@ func collectLinkImplInfoFromNode(
 	}
 
 	return nil
+}
+
+func collectLinkInstanceCapabilities(
+	ctx context.Context,
+	linkImpl provider.Link,
+	linkCtx provider.LinkContext,
+	linkType string,
+	resourceAName string,
+	resourceBName string,
+) (*LinkInstanceCapabilities, error) {
+	capabilities := &LinkInstanceCapabilities{
+		LinkType:      linkType,
+		ResourceAName: resourceAName,
+		ResourceBName: resourceBName,
+	}
+
+	output, err := linkImpl.GetCapabilities(ctx, &provider.LinkGetCapabilitiesInput{
+		LinkContext: linkCtx,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if output == nil {
+		return capabilities, nil
+	}
+
+	capabilities.Provides = output.Provides
+	capabilities.Requires = output.Requires
+
+	return capabilities, nil
 }
 
 func runCustomLinkValidation(

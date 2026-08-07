@@ -32,9 +32,14 @@ import (
 // 5. ResourceA5
 // 6. ResourceA6
 // 7. ChildA1
+//
+// A link that requires a capability another link provides is ordered as depending on it,
+// so that it is removed first. capabilityEdges maps a link to the links it must be
+// removed before, and may be nil when no link being removed declared anything.
 func OrderElementsForRemoval(
 	elements *CollectedElements,
 	currentState *state.InstanceState,
+	capabilityEdges map[string][]string,
 ) ([]*ElementWithAllDeps, error) {
 	combinedList := []state.Element{}
 	for _, resourceInfo := range elements.Resources {
@@ -49,7 +54,11 @@ func OrderElementsForRemoval(
 		combinedList = append(combinedList, linkInfo)
 	}
 
-	combinedListWithDeps := collectElementsWithDependencies(combinedList, currentState)
+	combinedListWithDeps := collectElementsWithDependencies(
+		combinedList,
+		currentState,
+		capabilityEdges,
+	)
 
 	refChainCollector := refgraph.NewRefChainCollector()
 	collectReferencesFromElements(combinedListWithDeps, refChainCollector)
@@ -76,6 +85,7 @@ func hasDependency(
 func collectElementsWithDependencies(
 	elementList []state.Element,
 	currentState *state.InstanceState,
+	capabilityEdges map[string][]string,
 ) []*ElementWithAllDeps {
 	elementsWithDeps := make([]*ElementWithAllDeps, len(elementList))
 	for i, element := range elementList {
@@ -90,6 +100,7 @@ func collectElementsWithDependencies(
 			elementWithDeps.Element,
 			elementsWithDeps,
 			currentState,
+			capabilityEdges,
 		)
 		elementWithDeps.AllDependencies = allDependencies
 		elementWithDeps.DirectDependencies = directDependencies
@@ -102,6 +113,7 @@ func collectElementDependencies(
 	element state.Element,
 	elementsWithDeps []*ElementWithAllDeps,
 	currentState *state.InstanceState,
+	capabilityEdges map[string][]string,
 ) ([]state.Element, []state.Element) {
 	allDeps := []state.Element{}
 	directDeps := []state.Element{}
@@ -173,9 +185,43 @@ func collectElementDependencies(
 			)
 			directDeps = append(directDeps, directResourceDeps...)
 		}
+
+		// A link that requires a capability another link provides depends on it for
+		// removal ordering, which puts the requirer first. The access link has to
+		// revoke its rules while the placement link still has the function attached.
+		capabilityDeps := collectElementLinkCapabilityDependencies(
+			element.LogicalName(),
+			elementsWithDeps,
+			capabilityEdges,
+		)
+		allDeps = addUniqueElements(allDeps, capabilityDeps)
+		directDeps = addUniqueElements(directDeps, capabilityDeps)
 	}
 
 	return allDeps, directDeps
+}
+
+func collectElementLinkCapabilityDependencies(
+	linkName string,
+	elementsWithDeps []*ElementWithAllDeps,
+	capabilityEdges map[string][]string,
+) []state.Element {
+	providerNames := capabilityEdges[linkName]
+	if len(providerNames) == 0 {
+		return nil
+	}
+
+	dependencies := []state.Element{}
+	for _, elementWithDeps := range elementsWithDeps {
+		if elementWithDeps.Element.Kind() != state.LinkElement {
+			continue
+		}
+		if slices.Contains(providerNames, elementWithDeps.Element.LogicalName()) {
+			dependencies = append(dependencies, elementWithDeps.Element)
+		}
+	}
+
+	return dependencies
 }
 
 func filterElementsByLogicalName(
@@ -271,6 +317,10 @@ func collectElementDependenciesOfType(
 					elementWithDeps.Element,
 					elementsWithDeps,
 					currentState,
+					// Only resource and child elements are resolved here, and
+					// capability ordering applies to links alone.
+					/* capabilityEdges */
+					nil,
 				)
 				elementWithDeps.AllDependencies = allDeps
 				elementWithDeps.DirectDependencies = directDeps

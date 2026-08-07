@@ -462,9 +462,21 @@ func (c *defaultBlueprintContainer) removeElements(
 		return true, nil
 	}
 
+	capabilityEdges, err := BuildLinkCapabilityRemovalEdges(
+		ctx,
+		elementsToRemove.Links,
+		deployCtx.InstanceStateSnapshot,
+		c.linkRegistry,
+		deployCtx.ParamOverrides,
+	)
+	if err != nil {
+		return true, err
+	}
+
 	orderedElements, err := OrderElementsForRemoval(
 		elementsToRemove,
 		deployCtx.InstanceStateSnapshot,
+		capabilityEdges,
 	)
 	if err != nil {
 		return true, err

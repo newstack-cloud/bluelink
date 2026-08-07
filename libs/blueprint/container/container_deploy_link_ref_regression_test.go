@@ -320,3 +320,10 @@ func (l *testNoPriorityRuleLambda2Link) ValidateLink(
 ) (*provider.LinkValidateOutput, error) {
 	return &provider.LinkValidateOutput{}, nil
 }
+
+func (l *testNoPriorityRuleLambda2Link) GetCapabilities(
+	ctx context.Context,
+	input *provider.LinkGetCapabilitiesInput,
+) (*provider.LinkGetCapabilitiesOutput, error) {
+	return &provider.LinkGetCapabilitiesOutput{}, nil
+}

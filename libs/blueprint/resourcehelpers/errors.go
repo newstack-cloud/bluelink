@@ -2,6 +2,7 @@ package resourcehelpers
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
@@ -25,7 +26,30 @@ const (
 	// reason for a blueprint run error is due to an abstract resource
 	// type not being found in any of the loaded transformers.
 	ErrorReasonCodeAbstractResourceTypeNotFound errors.ErrorReasonCode = "abstract_resource_type_not_found"
+	// ErrorReasonCodeResourceLockTimeout is provided when a lock on a resource
+	// could not be acquired before the acquire timeout elapsed, because another
+	// link still holds it.
+	ErrorReasonCodeResourceLockTimeout errors.ErrorReasonCode = "resource_lock_timeout"
 )
+
+func errResourceLockTimeout(
+	resourceName string,
+	heldBy string,
+	requestedBy string,
+	timeout time.Duration,
+) error {
+	return &errors.RunError{
+		ReasonCode: ErrorReasonCodeResourceLockTimeout,
+		Err: fmt.Errorf(
+			"timed out after %s waiting for a lock on resource %q, which is held by %q "+
+				"and was requested by %q",
+			timeout,
+			resourceName,
+			heldBy,
+			requestedBy,
+		),
+	}
+}
 
 func errResourceTypeProviderNotFound(
 	providerNamespace string,

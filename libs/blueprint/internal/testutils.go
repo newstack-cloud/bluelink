@@ -361,8 +361,8 @@ type resourceLock struct {
 	instanceID string
 	// The name of the resource that the lock is acquired on.
 	resourceName string
-	// The time when the lock was acquired.
-	// This is used to determine if the lock has timed out.
+	// The time when the lock was acquired. Kept for diagnostics: a lock is not
+	// expired on age.
 	lockTime time.Time
 	// The identifier of the caller that acquired the lock.
 	acquiredBy string
@@ -379,7 +379,7 @@ func (r *ResourceRegistryMock) AcquireResourceLock(
 		default:
 			r.resourceLocksMu.Lock()
 			lockKey := createResourceLockKey(input.InstanceID, input.ResourceName)
-			if r.checkLock(lockKey) {
+			if r.checkLock(lockKey, input.AcquiredBy) {
 				r.resourceLocks[lockKey] = &resourceLock{
 					instanceID:   input.InstanceID,
 					resourceName: input.ResourceName,
@@ -398,19 +398,18 @@ func (r *ResourceRegistryMock) AcquireResourceLock(
 	}
 }
 
+// Mirrors the real registry where a held lock is never taken from its holder, and a lock
+// already held by the same acquirer is re-entrant. A mock that expired locks would let
+// tests pass against behaviour the registry does not have.
+//
 // The resource locks mutex must be held when calling this method.
-func (r *ResourceRegistryMock) checkLock(lockKey string) bool {
-	if lock, exists := r.resourceLocks[lockKey]; exists {
-		// If the lock exists, check if it has timed out.
-		if r.clock.Now().Sub(lock.lockTime) < r.resourceLockTimeout {
-			// Lock is still held, cannot acquire.
-			return false
-		}
-		// Lock has timed out, remove it.
-		delete(r.resourceLocks, lockKey)
+func (r *ResourceRegistryMock) checkLock(lockKey string, acquiredBy string) bool {
+	lock, exists := r.resourceLocks[lockKey]
+	if !exists {
+		return true
 	}
 
-	return true
+	return acquiredBy != "" && lock.acquiredBy == acquiredBy
 }
 
 func (r *ResourceRegistryMock) ReleaseResourceLock(

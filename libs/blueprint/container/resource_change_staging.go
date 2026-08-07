@@ -204,9 +204,9 @@ func (s *defaultResourceChangeStager) stageChanges(
 
 // isResourceNewForStaging determines if a resource should be treated as "new"
 // (requiring creation) during change staging. A resource is considered new if:
-// - No persisted state exists, OR
-// - The persisted state indicates the resource was never successfully created
-//   (e.g., previous creation attempt failed or was interrupted)
+//   - No persisted state exists, OR
+//   - The persisted state indicates the resource was never successfully created
+//     (e.g., previous creation attempt failed or was interrupted)
 func isResourceNewForStaging(currentState *state.ResourceState) bool {
 	if currentState == nil {
 		return true
@@ -249,10 +249,10 @@ func (s *defaultResourceChangeStager) prepareAndStageLinkChanges(
 			return err
 		}
 
-		// Links are staged in series to reflect what happens with deployment.
-		// For deployment, multiple links could be modifying the same resource,
-		// to ensure consistency in state, links involving the same resource will be
-		// both staged and deployed synchronously.
+		// Links are staged in series. Staging only computes changes, so this is about
+		// keeping the staged state consistent when several links modify the same
+		// resource, and is unrelated to how they are deployed: deployment runs the
+		// links in a batch concurrently and relies on resource locks instead.
 		err = s.linkChangeStager.StageChanges(
 			ctx,
 			linkImpl,
