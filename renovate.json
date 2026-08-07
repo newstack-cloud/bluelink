@@ -6,6 +6,11 @@
   ],
   "packageRules": [
     {
+      "description": "aws/aws-sdk-go-v2 is a monorepo with 70k+ tags (one set per sub-module). Renovate's changelog fetcher paginates all of them through the GitHub GraphQL API, which 502s; the resulting error-level log makes Renovate exit non-zero and fails the whole workflow run. Bumps still work, they just ship without release notes. See https://github.com/renovatebot/renovate/discussions/41498",
+      "matchPackageNames": ["github.com/aws/aws-sdk-go-v2{/,}**"],
+      "fetchChangeLogs": "off"
+    },
+    {
       "description": "Per-component commit scope (so release-please attributes each go.mod bump to the right component in separate-pull-requests mode) and per-component grouping (so a component's simultaneous bumps land in one PR with no go.sum conflicts). Each component MUST use a unique groupName so groups never cross component boundaries.",
       "matchFileNames": ["libs/blueprint/**"],
       "semanticCommitScope": "blueprint",

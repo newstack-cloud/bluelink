@@ -83,6 +83,21 @@ A go.mod bump would leave these stale, so:
 When a new artifact adopts this mechanism, add a `postUpgradeTasks` rule + an
 `RENOVATE_ALLOWED_COMMANDS` entry + a CI guard for it.
 
+## Changelogs for huge-tag monorepos
+
+Renovate exits non-zero if *any* error-level log occurs during a run, which fails
+the workflow even when every PR was created fine. `aws/aws-sdk-go-v2` triggers
+this: the repo carries 70k+ tags (a set per sub-module) and Renovate's changelog
+fetcher paginates all of them through GitHub's GraphQL API, which responds `502`
+([discussion #41498](https://github.com/renovatebot/renovate/discussions/41498)).
+`blueprint-resolvers` and `blueprint-state` both depend on it directly, so every
+run hit this.
+
+`renovate.json` therefore sets `fetchChangeLogs: "off"` for
+`github.com/aws/aws-sdk-go-v2{/,}**`. Bumps still open as normal, just without
+release notes in the PR body. Apply the same rule if another dependency with a
+very large tag count starts failing runs the same way.
+
 ## One-time setup
 
 1. **Create the org preset repo.** Publish the staged
