@@ -1,6 +1,6 @@
 services:
   deploy_engine_test_postgres:
-    image: postgres:17.3
+    image: postgres:17.10
     container_name: deploy_engine_test_postgres
     networks:
       - bluelink_deploy_engine_test_network
@@ -20,7 +20,7 @@ services:
       start_period: 30s
 
   deploy_engine_test_postgres_migrate:
-    image: migrate/migrate:v4.18.2
+    image: migrate/migrate:v4.19.1
     container_name: deploy_engine_test_postgres_migrate
     networks:
       - bluelink_deploy_engine_test_network
@@ -43,7 +43,7 @@ services:
   # AWS S3 emulator for objectstore state backend integration tests.
   # Mirrors the setup used by the blueprint-state library suite.
   deploy_engine_test_localstack:
-    image: localstack/localstack:4.0
+    image: localstack/localstack:4.14
     container_name: deploy_engine_test_localstack
     networks:
       - bluelink_deploy_engine_test_network
