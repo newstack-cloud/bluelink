@@ -456,6 +456,20 @@ func validateResourcePropertySubDefinitionsPath(
 			if i == len(subResourceProp.Path)-1 {
 				resolvedType = attrType
 			}
+		} else if property.FieldName != "" &&
+			currentSchema.Type == provider.ResourceDefinitionsSchemaTypeMap {
+			// A map's keys are data, not schema, so any key is valid and the value
+			// takes the type the map declares for its values. Without this a map field
+			// could be referenced only in whole, which makes a computed map of IDs
+			// keyed by a name the author chose impossible to read a single entry from.
+			if currentSchema.MapValues == nil {
+				resolvedType = string(substitutions.ResolvedSubExprTypeAny)
+				return resolvedType, diagnostics, nil
+			}
+			currentSchema = currentSchema.MapValues
+			if i == len(subResourceProp.Path)-1 {
+				resolvedType = subResourceDefinitionsSchemaType(currentSchema.Type)
+			}
 		} else if property.ArrayIndex != nil &&
 			currentSchema.Type == provider.ResourceDefinitionsSchemaTypeArray {
 			diagnostics = append(diagnostics, warnArrayIndexBoundsUnverifiable(

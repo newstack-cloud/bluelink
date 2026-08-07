@@ -209,7 +209,7 @@ func getResourceSpecPropertyDefinition(
 	property *substitutions.SubstitutionResourceProperty,
 	resourceType string,
 	resolveCtx *resolveContext,
-) (*provider.ResourceDefinitionsSchema, error) {
+) (*provider.ResourceDefinitionsSchema, bool, error) {
 	finalProperty, err := getFinalResourceSpecProperty(
 		property,
 		specDefinition,
@@ -217,14 +217,21 @@ func getResourceSpecPropertyDefinition(
 		resolveCtx,
 	)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	current := specDefinition.Schema
 	pathExists := true
+	// A computed field's contents are equally unknown until it is deployed, so crossing
+	// one on the way down makes everything below it computed too. The schema for a map's
+	// values or an array's items is shared by every entry and carries no Computed flag of
+	// its own, so without carrying it down a reference into a computed map reads as a
+	// plain missing property and fails change staging instead of deferring to deploy.
+	computedOnPath := false
 	i := 1
 	for pathExists && current != nil && i < len(finalProperty.Path) {
 		pathItem := finalProperty.Path[i]
+		computedOnPath = computedOnPath || current.Computed
 		if pathItem.FieldName != "" &&
 			current.Type == provider.ResourceDefinitionsSchemaTypeObject &&
 			current.Attributes != nil {
@@ -245,14 +252,14 @@ func getResourceSpecPropertyDefinition(
 	}
 
 	if !pathExists || current == nil {
-		return nil, errInvalidResourceSpecProperty(
+		return nil, false, errInvalidResourceSpecProperty(
 			resolveCtx.currentElementName,
 			finalProperty,
 			resourceType,
 		)
 	}
 
-	return current, nil
+	return current, computedOnPath || current.Computed, nil
 }
 
 func getFinalResourceSpecProperty(

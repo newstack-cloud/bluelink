@@ -2161,7 +2161,7 @@ func (r *defaultSubstitutionResolver) resolveResourceSpecProperty(
 		)
 	}
 
-	definition, err := getResourceSpecPropertyDefinition(
+	definition, computedOnPath, err := getResourceSpecPropertyDefinition(
 		output.SpecDefinition,
 		prop,
 		resourceType,
@@ -2171,7 +2171,7 @@ func (r *defaultSubstitutionResolver) resolveResourceSpecProperty(
 		return nil, err
 	}
 
-	if definition.Computed && resolveCtx.resolveFor == ResolveForChangeStaging {
+	if computedOnPath && resolveCtx.resolveFor == ResolveForChangeStaging {
 		// For update change staging, the current value of the computed field is
 		// resolved from the existing instance state (best-effort) so that change
 		// staging compares concrete values instead of reporting phantom

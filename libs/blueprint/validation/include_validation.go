@@ -669,4 +669,3 @@ func resolveBaseDir(
 
 	return ""
 }
-

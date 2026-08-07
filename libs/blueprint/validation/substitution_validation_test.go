@@ -2621,10 +2621,10 @@ func (s *SubstitutionValidationTestSuite) Test_produces_warning_for_child_export
 		stringOrSubs.Values[0].SubstitutionValue,
 		/* nextLocation */ nil,
 		&ValidationContext{
-			BpSchema:     blueprint,
-			Params:       &core.ParamsImpl{},
-			FuncRegistry: s.functionRegistry,
-			RefChainCollector: s.refChainCollector,
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
 			ResourceRegistry:   s.resourceRegistry,
 			DataSourceRegistry: s.dataSourceRegistry,
 			ChildExportLookup: func(
@@ -2749,4 +2749,60 @@ func (s *SubstitutionValidationTestSuite) Test_fails_for_function_return_field_o
 	loadErr, isLoadErr := internal.UnpackLoadError(err)
 	c.Assert(isLoadErr, Equals, true)
 	c.Assert(loadErr.ReasonCode, Equals, ErrorReasonCodeSubFuncPathFieldOnNonObject)
+}
+
+// A map's keys are data, not schema, so no schema can enumerate them and any key has to
+// be accepted. The path walker descended an object's attributes and an array's items but
+// never a map's values, so every key against every map field was rejected. That made a
+// computed map of IDs keyed by a name the author chose impossible to read a single entry
+// from, which is the shape a provider naturally reaches for when handing back identifiers
+// for things it created.
+func (s *SubstitutionValidationTestSuite) Test_validates_accessing_a_key_of_a_map_in_a_resource_spec(c *C) {
+	subInputStr := "${resources.exampleResource1.spec.idsByName[\"anyKeyTheAuthorChose\"]}"
+	stringOrSubs := &substitutions.StringOrSubstitutions{}
+	err := yaml.Unmarshal([]byte(subInputStr), stringOrSubs)
+	if err != nil {
+		c.Fatalf("Failed to parse substitution: %v", err)
+	}
+
+	exampleResourceName := "exampleResource1"
+	blueprint := &schema.Blueprint{
+		Resources: &schema.ResourceMap{
+			Values: map[string]*schema.Resource{
+				"exampleResource1": {
+					Type: &schema.ResourceTypeWrapper{Value: "exampleResource"},
+					Spec: &core.MappingNode{
+						Fields: map[string]*core.MappingNode{
+							"name": {
+								Scalar: &core.ScalarValue{
+									StringValue: &exampleResourceName,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	resolvedType, _, err := ValidateSubstitution(
+		context.TODO(),
+		stringOrSubs.Values[0].SubstitutionValue,
+		/* nextLocation */ nil,
+		&ValidationContext{
+			BpSchema:           blueprint,
+			Params:             &core.ParamsImpl{},
+			FuncRegistry:       s.functionRegistry,
+			RefChainCollector:  s.refChainCollector,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
+		/* usedInResourceDerivedFromTemplate */ false,
+		"resources.exampleResource2",
+		"",
+	)
+	c.Assert(err, IsNil)
+	// The value takes the type the map declares for its values, so a reference to one
+	// entry is usable everywhere a string is.
+	c.Assert(resolvedType, Equals, string(substitutions.ResolvedSubExprTypeString))
 }
