@@ -1,6 +1,6 @@
 module github.com/newstack-cloud/bluelink/tools/blueprint-ls
 
-go 1.25.0
+go 1.26
 
 require (
 	github.com/coreos/go-json v0.0.0-20231102161613-e49c8866685a
@@ -8,10 +8,10 @@ require (
 	github.com/newstack-cloud/bluelink/libs/common v0.4.0
 	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.16.0
 	github.com/newstack-cloud/ls-builder v0.2.5
-	github.com/sourcegraph/jsonrpc2 v0.2.1
+	github.com/sourcegraph/jsonrpc2 v0.2.2
 	github.com/spf13/afero v1.15.0
 	github.com/stretchr/testify v1.11.1
-	github.com/tailscale/hujson v0.0.0-20260718110524-10d7940d4c87
+	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f
 	github.com/tree-sitter-grammars/tree-sitter-yaml v0.7.2
 	github.com/tree-sitter/go-tree-sitter v0.25.0
 	github.com/tree-sitter/tree-sitter-json v0.24.8
