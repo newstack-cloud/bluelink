@@ -652,6 +652,104 @@ func (s *SyntacticDetectionSuite) TestFindNearestContainerKind() {
 	}
 }
 
+// A top-level declaration header names the element being declared. That is
+// neither a key nor a value position, so no field name or declaration keyword
+// can complete there.
+func (s *SyntacticDetectionSuite) TestDetectSyntacticPosition_BlueprintDeclarationHeader() {
+	tests := []struct {
+		name       string
+		textBefore string
+		expected   SyntacticPosition
+	}{
+		{
+			name:       "partially typed keyword still completes as a keyword",
+			textBefore: "resource",
+			expected:   SyntacticPositionKeyField,
+		},
+		{
+			name:       "naming a resource",
+			textBefore: "resource ",
+			expected:   SyntacticPositionUnknown,
+		},
+		{
+			name:       "partially typed resource name",
+			textBefore: "resource orders",
+			expected:   SyntacticPositionUnknown,
+		},
+		{
+			name:       "naming a variable",
+			textBefore: "variable ",
+			expected:   SyntacticPositionUnknown,
+		},
+		{
+			name:       "naming a data source",
+			textBefore: "data ",
+			expected:   SyntacticPositionUnknown,
+		},
+		{
+			name:       "element type after the colon stays a key position",
+			textBefore: "resource orders: ",
+			expected:   SyntacticPositionKeyField,
+		},
+		{
+			name:       "string literal keeps its own completions",
+			textBefore: "transform \"",
+			expected:   SyntacticPositionKeyField,
+		},
+		{
+			name:       "indented line is inside a block, not a declaration",
+			textBefore: "    resource ",
+			expected:   SyntacticPositionKeyField,
+		},
+		{
+			name:       "a field sharing a keyword name is still a field",
+			textBefore: "        value",
+			expected:   SyntacticPositionKeyField,
+		},
+		{
+			name:       "a non-keyword first word is an ordinary field",
+			textBefore: "tableName ",
+			expected:   SyntacticPositionKeyField,
+		},
+		{
+			name:       "assignment is still a value position",
+			textBefore: "        tableName = ",
+			expected:   SyntacticPositionValueField,
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			pos := DetectSyntacticPosition(
+				SyntacticStyleBlueprint,
+				nil,
+				nil,
+				source.Position{Line: 1, Column: 1},
+				tt.textBefore,
+			)
+			s.Assert().Equal(tt.expected, pos, "textBefore: %q", tt.textBefore)
+		})
+	}
+}
+
+// The declaration-header rule is specific to the blueprint language: the same
+// text in YAML is an ordinary key being typed.
+func (s *SyntacticDetectionSuite) TestDetectSyntacticPosition_DeclarationRuleIsBlueprintOnly() {
+	for _, style := range []SyntacticStyle{SyntacticStyleBlockYAML, SyntacticStyleFlowYAML, SyntacticStyleJSONC} {
+		pos := DetectSyntacticPosition(
+			style,
+			nil,
+			nil,
+			source.Position{Line: 1, Column: 1},
+			"resource ",
+		)
+		s.Assert().NotEqual(
+			SyntacticPositionUnknown, pos,
+			"style %v must be unaffected by the blueprint declaration rule", style,
+		)
+	}
+}
+
 func TestSyntacticDetectionSuite(t *testing.T) {
 	suite.Run(t, new(SyntacticDetectionSuite))
 }

@@ -1,0 +1,9 @@
+{
+  "providers": { "aws": { "region": "eu-west-1" } },
+  "transformers": { "celerity": {} },
+  "contextVariables": {
+    "deployTarget": "aws-serverless",
+    "celerity.appName": "generated-app"
+  },
+  "dependencies": { "newstack-cloud/aws": "^0.4.0" }
+}

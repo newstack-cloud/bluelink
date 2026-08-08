@@ -1,0 +1,4 @@
+{
+  "providers": { "aws": { "region": "eu-west-1" } },
+  "contextVariables": { "deployTarget": "aws", "appEnv": "prod" }
+}

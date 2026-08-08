@@ -153,11 +153,23 @@ type DiagnosticsInitOptions struct {
 // LSP/window reload to take effect.
 type BlueprintsInitOptions struct {
 	// TransformSpec enables transformer plugins during validation.
-	// Defaults to false. Requires transformer plugins that handle the
-	// validation context.
+	// Defaults to true, matching the CLI, so that editor diagnostics agree
+	// with what a command line validation reports. Transformers are only run
+	// for documents that have deploy configuration available.
 	TransformSpec *bool `json:"transformSpec,omitempty"`
 	// ValidateAfterTransform enables resource validation against the
 	// transformed blueprint shape. Has no effect unless TransformSpec is
 	// also true. Defaults to false.
 	ValidateAfterTransform *bool `json:"validateAfterTransform,omitempty"`
+	// DeployConfigFile is an explicit path to a Bluelink deploy configuration
+	// file, used for every blueprint. An absolute path is used directly; a
+	// relative one is resolved against each directory of the upward search, so a
+	// per-environment file such as "bluelink.deploy.dev.jsonc" resolves against
+	// the project. When empty, configuration is discovered by searching upwards
+	// from each blueprint document.
+	DeployConfigFile *string `json:"deployConfigFile,omitempty"`
+	// DeployConfigFileNames replaces the conventional file names searched for,
+	// in preference order, for projects that keep deploy configuration under
+	// names of their own choosing. Ignored when DeployConfigFile is set.
+	DeployConfigFileNames []string `json:"deployConfigFileNames,omitempty"`
 }

@@ -11,6 +11,18 @@ import (
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 )
 
+const (
+	suggestionsMetadataKey = "suggestions"
+	maxValuesShown         = 8
+)
+
+// The values that could have been used are held under a key specific to the kind of
+// value for resource definition fields and under a general key everywhere else.
+var availableValuesLabels = map[string]string{
+	"availableFields": "Available fields",
+	"availableValues": "Available",
+}
+
 // BlueprintToLSP deals with transforming blueprint diagnostics to LSP diagnostics.
 // When showAnyTypeWarnings is false, warning diagnostics tagged with
 // ErrorReasonCodeAnyTypeWarning are filtered out.
@@ -78,17 +90,54 @@ func formatDiagnosticWithContext(message string, ctx *errors.ErrorContext) strin
 
 	sb := strings.Builder{}
 	sb.WriteString(message)
+	WriteSuggestions(&sb, ctx.Metadata)
 	sb.WriteString("\n\nSuggested Actions:\n")
 
 	for i, action := range ctx.SuggestedActions {
-		sb.WriteString(fmt.Sprintf("  %d. %s", i+1, action.Title))
+		fmt.Fprintf(&sb, "  %d. %s", i+1, action.Title)
 		if action.Description != "" {
-			sb.WriteString(fmt.Sprintf(": %s", action.Description))
+			fmt.Fprintf(&sb, ": %s", action.Description)
 		}
 		sb.WriteString("\n")
 	}
 
 	return sb.String()
+}
+
+// WriteSuggestions writes the values similar to the one that could not be resolved,
+// along with the values that were available, from the metadata of an error context.
+// Nothing is written when the metadata holds neither.
+func WriteSuggestions(sb *strings.Builder, metadata map[string]any) {
+	if metadata == nil {
+		return
+	}
+
+	if suggestions, ok := metadata[suggestionsMetadataKey].([]string); ok && len(suggestions) > 0 {
+		sb.WriteString("\n\nDid you mean: ")
+		sb.WriteString(strings.Join(suggestions, ", "))
+		sb.WriteString("?")
+	}
+
+	for key, label := range availableValuesLabels {
+		values, ok := metadata[key].([]string)
+		if !ok || len(values) == 0 {
+			continue
+		}
+
+		fmt.Fprintf(sb, "\n\n%s: ", label)
+		sb.WriteString(strings.Join(truncateValues(values), ", "))
+		if len(values) > maxValuesShown {
+			fmt.Fprintf(sb, ", ... (%d more)", len(values)-maxValuesShown)
+		}
+	}
+}
+
+func truncateValues(values []string) []string {
+	if len(values) <= maxValuesShown {
+		return values
+	}
+
+	return values[:maxValuesShown]
 }
 
 func lspDiagnosticRangeFromBlueprintDiagnosticRange(bpRange *core.DiagnosticRange) lsp.Range {

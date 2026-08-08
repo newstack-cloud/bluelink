@@ -207,6 +207,8 @@ func (r *stubLinkRegistry) Provider(
 }
 
 type stubLink struct {
+	provider.LinkNoCapabilities
+
 	annotationDefs   map[string]*provider.LinkAnnotationDefinition
 	cardinalityA     provider.LinkCardinality
 	cardinalityB     provider.LinkCardinality

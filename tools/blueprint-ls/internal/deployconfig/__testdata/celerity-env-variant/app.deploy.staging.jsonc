@@ -1,0 +1,4 @@
+{
+  "appName": "staging-app",
+  "deployTarget": { "name": "aws-serverless", "appEnv": "staging" }
+}

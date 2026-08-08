@@ -1,0 +1,6 @@
+{
+  "contextVariables": {
+    "deployTarget": "aws",
+    "celerity.appName": "stale-generated-app"
+  }
+}

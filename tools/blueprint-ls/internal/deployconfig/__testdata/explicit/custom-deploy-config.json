@@ -1,0 +1,3 @@
+{
+  "contextVariables": { "deployTarget": "azure-serverless" }
+}

@@ -876,37 +876,75 @@ func findResourceFieldSchema(
 		return nil, nil
 	}
 
-	currentSchema := defSchema
-	i := 0
-	for currentSchema != nil && i < len(path) {
-		pathItem := path[i]
+	return resolveResourceFieldSchema(
+		defSchema,
+		path,
+		map[*provider.ResourceDefinitionsSchema]bool{},
+	), nil
+}
 
-		objectFieldSchema := checkResourceObjectFieldSchema(currentSchema, pathItem)
-		if objectFieldSchema != nil {
-			currentSchema = objectFieldSchema
-		}
-
-		mapFieldSchema := checkResourceMapFieldSchema(currentSchema, pathItem)
-		if mapFieldSchema != nil {
-			currentSchema = mapFieldSchema
-		}
-
-		arrayItemSchema := checkResourceArrayItemSchema(currentSchema, pathItem)
-		if arrayItemSchema != nil {
-			currentSchema = arrayItemSchema
-		}
-
-		if objectFieldSchema == nil && mapFieldSchema == nil && arrayItemSchema == nil {
-			// Avoid associating the field with parent schemas,
-			// this will create confusing docs/help information that suggests
-			// a given field has a type that it does not.
-			currentSchema = nil
-		}
-
-		i += 1
+func resolveResourceFieldSchema(
+	currentSchema *provider.ResourceDefinitionsSchema,
+	path []*substitutions.SubstitutionPathItem,
+	visitedUnions map[*provider.ResourceDefinitionsSchema]bool,
+) *provider.ResourceDefinitionsSchema {
+	if currentSchema == nil || len(path) == 0 {
+		return currentSchema
 	}
 
-	return currentSchema, nil
+	if len(currentSchema.OneOf) > 0 {
+		return resolveUnionFieldSchema(currentSchema, path, visitedUnions)
+	}
+
+	return resolveResourceFieldSchema(
+		stepIntoResourceFieldSchema(currentSchema, path[0]),
+		path[1:],
+		visitedUnions,
+	)
+}
+
+// A union doesn't consume a path item, so self-referential schemas (e.g. an
+// "any JSON" schema that lists itself under OneOf) are tracked to terminate
+// instead of recursing indefinitely.
+func resolveUnionFieldSchema(
+	unionSchema *provider.ResourceDefinitionsSchema,
+	path []*substitutions.SubstitutionPathItem,
+	visitedUnions map[*provider.ResourceDefinitionsSchema]bool,
+) *provider.ResourceDefinitionsSchema {
+	if visitedUnions[unionSchema] {
+		return nil
+	}
+	visitedUnions[unionSchema] = true
+	defer delete(visitedUnions, unionSchema)
+
+	for _, oneOfSchema := range unionSchema.OneOf {
+		resolved := resolveResourceFieldSchema(oneOfSchema, path, visitedUnions)
+		if resolved != nil {
+			return resolved
+		}
+	}
+
+	return nil
+}
+
+func stepIntoResourceFieldSchema(
+	currentSchema *provider.ResourceDefinitionsSchema,
+	pathItem *substitutions.SubstitutionPathItem,
+) *provider.ResourceDefinitionsSchema {
+	// Each path item descends exactly one level, a field that holds a map must
+	// not be unwrapped to its values until the key that follows it is reached.
+	if objectFieldSchema := checkResourceObjectFieldSchema(currentSchema, pathItem); objectFieldSchema != nil {
+		return objectFieldSchema
+	}
+
+	if mapFieldSchema := checkResourceMapFieldSchema(currentSchema, pathItem); mapFieldSchema != nil {
+		return mapFieldSchema
+	}
+
+	// Avoid associating the field with parent schemas when nothing matches,
+	// this will create confusing docs/help information that suggests
+	// a given field has a type that it does not.
+	return checkResourceArrayItemSchema(currentSchema, pathItem)
 }
 
 func checkResourceObjectFieldSchema(

@@ -132,6 +132,20 @@ func (s *State) GetDocumentContent(uri string) *string {
 	return &content
 }
 
+// GetOpenDocumentURIs returns the URIs of all documents the server currently
+// holds content for.
+func (s *State) GetOpenDocumentURIs() []string {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	uris := make([]string, 0, len(s.documentContent))
+	for uri := range s.documentContent {
+		uris = append(uris, uri)
+	}
+
+	return uris
+}
+
 // SetDocumentContent sets the content of a document by its URI.
 func (s *State) SetDocumentContent(uri string, content string) {
 	s.lock.Lock()

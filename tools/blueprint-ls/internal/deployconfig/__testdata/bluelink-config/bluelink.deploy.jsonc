@@ -1,0 +1,7 @@
+{
+  // Canonical Bluelink deploy configuration.
+  "providers": { "aws": { "region": "eu-west-2" } },
+  "transformers": { "celerity": {} },
+  "contextVariables": { "deployTarget": "aws-serverless" },
+  "dependencies": { "newstack-cloud/aws": "~2.2.1" }
+}

@@ -1,0 +1,12 @@
+{
+  // Discovery should find this from nested directories.
+  "appName": "walk-app",
+  "deployTarget": {
+    "name": "aws-serverless",
+    "appEnv": "development",
+    "config": {
+      "aws.region": "us-east-1",
+      "aws.sqs.messageRetentionPeriod": 60
+    }
+  }
+}

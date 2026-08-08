@@ -1,0 +1,4 @@
+{
+  "appName": "source-of-truth-app",
+  "deployTarget": { "name": "aws-serverless" }
+}

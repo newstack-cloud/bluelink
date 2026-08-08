@@ -10,8 +10,8 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/resourcehelpers"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/blueprint"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/deployconfig"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/languageserver"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/languageservices"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
@@ -72,14 +72,17 @@ func main() {
 		logger,
 	)
 
+	// Spec transformation is disabled until plugins are loaded, at which point
+	// the loaders are rebuilt from the client's initialisation options. Until
+	// then transformers are still registered so that transforms which are not
+	// available can be reported as diagnostics.
 	blueprintLoader := container.NewDefaultLoader(
 		providers,
-		map[string]transform.SpecTransformer{},
+		transformers,
 		/* stateContainer */ nil,
 		/* childResolver */ nil,
 		// Disable runtime value validation as it is not needed for diagnostics.
 		container.WithLoaderValidateRuntimeValues(false),
-		// Disable spec transformation as it is not needed for diagnostics.
 		container.WithLoaderTransformSpec(false),
 	)
 
@@ -88,7 +91,14 @@ func main() {
 		state,
 		settingsService,
 		diagnosticErrorService,
-		blueprintLoader,
+		languageservices.Loaders{
+			WithTransform:    blueprintLoader,
+			WithoutTransform: blueprintLoader,
+			TransformEnabled: false,
+		},
+		// Replaced during initialise with a resolver configured from the
+		// client's initialisation options.
+		deployconfig.NewResolver(deployconfig.ResolverConfig{}, logger),
 		logger,
 	)
 

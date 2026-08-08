@@ -6,8 +6,10 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/lang"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
@@ -30,6 +32,56 @@ func (s *DiagnosticErrorServiceSuite) SetupTest() {
 
 func TestDiagnosticErrorServiceSuite(t *testing.T) {
 	suite.Run(t, new(DiagnosticErrorServiceSuite))
+}
+
+func (s *DiagnosticErrorServiceSuite) Test_unpositioned_error_is_attributed_to_matching_resource() {
+	// Errors reported by plugins for a resource type carry no location, they must
+	// still be reported against the resources that declare the type instead of
+	// defaulting to the start of the document.
+	docURI := "file:///test.yaml"
+	s.service.state.SetDocumentContext(string(docURI), &docmodel.DocumentContext{
+		URI: string(docURI),
+		Blueprint: &schema.Blueprint{
+			Resources: &schema.ResourceMap{
+				Values: map[string]*schema.Resource{
+					"api": {
+						Type: &schema.ResourceTypeWrapper{
+							Value: "celerity/apis",
+							SourceMeta: &source.Meta{
+								Position: source.Position{Line: 12, Column: 5},
+							},
+						},
+					},
+					"table": {
+						Type: &schema.ResourceTypeWrapper{
+							Value: "aws/dynamodb/table",
+							SourceMeta: &source.Meta{
+								Position: source.Position{Line: 30, Column: 5},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+
+	err := fmt.Errorf(
+		"plugin response error: abstract resource type not implemented" +
+			" in transformer plugin: celerity/apis",
+	)
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(err, lsp.URI(docURI))
+
+	s.Require().Len(diagnostics, 1)
+	s.Assert().Equal(lsp.UInteger(11), diagnostics[0].Range.Start.Line)
+	s.Assert().Equal(lsp.UInteger(4), diagnostics[0].Range.Start.Character)
+}
+
+func (s *DiagnosticErrorServiceSuite) Test_unpositioned_error_without_matching_resource() {
+	err := fmt.Errorf("a failure that does not refer to any resource type")
+	diagnostics, _ := s.service.BlueprintErrorToDiagnostics(err, "file:///test.yaml")
+
+	s.Require().Len(diagnostics, 1)
+	s.Assert().Equal(lsp.UInteger(0), diagnostics[0].Range.Start.Line)
 }
 
 func (s *DiagnosticErrorServiceSuite) Test_load_error_with_exact_end_position() {

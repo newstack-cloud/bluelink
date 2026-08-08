@@ -1,0 +1,9 @@
+{
+  "providers": {
+    "aws": {
+      "accessKeyId": "[placeholder__aws_access_key_id]",
+      "secretAccessKey": "[placeholder__aws_secret_access_key]"
+    }
+  },
+  "contextVariables": { "deployTarget": "[placeholder__deploy_target]" }
+}

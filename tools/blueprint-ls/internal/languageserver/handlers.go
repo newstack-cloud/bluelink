@@ -16,7 +16,9 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/plugin"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/blueprint"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/deployconfig"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/docmodel"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/languageservices"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/linkinfo"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/pluginhost"
 	common "github.com/newstack-cloud/ls-builder/common"
@@ -24,13 +26,40 @@ import (
 	"go.uber.org/zap"
 )
 
+// The encodings this language server can map
+// document positions with.
+var supportedPositionEncodings = map[lsp.PositionEncodingKind]bool{
+	lsp.PositionEncodingKindUTF8:  true,
+	lsp.PositionEncodingKindUTF16: true,
+	lsp.PositionEncodingKindUTF32: true,
+}
+
+// Picks the encoding to use with a client.
+//
+// The client lists encodings in decreasing order of preference, so the first
+// one this server supports wins. Both the general capabilities and the encoding
+// list are optional, and clients may offer an encoding the server does not
+// implement, so the result falls back to the spec's default of UTF-16. Echoing
+// back an unsupported encoding would misreport every position the server sends.
+func negotiatePositionEncoding(general *lsp.GeneralClientCapabilities) lsp.PositionEncodingKind {
+	if general == nil {
+		return lsp.PositionEncodingKindUTF16
+	}
+
+	for _, encoding := range general.PositionEncodings {
+		if supportedPositionEncodings[encoding] {
+			return encoding
+		}
+	}
+
+	return lsp.PositionEncodingKindUTF16
+}
+
 func (a *Application) handleInitialise(ctx *common.LSPContext, params *lsp.InitializeParams) (any, error) {
 	a.logger.Debug("Initialising server...")
 	clientCapabilities := params.Capabilities
 	capabilities := a.handler.CreateServerCapabilities()
-	// Take the first position encoding as the one with the highest priority as per the spec.
-	// this language server supports all three position encodings. (UTF-16, UTF-8, UTF-32)
-	capabilities.PositionEncoding = params.Capabilities.General.PositionEncodings[0]
+	capabilities.PositionEncoding = negotiatePositionEncoding(clientCapabilities.General)
 	a.state.SetPositionEncodingKind(capabilities.PositionEncoding)
 
 	capabilities.SignatureHelpProvider = &lsp.SignatureHelpOptions{
@@ -91,7 +120,9 @@ func (a *Application) handleInitialise(ctx *common.LSPContext, params *lsp.Initi
 		)
 	}
 
+	a.loaderSettings.workspaceRoots = workspaceRootsFromParams(params)
 	a.applyBlueprintsInitOptions(initOpts)
+	a.rebuildDeployConfigResolver()
 
 	// Load plugins if configured (only once per server lifetime)
 	pluginConfig := pluginhost.NewDefaultConfig().WithInitOptions(initOpts)
@@ -128,6 +159,52 @@ func (a *Application) applyBlueprintsInitOptions(initOpts *pluginhost.Initializa
 	if initOpts.Blueprints.ValidateAfterTransform != nil {
 		a.loaderSettings.validateAfterTransform = *initOpts.Blueprints.ValidateAfterTransform
 	}
+	if initOpts.Blueprints.DeployConfigFile != nil {
+		a.loaderSettings.deployConfigFile = *initOpts.Blueprints.DeployConfigFile
+	}
+	if len(initOpts.Blueprints.DeployConfigFileNames) > 0 {
+		a.loaderSettings.deployConfigFileNames = initOpts.Blueprints.DeployConfigFileNames
+	}
+}
+
+func (a *Application) rebuildDeployConfigResolver() {
+	a.diagnosticService.UpdateDeployConfigResolver(
+		deployconfig.NewResolver(
+			deployconfig.ResolverConfig{
+				ExplicitPath:   a.loaderSettings.deployConfigFile,
+				CandidatePaths: a.loaderSettings.deployConfigFileNames,
+				WorkspaceRoots: a.loaderSettings.workspaceRoots,
+			},
+			a.logger,
+		),
+	)
+}
+
+// Collects the directories the client opened, which
+// bound the search for deploy configuration.
+//
+// Workspace folders are preferred over the deprecated single root, and a client
+// may send neither, in which case the search falls back to its own boundary
+// detection.
+func workspaceRootsFromParams(params *lsp.InitializeParams) []string {
+	roots := []string{}
+	for _, folder := range params.WorkspaceFolders {
+		if path := deployconfig.FilePathFromURI(string(folder.URI)); path != "" {
+			roots = append(roots, path)
+		}
+	}
+
+	if len(roots) > 0 {
+		return roots
+	}
+
+	if params.RootURI != nil {
+		if path := deployconfig.FilePathFromURI(string(*params.RootURI)); path != "" {
+			roots = append(roots, path)
+		}
+	}
+
+	return roots
 }
 
 func (a *Application) handleInitialised(ctx *common.LSPContext, params *lsp.InitializedParams) error {
@@ -223,6 +300,34 @@ func (a *Application) handleTextDocumentDidSave(ctx *common.LSPContext, params *
 	}
 	// Flush any pending diagnostics immediately on save
 	a.debouncer.Flush(string(params.TextDocument.URI))
+	return nil
+}
+
+// Responds to deploy configuration changes the
+// client watches on the server's behalf. Deploy configuration selects the
+// deploy target transformers emit for, so a change to it can alter the
+// diagnostics for every open blueprint, not just the file that changed.
+func (a *Application) handleDidChangeWatchedFiles(
+	ctx *common.LSPContext,
+	params *lsp.DidChangeWatchedFilesParams,
+) error {
+	a.logger.Debug(
+		"Deploy configuration changed, revalidating open documents",
+		zap.Int("changes", len(params.Changes)),
+	)
+	a.diagnosticService.InvalidateDeployConfig()
+
+	// Revalidation goes through the debouncer rather than running inline: a
+	// single save can arrive as several change events, and validating every
+	// open document on each one would block this handler behind a full
+	// validation per document.
+	for _, uri := range a.state.GetOpenDocumentURIs() {
+		docURI := lsp.URI(uri)
+		a.debouncer.Debounce(uri, func() {
+			a.publishDiagnosticsBackground(docURI)
+		})
+	}
+
 	return nil
 }
 
@@ -673,7 +778,7 @@ func (a *Application) ReinitialiseRegistries(
 		transformers,
 		time.Second, // Not used by LS
 		nil,         // No state container needed
-		nil,         // No params needed
+		blueprint.ValidationParams(),
 	)
 	a.dataSourceRegistry = provider.NewDataSourceRegistry(
 		providers,
@@ -687,17 +792,15 @@ func (a *Application) ReinitialiseRegistries(
 		linkinfo.NewTransformerSource(transformers),
 	)
 
-	// Create a new blueprint loader with merged providers
-	blueprintLoader := container.NewDefaultLoader(
-		providers,
-		transformers,
-		nil, // No state container
-		nil, // No child resolver
-		container.WithLoaderValidateRuntimeValues(false),
-		container.WithLoaderTransformSpec(a.loaderSettings.transformSpec),
-		container.WithLoaderValidateAfterTransform(a.loaderSettings.validateAfterTransform),
-	)
-	a.blueprintLoader = blueprintLoader
+	// Create new blueprint loaders with merged providers. Two are built so
+	// that documents without deploy configuration can still be validated
+	// without running transformers, which need a deploy target to emit for.
+	loaders := languageservices.Loaders{
+		WithTransform:    a.newBlueprintLoader(providers, transformers, a.loaderSettings.transformSpec),
+		WithoutTransform: a.newBlueprintLoader(providers, transformers, false),
+		TransformEnabled: a.loaderSettings.transformSpec,
+	}
+	a.blueprintLoader = loaders.WithTransform
 
 	// Update services with new registries
 	a.completionService.UpdateRegistries(
@@ -707,13 +810,31 @@ func (a *Application) ReinitialiseRegistries(
 		a.functionRegistry,
 		linkSource,
 	)
-	a.diagnosticService.UpdateLoader(blueprintLoader)
+	a.diagnosticService.UpdateLoaders(loaders)
 	a.signatureService.UpdateRegistry(a.functionRegistry)
 	a.hoverService.UpdateRegistries(
 		a.functionRegistry,
 		a.resourceRegistry,
 		a.dataSourceRegistry,
 		linkSource,
+	)
+}
+
+func (a *Application) newBlueprintLoader(
+	providers map[string]provider.Provider,
+	transformers map[string]transform.SpecTransformer,
+	transformSpec bool,
+) container.Loader {
+	return container.NewDefaultLoader(
+		providers,
+		transformers,
+		/* stateContainer */ nil,
+		/* childResolver */ nil,
+		container.WithLoaderValidateRuntimeValues(false),
+		container.WithLoaderTransformSpec(transformSpec),
+		container.WithLoaderValidateAfterTransform(
+			transformSpec && a.loaderSettings.validateAfterTransform,
+		),
 	)
 }
 

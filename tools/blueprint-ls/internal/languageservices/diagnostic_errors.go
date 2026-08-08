@@ -1,7 +1,9 @@
 package languageservices
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -10,6 +12,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/diagnostichelpers"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
 	"go.uber.org/zap"
 )
@@ -73,7 +76,7 @@ func (s *DiagnosticErrorService) BlueprintErrorToDiagnostics(
 		return diagnostics, enhanced
 	}
 
-	return getGeneralErrorDiagnostics(err), enhanced
+	return s.getGeneralErrorDiagnostics(err, docURI), enhanced
 }
 
 // Handles the blueprint-language parse/lex error types, mapping
@@ -124,8 +127,25 @@ func (s *DiagnosticErrorService) collectLangMetaError(
 	})
 }
 
-func getGeneralErrorDiagnostics(err error) []lsp.Diagnostic {
+func (s *DiagnosticErrorService) getGeneralErrorDiagnostics(
+	err error,
+	docURI lsp.URI,
+) []lsp.Diagnostic {
 	severity := lsp.DiagnosticSeverityError
+
+	diagnostics := []lsp.Diagnostic{}
+	for _, location := range s.resourceTypeLocations(err, docURI) {
+		diagnostics = append(diagnostics, lsp.Diagnostic{
+			Range:    s.rangeFromBlueprintErrorLocation(location, nil, docURI),
+			Severity: &severity,
+			Message:  err.Error(),
+		})
+	}
+
+	if len(diagnostics) > 0 {
+		return diagnostics
+	}
+
 	return []lsp.Diagnostic{
 		{
 			Range: lsp.Range{
@@ -142,6 +162,60 @@ func getGeneralErrorDiagnostics(err error) []lsp.Diagnostic {
 			Message:  err.Error(),
 		},
 	}
+}
+
+// Errors that reach the general fallbacks often carry no location of their own,
+// most commonly errors reported by a plugin for a resource type. Matching the error
+// against the resource types declared in the document keeps the diagnostic on the
+// resources that the error refers to instead of the start of the document.
+func (s *DiagnosticErrorService) resourceTypeLocations(
+	err error,
+	docURI lsp.URI,
+) []blueprintErrorLocation {
+	blueprint := s.state.GetDocumentSchema(string(docURI))
+	if blueprint == nil || blueprint.Resources == nil {
+		return nil
+	}
+
+	message := err.Error()
+	locations := []blueprintErrorLocation{}
+	for _, resource := range blueprint.Resources.Values {
+		if isResourceTypeReferencedInError(resource, message) {
+			locations = append(
+				locations,
+				blueprintErrorLocationLangMeta{resource.Type.SourceMeta},
+			)
+		}
+	}
+
+	// Resources are held in a map, sort the locations so that the diagnostics
+	// produced for a document are stable between validation runs.
+	slices.SortFunc(locations, compareErrorLocations)
+
+	return locations
+}
+
+func isResourceTypeReferencedInError(resource *schema.Resource, message string) bool {
+	if resource == nil || resource.Type == nil ||
+		resource.Type.Value == "" || resource.Type.SourceMeta == nil {
+		return false
+	}
+
+	return strings.Contains(message, resource.Type.Value)
+}
+
+func compareErrorLocations(locationA, locationB blueprintErrorLocation) int {
+	lineA, lineB := locationA.Line(), locationB.Line()
+	if lineA != nil && lineB != nil && *lineA != *lineB {
+		return cmp.Compare(*lineA, *lineB)
+	}
+
+	columnA, columnB := locationA.Column(), locationB.Column()
+	if columnA != nil && columnB != nil {
+		return cmp.Compare(*columnA, *columnB)
+	}
+
+	return 0
 }
 
 func (s *DiagnosticErrorService) collectLoadErrors(
@@ -268,26 +342,7 @@ func formatLoadErrorWithContext(err *errors.LoadError) string {
 	sb := strings.Builder{}
 	sb.WriteString(err.Err.Error())
 
-	// Add typo suggestions if available (from schema validation)
-	if err.Context.Metadata != nil {
-		if suggestions, ok := err.Context.Metadata["suggestions"].([]string); ok && len(suggestions) > 0 {
-			sb.WriteString("\n\nDid you mean: ")
-			sb.WriteString(strings.Join(suggestions, ", "))
-			sb.WriteString("?")
-		}
-
-		// Add available fields hint
-		if fields, ok := err.Context.Metadata["availableFields"].([]string); ok && len(fields) > 0 {
-			sb.WriteString("\n\nAvailable fields: ")
-			if len(fields) <= 8 {
-				sb.WriteString(strings.Join(fields, ", "))
-			} else {
-				// Show first 8 fields with ellipsis for large schemas
-				sb.WriteString(strings.Join(fields[:8], ", "))
-				sb.WriteString(fmt.Sprintf(", ... (%d more)", len(fields)-8))
-			}
-		}
-	}
+	diagnostichelpers.WriteSuggestions(&sb, err.Context.Metadata)
 
 	if len(err.Context.SuggestedActions) > 0 {
 		sb.WriteString("\n\nSuggested Actions:\n")
@@ -539,10 +594,20 @@ func (s *DiagnosticErrorService) collectGeneralError(
 	parentLoadError *errors.LoadError,
 	docURI lsp.URI,
 ) {
+	parentLocation := &blueprintErrorLocationLoadErr{parentLoadError}
+	if parentLocation.Line() == nil && parentLocation.Column() == nil {
+		// The parent is usually the wrapper for multiple validation errors, which
+		// carries no location of its own, leaving the diagnostic at the start of
+		// the document unless it can be attributed to a resource.
+		locatedDiagnostics := s.getGeneralErrorDiagnostics(err, docURI)
+		*diagnostics = append(*diagnostics, locatedDiagnostics...)
+		return
+	}
+
 	severity := lsp.DiagnosticSeverityError
 	*diagnostics = append(*diagnostics, lsp.Diagnostic{
 		Range: s.rangeFromBlueprintErrorLocation(
-			&blueprintErrorLocationLoadErr{parentLoadError},
+			parentLocation,
 			nil,
 			docURI,
 		),

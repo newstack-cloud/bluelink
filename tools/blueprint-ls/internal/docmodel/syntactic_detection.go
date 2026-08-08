@@ -51,7 +51,7 @@ func DetectSyntacticPosition(
 ) SyntacticPosition {
 	switch style {
 	case SyntacticStyleBlockYAML:
-		return detectBlockYAMLPosition(node, ancestors, textBefore)
+		return detectBlockYAMLPosition(ancestors, textBefore)
 	case SyntacticStyleBlueprint:
 		return detectBlueprintPosition(ancestors, textBefore)
 	case SyntacticStyleFlowYAML, SyntacticStyleJSONC:
@@ -91,8 +91,57 @@ func detectBlueprintPosition(
 		}
 	}
 
+	// Naming the element being declared is neither a key nor a value position:
+	// no field name or keyword can complete there.
+	if isDeclarationHeaderName(currentLineText) {
+		return SyntacticPositionUnknown
+	}
+
 	// Otherwise the user is typing a field name / declaration keyword.
 	return SyntacticPositionKeyField
+}
+
+// blueprintDeclarationKeywords introduce a top-level declaration, and are
+// followed by the name or literal for the element being declared.
+var blueprintDeclarationKeywords = map[string]bool{
+	"resource":  true,
+	"variable":  true,
+	"value":     true,
+	"data":      true,
+	"include":   true,
+	"export":    true,
+	"metadata":  true,
+	"version":   true,
+	"transform": true,
+}
+
+// Reports whether the cursor sits in the name part of a
+// top-level declaration header, as in "resource |" or "variable my|".
+//
+// Only an unindented line qualifies. A top-level declaration starts at the
+// margin, whereas an indented line is inside a block, where a field may
+// legitimately share its name with a keyword.
+//
+// A ":" means the header has moved on to the element type and a quote means a
+// string literal, both of which have completions of their own, so neither is
+// treated as part of the name.
+func isDeclarationHeaderName(currentLine string) bool {
+	if currentLine == "" || currentLine[0] == ' ' || currentLine[0] == '\t' {
+		return false
+	}
+
+	if strings.ContainsAny(currentLine, ":\"") {
+		return false
+	}
+
+	fields := strings.Fields(currentLine)
+	if len(fields) == 0 || !blueprintDeclarationKeywords[fields[0]] {
+		return false
+	}
+
+	// Without whitespace after it the keyword is still being typed, and should
+	// complete as a keyword.
+	return len(currentLine) > len(fields[0])
 }
 
 func isInsideUnclosedBracket(currentLine string) bool {
@@ -115,7 +164,6 @@ func isComparisonOperatorAt(line string, idx int) bool {
 // detectBlockYAMLPosition handles position detection for block-style YAML.
 // Block YAML uses indentation for structure and "- " markers for sequence items.
 func detectBlockYAMLPosition(
-	node *UnifiedNode,
 	ancestors []*UnifiedNode,
 	textBefore string,
 ) SyntacticPosition {

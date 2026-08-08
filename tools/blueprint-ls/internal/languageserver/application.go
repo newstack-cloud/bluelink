@@ -26,9 +26,9 @@ type Application struct {
 	signatureService      *languageservices.SignatureService
 	hoverService          *languageservices.HoverService
 	symbolService         *languageservices.SymbolService
-	gotoDefinitionService  *languageservices.GotoDefinitionService
-	findReferencesService  *languageservices.FindReferencesService
-	codeActionService      *languageservices.CodeActionService
+	gotoDefinitionService *languageservices.GotoDefinitionService
+	findReferencesService *languageservices.FindReferencesService
+	codeActionService     *languageservices.CodeActionService
 	logger                *zap.Logger
 	traceService          *lsp.TraceService
 
@@ -57,11 +57,23 @@ type Application struct {
 }
 
 // loaderSettings holds resolved (non-pointer) values from
-// initializationOptions.blueprints, used to construct the blueprint
-// loader. All fields default to false when the client doesn't send them.
+// initializationOptions.blueprints, used to construct the blueprint loader.
+// Use defaultLoaderSettings to build these rather than relying on zero values,
+// which would disable spec transformation and silently produce fewer
+// diagnostics than the CLI.
 type loaderSettings struct {
 	transformSpec          bool
 	validateAfterTransform bool
+	deployConfigFile       string
+	deployConfigFileNames  []string
+	workspaceRoots         []string
+}
+
+func defaultLoaderSettings() loaderSettings {
+	return loaderSettings{
+		transformSpec:          true,
+		validateAfterTransform: false,
+	}
 }
 
 func NewApplication(
@@ -89,6 +101,7 @@ func NewApplication(
 	debouncer *DocumentDebouncer,
 ) *Application {
 	return &Application{
+		loaderSettings:        defaultLoaderSettings(),
 		state:                 state,
 		settingsService:       settingsService,
 		traceService:          traceService,
@@ -102,9 +115,9 @@ func NewApplication(
 		signatureService:      signatureService,
 		hoverService:          hoverService,
 		symbolService:         symbolService,
-		gotoDefinitionService:  gotoDefinitionService,
-		findReferencesService:  findReferencesService,
-		codeActionService:      codeActionService,
+		gotoDefinitionService: gotoDefinitionService,
+		findReferencesService: findReferencesService,
+		codeActionService:     codeActionService,
 		childResolver:         childResolver,
 		builtInProviders:      builtInProviders,
 		builtInTransformers:   builtInTransformers,
@@ -123,6 +136,7 @@ func (a *Application) Setup() {
 		lsp.WithTextDocumentDidCloseHandler(a.handleTextDocumentDidClose),
 		lsp.WithTextDocumentDidChangeHandler(a.handleTextDocumentDidChange),
 		lsp.WithTextDocumentDidSaveHandler(a.handleTextDocumentDidSave),
+		lsp.WithWorkspaceDidChangeWatchedFilesHandler(a.handleDidChangeWatchedFiles),
 		lsp.WithSetTraceHandler(a.traceService.CreateSetTraceHandler()),
 		lsp.WithHoverHandler(a.handleHover),
 		lsp.WithSignatureHelpHandler(a.handleSignatureHelp),

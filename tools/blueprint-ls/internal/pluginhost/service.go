@@ -14,6 +14,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginservicev1"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/providerserverv1"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/transformerserverv1"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/blueprint"
 	"github.com/spf13/afero"
 )
 
@@ -154,7 +155,7 @@ func (s *serviceImpl) initialise() error {
 		s.transformers,
 		time.Second, // Not used by LS
 		nil,         // No state container needed
-		nil,         // No params needed
+		blueprint.ValidationParams(),
 	)
 
 	pluginService := pluginservicev1.NewServiceServer(

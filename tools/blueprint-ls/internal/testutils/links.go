@@ -10,6 +10,8 @@ import (
 // Only GetAnnotationDefinitions and GetCardinality honour configured values;
 // other methods return empty/nil outputs.
 type MockLink struct {
+	provider.LinkNoCapabilities
+
 	AnnotationDefs map[string]*provider.LinkAnnotationDefinition
 	CardinalityA   provider.LinkCardinality
 	CardinalityB   provider.LinkCardinality

@@ -546,3 +546,64 @@ func (s *CompletionServiceGetItemsSuite) Test_bp_annotation_value_bare_key() {
 			"expected allowed annotation value %q for a bare key, got %v", value, labels)
 	}
 }
+
+// Naming a new element is not a position where anything can be suggested: the
+// name is the user's to choose. Offering the declaration keywords there put a
+// list in front of every new declaration.
+func (s *CompletionServiceGetItemsSuite) Test_bp_declaration_header_name_offers_no_suggestions() {
+	valid := "version \"2025-11-02\"\n" +
+		"resource ordersTable: aws/dynamodb/table {\n    spec {\n        tableName = \"orders\"\n    }\n}\n"
+
+	for _, header := range []string{
+		"resource ", "resource orders", "variable ", "value ",
+		"data ", "include ", "export ", "metadata ",
+	} {
+		docCtx := s.createBlueprintDocContext(valid, "version \"2025-11-02\"\n"+header)
+		labels := s.bpCompletionLabels(docCtx, 1, len(header))
+		s.Assert().Empty(labels, "expected no suggestions while naming after %q", header)
+	}
+}
+
+// The keyword itself must still complete while it is being typed, and the
+// positions on either side of the name keep their own completions.
+func (s *CompletionServiceGetItemsSuite) Test_bp_declaration_header_keeps_surrounding_completions() {
+	valid := "version \"2025-11-02\"\n" +
+		"resource ordersTable: aws/dynamodb/table {\n    spec {\n        tableName = \"orders\"\n    }\n}\n"
+	prefix := "version \"2025-11-02\"\n"
+
+	partialKeyword := s.bpCompletionLabels(
+		s.createBlueprintDocContext(valid, prefix+"resource"), 1, len("resource"),
+	)
+	s.Assert().True(containsLabel(partialKeyword, "resource"),
+		"a partially typed keyword must still complete")
+
+	resourceType := s.bpCompletionLabels(
+		s.createBlueprintDocContext(valid, prefix+"resource orders: "), 1, len("resource orders: "),
+	)
+	s.Assert().True(containsLabel(resourceType, "aws/dynamodb/table"),
+		"the element type position must still offer resource types")
+
+	variableType := s.bpCompletionLabels(
+		s.createBlueprintDocContext(valid, prefix+"variable region: "), 1, len("variable region: "),
+	)
+	s.Assert().True(containsLabel(variableType, "string"),
+		"the variable type position must still offer variable types")
+
+	topLevel := s.bpCompletionLabels(s.createBlueprintDocContext(valid, prefix), 1, 0)
+	s.Assert().True(containsLabel(topLevel, "resource"),
+		"an empty top-level line must still offer declaration keywords")
+}
+
+// A block field may share its name with a declaration keyword, so the rule must
+// not reach inside blocks.
+func (s *CompletionServiceGetItemsSuite) Test_bp_declaration_rule_does_not_affect_block_fields() {
+	valid := "version \"2025-11-02\"\n" +
+		"resource ordersTable: aws/dynamodb/table {\n    spec {\n        tableName = \"orders\"\n    }\n}\n"
+	editing := "version \"2025-11-02\"\n" +
+		"resource ordersTable: aws/dynamodb/table {\n    spec {\n        t"
+
+	labels := s.bpCompletionLabels(s.createBlueprintDocContext(valid, editing), 3, 9)
+
+	s.Assert().True(containsLabel(labels, "tableName"),
+		"spec field completions must be unaffected")
+}

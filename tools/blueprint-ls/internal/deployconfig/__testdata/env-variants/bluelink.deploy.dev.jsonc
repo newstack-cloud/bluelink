@@ -1,0 +1,4 @@
+{
+  "providers": { "aws": { "region": "us-east-1" } },
+  "contextVariables": { "deployTarget": "aws-serverless", "appEnv": "dev" }
+}

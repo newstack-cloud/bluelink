@@ -1,0 +1,1 @@
+{ "appName": "celerity-app", "deployTarget": { "name": "aws-serverless" } }

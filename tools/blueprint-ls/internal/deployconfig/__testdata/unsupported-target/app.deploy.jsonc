@@ -1,0 +1,4 @@
+{
+  "appName": "bad-target-app",
+  "deployTarget": { "name": "not-a-real-target" }
+}

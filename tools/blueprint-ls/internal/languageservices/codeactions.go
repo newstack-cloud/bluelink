@@ -18,7 +18,23 @@ const (
 	ReasonCodeResourceDefNotAllowedValue      = "resource_def_not_allowed_value"
 	ReasonCodeMissingVersion                  = "missing_version"
 	ReasonCodeVariableValidationErrors        = "variable_validation_errors"
+	ReasonCodeInvalidResource                 = "invalid_resource"
+	ReasonCodeInvalidDataSource               = "invalid_data_source"
+	ReasonCodeCustomVarValueNotInOptions      = "custom_variable_value_not_in_options"
 )
+
+// The value that could not be resolved is held under a key specific to the kind of
+// value it is, a quick fix can be offered for any of them in the same way.
+// An error can hold more than one of these keys, the value of the first key that is
+// present is the one the error is about, so the more specific keys come first.
+var invalidValueMetadataKeys = []string{
+	"unknownField",
+	"resourceType",
+	"dataSourceType",
+	"variableValue",
+	"variableType",
+	"functionName",
+}
 
 // CodeActionService provides functionality for generating LSP code actions
 // (quick fixes) from enhanced diagnostics.
@@ -92,12 +108,27 @@ func (s *CodeActionService) createActionsForDiagnostic(
 		if action := s.createMissingVariableTypeAction(uri, diag); action != nil {
 			actions = append(actions, *action)
 		}
+		actions = append(actions, s.createTypoFixActions(uri, diag)...)
+	case ReasonCodeInvalidResource, ReasonCodeInvalidDataSource,
+		ReasonCodeCustomVarValueNotInOptions:
+		actions = append(actions, s.createTypoFixActions(uri, diag)...)
 	}
 
 	return actions
 }
 
-// createTypoFixActions creates quick fix actions for unknown field typos.
+func invalidValueFromMetadata(metadata map[string]any) string {
+	for _, key := range invalidValueMetadataKeys {
+		if value, ok := metadata[key].(string); ok && value != "" {
+			return value
+		}
+	}
+
+	return ""
+}
+
+// createTypoFixActions creates quick fix actions for a value that could not be
+// resolved, such as an unknown field, resource type or variable type.
 // It uses the suggestions metadata to offer replacements.
 func (s *CodeActionService) createTypoFixActions(
 	uri lsp.URI,
@@ -109,9 +140,8 @@ func (s *CodeActionService) createTypoFixActions(
 		return actions
 	}
 
-	// Get the unknown field name
-	unknownField, ok := diag.ErrorContext.Metadata["unknownField"].(string)
-	if !ok || unknownField == "" {
+	invalidValue := invalidValueFromMetadata(diag.ErrorContext.Metadata)
+	if invalidValue == "" {
 		return actions
 	}
 
@@ -140,7 +170,7 @@ func (s *CodeActionService) createTypoFixActions(
 		isPreferred := i == 0
 		kind := lsp.CodeActionKindQuickFix
 		action := lsp.CodeAction{
-			Title:       fmt.Sprintf("Replace '%s' with '%s'", unknownField, suggestion),
+			Title:       fmt.Sprintf("Replace '%s' with '%s'", invalidValue, suggestion),
 			Kind:        &kind,
 			IsPreferred: &isPreferred,
 			Edit: &lsp.WorkspaceEdit{

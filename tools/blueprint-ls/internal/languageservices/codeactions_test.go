@@ -99,6 +99,92 @@ func (s *CodeActionServiceSuite) Test_typo_fix_action_for_unknown_field() {
 	s.Assert().False(*actions[1].IsPreferred)
 }
 
+func (s *CodeActionServiceSuite) Test_quick_fix_for_unsupported_resource_type() {
+	diagRange := lsp.Range{
+		Start: lsp.Position{Line: 5, Character: 10},
+		End:   lsp.Position{Line: 5, Character: 24},
+	}
+	severity := lsp.DiagnosticSeverityError
+	code := "invalid_resource"
+
+	enhanced := []*EnhancedDiagnostic{
+		{
+			Diagnostic: lsp.Diagnostic{
+				Range:    diagRange,
+				Severity: &severity,
+				Message:  "unsupported type \"aws/ecs/servic\"",
+				Code:     &lsp.IntOrString{StrVal: &code},
+			},
+			ErrorContext: &errors.ErrorContext{
+				ReasonCode: "invalid_resource",
+				Metadata: map[string]any{
+					"resourceType": "aws/ecs/servic",
+					"suggestions":  []string{"aws/ecs/service"},
+				},
+			},
+		},
+	}
+	s.state.SetEnhancedDiagnostics("file:///test.yaml", enhanced)
+
+	actions, err := s.service.GetCodeActions(&lsp.CodeActionParams{
+		TextDocument: lsp.TextDocumentIdentifier{
+			URI: "file:///test.yaml",
+		},
+		Range: diagRange,
+	})
+
+	s.Require().NoError(err)
+	s.Require().Len(actions, 1)
+	s.Assert().Equal(
+		"Replace 'aws/ecs/servic' with 'aws/ecs/service'",
+		actions[0].Title,
+	)
+	s.Assert().True(*actions[0].IsPreferred)
+}
+
+func (s *CodeActionServiceSuite) Test_quick_fix_for_custom_variable_value_not_in_options() {
+	// The error for this holds both the type of the variable and the value that was
+	// provided for it, the quick fix must offer to replace the value.
+	diagRange := lsp.Range{
+		Start: lsp.Position{Line: 8, Character: 13},
+		End:   lsp.Position{Line: 8, Character: 24},
+	}
+	severity := lsp.DiagnosticSeverityError
+	code := "custom_variable_value_not_in_options"
+
+	enhanced := []*EnhancedDiagnostic{
+		{
+			Diagnostic: lsp.Diagnostic{
+				Range:    diagRange,
+				Severity: &severity,
+				Message:  "invalid value \"t2.microo\" provided for variable \"instanceType\"",
+				Code:     &lsp.IntOrString{StrVal: &code},
+			},
+			ErrorContext: &errors.ErrorContext{
+				ReasonCode: "custom_variable_value_not_in_options",
+				Metadata: map[string]any{
+					"variableName":  "instanceType",
+					"variableType":  "aws/ec2/instanceType",
+					"variableValue": "t2.microo",
+					"suggestions":   []string{"t2.micro"},
+				},
+			},
+		},
+	}
+	s.state.SetEnhancedDiagnostics("file:///test.yaml", enhanced)
+
+	actions, err := s.service.GetCodeActions(&lsp.CodeActionParams{
+		TextDocument: lsp.TextDocumentIdentifier{
+			URI: "file:///test.yaml",
+		},
+		Range: diagRange,
+	})
+
+	s.Require().NoError(err)
+	s.Require().Len(actions, 1)
+	s.Assert().Equal("Replace 't2.microo' with 't2.micro'", actions[0].Title)
+}
+
 func (s *CodeActionServiceSuite) Test_no_action_for_diagnostics_outside_range() {
 	// Set up enhanced diagnostic at line 20
 	diagRange := lsp.Range{

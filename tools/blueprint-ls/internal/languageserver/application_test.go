@@ -10,6 +10,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/deployconfig"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/languageservices"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/testutils"
 	"github.com/newstack-cloud/ls-builder/common"
@@ -94,7 +95,10 @@ func (s *ApplicationSuite) createTestApplication() *Application {
 		resourceRegistry, dataSourceRegistry, customVarTypeRegistry, functionRegistry, nil, state, s.logger,
 	)
 	diagnosticService := languageservices.NewDiagnosticsService(
-		state, settingsService, diagnosticErrorService, nil, s.logger,
+		state, settingsService, diagnosticErrorService,
+		languageservices.Loaders{},
+		deployconfig.NewResolver(deployconfig.ResolverConfig{}, s.logger),
+		s.logger,
 	)
 	hoverService := languageservices.NewHoverService(
 		functionRegistry, resourceRegistry, dataSourceRegistry, nil, signatureService, nil, s.logger,
@@ -216,6 +220,70 @@ func (s *ApplicationSuite) TestInitialize_SetsPositionEncoding() {
 	s.Require().NoError(err)
 
 	s.Equal(lsp.PositionEncodingKindUTF32, result.Capabilities.PositionEncoding)
+}
+
+// Both the general capabilities and the encoding list are optional in the
+// protocol, and clients may offer encodings this server does not implement, so
+// initialize has to survive all of these without taking the server down.
+func (s *ApplicationSuite) TestInitialize_PositionEncodingFallbacks() {
+	testCases := []struct {
+		name     string
+		general  *lsp.GeneralClientCapabilities
+		expected lsp.PositionEncodingKind
+	}{
+		{
+			name:     "no general capabilities",
+			general:  nil,
+			expected: lsp.PositionEncodingKindUTF16,
+		},
+		{
+			name:     "no position encodings offered",
+			general:  &lsp.GeneralClientCapabilities{},
+			expected: lsp.PositionEncodingKindUTF16,
+		},
+		{
+			name: "only unsupported encodings offered",
+			general: &lsp.GeneralClientCapabilities{
+				PositionEncodings: []lsp.PositionEncodingKind{"utf-7"},
+			},
+			expected: lsp.PositionEncodingKindUTF16,
+		},
+		{
+			name: "first supported encoding wins",
+			general: &lsp.GeneralClientCapabilities{
+				PositionEncodings: []lsp.PositionEncodingKind{
+					"utf-7",
+					lsp.PositionEncodingKindUTF8,
+					lsp.PositionEncodingKindUTF32,
+				},
+			},
+			expected: lsp.PositionEncodingKindUTF8,
+		},
+	}
+
+	for _, testCase := range testCases {
+		s.Run(testCase.name, func() {
+			app := s.createTestApplication()
+			app.Setup()
+
+			srv := server.NewServer(app.Handler(), true, nil, nil)
+			container := createTestConnectionsContainer(srv.NewHandler())
+			go srv.Serve(container.serverConn, s.logger)
+
+			ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+			defer cancel()
+
+			clientLSPContext := server.NewLSPContext(ctx, container.clientConn, nil)
+			initParams := lsp.InitializeParams{
+				Capabilities: lsp.ClientCapabilities{General: testCase.general},
+			}
+
+			var result lsp.InitializeResult
+			err := clientLSPContext.Call(lsp.MethodInitialize, initParams, &result)
+			s.Require().NoError(err)
+			s.Equal(testCase.expected, result.Capabilities.PositionEncoding)
+		})
+	}
 }
 
 func (s *ApplicationSuite) TestInitialize_SetsWorkspaceFolderCapability() {

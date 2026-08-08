@@ -1,0 +1,28 @@
+{
+  "providers": {
+    "aws": {
+      "accessKeyId": "${AWS_ACCESS_KEY_ID}",
+      "region": "eu-west-2"
+    }
+  },
+  "transformers": {
+    "celerity": {
+      "aws.apigateway.throttlingEnabled": true,
+      "aws.lambda.memorySize": 512,
+      "aws.sqs.messageRetentionPeriod": 345600
+    }
+  },
+  "contextVariables": {
+    "appEnv": "staging",
+    "celerity.appName": "golden-fixture-app",
+    "customContextVar": "custom-value",
+    "deployTarget": "aws-serverless"
+  },
+  "blueprintVariables": {
+    "logLevel": "debug"
+  },
+  "dependencies": {
+    "newstack-cloud/aws": "^0.4.0",
+    "newstack-cloud/celerity": ""
+  }
+}

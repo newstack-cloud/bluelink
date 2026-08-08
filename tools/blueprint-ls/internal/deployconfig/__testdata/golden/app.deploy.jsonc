@@ -1,0 +1,22 @@
+{
+  // Application name, surfaced to the transform as celerity.appName.
+  "appName": "golden-fixture-app",
+  "deployTarget": {
+    "name": "aws-serverless",
+    "appEnv": "staging",
+    "config": {
+      "aws.region": "eu-west-2",
+      "aws.accessKeyId": "${AWS_ACCESS_KEY_ID}",
+      /* Transformer-handled, keeps its full dotted key. */
+      "aws.sqs.messageRetentionPeriod": 345600,
+      "aws.lambda.memorySize": 512,
+      "aws.apigateway.throttlingEnabled": true
+    }
+  },
+  "contextVariables": {
+    "customContextVar": "custom-value"
+  },
+  "blueprintVariables": {
+    "logLevel": "debug"
+  }
+}

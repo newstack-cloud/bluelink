@@ -252,7 +252,9 @@ func (p *mockAWSProviderForDiagnostics) RetryPolicy(ctx context.Context) (*provi
 }
 
 // Mock Link for Lambda -> DynamoDB
-type mockLambdaDynamoDBLinkForDiagnostics struct{}
+type mockLambdaDynamoDBLinkForDiagnostics struct {
+	provider.LinkNoCapabilities
+}
 
 func (l *mockLambdaDynamoDBLinkForDiagnostics) StageChanges(ctx context.Context, input *provider.LinkStageChangesInput) (*provider.LinkStageChangesOutput, error) {
 	return &provider.LinkStageChangesOutput{}, nil

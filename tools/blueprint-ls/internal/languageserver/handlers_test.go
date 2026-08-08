@@ -7,6 +7,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
+	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/deployconfig"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/languageservices"
 	"github.com/newstack-cloud/bluelink/tools/blueprint-ls/internal/testutils"
 	lsp "github.com/newstack-cloud/ls-builder/lsp_3_17"
@@ -383,7 +384,8 @@ func (s *HandlersSuite) createTestApplication(state *languageservices.State) *Ap
 		state,
 		settingsService,
 		diagnosticErrorService,
-		nil,
+		languageservices.Loaders{},
+		deployconfig.NewResolver(deployconfig.ResolverConfig{}, s.logger),
 		s.logger,
 	)
 	hoverService := languageservices.NewHoverService(
