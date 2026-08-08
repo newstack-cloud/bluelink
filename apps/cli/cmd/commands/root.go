@@ -73,9 +73,10 @@ This CLI validates, stages changes for, and deploys blueprints.`,
 
 	rootCmd.PersistentFlags().String(
 		"connect-protocol",
-		// Connect to a local instance of the deploy engine
-		// via a unix socket by default.
-		"unix",
+		// Connect to a local instance of the deploy engine via a unix socket on
+		// unix-like systems (falling back to TCP on Windows). See
+		// defaultConnectProtocol for the rationale.
+		defaultConnectProtocol(),
 		"The protocol to connect to the deploy engine with, "+
 			"this can be either \"unix\" or \"tcp\". A unix socket can only be used on linux, macos, and other unix-like operating systems. "+
 			"To use a \"unix\" socket on windows, you will need to use WSL 2 or above.",
@@ -139,6 +140,18 @@ This CLI validates, stages changes for, and deploys blueprints.`,
 	setupTemplatesCommand(rootCmd, confProvider)
 
 	return rootCmd
+}
+
+// Returns the transport used to reach the deploy engine
+// when the user has not overridden it. On unix-like systems a unix domain
+// socket is preferred. Windows cannot use a unix socket
+// (outside WSL), so it falls back to TCP.
+func defaultConnectProtocol() string {
+	if runtime.GOOS == "windows" {
+		return "tcp"
+	}
+
+	return "unix"
 }
 
 func validateConnectProtocol(protocol string) error {
