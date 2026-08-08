@@ -452,10 +452,14 @@ func assertActionsCalled(
 		if expectedSlice, ok := expectedInput.([]any); ok {
 			// []any indicates that the method is expected to be called multiple times
 			// with different inputs, in the given order.
+			//
+			// Moving on to the next method rather than returning: returning here
+			// abandoned every remaining expectation, and since map iteration order is
+			// random, which ones were checked varied between runs.
 			for i, input := range expectedSlice {
 				serviceMockCalls.AssertCalledWith(s, methodName, i, Any, input)
 			}
-			return
+			continue
 		}
 
 		serviceMockCalls.AssertCalledWith(s, methodName, 0, Any, expectedInput)
