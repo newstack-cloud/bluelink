@@ -3,7 +3,7 @@
 ###################
 
 # Please keep up to date with the new-version of Golang docker for builder
-FROM golang:1.24.2-bookworm AS build
+FROM golang:1.26.5-bookworm AS build
 
 # Add non-root user
 RUN useradd -u 1001 bluelink && \
