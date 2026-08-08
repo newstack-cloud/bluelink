@@ -47,7 +47,7 @@ services:
       OIDC_CLIENT_SECRET: "test-secret"
 
   deploy_engine_local_postgres:
-    image: postgres:17.3
+    image: postgres:17.10
     container_name: deploy_engine_local_postgres
     networks:
       - bluelink_deploy_engine_network
@@ -71,7 +71,7 @@ services:
       start_period: 30s
 
   deploy_engine_local_postgres_migrate:
-    image: migrate/migrate:v4.18.2
+    image: migrate/migrate:v4.19.1
     networks:
       - bluelink_deploy_engine_network
     command:
