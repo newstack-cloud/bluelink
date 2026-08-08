@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.2](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.8.1...deploy-engine/v0.8.2) (2026-08-08)
+
+
+### Bug Fixes
+
+* **deploy-engine:** add fixes to validation stream, config mapping and unix socket ([633f7f4](https://github.com/newstack-cloud/bluelink/commit/633f7f4e39c62b2c39cc6b84a07b6d461827a428))
+
 ## [0.8.1](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.8.0...deploy-engine/v0.8.1) (2026-07-19)
 
 
