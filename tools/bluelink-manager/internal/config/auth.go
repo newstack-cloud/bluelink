@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/newstack-cloud/bluelink/tools/bluelink-manager/internal/paths"
 	"github.com/newstack-cloud/bluelink/tools/bluelink-manager/internal/ui"
@@ -22,6 +23,10 @@ type CLIAuthConfig struct {
 type EngineConfig struct {
 	Auth         EngineAuthConfig `json:"auth"`
 	LoopbackOnly bool             `json:"loopback_only"`
+	// UseUnixSocket makes the engine listen on a unix domain socket instead of
+	// a loopback TCP port. Omitted (engine defaults to TCP) on Windows, which
+	// cannot use a unix socket outside WSL.
+	UseUnixSocket bool `json:"use_unix_socket,omitempty"`
 }
 
 // EngineAuthConfig represents the auth section of engine config.
@@ -66,6 +71,12 @@ func ConfigureAuth(force bool) error {
 			BluelinkAPIKeys: []string{apiKey},
 		},
 		LoopbackOnly: true,
+		// Prefer a unix domain socket on unix-like systems: it can be locked to
+		// the owning user via filesystem permissions (the engine chmods it
+		// 0600), unlike a loopback TCP port that any local user can reach. The
+		// CLIs default to a unix socket on these systems too, so the two align
+		// out of the box at the engine's default socket path.
+		UseUnixSocket: runtime.GOOS != "windows",
 	}
 
 	if err := writeJSON(engineConfigPath, engineConfig); err != nil {
