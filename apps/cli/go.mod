@@ -1,20 +1,20 @@
 module github.com/newstack-cloud/bluelink/apps/cli
 
-go 1.25.0
+go 1.26
 
 require (
-	github.com/ProtonMail/go-crypto v1.3.0
+	github.com/ProtonMail/go-crypto v1.4.1
 	github.com/charmbracelet/bubbles v0.21.1
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/huh v0.8.0
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
 	github.com/charmbracelet/x/exp/teatest v0.0.0-20260803091719-3755ebad01b1
 	github.com/newstack-cloud/deploy-cli-sdk v0.8.1
-	github.com/rogpeppe/go-internal v1.14.1
+	github.com/rogpeppe/go-internal v1.16.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
-	github.com/tailscale/hujson v0.0.0-20260718110524-10d7940d4c87
+	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f
 	go.uber.org/zap v1.28.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/term v0.45.0
@@ -75,7 +75,7 @@ require (
 	github.com/clipperhouse/displaywidth v0.9.0 // indirect
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.5.0 // indirect
-	github.com/cloudflare/circl v1.6.0 // indirect
+	github.com/cloudflare/circl v1.6.2 // indirect
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2 // indirect
 	github.com/coreos/go-json v0.0.0-20231102161613-e49c8866685a // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect

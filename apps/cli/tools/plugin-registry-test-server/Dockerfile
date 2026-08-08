@@ -2,7 +2,7 @@
 # Multi-stage build for minimal image size
 
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /build
 
@@ -17,7 +17,7 @@ COPY *.go ./
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o plugin-registry-test-server .
 
 # Runtime stage
-FROM alpine:3.23
+FROM alpine:3.24
 
 # Install ca-certificates for HTTPS support and create non-root user
 RUN apk --no-cache add ca-certificates=20251003-r0 \

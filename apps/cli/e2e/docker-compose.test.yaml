@@ -12,7 +12,7 @@ services:
   # Build the mock registry server as a Linux binary inside Docker
   # The testregistry is a standalone Go module for testing plugins login
   mock-registry-builder:
-    image: golang:1.24-alpine
+    image: golang:1.26-alpine
     working_dir: /testregistry
     command: ["go", "build", "-o", "/output/registry", "."]
     volumes:
@@ -44,7 +44,7 @@ services:
   # Build the test provider as a Linux binary inside Docker
   # The testprovider is a standalone Go module with its own go.mod
   test-provider-builder:
-    image: golang:1.24-alpine
+    image: golang:1.26-alpine
     working_dir: /testprovider
     command: ["go", "build", "-o", "/output/plugin", "."]
     volumes:
