@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17.3
+    image: postgres:17.10
     networks:
       - blueprint_state_tests
     restart: always
@@ -19,7 +19,7 @@ services:
       start_period: 30s
 
   postgres_migrate:
-    image: migrate/migrate:v4.18.2
+    image: migrate/migrate:v4.19.1
     restart: always
     networks:
       - blueprint_state_tests
@@ -49,7 +49,7 @@ services:
 
   # AWS S3 emulator for objectstore backend tests.
   localstack:
-    image: localstack/localstack:4.0
+    image: localstack/localstack:4.14
     networks:
       - blueprint_state_tests
     restart: always
@@ -69,7 +69,7 @@ services:
 
   # Google Cloud Storage emulator for objectstore backend tests.
   fake-gcs-server:
-    image: fsouza/fake-gcs-server:1.50
+    image: fsouza/fake-gcs-server:1.55
     networks:
       - blueprint_state_tests
     restart: always
@@ -100,7 +100,7 @@ services:
   # produces AuthorizationFailure against requests signed with the
   # documented dev key.
   azurite:
-    image: mcr.microsoft.com/azure-storage/azurite:3.33.0
+    image: mcr.microsoft.com/azure-storage/azurite:3.36.0
     networks:
       - blueprint_state_tests
     restart: always
