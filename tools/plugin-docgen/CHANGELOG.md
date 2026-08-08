@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/newstack-cloud/bluelink/compare/plugin-docgen/v0.3.1...plugin-docgen/v0.3.2) (2026-08-08)
+
+
+### Dependencies
+
+* **plugin-docgen:** update plugin-docgen go modules ([#255](https://github.com/newstack-cloud/bluelink/issues/255)) ([f3e0048](https://github.com/newstack-cloud/bluelink/commit/f3e004815227cf18987bd6466a97af41982ed519))
+
 ## [0.3.1](https://github.com/newstack-cloud/bluelink/compare/plugin-docgen/v0.3.0...plugin-docgen/v0.3.1) (2026-07-19)
 
 
