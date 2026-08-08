@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.5.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-ls/v0.4.0...blueprint-ls/v0.5.0) (2026-08-08)
+
+
+### Features
+
+* **blueprint-ls:** transform-aware validation driven by deploy config ([e9b6aae](https://github.com/newstack-cloud/bluelink/commit/e9b6aaeb621fc9f6c8f6448e9deecdb8b8de6f09))
+
+
+### Bug Fixes
+
+* **blueprint-ls:** make sure plugin service selects a random available port ([8ce8f4e](https://github.com/newstack-cloud/bluelink/commit/8ce8f4ebe1ecc3aeb710e7a627dc0fcf38ed5cd0))
+
+
+### Dependencies
+
+* **blueprint-ls:** update blueprint-ls go modules ([#245](https://github.com/newstack-cloud/bluelink/issues/245)) ([60387d0](https://github.com/newstack-cloud/bluelink/commit/60387d0ceb06df8f83709559ee4b836f786b51c3))
+
 ## [0.4.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-ls/v0.3.0...blueprint-ls/v0.4.0) (2026-06-01)
 
 
