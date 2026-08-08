@@ -67,7 +67,15 @@ func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider)
 				)
 			}
 
+			// Loaded after the preflight model is created so it picks up any
+			// deploy configuration artifacts written by preflight checks.
+			operationConfig, err := config.LoadOperationConfig(confProvider)
+			if err != nil {
+				return err
+			}
+
 			app, err := validateui.NewValidateApp(validateui.ValidateAppConfig{
+				Context:                cmd.Context(),
 				Engine:                 deployEngine,
 				Logger:                 logger,
 				BlueprintFile:          blueprintFile,
@@ -78,6 +86,7 @@ func setupValidateCommand(rootCmd *cobra.Command, confProvider *config.Provider)
 				Preflight:              preflightModel,
 				TransformSpec:          transformSpecPtr,
 				ValidateAfterTransform: validateAfterTransformPtr,
+				OperationConfig:        operationConfig,
 			})
 			if err != nil {
 				return err
