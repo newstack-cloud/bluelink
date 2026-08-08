@@ -278,6 +278,57 @@ func (s *PreparerSuite) Test_skips_validation_and_populates_defaults() {
 	)
 }
 
+func (s *PreparerSuite) Test_dependency_with_empty_version_constraint_passes() {
+	// An empty version constraint declares a dependency on an installed
+	// plugin without pinning a version, so it must not produce an error.
+	_, diagnostics, err := s.preparer.Prepare(
+		context.Background(),
+		&types.BlueprintOperationConfig{
+			Dependencies: map[string]string{
+				"test-provider":    "",
+				"test-transformer": "",
+			},
+		},
+		/* validate */ true,
+	)
+	s.Require().NoError(err)
+	s.Assert().Empty(diagnostics)
+}
+
+func (s *PreparerSuite) Test_dependency_not_installed_returns_error_diagnostic() {
+	// A dependency on a plugin that is not installed must surface an error
+	// diagnostic rather than a hard (500) error.
+	_, diagnostics, err := s.preparer.Prepare(
+		context.Background(),
+		&types.BlueprintOperationConfig{
+			Dependencies: map[string]string{
+				"missing-plugin": "^1.0.0",
+			},
+		},
+		/* validate */ true,
+	)
+	s.Require().NoError(err)
+	s.Require().Len(diagnostics, 1)
+	s.Assert().Equal(core.DiagnosticLevelError, diagnostics[0].Level)
+	s.Assert().Equal(`plugin "missing-plugin" is not installed`, diagnostics[0].Message)
+}
+
+func (s *PreparerSuite) Test_dependency_with_incompatible_version_returns_error_diagnostic() {
+	_, diagnostics, err := s.preparer.Prepare(
+		context.Background(),
+		&types.BlueprintOperationConfig{
+			Dependencies: map[string]string{
+				// Installed test-provider is 1.0.0, so a major-2 constraint is incompatible.
+				"test-provider": "^2.0.0",
+			},
+		},
+		/* validate */ true,
+	)
+	s.Require().NoError(err)
+	s.Require().Len(diagnostics, 1)
+	s.Assert().Equal(core.DiagnosticLevelError, diagnostics[0].Level)
+}
+
 func testProviders() map[string]DefinitionProvider {
 	return map[string]DefinitionProvider{
 		"test-provider": &testProvider{},

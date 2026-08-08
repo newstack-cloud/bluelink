@@ -610,6 +610,65 @@ func (c *Controller) prepareAndSaveEvents(
 			)
 		}
 	}
+
+	if len(allDiagnostics) == 0 {
+		// A validation with no diagnostics saves no events in the loop above,
+		// which would leave the stream without an End marker and hang streaming
+		// clients waiting for one. Emit a terminal marker so they receive a
+		// clean end-of-stream signal.
+		c.saveValidationEndMarker(ctx, blueprintValidation.ID, currentTimestamp, logger)
+	}
+}
+
+// Persists a terminal End event that carries no
+// diagnostic, used when a validation produced no diagnostics so that streaming
+// clients still receive an end-of-stream signal instead of waiting
+// indefinitely. Clients ignore markers with no diagnostic content.
+func (c *Controller) saveValidationEndMarker(
+	ctx context.Context,
+	validationID string,
+	timestamp int64,
+	logger core.Logger,
+) {
+	marker := diagnosticWithTimestamp{
+		Timestamp: timestamp,
+		End:       true,
+	}
+	serialised, err := json.Marshal(marker)
+	if err != nil {
+		logger.Error(
+			"failed to marshal validation end marker",
+			core.ErrorLogField("error", err),
+		)
+		return
+	}
+
+	eventID, err := c.eventIDGenerator.GenerateID()
+	if err != nil {
+		logger.Error(
+			"failed to generate event ID for validation end marker",
+			core.ErrorLogField("error", err),
+		)
+		return
+	}
+
+	if err := c.eventStore.Save(
+		ctx,
+		&manage.Event{
+			ID:          eventID,
+			Type:        eventTypeDiagnostic,
+			ChannelType: helpersv1.ChannelTypeValidation,
+			ChannelID:   validationID,
+			Data:        string(serialised),
+			Timestamp:   timestamp,
+			End:         true,
+		},
+	); err != nil {
+		logger.Error(
+			"failed to save validation end marker event",
+			core.ErrorLogField("error", err),
+		)
+	}
 }
 
 func determineValidationStatus(

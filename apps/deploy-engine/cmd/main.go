@@ -116,13 +116,62 @@ func runShutdown(
 	}
 }
 
+const unixSocketDialTimeout = 200 * time.Millisecond
+
 func serveUnixSocket(srv *http.Server, unixSocketPath string) error {
+	if err := prepareUnixSocketPath(unixSocketPath); err != nil {
+		return err
+	}
+
 	listener, err := net.Listen("unix", unixSocketPath)
 	if err != nil {
 		return fmt.Errorf("error creating listener for unix socket: %w", err)
 	}
 	defer listener.Close()
+
+	// Restrict the socket to the owning user. net.Listen creates it with
+	// umask-dependent permissions (often group/world accessible), which would
+	// undermine the reason for preferring a socket over a loopback TCP port.
+	if err := os.Chmod(unixSocketPath, 0o600); err != nil {
+		return fmt.Errorf("error restricting unix socket permissions: %w", err)
+	}
+
 	return srv.Serve(listener)
+}
+
+// Clears a stale socket file left behind by a previous
+// run so net.Listen does not fail with "address already in use". If a live
+// engine is still listening on the socket it is left untouched and an error is
+// returned rather than hijacking the path.
+func prepareUnixSocketPath(unixSocketPath string) error {
+	info, err := os.Stat(unixSocketPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("error inspecting unix socket path: %w", err)
+	}
+
+	if info.Mode()&os.ModeSocket == 0 {
+		return fmt.Errorf(
+			"path %q exists and is not a socket, refusing to remove it",
+			unixSocketPath,
+		)
+	}
+
+	if conn, err := net.DialTimeout("unix", unixSocketPath, unixSocketDialTimeout); err == nil {
+		conn.Close()
+		return fmt.Errorf(
+			"another deploy engine appears to be listening on %q",
+			unixSocketPath,
+		)
+	}
+
+	if err := os.Remove(unixSocketPath); err != nil {
+		return fmt.Errorf("error removing stale unix socket: %w", err)
+	}
+
+	return nil
 }
 
 func determineServerAddr(loopbackOnly bool, port int) string {

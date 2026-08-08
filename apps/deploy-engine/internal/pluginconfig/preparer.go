@@ -182,6 +182,14 @@ func (p *preparerImpl) validateDependencies(
 				Message: fmt.Sprintf("plugin %q is not installed", pluginID),
 				Range:   defaultDiagnosticRange(),
 			})
+			continue
+		}
+
+		// An empty version constraint declares the dependency without pinning
+		// a version where any installed version is accepted, so once we know the
+		// plugin is installed there is nothing further to check.
+		if versionConstraint == "" {
+			continue
 		}
 
 		installedVersion := getPluginVersionFromInstance(pluginInstance)

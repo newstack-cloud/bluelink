@@ -35,7 +35,10 @@ import (
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/providerhelpers"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/plugin"
+	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginservicev1"
+	pluginutils "github.com/newstack-cloud/bluelink/libs/plugin-framework/utils"
 	"github.com/spf13/afero"
 )
 
@@ -124,9 +127,17 @@ func Setup(
 		resolverrouter.WithRoute(resolve.HTTPSSourceType, httpsResolver),
 	)
 
+	// Provider and transformer config in a blueprint operation is keyed by the
+	// simplified plugin name (namespace), e.g. "aws" or "celerity". The
+	// transformers in pluginMaps are keyed by transform name (the string used in
+	// a blueprint's `transform` section, e.g. "celerity-2025-08-01") for the
+	// blueprint loader, so we build a plugin-name-keyed view for config
+	// preparation rather than conflating the two keyings.
 	pluginConfigPreparer := pluginconfig.NewDefaultPreparer(
 		pluginconfig.ToConfigDefinitionProviders(pluginMaps.Providers),
-		pluginconfig.ToConfigDefinitionProviders(pluginMaps.Transformers),
+		pluginconfig.ToConfigDefinitionProviders(
+			transformerConfigProvidersByPluginName(pluginHostService.Manager()),
+		),
 		pluginHostService.Manager(),
 	)
 
@@ -239,6 +250,27 @@ func Setup(
 		closeStateService,
 		pluginHostService.Close,
 	), nil
+}
+
+// Returns the installed transformer
+// plugins keyed by their simplified plugin name (namespace), e.g. the plugin
+// "newstack-cloud/celerity" is keyed as "celerity". This matches how
+// transformer config is keyed in a blueprint operation config, and is distinct
+// from the transform-name keying (e.g. "celerity-2025-08-01") used by the
+// blueprint loader.
+func transformerConfigProvidersByPluginName(
+	manager pluginservicev1.Manager,
+) map[string]transform.SpecTransformer {
+	transformers := map[string]transform.SpecTransformer{}
+	instances := manager.GetPlugins(pluginservicev1.PluginType_PLUGIN_TYPE_TRANSFORMER)
+	for _, instance := range instances {
+		transformer, ok := instance.Client.(transform.SpecTransformer)
+		if !ok {
+			continue
+		}
+		transformers[pluginutils.ExtractPluginNamespace(instance.Info.ID)] = transformer
+	}
+	return transformers
 }
 
 func drainInFlightDeploymentsFunc(
