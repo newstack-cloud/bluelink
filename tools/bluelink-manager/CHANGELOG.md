@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.0](https://github.com/newstack-cloud/bluelink/compare/bluelink-manager/v0.1.5...bluelink-manager/v0.2.0) (2026-08-08)
+
+
+### Features
+
+* **bluelink-manager:** add support for profiles to support celerity installs ([bb70d2d](https://github.com/newstack-cloud/bluelink/commit/bb70d2d29306e3f1b74b00e8d087f6dd7e4e92a1))
+* **bluelink-manager:** ensure the right protocol is used to connect to deploy engine for os ([f2c920a](https://github.com/newstack-cloud/bluelink/commit/f2c920a739786544fc5983b0195cb33e6dd0689a))
+
+
+### Dependencies
+
+* **bluelink-manager:** bump the go-deps group across 1 directory with 3 updates ([54ef151](https://github.com/newstack-cloud/bluelink/commit/54ef151ff5b0d41fa1fa7c8c3341372a263e41fa))
+* **bluelink-manager:** update bluelink-manager go modules ([#256](https://github.com/newstack-cloud/bluelink/issues/256)) ([f66eac1](https://github.com/newstack-cloud/bluelink/commit/f66eac13e344e6fdb9c9362f84682f65ea0e6fcf))
+
 ## [0.1.5](https://github.com/newstack-cloud/bluelink/compare/bluelink-manager/v0.1.4...bluelink-manager/v0.1.5) (2025-12-06)
 
 
