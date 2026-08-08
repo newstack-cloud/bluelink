@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.0](https://github.com/newstack-cloud/bluelink/compare/cli/v0.5.1...cli/v0.6.0) (2026-08-08)
+
+
+### Features
+
+* **cli:** add support for dynamic os-based protocol selection ([32901b2](https://github.com/newstack-cloud/bluelink/commit/32901b20fa497572d383edc0676007fb7664c2af))
+* **cli:** thread cancellable context through commands and preflight ([d9b27d8](https://github.com/newstack-cloud/bluelink/commit/d9b27d8c705eaa0456b3b24c652402dd01493ba7))
+
+
+### Bug Fixes
+
+* **cli:** ensure context and operation config is passed through to validation tui ([6a5d6df](https://github.com/newstack-cloud/bluelink/commit/6a5d6dfd89788e303fb586a680fa75165eecedad))
+
 ## [0.5.1](https://github.com/newstack-cloud/bluelink/compare/cli/v0.5.0...cli/v0.5.1) (2026-07-19)
 
 
