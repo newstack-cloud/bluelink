@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.16.1](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.16.0...plugin-framework/v0.16.1) (2026-08-08)
+
+
+### Bug Fixes
+
+* **plugin-framework:** add corection to support multiple asserts for service mock calls ([6ba5ea0](https://github.com/newstack-cloud/bluelink/commit/6ba5ea055e8f3025587d0c5edf29d67a6325a6a9))
+
+
+### Dependencies
+
+* **plugin-framework:** bump blueprint lib to 0.52.0 ([d1e8d6d](https://github.com/newstack-cloud/bluelink/commit/d1e8d6d34a9f967681b724868f43db63ba2d44b9))
+
 ## [0.16.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.15.0...plugin-framework/v0.16.0) (2026-08-07)
 
 
