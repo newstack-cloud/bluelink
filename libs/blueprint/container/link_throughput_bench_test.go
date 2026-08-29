@@ -37,8 +37,14 @@ const linkThroughputTimeout = 5 * time.Minute
 // one, and it would hide the question this asks which is whether links on unrelated resources
 // run at the same time.
 type linkThroughputShape struct {
-	functions            int
-	tablesPerFunction    int
+	functions         int
+	tablesPerFunction int
+	// sharedTable puts every function's links on one table instead of giving each
+	// function its own, so the links share their resource B while their resource A
+	// differs. Several functions reading one table is an ordinary blueprint, and it is
+	// the shape that distinguishes resource affinity keyed on A from affinity keyed on
+	// both endpoints.
+	sharedTable          bool
 	updateResourceA      time.Duration
 	updateResourceB      time.Duration
 	updateIntermediaries time.Duration
@@ -49,6 +55,14 @@ func (s linkThroughputShape) links() int {
 }
 
 func (s linkThroughputShape) name() string {
+	if s.sharedTable {
+		return fmt.Sprintf(
+			"functions=%d/sharedTable/links=%d",
+			s.functions,
+			s.links(),
+		)
+	}
+
 	return fmt.Sprintf(
 		"functions=%d/linksPerFunction=%d/links=%d",
 		s.functions,
@@ -254,6 +268,10 @@ func generateLinkThroughputBlueprint(shape linkThroughputShape) string {
 	var spec strings.Builder
 	spec.WriteString("version: 2025-11-02\nresources:\n")
 
+	if shape.sharedTable {
+		return generateSharedTableBlueprint(shape)
+	}
+
 	for functionIndex := range shape.functions {
 		group := fmt.Sprintf("group%d", functionIndex)
 
@@ -277,6 +295,37 @@ func generateLinkThroughputBlueprint(shape linkThroughputShape) string {
     spec:
       handler: "src/handler%d.handler"
 `, functionIndex, group, functionIndex)
+	}
+
+	return spec.String()
+}
+
+// Every function links to the same tables, so the links share their resource B.
+func generateSharedTableBlueprint(shape linkThroughputShape) string {
+	var spec strings.Builder
+	spec.WriteString("version: 2025-11-02\nresources:\n")
+
+	for tableIndex := range shape.tablesPerFunction {
+		spec.WriteString(fmt.Sprintf(`  sharedTable%d:
+    type: aws/dynamodb/table
+    metadata:
+      labels:
+        linkGroup: shared
+    spec:
+      tableName: "shared-table-%d"
+      region: "eu-west-2"
+`, tableIndex, tableIndex))
+	}
+
+	for functionIndex := range shape.functions {
+		spec.WriteString(fmt.Sprintf(`  function%d:
+    type: aws/lambda/function
+    linkSelector:
+      byLabel:
+        linkGroup: shared
+    spec:
+      handler: "src/handler%d.handler"
+`, functionIndex, functionIndex))
 	}
 
 	return spec.String()
@@ -439,6 +488,8 @@ func BenchmarkLinkThroughput(b *testing.B) {
 		{functions: 8, tablesPerFunction: 3},
 		{functions: 8, tablesPerFunction: 6},
 		{functions: 20, tablesPerFunction: 3},
+		{functions: 12, tablesPerFunction: 1, sharedTable: true},
+		{functions: 12, tablesPerFunction: 3, sharedTable: true},
 	}
 
 	for _, shape := range shapes {

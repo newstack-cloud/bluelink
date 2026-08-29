@@ -66,10 +66,6 @@ func (r *linkConcurrencyRecorder) peakInFlight() int {
 
 // Wraps a link so its resource A update is observed, leaving the rest of the
 // implementation as the suite already has it.
-//
-// Resource A rather than resource B. The two links in the fixture share their
-// resource B, so the deployer's lock on it serialises those updates by design.
-// Their resource A differs, and is the part with nothing to serialise.
 type concurrencyObservedLink struct {
 	provider.Link
 	recorder *linkConcurrencyRecorder
@@ -141,11 +137,8 @@ func (s *ContainerDeployTestSuite) Test_links_ready_together_are_deployed_concur
 	// are expanded from a template and reference a child blueprint, so their
 	// links become ready in a stagger behind the child and never overlap.
 	//
-	// Two functions linking to one table, so the table completing readies both
-	// links at once and they are deployed in the same batch. Batches are
-	// serialised against each other, so links readied by different resource
-	// completions could not overlap however the deployment behaved. See the
-	// fixture for why no other arrangement puts two links in one batch.
+	// Two functions with a table each, so the two links share no resource and
+	// nothing about them has to be serialised.
 	params := core.NewDefaultParams(
 		map[string]map[string]*core.ScalarValue{},
 		map[string]map[string]*core.ScalarValue{},

@@ -127,7 +127,7 @@ func Test_access_link_waits_for_the_placement_link_in_the_same_batch(t *testing.
 		"the access link should wait while the placement link is still undeployed",
 	)
 
-	deployState.MarkLinkDeployed("netVPC::netFunction")
+	deployState.MarkLinkSettled("netVPC::netFunction")
 
 	require.Empty(
 		t,
@@ -162,7 +162,7 @@ func Test_access_link_waits_for_a_placement_link_in_another_batch(t *testing.T) 
 		"the access link should wait for a placement link its own batch does not hold",
 	)
 
-	deployState.MarkLinkDeployed("netVPC::netFunction")
+	deployState.MarkLinkSettled("netVPC::netFunction")
 
 	require.Empty(t, deployState.AwaitingCapabilityProviders("netFunction::netQueue"))
 }
@@ -207,30 +207,6 @@ func Test_links_are_unordered_when_no_capabilities_are_declared(t *testing.T) {
 	}
 }
 
-// A link deferred by one batch has to be handed to the next one, or it is simply dropped
-// and never deployed at all.
-func Test_deferred_links_are_taken_by_the_next_batch(t *testing.T) {
-	vpc, function, queue := linkOrderingChain()
-	deployState := NewDefaultDeploymentState()
-	deployState.SetLinkCapabilityGraph(placementOrderingGraph(t))
-
-	require.Empty(t, deployState.UpdateLinkDeploymentState(vpc))
-	require.Empty(t, deployState.UpdateLinkDeploymentState(queue))
-	ready := deployState.UpdateLinkDeploymentState(function)
-
-	deployState.DeferLinks(ready)
-
-	// A batch with nothing new of its own still has to collect what was deferred.
-	taken := deployState.TakeReadyLinks(nil)
-	require.Equal(t, ready, taken)
-
-	require.Empty(
-		t,
-		deployState.TakeReadyLinks(nil),
-		"deferred links should only be handed out once",
-	)
-}
-
 // Two links between the same pair of resources, pointing in opposite directions.
 //
 // This is an ordinary blueprint with a function that writes to
@@ -270,13 +246,13 @@ func Test_a_link_waits_for_every_provider_of_the_capabilities_it_requires(t *tes
 	deployState := NewDefaultDeploymentState()
 	deployState.SetLinkCapabilityGraph(twoProviderOrderingGraph(t))
 
-	deployState.MarkLinkDeployed("netVPC::netFunction")
+	deployState.MarkLinkSettled("netVPC::netFunction")
 	require.Equal(
 		t,
 		[]string{"netVPC2::netFunction"},
 		deployState.AwaitingCapabilityProviders("netFunction::netQueue"),
 	)
 
-	deployState.MarkLinkDeployed("netVPC2::netFunction")
+	deployState.MarkLinkSettled("netVPC2::netFunction")
 	require.Empty(t, deployState.AwaitingCapabilityProviders("netFunction::netQueue"))
 }

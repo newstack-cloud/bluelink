@@ -189,6 +189,11 @@ type DeployInput struct {
 	// Resources in CONFIG_COMPLETE (stabilization polling) benefit from
 	// longer drain times to reach finalized states.
 	DrainTimeout time.Duration
+	// LinkSlots bounds how many links are deployed at the same time across the whole
+	// deployment. A parent passes its own budget to each child blueprint so the bound
+	// holds across the instance tree. A nil value means this is the root of a deployment
+	// and a budget of DefaultMaxConcurrentLinks is created for it.
+	LinkSlots *LinkSlots
 }
 
 // DestroyInput contains the primary input needed to destroy a blueprint instance.
