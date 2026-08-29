@@ -872,7 +872,15 @@ func (d *defaultLinkDeployer) updateLinkIntermediaryResources(
 	deployCtx.Channels.LinkUpdateChan <- d.createLinkIntermediariesUpdatedMessage(
 		linkInfo,
 		deployCtx,
-		updateIntermediariesRetryInfo,
+		// The retry context has to carry the start time of this attempt, as it
+		// does on the retry and terminal failure paths above. The duration for
+		// this phase is measured from it, and a context created for a first
+		// attempt has a zero start time, which measures from the zero instant
+		// and saturates time.Duration instead of timing the update.
+		provider.RetryContextWithStartTime(
+			updateIntermediariesRetryInfo,
+			updateIntermediariesStartTime,
+		),
 		input.LinkUpdateType,
 	)
 

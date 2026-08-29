@@ -303,6 +303,7 @@ func assertLinkMessageDurations(
 		testSuite.Assert().NotNil(actualDurations)
 		if expectedDurations.TotalDuration != nil {
 			testSuite.Assert().NotNil(actualDurations.TotalDuration)
+			assertMeasuredDuration(actualDurations.TotalDuration, "link total", testSuite)
 		}
 
 		if expectedDurations.ResourceAUpdate != nil {
@@ -340,6 +341,7 @@ func assertLinkComponentAttemptDurationsPresent(
 		testSuite.Assert().NotNil(actualDurations)
 		if expectedDurations.TotalDuration != nil {
 			testSuite.Assert().NotNil(actualDurations.TotalDuration)
+			assertMeasuredDuration(actualDurations.TotalDuration, "link component total", testSuite)
 		}
 
 		if expectedDurations.AttemptDurations != nil {
@@ -1071,4 +1073,33 @@ func (c *stubBlueprintContainer) ApplyReconciliation(
 	paramOverrides core.BlueprintParams,
 ) (*ApplyReconciliationResult, error) {
 	return nil, nil
+}
+
+// Bounds what a duration recorded during a test can
+// plausibly be. Everything here completes in milliseconds, so an hour leaves
+// enormous headroom while still catching a duration that was never measured.
+const maxMeasuredTestDurationMs = 60 * 60 * 1000
+
+// Checks a duration was actually measured rather than
+// derived from an unset start time. Measuring from a zero time.Time overflows
+// time.Duration, which saturates at math.MaxInt64 nanoseconds and reaches state
+// as roughly 9.2e12 milliseconds. That value is not nil, so asserting presence
+// alone lets it through.
+func assertMeasuredDuration(
+	actual *float64,
+	label string,
+	testSuite *suite.Suite,
+) {
+	if actual == nil {
+		return
+	}
+	testSuite.Assert().GreaterOrEqualf(*actual, float64(0), "%s duration is negative", label)
+	testSuite.Assert().Lessf(
+		*actual,
+		float64(maxMeasuredTestDurationMs),
+		"%s duration was not measured (saturated at %.0fms, which is what measuring "+
+			"from an unset start time produces)",
+		label,
+		*actual,
+	)
 }
