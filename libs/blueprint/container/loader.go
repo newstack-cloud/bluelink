@@ -1110,7 +1110,7 @@ func (l *defaultLoader) validateAndApplyTransforms(
 	currentBlueprintSchema := blueprintSchema
 	for transformName, transformer := range transformers {
 		transformerCtx := transform.NewTransformerContextFromParams(
-			transformName,
+			l.transformerConfigNamespace(ctx, transformName, transformer),
 			valCtx.Params,
 		)
 
@@ -1148,6 +1148,37 @@ func (l *defaultLoader) validateAndApplyTransforms(
 	}
 
 	return transformers, currentBlueprintSchema, transformDiagnostics, nil
+}
+
+// The namespace a transformer's configuration is keyed by, which is not the
+// name it is selected by in a blueprint's `transform` field.
+//
+// Hosts key transformer config by plugin namespace ("celerity"), the same
+// namespace abstract resource types carry ("celerity/vpc"). A transform name is
+// versioned and distinct ("celerity-2026-02-27-draft"), so using it to read
+// config finds nothing, every lookup a transformer makes during Transform comes
+// back empty, and only the transformers that require a config value report it.
+//
+// The namespace is derived from an abstract resource type because the interface exposes no
+// namespace of its own. A transformer that has no abstract resources
+// has no namespace to derive and nothing that could read config under one, so
+// the transform name is used instead.
+func (l *defaultLoader) transformerConfigNamespace(
+	ctx context.Context,
+	transformName string,
+	transformer transform.SpecTransformer,
+) string {
+	resourceTypes, err := transformer.ListAbstractResourceTypes(ctx)
+	if err != nil || len(resourceTypes) == 0 {
+		return transformName
+	}
+
+	namespace := transform.ExtractTransformerFromItemType(resourceTypes[0])
+	if namespace == "" {
+		return transformName
+	}
+
+	return namespace
 }
 
 func (l *defaultLoader) validateTransformerLinks(
