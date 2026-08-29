@@ -1,0 +1,35 @@
+version: 2025-11-02
+values:
+  consumerConfig:
+    type: array
+    value:
+      - name: "one"
+      - name: "two"
+
+resources:
+  gatedProducer:
+    type: aws/lambda2/function
+    description: >
+      Stands in for a resource whose creation takes minutes. Its computed id is
+      only readable once it has been created.
+    spec:
+      handler: "src/gated.handler"
+
+  fastFunction:
+    type: aws/lambda2/function
+    description: >
+      Completes immediately, prompting a readiness evaluation of the consumers
+      while gatedProducer is still being created.
+    spec:
+      handler: "src/fast.handler"
+
+  consumer:
+    type: aws/consumer2/record
+    description: >
+      Expanded from a template, so the deployed nodes are named consumer_0 and
+      consumer_1 and exist only in the expanded blueprint. Each references a
+      computed property of a resource it has no link to.
+    each: "${values.consumerConfig}"
+    spec:
+      sourceId: "${resources.gatedProducer.spec.id}"
+      otherId: "${resources.fastFunction.spec.id}"

@@ -315,10 +315,14 @@ func (c *defaultBlueprintContainer) deploy(
 	// in the deployment groups, this provides the information needed
 	// to determine which elements can be deployed next upon completion
 	// of others.
+	//
+	// The collector must be the expanded blueprint's, the same one the nodes
+	// were grouped from. This ensures that direct dependencies are correctly
+	// resolved from the final template that feeds into deployment orchestration.
 	err = PopulateDirectDependencies(
 		ctx,
 		flattenedNodes,
-		c.refChainCollector,
+		prepareResult.BlueprintContainer.RefChainCollector(),
 		deployDeps.paramOverrides,
 	)
 	if err != nil {
