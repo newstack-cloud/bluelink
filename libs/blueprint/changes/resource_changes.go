@@ -90,6 +90,7 @@ func (s *defaultResourceChangeGenerator) GenerateChanges(
 		&fieldChangeContext{
 			fieldsToResolveOnDeploy: fieldsToResolveOnDeploy,
 			parentMustRecreate:      false,
+			parentSensitive:         false,
 			currentPath:             "spec",
 			depth:                   0,
 		},
@@ -286,7 +287,7 @@ func collectScalarFieldChanges(
 			PrevValue:    scalarInCurrentState,
 			NewValue:     scalarInNewSpec,
 			MustRecreate: fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
-			Sensitive:    schema.Sensitive,
+			Sensitive:    fieldChangeSensitive(fieldChangeCtx.parentSensitive, schema),
 		})
 		return
 	}
@@ -308,7 +309,7 @@ func collectScalarFieldChanges(
 			PrevValue:    nil,
 			NewValue:     scalarInNewSpec,
 			MustRecreate: fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
-			Sensitive:    schema.Sensitive,
+			Sensitive:    fieldChangeSensitive(fieldChangeCtx.parentSensitive, schema),
 		})
 		return
 	}
@@ -346,6 +347,7 @@ func collectArrayFieldChanges(
 			&fieldChangeContext{
 				fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
 				parentMustRecreate:      fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
+				parentSensitive:         fieldChangeSensitive(fieldChangeCtx.parentSensitive, schema),
 				currentPath:             renderFieldArrayPath(fieldChangeCtx.currentPath, i),
 				depth:                   fieldChangeCtx.depth + 1,
 			},
@@ -362,6 +364,7 @@ func collectArrayFieldChanges(
 				&fieldChangeContext{
 					fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
 					parentMustRecreate:      fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
+					parentSensitive:         fieldChangeSensitive(fieldChangeCtx.parentSensitive, schema),
 					currentPath:             renderFieldArrayPath(fieldChangeCtx.currentPath, i),
 					depth:                   fieldChangeCtx.depth + 1,
 				},
@@ -386,6 +389,7 @@ func collectObjectFieldChanges(
 			&fieldChangeContext{
 				fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
 				parentMustRecreate:      fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
+				parentSensitive:         fieldChangeSensitive(fieldChangeCtx.parentSensitive, schema),
 				currentPath:             substitutions.RenderFieldPath(fieldChangeCtx.currentPath, fieldName),
 				depth:                   fieldChangeCtx.depth + 1,
 			},
@@ -411,6 +415,7 @@ func collectMapFieldChanges(
 			&fieldChangeContext{
 				fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
 				parentMustRecreate:      fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
+				parentSensitive:         fieldChangeSensitive(fieldChangeCtx.parentSensitive, schema),
 				currentPath:             substitutions.RenderFieldPath(fieldChangeCtx.currentPath, fieldName),
 				depth:                   fieldChangeCtx.depth + 1,
 			},
@@ -429,6 +434,7 @@ func collectMapFieldChanges(
 				&fieldChangeContext{
 					fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
 					parentMustRecreate:      fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
+					parentSensitive:         fieldChangeSensitive(fieldChangeCtx.parentSensitive, schema),
 					currentPath:             substitutions.RenderFieldPath(fieldChangeCtx.currentPath, fieldName),
 					depth:                   fieldChangeCtx.depth + 1,
 				},
@@ -453,7 +459,7 @@ func collectUnionFieldChanges(
 			PrevValue:    unionValueInCurrentState,
 			NewValue:     unionValueInNewSpec,
 			MustRecreate: fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
-			Sensitive:    unionHasSensitiveVariant(schema),
+			Sensitive:    fieldChangeCtx.parentSensitive || unionHasSensitiveVariant(schema),
 		})
 		return
 	}
@@ -469,6 +475,7 @@ func collectUnionFieldChanges(
 			// Ensure that if the field with the union type changes requires a resource to be recreated,
 			// this information is passed down to all child values.
 			parentMustRecreate: fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
+			parentSensitive:    fieldChangeSensitive(fieldChangeCtx.parentSensitive, schema),
 			currentPath:        fieldChangeCtx.currentPath,
 			depth:              fieldChangeCtx.depth,
 		},
@@ -663,8 +670,15 @@ func collectMetadataAnnotationChanges(
 type fieldChangeContext struct {
 	fieldsToResolveOnDeploy []string
 	parentMustRecreate      bool
-	currentPath             string
-	depth                   int
+	// Whether an ancestor of the field was declared sensitive.
+	//
+	// Sensitivity is declared on the field a plugin author thinks of as secret,
+	// which for a map or object of secrets is the container rather than each of
+	// its entries. Without inheriting it, the leaves carrying the actual values
+	// are the ones that come out unmarked.
+	parentSensitive bool
+	currentPath     string
+	depth           int
 }
 
 func getField(node *bpcore.MappingNode, fieldName string) *bpcore.MappingNode {
@@ -995,6 +1009,12 @@ func mustRecreateResource(fieldChanges []provider.FieldChange, resourceInfo *pro
 
 func fieldChangeMustRecreateResource(parentMustRecreate bool, schema *provider.ResourceDefinitionsSchema) bool {
 	return (parentMustRecreate || schema.MustRecreate) && !schema.Computed
+}
+
+// Unlike MustRecreate, a computed field is not exempt as a value the provider
+// computed from a secret is still a secret.
+func fieldChangeSensitive(parentSensitive bool, schema *provider.ResourceDefinitionsSchema) bool {
+	return parentSensitive || schema.Sensitive
 }
 
 func getObjectSchemas(

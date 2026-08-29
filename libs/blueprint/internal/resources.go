@@ -1436,3 +1436,132 @@ func (r *ExampleNullableFieldResource) Destroy(
 ) error {
 	return nil
 }
+
+// ExampleSensitiveContainerResource declares sensitivity on containers rather
+// than on the leaves beneath them, which is how a plugin author naturally
+// expresses "this map holds secrets". It exists to pin that the values inside
+// such a container are marked sensitive in staged changes.
+type ExampleSensitiveContainerResource struct{}
+
+func (r *ExampleSensitiveContainerResource) CustomValidate(
+	ctx context.Context,
+	input *provider.ResourceValidateInput,
+) (*provider.ResourceValidateOutput, error) {
+	return &provider.ResourceValidateOutput{}, nil
+}
+
+func (r *ExampleSensitiveContainerResource) GetSpecDefinition(
+	ctx context.Context,
+	input *provider.ResourceGetSpecDefinitionInput,
+) (*provider.ResourceGetSpecDefinitionOutput, error) {
+	return &provider.ResourceGetSpecDefinitionOutput{
+		SpecDefinition: &provider.ResourceSpecDefinition{
+			Schema: &provider.ResourceDefinitionsSchema{
+				Type: provider.ResourceDefinitionsSchemaTypeObject,
+				Attributes: map[string]*provider.ResourceDefinitionsSchema{
+					"name": {
+						Type: provider.ResourceDefinitionsSchemaTypeString,
+					},
+					"values": {
+						Type: provider.ResourceDefinitionsSchemaTypeMap,
+						MapValues: &provider.ResourceDefinitionsSchema{
+							Type: provider.ResourceDefinitionsSchemaTypeString,
+						},
+					},
+					"secureValues": {
+						Type: provider.ResourceDefinitionsSchemaTypeMap,
+						MapValues: &provider.ResourceDefinitionsSchema{
+							Type: provider.ResourceDefinitionsSchemaTypeString,
+						},
+						Sensitive: true,
+					},
+					"credentials": {
+						Type: provider.ResourceDefinitionsSchemaTypeObject,
+						Attributes: map[string]*provider.ResourceDefinitionsSchema{
+							"username": {
+								Type: provider.ResourceDefinitionsSchemaTypeString,
+							},
+						},
+						Sensitive: true,
+					},
+				},
+			},
+		},
+	}, nil
+}
+
+func (r *ExampleSensitiveContainerResource) CanLinkTo(
+	ctx context.Context,
+	input *provider.ResourceCanLinkToInput,
+) (*provider.ResourceCanLinkToOutput, error) {
+	return &provider.ResourceCanLinkToOutput{}, nil
+}
+
+func (r *ExampleSensitiveContainerResource) GetStabilisedDependencies(
+	ctx context.Context,
+	input *provider.ResourceStabilisedDependenciesInput,
+) (*provider.ResourceStabilisedDependenciesOutput, error) {
+	return &provider.ResourceStabilisedDependenciesOutput{}, nil
+}
+
+func (r *ExampleSensitiveContainerResource) IsCommonTerminal(
+	ctx context.Context,
+	input *provider.ResourceIsCommonTerminalInput,
+) (*provider.ResourceIsCommonTerminalOutput, error) {
+	return &provider.ResourceIsCommonTerminalOutput{}, nil
+}
+
+func (r *ExampleSensitiveContainerResource) GetType(
+	ctx context.Context,
+	input *provider.ResourceGetTypeInput,
+) (*provider.ResourceGetTypeOutput, error) {
+	return &provider.ResourceGetTypeOutput{
+		Type:  "example/sensitiveContainer",
+		Label: "Sensitive Container Resource",
+	}, nil
+}
+
+func (r *ExampleSensitiveContainerResource) GetTypeDescription(
+	ctx context.Context,
+	input *provider.ResourceGetTypeDescriptionInput,
+) (*provider.ResourceGetTypeDescriptionOutput, error) {
+	return &provider.ResourceGetTypeDescriptionOutput{
+		MarkdownDescription:  "A test resource declaring sensitivity on containers.",
+		PlainTextDescription: "A test resource declaring sensitivity on containers.",
+	}, nil
+}
+
+func (r *ExampleSensitiveContainerResource) GetExamples(
+	ctx context.Context,
+	input *provider.ResourceGetExamplesInput,
+) (*provider.ResourceGetExamplesOutput, error) {
+	return &provider.ResourceGetExamplesOutput{}, nil
+}
+
+func (r *ExampleSensitiveContainerResource) Deploy(
+	ctx context.Context,
+	input *provider.ResourceDeployInput,
+) (*provider.ResourceDeployOutput, error) {
+	return &provider.ResourceDeployOutput{}, nil
+}
+
+func (r *ExampleSensitiveContainerResource) HasStabilised(
+	ctx context.Context,
+	input *provider.ResourceHasStabilisedInput,
+) (*provider.ResourceHasStabilisedOutput, error) {
+	return &provider.ResourceHasStabilisedOutput{Stabilised: true}, nil
+}
+
+func (r *ExampleSensitiveContainerResource) GetExternalState(
+	ctx context.Context,
+	input *provider.ResourceGetExternalStateInput,
+) (*provider.ResourceGetExternalStateOutput, error) {
+	return &provider.ResourceGetExternalStateOutput{}, nil
+}
+
+func (r *ExampleSensitiveContainerResource) Destroy(
+	ctx context.Context,
+	input *provider.ResourceDestroyInput,
+) error {
+	return nil
+}
