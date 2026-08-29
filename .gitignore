@@ -21,3 +21,5 @@ node_modules
 
 # Language server log files for Bluelink blueprints
 blueprint-ls.log
+
+docs/design
