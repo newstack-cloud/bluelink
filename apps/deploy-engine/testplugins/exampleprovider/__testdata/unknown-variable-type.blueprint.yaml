@@ -1,0 +1,16 @@
+version: 2025-11-02
+# "example/regionn" is not a custom variable type provided by the example
+# provider, validation reports the available types along with "example/region"
+# as a suggestion.
+variables:
+  region:
+    type: example/regionn
+    description: "The region to deploy the example service to."
+
+resources:
+  ordersService:
+    type: example/service
+    description: "Service that handles orders."
+    spec:
+      serviceName: "orders"
+      region: "${variables.region}"

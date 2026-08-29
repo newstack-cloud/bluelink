@@ -44,3 +44,10 @@ core/versions.go
 tmp
 
 .bluelink
+
+# Ignore local test binaries built into the app directory.
+/exampleprovider
+
+# Locations of local plugin source repositories, these are specific to
+# each machine. See local-plugins.example.conf.
+local-plugins.conf

@@ -118,7 +118,7 @@ L:
 				break L
 			}
 		case err := <-errChan:
-			fmt.Println("writing error", err)
+			logger.Debug("writing error to stream", core.ErrorLogField("error", err))
 			writeError(w, err, flusher)
 			break L
 		}

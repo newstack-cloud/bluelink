@@ -56,6 +56,71 @@ bash ./scripts/run-local.sh
 bash ./scripts/run-local.sh --host
 ```
 
+## Building plugins for local testing
+
+The deploy engine discovers plugins under a plugin directory tree rooted at
+`.bluelink/deploy-engine/plugins/bin` when running locally, with each plugin
+binary installed at:
+
+```
+<providers|transformers>/<namespace>/<name>/<version>/plugin
+```
+
+`scripts/build-local-plugins.sh` builds plugins from their source repositories
+and installs them into that tree. It has no knowledge of where any plugin lives,
+the locations are given as specs of the form:
+
+```
+<namespace>/<name>=<source directory>[@<version>]
+```
+
+where the source directory is the directory holding the plugin's main package
+and a leading `~/` is expanded. When no version is given it is derived from the
+latest git tag in the source directory's repository, falling back to `0.0.0-dev`
+when there are no tags. The version is used both for the install directory and
+for the version compiled into the plugin binary.
+
+```bash
+bash ./scripts/build-local-plugins.sh \
+  --provider newstack-cloud/aws=~/repos/bluelink-provider-aws \
+  --transformer newstack-cloud/celerity=~/repos/bluelink-transformer-celerity
+```
+
+Both options can be repeated to build any number of plugins, and a version can
+be pinned instead of derived from git tags:
+
+```bash
+bash ./scripts/build-local-plugins.sh --provider newstack-cloud/aws=~/repos/bluelink-provider-aws@0.4.2
+```
+
+### Config file
+
+So the locations on your machine do not have to be retyped, plugin specs can be
+kept in a config file. Copy `local-plugins.example.conf` to `local-plugins.conf`
+and adjust the directories, `local-plugins.conf` is not tracked in version
+control. When no `--provider` or `--transformer` option is given the specs are
+read from it:
+
+```bash
+bash ./scripts/build-local-plugins.sh
+```
+
+Use `--config <file>` or the `BLUELINK_LOCAL_PLUGINS_CONFIG` environment
+variable for a config file in another location, `--only <namespace>/<name>` to
+build a subset of the plugins in it, and `--list` to see what would be built
+without building it.
+
+The deploy engine loads plugins at startup, so restart it after building to pick
+up new or rebuilt plugins.
+
+### Test plugins
+
+The repository also carries plugins under `testplugins/` for exercising the
+deploy engine locally without talking to any upstream system. These are built
+with `scripts/build-test-plugins.sh`, see
+[testplugins/README.md](../testplugins/README.md) for what they provide and how
+to use them.
+
 ## Releasing
 
 Releases are automated using [release-please](https://github.com/googleapis/release-please).

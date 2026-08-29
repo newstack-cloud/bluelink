@@ -1,0 +1,18 @@
+version: 2025-11-02
+# "eu-central-4" is not one of the options for the "example/region" custom
+# variable type, validation reports the available options along with
+# "eu-central-1" as a suggestion.
+# The value for the variable comes from the request, provide it as
+# "eu-central-4" when validating this blueprint.
+variables:
+  region:
+    type: example/region
+    description: "The region to deploy the example service to."
+
+resources:
+  ordersService:
+    type: example/service
+    description: "Service that handles orders."
+    spec:
+      serviceName: "orders"
+      region: "${variables.region}"
