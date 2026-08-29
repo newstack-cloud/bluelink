@@ -1,0 +1,28 @@
+version: 2025-11-02
+resources:
+  gatedProducer:
+    type: aws/lambda2/function
+    description: >
+      Stands in for a resource whose creation takes minutes, such as a VPC
+      waiting on a NAT gateway. Its computed id is only readable once it has
+      been created.
+    spec:
+      handler: "src/gated.handler"
+
+  fastFunction:
+    type: aws/lambda2/function
+    description: >
+      Completes immediately. Its completion triggers an evaluation of the
+      consumer's readiness while gatedProducer is still being created.
+    spec:
+      handler: "src/fast.handler"
+
+  consumer:
+    type: aws/consumer2/record
+    description: >
+      References a computed property of a resource it has no link to, so the
+      ordering can only come from the reference itself. It also references the
+      fast function so its completion prompts a readiness check.
+    spec:
+      sourceId: "${resources.gatedProducer.spec.id}"
+      otherId: "${resources.fastFunction.spec.id}"

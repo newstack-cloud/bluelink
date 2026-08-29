@@ -104,15 +104,16 @@ type Registry interface {
 		input *provider.AcquireResourceLockInput,
 	) error
 
-	// ReleaseResourceLock releases a lock on a resource of a given type
-	// in the blueprint state.
-	// This is to be used by the deployment orchestrator to release the lock
-	// after the link update phase is complete or the link update fails.
+	// ReleaseResourceLock releases a single lock held by a given caller, letting
+	// the holder give a resource up before its phase ends. See
+	// provider.ResourceService.ReleaseResourceLock for why a caller would.
+	//
+	// A lock held by anyone else is left alone, and releasing one that is not held
+	// is not an error: the phase's own release may have already run.
 	ReleaseResourceLock(
 		ctx context.Context,
-		instanceID string,
-		resourceName string,
-	)
+		input *provider.ReleaseResourceLockInput,
+	) error
 
 	// ReleaseResourceLocks releases all resource locks
 	// that have been acquired for the given instance ID.
@@ -727,14 +728,25 @@ func (r *registryFromProviders) lockHolder(lockKey string, acquiredBy string) (s
 
 func (r *registryFromProviders) ReleaseResourceLock(
 	ctx context.Context,
-	instanceID string,
-	resourceName string,
-) {
+	input *provider.ReleaseResourceLockInput,
+) error {
 	r.resourceLocksMu.Lock()
 	defer r.resourceLocksMu.Unlock()
 
-	lockKey := createResourceLockKey(instanceID, resourceName)
+	lockKey := createResourceLockKey(input.InstanceID, input.ResourceName)
+	lock, held := r.resourceLocks[lockKey]
+	if !held {
+		return nil
+	}
+
+	// Releasing another caller's lock would do exactly what the lock exists to
+	// prevent, and a caller cannot tell from here whether the holder is mid-write.
+	if lock.acquiredBy != input.AcquiredBy {
+		return nil
+	}
+
 	delete(r.resourceLocks, lockKey)
+	return nil
 }
 
 func (r *registryFromProviders) ReleaseResourceLocks(ctx context.Context, instanceID string) {

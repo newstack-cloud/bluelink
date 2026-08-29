@@ -42,3 +42,17 @@ func (s *linkScopedResourceService) AcquireResourceLock(
 
 	return s.ResourceService.AcquireResourceLock(ctx, &scoped)
 }
+
+// Stamped here for the same reason as on acquire, and it matters more.
+// This is because a release only takes effect on a lock recorded under the same acquirer,
+// so an unstamped release would silently do nothing and the caller would keep a lock it believes
+// it gave up.
+func (s *linkScopedResourceService) ReleaseResourceLock(
+	ctx context.Context,
+	input *provider.ReleaseResourceLockInput,
+) error {
+	scoped := *input
+	scoped.AcquiredBy = s.linkID
+
+	return s.ResourceService.ReleaseResourceLock(ctx, &scoped)
+}

@@ -1,0 +1,46 @@
+version: 2025-11-02
+resources:
+  # Two functions linking to one table, which is the shape that puts two links in
+  # the same batch.
+  #
+  # A link becomes ready when the last of its two resources is deployed, and each
+  # resource completion starts its own batch of links. Batches are serialised
+  # against one another, so two links overlap only when a single completion
+  # readies both. A link's function is deployed before its table, so the table is
+  # the last of the pair and readies both links at once when it completes.
+  #
+  # Giving each link its own table instead readies them from separate
+  # completions, and they cannot overlap however the deployment behaves.
+  ordersTable:
+    type: aws/dynamodb/table
+    description: "The one table both functions link to."
+    metadata:
+      displayName: Orders Table
+      labels:
+        app: orders
+    spec:
+      tableName: "orders"
+      region: "eu-west-2"
+
+  # The two links share this table as resource B, so the lock the deployer takes
+  # around UpdateResourceB keeps those apart, which is what the locks are for.
+  # Their resource A is a different function each, so nothing stops the two
+  # UpdateResourceA calls being in flight together, and the only thing that can
+  # prevent it is the deployment running links one after another.
+  saveOrderFunction:
+    type: aws/lambda/function
+    description: "Links to the orders table."
+    linkSelector:
+      byLabel:
+        app: orders
+    spec:
+      handler: "src/saveOrder.handler"
+
+  saveCustomerFunction:
+    type: aws/lambda/function
+    description: "Also links to the orders table."
+    linkSelector:
+      byLabel:
+        app: orders
+    spec:
+      handler: "src/saveCustomer.handler"

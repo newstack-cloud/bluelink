@@ -46,13 +46,20 @@
           }
         }
       },
-      "computedFields": ["spec.id"],
+      "computedFields": [
+        "spec.id"
+      ],
       "failureReasons": null,
       "durations": {
         "configCompleteDuration": -1,
         "totalDuration": -1,
-        "attemptDurations": [-1]
-      }
+        "attemptDurations": [
+          -1
+        ]
+      },
+      "dependsOnChildren": [
+        "coreInfra"
+      ]
     },
     "{idOf::invoiceStream}": {
       "id": "{dynamicValue}",
@@ -73,14 +80,22 @@
           "app": "invoices"
         }
       },
-      "computedFields": ["spec.id"],
-      "dependsOnResources": ["processInvoiceFunction"],
-      "dependsOnChildren": ["coreInfra"],
+      "computedFields": [
+        "spec.id"
+      ],
+      "dependsOnResources": [
+        "processInvoiceFunction"
+      ],
+      "dependsOnChildren": [
+        "coreInfra"
+      ],
       "failureReasons": null,
       "durations": {
         "configCompleteDuration": -1,
         "totalDuration": -1,
-        "attemptDurations": [-1]
+        "attemptDurations": [
+          -1
+        ]
       }
     },
     "{idOf::processInvoiceFunction}": {
@@ -101,12 +116,18 @@
           "app": "invoices"
         }
       },
-      "computedFields": ["spec.id"],
+      "computedFields": [
+        "spec.id"
+      ],
       "failureReasons": null,
       "durations": {
         "configCompleteDuration": -1,
         "totalDuration": -1,
-        "attemptDurations": [-1, -1, -1]
+        "attemptDurations": [
+          -1,
+          -1,
+          -1
+        ]
       }
     },
     "test-orders-table-0-id": {
@@ -142,13 +163,20 @@
           }
         }
       },
-      "computedFields": ["spec.id"],
+      "computedFields": [
+        "spec.id"
+      ],
       "failureReasons": null,
       "durations": {
         "configCompleteDuration": -1,
         "totalDuration": -1,
-        "attemptDurations": [-1]
-      }
+        "attemptDurations": [
+          -1
+        ]
+      },
+      "dependsOnChildren": [
+        "coreInfra"
+      ]
     },
     "test-orders-table-1-id": {
       "id": "test-orders-table-1-id",
@@ -183,13 +211,20 @@
           }
         }
       },
-      "computedFields": ["spec.id"],
+      "computedFields": [
+        "spec.id"
+      ],
       "failureReasons": null,
       "durations": {
         "configCompleteDuration": -1,
         "totalDuration": -1,
-        "attemptDurations": [-1]
-      }
+        "attemptDurations": [
+          -1
+        ]
+      },
+      "dependsOnChildren": [
+        "coreInfra"
+      ]
     },
     "test-save-order-function-id": {
       "id": "test-save-order-function-id",
@@ -205,13 +240,23 @@
         "id": "arn:aws:lambda:us-east-1:123456789012:function:saveOrderFunction"
       },
       "metadata": {},
-      "computedFields": ["spec.id"],
-      "dependsOnResources": ["ordersTable_0", "ordersTable_1", "ordersTable_2"],
+      "computedFields": [
+        "spec.id"
+      ],
+      "dependsOnResources": [
+        "ordersTable_0",
+        "ordersTable_1",
+        "ordersTable_2"
+      ],
       "failureReasons": null,
       "durations": {
         "configCompleteDuration": -1,
         "totalDuration": -1,
-        "attemptDurations": [-1, -1, -1]
+        "attemptDurations": [
+          -1,
+          -1,
+          -1
+        ]
       }
     }
   },
@@ -230,15 +275,21 @@
       "durations": {
         "resourceAUpdate": {
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         },
         "resourceBUpdate": {
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         },
         "intermediaryResources": {
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         },
         "totalDuration": -1
       }
@@ -270,15 +321,21 @@
       "durations": {
         "resourceAUpdate": {
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         },
         "resourceBUpdate": {
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         },
         "intermediaryResources": {
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         },
         "totalDuration": -1
       }
@@ -310,15 +367,23 @@
       "durations": {
         "resourceAUpdate": {
           "totalDuration": -1,
-          "attemptDurations": [-1, -1, -1]
+          "attemptDurations": [
+            -1,
+            -1,
+            -1
+          ]
         },
         "resourceBUpdate": {
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         },
         "intermediaryResources": {
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         },
         "totalDuration": -1
       }
@@ -350,15 +415,21 @@
       "durations": {
         "resourceAUpdate": {
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         },
         "resourceBUpdate": {
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         },
         "intermediaryResources": {
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         },
         "totalDuration": -1
       }
@@ -395,7 +466,10 @@
           "lastDeployAttemptTimestamp": -1,
           "specData": {
             "itemConfig": {
-              "endpoints": ["https://example.com/1", "https://example.com/2"],
+              "endpoints": [
+                "https://example.com/1",
+                "https://example.com/2"
+              ],
               "ipv4": true,
               "metadata": {
                 "environment": "production-env",
@@ -417,12 +491,17 @@
             ]
           },
           "metadata": {},
-          "computedFields": ["spec.computedFieldTrackDrift", "spec.id"],
+          "computedFields": [
+            "spec.computedFieldTrackDrift",
+            "spec.id"
+          ],
           "failureReasons": null,
           "durations": {
             "configCompleteDuration": -1,
             "totalDuration": -1,
-            "attemptDurations": [-1]
+            "attemptDurations": [
+              -1
+            ]
           }
         }
       },

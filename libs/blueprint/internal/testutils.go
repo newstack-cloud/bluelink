@@ -414,14 +414,19 @@ func (r *ResourceRegistryMock) checkLock(lockKey string, acquiredBy string) bool
 
 func (r *ResourceRegistryMock) ReleaseResourceLock(
 	ctx context.Context,
-	instanceID string,
-	resourceName string,
-) {
+	input *provider.ReleaseResourceLockInput,
+) error {
 	r.resourceLocksMu.Lock()
 	defer r.resourceLocksMu.Unlock()
 
-	lockKey := createResourceLockKey(instanceID, resourceName)
+	lockKey := createResourceLockKey(input.InstanceID, input.ResourceName)
+	lock, held := r.resourceLocks[lockKey]
+	if !held || lock.acquiredBy != input.AcquiredBy {
+		return nil
+	}
+
 	delete(r.resourceLocks, lockKey)
+	return nil
 }
 
 func (r *ResourceRegistryMock) ReleaseResourceLocks(ctx context.Context, instanceID string) {

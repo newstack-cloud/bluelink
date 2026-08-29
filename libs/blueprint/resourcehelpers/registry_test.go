@@ -516,13 +516,69 @@ func (s *RegistryTestSuite) Test_a_held_lock_is_never_taken_from_its_holder(c *C
 	c.Assert(err, NotNil)
 
 	// Released explicitly, which is the only way a lock is given up.
-	s.resourceRegistry.ReleaseResourceLock(
+	err = s.resourceRegistry.ReleaseResourceLock(
 		context.TODO(),
-		held.InstanceID,
-		held.ResourceName,
+		&provider.ReleaseResourceLockInput{
+			InstanceID:   held.InstanceID,
+			ResourceName: held.ResourceName,
+			AcquiredBy:   held.AcquiredBy,
+		},
 	)
+	c.Assert(err, IsNil)
 
 	err = s.resourceRegistry.AcquireResourceLock(context.TODO(), contending)
+	c.Assert(err, IsNil)
+}
+
+// The release is attributed, so one caller cannot hand another caller's resource
+// to a third. Without this a link could release a lock it never took and let two
+// writers into the same resource, which is the failure the lock exists to stop.
+func (s *RegistryTestSuite) Test_a_lock_is_not_released_by_a_caller_that_does_not_hold_it(c *C) {
+	held := &provider.AcquireResourceLockInput{
+		InstanceID:   "test-blueprint-id",
+		ResourceName: "test-resource-id-1",
+		AcquiredBy:   "link-a",
+	}
+	err := s.resourceRegistry.AcquireResourceLock(context.TODO(), held)
+	c.Assert(err, IsNil)
+
+	err = s.resourceRegistry.ReleaseResourceLock(
+		context.TODO(),
+		&provider.ReleaseResourceLockInput{
+			InstanceID:   held.InstanceID,
+			ResourceName: held.ResourceName,
+			AcquiredBy:   "link-b",
+		},
+	)
+	// Not an error: a caller releasing a lock it does not hold has nothing to fix,
+	// and the lock is simply left with its holder.
+	c.Assert(err, IsNil)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	err = s.resourceRegistry.AcquireResourceLock(
+		ctx,
+		&provider.AcquireResourceLockInput{
+			InstanceID:   held.InstanceID,
+			ResourceName: held.ResourceName,
+			AcquiredBy:   "link-b",
+		},
+	)
+	c.Assert(err, NotNil)
+}
+
+// Releasing a lock that was never taken is a no-op rather than an error, the
+// phase's own release may already have run, and a caller finished with a
+// resource should not have to work out which happened first.
+func (s *RegistryTestSuite) Test_releasing_a_lock_that_is_not_held_is_not_an_error(c *C) {
+	err := s.resourceRegistry.ReleaseResourceLock(
+		context.TODO(),
+		&provider.ReleaseResourceLockInput{
+			InstanceID:   "test-blueprint-id",
+			ResourceName: "never-locked",
+			AcquiredBy:   "link-a",
+		},
+	)
 	c.Assert(err, IsNil)
 }
 

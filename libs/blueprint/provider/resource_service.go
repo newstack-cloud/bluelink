@@ -59,6 +59,41 @@ type ResourceService interface {
 		ctx context.Context,
 		input *AcquireResourceLockInput,
 	) error
+
+	// ReleaseResourceLock releases a lock the caller holds, without waiting for
+	// the phase that took it to finish.
+	//
+	// A lock is otherwise held until the end of the phase, which is the right
+	// default: it spans the whole read-modify-write the caller is performing. It
+	// is the wrong default when a phase goes on to do unrelated and slow work,
+	// because every other caller wanting that resource waits for work that has
+	// nothing to do with it. A link that grants an execution role access and then
+	// reconciles networking is the case this exists for: the role is finished with
+	// long before the phase is.
+	//
+	// Releasing a lock the caller does not hold is not an error. The lock may have
+	// already been released with the phase, and a caller that has finished with a
+	// resource should not have to reason about which happened first.
+	ReleaseResourceLock(
+		ctx context.Context,
+		input *ReleaseResourceLockInput,
+	) error
+}
+
+// ReleaseResourceLockInput is the input for the ReleaseResourceLock method of the
+// ResourceService.
+type ReleaseResourceLockInput struct {
+	// InstanceID is the ID of the blueprint instance the lock was acquired in.
+	InstanceID string
+	// ResourceName is the name of the resource as defined in the blueprint
+	// to release the lock on.
+	ResourceName string
+	// AcquiredBy is the identifier of the caller that holds the lock. As with
+	// AcquireResourceLockInput this is populated by the deployment orchestrator
+	// and does not need to be set by a provider link implementation. A lock held
+	// by anyone else is left alone.
+	AcquiredBy      string
+	ProviderContext Context
 }
 
 // ResourceLookupInput is the input for the lookup methods of the ResourceService.
