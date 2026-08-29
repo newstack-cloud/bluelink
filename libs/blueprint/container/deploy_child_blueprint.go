@@ -122,6 +122,10 @@ func (d *defaultChildBlueprintDeployer) Deploy(
 			TaggingConfig:          deployCtx.TaggingConfig,
 			ProviderMetadataLookup: deployCtx.ProviderMetadataLookup,
 			DrainTimeout:           deployCtx.DrainTimeout,
+			// The child shares the parent's budget rather than creating its own, so
+			// the deployment's link concurrency bound is not multiplied by the number
+			// of blueprint instances in the tree.
+			LinkSlots: deployCtx.LinkSlots,
 		},
 		childChannels,
 		loadResult.childParams,

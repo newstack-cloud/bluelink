@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"sync"
 	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
@@ -343,6 +342,14 @@ func (c *defaultBlueprintContainer) deploy(
 		return
 	}
 	deployState.SetLinkCapabilityGraph(linkCapabilities)
+
+	// One budget for the whole deployment. A child blueprint is handed the budget its
+	// parent is using rather than creating its own, so the bound holds across the
+	// instance tree instead of being multiplied by it.
+	deployCtx.LinkSlots = input.LinkSlots
+	if deployCtx.LinkSlots == nil {
+		deployCtx.LinkSlots = NewLinkSlots(DefaultMaxConcurrentLinks)
+	}
 
 	sentFinishedMessage, err := c.removeElements(
 		ctx,
@@ -732,6 +739,15 @@ func (c *defaultBlueprintContainer) deployElements(
 		)
 		return true, nil
 	}
+
+	schedulerCtx, stopScheduler := context.WithCancel(ctx)
+	defer stopScheduler()
+	deployCtx.LinkScheduler = c.createLinkScheduler(
+		input.InstanceID,
+		deployCtx,
+		internalChannels,
+	)
+	deployCtx.LinkScheduler.Start(schedulerCtx)
 
 	c.startDeploymentFromFirstGroup(
 		ctx,
@@ -1151,6 +1167,7 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 			if state.terminalFailure {
 				// Mark all in-flight elements as interrupted since we can't
 				// determine their actual state after drain timeout.
+				neverStartedLinks := c.drainLinkScheduler(ctx, deployCtx, finished)
 				inFlightElements := deployCtx.State.GetInFlightElements()
 				c.markInFlightElementsAsInterrupted(
 					ctx,
@@ -1161,7 +1178,10 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 				)
 
 				failed := getFailedElementsFromFinished(finished, deployCtx.Rollback)
-				interrupted := getInterruptedElementNames(inFlightElements, finished)
+				interrupted := append(
+					getInterruptedElementNames(inFlightElements, finished),
+					neverStartedLinks...,
+				)
 
 				deployCtx.Channels.FinishChan <- c.createDeploymentFinishedMessage(
 					instanceID,
@@ -1201,6 +1221,7 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 			// Mark any remaining in-flight elements as interrupted.
 			// This handles the case where elements are still in-flight when the loop exits
 			// (same logic as the drain timeout path).
+			neverStartedLinks := c.drainLinkScheduler(ctx, deployCtx, finished)
 			inFlightElements := deployCtx.State.GetInFlightElements()
 			c.markInFlightElementsAsInterrupted(
 				ctx,
@@ -1211,7 +1232,10 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 			)
 
 			failed := getFailedElementsFromFinished(finished, deployCtx.Rollback)
-			interrupted := getInterruptedElementNames(inFlightElements, finished)
+			interrupted := append(
+				getInterruptedElementNames(inFlightElements, finished),
+				neverStartedLinks...,
+			)
 
 			deployCtx.Channels.FinishChan <- c.createDeploymentFinishedMessage(
 				instanceID,
@@ -1535,134 +1559,61 @@ func (c *defaultBlueprintContainer) buildResourceState(
 	return resourceState
 }
 
-func (c *defaultBlueprintContainer) prepareAndDeployLinks(
-	ctx context.Context,
-	instanceID string,
+// Hands links released by a resource completing to the deployment's link scheduler.
+//
+// Links outside the change set never run, so they are settled here rather than submitted.
+// The pending link tracking follows every link adjacent to a deployed resource, including
+// links change staging determined had no changes, and a completion the deployment event
+// loop does not count would let the loop exit before every planned element is done.
+func (c *defaultBlueprintContainer) submitReadyLinks(
 	linksReadyToBeDeployed []*LinkPendingCompletion,
 	deployCtx *DeployContext,
-	internalChannels *DeployChannels,
 ) {
-	// Only deploy links that are a part of the staged change set.
-	// The pending link tracking follows every link adjacent to resources
-	// deployed in the current deployment, including links that change staging
-	// determined to have no changes.
-	// Deploying links that are not in the change set would produce
-	// completions that the deployment event loop does not count, allowing the
-	// loop to exit before all of the planned elements have been deployed.
 	newlyReady := filterLinksInChangeSet(
 		linksReadyToBeDeployed,
 		deployCtx.InputChanges,
 	)
 
-	// A link outside the change set is never deployed, so nothing should be left
-	// waiting on it. The capability graph already excludes such links when building
-	// edges; marking them here covers the same ground for links that become ready
-	// after the graph was resolved.
 	for _, readyLink := range linksReadyToBeDeployed {
 		if !containsPendingLink(newlyReady, readyLink) {
-			deployCtx.State.MarkLinkDeployed(pendingLinkName(readyLink))
+			deployCtx.State.MarkLinkSettled(pendingLinkName(readyLink))
 		}
 	}
 
-	// Batches are serialised against each other, though the links within one are not.
-	//
-	// A batch takes the deferred links, deploys what it can and hands back the rest, so
-	// two batches running at once could have one take a link the other was about to
-	// release, leaving it deferred with nothing left to run. Links sharing a resource
-	// are kept apart by the resource locks the link deployer holds around each phase,
-	// not by the central coordination.
-	releaseLinkDeployment := deployCtx.State.LockLinkDeployment()
-	defer releaseLinkDeployment()
-
-	// Links deferred by an earlier batch are picked up here. A batch that had nothing
-	// new of its own still runs, because it may be the one that releases them.
-	linksToDeploy := deployCtx.State.TakeReadyLinks(newlyReady)
-	if len(linksToDeploy) == 0 {
-		// Make sure that the latest instance state is only loaded
-		// if it is needed for links ready to be deployed.
-		return
-	}
-
-	// Get the latest instance state that will be fully updated with the current
-	// state of the resources that the links depend on.
-	instances := c.stateContainer.Instances()
-	latestInstanceState, err := instances.Get(ctx, instanceID)
-	if err != nil {
-		deployCtx.State.DeferLinks(linksToDeploy)
-		internalChannels.ErrChan <- err
-		return
-	}
-
-	// Deploying a link can release others that were waiting on it, so this keeps
-	// sweeping until a pass has nothing it can run. Whatever is left is waiting on a
-	// link that another batch owns, and is handed to that batch rather than deployed
-	// out of order.
-	for len(linksToDeploy) > 0 {
-		eligible, waiting := partitionLinksByCapabilityReadiness(
-			deployCtx.State,
-			linksToDeploy,
-		)
-		if len(eligible) == 0 {
-			deployCtx.State.DeferLinks(waiting)
-			return
-		}
-
-		err := c.deployLinksConcurrently(
-			ctx,
-			eligible,
-			&latestInstanceState,
-			DeployContextWithChannels(deployCtx, internalChannels),
-		)
-		if err != nil {
-			deployCtx.State.DeferLinks(waiting)
-			internalChannels.ErrChan <- err
-			return
-		}
-
-		linksToDeploy = waiting
-	}
+	deployCtx.LinkScheduler.Submit(newlyReady)
 }
 
-// Nothing in a pass requires a capability another link in the same pass provides, so
-// there is no order to keep between them and they run together.
-//
-// What keeps two links off the same resource is the lock the link deployer takes around
-// each of UpdateResourceA and UpdateResourceB, and the locks a link implementation takes
-// on the intermediaries it shares, such as an execution role several links write policy
-// to.
-func (c *defaultBlueprintContainer) deployLinksConcurrently(
-	ctx context.Context,
-	links []*LinkPendingCompletion,
-	latestInstanceState *state.InstanceState,
+// Builds the scheduler that deploys this instance's links for the lifetime of the
+// deployment.
+func (c *defaultBlueprintContainer) createLinkScheduler(
+	instanceID string,
 	deployCtx *DeployContext,
-) error {
-	var wg sync.WaitGroup
-	var errMu sync.Mutex
-	var firstErr error
+	internalChannels *DeployChannels,
+) *linkScheduler {
+	linkDeployCtx := DeployContextWithChannels(deployCtx, internalChannels)
 
-	for _, link := range links {
-		wg.Add(1)
-		go func(link *LinkPendingCompletion) {
-			defer wg.Done()
-
-			// Every link is attempted regardless of whether another fails, since the
-			// deployment is ending either way and a link abandoned half-run is worse
-			// than one that finished. The first error is the one reported.
-			err := c.deployReadyLink(ctx, link, latestInstanceState, deployCtx)
-			if err == nil {
-				return
+	return newLinkScheduler(
+		deployCtx.LinkSlots,
+		func(
+			ctx context.Context,
+			link *LinkPendingCompletion,
+			instanceState *state.InstanceState,
+		) error {
+			return c.deployReadyLink(ctx, link, instanceState, linkDeployCtx)
+		},
+		func(ctx context.Context) (*state.InstanceState, error) {
+			instanceState, err := c.stateContainer.Instances().Get(ctx, instanceID)
+			if err != nil {
+				return nil, err
 			}
-
-			errMu.Lock()
-			defer errMu.Unlock()
-			if firstErr == nil {
-				firstErr = err
-			}
-		}(link)
-	}
-	wg.Wait()
-
-	return firstErr
+			return &instanceState, nil
+		},
+		deployCtx.State.MarkLinkSettled,
+		deployCtx.State.AwaitingCapabilityProviders,
+		func(err error) {
+			internalChannels.ErrChan <- err
+		},
+	)
 }
 
 func (c *defaultBlueprintContainer) deployReadyLink(
@@ -1679,32 +1630,7 @@ func (c *defaultBlueprintContainer) deployReadyLink(
 		return err
 	}
 
-	err = c.deployLink(ctx, linkImpl, readyToDeploy, latestInstanceState, deployCtx)
-	if err != nil {
-		return err
-	}
-
-	deployCtx.State.MarkLinkDeployed(pendingLinkName(readyToDeploy))
-
-	return nil
-}
-
-// Splits links into those whose required capabilities have all been established and
-// those still waiting on a provider.
-func partitionLinksByCapabilityReadiness(
-	deployState DeploymentState,
-	links []*LinkPendingCompletion,
-) (eligible []*LinkPendingCompletion, waiting []*LinkPendingCompletion) {
-	for _, link := range links {
-		awaiting := deployState.AwaitingCapabilityProviders(pendingLinkName(link))
-		if len(awaiting) > 0 {
-			waiting = append(waiting, link)
-			continue
-		}
-		eligible = append(eligible, link)
-	}
-
-	return eligible, waiting
+	return c.deployLink(ctx, linkImpl, readyToDeploy, latestInstanceState, deployCtx)
 }
 
 func (c *defaultBlueprintContainer) deployLink(
@@ -2189,13 +2115,7 @@ func (c *defaultBlueprintContainer) handleSuccessfulResourceDeployment(
 		node.ChainLinkNode,
 	)
 
-	go c.prepareAndDeployLinks(
-		ctx,
-		msg.InstanceID,
-		linksReadyToBeDeployed,
-		deployCtx,
-		internalChannels,
-	)
+	c.submitReadyLinks(linksReadyToBeDeployed, deployCtx)
 
 	// To avoid blocking the handler from processing other messages
 	// run the logic to deploy the next elements in a separate goroutine.
@@ -2793,6 +2713,29 @@ func (c *defaultBlueprintContainer) createDeploymentFinishedMessage(
 	}
 
 	return msg
+}
+
+// Stops the link scheduler and names the links that never started, so a terminal failure
+// reports them rather than leaving them unmentioned.
+func (c *defaultBlueprintContainer) drainLinkScheduler(
+	ctx context.Context,
+	deployCtx *DeployContext,
+	finished map[string]*deployUpdateMessageWrapper,
+) []string {
+	if deployCtx.LinkScheduler == nil {
+		return nil
+	}
+
+	neverStarted := deployCtx.LinkScheduler.Drain(ctx)
+	names := make([]string, 0, len(neverStarted))
+	for _, link := range neverStarted {
+		name := linkElementID(pendingLinkName(link))
+		if _, alreadyFinished := finished[name]; !alreadyFinished {
+			names = append(names, name)
+		}
+	}
+
+	return names
 }
 
 // markInFlightElementsAsInterrupted marks in-flight elements as interrupted

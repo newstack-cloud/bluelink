@@ -51,6 +51,12 @@ type DeployContext struct {
 	// after a terminal failure. This should be set from configuration when creating
 	// the context, and defaults to DefaultDrainTimeout if not set.
 	DrainTimeout time.Duration
+	// LinkSlots bounds how many links are deployed at the same time across the whole
+	// deployment, shared by every blueprint instance in it rather than held per
+	// instance, which would multiply the bound by the size of the instance tree.
+	LinkSlots *LinkSlots
+	// LinkScheduler deploys this instance's links for the lifetime of the deployment.
+	LinkScheduler *linkScheduler
 }
 
 func DeployContextWithChannels(
@@ -77,6 +83,8 @@ func DeployContextWithChannels(
 		TaggingConfig:          deployCtx.TaggingConfig,
 		ProviderMetadataLookup: deployCtx.ProviderMetadataLookup,
 		DrainTimeout:           deployCtx.DrainTimeout,
+		LinkSlots:              deployCtx.LinkSlots,
+		LinkScheduler:          deployCtx.LinkScheduler,
 	}
 }
 
@@ -104,6 +112,8 @@ func DeployContextWithGroup(
 		TaggingConfig:          deployCtx.TaggingConfig,
 		ProviderMetadataLookup: deployCtx.ProviderMetadataLookup,
 		DrainTimeout:           deployCtx.DrainTimeout,
+		LinkSlots:              deployCtx.LinkSlots,
+		LinkScheduler:          deployCtx.LinkScheduler,
 	}
 }
 
@@ -131,6 +141,8 @@ func DeployContextWithInstanceSnapshot(
 		TaggingConfig:          deployCtx.TaggingConfig,
 		ProviderMetadataLookup: deployCtx.ProviderMetadataLookup,
 		DrainTimeout:           deployCtx.DrainTimeout,
+		LinkSlots:              deployCtx.LinkSlots,
+		LinkScheduler:          deployCtx.LinkScheduler,
 	}
 }
 
@@ -158,5 +170,7 @@ func DeployContextWithLogger(
 		TaggingConfig:          deployCtx.TaggingConfig,
 		ProviderMetadataLookup: deployCtx.ProviderMetadataLookup,
 		DrainTimeout:           deployCtx.DrainTimeout,
+		LinkSlots:              deployCtx.LinkSlots,
+		LinkScheduler:          deployCtx.LinkScheduler,
 	}
 }

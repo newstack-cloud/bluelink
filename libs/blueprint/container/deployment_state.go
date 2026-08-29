@@ -78,24 +78,6 @@ type DeploymentState interface {
 	// UpdateLinkDeploymentState updates the state of links that are pending completion
 	// and returns a list of links that are ready to be deployed or updated.
 	UpdateLinkDeploymentState(node *links.ChainLinkNode) []*LinkPendingCompletion
-	// LockLinkDeployment blocks until no other batch of links is being deployed,
-	// returning the function that releases it.
-	//
-	// This serialises batches against each other, not the links within one, which are
-	// deployed concurrently. A batch takes the deferred links, deploys what it can and
-	// hands the rest back, so two batches running at once could have one take a link the
-	// other was about to release, leaving it deferred with nothing left to run it.
-	//
-	// Keeping two links off the same resource is a different job, carried out by the resource
-	// locks held around each link deployment phase and not this.
-	LockLinkDeployment() func()
-	// TakeReadyLinks returns the links that are ready to deploy, combining the given
-	// newly-ready links with any that were previously deferred, and clears the deferred
-	// set. The caller must hold the link deployment lock.
-	TakeReadyLinks(newlyReady []*LinkPendingCompletion) []*LinkPendingCompletion
-	// DeferLinks records links that cannot be deployed yet, to be returned by a
-	// subsequent TakeReadyLinks. The caller must hold the link deployment lock.
-	DeferLinks(links []*LinkPendingCompletion)
 	// SetLinkCapabilityGraph records the ordering implied by the capabilities that
 	// links declare, resolved once for the deployment before any link runs.
 	SetLinkCapabilityGraph(graph *LinkCapabilityGraph)
@@ -118,10 +100,13 @@ type DeploymentState interface {
 	// exclusion between links that write the same resource without depending on one
 	// another is a separate concern, and comes from resource locks.
 	AwaitingCapabilityProviders(linkName string) []string
-	// MarkLinkDeployed records that a link will produce no further work, either
-	// because it finished deploying or because it is not in the change set, and
-	// releases anything waiting on the capabilities it provides.
-	MarkLinkDeployed(linkName string)
+	// MarkLinkSettled records that a link will produce no further work, whatever the
+	// outcome, and releases anything waiting on the capabilities it provides.
+	//
+	// Called for a link that deployed, one that failed, and one that is not in the
+	// change set and will never run. A link that never reports leaves every link
+	// waiting on a capability it provides pending for the rest of the deployment.
+	MarkLinkSettled(linkName string)
 	// SetLinkDeployResult sets the result of the deployment of a link
 	// to be used for persisting.
 	// This is primarily meant to store the result
@@ -181,7 +166,7 @@ func NewDefaultDeploymentState() DeploymentState {
 		linkDurationInfo:           make(map[string]*state.LinkCompletionDurations),
 		resourceDurationInfo:       make(map[string]*state.ResourceCompletionDurations),
 		elementDependencies:        make(map[string]*state.DependencyInfo),
-		deployedLinks:              make(map[string]bool),
+		settledLinks:               make(map[string]bool),
 	}
 }
 
@@ -249,46 +234,15 @@ type defaultDeploymentState struct {
 	// The ordering implied by the capabilities links declare, resolved once before
 	// any link is deployed. Nil when no link in the deployment declared anything.
 	linkCapabilities *LinkCapabilityGraph
-	// Links that will produce no further work, either because they finished deploying
-	// or because they are not in the change set. A link waits until every provider of
-	// a capability it requires is in here.
+	// Links that will produce no further work, whatever the outcome. A link waits until
+	// every provider of a capability it requires is in here.
 	//
-	// Links out of the change set belong here too: they never run, so a requirer left
-	// waiting for one would wait for a completion that never arrives.
-	deployedLinks map[string]bool
-	// Links held back because they were waiting on a capability provider, picked up by
-	// the next batch to run.
-	deferredLinks []*LinkPendingCompletion
-	// Serialises batches against each other. The links within a batch run
-	// concurrently; what keeps two of them off the same resource is the resource locks
-	// held around each link deployment phase.
-	linkDeployMu sync.Mutex
+	// Links that failed and links out of the change set belong here too, neither will
+	// report again, so a requirer left waiting for one would wait for a completion that
+	// never arrives.
+	settledLinks map[string]bool
 	// Mutex is required as resources can be deployed concurrently.
 	mu sync.Mutex
-}
-
-func (d *defaultDeploymentState) LockLinkDeployment() func() {
-	d.linkDeployMu.Lock()
-	return d.linkDeployMu.Unlock
-}
-
-func (d *defaultDeploymentState) TakeReadyLinks(
-	newlyReady []*LinkPendingCompletion,
-) []*LinkPendingCompletion {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	ready := append(d.deferredLinks, newlyReady...)
-	d.deferredLinks = nil
-
-	return ready
-}
-
-func (d *defaultDeploymentState) DeferLinks(links []*LinkPendingCompletion) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	d.deferredLinks = append(d.deferredLinks, links...)
 }
 
 func (d *defaultDeploymentState) SetLinkCapabilityGraph(graph *LinkCapabilityGraph) {
@@ -304,7 +258,7 @@ func (d *defaultDeploymentState) AwaitingCapabilityProviders(linkName string) []
 
 	outstanding := []string{}
 	for _, providerName := range d.linkCapabilities.WaitsFor(linkName) {
-		if !d.deployedLinks[providerName] {
+		if !d.settledLinks[providerName] {
 			outstanding = append(outstanding, providerName)
 		}
 	}
@@ -312,11 +266,11 @@ func (d *defaultDeploymentState) AwaitingCapabilityProviders(linkName string) []
 	return outstanding
 }
 
-func (d *defaultDeploymentState) MarkLinkDeployed(linkName string) {
+func (d *defaultDeploymentState) MarkLinkSettled(linkName string) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	d.deployedLinks[linkName] = true
+	d.settledLinks[linkName] = true
 }
 
 func containsPendingLink(links []*LinkPendingCompletion, link *LinkPendingCompletion) bool {

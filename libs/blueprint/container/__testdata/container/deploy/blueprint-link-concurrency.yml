@@ -1,19 +1,22 @@
 version: 2025-11-02
 resources:
-  # Two functions linking to one table, which is the shape that puts two links in
-  # the same batch.
+  # Two functions, each with its own table, so the two links share nothing at all.
   #
-  # A link becomes ready when the last of its two resources is deployed, and each
-  # resource completion starts its own batch of links. Batches are serialised
-  # against one another, so two links overlap only when a single completion
-  # readies both. A link's function is deployed before its table, so the table is
-  # the last of the pair and readies both links at once when it completes.
+  # A link becomes ready when the last of its two resources is deployed, and a table is
+  # the priority resource of a function-to-table link, so each function completing
+  # releases its own link. The scheduler dispatches links as they are released rather
+  # than assembling a batch per resource completion, so two links released moments apart
+  # still run together.
   #
-  # Giving each link its own table instead readies them from separate
-  # completions, and they cannot overlap however the deployment behaves.
+  # This fixture used to give both functions one shared table. That was not about what is
+  # being measured: batches were serialised against one another, so the only way to get
+  # two links running at once was to have a single resource completion release both, and
+  # sharing a table was how that was arranged. With the batching gone, sharing the table
+  # would now mean sharing a resource, which the scheduler deliberately keeps apart, and
+  # the fixture would be measuring the opposite of what it claims.
   ordersTable:
     type: aws/dynamodb/table
-    description: "The one table both functions link to."
+    description: "The table saveOrderFunction links to."
     metadata:
       displayName: Orders Table
       labels:
@@ -22,11 +25,17 @@ resources:
       tableName: "orders"
       region: "eu-west-2"
 
-  # The two links share this table as resource B, so the lock the deployer takes
-  # around UpdateResourceB keeps those apart, which is what the locks are for.
-  # Their resource A is a different function each, so nothing stops the two
-  # UpdateResourceA calls being in flight together, and the only thing that can
-  # prevent it is the deployment running links one after another.
+  customersTable:
+    type: aws/dynamodb/table
+    description: "The table saveCustomerFunction links to."
+    metadata:
+      displayName: Customers Table
+      labels:
+        app: customers
+    spec:
+      tableName: "customers"
+      region: "eu-west-2"
+
   saveOrderFunction:
     type: aws/lambda/function
     description: "Links to the orders table."
@@ -38,9 +47,9 @@ resources:
 
   saveCustomerFunction:
     type: aws/lambda/function
-    description: "Also links to the orders table."
+    description: "Links to the customers table."
     linkSelector:
       byLabel:
-        app: orders
+        app: customers
     spec:
       handler: "src/saveCustomer.handler"
