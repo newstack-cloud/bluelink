@@ -27,5 +27,15 @@ const (
 	// An internal timeout to wait for the client "streamTo" channel to
 	// receive a message before closing the connection to the server used
 	// for an SSE stream.
-	sendToClientStreamTimeout = 5 * time.Second
+	//
+	// This guards against a consumer that has gone away, so the goroutine and
+	// its connection are not held forever. It is deliberately generous as a
+	// consumer is not necessarily reading the channel at any given moment.
+	// For example, a TUI takes an event, updates its model and renders before asking for
+	// the next one and closing the stream aborts the operation the server
+	// is running, not just the client's view of it. A deployment killed
+	// mid-flight leaves half-created infrastructure behind, so the cost of
+	// being too eager here is far higher than the cost of holding an idle
+	// goroutine for a few minutes.
+	sendToClientStreamTimeout = 5 * time.Minute
 )

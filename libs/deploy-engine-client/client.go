@@ -32,6 +32,7 @@ type Client struct {
 	createRoundTripper   func(transport *http.Transport) http.RoundTripper
 	requestTimeout       time.Duration
 	streamTimeout        time.Duration
+	streamMaxBufferSize  int
 	httpClient           *http.Client
 	streamHTTPClient     *http.Client
 	oauthHTTPClient      *http.Client
@@ -164,6 +165,14 @@ func WithClientRequestTimeout(timeout time.Duration) ClientOption {
 	}
 }
 
+// WithClientStreamMaxBufferSize configures the largest single event the client
+// will read from a stream. See DefaultStreamMaxBufferSize.
+func WithClientStreamMaxBufferSize(size int) ClientOption {
+	return func(c *Client) {
+		c.streamMaxBufferSize = size
+	}
+}
+
 // WithClientStreamTimeout configures the stream timeout to use
 // to connect to the Bluelink Deploy Engine.
 // This is used to configure the HTTP client with a custom timeout
@@ -215,6 +224,7 @@ func NewClient(
 		defaultHTTPTransport: http.DefaultTransport.(*http.Transport),
 		requestTimeout:       DefaultRequestTimeout,
 		streamTimeout:        DefaultStreamTimeout,
+		streamMaxBufferSize:  DefaultStreamMaxBufferSize,
 		logger:               core.NewNopLogger(),
 		clock:                &core.SystemClock{},
 	}
@@ -356,6 +366,7 @@ func (c *Client) StreamBlueprintValidationEvents(
 		url,
 		sseconfig.WithHeaders(headers),
 		sseconfig.WithHTTPClient(c.streamHTTPClient),
+		sseconfig.WithMaxBufferSize(c.streamMaxBufferSize),
 		sseconfig.WithResponseValidator(
 			c.createStreamResponseValidator(
 				errChan,
@@ -520,6 +531,7 @@ func (c *Client) StreamChangeStagingEvents(
 		url,
 		sseconfig.WithHeaders(headers),
 		sseconfig.WithHTTPClient(c.streamHTTPClient),
+		sseconfig.WithMaxBufferSize(c.streamMaxBufferSize),
 		sseconfig.WithResponseValidator(
 			c.createStreamResponseValidator(
 				errChan,
@@ -835,6 +847,7 @@ func (c *Client) StreamBlueprintInstanceEvents(
 		url,
 		sseconfig.WithHeaders(headers),
 		sseconfig.WithHTTPClient(c.streamHTTPClient),
+		sseconfig.WithMaxBufferSize(c.streamMaxBufferSize),
 		sseconfig.WithResponseValidator(
 			c.createStreamResponseValidator(
 				errChan,

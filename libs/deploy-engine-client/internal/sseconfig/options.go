@@ -28,6 +28,17 @@ func WithHTTPClient(client *http.Client) Option {
 	}
 }
 
+// WithMaxBufferSize configures the largest single event the sse.Client will
+// read.
+//
+// The library reads events with a bufio.Scanner and defaults the limit to 64KB.
+// An event larger than the limit stops the read with no further events
+// delivered, so the caller waits out its stream timeout on a stream the server
+// has already finished. A change set for a large blueprint passes 64KB easily.
+func WithMaxBufferSize(size int) Option {
+	return sse.ClientMaxBufferSize(size)
+}
+
 // WithResponseValidator configures the sse.Client with the provided response validator.
 // The response validator is used to validate the response from the server in order
 // to handle non-200 status codes and other errors.

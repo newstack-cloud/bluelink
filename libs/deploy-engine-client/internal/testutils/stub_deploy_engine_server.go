@@ -191,13 +191,13 @@ func CreateDeployEngineServer(
 }
 
 type stubDeployEngineController struct {
-	serverConfig                     *TestServerConfig
-	clock                            core.Clock
-	server                           *httptest.Server
-	stubValidationEvents             []*manage.Event
-	stubChangeStagingEvents          []*manage.Event
-	stubDriftDetectedEvents          []*manage.Event
-	stubDeploymentEvents             []*manage.Event
+	serverConfig            *TestServerConfig
+	clock                   core.Clock
+	server                  *httptest.Server
+	stubValidationEvents    []*manage.Event
+	stubChangeStagingEvents []*manage.Event
+	stubDriftDetectedEvents []*manage.Event
+	stubDeploymentEvents    []*manage.Event
 }
 
 type postRequestPayload struct {

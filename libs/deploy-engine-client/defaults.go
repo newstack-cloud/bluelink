@@ -37,4 +37,12 @@ const (
 	// This default is high to allow for long-running processes like deployments
 	// of infrastructure that can take a long time to complete.
 	DefaultStreamTimeout = 3 * time.Hour
+	// DefaultStreamMaxBufferSize specifies the default limit on the size of a
+	// single event read from a stream.
+	//
+	// A change set or deployment event carries the state of every resource in a
+	// blueprint, which for a large one runs to megabytes. The underlying SSE
+	// library defaults to 64KB and stops reading silently when an event exceeds
+	// it, so the limit is raised to a size no realistic event reaches.
+	DefaultStreamMaxBufferSize = 10 * 1024 * 1024
 )
