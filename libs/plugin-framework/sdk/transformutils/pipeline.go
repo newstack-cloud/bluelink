@@ -316,11 +316,16 @@ func mergeSharedParents(
 
 func sharedParentResource(parent SharedParent, spec *core.MappingNode) *schema.Resource {
 	resource := &schema.Resource{
-		Type: &schema.ResourceTypeWrapper{Value: parent.ResourceType},
-		Spec: spec,
+		Type:         &schema.ResourceTypeWrapper{Value: parent.ResourceType},
+		Spec:         spec,
+		LinkSelector: parent.LinkSelector,
 	}
-	if parent.Annotations != nil {
-		resource.Metadata = &schema.Metadata{Custom: parent.Annotations}
+	if parent.Annotations != nil || parent.Labels != nil || parent.LinkAnnotations != nil {
+		resource.Metadata = &schema.Metadata{
+			Custom:      parent.Annotations,
+			Labels:      parent.Labels,
+			Annotations: parent.LinkAnnotations,
+		}
 	}
 	return resource
 }

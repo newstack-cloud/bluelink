@@ -28,7 +28,18 @@ type SharedParent struct {
 	Key          string
 	ResourceName string
 	ResourceType string
-	Annotations  *core.MappingNode
+	// Fills the resource's metadata.custom.
+	Annotations *core.MappingNode
+	// Fills the resource's metadata.annotations, the link configuration a
+	// provider link reads. Distinct from Annotations above, which despite the
+	// name is arbitrary custom metadata.
+	LinkAnnotations *schema.StringOrSubstitutionsMap
+	// Labels this parent carries, for the resources that select it.
+	Labels *schema.StringMap
+	// What this parent selects, for a parent that has to take part in a link
+	// rather than only be pointed at. An intermediary queue that must activate
+	// the link to the function it feeds is the case this exists for.
+	LinkSelector *schema.LinkSelector
 	SeedSpec     *core.MappingNode
 }
 
