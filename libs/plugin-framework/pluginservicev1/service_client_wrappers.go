@@ -271,6 +271,57 @@ func (r *resourceServiceClientWrapper) AcquireResourceLock(
 	)
 }
 
+func (r *resourceServiceClientWrapper) ReleaseResourceLock(
+	ctx context.Context,
+	input *provider.ReleaseResourceLockInput,
+) error {
+	linkID, linkIDInContext := ctx.Value(utils.ContextKeyLinkID).(string)
+	providerCtx, err := convertv1.ToPBProviderContext(input.ProviderContext)
+	if err != nil {
+		return errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionServiceReleaseResourceLock,
+		)
+	}
+
+	releaseReq := &ReleaseResourceLockRequest{
+		InstanceId:   input.InstanceID,
+		ResourceName: input.ResourceName,
+		AcquiredBy:   input.AcquiredBy,
+		Context:      providerCtx,
+	}
+	if releaseReq.AcquiredBy == "" && linkIDInContext {
+		releaseReq.AcquiredBy = linkID
+	}
+
+	response, err := r.client.ReleaseResourceLock(ctx, releaseReq)
+	if err != nil {
+		return errorsv1.CreateGeneralError(
+			err,
+			errorsv1.PluginActionServiceReleaseResourceLock,
+		)
+	}
+
+	switch result := response.Response.(type) {
+	case *ReleaseResourceLockResponse_Result:
+		// Released false only means there was nothing held by this caller to
+		// release, which callers are not expected to treat as a failure.
+		return nil
+	case *ReleaseResourceLockResponse_ErrorResponse:
+		return errorsv1.CreateErrorFromResponse(
+			result.ErrorResponse,
+			errorsv1.PluginActionServiceReleaseResourceLock,
+		)
+	}
+
+	return errorsv1.CreateGeneralError(
+		errorsv1.ErrUnexpectedResponseType(
+			errorsv1.PluginActionServiceReleaseResourceLock,
+		),
+		errorsv1.PluginActionServiceReleaseResourceLock,
+	)
+}
+
 // FunctionRegistryFromClient creates a new instance of a FunctionRegistry
 // that uses the provided ServiceClient to interact with the deploy engine.
 // This allows plugin implementations to interact with the deploy engine

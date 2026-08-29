@@ -97,4 +97,5 @@ const (
 	PluginActionServiceListFunctions         = PluginAction("Service::ListFunctions")
 	PluginActionServiceLookupResourceInState = PluginAction("Service::LookupResourceInState")
 	PluginActionServiceAcquireResourceLock   = PluginAction("Service::AcquireResourceLock")
+	PluginActionServiceReleaseResourceLock   = PluginAction("Service::ReleaseResourceLock")
 )

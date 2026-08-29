@@ -401,6 +401,57 @@ func (s *pluginServiceServer) AcquireResourceLock(
 	}, nil
 }
 
+func (s *pluginServiceServer) ReleaseResourceLock(
+	ctx context.Context,
+	req *ReleaseResourceLockRequest,
+) (*ReleaseResourceLockResponse, error) {
+	input, err := fromPBReleaseResourceLockRequest(req)
+	if err != nil {
+		return toPBReleaseResourceLockErrorResponse(err), nil
+	}
+
+	err = s.resourceService.ReleaseResourceLock(ctx, input)
+	if err != nil {
+		return toPBReleaseResourceLockErrorResponse(err), nil
+	}
+
+	return &ReleaseResourceLockResponse{
+		Response: &ReleaseResourceLockResponse_Result{
+			Result: &ReleaseResourceLockResult{
+				Released: true,
+			},
+		},
+	}, nil
+}
+
+func toPBReleaseResourceLockErrorResponse(err error) *ReleaseResourceLockResponse {
+	return &ReleaseResourceLockResponse{
+		Response: &ReleaseResourceLockResponse_ErrorResponse{
+			ErrorResponse: errorsv1.CreateResponseFromError(err),
+		},
+	}
+}
+
+func fromPBReleaseResourceLockRequest(
+	req *ReleaseResourceLockRequest,
+) (*provider.ReleaseResourceLockInput, error) {
+	if req == nil {
+		return nil, nil
+	}
+
+	providerCtx, err := convertv1.FromPBProviderContext(req.Context)
+	if err != nil {
+		return nil, err
+	}
+
+	return &provider.ReleaseResourceLockInput{
+		InstanceID:      req.InstanceId,
+		ResourceName:    req.ResourceName,
+		AcquiredBy:      req.AcquiredBy,
+		ProviderContext: providerCtx,
+	}, nil
+}
+
 func toPBLookupResourceInStateErrorResponse(err error) *LookupResourceInStateResponse {
 	return &LookupResourceInStateResponse{
 		Response: &LookupResourceInStateResponse_ErrorResponse{

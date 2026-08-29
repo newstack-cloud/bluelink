@@ -31,6 +31,7 @@ const (
 	Service_DestroyResource_FullMethodName       = "/pluginservicev1.Service/DestroyResource"
 	Service_LookupResourceInState_FullMethodName = "/pluginservicev1.Service/LookupResourceInState"
 	Service_AcquireResourceLock_FullMethodName   = "/pluginservicev1.Service/AcquireResourceLock"
+	Service_ReleaseResourceLock_FullMethodName   = "/pluginservicev1.Service/ReleaseResourceLock"
 )
 
 // ServiceClient is the client API for Service service.
@@ -99,6 +100,18 @@ type ServiceClient interface {
 	// a caller that cannot acquire one within the lock timeout fails with an error
 	// naming the holder rather than proceeding without it.
 	AcquireResourceLock(ctx context.Context, in *AcquireResourceLockRequest, opts ...grpc.CallOption) (*AcquireResourceLockResponse, error)
+	// ReleaseResourceLock releases a lock the caller holds, without waiting for the
+	// phase that took it to finish.
+	//
+	// A lock is otherwise held to the end of the phase, which suits a phase that is
+	// wholly about the locked resource. It suits a phase that goes on to do slow and
+	// unrelated work far less: everyone else wanting that resource waits for work
+	// that has nothing to do with it. A link that grants an execution role access and
+	// then reconciles networking is the case this exists for.
+	//
+	// Releasing a lock the caller does not hold is not an error, and never disturbs
+	// the holder.
+	ReleaseResourceLock(ctx context.Context, in *ReleaseResourceLockRequest, opts ...grpc.CallOption) (*ReleaseResourceLockResponse, error)
 }
 
 type serviceClient struct {
@@ -209,6 +222,16 @@ func (c *serviceClient) AcquireResourceLock(ctx context.Context, in *AcquireReso
 	return out, nil
 }
 
+func (c *serviceClient) ReleaseResourceLock(ctx context.Context, in *ReleaseResourceLockRequest, opts ...grpc.CallOption) (*ReleaseResourceLockResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReleaseResourceLockResponse)
+	err := c.cc.Invoke(ctx, Service_ReleaseResourceLock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ServiceServer is the server API for Service service.
 // All implementations must embed UnimplementedServiceServer
 // for forward compatibility.
@@ -275,6 +298,18 @@ type ServiceServer interface {
 	// a caller that cannot acquire one within the lock timeout fails with an error
 	// naming the holder rather than proceeding without it.
 	AcquireResourceLock(context.Context, *AcquireResourceLockRequest) (*AcquireResourceLockResponse, error)
+	// ReleaseResourceLock releases a lock the caller holds, without waiting for the
+	// phase that took it to finish.
+	//
+	// A lock is otherwise held to the end of the phase, which suits a phase that is
+	// wholly about the locked resource. It suits a phase that goes on to do slow and
+	// unrelated work far less: everyone else wanting that resource waits for work
+	// that has nothing to do with it. A link that grants an execution role access and
+	// then reconciles networking is the case this exists for.
+	//
+	// Releasing a lock the caller does not hold is not an error, and never disturbs
+	// the holder.
+	ReleaseResourceLock(context.Context, *ReleaseResourceLockRequest) (*ReleaseResourceLockResponse, error)
 	mustEmbedUnimplementedServiceServer()
 }
 
@@ -314,6 +349,9 @@ func (UnimplementedServiceServer) LookupResourceInState(context.Context, *Lookup
 }
 func (UnimplementedServiceServer) AcquireResourceLock(context.Context, *AcquireResourceLockRequest) (*AcquireResourceLockResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AcquireResourceLock not implemented")
+}
+func (UnimplementedServiceServer) ReleaseResourceLock(context.Context, *ReleaseResourceLockRequest) (*ReleaseResourceLockResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReleaseResourceLock not implemented")
 }
 func (UnimplementedServiceServer) mustEmbedUnimplementedServiceServer() {}
 func (UnimplementedServiceServer) testEmbeddedByValue()                 {}
@@ -516,6 +554,24 @@ func _Service_AcquireResourceLock_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Service_ReleaseResourceLock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReleaseResourceLockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServiceServer).ReleaseResourceLock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Service_ReleaseResourceLock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServiceServer).ReleaseResourceLock(ctx, req.(*ReleaseResourceLockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Service_ServiceDesc is the grpc.ServiceDesc for Service service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -562,6 +618,10 @@ var Service_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AcquireResourceLock",
 			Handler:    _Service_AcquireResourceLock_Handler,
+		},
+		{
+			MethodName: "ReleaseResourceLock",
+			Handler:    _Service_ReleaseResourceLock_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

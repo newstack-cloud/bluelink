@@ -276,7 +276,17 @@ func (s *PluginServiceV1Suite) Test_link_deploy_intermediary_resource_call_and_a
 	)
 	s.Require().NoError(err)
 
-	s.Assert().Equal(&provider.LinkUpdateIntermediaryResourcesOutput{}, output)
+	// The link returns empty link data, and empty is carried across the plugin
+	// boundary as empty. It used to arrive as nil, because the serialiser could not
+	// tell an empty map from an absent one; the empty-container marker makes that
+	// distinction survive, and a consumer reading nil Fields now knows the value
+	// really was unset.
+	s.Assert().Equal(
+		&provider.LinkUpdateIntermediaryResourcesOutput{
+			LinkData: &core.MappingNode{Fields: map[string]*core.MappingNode{}},
+		},
+		output,
+	)
 }
 
 func (s *PluginServiceV1Suite) Test_link_destroy_intermediary_resource_call() {
@@ -295,7 +305,12 @@ func (s *PluginServiceV1Suite) Test_link_destroy_intermediary_resource_call() {
 	)
 	s.Require().NoError(err)
 
-	s.Assert().Equal(&provider.LinkUpdateIntermediaryResourcesOutput{}, output)
+	s.Assert().Equal(
+		&provider.LinkUpdateIntermediaryResourcesOutput{
+			LinkData: &core.MappingNode{Fields: map[string]*core.MappingNode{}},
+		},
+		output,
+	)
 }
 
 func (s *PluginServiceV1Suite) Test_lookup_resource_in_state_output() {

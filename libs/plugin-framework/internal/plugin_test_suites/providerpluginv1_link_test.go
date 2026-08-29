@@ -168,7 +168,12 @@ func (s *ProviderPluginV1Suite) Test_link_update_resource_b() {
 		linkUpdateResourceBInput(),
 	)
 	s.Require().NoError(err)
-	s.Assert().Equal(&provider.LinkUpdateResourceOutput{}, output)
+	s.Assert().Equal(
+		&provider.LinkUpdateResourceOutput{
+			LinkData: &core.MappingNode{Fields: map[string]*core.MappingNode{}},
+		},
+		output,
+	)
 }
 
 func (s *ProviderPluginV1Suite) Test_link_update_resource_b_fails_for_unexpected_host() {
@@ -220,7 +225,14 @@ func (s *ProviderPluginV1Suite) Test_link_update_intermediary_resources() {
 		linkUpdateIntermediaryResourcesInput(),
 	)
 	s.Require().NoError(err)
-	s.Assert().Equal(&provider.LinkUpdateIntermediaryResourcesOutput{}, output)
+	// Empty link data crosses the plugin boundary as empty rather than collapsing
+	// to nil, so a consumer reading nil Fields knows the value really was unset.
+	s.Assert().Equal(
+		&provider.LinkUpdateIntermediaryResourcesOutput{
+			LinkData: &core.MappingNode{Fields: map[string]*core.MappingNode{}},
+		},
+		output,
+	)
 }
 
 func (s *ProviderPluginV1Suite) Test_link_update_intermediary_resources_fails_for_unexpected_host() {

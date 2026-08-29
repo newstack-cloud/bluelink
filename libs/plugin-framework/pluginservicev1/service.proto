@@ -84,6 +84,18 @@ service Service {
 	// a caller that cannot acquire one within the lock timeout fails with an error
 	// naming the holder rather than proceeding without it.
     rpc AcquireResourceLock(AcquireResourceLockRequest) returns (AcquireResourceLockResponse) {}
+    // ReleaseResourceLock releases a lock the caller holds, without waiting for the
+	// phase that took it to finish.
+	//
+	// A lock is otherwise held to the end of the phase, which suits a phase that is
+	// wholly about the locked resource. It suits a phase that goes on to do slow and
+	// unrelated work far less where everyone else wanting that resource waits for work
+	// that has nothing to do with it. A link that grants an execution role access and
+	// then reconciles networking is the case this exists for.
+	//
+	// Releasing a lock the caller does not hold is not an error, and never disturbs
+	// the holder.
+    rpc ReleaseResourceLock(ReleaseResourceLockRequest) returns (ReleaseResourceLockResponse) {}
 }
 
 // PluginRegistrationRequest is the request
@@ -289,4 +301,34 @@ message AcquireResourceLockResponse {
 // of acquiring a lock to a resource.
 message AcquireResourceLockResult {
     bool acquired = 1;
+}
+
+// ReleaseResourceLockRequest is the request
+// to release a lock on a resource.
+message ReleaseResourceLockRequest {
+    // The ID of the blueprint instance the lock is scoped to.
+    string instance_id = 1;
+    // The name of the resource in the blueprint to release.
+    string resource_name = 2;
+    // The identifier of the caller that holds the lock. A lock recorded under any
+    // other caller is left alone.
+    string acquired_by = 3;
+    sharedtypesv1.ProviderContext context = 4;
+}
+
+// ReleaseResourceLockResponse is the response
+// containing the result of releasing a resource lock.
+message ReleaseResourceLockResponse {
+    oneof response {
+        ReleaseResourceLockResult result = 1;
+        sharedtypesv1.ErrorResponse error_response = 2;
+    }
+}
+
+// ReleaseResourceLockResult contains the result
+// of releasing a lock on a resource.
+message ReleaseResourceLockResult {
+    // Whether a lock held by the caller was released. False when there was
+    // nothing to release, which is not a failure.
+    bool released = 1;
 }
