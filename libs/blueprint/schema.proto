@@ -138,6 +138,19 @@ message DataSourceFieldExport {
     optional StringOrSubstitutions description = 3;
 }
 
+// Which container a mapping node holds when that container is empty.
+//
+// proto3 does not put an empty map or list on the wire, so an empty one and an
+// absent one arrive identical. The two mean different things: an empty mapping
+// is a value, whereas a node with nothing set is an unresolved node and is
+// rejected. Without this, a resource whose spec is an empty mapping is sent
+// successfully and fails to be read back.
+enum EmptyContainer {
+    EMPTY_CONTAINER_UNSPECIFIED = 0;
+    EMPTY_CONTAINER_FIELDS = 1;
+    EMPTY_CONTAINER_ITEMS = 2;
+}
+
 message MappingNode {
     // repeated fields and maps are not supported in oneof so it's better
     // to have a separate field for each type of value
@@ -151,6 +164,8 @@ message MappingNode {
     // nodes are how resource specs are represented, so this is what lets a
     // diagnostic point at a specific spec field.
     map<string, SourceMeta> fields_source_meta = 6;
+    // Set only when the container this node holds is empty; see EmptyContainer.
+    EmptyContainer empty_container = 7;
 }
 
 message StringOrSubstitutions {

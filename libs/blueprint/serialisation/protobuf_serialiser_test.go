@@ -124,7 +124,7 @@ func (s *ProtobufSerialiserTestSuite) Test_fails_to_marshal_blueprint_fixture_wi
 		c.FailNow()
 	}
 
-	if err.Error() != "expanded blueprint serialise error: missing scalar value" {
+	if err.Error() != "resource \"orderApi\": expanded blueprint serialise error: missing scalar value" {
 		c.Errorf("unexpected error message: %s", err.Error())
 	}
 }
@@ -137,7 +137,7 @@ func (s *ProtobufSerialiserTestSuite) Test_fails_to_marshal_blueprint_fixture_wi
 		c.FailNow()
 	}
 
-	if err.Error() != "expanded blueprint serialise error: missing string or substitution value" {
+	if err.Error() != "resource \"orderApi\": expanded blueprint serialise error: missing string or substitution value" {
 		c.Errorf("unexpected error message: %s", err.Error())
 	}
 }
@@ -150,7 +150,7 @@ func (s *ProtobufSerialiserTestSuite) Test_fails_to_marshal_blueprint_fixture_wi
 		c.FailNow()
 	}
 
-	if err.Error() != "expanded blueprint serialise error: missing substitution value" {
+	if err.Error() != "resource \"orderApi\": expanded blueprint serialise error: missing substitution value" {
 		c.Errorf("unexpected error message: %s", err.Error())
 	}
 }
@@ -163,7 +163,7 @@ func (s *ProtobufSerialiserTestSuite) Test_fails_to_marshal_blueprint_fixture_wi
 		c.FailNow()
 	}
 
-	if err.Error() != "expanded blueprint serialise error: missing substitution path item value" {
+	if err.Error() != "resource \"orderApi\": expanded blueprint serialise error: missing substitution path item value" {
 		c.Errorf("unexpected error message: %s", err.Error())
 	}
 }
@@ -193,6 +193,20 @@ func (s *ProtobufSerialiserTestSuite) Test_ToMappingNodePB_fails_for_empty_mappi
 	_, err := ToMappingNodePB(emptyMappingNode, false /* optional */)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "expanded blueprint serialise error: missing mapping node value")
+}
+
+// Hunting an unserialisable node through a large blueprint by hand is the thing
+// the path exists to avoid.
+func (s *ProtobufSerialiserTestSuite) Test_ToMappingNodePB_reports_where_an_empty_node_was_found(c *C) {
+	_, err := ToMappingNodePBAtPath(&core.MappingNode{}, false /* optional */, "resources.configStore.spec")
+	c.Assert(err, NotNil)
+	c.Assert(
+		err.Error(),
+		Equals,
+		"expanded blueprint serialise error: missing mapping node value at "+
+			"\"resources.configStore.spec\"; the node holds no scalar, fields, items or "+
+			"string with substitutions",
+	)
 }
 
 func (s *ProtobufSerialiserTestSuite) Test_ToMappingNodePB_fails_for_nil_mapping_node_when_not_optional(c *C) {

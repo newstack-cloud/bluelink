@@ -30,3 +30,5 @@ playground
 
 # Any temporary documentation files that shouldn't be in version control.
 tmp-*.md
+
+docs/design

@@ -1,6 +1,8 @@
 package serialisation
 
 import (
+	"fmt"
+
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schemapb"
@@ -128,7 +130,7 @@ func toValuesPB(values *schema.ValueMap) (map[string]*schemapb.Value, error) {
 	var valuesPB = make(map[string]*schemapb.Value)
 	for k, v := range values.Values {
 
-		valuePB, err := ToMappingNodePB(v.Value, false)
+		valuePB, err := ToMappingNodePBAtPath(v.Value, false, fmt.Sprintf("values.%s", k))
 		if err != nil {
 			return nil, err
 		}
@@ -206,7 +208,7 @@ func toResourcesPB(resources *schema.ResourceMap) (map[string]*schemapb.Resource
 	for k, v := range resources.Values {
 		resourcePB, err := ToResourcePB(v)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("resource %q: %w", k, err)
 		}
 
 		resourcesPB[k] = resourcePB
@@ -448,7 +450,7 @@ func ToResourcePB(resource *schema.Resource) (*schemapb.Resource, error) {
 		return nil, err
 	}
 
-	specPB, err := ToMappingNodePB(resource.Spec, false)
+	specPB, err := ToMappingNodePBAtPath(resource.Spec, false, "spec")
 	if err != nil {
 		return nil, err
 	}
@@ -645,6 +647,17 @@ func toAnnotationsPB(
 // ToMappingNodePB converts a core.MappingNode to a schemapb.MappingNode
 // that can be stored and transmitted as a protobuf message.
 func ToMappingNodePB(mappingNode *core.MappingNode, optional bool) (*schemapb.MappingNode, error) {
+	return ToMappingNodePBAtPath(mappingNode, optional, "")
+}
+
+// ToMappingNodePBAtPath is ToMappingNodePB with the location of the node in the
+// blueprint, so a node that cannot be serialised can be pointed at rather than
+// hunted for.
+func ToMappingNodePBAtPath(
+	mappingNode *core.MappingNode,
+	optional bool,
+	path string,
+) (*schemapb.MappingNode, error) {
 	// Use IsNilMappingNode to handle both nil and empty mapping nodes
 	// (mapping nodes with all fields set to nil).
 	// Empty mapping nodes can occur when a resource state is saved
@@ -657,7 +670,7 @@ func ToMappingNodePB(mappingNode *core.MappingNode, optional bool) (*schemapb.Ma
 		return nil, errMappingNodeIsNil()
 	}
 
-	mappingNodePB, err := toMappingNodeValuePB(mappingNode)
+	mappingNodePB, err := toMappingNodeValuePB(mappingNode, path)
 	if err != nil {
 		return nil, err
 	}
@@ -671,7 +684,7 @@ func ToMappingNodePB(mappingNode *core.MappingNode, optional bool) (*schemapb.Ma
 	return mappingNodePB, nil
 }
 
-func toMappingNodeValuePB(mappingNode *core.MappingNode) (*schemapb.MappingNode, error) {
+func toMappingNodeValuePB(mappingNode *core.MappingNode, path string) (*schemapb.MappingNode, error) {
 	if mappingNode.Scalar != nil {
 		scalarPB, err := ToScalarValuePB(mappingNode.Scalar, false)
 		if err != nil {
@@ -684,11 +697,11 @@ func toMappingNodeValuePB(mappingNode *core.MappingNode) (*schemapb.MappingNode,
 	}
 
 	if mappingNode.Fields != nil {
-		return toMappingNodeFieldsPB(mappingNode.Fields)
+		return toMappingNodeFieldsPB(mappingNode.Fields, path)
 	}
 
 	if mappingNode.Items != nil {
-		return toMappingNodeItemsPB(mappingNode.Items)
+		return toMappingNodeItemsPB(mappingNode.Items, path)
 	}
 
 	if mappingNode.StringWithSubstitutions != nil {
@@ -702,13 +715,25 @@ func toMappingNodeValuePB(mappingNode *core.MappingNode) (*schemapb.MappingNode,
 		}, nil
 	}
 
-	return nil, errMissingMappingNodeValue()
+	return nil, errMissingMappingNodeValue(path)
 }
 
-func toMappingNodeFieldsPB(fields map[string]*core.MappingNode) (*schemapb.MappingNode, error) {
+func toMappingNodeFieldsPB(
+	fields map[string]*core.MappingNode,
+	path string,
+) (*schemapb.MappingNode, error) {
+	// An empty map is not put on the wire, so it is marked to tell it apart from
+	// a node that holds nothing at all. See EmptyContainer in schema.proto.
+	if len(fields) == 0 {
+		return &schemapb.MappingNode{
+			Fields:         map[string]*schemapb.MappingNode{},
+			EmptyContainer: schemapb.EmptyContainer_EMPTY_CONTAINER_FIELDS,
+		}, nil
+	}
+
 	fieldsPB := make(map[string]*schemapb.MappingNode)
 	for k, v := range fields {
-		mappingNodePB, err := ToMappingNodePB(v, true)
+		mappingNodePB, err := ToMappingNodePBAtPath(v, true, childPath(path, k))
 		if err != nil {
 			return nil, err
 		}
@@ -721,10 +746,21 @@ func toMappingNodeFieldsPB(fields map[string]*core.MappingNode) (*schemapb.Mappi
 	}, nil
 }
 
-func toMappingNodeItemsPB(items []*core.MappingNode) (*schemapb.MappingNode, error) {
+func toMappingNodeItemsPB(
+	items []*core.MappingNode,
+	path string,
+) (*schemapb.MappingNode, error) {
+	// See toMappingNodeFieldsPB; an empty list is lost on the wire the same way.
+	if len(items) == 0 {
+		return &schemapb.MappingNode{
+			Items:          []*schemapb.MappingNode{},
+			EmptyContainer: schemapb.EmptyContainer_EMPTY_CONTAINER_ITEMS,
+		}, nil
+	}
+
 	itemsPB := make([]*schemapb.MappingNode, len(items))
 	for i, item := range items {
-		mappingNodePB, err := ToMappingNodePB(item, true)
+		mappingNodePB, err := ToMappingNodePBAtPath(item, true, indexPath(path, i))
 		if err != nil {
 			return nil, err
 		}
@@ -1145,4 +1181,15 @@ func toScalarValueOnlyPB(scalarValue *core.ScalarValue) (*schemapb.ScalarValue, 
 	}
 
 	return nil, errMissingScalarValue()
+}
+
+func childPath(path string, key string) string {
+	if path == "" {
+		return key
+	}
+	return path + "." + key
+}
+
+func indexPath(path string, index int) string {
+	return fmt.Sprintf("%s[%d]", path, index)
 }

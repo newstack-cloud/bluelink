@@ -73,10 +73,21 @@ func errMissingSubstitutionPathItemValue() error {
 	}
 }
 
-func errMissingMappingNodeValue() error {
+func errMissingMappingNodeValue(path string) error {
+	if path == "" {
+		return &errors.ExpandedSerialiseError{
+			ReasonCode: ErrorReasonCodeMissingMappingNodeValue,
+			Err:        fmt.Errorf("missing mapping node value"),
+		}
+	}
+
 	return &errors.ExpandedSerialiseError{
 		ReasonCode: ErrorReasonCodeMissingMappingNodeValue,
-		Err:        fmt.Errorf("missing mapping node value"),
+		Err: fmt.Errorf(
+			"missing mapping node value at %q; the node holds no scalar, "+
+				"fields, items or string with substitutions",
+			path,
+		),
 	}
 }
 

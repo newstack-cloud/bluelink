@@ -702,7 +702,17 @@ func fromMappingNodeValuePB(mappingNodePB *schemapb.MappingNode) (*core.MappingN
 		}, nil
 	}
 
-	return nil, errMissingMappingNodeValue()
+	// The container was empty rather than absent, so it is restored as empty and
+	// non-nil. Checked after the value branches, since a populated container is
+	// never marked.
+	switch mappingNodePB.EmptyContainer {
+	case schemapb.EmptyContainer_EMPTY_CONTAINER_FIELDS:
+		return &core.MappingNode{Fields: map[string]*core.MappingNode{}}, nil
+	case schemapb.EmptyContainer_EMPTY_CONTAINER_ITEMS:
+		return &core.MappingNode{Items: []*core.MappingNode{}}, nil
+	}
+
+	return nil, errMissingMappingNodeValue("")
 }
 
 func fromMappingNodeFieldsPB(fieldsPB map[string]*schemapb.MappingNode) (*core.MappingNode, error) {
@@ -1117,5 +1127,10 @@ func mappingNodePBIsNil(
 		(mappingNodePB.Scalar == nil &&
 			mappingNodePB.Fields == nil &&
 			mappingNodePB.Items == nil &&
-			mappingNodePB.StringWithSubstitutions == nil)
+			mappingNodePB.StringWithSubstitutions == nil &&
+			// An empty container arrives with its map or list absent, since
+			// proto3 does not put an empty one on the wire, and only the marker
+			// to say it was there. Treating it as nil would discard the very
+			// distinction the marker exists to carry.
+			mappingNodePB.EmptyContainer == schemapb.EmptyContainer_EMPTY_CONTAINER_UNSPECIFIED)
 }
