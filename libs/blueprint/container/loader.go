@@ -171,6 +171,7 @@ type defaultLoader struct {
 	idGenerator                    bpcore.IDGenerator
 	defaultRetryPolicy             *provider.RetryPolicy
 	resourceStabilityPollingConfig *ResourceStabilityPollingConfig
+	linkSettlePollingConfig        *LinkSettlePollingConfig
 	deploymentStateFactory         DeploymentStateFactory
 	changeStagingStateFactory      ChangeStagingStateFactory
 	resourceDestroyer              ResourceDestroyer
@@ -436,6 +437,18 @@ func WithLoaderDependenciesOverrider(overrider DependenciesOverrider) LoaderOpti
 	}
 }
 
+// WithLoaderLinkSettlePollingConfig sets the configuration for waiting on a resource to
+// settle after a link has written it.
+//
+// The timeout is separate from the resource stability one because the wait happens while
+// the link holds the resource's lock, so it has to stay well below the resource lock
+// timeout or a slow settle fails every link waiting on that resource instead.
+func WithLoaderLinkSettlePollingConfig(config *LinkSettlePollingConfig) LoaderOption {
+	return func(loader *defaultLoader) {
+		loader.linkSettlePollingConfig = config
+	}
+}
+
 // WithLoaderResourceStabilityPollingConfig sets the resource stability polling configuration
 // to be used for deployment orchestration when waiting for resources to become stable.
 //
@@ -480,12 +493,6 @@ func NewDefaultLoader(
 	linkRegistry := provider.NewLinkRegistry(providers)
 	internalProviders := copyProviderMap(providers)
 	clock := &bpcore.SystemClock{}
-	linkDeployer := NewDefaultLinkDeployer(clock, stateContainer)
-	linkDestroyer := NewDefaultLinkDestroyer(
-		linkDeployer,
-		linkRegistry,
-		provider.DefaultRetryPolicy,
-	)
 	logger := bpcore.NewNopLogger()
 
 	loader := &defaultLoader{
@@ -503,18 +510,35 @@ func NewDefaultLoader(
 		idGenerator:                    bpcore.NewUUIDGenerator(),
 		defaultRetryPolicy:             provider.DefaultRetryPolicy,
 		resourceStabilityPollingConfig: DefaultResourceStabilityPollingConfig,
+		linkSettlePollingConfig:        DefaultLinkSettlePollingConfig,
 		deploymentStateFactory:         NewDefaultDeploymentState,
 		changeStagingStateFactory:      NewDefaultChangeStagingState,
 		resourceTemplates:              map[string]string{},
 		resourceDestroyer:              NewDefaultResourceDestroyer(clock, provider.DefaultRetryPolicy),
 		childBlueprintDestroyer:        NewDefaultChildBlueprintDestroyer(),
-		linkDestroyer:                  linkDestroyer,
-		linkDeployer:                   linkDeployer,
 		logger:                         logger,
 	}
 
 	for _, opt := range opts {
 		opt(loader)
+	}
+
+	// Built after the options are applied so the link settle configuration a caller
+	// supplied is the one the deployer uses, rather than the default it was constructed
+	// with before the options were seen.
+	if loader.linkDeployer == nil {
+		loader.linkDeployer = NewDefaultLinkDeployer(
+			clock,
+			stateContainer,
+			loader.linkSettlePollingConfig,
+		)
+	}
+	if loader.linkDestroyer == nil {
+		loader.linkDestroyer = NewDefaultLinkDestroyer(
+			loader.linkDeployer,
+			linkRegistry,
+			provider.DefaultRetryPolicy,
+		)
 	}
 
 	if loader.resourceRegistry == nil {

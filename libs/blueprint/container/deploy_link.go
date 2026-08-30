@@ -42,16 +42,26 @@ type LinkDeployResult struct {
 // NewDefaultLinkDeployer creates a new instance of the default implementation
 // of the service that deploys a link between two resources as a part of the deployment process
 // for a blueprint instance.
-func NewDefaultLinkDeployer(clock core.Clock, stateContainer state.Container) LinkDeployer {
+func NewDefaultLinkDeployer(
+	clock core.Clock,
+	stateContainer state.Container,
+	settlePollingConfig *LinkSettlePollingConfig,
+) LinkDeployer {
+	if settlePollingConfig == nil {
+		settlePollingConfig = DefaultLinkSettlePollingConfig
+	}
+
 	return &defaultLinkDeployer{
-		clock:          clock,
-		stateContainer: stateContainer,
+		clock:               clock,
+		stateContainer:      stateContainer,
+		settlePollingConfig: settlePollingConfig,
 	}
 }
 
 type defaultLinkDeployer struct {
-	clock          core.Clock
-	stateContainer state.Container
+	clock               core.Clock
+	stateContainer      state.Container
+	settlePollingConfig *LinkSettlePollingConfig
 }
 
 func (d *defaultLinkDeployer) Deploy(
@@ -252,6 +262,11 @@ func (d *defaultLinkDeployer) updateLinkResourceA(
 	)
 
 	resourceAOutput, err := linkImplementation.UpdateResourceA(ctx, input)
+	if err == nil {
+		// Inside the lock, so the next link cannot reach the resource while it is still
+		// applying what this one wrote.
+		err = d.waitForResourceToSettle(ctx, input.ResourceInfo, deployCtx)
+	}
 	// Regardless of whether or not the resource A update was successful,
 	// we need to ensure that all locks acquired by the link implementation's UpdateResourceA
 	// method are released before retrying or moving on.
@@ -533,6 +548,11 @@ func (d *defaultLinkDeployer) updateLinkResourceB(
 	)
 
 	resourceBOutput, err := linkImplementation.UpdateResourceB(ctx, input)
+	if err == nil {
+		// Inside the lock, so the next link cannot reach the resource while it is still
+		// applying what this one wrote.
+		err = d.waitForResourceToSettle(ctx, input.ResourceInfo, deployCtx)
+	}
 	// Regardless of whether or not the resource B update was successful,
 	// we need to ensure that all locks acquired by the link implementation's UpdateResourceB
 	// method are released before retrying or moving on.

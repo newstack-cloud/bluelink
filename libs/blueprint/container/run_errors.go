@@ -3,6 +3,7 @@ package container
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
@@ -41,6 +42,9 @@ const (
 	// during deployment or change staging is due to
 	// the maximum blueprint depth being exceeded.
 	ErrorReasonCodeMaxBlueprintDepthExceeded errors.ErrorReasonCode = "max_blueprint_depth_exceeded"
+	// ErrorReasonCodeLinkResourceSettleTimeout is provided when a resource a link has
+	// written does not reach a stable state within the link settle timeout.
+	ErrorReasonCodeLinkResourceSettleTimeout errors.ErrorReasonCode = "link_resource_settle_timeout"
 	// ErrorReasonCodeRemovedResourceHasDependents
 	// is provided when the reason for an error
 	// during deployment is due to a resource that is
@@ -170,6 +174,21 @@ func errBlueprintCycleDetected(
 			includeName,
 			cyclicInstanceID,
 			instanceTreePath,
+		),
+	}
+}
+
+func errLinkResourceSettleTimeout(
+	resourceName string,
+	timeout time.Duration,
+) error {
+	return &errors.RunError{
+		ReasonCode: ErrorReasonCodeLinkResourceSettleTimeout,
+		Err: fmt.Errorf(
+			"resource %q did not settle within %s after a link updated it, "+
+				"the link cannot release the resource without the change having taken effect",
+			resourceName,
+			timeout,
 		),
 	}
 }
