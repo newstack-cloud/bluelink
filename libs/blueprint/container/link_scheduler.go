@@ -105,7 +105,12 @@ type linkScheduler struct {
 	loadInstanceState func(context.Context) (*state.InstanceState, error)
 	markSettled       func(linkName string)
 	awaitingProviders func(linkName string) []string
-	reportError       func(err error)
+	// Reports an error to whoever is listening, returning false if it could not be
+	// delivered without waiting. The scheduler never waits on it.
+	trySendError func(err error) bool
+
+	errMu      sync.Mutex
+	heldErrors []error
 
 	submitCh   chan []*LinkPendingCompletion
 	completeCh chan *linkCompletion
@@ -122,7 +127,7 @@ func newLinkScheduler(
 	loadInstanceState func(context.Context) (*state.InstanceState, error),
 	markSettled func(linkName string),
 	awaitingProviders func(linkName string) []string,
-	reportError func(err error),
+	trySendError func(err error) bool,
 ) *linkScheduler {
 	return &linkScheduler{
 		slots:             slots,
@@ -131,7 +136,7 @@ func newLinkScheduler(
 		loadInstanceState: loadInstanceState,
 		markSettled:       markSettled,
 		awaitingProviders: awaitingProviders,
-		reportError:       reportError,
+		trySendError:      trySendError,
 		submitCh:          make(chan []*LinkPendingCompletion, 1),
 		completeCh:        make(chan *linkCompletion, 1),
 		drainCh:           make(chan chan []*LinkPendingCompletion),
@@ -160,27 +165,69 @@ func (s *linkScheduler) Submit(links []*LinkPendingCompletion) {
 	}
 }
 
-// Drain stops dispatching, waits for links already running to finish, and returns those
-// that never started so the caller can report them as interrupted.
-func (s *linkScheduler) Drain(ctx context.Context) []*LinkPendingCompletion {
+// Drain stops dispatching, waits for links already running to finish, and returns the
+// links that never started along with any errors that could not be delivered while the
+// deployment was running, so the caller can report both.
+func (s *linkScheduler) Drain(ctx context.Context) ([]*LinkPendingCompletion, []error) {
 	leftover := make(chan []*LinkPendingCompletion, 1)
 
 	select {
 	case s.drainCh <- leftover:
 	case <-s.stopped:
-		return nil
+		return nil, s.takeHeldErrors()
 	case <-ctx.Done():
-		return nil
+		return nil, s.takeHeldErrors()
 	}
 
 	s.inFlight.Wait()
 
+	// A worker that finished after the dispatcher returned has no one left to forward
+	// its error, so this is the last chance to collect it.
+	s.forwardErrors()
+
 	select {
 	case pending := <-leftover:
-		return pending
+		return pending, s.takeHeldErrors()
 	case <-ctx.Done():
-		return nil
+		return nil, s.takeHeldErrors()
 	}
+}
+
+// Holds an error until it can be delivered without waiting.
+//
+// A worker must never block reporting one. The error channel is unbuffered, and whoever
+// reads it may be busy or may have stopped, so a worker parked on a send holds its slot
+// and its resource affinity for the rest of the deployment and never reports completion.
+// Holding the error costs nothing and loses nothing, the dispatcher tries to deliver it
+// on every pass, and Drain hands back whatever never went so the caller can report it.
+func (s *linkScheduler) recordError(err error) {
+	s.errMu.Lock()
+	defer s.errMu.Unlock()
+
+	s.heldErrors = append(s.heldErrors, err)
+}
+
+func (s *linkScheduler) forwardErrors() {
+	s.errMu.Lock()
+	defer s.errMu.Unlock()
+
+	undelivered := s.heldErrors[:0]
+	for _, err := range s.heldErrors {
+		if !s.trySendError(err) {
+			undelivered = append(undelivered, err)
+		}
+	}
+	s.heldErrors = undelivered
+}
+
+func (s *linkScheduler) takeHeldErrors() []error {
+	s.errMu.Lock()
+	defer s.errMu.Unlock()
+
+	held := s.heldErrors
+	s.heldErrors = nil
+
+	return held
 }
 
 func (s *linkScheduler) dispatch(ctx context.Context) {
@@ -209,6 +256,7 @@ func (s *linkScheduler) dispatch(ctx context.Context) {
 			return
 		}
 
+		s.forwardErrors()
 		pending = s.dispatchReady(ctx, pending, writing)
 		slotWait = s.waitForSlotIfBlocked(pending, writing, slotWait)
 	}
@@ -258,7 +306,7 @@ func (s *linkScheduler) dispatchReady(
 			loaded, err := s.loadInstanceState(ctx)
 			if err != nil {
 				s.slots.Release()
-				s.reportError(err)
+				s.recordError(err)
 				return append(held, link)
 			}
 			instanceState = loaded
@@ -335,16 +383,21 @@ func (s *linkScheduler) run(
 		defer s.inFlight.Done()
 
 		err := s.deployLink(ctx, link, instanceState)
-		if err != nil {
-			s.reportError(err)
-		}
 
-		// Reported on every outcome, including a failure. A link that never reports
-		// leaves everything waiting on a capability it provides pending for the rest of
-		// the deployment, with nothing to say why.
+		// Completion is reported first, and on every outcome including a failure.
+		//
+		// Reporting an error can block, the error channel is unbuffered and whoever
+		// reads it may have stopped. Letting that gate the completion means one
+		// unread error holds this link's slot and its resource affinity for the rest
+		// of the deployment, and leaves every link waiting on a capability this one
+		// provides pending with nothing to say why.
 		select {
 		case s.completeCh <- &linkCompletion{linkName: linkName, holds: holds}:
 		case <-s.stopped:
+		}
+
+		if err != nil {
+			s.recordError(err)
 		}
 	}()
 }

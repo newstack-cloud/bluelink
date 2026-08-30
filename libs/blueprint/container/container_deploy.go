@@ -1611,8 +1611,16 @@ func (c *defaultBlueprintContainer) createLinkScheduler(
 		},
 		deployCtx.State.MarkLinkSettled,
 		deployCtx.State.AwaitingCapabilityProviders,
-		func(err error) {
-			internalChannels.ErrChan <- err
+		// Never waits. The error channel is unbuffered, so a send blocks whenever the
+		// deployment event loop is busy elsewhere, and the scheduler holds anything
+		// that will not go rather than parking a worker on it.
+		func(err error) bool {
+			select {
+			case internalChannels.ErrChan <- err:
+				return true
+			default:
+				return false
+			}
 		},
 	)
 }
@@ -2727,7 +2735,14 @@ func (c *defaultBlueprintContainer) drainLinkScheduler(
 		return nil
 	}
 
-	neverStarted := deployCtx.LinkScheduler.Drain(ctx)
+	neverStarted, undelivered := deployCtx.LinkScheduler.Drain(ctx)
+	for _, err := range undelivered {
+		deployCtx.Logger.Error(
+			"link deployment error that could not be reported while the deployment ran",
+			core.ErrorLogField("error", err),
+		)
+	}
+
 	names := make([]string, 0, len(neverStarted))
 	for _, link := range neverStarted {
 		name := linkElementID(pendingLinkName(link))
