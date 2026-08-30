@@ -343,7 +343,21 @@ type ResourceHasStabilisedInput struct {
 	ResourceID       string
 	ResourceSpec     *core.MappingNode
 	ResourceMetadata *state.ResourceMetadataState
-	ProviderContext  Context
+	// AfterLinkUpdate marks a check made because a link wrote the resource, rather
+	// than because the framework deployed it.
+	//
+	// The two ask different questions and an implementation that conflates them will
+	// answer one of them wrongly. After a deployment the question is whether the
+	// operation the framework started has finished, which an implementation can answer
+	// from a token or handle it holds. After a link's write it is whether the resource
+	// is settled in the provider, which the framework knows nothing about, it did not
+	// make the call, has no handle on it, and the write may have gone through an API
+	// the framework never touches.
+	//
+	// An implementation with no way to tell should report stable rather than block,
+	// which is what it did before this field existed.
+	AfterLinkUpdate bool
+	ProviderContext Context
 }
 
 // ResourceHasStabilisedOutput provides the output data from determining if a resource

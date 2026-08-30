@@ -63,10 +63,14 @@ func (d *defaultLinkDeployer) waitForResourceToSettle(
 		ResourceID:   resourceInfo.ResourceID,
 		ResourceSpec: resourceData.Spec,
 		// The spec describes the resource as the framework deployed it, not as the link
-		// has just written it, which the framework has no way to know. HasStabilised is a
-		// liveness check against the upstream API rather than a comparison against a
-		// desired spec, so this is the right input for it.
+		// has just written it, which the framework has no way to know. It identifies the
+		// resource for the check rather than describing what to wait for, and an
+		// implementation should not diff against it.
 		ResourceMetadata: resourceData.Metadata,
+		// This check follows a link's write rather than a deployment, which is a
+		// different question and one some implementations can only answer if they are
+		// told which is being asked.
+		AfterLinkUpdate: true,
 		ProviderContext: provider.NewProviderContextFromParams(
 			provider.ExtractProviderFromItemType(resourceInfo.ResourceWithResolvedSubs.Type.Value),
 			deployCtx.ParamOverrides,
@@ -77,12 +81,35 @@ func (d *defaultLinkDeployer) waitForResourceToSettle(
 	// before its first check, which is reasonable for a resource that was just created
 	// and cannot be ready yet. Applied to every link phase it would add that interval to
 	// each one, inside the lock, for resources that are already stable.
+	//
+	// The timing is logged because "settled on the first check" is indistinguishable from
+	// "this resource type cannot report a link's write" without it, and the two mean very
+	// different things: the first is the wait working, the second is it doing nothing at
+	// all. A resource whose HasStabilised is scoped to an operation the framework started,
+	// for example, a Cloud Control backed one, reports stable immediately no matter what a
+	// link just wrote through a service SDK.
+	settleStart := time.Now()
 	settled, err := d.hasResourceSettled(settleCtx, resourceImpl, input)
 	if err != nil || settled {
+		deployCtx.Logger.Debug(
+			"link settle wait finished on the first check",
+			core.StringLogField("resourceName", resourceInfo.ResourceName),
+			core.StringLogField("resourceType", resourceInfo.ResourceWithResolvedSubs.Type.Value),
+			core.StringLogField("settleDuration", time.Since(settleStart).String()),
+			core.BoolLogField("settled", settled),
+		)
 		return err
 	}
 
-	return d.pollUntilResourceSettles(settleCtx, resourceImpl, input, resourceInfo, deployCtx)
+	err = d.pollUntilResourceSettles(settleCtx, resourceImpl, input, resourceInfo, deployCtx)
+	deployCtx.Logger.Debug(
+		"link settle wait polled until the resource stabilised",
+		core.StringLogField("resourceName", resourceInfo.ResourceName),
+		core.StringLogField("resourceType", resourceInfo.ResourceWithResolvedSubs.Type.Value),
+		core.StringLogField("settleDuration", time.Since(settleStart).String()),
+	)
+
+	return err
 }
 
 func (d *defaultLinkDeployer) pollUntilResourceSettles(
