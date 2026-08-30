@@ -8,6 +8,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/links"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
@@ -81,6 +82,9 @@ type DeploymentState interface {
 	// SetLinkCapabilityGraph records the ordering implied by the capabilities that
 	// links declare, resolved once for the deployment before any link runs.
 	SetLinkCapabilityGraph(graph *LinkCapabilityGraph)
+	// LinkModifies returns which resources in its relationship the named link declared
+	// it writes, defaulting to both for a link that declared nothing.
+	LinkModifies(linkName string) provider.LinkModifies
 	// AwaitingCapabilityProviders returns the names of the links that establish a
 	// capability the named link requires and have not finished deploying yet.
 	//
@@ -250,6 +254,13 @@ func (d *defaultDeploymentState) SetLinkCapabilityGraph(graph *LinkCapabilityGra
 	defer d.mu.Unlock()
 
 	d.linkCapabilities = graph
+}
+
+func (d *defaultDeploymentState) LinkModifies(linkName string) provider.LinkModifies {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	return d.linkCapabilities.Modifies(linkName)
 }
 
 func (d *defaultDeploymentState) AwaitingCapabilityProviders(linkName string) []string {

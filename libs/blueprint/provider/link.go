@@ -413,9 +413,50 @@ type LinkGetCapabilitiesInput struct {
 	LinkContext LinkContext
 }
 
+// LinkModifies identifies which of the two resources in a link relationship a link
+// writes to.
+type LinkModifies int
+
+const (
+	// LinkModifiesBoth is the default, and treats both resources in the relationship as
+	// written by the link.
+	LinkModifiesBoth LinkModifies = iota
+	// LinkModifiesResourceA declares that only the first resource is written, and that
+	// the second is read.
+	LinkModifiesResourceA
+	// LinkModifiesResourceB declares that only the second resource is written, and that
+	// the first is read.
+	LinkModifiesResourceB
+	// LinkModifiesNeither declares that the link writes neither resource in the
+	// relationship, doing its work through intermediary resources instead.
+	LinkModifiesNeither
+)
+
+// WritesResourceA reports whether a link declaring this writes the first resource in the
+// relationship.
+func (m LinkModifies) WritesResourceA() bool {
+	return m == LinkModifiesBoth || m == LinkModifiesResourceA
+}
+
+// WritesResourceB reports whether a link declaring this writes the second resource in the
+// relationship.
+func (m LinkModifies) WritesResourceB() bool {
+	return m == LinkModifiesBoth || m == LinkModifiesResourceB
+}
+
 // LinkGetCapabilitiesOutput provides the output for retrieving the capabilities
 // a link provides and requires.
 type LinkGetCapabilitiesOutput struct {
+	// Modifies declares which of the two resources in the relationship this link writes.
+	//
+	// The deployer takes an exclusive lock only on a declared side, and the link
+	// scheduler only holds a link back because another link is busy with a side it
+	// writes. A link that reads a resource shared by many links therefore stops
+	// serialising against every other link that reads it, for example, a VPC placing forty functions,
+	// or twelve access links reading the same table.
+	//
+	// Defaults to LinkModifiesBoth, which is what the framework did before this existed.
+	Modifies LinkModifies
 	// Provides holds the guarantees this link establishes once deployed.
 	Provides []LinkCapability
 	// Requires holds the guarantees this link needs established before it runs.

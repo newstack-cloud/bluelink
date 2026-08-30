@@ -151,3 +151,33 @@ func Test_a_link_waits_for_the_resource_it_wrote_to_settle(t *testing.T) {
 			"over and above the check each resource gets from its own deployment",
 	)
 }
+
+// A resource that links only read does not serialise them against one another.
+//
+// Twelve functions linking to one table have twelve links that all touch it, and the
+// deployer used to take an exclusive lock on both sides of every link whether or not it
+// wrote them. That put every link reading the table in one queue that led to a mean concurrency of
+// around one, on a blueprint where nothing actually contends. Declaring which side a link
+// writes lets the read side go unlocked.
+func Test_links_reading_a_shared_resource_are_not_serialised_by_it(t *testing.T) {
+	shape := linkThroughputShape{
+		functions:            12,
+		tablesPerFunction:    1,
+		sharedTable:          true,
+		updateResourceA:      20 * time.Millisecond,
+		updateResourceB:      20 * time.Millisecond,
+		updateIntermediaries: 20 * time.Millisecond,
+	}
+
+	result, err := runLinkThroughputDeployment(context.Background(), shape, 0)
+	require.NoError(t, err)
+
+	// The link in this fixture declares it writes resource A, the function, and reads the
+	// table. Treating both sides as written gives a mean below 1.1 on this shape.
+	require.Greater(
+		t,
+		result.meanInFlight,
+		6.0,
+		"links that only read the shared table should run alongside one another",
+	)
+}

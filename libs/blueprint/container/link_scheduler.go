@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
@@ -99,6 +100,7 @@ type linkCompletion struct {
 // access by multiple resource completion goroutines.
 type linkScheduler struct {
 	slots             *LinkSlots
+	modifies          func(linkName string) provider.LinkModifies
 	deployLink        func(context.Context, *LinkPendingCompletion, *state.InstanceState) error
 	loadInstanceState func(context.Context) (*state.InstanceState, error)
 	markSettled       func(linkName string)
@@ -115,6 +117,7 @@ type linkScheduler struct {
 
 func newLinkScheduler(
 	slots *LinkSlots,
+	modifies func(linkName string) provider.LinkModifies,
 	deployLink func(context.Context, *LinkPendingCompletion, *state.InstanceState) error,
 	loadInstanceState func(context.Context) (*state.InstanceState, error),
 	markSettled func(linkName string),
@@ -123,6 +126,7 @@ func newLinkScheduler(
 ) *linkScheduler {
 	return &linkScheduler{
 		slots:             slots,
+		modifies:          modifies,
 		deployLink:        deployLink,
 		loadInstanceState: loadInstanceState,
 		markSettled:       markSettled,
@@ -273,10 +277,10 @@ func (s *linkScheduler) dispatchReady(
 // resources drops by more than half, because the slots are spent on links that cannot
 // move.
 //
-// Both endpoints are keyed on, not just resource A. The deployer takes a lock on resource
-// A and on resource B, whichever side a link implementation actually writes, so either can
-// be the one that blocks: a VPC placing a function, a table triggering a function and a
-// stream feeding a function all drive from resource B.
+// Only the sides a link declared it writes are keyed on. A link that reads a resource is
+// not held back because another link is busy with it, since the deployer takes no
+// exclusive lock on a side that is only read. A link that declares nothing is treated as
+// writing both, which is what the framework did before the declaration existed.
 //
 // It sees the link's own two resources and not the ones a link implementation locks from
 // the inside, such as an execution role several links write policy to, so it is a
@@ -285,12 +289,32 @@ func (s *linkScheduler) readyToDispatch(
 	link *LinkPendingCompletion,
 	writing map[string]bool,
 ) bool {
-	if len(s.awaitingProviders(pendingLinkName(link))) > 0 {
+	linkName := pendingLinkName(link)
+	if len(s.awaitingProviders(linkName)) > 0 {
 		return false
 	}
 
-	return !writing[link.resourceANode.ResourceName] &&
-		!writing[link.resourceBNode.ResourceName]
+	writtenResources := s.writtenResources(link)
+	for _, resourceName := range writtenResources {
+		if writing[resourceName] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (s *linkScheduler) writtenResources(link *LinkPendingCompletion) []string {
+	modifies := s.modifies(pendingLinkName(link))
+	written := []string{}
+	if modifies.WritesResourceA() {
+		written = append(written, link.resourceANode.ResourceName)
+	}
+	if modifies.WritesResourceB() {
+		written = append(written, link.resourceBNode.ResourceName)
+	}
+
+	return written
 }
 
 func (s *linkScheduler) run(
@@ -299,10 +323,7 @@ func (s *linkScheduler) run(
 	instanceState *state.InstanceState,
 	writing map[string]bool,
 ) {
-	holds := []string{
-		link.resourceANode.ResourceName,
-		link.resourceBNode.ResourceName,
-	}
+	holds := s.writtenResources(link)
 	for _, resourceName := range holds {
 		writing[resourceName] = true
 	}
