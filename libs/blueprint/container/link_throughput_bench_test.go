@@ -484,6 +484,20 @@ func deployGeneratedBlueprint(
 	stateContainer state.Container,
 	awsProvider provider.Provider,
 ) error {
+	return deployGeneratedBlueprintSpec(
+		ctx,
+		generateLinkThroughputBlueprint(shape),
+		stateContainer,
+		awsProvider,
+	)
+}
+
+func deployGeneratedBlueprintSpec(
+	ctx context.Context,
+	spec string,
+	stateContainer state.Container,
+	awsProvider provider.Provider,
+) error {
 	loader := newLinkThroughputLoader(stateContainer, awsProvider)
 	params := core.NewDefaultParams(
 		map[string]map[string]*core.ScalarValue{},
@@ -494,7 +508,7 @@ func deployGeneratedBlueprint(
 
 	blueprintContainer, err := loader.LoadString(
 		ctx,
-		generateLinkThroughputBlueprint(shape),
+		spec,
 		schema.YAMLSpecFormat,
 		params,
 	)

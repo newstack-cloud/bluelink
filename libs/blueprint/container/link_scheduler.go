@@ -112,6 +112,9 @@ type linkScheduler struct {
 	errMu      sync.Mutex
 	heldErrors []error
 
+	pendingMu    sync.Mutex
+	pendingCount int
+
 	submitCh   chan []*LinkPendingCompletion
 	completeCh chan *linkCompletion
 	drainCh    chan chan []*LinkPendingCompletion
@@ -193,6 +196,22 @@ func (s *linkScheduler) Drain(ctx context.Context) ([]*LinkPendingCompletion, []
 	}
 }
 
+// HasPendingLinks reports whether any link is waiting to be dispatched, which is work the
+// deployment can still make progress on even when nothing is in flight.
+func (s *linkScheduler) HasPendingLinks() bool {
+	s.pendingMu.Lock()
+	defer s.pendingMu.Unlock()
+
+	return s.pendingCount > 0
+}
+
+func (s *linkScheduler) setPendingCount(count int) {
+	s.pendingMu.Lock()
+	defer s.pendingMu.Unlock()
+
+	s.pendingCount = count
+}
+
 // Holds an error until it can be delivered without waiting.
 //
 // A worker must never block reporting one. The error channel is unbuffered, and whoever
@@ -258,6 +277,7 @@ func (s *linkScheduler) dispatch(ctx context.Context) {
 
 		s.forwardErrors()
 		pending = s.dispatchReady(ctx, pending, writing)
+		s.setPendingCount(len(pending))
 		slotWait = s.waitForSlotIfBlocked(pending, writing, slotWait)
 	}
 }
