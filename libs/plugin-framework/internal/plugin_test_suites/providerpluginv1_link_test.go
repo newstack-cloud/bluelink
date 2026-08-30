@@ -671,6 +671,9 @@ func (s *ProviderPluginV1Suite) Test_link_get_capabilities() {
 		&provider.LinkGetCapabilitiesOutput{
 			Provides: testprovider.LinkLambdaFunctionDDBTableProvides(),
 			Requires: testprovider.LinkLambdaFunctionDDBTableRequires(),
+			// Carried over the wire rather than defaulted, which a zero value here
+			// would not distinguish.
+			Modifies: provider.LinkModifiesResourceA,
 		},
 		output,
 	)

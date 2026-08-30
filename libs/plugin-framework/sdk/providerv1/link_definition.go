@@ -81,6 +81,20 @@ type LinkDefinition struct {
 	// capability only where its absence makes the link itself invalid.
 	Requires []provider.LinkCapability
 
+	// Modifies declares which of the two resources in the relationship this link
+	// writes to. The deployer takes an exclusive lock only on a declared side, and
+	// the link scheduler only holds a link back while another link is busy with a
+	// side it writes.
+	//
+	// Declaring this is what stops a resource that many links merely read from
+	// serialising all of them: a VPC that forty placement links read, or a table
+	// that a dozen access links read while writing only their own function.
+	//
+	// The zero value is LinkModifiesBoth, which is what the engine assumed before
+	// links could declare this. Over-declaring costs throughput; under-declaring
+	// lets two links write one resource at the same time.
+	Modifies provider.LinkModifies
+
 	// ValidateFunc is a custom validation function that runs at blueprint
 	// validation time (pre-deploy). It receives the resource specs and
 	// annotations for the link pair and returns diagnostics.
@@ -285,6 +299,7 @@ func (l *LinkDefinition) GetCapabilities(
 	return &provider.LinkGetCapabilitiesOutput{
 		Provides: l.Provides,
 		Requires: l.Requires,
+		Modifies: l.Modifies,
 	}, nil
 }
 
