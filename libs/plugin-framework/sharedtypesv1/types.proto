@@ -1579,6 +1579,15 @@ message LinkCapabilitiesResponse {
 message LinkCapabilitiesInfo {
     repeated LinkCapability provides = 1;
     repeated LinkCapability requires = 2;
+    // Which resources in the relationship the link writes to.
+    // 0 = both, 1 = ResourceA only, 2 = ResourceB only, 3 = neither.
+    //
+    // Both is the zero value on purpose. A plugin built before this field existed
+    // sends nothing, which decodes as both and keeps the behaviour the engine had
+    // before links could declare this. Over-declaring costs throughput, while
+    // under-declaring lets two links write one resource at the same time, so the
+    // value that means "assume nothing" has to be the cautious one.
+    int32 modifies = 3;
 }
 
 // LinkCapability identifies a guarantee about one of the resources in a link

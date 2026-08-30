@@ -83,6 +83,23 @@ func FromPBLinkCapabilitiesResponse(
 	return &provider.LinkGetCapabilitiesOutput{
 		Provides: fromPBLinkCapabilities(pbResponse.CapabilitiesInfo.Provides),
 		Requires: fromPBLinkCapabilities(pbResponse.CapabilitiesInfo.Requires),
+		Modifies: fromPBLinkModifies(pbResponse.CapabilitiesInfo.Modifies),
+	}
+}
+
+// A value outside the known range is treated as both, the same as a plugin that sends
+// nothing. Guessing narrower from a value this build does not understand would drop a lock
+// the link most likely needs.
+func fromPBLinkModifies(pbModifies int32) provider.LinkModifies {
+	switch provider.LinkModifies(pbModifies) {
+	case provider.LinkModifiesResourceA:
+		return provider.LinkModifiesResourceA
+	case provider.LinkModifiesResourceB:
+		return provider.LinkModifiesResourceB
+	case provider.LinkModifiesNeither:
+		return provider.LinkModifiesNeither
+	default:
+		return provider.LinkModifiesBoth
 	}
 }
 

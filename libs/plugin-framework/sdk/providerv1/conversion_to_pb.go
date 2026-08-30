@@ -899,6 +899,7 @@ func toPBGetLinkCapabilitiesResponse(
 			CapabilitiesInfo: &sharedtypesv1.LinkCapabilitiesInfo{
 				Provides: convertv1.ToPBLinkCapabilities(output.Provides),
 				Requires: convertv1.ToPBLinkCapabilities(output.Requires),
+				Modifies: int32(output.Modifies),
 			},
 		},
 	}
