@@ -86,19 +86,34 @@ func Test_links_on_distinct_resources_are_deployed_concurrently(t *testing.T) {
 
 // Counts stabilisation checks per resource so the link settle poll can be told apart from
 // the one the resource deployer runs.
+// Shared by every wrapped resource type so the counts describe the deployment rather than
+// one resource type's share of it.
+type settleRecorder struct {
+	mu              sync.Mutex
+	checks          map[string]int
+	afterLinkChecks int
+}
+
+func (r *settleRecorder) record(resourceID string, afterLinkUpdate bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.checks[resourceID] += 1
+	if afterLinkUpdate {
+		r.afterLinkChecks += 1
+	}
+}
+
 type settleCountingResource struct {
 	provider.Resource
-	mu     *sync.Mutex
-	counts map[string]int
+	recorder *settleRecorder
 }
 
 func (r *settleCountingResource) HasStabilised(
 	ctx context.Context,
 	input *provider.ResourceHasStabilisedInput,
 ) (*provider.ResourceHasStabilisedOutput, error) {
-	r.mu.Lock()
-	r.counts[input.ResourceID] += 1
-	r.mu.Unlock()
+	r.recorder.record(input.ResourceID, input.AfterLinkUpdate)
 
 	return r.Resource.HasStabilised(ctx, input)
 }
@@ -110,8 +125,7 @@ func (r *settleCountingResource) HasStabilised(
 // it, so the next link acquired the resource at exactly the point the API would refuse it,
 // and providers worked around that individually with their own backoff.
 func Test_a_link_waits_for_the_resource_it_wrote_to_settle(t *testing.T) {
-	counts := map[string]int{}
-	countsMu := &sync.Mutex{}
+	recorder := &settleRecorder{checks: map[string]int{}}
 	stateContainer := memstate.NewMemoryStateContainer()
 
 	awsProvider := newTestAWSProvider(
@@ -122,8 +136,7 @@ func Test_a_link_waits_for_the_resource_it_wrote_to_settle(t *testing.T) {
 	for resourceType, resourceImpl := range awsProvider.Resources {
 		awsProvider.Resources[resourceType] = &settleCountingResource{
 			Resource: resourceImpl,
-			mu:       countsMu,
-			counts:   counts,
+			recorder: recorder,
 		}
 	}
 
@@ -131,24 +144,20 @@ func Test_a_link_waits_for_the_resource_it_wrote_to_settle(t *testing.T) {
 	err := deployGeneratedBlueprint(context.Background(), shape, stateContainer, awsProvider)
 	require.NoError(t, err)
 
-	countsMu.Lock()
-	defer countsMu.Unlock()
+	recorder.mu.Lock()
+	defer recorder.mu.Unlock()
 
-	// Every resource is polled once by its own deployment. A resource a link wrote is
-	// polled again before the link gives up its lock, so the functions each see more
-	// checks than the tables that no link writes on the A side.
-	require.NotEmpty(t, counts, "stabilisation should have been checked at all")
+	require.NotEmpty(t, recorder.checks, "stabilisation should have been checked at all")
 
-	totalChecks := 0
-	for _, count := range counts {
-		totalChecks += count
-	}
+	// The flag is what lets an implementation tell the two questions apart. A Cloud
+	// Control resource, for one, answers a deployment check by polling the request it
+	// started and has no such request for a link's write, so without the flag it reports
+	// settled immediately and waits for nothing.
 	require.Greater(
 		t,
-		totalChecks,
-		len(counts),
-		"a link should check that the resource it wrote has settled, "+
-			"over and above the check each resource gets from its own deployment",
+		recorder.afterLinkChecks,
+		0,
+		"a link should check that the resource it wrote has settled, and say that is why",
 	)
 }
 
