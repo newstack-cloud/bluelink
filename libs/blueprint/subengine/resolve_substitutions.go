@@ -2192,7 +2192,24 @@ func (r *defaultSubstitutionResolver) resolveResourceSpecProperty(
 	resourceName := getFinalResourceName(prop)
 	resource, hasResource := r.resourceCache.Get(resourceName)
 	if !hasResource {
-		return nil, errResourceNotResolved(resolveCtx.currentElementName, prop.ResourceName)
+		// A resource the deployment is not touching is never resolved during it, so it
+		// is absent from the cache rather than absent from the blueprint. The cache is
+		// filled as each resource is deployed, and a resource with no changes is
+		// skipped, so an update that references an unchanged resource finds nothing
+		// here. This is the expected behaviour of an incremental deployment, where a changed
+		// resource refers to one that did not change.
+		//
+		// Change staging resolves every resource in dependency order and caches each
+		// one as it goes, so a miss cannot happen there and still means what it always
+		// did. The fallback below only applies to deployment and returns the original
+		// error otherwise.
+		return r.resolveResourceSpecPropertyFromStateOrDefault(
+			ctx,
+			prop,
+			definition,
+			errResourceNotResolved(resolveCtx.currentElementName, prop.ResourceName),
+			resolveCtx,
+		)
 	}
 
 	resolved, err := getResourceSpecPropertyValue(resource, prop, resolveCtx)
