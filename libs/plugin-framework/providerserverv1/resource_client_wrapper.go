@@ -546,6 +546,7 @@ func (r *resourceProviderClientWrapper) HasStabilised(
 			ResourceId:       input.ResourceID,
 			ResourceSpec:     pbResourceSpec,
 			ResourceMetadata: pbResourceMetadata,
+			AfterLinkUpdate:  input.AfterLinkUpdate,
 			Context:          providerCtx,
 		},
 	)
