@@ -1594,6 +1594,7 @@ func (c *defaultBlueprintContainer) createLinkScheduler(
 
 	return newLinkScheduler(
 		deployCtx.LinkSlots,
+		deployCtx.State.LinkModifies,
 		func(
 			ctx context.Context,
 			link *LinkPendingCompletion,

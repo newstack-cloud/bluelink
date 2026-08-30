@@ -203,6 +203,26 @@ func (d *defaultLinkDeployer) Deploy(
 	return nil
 }
 
+// Whether the deployer takes an exclusive lock on a resource for a link phase, and waits
+// for it to settle afterwards.
+//
+// A link that declared it does not write a side is only reading it, so locking it would
+// serialise every link that reads the same resource against one another for no benefit,
+// and waiting for it to settle would poll a resource this link did not change. A link that
+// declared nothing is treated as writing both sides.
+func (d *defaultLinkDeployer) writesResource(
+	linkInfo *deploymentElementInfo,
+	deployCtx *DeployContext,
+	side provider.LinkPriorityResource,
+) bool {
+	modifies := deployCtx.State.LinkModifies(linkInfo.element.LogicalName())
+	if side == provider.LinkPriorityResourceB {
+		return modifies.WritesResourceB()
+	}
+
+	return modifies.WritesResourceA()
+}
+
 func (d *defaultLinkDeployer) updateLinkResourceA(
 	ctx context.Context,
 	linkImplementation provider.Link,
@@ -219,19 +239,23 @@ func (d *defaultLinkDeployer) updateLinkResourceA(
 		input.LinkUpdateType,
 	)
 
-	deployCtx.Logger.Debug(
-		"acquiring resource lock for link resource A update",
-		core.StringLogField("linkId", linkInfo.element.ID()),
-		core.StringLogField("resourceName", input.ResourceInfo.ResourceName),
-	)
-	err := deployCtx.ResourceRegistry.AcquireResourceLock(
-		ctx,
-		&provider.AcquireResourceLockInput{
-			InstanceID:   linkInfo.instanceID,
-			ResourceName: input.ResourceInfo.ResourceName,
-			AcquiredBy:   linkInfo.element.ID(),
-		},
-	)
+	writesResource := d.writesResource(linkInfo, deployCtx, provider.LinkPriorityResourceA)
+	var err error
+	if writesResource {
+		deployCtx.Logger.Debug(
+			"acquiring resource lock for link resource A update",
+			core.StringLogField("linkId", linkInfo.element.ID()),
+			core.StringLogField("resourceName", input.ResourceInfo.ResourceName),
+		)
+		err = deployCtx.ResourceRegistry.AcquireResourceLock(
+			ctx,
+			&provider.AcquireResourceLockInput{
+				InstanceID:   linkInfo.instanceID,
+				ResourceName: input.ResourceInfo.ResourceName,
+				AcquiredBy:   linkInfo.element.ID(),
+			},
+		)
+	}
 	if err != nil {
 		deployCtx.Logger.Error(
 			"failed to acquire resource lock for link resource A update",
@@ -262,7 +286,7 @@ func (d *defaultLinkDeployer) updateLinkResourceA(
 	)
 
 	resourceAOutput, err := linkImplementation.UpdateResourceA(ctx, input)
-	if err == nil {
+	if err == nil && writesResource {
 		// Inside the lock, so the next link cannot reach the resource while it is still
 		// applying what this one wrote.
 		err = d.waitForResourceToSettle(ctx, input.ResourceInfo, deployCtx)
@@ -505,19 +529,23 @@ func (d *defaultLinkDeployer) updateLinkResourceB(
 		input.LinkUpdateType,
 	)
 
-	deployCtx.Logger.Debug(
-		"acquiring resource lock for link resource B update",
-		core.StringLogField("linkId", linkInfo.element.ID()),
-		core.StringLogField("resourceName", input.ResourceInfo.ResourceName),
-	)
-	err := deployCtx.ResourceRegistry.AcquireResourceLock(
-		ctx,
-		&provider.AcquireResourceLockInput{
-			InstanceID:   linkInfo.instanceID,
-			ResourceName: input.ResourceInfo.ResourceName,
-			AcquiredBy:   linkInfo.element.ID(),
-		},
-	)
+	writesResource := d.writesResource(linkInfo, deployCtx, provider.LinkPriorityResourceB)
+	var err error
+	if writesResource {
+		deployCtx.Logger.Debug(
+			"acquiring resource lock for link resource B update",
+			core.StringLogField("linkId", linkInfo.element.ID()),
+			core.StringLogField("resourceName", input.ResourceInfo.ResourceName),
+		)
+		err = deployCtx.ResourceRegistry.AcquireResourceLock(
+			ctx,
+			&provider.AcquireResourceLockInput{
+				InstanceID:   linkInfo.instanceID,
+				ResourceName: input.ResourceInfo.ResourceName,
+				AcquiredBy:   linkInfo.element.ID(),
+			},
+		)
+	}
 	if err != nil {
 		deployCtx.Logger.Error(
 			"failed to acquire resource lock for link resource B update",
@@ -548,7 +576,7 @@ func (d *defaultLinkDeployer) updateLinkResourceB(
 	)
 
 	resourceBOutput, err := linkImplementation.UpdateResourceB(ctx, input)
-	if err == nil {
+	if err == nil && writesResource {
 		// Inside the lock, so the next link cannot reach the resource while it is still
 		// applying what this one wrote.
 		err = d.waitForResourceToSettle(ctx, input.ResourceInfo, deployCtx)

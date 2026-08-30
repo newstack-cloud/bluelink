@@ -1560,11 +1560,16 @@ func (l *testApiGatewayLambdaLink) GetCapabilities(
 	return &provider.LinkGetCapabilitiesOutput{}, nil
 }
 
+// The function is the only resource this link writes: it sets an environment variable on
+// it, and reads the table's name. Mirrors the AWS provider, where every function-to-X
+// access link writes the function and reads the target.
 func (l *testLambdaDynamoDBTableLink) GetCapabilities(
 	ctx context.Context,
 	input *provider.LinkGetCapabilitiesInput,
 ) (*provider.LinkGetCapabilitiesOutput, error) {
-	return &provider.LinkGetCapabilitiesOutput{}, nil
+	return &provider.LinkGetCapabilitiesOutput{
+		Modifies: provider.LinkModifiesResourceA,
+	}, nil
 }
 
 func (l *testDynamoDBTableStreamLink) GetCapabilities(

@@ -30,6 +30,10 @@ type capabilityRef struct {
 // so tearing placement down first would strand them.
 type LinkCapabilityGraph struct {
 	waitsFor map[string][]string
+	// What each link declared it writes, resolved from the same GetCapabilities call
+	// that produced the ordering. A link with no entry is treated as writing both
+	// resources, which is the behaviour that predates the declaration.
+	modifies map[string]provider.LinkModifies
 }
 
 // WaitsFor returns the logical names of the links that must finish deploying
@@ -42,6 +46,20 @@ func (g *LinkCapabilityGraph) WaitsFor(linkName string) []string {
 	}
 
 	return g.waitsFor[linkName]
+}
+
+// Modifies returns which resources in its relationship the named link declared it
+// writes, defaulting to both for a link that declared nothing.
+//
+// The deployer takes an exclusive lock only on a declared side, and the scheduler only
+// holds a link back for a side it writes, so a resource that many links merely read stops
+// serialising them against one another.
+func (g *LinkCapabilityGraph) Modifies(linkName string) provider.LinkModifies {
+	if g == nil {
+		return provider.LinkModifiesBoth
+	}
+
+	return g.modifies[linkName]
 }
 
 // Empty reports whether no link in the deployment declared an ordering
@@ -138,6 +156,7 @@ func BuildLinkCapabilityGraph(
 
 	linkCtx := provider.NewLinkContextFromParams(params)
 	index := newCapabilityIndex()
+	modifies := map[string]provider.LinkModifies{}
 	for _, pair := range pairs {
 		output, err := getLinkCapabilities(ctx, pair.impl, linkCtx)
 		if err != nil {
@@ -148,6 +167,7 @@ func BuildLinkCapabilityGraph(
 			index.addProvided(pair.capabilityPair, output.Provides)
 		}
 		index.addRequired(pair.capabilityPair, output.Requires)
+		modifies[pendingLinkName(pair.pending)] = output.Modifies
 	}
 
 	waitsFor := index.edges()
@@ -155,7 +175,10 @@ func BuildLinkCapabilityGraph(
 		return nil, errLinkCapabilityCycle(cycle)
 	}
 
-	return &LinkCapabilityGraph{waitsFor: waitsFor}, nil
+	return &LinkCapabilityGraph{
+		waitsFor: waitsFor,
+		modifies: modifies,
+	}, nil
 }
 
 // BuildLinkCapabilityRemovalEdges resolves the capabilities declared by the links being
