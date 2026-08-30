@@ -792,6 +792,14 @@ message ResourceHasStabilisedRequest {
     schema.MappingNode resource_spec = 6;
     ResourceMetadataState resource_metadata = 7;
     ProviderContext context = 8;
+    // Whether the check follows a link writing the resource rather than the engine
+    // deploying it. The two are different questions. After a deployment, it is whether the
+    // operation the engine started has finished; after a link's write, it is whether the
+    // resource is settled in the provider, which the engine has no handle on.
+    //
+    // Absent on a plugin built before this field existed, which decodes as false and
+    // keeps the behaviour those plugins already have.
+    bool after_link_update = 9;
 }
 
 // ResourceHasStabilisedResponse is the response

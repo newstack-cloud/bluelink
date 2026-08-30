@@ -1523,6 +1523,7 @@ func FromPBResourceHasStabilisedRequest(
 		ResourceID:       req.ResourceId,
 		ResourceSpec:     resourceSpec,
 		ResourceMetadata: resourceMetadataState,
+		AfterLinkUpdate:  req.AfterLinkUpdate,
 		ProviderContext:  providerCtx,
 	}, nil
 }
