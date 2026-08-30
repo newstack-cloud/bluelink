@@ -552,3 +552,78 @@ func (s *SubstitutionResourceResolverTestSuite) Test_reference_to_set_computed_w
 func TestSubstitutionResourceResolverTestSuite(t *testing.T) {
 	suite.Run(t, new(SubstitutionResourceResolverTestSuite))
 }
+
+// A resource that is not being deployed is never resolved during the deployment, so it is
+// absent from the resource cache rather than absent from the blueprint. This is the
+// ordinary shape of an update, a changed resource referring to one that did not change.
+//
+// The reference has to come from the referenced resource's deployed state, which is where
+// its computed fields live in any case. Failing here made every incremental deployment
+// that referenced an unchanged resource fail on the first such reference it met.
+func (s *SubstitutionResourceResolverTestSuite) Test_resolves_reference_to_a_resource_not_being_deployed_from_state() {
+	blueprint := s.specFixtureSchemas[resolveInResourceComputedFromStateFixtureName]
+	spec := internal.NewBlueprintSpecMock(blueprint)
+	params := resolveInResourceTestParams()
+	subResolver := NewDefaultSubstitutionResolver(
+		&Registries{
+			FuncRegistry:       s.funcRegistry,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
+		s.stateContainer,
+		// A cache of its own, left empty for the referenced resource, which is what a
+		// deployment that skips it leaves behind.
+		core.NewCache[*provider.ResolvedResource](),
+		s.resourceTemplateInputElemCache,
+		s.childExportFieldCache,
+		spec,
+		params,
+	)
+
+	err := s.stateContainer.Instances().Save(context.Background(), state.InstanceState{
+		InstanceID: testInstanceID,
+	})
+	s.Require().NoError(err)
+
+	resourceID := "test-orders-table-309428320"
+	err = s.stateContainer.Resources().Save(
+		context.Background(),
+		state.ResourceState{
+			ResourceID: resourceID,
+			InstanceID: testInstanceID,
+			Name:       "ordersTable",
+			SpecData: &core.MappingNode{
+				Fields: map[string]*core.MappingNode{
+					"id": {
+						Scalar: &core.ScalarValue{
+							StringValue: &resourceID,
+						},
+					},
+				},
+			},
+		},
+	)
+	s.Require().NoError(err)
+
+	ctx := context.WithValue(
+		context.Background(),
+		core.BlueprintInstanceIDKey,
+		testInstanceID,
+	)
+
+	result, err := subResolver.ResolveInResource(
+		ctx,
+		"saveOrderFunction",
+		blueprint.Resources.Values["saveOrderFunction"],
+		&ResolveResourceTargetInfo{
+			ResolveFor: ResolveForDeployment,
+		},
+	)
+	s.Require().NoError(err)
+	s.Require().NotNil(result)
+
+	s.Assert().Equal(
+		resourceID,
+		core.StringValue(result.ResolvedResource.Spec.Fields["tableId"]),
+	)
+}
