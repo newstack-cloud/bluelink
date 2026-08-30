@@ -45,6 +45,9 @@ const (
 	// ErrorReasonCodeLinkResourceSettleTimeout is provided when a resource a link has
 	// written does not reach a stable state within the link settle timeout.
 	ErrorReasonCodeLinkResourceSettleTimeout errors.ErrorReasonCode = "link_resource_settle_timeout"
+	// ErrorReasonCodeDeploymentStalled is provided when a deployment is waiting on
+	// elements that will never be deployed, so it can report them instead of hanging.
+	ErrorReasonCodeDeploymentStalled errors.ErrorReasonCode = "deployment_stalled"
 	// ErrorReasonCodeRemovedResourceHasDependents
 	// is provided when the reason for an error
 	// during deployment is due to a resource that is
@@ -174,6 +177,19 @@ func errBlueprintCycleDetected(
 			includeName,
 			cyclicInstanceID,
 			instanceTreePath,
+		),
+	}
+}
+
+func errDeploymentStalled(outstandingElements []string) error {
+	return &errors.RunError{
+		ReasonCode: ErrorReasonCodeDeploymentStalled,
+		Err: fmt.Errorf(
+			"deployment stopped making progress with %d element(s) never deployed: %s. "+
+				"nothing is in flight and nothing is waiting to be deployed, so the "+
+				"remaining elements will never be reached",
+			len(outstandingElements),
+			strings.Join(outstandingElements, ", "),
 		),
 	}
 }

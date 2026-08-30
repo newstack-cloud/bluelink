@@ -280,6 +280,8 @@ func (c *defaultBlueprintContainer) deploy(
 		return
 	}
 
+	warnOnElementsMissingFromGroups(deployLogger, prepareResult.ParallelGroups, input.Changes)
+
 	drainTimeout := input.DrainTimeout
 	if drainTimeout == 0 {
 		drainTimeout = DefaultDrainTimeout
@@ -1138,6 +1140,13 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 
 	state := &deploymentEventLoopState{}
 
+	// A deployment waiting for an element that will never be dispatched has nothing else
+	// to bound it, so it is detected here rather than left to the engine's deployment
+	// timeout with no indication of what it was waiting for.
+	stallDetector := newDeploymentStallDetector(elementsToDeploy, c.clock)
+	stallCheck := time.NewTicker(stalledDeploymentCheckInterval)
+	defer stallCheck.Stop()
+
 	// Keep looping until expected elements report completion (success or failure).
 	// In normal mode, we wait for all planned elements.
 	// In drain mode (after a terminal failure), we only wait for elements that
@@ -1205,6 +1214,16 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 
 		case msg := <-internalChannels.LinkUpdateChan:
 			c.processLinkUpdate(ctx, instanceID, msg, deployCtx, finished, state)
+
+		case <-stallCheck.C:
+			outstanding := stallDetector.check(deployCtx, finished, state.isDraining())
+			if len(outstanding) > 0 {
+				state.setError(
+					errDeploymentStalled(outstanding),
+					deployCtx.DrainTimeout,
+					deployCtx,
+				)
+			}
 
 		case newErr := <-internalChannels.ErrChan:
 			// Use a shorter drain timeout for errors from ErrChan since
@@ -1740,12 +1759,16 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterResource(
 	}
 
 	elementName := core.ResourceElementID(deployedResource.ResourceName)
-	// Evaluate the immediately-following group (unchanged behaviour) and then every
-	// subsequent group. A node can have direct dependencies spanning non-adjacent groups
-	// so that needs to be considered to avoid deadlocks where a node in a later group
-	// is waiting for a dependency in an earlier group to complete.
+	// Evaluate the immediately-following group in full and then every subsequent group.
+	// A node can have direct dependencies spanning non-adjacent groups so that needs to
+	// be considered to avoid deadlocks where a node in a later group is waiting for a
+	// dependency in an earlier group to complete.
+	//
+	// Beyond the adjacent group a node is only evaluated when it could actually start,
+	// which is either because it depends on the element that just completed or because
+	// it is not waiting on anything this deployment will deploy.
 	for groupIndex := deployCtx.CurrentGroupIndex + 1; groupIndex < len(deployCtx.DeploymentGroups); groupIndex++ {
-		dependantsOnly := groupIndex > deployCtx.CurrentGroupIndex+1
+		beyondAdjacentGroup := groupIndex > deployCtx.CurrentGroupIndex+1
 		for _, node := range deployCtx.DeploymentGroups[groupIndex] {
 			dependencyNode := commoncore.Find(
 				node.DirectDependencies,
@@ -1754,7 +1777,8 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterResource(
 				},
 			)
 			isDependant := dependencyNode != nil
-			if dependantsOnly && !isDependant {
+			if beyondAdjacentGroup && !isDependant &&
+				c.hasPendingDependencies(node, deployCtx) {
 				continue
 			}
 
@@ -1848,6 +1872,46 @@ func (c *defaultBlueprintContainer) getStabilisedDependencies(
 	}
 
 	return []string{}, nil
+}
+
+// Reports whether a node is still waiting on a dependency that this deployment is going
+// to deploy.
+//
+// Groups beyond the one immediately following a completed element are not evaluated in
+// full, because doing so costs a plugin round trip per node on every completion. The
+// filter used to be "dependants of the completed element only", which strands any node
+// that is already free to deploy but is nobody's dependant: it is skipped on every
+// completion for the rest of the deployment, and the only thing that could ever have
+// started it was a completion in the group directly before it. A group produces no
+// completions when every element in it is unchanged, which is ordinary on an update, and
+// the deployment then waits forever on an element it never started.
+//
+// A node with no dependencies is the clearest case, and where ordering puts one is
+// arbitrary. Ordering only guarantees that an element follows what it depends on, so a
+// node that depends on nothing can land in any group, and which one varies between runs.
+//
+// Only completed dependencies count as resolved here, so a dependency that is merely
+// config complete still holds the node back. Nothing is lost by that, the node is a
+// dependant of that dependency, so the config complete event evaluates it directly.
+//
+// Dependencies with no changes are not deployed by this deployment and never complete,
+// so they cannot be waited on.
+func (c *defaultBlueprintContainer) hasPendingDependencies(
+	node *DeploymentNode,
+	deployCtx *DeployContext,
+) bool {
+	for _, dependency := range node.DirectDependencies {
+		if !nodeHasChanges(dependency, deployCtx.InputChanges) {
+			continue
+		}
+
+		dependencyElement := createElementFromDeploymentNode(dependency)
+		if !deployCtx.State.WasElementCompleted(dependencyElement) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (c *defaultBlueprintContainer) checkUpdateNodeCanDeploy(
@@ -2302,12 +2366,16 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterChild(
 	}
 
 	elementName := core.ChildElementID(deployedChild.ChildName)
-	// Evaluate the immediately-following group (unchanged behaviour) and then every
-	// subsequent group. A node can have direct dependencies spanning non-adjacent groups
-	// so that needs to be considered to avoid deadlocks where a node in a later group
-	// is waiting for a dependency in an earlier group to complete.
+	// Evaluate the immediately-following group in full and then every subsequent group.
+	// A node can have direct dependencies spanning non-adjacent groups so that needs to
+	// be considered to avoid deadlocks where a node in a later group is waiting for a
+	// dependency in an earlier group to complete.
+	//
+	// Beyond the adjacent group a node is only evaluated when it could actually start,
+	// which is either because it depends on the element that just completed or because
+	// it is not waiting on anything this deployment will deploy.
 	for groupIndex := deployCtx.CurrentGroupIndex + 1; groupIndex < len(deployCtx.DeploymentGroups); groupIndex++ {
-		dependantsOnly := groupIndex > deployCtx.CurrentGroupIndex+1
+		beyondAdjacentGroup := groupIndex > deployCtx.CurrentGroupIndex+1
 		for _, node := range deployCtx.DeploymentGroups[groupIndex] {
 			dependencyNode := commoncore.Find(
 				node.DirectDependencies,
@@ -2316,7 +2384,8 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterChild(
 				},
 			)
 			isDependant := dependencyNode != nil
-			if dependantsOnly && !isDependant {
+			if beyondAdjacentGroup && !isDependant &&
+				c.hasPendingDependencies(node, deployCtx) {
 				continue
 			}
 
@@ -2975,4 +3044,39 @@ type DeployChannels struct {
 	FinishChan chan DeploymentFinishedMessage
 	// ErrChan is used to signal that an unexpected error occurred during deployment of changes.
 	ErrChan chan error
+}
+
+// Reports change set elements that were not placed into any deployment group.
+//
+// The event loop waits for one completion per element in the change set, counted by
+// countElementsToDeploy, while only elements in a group are ever dispatched. An element in
+// the change set and in no group is therefore a completion that can never arrive, and the
+// deployment waits on it until the engine's deployment timeout.
+func warnOnElementsMissingFromGroups(
+	logger core.Logger,
+	groups [][]*DeploymentNode,
+	inputChanges *changes.BlueprintChanges,
+) {
+	grouped := map[string]bool{}
+	for _, group := range groups {
+		for _, node := range group {
+			grouped[node.Name()] = true
+		}
+	}
+
+	missing := []string{}
+	for _, elementName := range outstandingElementNames(inputChanges, nil) {
+		if !grouped[elementName] {
+			missing = append(missing, elementName)
+		}
+	}
+
+	if len(missing) == 0 {
+		return
+	}
+
+	logger.Warn(
+		"change set elements are absent from every deployment group and will never deploy",
+		core.StringsLogField("elements", missing),
+	)
 }
