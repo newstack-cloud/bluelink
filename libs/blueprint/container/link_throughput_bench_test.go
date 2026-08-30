@@ -333,12 +333,11 @@ func generateSharedTableBlueprint(shape linkThroughputShape) string {
 
 func newLinkThroughputLoader(
 	stateContainer state.Container,
-	shape linkThroughputShape,
-	recorder *linkThroughputRecorder,
+	awsProvider provider.Provider,
 ) Loader {
 	return NewDefaultLoader(
 		map[string]provider.Provider{
-			"aws":     latencyObservedAWSProvider(stateContainer, shape, recorder),
+			"aws":     awsProvider,
 			"example": newTestExampleProvider(),
 			"core": providerhelpers.NewCoreProvider(
 				stateContainer.Links(),
@@ -421,7 +420,10 @@ func runLinkThroughputDeployment(
 ) (*linkThroughputResult, error) {
 	recorder := newLinkThroughputRecorder()
 	stateContainer := memstate.NewMemoryStateContainer()
-	loader := newLinkThroughputLoader(stateContainer, shape, recorder)
+	loader := newLinkThroughputLoader(
+		stateContainer,
+		latencyObservedAWSProvider(stateContainer, shape, recorder),
+	)
 
 	params := core.NewDefaultParams(
 		map[string]map[string]*core.ScalarValue{},
@@ -472,6 +474,55 @@ func runLinkThroughputDeployment(
 		meanInFlight:      recorder.meanInFlight(),
 		worstResourceBusy: recorder.worstResourceBusy(),
 	}, nil
+}
+
+// Deploys a generated blueprint against a caller-supplied provider, for tests that need to
+// observe what the provider was asked to do rather than how long the deployment took.
+func deployGeneratedBlueprint(
+	ctx context.Context,
+	shape linkThroughputShape,
+	stateContainer state.Container,
+	awsProvider provider.Provider,
+) error {
+	loader := newLinkThroughputLoader(stateContainer, awsProvider)
+	params := core.NewDefaultParams(
+		map[string]map[string]*core.ScalarValue{},
+		map[string]map[string]*core.ScalarValue{},
+		map[string]*core.ScalarValue{},
+		map[string]*core.ScalarValue{},
+	)
+
+	blueprintContainer, err := loader.LoadString(
+		ctx,
+		generateLinkThroughputBlueprint(shape),
+		schema.YAMLSpecFormat,
+		params,
+	)
+	if err != nil {
+		return err
+	}
+
+	deployChanges, err := stageLinkThroughputChanges(ctx, blueprintContainer, params)
+	if err != nil {
+		return err
+	}
+
+	channels := CreateDeployChannels()
+	err = blueprintContainer.Deploy(
+		ctx,
+		&DeployInput{
+			InstanceName: "SettleObservedInstance",
+			Changes:      deployChanges,
+			Rollback:     false,
+		},
+		channels,
+		params,
+	)
+	if err != nil {
+		return err
+	}
+
+	return awaitLinkThroughputDeployment(channels)
 }
 
 // BenchmarkLinkThroughput measures how many links a deployment runs at once, and what
