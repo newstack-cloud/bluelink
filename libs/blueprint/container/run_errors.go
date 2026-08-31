@@ -7,6 +7,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/specmerge"
 )
 
 const (
@@ -48,6 +49,9 @@ const (
 	// ErrorReasonCodeDeploymentStalled is provided when a deployment is waiting on
 	// elements that will never be deployed, so it can report them instead of hanging.
 	ErrorReasonCodeDeploymentStalled errors.ErrorReasonCode = "deployment_stalled"
+	// ErrorReasonCodeUnresolvedLinkProjections is provided when a resource has fields
+	// that links are recorded as owning and the values for them can not be found.
+	ErrorReasonCodeUnresolvedLinkProjections errors.ErrorReasonCode = "unresolved_link_projections"
 	// ErrorReasonCodeRemovedResourceHasDependents
 	// is provided when the reason for an error
 	// during deployment is due to a resource that is
@@ -390,4 +394,37 @@ func getDeploymentErrorSpecificMessage(err error, fallbackMessage string) string
 	}
 
 	return message
+}
+
+// A resource must not be deployed while a contribution a link is recorded as having made
+// to it cannot be found.
+//
+// Deploying applies the resource's complete intended state, so a field that a link owns
+// and that is missing from the spec is removed from the live resource. Reporting which
+// link and which field says what has been lost, rather than leaving it to be discovered
+// through the behaviour of a deployed application.
+func errUnresolvedLinkProjections(
+	resourceName string,
+	unresolved []specmerge.UnresolvedProjection,
+) error {
+	descriptions := make([]string, len(unresolved))
+	for i, projection := range unresolved {
+		descriptions[i] = fmt.Sprintf(
+			"%q owned by link %q",
+			projection.ResourceFieldPath,
+			projection.LinkName,
+		)
+	}
+
+	return &errors.RunError{
+		ReasonCode: ErrorReasonCodeUnresolvedLinkProjections,
+		Err: fmt.Errorf(
+			"resource %q was not deployed, %d field(s) that links have contributed to it "+
+				"could not be resolved from link state: %s. deploying without them would "+
+				"remove them from the deployed resource",
+			resourceName,
+			len(unresolved),
+			strings.Join(descriptions, ", "),
+		),
+	}
 }

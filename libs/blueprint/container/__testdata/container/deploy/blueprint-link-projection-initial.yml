@@ -1,0 +1,20 @@
+version: 2025-11-02
+resources:
+  ordersTable:
+    type: aws/dynamodb/table
+    description: "Table the function is granted access to by a link."
+    metadata:
+      labels:
+        system: orders
+    spec:
+      tableName: "orders"
+      region: "eu-west-2"
+
+  ordersFunction:
+    type: aws/lambda/function
+    description: "Function the link writes environment variables to."
+    linkSelector:
+      byLabel:
+        system: orders
+    spec:
+      handler: "src/orders_v1.handler"
