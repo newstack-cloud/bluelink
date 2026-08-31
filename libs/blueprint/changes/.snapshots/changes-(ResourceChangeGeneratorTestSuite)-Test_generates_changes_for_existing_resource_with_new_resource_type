@@ -408,6 +408,7 @@
   },
   UnchangedFields: ([]string) {
   },
+  LinkOwnedFields: (map[string]string) <nil>,
   ComputedFields: ([]string) {
   },
   FieldChangesKnownOnDeploy: ([]string) {

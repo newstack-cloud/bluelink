@@ -223,6 +223,15 @@ func TestStagingReportsFieldsLostWhenALinkIsRemoved(t *testing.T) {
 		"spec.environment.variables.TABLE_NAME_ordersTable",
 		"the field the removed link contributed is taken away without being reported",
 	)
+
+	// Reporting the path alone leaves an operator to work out why a field they never
+	// wrote is disappearing.
+	require.Equal(
+		t,
+		"ordersFunction::ordersTable",
+		functionChanges.LinkOwnedFields["spec.environment.variables.TABLE_NAME_ordersTable"],
+		"the removed field is not attributed to the link that contributed it",
+	)
 }
 
 // A link that has not changed contributes the same fields to both sides of the comparison,

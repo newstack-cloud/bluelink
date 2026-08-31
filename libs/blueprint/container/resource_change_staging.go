@@ -121,11 +121,11 @@ func (s *defaultResourceChangeStager) composeLinkContributions(
 	ctx context.Context,
 	stageResourceInfo *stageResourceChangeInfo,
 	resourceInfo *provider.ResourceInfo,
-) error {
+) (map[string]string, error) {
 	// A blueprint that has never been deployed has no instance to hold links, and a
 	// resource that is being created has nothing contributed to it yet.
 	if stageResourceInfo.instanceID == "" {
-		return nil
+		return nil, nil
 	}
 
 	resourceName := stageResourceInfo.node.ResourceName
@@ -136,14 +136,14 @@ func (s *defaultResourceChangeStager) composeLinkContributions(
 	)
 	if err != nil {
 		if state.IsInstanceNotFound(err) {
-			return nil
+			return nil, nil
 		}
 
-		return err
+		return nil, err
 	}
 
 	if len(linksWithMappings) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	// Composed specs are swapped onto this ResourceInfo rather than written into what it
@@ -158,7 +158,7 @@ func (s *defaultResourceChangeStager) composeLinkContributions(
 			linksWithMappings,
 		)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		currentState := *resourceInfo.CurrentResourceState
@@ -173,7 +173,7 @@ func (s *defaultResourceChangeStager) composeLinkContributions(
 			survivingLinks(linksWithMappings, stageResourceInfo.node),
 		)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		composedResource := *resourceInfo.ResourceWithResolvedSubs
@@ -181,7 +181,7 @@ func (s *defaultResourceChangeStager) composeLinkContributions(
 		resourceInfo.ResourceWithResolvedSubs = &composedResource
 	}
 
-	return nil
+	return specmerge.LinkOwnedFields(resourceName, linksWithMappings), nil
 }
 
 // The links that contribute to a resource and that the blueprint being staged still has.
@@ -247,7 +247,7 @@ func (s *defaultResourceChangeStager) stageChanges(
 	declaredResource := resourceInfo.ResourceWithResolvedSubs
 	declaredResourceState := resourceInfo.CurrentResourceState
 
-	err = s.composeLinkContributions(ctx, stageResourceInfo, resourceInfo)
+	linkOwnedFields, err := s.composeLinkContributions(ctx, stageResourceInfo, resourceInfo)
 	if err != nil {
 		resourceIDLogger.Debug(
 			"failed to compose the contributions links have made to the resource",
@@ -280,6 +280,11 @@ func (s *defaultResourceChangeStager) stageChanges(
 	// it persists is the declared spec.
 	changes.AppliedResourceInfo.ResourceWithResolvedSubs = declaredResource
 	changes.AppliedResourceInfo.CurrentResourceState = declaredResourceState
+
+	// Says which link each field a link owns belongs to, so that a change to one can be
+	// reported against the link that made it rather than as an unexplained change to the
+	// resource.
+	changes.LinkOwnedFields = linkOwnedFields
 
 	// The resource must be recreated if an element that it previously depended on
 	// has been removed.

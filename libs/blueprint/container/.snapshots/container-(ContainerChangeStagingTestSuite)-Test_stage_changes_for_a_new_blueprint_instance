@@ -252,6 +252,7 @@
       },
       UnchangedFields: ([]string) {
       },
+      LinkOwnedFields: (map[string]string) <nil>,
       ComputedFields: ([]string) (len=1) {
         (string) (len=7) "spec.id"
       },
@@ -580,6 +581,7 @@
       },
       UnchangedFields: ([]string) {
       },
+      LinkOwnedFields: (map[string]string) <nil>,
       ComputedFields: ([]string) (len=1) {
         (string) (len=7) "spec.id"
       },
@@ -1197,6 +1199,7 @@
       },
       UnchangedFields: ([]string) {
       },
+      LinkOwnedFields: (map[string]string) <nil>,
       ComputedFields: ([]string) (len=1) {
         (string) (len=7) "spec.id"
       },
@@ -1799,6 +1802,7 @@
       },
       UnchangedFields: ([]string) {
       },
+      LinkOwnedFields: (map[string]string) <nil>,
       ComputedFields: ([]string) (len=1) {
         (string) (len=7) "spec.id"
       },
@@ -1988,6 +1992,7 @@
       },
       UnchangedFields: ([]string) {
       },
+      LinkOwnedFields: (map[string]string) <nil>,
       ComputedFields: ([]string) (len=1) {
         (string) (len=7) "spec.id"
       },
@@ -2174,6 +2179,7 @@
       },
       UnchangedFields: ([]string) {
       },
+      LinkOwnedFields: (map[string]string) <nil>,
       ComputedFields: ([]string) (len=1) {
         (string) (len=7) "spec.id"
       },
@@ -3116,6 +3122,7 @@
             (string) (len=21) "spec.itemConfig.score",
             (string) (len=15) "spec.vendorTags"
           },
+          LinkOwnedFields: (map[string]string) <nil>,
           ComputedFields: ([]string) (len=2) {
             (string) (len=28) "spec.computedFieldTrackDrift",
             (string) (len=7) "spec.id"
