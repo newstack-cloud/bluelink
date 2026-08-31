@@ -420,6 +420,16 @@ type Changes struct {
 	NewFields           []FieldChange `json:"newFields"`
 	RemovedFields       []string      `json:"removedFields"`
 	UnchangedFields     []string      `json:"unchangedFields"`
+	// LinkOwnedFields maps a resource spec field path to the logical name of the link
+	// that contributed the value at that path.
+	//
+	// A link writes fields that the blueprint does not declare, so a change to one of
+	// them is not something the author of the blueprint wrote and cannot be explained by
+	// reading it. The field paths appear in ModifiedFields, NewFields and RemovedFields
+	// like any other, and this says which link each one belongs to, so that a removal can
+	// be reported as the loss of what a named link contributes rather than as a field
+	// disappearing for no stated reason.
+	LinkOwnedFields map[string]string `json:"linkOwnedFields,omitempty"`
 	// ComputedFields holds a list of field paths that are computed
 	// at deploy time. This is primarily useful to give fast access to
 	// information about which fields are computed without having to inspect

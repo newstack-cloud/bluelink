@@ -220,3 +220,26 @@ func RemoveLinkProjections(
 
 	return stripped, nil
 }
+
+// LinkOwnedFields reports the field paths of a resource that links contribute, mapped to
+// the logical name of the link that contributes each one.
+//
+// The paths are the ones a change set reports, so a caller comparing two versions of a
+// resource can say which link a changed field belongs to. Every link that maps into the
+// resource is included, whether or not it still exists in the blueprint, since a link
+// being removed is exactly when saying who owned a field matters most.
+func LinkOwnedFields(
+	resourceName string,
+	links []state.LinkState,
+) map[string]string {
+	owners := map[string]string{}
+	for _, projection := range orderedProjectionsFor(resourceName, links) {
+		owners[projection.fieldPath] = projection.linkName
+	}
+
+	if len(owners) == 0 {
+		return nil
+	}
+
+	return owners
+}

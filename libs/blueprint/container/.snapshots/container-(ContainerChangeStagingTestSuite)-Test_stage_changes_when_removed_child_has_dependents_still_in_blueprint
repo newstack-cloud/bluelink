@@ -252,6 +252,7 @@
       },
       UnchangedFields: ([]string) {
       },
+      LinkOwnedFields: (map[string]string) <nil>,
       ComputedFields: ([]string) (len=1) {
         (string) (len=7) "spec.id"
       },
@@ -449,6 +450,7 @@
       },
       UnchangedFields: ([]string) {
       },
+      LinkOwnedFields: (map[string]string) <nil>,
       ComputedFields: ([]string) (len=1) {
         (string) (len=7) "spec.id"
       },
@@ -1316,6 +1318,7 @@
       },
       UnchangedFields: ([]string) {
       },
+      LinkOwnedFields: (map[string]string) <nil>,
       ComputedFields: ([]string) (len=1) {
         (string) (len=7) "spec.id"
       },
@@ -2181,6 +2184,7 @@
       },
       UnchangedFields: ([]string) {
       },
+      LinkOwnedFields: (map[string]string) <nil>,
       ComputedFields: ([]string) (len=1) {
         (string) (len=7) "spec.id"
       },
@@ -2376,6 +2380,7 @@
       UnchangedFields: ([]string) (len=1) {
         (string) (len=12) "spec.handler"
       },
+      LinkOwnedFields: (map[string]string) <nil>,
       ComputedFields: ([]string) (len=1) {
         (string) (len=7) "spec.id"
       },
@@ -3668,6 +3673,7 @@
             (string) (len=28) "spec.computedFieldTrackDrift",
             (string) (len=21) "spec.itemConfig.score"
           },
+          LinkOwnedFields: (map[string]string) <nil>,
           ComputedFields: ([]string) (len=2) {
             (string) (len=28) "spec.computedFieldTrackDrift",
             (string) (len=7) "spec.id"
