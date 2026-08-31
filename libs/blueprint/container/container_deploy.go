@@ -3056,7 +3056,14 @@ type resourceDeployInfo struct {
 	resourceName string
 	resourceImpl provider.Resource
 	changes      *provider.Changes
-	isNew        bool
+	// The resource as the blueprint declares it, without the
+	// contributions links have made to it.
+	//
+	// The declared spec is what needs to be persisted, link
+	// contributions are applied at runtime from link data
+	// and link to resource data mappings.
+	declaredResource *provider.ResolvedResource
+	isNew            bool
 }
 
 // DeployChannels contains all the channels required to stream

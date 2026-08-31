@@ -9,6 +9,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/drift"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/specmerge"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
@@ -1078,12 +1079,25 @@ func (c *defaultBlueprintContainer) applyResourceReconciliation(
 		currentState.Status = reconcilePreciseToResourceStatus(action.NewStatus)
 		currentState.PreciseStatus = action.NewStatus
 		currentState.LastStatusUpdateTimestamp = currentTime
-		currentState.SpecData = action.ExternalState
 
 		// Update any link.Data that references this resource via ResourceDataMappings
 		if err := c.updateAffectedLinkData(ctx, currentState, action.ExternalState); err != nil {
 			return fmt.Errorf("failed to update affected link data: %w", err)
 		}
+
+		// The external state describes the resource as it actually is, which includes
+		// everything links have written to it. Those values have just been recorded
+		// against the links that own them, and the resource's own spec holds what the
+		// blueprint declares, so they are taken back out rather than stored twice.
+		declaredSpec, err := c.specWithoutLinkContributions(
+			ctx,
+			&currentState,
+			action.ExternalState,
+		)
+		if err != nil {
+			return err
+		}
+		currentState.SpecData = declaredSpec
 		currentState.FailureReasons = nil
 		currentState.Drifted = false
 		currentState.LastDriftDetectedTimestamp = nil
@@ -1441,6 +1455,38 @@ func reconcilePreciseLinkToLinkStatus(preciseStatus core.PreciseLinkStatus) core
 	default:
 		return core.LinkStatusUnknown
 	}
+}
+
+// Reports the resource's spec as the blueprint declares it, by taking the contributions
+// links have made out of a spec that describes the deployed resource.
+//
+// A link records what it contributed and which resource field it wrote, and that record is
+// what a deployment composes back in. Holding the same values in the resource's spec as
+// well would leave two records of one thing, with nothing to say which link owns which
+// value where several contribute to the same resource.
+func (c *defaultBlueprintContainer) specWithoutLinkContributions(
+	ctx context.Context,
+	resourceState *state.ResourceState,
+	externalState *core.MappingNode,
+) (*core.MappingNode, error) {
+	linksWithMappings, err := c.stateContainer.Links().ListWithResourceDataMappings(
+		ctx,
+		resourceState.InstanceID,
+		resourceState.Name,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list links with resource data mappings: %w", err)
+	}
+
+	if len(linksWithMappings) == 0 {
+		return externalState, nil
+	}
+
+	return specmerge.RemoveLinkProjections(
+		externalState,
+		resourceState.Name,
+		linksWithMappings,
+	)
 }
 
 // updateAffectedLinkData updates link.Data for any links that have

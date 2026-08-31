@@ -831,12 +831,17 @@ func (s *ContainerReconciliationTestSuite) Test_apply_resource_reconciliation_up
 	s.Equal(1, result.ResourcesUpdated)
 	s.Empty(result.Errors)
 
-	// Verify the resource state was updated
+	// The field the link owns is recorded against the link and not in the resource's own
+	// spec, so that one value is not held in two places that can disagree.
 	resourceState, err := s.stateContainer.Resources().Get(context.Background(), "resource-a")
 	s.Require().NoError(err)
-	s.Equal(newHandlerValue, *resourceState.SpecData.Fields["handler"].Scalar.StringValue)
+	s.NotContains(
+		resourceState.SpecData.Fields,
+		"handler",
+		"a field a link contributed was stored in the resource's spec as well as the link's data",
+	)
 
-	// Verify the link.Data was ALSO updated to maintain consistency
+	// Verify the link.Data was updated to reflect the external state
 	linkState, err := s.stateContainer.Links().Get(context.Background(), "link-1")
 	s.Require().NoError(err)
 	s.Require().NotNil(linkState.Data)
