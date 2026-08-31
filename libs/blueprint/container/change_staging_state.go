@@ -173,6 +173,9 @@ func (c *defaultChangeStagingState) UpdateLinkStagingState(
 			pendingLinkNames,
 			c.pendingLinks,
 			c.resourceNameLinkMap,
+			// Change staging visits every resource in the blueprint, so every link is
+			// waited for on both sides.
+			func(_ string) bool { return true },
 		)
 	}
 	return updatePendingLinksInEphemeralState(

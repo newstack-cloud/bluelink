@@ -768,6 +768,16 @@ func (c *defaultBlueprintContainer) deployElements(
 	)
 }
 
+// Starts every element that can be deployed straight away.
+//
+// The first group is not the only place those live. Ordering only guarantees that an
+// element follows what it depends on, so an element with no dependencies can be in any
+// group, and an element whose dependencies are all unchanged is not waiting for anything
+// this deployment will deploy.
+//
+// Starting only the first group leaves a deployment with nothing to do whenever every
+// element in that group is unchanged, which is ordinary on an update. Nothing completes,
+// and since completions are what dispatch the rest, nothing else is ever started.
 func (c *defaultBlueprintContainer) startDeploymentFromFirstGroup(
 	ctx context.Context,
 	instanceID string,
@@ -777,11 +787,29 @@ func (c *defaultBlueprintContainer) startDeploymentFromFirstGroup(
 ) {
 	instanceTreePath := getInstanceTreePath(deployCtx.ParamOverrides, instanceID)
 
-	for _, node := range deployCtx.DeploymentGroups[0] {
-		// Only deploy nodes that have changes.
-		// This is essential for retry scenarios where some resources may have already
-		// been deployed successfully and have no pending changes.
-		if nodeHasChanges(node, changes) {
+	for groupIndex, group := range deployCtx.DeploymentGroups {
+		for _, node := range group {
+			// Only deploy nodes that have changes.
+			// This is essential for retry scenarios where some resources may have already
+			// been deployed successfully and have no pending changes.
+			if !nodeHasChanges(node, changes) {
+				continue
+			}
+
+			if c.hasPendingDependencies(node, deployCtx) {
+				continue
+			}
+
+			// Marks the element as started, so that a completion elsewhere in the
+			// deployment does not evaluate it a second time and deploy it twice.
+			if !c.checkUpdateNodeCanDeploy(
+				node,
+				deployCtx.State,
+				/* otherConditionToStart */ true,
+			) {
+				continue
+			}
+
 			c.deployNode(
 				ctx,
 				node,
@@ -790,7 +818,7 @@ func (c *defaultBlueprintContainer) startDeploymentFromFirstGroup(
 				changes,
 				DeployContextWithGroup(
 					DeployContextWithChannels(deployCtx, internalChannels),
-					0,
+					groupIndex,
 				),
 			)
 		}
@@ -2186,6 +2214,9 @@ func (c *defaultBlueprintContainer) handleSuccessfulResourceDeployment(
 	)
 	linksReadyToBeDeployed := deployCtx.State.UpdateLinkDeploymentState(
 		node.ChainLinkNode,
+		func(resourceName string) bool {
+			return resourceWillDeploy(resourceName, deployCtx.InputChanges)
+		},
 	)
 
 	c.submitReadyLinks(linksReadyToBeDeployed, deployCtx)

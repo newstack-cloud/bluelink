@@ -78,7 +78,15 @@ type DeploymentState interface {
 	GetResourceData(resourceName string) *CollectedResourceData
 	// UpdateLinkDeploymentState updates the state of links that are pending completion
 	// and returns a list of links that are ready to be deployed or updated.
-	UpdateLinkDeploymentState(node *links.ChainLinkNode) []*LinkPendingCompletion
+	//
+	// resourceWillDeploy reports whether a resource is one this deployment is going to
+	// deploy. A link waits for both of its resources, and a resource that is not being
+	// deployed never completes, so without this a link to an unchanged resource waits
+	// for a completion that cannot arrive.
+	UpdateLinkDeploymentState(
+		node *links.ChainLinkNode,
+		resourceWillDeploy func(resourceName string) bool,
+	) []*LinkPendingCompletion
 	// SetLinkCapabilityGraph records the ordering implied by the capabilities that
 	// links declare, resolved once for the deployment before any link runs.
 	SetLinkCapabilityGraph(graph *LinkCapabilityGraph)
@@ -531,6 +539,7 @@ func (d *defaultDeploymentState) GetLinkDeployResult(linkName string) *LinkDeplo
 
 func (d *defaultDeploymentState) UpdateLinkDeploymentState(
 	node *links.ChainLinkNode,
+	resourceWillDeploy func(resourceName string) bool,
 ) []*LinkPendingCompletion {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -543,11 +552,13 @@ func (d *defaultDeploymentState) UpdateLinkDeploymentState(
 			pendingLinkNames,
 			d.pendingLinks,
 			d.resourceNamePendingLinkMap,
+			resourceWillDeploy,
 		)
 	}
+
 	return updatePendingLinksInEphemeralState(
 		node,
-		pendingLinkNames,
+		d.resourceNamePendingLinkMap[node.ResourceName],
 		d.pendingLinks,
 	)
 }
@@ -707,9 +718,7 @@ func copyResourceMetadataState(metadata *state.ResourceMetadataState) *state.Res
 	}
 
 	labelsCopy := map[string]string{}
-	for key, value := range metadata.Labels {
-		labelsCopy[key] = value
-	}
+	maps.Copy(labelsCopy, metadata.Labels)
 
 	return &state.ResourceMetadataState{
 		DisplayName: metadata.DisplayName,
