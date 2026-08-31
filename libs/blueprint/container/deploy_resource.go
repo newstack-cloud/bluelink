@@ -162,6 +162,18 @@ func (d *defaultResourceDeployer) Deploy(
 		chainLinkNode.ResourceName,
 	)
 
+	resourceToDeploy, err := d.composeLinkContributions(
+		ctx,
+		instanceID,
+		chainLinkNode.ResourceName,
+		resolvedResource,
+		resourceState,
+	)
+	if err != nil {
+		deployCtx.Channels.ErrChan <- err
+		return
+	}
+
 	err = d.deployResource(
 		ctx,
 		&resourceDeployInfo{
@@ -172,7 +184,7 @@ func (d *defaultResourceDeployer) Deploy(
 			resourceImpl: resourceImplementation,
 			changes: prepareResourceChangesForDeployment(
 				resourceChangeInfo.changes,
-				resolvedResource,
+				resourceToDeploy,
 				resourceState,
 				resourceID,
 				instanceID,
@@ -186,6 +198,61 @@ func (d *defaultResourceDeployer) Deploy(
 	if err != nil {
 		deployCtx.Channels.ErrChan <- err
 	}
+}
+
+// Composes the contributions links have made to a resource into the spec that will be
+// deployed.
+//
+// A deploy applies a resource's complete intended state rather than a patch of the fields
+// that changed, so a spec without them removes every link's work from the live resource:
+// the environment variables a link populated, the networking it configured, the policy
+// statements it granted a shared execution role. The resource is then live in a state the
+// blueprint describes and the application does not work in.
+// Composition feeding into deploy for updates and recreations is the only way to ensure
+// the resource is deployed with all the link contributions it should have.
+func (d *defaultResourceDeployer) composeLinkContributions(
+	ctx context.Context,
+	instanceID string,
+	resourceName string,
+	resolvedResource *provider.ResolvedResource,
+	resourceState *state.ResourceState,
+) (*provider.ResolvedResource, error) {
+	if resourceState == nil || resolvedResource == nil {
+		return resolvedResource, nil
+	}
+
+	linksWithMappings, err := d.stateContainer.Links().ListWithResourceDataMappings(
+		ctx,
+		instanceID,
+		resourceName,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(linksWithMappings) == 0 {
+		return resolvedResource, nil
+	}
+
+	projected, err := specmerge.ApplyLinkProjections(
+		resolvedResource.Spec,
+		resourceName,
+		linksWithMappings,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// A contribution the framework holds a record of and cannot find a value for must not
+	// be applied as an absent field, which is what deploying this spec would do.
+	if len(projected.Unresolved) > 0 {
+		return nil, errUnresolvedLinkProjections(resourceName, projected.Unresolved)
+	}
+
+	composedResource := *resolvedResource
+	composedResource.Spec = projected.Spec
+
+	return &composedResource, nil
 }
 
 func (d *defaultResourceDeployer) deployResource(
