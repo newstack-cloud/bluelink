@@ -542,6 +542,7 @@ func ToPBChanges(
 		NewOutboundLinks:          newOutboundLinks,
 		OutboundLinkChanges:       outboundLinkChanges,
 		RemovedOutboundLinks:      changes.RemovedOutboundLinks,
+		LinkOwnedFields:           changes.LinkOwnedFields,
 	}, nil
 }
 
