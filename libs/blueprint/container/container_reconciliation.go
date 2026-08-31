@@ -1560,7 +1560,12 @@ func extractLinkDataUpdatesFromExternalState(
 
 		// Get the value from external state at this path using the core helper
 		// which supports complex paths including array indices and quoted field names.
-		pathWithRoot := core.AddRootToPath(fieldPath)
+		//
+		// External state is the resource's spec, so a mapping written against "spec" is
+		// rooted by trimming it. Adding a root without trimming produces a path into a
+		// "spec" field that external state does not have, and the value is silently not
+		// found.
+		pathWithRoot := specmerge.ResourceSpecPath(fieldPath)
 		externalValue, _ := core.GetPathValue(pathWithRoot, externalState, maxLinkDataUpdatePathDepth)
 		if externalValue != nil {
 			updates[linkDataPath] = externalValue

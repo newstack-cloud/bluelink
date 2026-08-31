@@ -12,6 +12,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal/memstate"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/specmerge"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
 	"github.com/stretchr/testify/require"
@@ -234,6 +235,224 @@ func TestStagingReportsFieldsLostWhenALinkIsRemoved(t *testing.T) {
 	)
 }
 
+// A contribution the framework has a record of and no value for is read back from the
+// deployed resource, rather than the resource being deployed without it.
+//
+// A deployment that writes a resource through a link and stops before the link's data is
+// saved leaves exactly this. The value is on the live resource, the mapping says where it
+// belongs, and nothing holds the value itself. Recovering it is the difference between
+// carrying on and refusing to deploy a resource that would lose the field.
+func TestUpdateDeployRecoversContributionMissingFromLinkData(t *testing.T) {
+	stateContainer := memstate.NewMemoryStateContainer()
+	deployedResource := &recordingLambdaResource{}
+	loader, _ := newLinkProjectionLoader(
+		stateContainer,
+		func(lambdaResource provider.Resource) provider.Resource {
+			deployedResource.Resource = lambdaResource
+			return deployedResource
+		},
+	)
+	params := newLinkProjectionParams()
+
+	instanceID := deployInitialInstanceForProjectionTest(t, loader, params)
+	requireLinkRecordedItsContribution(t, stateContainer, instanceID)
+	simulateLinkWritesToLiveResource(t, stateContainer, instanceID, deployedResource)
+	forgetLinkData(t, stateContainer, instanceID)
+	deployedResource.forget()
+
+	updatedContainer, err := loader.Load(
+		context.Background(),
+		"__testdata/container/deploy/blueprint-link-projection-update.yml",
+		params,
+	)
+	require.NoError(t, err)
+
+	stagingChannels := createChangeStagingChannels()
+	err = updatedContainer.StageChanges(
+		context.Background(),
+		&StageChangesInput{InstanceID: instanceID},
+		stagingChannels,
+		params,
+	)
+	require.NoError(t, err)
+
+	updateChanges, err := consumeStagedChangesForTest(stagingChannels)
+	require.NoError(t, err)
+
+	updateChannels := CreateDeployChannels()
+	err = updatedContainer.Deploy(
+		context.Background(),
+		&DeployInput{
+			InstanceID: instanceID,
+			Changes:    updateChanges,
+			Rollback:   false,
+		},
+		updateChannels,
+		params,
+	)
+	require.NoError(t, err)
+
+	finishedMessage := consumeUntilFinishForTest(t, updateChannels, "update deploy")
+	require.Equal(
+		t,
+		core.InstanceStatusUpdated,
+		finishedMessage.Status,
+		fmt.Sprintf("update deploy failed: %v", finishedMessage.FailureReasons),
+	)
+
+	deployedSpec := deployedResource.lastDeployedSpec()
+	require.NotNil(t, deployedSpec)
+
+	tableName, _ := core.GetPathValue(
+		"$.environment.variables.TABLE_NAME_ordersTable",
+		deployedSpec,
+		core.MappingNodeMaxTraverseDepth,
+	)
+	require.NotNil(
+		t,
+		tableName,
+		"the contribution was not read back from the deployed resource, so the resource "+
+			"was either deployed without it or not deployed at all",
+	)
+
+	// What was read back is recorded against the link that owns it, so the next
+	// deployment does not have to go looking for it again.
+	links, err := stateContainer.Links().ListWithResourceDataMappings(
+		context.Background(),
+		instanceID,
+		"ordersFunction",
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, links)
+	require.NotEmpty(
+		t,
+		links[0].Data,
+		"the recovered value was not recorded against the link",
+	)
+}
+
+// Puts what the link contributed onto the live resource.
+//
+// A link writes to a resource after the framework has deployed it, through the provider's
+// own API rather than through the framework, so the deployed resource carries the
+// contribution while the spec the framework applied did not. The test provider's link does
+// not reach a real service, so the effect of it is applied here.
+func simulateLinkWritesToLiveResource(
+	t *testing.T,
+	stateContainer state.Container,
+	instanceID string,
+	resource *recordingLambdaResource,
+) {
+	t.Helper()
+
+	links, err := stateContainer.Links().ListWithResourceDataMappings(
+		context.Background(),
+		instanceID,
+		"ordersFunction",
+	)
+	require.NoError(t, err)
+
+	live, err := specmerge.ApplyLinkProjections(
+		resource.lastDeployedSpec(),
+		"ordersFunction",
+		links,
+	)
+	require.NoError(t, err)
+	require.Empty(t, live.Unresolved)
+
+	resource.setLiveSpec(live.Spec)
+}
+
+// A contribution that is not on the deployed resource either, and so cannot be recovered,
+// fails that resource rather than deploying it without the field.
+//
+// Deploying applies the resource's complete intended state, so a field a link owns that is
+// missing from the spec is removed from the deployed resource. Leaving the resource alone
+// keeps what links contributed to it live and intact.
+func TestUpdateDeployFailsResourceWhenAContributionCannotBeRecovered(t *testing.T) {
+	stateContainer := memstate.NewMemoryStateContainer()
+	deployedResource := &recordingLambdaResource{}
+	loader, _ := newLinkProjectionLoader(
+		stateContainer,
+		func(lambdaResource provider.Resource) provider.Resource {
+			deployedResource.Resource = lambdaResource
+			return deployedResource
+		},
+	)
+	params := newLinkProjectionParams()
+
+	instanceID := deployInitialInstanceForProjectionTest(t, loader, params)
+	requireLinkRecordedItsContribution(t, stateContainer, instanceID)
+
+	// The value is in neither place it could be: not recorded against the link, and not
+	// on the deployed resource to read back, since the link never reached it.
+	forgetLinkData(t, stateContainer, instanceID)
+
+	updatedContainer, err := loader.Load(
+		context.Background(),
+		"__testdata/container/deploy/blueprint-link-projection-update.yml",
+		params,
+	)
+	require.NoError(t, err)
+
+	stagingChannels := createChangeStagingChannels()
+	err = updatedContainer.StageChanges(
+		context.Background(),
+		&StageChangesInput{InstanceID: instanceID},
+		stagingChannels,
+		params,
+	)
+	require.NoError(t, err)
+
+	updateChanges, err := consumeStagedChangesForTest(stagingChannels)
+	require.NoError(t, err)
+
+	updateChannels := CreateDeployChannels()
+	err = updatedContainer.Deploy(
+		context.Background(),
+		&DeployInput{
+			InstanceID: instanceID,
+			Changes:    updateChanges,
+			Rollback:   false,
+		},
+		updateChannels,
+		params,
+	)
+	require.NoError(t, err)
+
+	finishedMessage := consumeUntilFinishForTest(t, updateChannels, "update deploy")
+	require.NotEqual(
+		t,
+		core.InstanceStatusUpdated,
+		finishedMessage.Status,
+		"the resource was deployed without a field a link is recorded as contributing",
+	)
+	require.NotEmpty(t, finishedMessage.FailureReasons)
+}
+
+// Empties a link's data while leaving its mappings in place, which is the state a
+// deployment interrupted between writing a resource and saving its link leaves behind.
+func forgetLinkData(
+	t *testing.T,
+	stateContainer state.Container,
+	instanceID string,
+) {
+	t.Helper()
+
+	links, err := stateContainer.Links().ListWithResourceDataMappings(
+		context.Background(),
+		instanceID,
+		"ordersFunction",
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, links)
+
+	for _, link := range links {
+		link.Data = map[string]*core.MappingNode{}
+		require.NoError(t, stateContainer.Links().Save(context.Background(), link))
+	}
+}
+
 // A link that has not changed contributes the same fields to both sides of the comparison,
 // so it produces no field changes at all.
 //
@@ -396,6 +615,10 @@ type recordingLambdaResource struct {
 	provider.Resource
 	mu         sync.Mutex
 	deployedAs *core.MappingNode
+	// The resource as it exists outside the framework, which is whatever was last
+	// deployed to it. Unlike deployedAs it is not forgotten between deployments, since
+	// the deployed resource does not stop existing between them.
+	liveSpec *core.MappingNode
 }
 
 // The environment variables links contribute are part of the resource's schema, so that
@@ -444,9 +667,35 @@ func (r *recordingLambdaResource) Deploy(
 	r.deployedAs = core.CopyMappingNode(
 		input.Changes.AppliedResourceInfo.ResourceWithResolvedSubs.Spec,
 	)
+	r.liveSpec = core.CopyMappingNode(r.deployedAs)
 	r.mu.Unlock()
 
 	return r.Resource.Deploy(ctx, input)
+}
+
+func (r *recordingLambdaResource) setLiveSpec(spec *core.MappingNode) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.liveSpec = core.CopyMappingNode(spec)
+}
+
+// The resource as it is outside the framework, which is what was last deployed to it
+// including everything links contributed.
+func (r *recordingLambdaResource) GetExternalState(
+	ctx context.Context,
+	input *provider.ResourceGetExternalStateInput,
+) (*provider.ResourceGetExternalStateOutput, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.liveSpec == nil {
+		return r.Resource.GetExternalState(ctx, input)
+	}
+
+	return &provider.ResourceGetExternalStateOutput{
+		ResourceSpecState: core.CopyMappingNode(r.liveSpec),
+	}, nil
 }
 
 func (r *recordingLambdaResource) lastDeployedSpec() *core.MappingNode {
