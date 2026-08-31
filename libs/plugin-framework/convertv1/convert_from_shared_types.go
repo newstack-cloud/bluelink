@@ -1127,6 +1127,7 @@ func FromPBResourceChanges(changes *sharedtypesv1.Changes) (*provider.Changes, e
 		NewOutboundLinks:          newOutboundLinks,
 		OutboundLinkChanges:       outboundLinkChanges,
 		RemovedOutboundLinks:      changes.RemovedOutboundLinks,
+		LinkOwnedFields:           changes.LinkOwnedFields,
 	}, nil
 }
 

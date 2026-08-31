@@ -887,6 +887,13 @@ message Changes {
     // A list of link identifiers that will be removed.
     // The form of the link identifier is `{resourceA}::{resourceB}`.
     repeated string removed_outbound_links = 12;
+    // A mapping of a resource spec field path to the logical name of the link
+    // that contributes the value at that path.
+    // A link writes fields that the blueprint does not declare, so a change to
+    // one of them cannot be explained by reading the blueprint. The field paths
+    // appear in modified_fields, new_fields and removed_fields like any other,
+    // and this says which link each one belongs to.
+    map<string, string> link_owned_fields = 13;
 }
 
 // FieldChange represents a change in a field value of
