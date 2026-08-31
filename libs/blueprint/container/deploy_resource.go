@@ -168,9 +168,27 @@ func (d *defaultResourceDeployer) Deploy(
 		chainLinkNode.ResourceName,
 		resolvedResource,
 		resourceState,
+		deployCtx,
 	)
 	if err != nil {
-		deployCtx.Channels.ErrChan <- err
+		// Reported against the resource rather than as a failure of the deployment. The
+		// resource is not deployed, so what links contributed to it is still live and
+		// intact, and the rest of the deployment is unaffected by leaving it alone.
+		reportErr := d.handleDeployResourceTerminalFailure(
+			&resourceDeployInfo{
+				instanceID:   instanceID,
+				resourceID:   resourceID,
+				resourceName: chainLinkNode.ResourceName,
+				isNew:        resourceChangeInfo.isNew,
+			},
+			provider.CreateRetryContext(policy),
+			[]string{err.Error()},
+			deployCtx,
+		)
+		if reportErr != nil {
+			deployCtx.Channels.ErrChan <- reportErr
+		}
+
 		return
 	}
 
@@ -217,6 +235,7 @@ func (d *defaultResourceDeployer) composeLinkContributions(
 	resourceName string,
 	resolvedResource *provider.ResolvedResource,
 	resourceState *state.ResourceState,
+	deployCtx *DeployContext,
 ) (*provider.ResolvedResource, error) {
 	if resourceState == nil || resolvedResource == nil {
 		return resolvedResource, nil
@@ -247,6 +266,21 @@ func (d *defaultResourceDeployer) composeLinkContributions(
 	// A contribution the framework holds a record of and cannot find a value for must not
 	// be applied as an absent field, which is what deploying this spec would do.
 	if len(projected.Unresolved) > 0 {
+		projected, err = d.recoverUnresolvedContributions(
+			ctx,
+			instanceID,
+			resourceName,
+			resolvedResource,
+			resourceState,
+			linksWithMappings,
+			deployCtx,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(projected.Unresolved) > 0 {
 		return nil, errUnresolvedLinkProjections(resourceName, projected.Unresolved)
 	}
 
@@ -254,6 +288,110 @@ func (d *defaultResourceDeployer) composeLinkContributions(
 	composedResource.Spec = projected.Spec
 
 	return &composedResource, nil
+}
+
+// Reads the resource as it actually is and records what links contributed to it, then
+// composes again.
+//
+// A contribution can go missing when a deployment writes a resource through a link and
+// stops before the link's own data is saved. The value is not lost, it is on the deployed
+// resource, and the mappings say where to find it, so it can be read back and recorded
+// against the link that owns it. This is the same thing reconciliation does when accepting
+// external state, in the same direction.
+//
+// It recovers what it can. A contribution that is not on the live resource either has
+// never been applied or has been removed outside the framework, and neither is something
+// to guess at, so it is left unresolved for the caller to refuse to deploy.
+func (d *defaultResourceDeployer) recoverUnresolvedContributions(
+	ctx context.Context,
+	instanceID string,
+	resourceName string,
+	resolvedResource *provider.ResolvedResource,
+	resourceState *state.ResourceState,
+	linksWithMappings []state.LinkState,
+	deployCtx *DeployContext,
+) (*specmerge.LinkProjectionResult, error) {
+	externalState, err := d.getResourceExternalState(
+		ctx,
+		instanceID,
+		resourceName,
+		resolvedResource,
+		resourceState,
+		deployCtx,
+	)
+	if err != nil || externalState == nil {
+		// The resource cannot be read, so there is nothing to recover from. The caller
+		// still has the unresolved contributions and refuses to deploy without them.
+		return &specmerge.LinkProjectionResult{
+			Spec: resolvedResource.Spec,
+			Unresolved: []specmerge.UnresolvedProjection{
+				{ResourceFieldPath: resourceName},
+			},
+		}, nil
+	}
+
+	recorded := []state.LinkState{}
+	for _, link := range linksWithMappings {
+		updates := extractLinkDataUpdatesFromExternalState(
+			link.ResourceDataMappings,
+			resourceName,
+			externalState,
+		)
+		if len(updates) > 0 {
+			applyLinkDataUpdates(&link, updates)
+			if err := d.stateContainer.Links().Save(ctx, link); err != nil {
+				return nil, err
+			}
+		}
+
+		recorded = append(recorded, link)
+	}
+
+	return specmerge.ApplyLinkProjections(
+		resolvedResource.Spec,
+		resourceName,
+		recorded,
+	)
+}
+
+// Reads the resource from the provider it belongs to.
+func (d *defaultResourceDeployer) getResourceExternalState(
+	ctx context.Context,
+	instanceID string,
+	resourceName string,
+	resolvedResource *provider.ResolvedResource,
+	resourceState *state.ResourceState,
+	deployCtx *DeployContext,
+) (*core.MappingNode, error) {
+	resourceImplementation, err := getProviderResourceImplementation(
+		ctx,
+		resourceName,
+		resolvedResource.Type.Value,
+		deployCtx.ResourceProviders,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	output, err := resourceImplementation.GetExternalState(
+		ctx,
+		&provider.ResourceGetExternalStateInput{
+			InstanceID:              instanceID,
+			ResourceID:              resourceState.ResourceID,
+			ResourceName:            resourceName,
+			CurrentResourceSpec:     resourceState.SpecData,
+			CurrentResourceMetadata: resourceState.Metadata,
+			ProviderContext: provider.NewProviderContextFromParams(
+				provider.ExtractProviderFromItemType(resolvedResource.Type.Value),
+				deployCtx.ParamOverrides,
+			),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return output.ResourceSpecState, nil
 }
 
 func (d *defaultResourceDeployer) deployResource(

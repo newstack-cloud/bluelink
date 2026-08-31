@@ -137,7 +137,7 @@ func applyLinkProjection(
 	}
 
 	err := core.InjectPathValueReplaceFields(
-		resourceSpecPath(projection.fieldPath),
+		ResourceSpecPath(projection.fieldPath),
 		linkDataValue,
 		result.Spec,
 		core.MappingNodeMaxTraverseDepth,
@@ -149,13 +149,14 @@ func applyLinkProjection(
 	return nil
 }
 
-// Roots a mapping's resource field path so that it can be applied to a resource spec.
+// ResourceSpecPath roots a mapping's resource field path so that it can be applied to, or
+// read from, a resource spec.
 //
 // Mappings are written against the resource, so a path usually starts at "spec", which is
-// the spec being composed into. Providers also write paths that start at the spec's own
-// fields, and rooting those as though "spec" had been trimmed produces a malformed path
-// rather than an error, so the two forms are distinguished here.
-func resourceSpecPath(fieldPath string) string {
+// the spec itself. Providers also write paths that start at the spec's own fields, and
+// rooting those as though "spec" had been trimmed produces a malformed path rather than an
+// error, so the two forms are distinguished here.
+func ResourceSpecPath(fieldPath string) string {
 	if strings.HasPrefix(fieldPath, "spec.") || strings.HasPrefix(fieldPath, "spec[") {
 		return core.ReplaceSpecWithRoot(fieldPath)
 	}
@@ -209,7 +210,7 @@ func RemoveLinkProjections(
 
 	for _, projection := range orderedProjectionsFor(resourceName, links) {
 		_, err := core.RemovePathValue(
-			resourceSpecPath(projection.fieldPath),
+			ResourceSpecPath(projection.fieldPath),
 			stripped,
 			core.MappingNodeMaxTraverseDepth,
 		)
