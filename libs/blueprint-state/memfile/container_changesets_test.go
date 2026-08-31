@@ -9,7 +9,9 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/internal"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/common/testhelpers"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/suite"
@@ -95,6 +97,49 @@ func (s *MemFileStateContainerChangesetsSuite) Test_saves_new_changeset() {
 	s.Assert().Equal(fixture.Changeset, savedChangeset)
 
 	s.assertPersistedChangeset(fixture.Changeset)
+}
+
+// A change set records which link contributes each field a link owns, and that has to
+// survive being stored and read back.
+//
+// Without it a change set retrieved from storage reports a field changing with nothing to
+// say why, which is the case the attribution exists for: a field the blueprint does not
+// declare, changing because of a link.
+func (s *MemFileStateContainerChangesetsSuite) Test_saves_changeset_with_link_owned_fields() {
+	changesets := s.container.Changesets()
+	changeset := &manage.Changeset{
+		ID:                "0f0a9b8c-3a1e-4a2b-9d5e-7c6f4b2a1d09",
+		InstanceID:        "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+		Status:            manage.ChangesetStatusChangesStaged,
+		BlueprintLocation: "s3://bucket/blueprint.yaml",
+		Changes: &changes.BlueprintChanges{
+			ResourceChanges: map[string]provider.Changes{
+				"ordersFunction": {
+					RemovedFields: []string{
+						"spec.environment.variables.TABLE_NAME_ordersTable",
+					},
+					LinkOwnedFields: map[string]string{
+						"spec.environment.variables.TABLE_NAME_ordersTable": "ordersFunction::ordersTable",
+					},
+				},
+			},
+		},
+		Created: time.Now().Unix(),
+	}
+
+	err := changesets.Save(context.Background(), changeset)
+	s.Require().NoError(err)
+
+	saved, err := changesets.Get(context.Background(), changeset.ID)
+	s.Require().NoError(err)
+	s.Require().NotNil(saved)
+
+	savedResourceChanges, hasChanges := saved.Changes.ResourceChanges["ordersFunction"]
+	s.Require().True(hasChanges)
+	s.Assert().Equal(
+		"ordersFunction::ordersTable",
+		savedResourceChanges.LinkOwnedFields["spec.environment.variables.TABLE_NAME_ordersTable"],
+	)
 }
 
 func (s *MemFileStateContainerChangesetsSuite) Test_updates_existing_changeset() {
