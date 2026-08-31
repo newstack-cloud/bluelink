@@ -5,8 +5,8 @@
   "main": "index.js",
   "repository": "git@github.com:newstack-cloud/bluelink.git",
   "devDependencies": {
-    "@commitlint/cli": "^17.0.0",
-    "@commitlint/config-conventional": "^17.0.0"
+    "@commitlint/cli": "^21.0.0",
+    "@commitlint/config-conventional": "^21.0.0"
   },
   "packageManager": "yarn@4.18.0"
 }
