@@ -265,15 +265,35 @@ func injectIntoItemsWithSelector(
 		),
 	)
 	if targetItemIndex < 0 {
-		// A scalar selector ("[@ = \"x\"]") fully describes the item to inject (the
-		// value is the item itself), so a missing item can be appended.
-		if pathItem.arrayItemSelector.isScalar() && i == len(parsedPath)-1 {
+		// A selector in the final position fully describes the item to inject, whether it
+		// matches a scalar item by its own value ("[@ = \"x\"]") or an object item by an
+		// attribute ("[@.<key> = \"<value>\"]"), so a missing item can be appended.
+		//
+		// It appends only when the value satisfies the selector, which is what makes
+		// injecting the same value twice a no-op. An item that does not match the
+		// selector that created it could never be found again, so every later injection
+		// would append another copy.
+		if i == len(parsedPath)-1 {
+			if !objectHasPropertyWithValue(pathItem.arrayItemSelector)(valueToInject) {
+				return -1
+			}
+
 			target.Items = append(target.Items, valueToInject)
 			return len(target.Items) - 1
 		}
-		// If there is no item in the array that matches the selector,
-		// the value can not be injected.
-		return -1
+
+		// A selector that is traversed through rather than injected into describes the
+		// item it is looking for completely enough to create it, in the same way a
+		// missing field or array is created on the way to the value. Its conditions are
+		// the item's attributes, so an item built from them is matched by the selector
+		// that created it on every later injection.
+		newItem := createItemForSelector(pathItem.arrayItemSelector)
+		if newItem == nil {
+			return -1
+		}
+
+		target.Items = append(target.Items, newItem)
+		return len(target.Items) - 1
 	}
 
 	if i == len(parsedPath)-1 {
@@ -349,6 +369,31 @@ func injectIntoItems(
 	}
 }
 
+// Builds an array item that the given selector matches, for a selector that is traversed
+// through on the way to the value being injected.
+//
+// The selector's conditions are attribute equalities, so they double as a constructor.
+// An item carrying each condition's key and value is matched by that same selector, which
+// keeps a later injection finding the item rather than creating a second one.
+//
+// A scalar selector ("[@ = \"x\"]") describes an item that has no attributes to traverse
+// into, so there is nothing sensible to create for one in this position and it reports
+// that the path cannot be injected.
+func createItemForSelector(selector *arrayItemSelector) *MappingNode {
+	if selector.isScalar() {
+		return nil
+	}
+
+	newItem := &MappingNode{
+		Fields: map[string]*MappingNode{},
+	}
+	for _, condition := range selector.conditions {
+		newItem.Fields[condition.key] = MappingNodeFromString(condition.value)
+	}
+
+	return newItem
+}
+
 func createFieldsOrItems(parsedPath []*pathItem, nextIndex int) *MappingNode {
 	if nextIndex >= len(parsedPath) {
 		return &MappingNode{}
@@ -361,7 +406,7 @@ func createFieldsOrItems(parsedPath []*pathItem, nextIndex int) *MappingNode {
 		}
 	}
 
-	if nextPathItem.arrayIndex != nil {
+	if nextPathItem.arrayIndex != nil || nextPathItem.arrayItemSelector != nil {
 		return &MappingNode{
 			Items: []*MappingNode{},
 		}

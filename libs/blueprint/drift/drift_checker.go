@@ -10,6 +10,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/specmerge"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
@@ -845,64 +846,28 @@ func toResourceDriftFieldChanges(
 	)
 }
 
+// Composes the contributions links have made to a resource into its state, so that a
+// drift check compares against the resource as it was actually deployed rather than
+// against the blueprint's declared picture of it.
+//
+// Contributions that cannot be resolved are tolerated here. Reporting drift from a
+// partial picture is a lesser problem than a deployment applying one, which is where
+// the same composition is strict.
 func applyLinksToResourceState(
 	resourceState *state.ResourceState,
 	linksWithResourceDataMappings []state.LinkState,
 ) (state.ResourceState, error) {
-	appliedResourceState := state.ResourceState{
-		ResourceID:                 resourceState.ResourceID,
-		Name:                       resourceState.Name,
-		Type:                       resourceState.Type,
-		TemplateName:               resourceState.TemplateName,
-		InstanceID:                 resourceState.InstanceID,
-		Status:                     resourceState.Status,
-		PreciseStatus:              resourceState.PreciseStatus,
-		LastStatusUpdateTimestamp:  resourceState.LastStatusUpdateTimestamp,
-		LastDeployedTimestamp:      resourceState.LastDeployedTimestamp,
-		LastDeployAttemptTimestamp: resourceState.LastDeployAttemptTimestamp,
-		SpecData:                   core.CopyMappingNode(resourceState.SpecData),
-		Description:                resourceState.Description,
-		Metadata:                   resourceState.Metadata,
-		DependsOnResources:         resourceState.DependsOnResources,
-		DependsOnChildren:          resourceState.DependsOnChildren,
-		FailureReasons:             resourceState.FailureReasons,
-		Drifted:                    resourceState.Drifted,
-		LastDriftDetectedTimestamp: resourceState.LastDriftDetectedTimestamp,
-		Durations:                  resourceState.Durations,
-	}
+	appliedResourceState := *resourceState
 
-	for _, link := range linksWithResourceDataMappings {
-		for resourceFieldPath, linkFieldPath := range link.ResourceDataMappings {
-			// resourceFieldPath is in the form "resourceName::fieldPath".
-			parts := strings.SplitN(resourceFieldPath, "::", 2)
-			if len(parts) == 2 {
-				linkDataPathWithRoot := core.AddRootToPath(linkFieldPath)
-				linkDataValue, _ := core.GetPathValue(
-					linkDataPathWithRoot,
-					&core.MappingNode{
-						Fields: link.Data,
-					},
-					core.MappingNodeMaxTraverseDepth,
-				)
-
-				if linkDataValue != nil {
-					fieldPath := core.ReplaceSpecWithRoot(parts[1])
-					err := core.InjectPathValueReplaceFields(
-						fieldPath,
-						linkDataValue,
-						appliedResourceState.SpecData,
-						core.MappingNodeMaxTraverseDepth,
-					)
-					if err != nil {
-						return state.ResourceState{}, fmt.Errorf(
-							"failed to apply link data to resource state: %w",
-							err,
-						)
-					}
-				}
-			}
-		}
+	projected, err := specmerge.ApplyLinkProjections(
+		resourceState.SpecData,
+		resourceState.Name,
+		linksWithResourceDataMappings,
+	)
+	if err != nil {
+		return state.ResourceState{}, err
 	}
+	appliedResourceState.SpecData = projected.Spec
 
 	return appliedResourceState, nil
 }
