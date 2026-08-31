@@ -17,6 +17,10 @@ const (
 	// is provided when a contribution a link has made to a resource
 	// cannot be applied to the resource's spec.
 	ErrorReasonCodeApplyLinkProjection errors.ErrorReasonCode = "apply_link_projection"
+	// ErrorReasonCodeRemoveLinkProjection
+	// is provided when a contribution a link has made to a resource
+	// cannot be taken back out of the resource's spec.
+	ErrorReasonCodeRemoveLinkProjection errors.ErrorReasonCode = "remove_link_projection"
 )
 
 func errUnexpectedComputedField(
@@ -46,6 +50,22 @@ func errApplyLinkProjection(
 		ReasonCode: ErrorReasonCodeApplyLinkProjection,
 		Err: fmt.Errorf(
 			"failed to apply the contribution link %q makes to %q: %w",
+			linkName,
+			resourceFieldPath,
+			err,
+		),
+	}
+}
+
+func errRemoveLinkProjection(
+	linkName string,
+	resourceFieldPath string,
+	err error,
+) error {
+	return &errors.RunError{
+		ReasonCode: ErrorReasonCodeRemoveLinkProjection,
+		Err: fmt.Errorf(
+			"failed to remove the contribution link %q makes to %q: %w",
 			linkName,
 			resourceFieldPath,
 			err,

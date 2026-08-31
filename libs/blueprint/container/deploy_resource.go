@@ -189,7 +189,8 @@ func (d *defaultResourceDeployer) Deploy(
 				resourceID,
 				instanceID,
 			),
-			isNew: resourceChangeInfo.isNew,
+			declaredResource: resolvedResource,
+			isNew:            resourceChangeInfo.isNew,
 		},
 		resolvedResource.Type.Value,
 		deployCtx,
@@ -371,9 +372,8 @@ func (d *defaultResourceDeployer) deployResource(
 	deployCtx.Logger.Debug(
 		"merging user-defined resource spec with computed field values returned by the plugin",
 	)
-	resolvedResource := getResolvedResourceFromChanges(resourceInfo.changes)
 	mergedSpecState, err := specmerge.MergeResourceSpec(
-		resolvedResource,
+		resourceInfo.declaredResource,
 		resourceInfo.resourceName,
 		output.ComputedFieldValues,
 		resourceInfo.changes.ComputedFields,
@@ -436,7 +436,6 @@ func (d *defaultResourceDeployer) deployResource(
 // resource has stabilised into the persisted resource state.
 func (d *defaultResourceDeployer) persistStabilisedComputedFields(
 	resourceInfo *resourceDeployInfo,
-	resolvedResource *provider.ResolvedResource,
 	output *provider.ResourceHasStabilisedOutput,
 	deployCtx *DeployContext,
 ) error {
@@ -445,7 +444,7 @@ func (d *defaultResourceDeployer) persistStabilisedComputedFields(
 	}
 
 	mergedSpecState, err := specmerge.MergeResourceSpec(
-		resolvedResource,
+		resourceInfo.declaredResource,
 		resourceInfo.resourceName,
 		output.ComputedFieldValues,
 		resourceInfo.changes.ComputedFields,
@@ -539,7 +538,6 @@ func (d *defaultResourceDeployer) pollForResourceStability(
 			if output.Stabilised {
 				if err := d.persistStabilisedComputedFields(
 					resourceInfo,
-					resolvedResource,
 					output,
 					deployCtx,
 				); err != nil {

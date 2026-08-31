@@ -179,6 +179,65 @@ func (s *LinkProjectionsTestSuite) Test_applies_nothing_when_no_link_contributes
 	s.Assert().Len(result.Spec.Fields, 1)
 }
 
+// Composing and then removing must return the spec to what it was, or state accumulates
+// the shape of contributions after the values are gone.
+func (s *LinkProjectionsTestSuite) Test_removing_contributions_undoes_composing_them() {
+	links := []state.LinkState{vpcLinkState(), tableAccessLinkState()}
+	declared := executionRoleSpec()
+
+	composed, err := ApplyLinkProjections(declared, "lambdaExecutionRole", links)
+	s.Require().NoError(err)
+	s.Require().False(core.MappingNodeEqual(declared, composed.Spec))
+
+	stripped, err := RemoveLinkProjections(composed.Spec, "lambdaExecutionRole", links)
+	s.Require().NoError(err)
+	s.Assert().True(
+		core.MappingNodeEqual(declared, stripped),
+		"removing the contributions did not return the spec to what the blueprint declares",
+	)
+}
+
+// The spec a resource is reconciled from describes the deployed resource, where a link's
+// contribution may not be present at all. Its absence is a fact about the resource rather
+// than a problem with the removal.
+func (s *LinkProjectionsTestSuite) Test_removing_a_contribution_that_is_not_there() {
+	declared := executionRoleSpec()
+
+	stripped, err := RemoveLinkProjections(
+		declared,
+		"lambdaExecutionRole",
+		[]state.LinkState{vpcLinkState(), tableAccessLinkState()},
+	)
+	s.Require().NoError(err)
+	s.Assert().True(core.MappingNodeEqual(declared, stripped))
+}
+
+// Only what the named resource owns is removed, for the same reason only what it owns is
+// applied.
+func (s *LinkProjectionsTestSuite) Test_removing_leaves_another_resources_fields_alone() {
+	function := core.MappingNodeFields(
+		"handler",
+		core.MappingNodeFromString("src/handler.handler"),
+		"policies",
+		core.MappingNodeItems(
+			core.MappingNodeFields(
+				"policyName",
+				core.MappingNodeFromString("bluelink-link-access"),
+			),
+		),
+	)
+
+	stripped, err := RemoveLinkProjections(
+		function,
+		"listUsersFunction",
+		[]state.LinkState{vpcLinkState()},
+	)
+	s.Require().NoError(err)
+
+	policies, _ := core.GetPathValue("$.policies", stripped, core.MappingNodeMaxTraverseDepth)
+	s.Assert().NotNil(policies, "a field owned by the execution role was removed from the function")
+}
+
 // A link that writes a function's VPC configuration and grants its execution role the
 // matching permissions, mapping into two resources.
 func vpcLinkState() state.LinkState {

@@ -137,7 +137,7 @@ func applyLinkProjection(
 	}
 
 	err := core.InjectPathValueReplaceFields(
-		core.ReplaceSpecWithRoot(projection.fieldPath),
+		resourceSpecPath(projection.fieldPath),
 		linkDataValue,
 		result.Spec,
 		core.MappingNodeMaxTraverseDepth,
@@ -147,6 +147,20 @@ func applyLinkProjection(
 	}
 
 	return nil
+}
+
+// Roots a mapping's resource field path so that it can be applied to a resource spec.
+//
+// Mappings are written against the resource, so a path usually starts at "spec", which is
+// the spec being composed into. Providers also write paths that start at the spec's own
+// fields, and rooting those as though "spec" had been trimmed produces a malformed path
+// rather than an error, so the two forms are distinguished here.
+func resourceSpecPath(fieldPath string) string {
+	if strings.HasPrefix(fieldPath, "spec.") || strings.HasPrefix(fieldPath, "spec[") {
+		return core.ReplaceSpecWithRoot(fieldPath)
+	}
+
+	return core.AddRootToPath(fieldPath)
 }
 
 // Reports the resource field path a mapping refers to, and whether it belongs to the
@@ -168,4 +182,41 @@ func resourceFieldPathFor(resourceFieldPath string, resourceName string) (string
 	}
 
 	return parts[1], true
+}
+
+// RemoveLinkProjections takes the contributions links have made to a resource back out of
+// a copy of the given spec, along with any structure left holding nothing once they are
+// gone.
+//
+// It is used where a spec comes from outside the framework and describes the resource as
+// it actually is, which includes everything links have written to it. What a link
+// contributed belongs to the link, which records it along with the resource field it
+// wrote, so keeping it in the resource's spec as well would leave two records of the same
+// thing that are free to disagree.
+//
+// A mapping that matches nothing in the spec is not an error. The spec describes a real
+// resource, and a link's contribution being absent from it is a fact about that resource
+// rather than a problem with the removal.
+func RemoveLinkProjections(
+	spec *core.MappingNode,
+	resourceName string,
+	links []state.LinkState,
+) (*core.MappingNode, error) {
+	stripped := core.CopyMappingNode(spec)
+	if stripped == nil {
+		return nil, nil
+	}
+
+	for _, projection := range orderedProjectionsFor(resourceName, links) {
+		_, err := core.RemovePathValue(
+			resourceSpecPath(projection.fieldPath),
+			stripped,
+			core.MappingNodeMaxTraverseDepth,
+		)
+		if err != nil {
+			return nil, errRemoveLinkProjection(projection.linkName, projection.fieldPath, err)
+		}
+	}
+
+	return stripped, nil
 }

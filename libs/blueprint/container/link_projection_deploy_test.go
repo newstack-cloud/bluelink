@@ -112,6 +112,54 @@ func TestUpdateDeployKeepsFieldsContributedByLinks(t *testing.T) {
 	// The change the deployment is actually for must still be applied.
 	handler, _ := core.GetPathValue("$.handler", deployedSpec, core.MappingNodeMaxTraverseDepth)
 	require.Equal(t, "src/orders_v2.handler", core.StringValue(handler))
+
+	requireStateHoldsOnlyTheDeclaredSpec(t, stateContainer, instanceID)
+}
+
+// The resource's persisted spec holds what the blueprint declares, and not what links
+// have contributed.
+//
+// The link records its own contribution along with the resource field it wrote, and that
+// record is what composition reads. Copying the value into the resource's spec as well
+// would leave two records of the same thing, making it possible for them to diverge and
+// makes it harder to reason about what the resource's spec actually contains when it differs
+// from what the blueprint declares without cross-referencing with link data mappings.
+// This is especially an issue for debugging when a deployment doesn't go to plan,
+// when resource or link operations fail or are interrupted.
+func requireStateHoldsOnlyTheDeclaredSpec(
+	t *testing.T,
+	stateContainer state.Container,
+	instanceID string,
+) {
+	t.Helper()
+
+	resourceState, err := stateContainer.Resources().GetByName(
+		context.Background(),
+		instanceID,
+		"ordersFunction",
+	)
+	require.NoError(t, err)
+
+	contributed, _ := core.GetPathValue(
+		"$.environment.variables.TABLE_NAME_ordersTable",
+		resourceState.SpecData,
+		core.MappingNodeMaxTraverseDepth,
+	)
+	require.Nil(
+		t,
+		contributed,
+		"the link's contribution was copied into the resource's own spec, which leaves "+
+			"two records of it that can disagree",
+	)
+
+	// What the blueprint declares, including fields the provider computed, is still
+	// recorded.
+	handler, _ := core.GetPathValue(
+		"$.handler",
+		resourceState.SpecData,
+		core.MappingNodeMaxTraverseDepth,
+	)
+	require.Equal(t, "src/orders_v2.handler", core.StringValue(handler))
 }
 
 // The link's own record of what it contributed, written by the initial deploy. The
