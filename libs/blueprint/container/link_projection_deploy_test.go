@@ -71,6 +71,7 @@ func TestUpdateDeployKeepsFieldsContributedByLinks(t *testing.T) {
 	// The change this deployment is for has nothing to do with the link, which is what
 	// makes the contribution's removal silent.
 	require.Contains(t, updateChanges.ResourceChanges, "ordersFunction")
+	requireNoChangesReportedForContribution(t, updateChanges.ResourceChanges["ordersFunction"])
 
 	updateChannels := CreateDeployChannels()
 	err = updatedContainer.Deploy(
@@ -160,6 +161,108 @@ func requireStateHoldsOnlyTheDeclaredSpec(
 		core.MappingNodeMaxTraverseDepth,
 	)
 	require.Equal(t, "src/orders_v2.handler", core.StringValue(handler))
+}
+
+// Removing a link takes away everything it contributed, and that has to be visible in the
+// change set before it is applied.
+//
+// The fields belong to the link rather than to the blueprint, so they leave the resource
+// when the link does. That is a correct consequence of removing the link, and an operator
+// approving the change set is entitled to see it rather than discover it from the
+// behaviour of a deployed application.
+func TestStagingReportsFieldsLostWhenALinkIsRemoved(t *testing.T) {
+	stateContainer := memstate.NewMemoryStateContainer()
+	deployedResource := &recordingLambdaResource{}
+	loader, _ := newLinkProjectionLoader(
+		stateContainer,
+		func(lambdaResource provider.Resource) provider.Resource {
+			deployedResource.Resource = lambdaResource
+			return deployedResource
+		},
+	)
+	params := newLinkProjectionParams()
+
+	instanceID := deployInitialInstanceForProjectionTest(t, loader, params)
+	requireLinkRecordedItsContribution(t, stateContainer, instanceID)
+
+	unlinkedContainer, err := loader.Load(
+		context.Background(),
+		"__testdata/container/deploy/blueprint-link-projection-unlinked.yml",
+		params,
+	)
+	require.NoError(t, err)
+
+	stagingChannels := createChangeStagingChannels()
+	err = unlinkedContainer.StageChanges(
+		context.Background(),
+		&StageChangesInput{InstanceID: instanceID},
+		stagingChannels,
+		params,
+	)
+	require.NoError(t, err)
+
+	stagedChanges, err := consumeStagedChangesForTest(stagingChannels)
+	require.NoError(t, err)
+
+	require.Contains(
+		t,
+		stagedChanges.RemovedLinks,
+		"ordersFunction::ordersTable",
+		"the link itself must be staged for removal",
+	)
+
+	functionChanges, hasChanges := stagedChanges.ResourceChanges["ordersFunction"]
+	require.True(
+		t,
+		hasChanges,
+		"the resource loses the fields the link contributed, so it has changes",
+	)
+	require.Contains(
+		t,
+		functionChanges.RemovedFields,
+		"spec.environment.variables.TABLE_NAME_ordersTable",
+		"the field the removed link contributed is taken away without being reported",
+	)
+}
+
+// A link that has not changed contributes the same fields to both sides of the comparison,
+// so it produces no field changes at all.
+//
+// The change set is what a user reads before approving a deployment. A link's fields
+// appearing as new or modified on every update, when nothing about them has changed, is
+// noise that makes a real change harder to see.
+func requireNoChangesReportedForContribution(
+	t *testing.T,
+	resourceChanges provider.Changes,
+) {
+	t.Helper()
+
+	contributedField := "spec.environment.variables.TABLE_NAME_ordersTable"
+
+	for _, fieldChange := range resourceChanges.NewFields {
+		require.NotEqual(
+			t,
+			contributedField,
+			fieldChange.FieldPath,
+			"a field the link contributed is reported as new when the link has not changed",
+		)
+	}
+
+	for _, fieldChange := range resourceChanges.ModifiedFields {
+		require.NotEqual(
+			t,
+			contributedField,
+			fieldChange.FieldPath,
+			"a field the link contributed is reported as modified when the link has not changed",
+		)
+	}
+
+	require.NotContains(
+		t,
+		resourceChanges.RemovedFields,
+		contributedField,
+		"a field the link contributed is reported as removed when the link still contributes it",
+	)
 }
 
 // The link's own record of what it contributed, written by the initial deploy. The
@@ -284,6 +387,44 @@ type recordingLambdaResource struct {
 	provider.Resource
 	mu         sync.Mutex
 	deployedAs *core.MappingNode
+}
+
+// The environment variables links contribute are part of the resource's schema, so that
+// change staging can see them. A change set is produced by walking the spec definition, so
+// a field absent from it is invisible to the comparison whether or not it is in the spec.
+func (r *recordingLambdaResource) GetSpecDefinition(
+	ctx context.Context,
+	input *provider.ResourceGetSpecDefinitionInput,
+) (*provider.ResourceGetSpecDefinitionOutput, error) {
+	return &provider.ResourceGetSpecDefinitionOutput{
+		SpecDefinition: &provider.ResourceSpecDefinition{
+			Schema: &provider.ResourceDefinitionsSchema{
+				Type: provider.ResourceDefinitionsSchemaTypeObject,
+				Attributes: map[string]*provider.ResourceDefinitionsSchema{
+					"id": {
+						Type:     provider.ResourceDefinitionsSchemaTypeString,
+						Computed: true,
+					},
+					"handler": {
+						Type: provider.ResourceDefinitionsSchemaTypeString,
+					},
+					"environment": {
+						Type:     provider.ResourceDefinitionsSchemaTypeObject,
+						Nullable: true,
+						Attributes: map[string]*provider.ResourceDefinitionsSchema{
+							"variables": {
+								Type:     provider.ResourceDefinitionsSchemaTypeMap,
+								Nullable: true,
+								MapValues: &provider.ResourceDefinitionsSchema{
+									Type: provider.ResourceDefinitionsSchemaTypeString,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}, nil
 }
 
 func (r *recordingLambdaResource) Deploy(

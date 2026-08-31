@@ -1,0 +1,17 @@
+version: 2025-11-02
+resources:
+  ordersTable:
+    type: aws/dynamodb/table
+    description: "Table that is no longer linked to the function."
+    metadata:
+      labels:
+        system: orders
+    spec:
+      tableName: "orders"
+      region: "eu-west-2"
+
+  ordersFunction:
+    type: aws/lambda/function
+    description: "Function that no longer selects the table, so the link is removed."
+    spec:
+      handler: "src/orders_v1.handler"
