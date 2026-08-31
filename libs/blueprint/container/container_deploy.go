@@ -1781,22 +1781,23 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterResource(
 	configComplete bool,
 	internalChannels *DeployChannels,
 ) {
-	if deployCtx.CurrentGroupIndex == len(deployCtx.DeploymentGroups)-1 {
-		// No more groups to deploy.
-		return
-	}
 
 	elementName := core.ResourceElementID(deployedResource.ResourceName)
-	// Evaluate the immediately-following group in full and then every subsequent group.
-	// A node can have direct dependencies spanning non-adjacent groups so that needs to
-	// be considered to avoid deadlocks where a node in a later group is waiting for a
-	// dependency in an earlier group to complete.
+	// Evaluate the immediately-following group in full and every other group for
+	// elements that could start. A node can have direct dependencies spanning
+	// non-adjacent groups so that needs to be considered to avoid deadlocks where a node
+	// is waiting for a dependency in another group to complete.
 	//
-	// Beyond the adjacent group a node is only evaluated when it could actually start,
+	// Every group is considered, not only the ones after this element's, because an
+	// element is held back at the start of a deployment when it is waiting on something,
+	// and the only thing that can release it is a completion. Looking only forwards
+	// leaves an element in an earlier group with nothing that will ever reconsider it.
+	//
+	// Outside the adjacent group a node is only evaluated when it could actually start,
 	// which is either because it depends on the element that just completed or because
 	// it is not waiting on anything this deployment will deploy.
-	for groupIndex := deployCtx.CurrentGroupIndex + 1; groupIndex < len(deployCtx.DeploymentGroups); groupIndex++ {
-		beyondAdjacentGroup := groupIndex > deployCtx.CurrentGroupIndex+1
+	for groupIndex := range deployCtx.DeploymentGroups {
+		beyondAdjacentGroup := groupIndex != deployCtx.CurrentGroupIndex+1
 		for _, node := range deployCtx.DeploymentGroups[groupIndex] {
 			dependencyNode := commoncore.Find(
 				node.DirectDependencies,
@@ -2391,22 +2392,23 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterChild(
 	deployedChild *ChildBlueprintIDInfo,
 	internalChannels *DeployChannels,
 ) {
-	if deployCtx.CurrentGroupIndex == len(deployCtx.DeploymentGroups)-1 {
-		// No more groups to deploy.
-		return
-	}
 
 	elementName := core.ChildElementID(deployedChild.ChildName)
-	// Evaluate the immediately-following group in full and then every subsequent group.
-	// A node can have direct dependencies spanning non-adjacent groups so that needs to
-	// be considered to avoid deadlocks where a node in a later group is waiting for a
-	// dependency in an earlier group to complete.
+	// Evaluate the immediately-following group in full and every other group for
+	// elements that could start. A node can have direct dependencies spanning
+	// non-adjacent groups so that needs to be considered to avoid deadlocks where a node
+	// is waiting for a dependency in another group to complete.
 	//
-	// Beyond the adjacent group a node is only evaluated when it could actually start,
+	// Every group is considered, not only the ones after this element's, because an
+	// element is held back at the start of a deployment when it is waiting on something,
+	// and the only thing that can release it is a completion. Looking only forwards
+	// leaves an element in an earlier group with nothing that will ever reconsider it.
+	//
+	// Outside the adjacent group a node is only evaluated when it could actually start,
 	// which is either because it depends on the element that just completed or because
 	// it is not waiting on anything this deployment will deploy.
-	for groupIndex := deployCtx.CurrentGroupIndex + 1; groupIndex < len(deployCtx.DeploymentGroups); groupIndex++ {
-		beyondAdjacentGroup := groupIndex > deployCtx.CurrentGroupIndex+1
+	for groupIndex := range deployCtx.DeploymentGroups {
+		beyondAdjacentGroup := groupIndex != deployCtx.CurrentGroupIndex+1
 		for _, node := range deployCtx.DeploymentGroups[groupIndex] {
 			dependencyNode := commoncore.Find(
 				node.DirectDependencies,
