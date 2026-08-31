@@ -860,11 +860,18 @@ func getResourceInfo(
 
 // This must only be called when a lock has already been held on the ephemeral state
 // that the provided maps belong to.
+// Registers the links of a resource that has just been deployed, recording which of each
+// link's resources it is still waiting for.
+//
+// A resource that this deployment is not deploying is not waited for. It has no changes
+// to apply, so it never reports a completion, and a link that waits for one waits for the
+// rest of the deployment while still being counted as an element that has to finish.
 func addPendingLinksToEphemeralState(
 	node *links.ChainLinkNode,
 	alreadyPendingLinks []string,
 	pendingLinks map[string]*LinkPendingCompletion,
 	resourceNameLinkMap map[string][]string,
+	resourceWillDeploy func(resourceName string) bool,
 ) {
 	for _, linksToNode := range node.LinksTo {
 		linkName := core.LogicalLinkName(node.ResourceName, linksToNode.ResourceName)
@@ -873,7 +880,7 @@ func addPendingLinksToEphemeralState(
 				resourceANode:    node,
 				resourceBNode:    linksToNode,
 				resourceAPending: false,
-				resourceBPending: true,
+				resourceBPending: resourceWillDeploy(linksToNode.ResourceName),
 				linkPending:      true,
 			}
 			pendingLinks[linkName] = completionState
@@ -894,7 +901,7 @@ func addPendingLinksToEphemeralState(
 			completionState := &LinkPendingCompletion{
 				resourceANode:    linkedFromNode,
 				resourceBNode:    node,
-				resourceAPending: true,
+				resourceAPending: resourceWillDeploy(linkedFromNode.ResourceName),
 				resourceBPending: false,
 				linkPending:      true,
 			}

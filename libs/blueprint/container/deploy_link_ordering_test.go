@@ -110,9 +110,9 @@ func Test_access_link_waits_for_the_placement_link_in_the_same_batch(t *testing.
 	deployState := NewDefaultDeploymentState()
 	deployState.SetLinkCapabilityGraph(placementOrderingGraph(t))
 
-	require.Empty(t, deployState.UpdateLinkDeploymentState(queue))
-	require.Empty(t, deployState.UpdateLinkDeploymentState(vpc))
-	ready := deployState.UpdateLinkDeploymentState(function)
+	require.Empty(t, deployState.UpdateLinkDeploymentState(queue, allResourcesDeploying))
+	require.Empty(t, deployState.UpdateLinkDeploymentState(vpc, allResourcesDeploying))
+	ready := deployState.UpdateLinkDeploymentState(function, allResourcesDeploying)
 	require.Len(t, ready, 2)
 
 	require.Empty(
@@ -148,12 +148,12 @@ func Test_access_link_waits_for_a_placement_link_in_another_batch(t *testing.T) 
 	deployState := NewDefaultDeploymentState()
 	deployState.SetLinkCapabilityGraph(placementOrderingGraph(t))
 
-	require.Empty(t, deployState.UpdateLinkDeploymentState(vpc))
+	require.Empty(t, deployState.UpdateLinkDeploymentState(vpc, allResourcesDeploying))
 
-	placementBatch := deployState.UpdateLinkDeploymentState(function)
+	placementBatch := deployState.UpdateLinkDeploymentState(function, allResourcesDeploying)
 	require.Len(t, placementBatch, 1, "only the placement link should be ready")
 
-	accessBatch := deployState.UpdateLinkDeploymentState(queue)
+	accessBatch := deployState.UpdateLinkDeploymentState(queue, allResourcesDeploying)
 	require.Len(t, accessBatch, 1, "only the access link should be ready")
 
 	require.NotEmpty(
@@ -176,8 +176,8 @@ func Test_a_requirement_nothing_provides_does_not_hold_a_link_back(t *testing.T)
 	deployState := NewDefaultDeploymentState()
 	deployState.SetLinkCapabilityGraph(unorderedGraph(t))
 
-	require.Empty(t, deployState.UpdateLinkDeploymentState(function))
-	ready := deployState.UpdateLinkDeploymentState(queue)
+	require.Empty(t, deployState.UpdateLinkDeploymentState(function, allResourcesDeploying))
+	ready := deployState.UpdateLinkDeploymentState(queue, allResourcesDeploying)
 	require.Len(t, ready, 1)
 
 	require.Empty(
@@ -193,9 +193,9 @@ func Test_links_are_unordered_when_no_capabilities_are_declared(t *testing.T) {
 	vpc, function, queue := linkOrderingChain()
 	deployState := NewDefaultDeploymentState()
 
-	require.Empty(t, deployState.UpdateLinkDeploymentState(queue))
-	require.Empty(t, deployState.UpdateLinkDeploymentState(vpc))
-	ready := deployState.UpdateLinkDeploymentState(function)
+	require.Empty(t, deployState.UpdateLinkDeploymentState(queue, allResourcesDeploying))
+	require.Empty(t, deployState.UpdateLinkDeploymentState(vpc, allResourcesDeploying))
+	ready := deployState.UpdateLinkDeploymentState(function, allResourcesDeploying)
 	require.Len(t, ready, 2)
 
 	for _, linkName := range []string{"netVPC::netFunction", "netFunction::netQueue"} {
@@ -228,8 +228,8 @@ func Test_opposing_links_between_the_same_pair_do_not_wait_on_each_other(t *test
 	function.LinkedFrom = []*links.ChainLinkNode{table}
 
 	deployState := NewDefaultDeploymentState()
-	require.Empty(t, deployState.UpdateLinkDeploymentState(function))
-	ready := deployState.UpdateLinkDeploymentState(table)
+	require.Empty(t, deployState.UpdateLinkDeploymentState(function, allResourcesDeploying))
+	ready := deployState.UpdateLinkDeploymentState(table, allResourcesDeploying)
 	require.Len(t, ready, 2, "both directions should become ready together")
 
 	for _, linkName := range []string{"appFunction::appTable", "appTable::appFunction"} {
@@ -255,4 +255,10 @@ func Test_a_link_waits_for_every_provider_of_the_capabilities_it_requires(t *tes
 
 	deployState.MarkLinkSettled("netVPC2::netFunction")
 	require.Empty(t, deployState.AwaitingCapabilityProviders("netFunction::netQueue"))
+}
+
+// These tests exercise link ordering where every resource in the blueprint is being
+// deployed, so no link is waiting on a resource that will never complete.
+func allResourcesDeploying(_ string) bool {
+	return true
 }

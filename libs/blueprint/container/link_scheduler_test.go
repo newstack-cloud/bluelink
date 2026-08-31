@@ -23,9 +23,9 @@ func Test_a_settled_link_releases_the_links_waiting_on_its_capability(t *testing
 	deployState := NewDefaultDeploymentState()
 	deployState.SetLinkCapabilityGraph(placementOrderingGraph(t))
 
-	deployState.UpdateLinkDeploymentState(vpc)
-	deployState.UpdateLinkDeploymentState(queue)
-	deployState.UpdateLinkDeploymentState(function)
+	deployState.UpdateLinkDeploymentState(vpc, allResourcesDeploying)
+	deployState.UpdateLinkDeploymentState(queue, allResourcesDeploying)
+	deployState.UpdateLinkDeploymentState(function, allResourcesDeploying)
 
 	require.Equal(
 		t,

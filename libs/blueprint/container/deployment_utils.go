@@ -2140,6 +2140,20 @@ func getChildChanges(parentChanges *changes.BlueprintChanges, childName string) 
 	return nil
 }
 
+// Reports whether a resource is one the deployment is going to deploy, which is the same
+// question nodeHasChanges answers for a deployment node, asked where only the resource
+// name is known.
+func resourceWillDeploy(resourceName string, blueprintChanges *changes.BlueprintChanges) bool {
+	if blueprintChanges == nil {
+		return false
+	}
+
+	_, inNew := blueprintChanges.NewResources[resourceName]
+	_, inChanges := blueprintChanges.ResourceChanges[resourceName]
+
+	return inNew || inChanges
+}
+
 // nodeHasChanges returns true if the deployment node has a corresponding
 // entry in the changes object. Resources/children with no changes should
 // be skipped during deployment.
