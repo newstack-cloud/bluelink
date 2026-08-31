@@ -7,6 +7,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/links"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/specmerge"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/subengine"
 )
@@ -102,6 +103,114 @@ func (s *defaultResourceChangeStager) StageChanges(
 	}
 }
 
+// Composes the contributions links have made to a resource into both sides of the
+// comparison that produces its change set.
+//
+// A link writes fields that the blueprint does not declare, and both sides have to account
+// for them or the comparison is between different things. Composing neither side reports
+// nothing when a link's contribution changes, and composing only the side that is being
+// deployed reports every field a link owns as new on every update.
+//
+// The two sides are composed against different sets of links, which is what makes a
+// removed link visible. The current side takes every link that contributes to the resource
+// today. The side being deployed takes only the links that will still exist, so a link
+// that the blueprint no longer has is present in what the resource is and absent from what
+// it is going to be, and its contribution is reported as a removal rather than
+// disappearing when the resource is deployed.
+func (s *defaultResourceChangeStager) composeLinkContributions(
+	ctx context.Context,
+	stageResourceInfo *stageResourceChangeInfo,
+	resourceInfo *provider.ResourceInfo,
+) error {
+	// A blueprint that has never been deployed has no instance to hold links, and a
+	// resource that is being created has nothing contributed to it yet.
+	if stageResourceInfo.instanceID == "" {
+		return nil
+	}
+
+	resourceName := stageResourceInfo.node.ResourceName
+	linksWithMappings, err := s.stateContainer.Links().ListWithResourceDataMappings(
+		ctx,
+		stageResourceInfo.instanceID,
+		resourceName,
+	)
+	if err != nil {
+		if state.IsInstanceNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	if len(linksWithMappings) == 0 {
+		return nil
+	}
+
+	// Composed specs are swapped onto this ResourceInfo rather than written into what it
+	// points at: the resolved resource is cached and read again to deploy the resource,
+	// where the declared spec is the one that gets persisted. The current state is already
+	// a copy, and is treated the same way so neither side reads as safe to compose in
+	// place.
+	if resourceInfo.CurrentResourceState != nil {
+		current, err := specmerge.ApplyLinkProjections(
+			resourceInfo.CurrentResourceState.SpecData,
+			resourceName,
+			linksWithMappings,
+		)
+		if err != nil {
+			return err
+		}
+
+		currentState := *resourceInfo.CurrentResourceState
+		currentState.SpecData = current.Spec
+		resourceInfo.CurrentResourceState = &currentState
+	}
+
+	if resourceInfo.ResourceWithResolvedSubs != nil {
+		desired, err := specmerge.ApplyLinkProjections(
+			resourceInfo.ResourceWithResolvedSubs.Spec,
+			resourceName,
+			survivingLinks(linksWithMappings, stageResourceInfo.node),
+		)
+		if err != nil {
+			return err
+		}
+
+		composedResource := *resourceInfo.ResourceWithResolvedSubs
+		composedResource.Spec = desired.Spec
+		resourceInfo.ResourceWithResolvedSubs = &composedResource
+	}
+
+	return nil
+}
+
+// The links that contribute to a resource and that the blueprint being staged still has.
+//
+// The chain link node comes from the blueprint the change set is being produced for, so
+// the links adjacent to it are the ones that will exist once it is deployed. A link that
+// contributes to the resource and is not among them is being removed.
+func survivingLinks(
+	linksWithMappings []state.LinkState,
+	node *links.ChainLinkNode,
+) []state.LinkState {
+	surviving := map[string]bool{}
+	for _, linksToNode := range node.LinksTo {
+		surviving[core.LogicalLinkName(node.ResourceName, linksToNode.ResourceName)] = true
+	}
+	for _, linkedFromNode := range node.LinkedFrom {
+		surviving[core.LogicalLinkName(linkedFromNode.ResourceName, node.ResourceName)] = true
+	}
+
+	kept := []state.LinkState{}
+	for _, link := range linksWithMappings {
+		if surviving[link.Name] {
+			kept = append(kept, link)
+		}
+	}
+
+	return kept
+}
+
 func (s *defaultResourceChangeStager) stageChanges(
 	ctx context.Context,
 	stageResourceInfo *stageResourceChangeInfo,
@@ -133,6 +242,20 @@ func (s *defaultResourceChangeStager) stageChanges(
 		return err
 	}
 
+	// What the resource is declared as, kept aside while the comparison is made against
+	// specs that include what links have contributed.
+	declaredResource := resourceInfo.ResourceWithResolvedSubs
+	declaredResourceState := resourceInfo.CurrentResourceState
+
+	err = s.composeLinkContributions(ctx, stageResourceInfo, resourceInfo)
+	if err != nil {
+		resourceIDLogger.Debug(
+			"failed to compose the contributions links have made to the resource",
+			core.ErrorLogField("error", err),
+		)
+		return err
+	}
+
 	resourceIDLogger.Info(
 		"generating change set for resource",
 	)
@@ -150,6 +273,13 @@ func (s *defaultResourceChangeStager) stageChanges(
 		)
 		return err
 	}
+
+	// The change set carries the resource for the deployment to apply, which is the
+	// declared one. A deployment composes the contributions in itself, from the links as
+	// they are when it runs rather than as they were when changes were staged, and what
+	// it persists is the declared spec.
+	changes.AppliedResourceInfo.ResourceWithResolvedSubs = declaredResource
+	changes.AppliedResourceInfo.CurrentResourceState = declaredResourceState
 
 	// The resource must be recreated if an element that it previously depended on
 	// has been removed.
