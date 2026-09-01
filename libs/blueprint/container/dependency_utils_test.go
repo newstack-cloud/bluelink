@@ -162,6 +162,83 @@ func (s *DependencyUtilsTestSuite) Test_does_not_populate_direct_deps_when_there
 	s.Assert().Empty(nodes[0].DirectDependencies)
 }
 
+// A soft link does not make the resource it links to a dependency, whatever priority
+// resource it names.
+//
+// A hard link is one where the priority resource must be created before the other, and a
+// soft link is one where it does not matter which is created first, so the two are a
+// single statement about ordering rather than separate properties. Only hard links are
+// recorded as references, which is what orders resources into groups, so taking the
+// priority alone would produce a dependency that ordering knows nothing about, the
+// resource that depends could be grouped before the resource it depends on, and be left
+// waiting for the rest of the deployment.
+func (s *DependencyUtilsTestSuite) Test_soft_link_with_a_priority_resource_is_not_a_dependency() {
+	cacheNode := &DeploymentNode{
+		ChainLinkNode: &links.ChainLinkNode{
+			ResourceName: "replicationGroup",
+			LinksTo: []*links.ChainLinkNode{
+				{ResourceName: "authSecret"},
+			},
+			LinkedFrom: []*links.ChainLinkNode{},
+			LinkImplementations: map[string]provider.Link{
+				"authSecret": &softLinkWithPriority{},
+			},
+		},
+		DirectDependencies: []*DeploymentNode{},
+	}
+	secretNode := &DeploymentNode{
+		ChainLinkNode: &links.ChainLinkNode{
+			ResourceName:        "authSecret",
+			LinksTo:             []*links.ChainLinkNode{},
+			LinkedFrom:          []*links.ChainLinkNode{cacheNode.ChainLinkNode},
+			LinkImplementations: map[string]provider.Link{},
+		},
+		DirectDependencies: []*DeploymentNode{},
+	}
+
+	nodes := []*DeploymentNode{cacheNode, secretNode}
+	err := PopulateDirectDependencies(
+		context.Background(),
+		nodes,
+		refgraph.NewRefChainCollector(),
+		s.createBlueprintParams(),
+	)
+	s.Require().NoError(err)
+
+	s.Assert().Empty(
+		cacheNode.DirectDependencies,
+		"a soft link produced a dependency that nothing orders",
+	)
+	s.Assert().Empty(
+		secretNode.DirectDependencies,
+		"a soft link produced a dependency that nothing orders",
+	)
+}
+
+// A link that names a priority resource while declaring itself soft, which is the
+// contradiction the framework has to ignore rather than half-honour.
+type softLinkWithPriority struct {
+	*testLambdaDynamoDBTableLink
+}
+
+func (l *softLinkWithPriority) GetKind(
+	ctx context.Context,
+	input *provider.LinkGetKindInput,
+) (*provider.LinkGetKindOutput, error) {
+	return &provider.LinkGetKindOutput{
+		Kind: provider.LinkKindSoft,
+	}, nil
+}
+
+func (l *softLinkWithPriority) GetPriorityResource(
+	ctx context.Context,
+	input *provider.LinkGetPriorityResourceInput,
+) (*provider.LinkGetPriorityResourceOutput, error) {
+	return &provider.LinkGetPriorityResourceOutput{
+		PriorityResource: provider.LinkPriorityResourceB,
+	}, nil
+}
+
 func (s *DependencyUtilsTestSuite) createBlueprintParams() core.BlueprintParams {
 	return core.NewDefaultParams(
 		map[string]map[string]*core.ScalarValue{},
