@@ -203,8 +203,7 @@
         "spec.id"
       ],
       "dependsOnResources": [
-        "invoicesTable",
-        "processInvoiceFunction"
+        "invoicesTable"
       ],
       "dependsOnChildren": [
         "coreInfra"

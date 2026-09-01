@@ -203,6 +203,19 @@ func getRefChainNode(
 	return refChainCollector.Chain(node.Name())
 }
 
+// Reports whether a link makes the resource it links to a dependency, which requires the
+// link to be hard as well as to name a priority resource.
+//
+// A hard link is one where the priority resource must be created before the other, and a
+// soft link is one where it does not matter which is created first. The two are a single
+// statement about ordering rather than separate properties, so a priority on a soft link
+// says nothing.
+//
+// Taking the priority alone would produce a dependency that ordering does not know about,
+// since a link is recorded as a reference, which is what orders resources, only when it is
+// hard. The resource that depends could then be deployed in an earlier group than the
+// resource it depends on, and the two answers to "what does this resource wait for" would
+// disagree.
 func linkedToResourceHasPriority(
 	ctx context.Context,
 	chainLinkNode *links.ChainLinkNode,
@@ -211,20 +224,34 @@ func linkedToResourceHasPriority(
 	params bpcore.BlueprintParams,
 ) (bool, error) {
 	linkImpl, hasLinkImpl := chainLinkNode.LinkImplementations[linksToResourceName]
-	if hasLinkImpl {
-		linkCtx := provider.NewLinkContextFromParams(params)
-		priorityOutput, err := linkImpl.GetPriorityResource(
-			ctx,
-			&provider.LinkGetPriorityResourceInput{
-				LinkContext: linkCtx,
-			},
-		)
-		if err != nil {
-			return false, err
-		}
-
-		return priorityOutput.PriorityResource == dependencyResourcePriority, nil
+	if !hasLinkImpl {
+		return false, nil
 	}
 
-	return false, nil
+	linkCtx := provider.NewLinkContextFromParams(params)
+	kindOutput, err := linkImpl.GetKind(
+		ctx,
+		&provider.LinkGetKindInput{
+			LinkContext: linkCtx,
+		},
+	)
+	if err != nil {
+		return false, err
+	}
+
+	if kindOutput.Kind != provider.LinkKindHard {
+		return false, nil
+	}
+
+	priorityOutput, err := linkImpl.GetPriorityResource(
+		ctx,
+		&provider.LinkGetPriorityResourceInput{
+			LinkContext: linkCtx,
+		},
+	)
+	if err != nil {
+		return false, err
+	}
+
+	return priorityOutput.PriorityResource == dependencyResourcePriority, nil
 }

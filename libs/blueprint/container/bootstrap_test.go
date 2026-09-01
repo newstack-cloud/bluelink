@@ -163,7 +163,7 @@ func (l *testApiGatewayLambdaLink) GetPriorityResource(
 	input *provider.LinkGetPriorityResourceInput,
 ) (*provider.LinkGetPriorityResourceOutput, error) {
 	return &provider.LinkGetPriorityResourceOutput{
-		PriorityResource:     provider.LinkPriorityResourceB,
+		PriorityResource:     provider.LinkPriorityResourceNone,
 		PriorityResourceType: lambdaFunctionResourceType,
 	}, nil
 }
@@ -737,7 +737,7 @@ func (l *testDynamoDBStreamLambdaLink) GetPriorityResource(
 	input *provider.LinkGetPriorityResourceInput,
 ) (*provider.LinkGetPriorityResourceOutput, error) {
 	return &provider.LinkGetPriorityResourceOutput{
-		PriorityResource:     provider.LinkPriorityResourceB,
+		PriorityResource:     provider.LinkPriorityResourceNone,
 		PriorityResourceType: lambdaFunctionResourceType,
 	}, nil
 }
