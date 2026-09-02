@@ -4,14 +4,14 @@ go 1.26.4
 
 require (
 	github.com/coreos/go-json v0.0.0-20231102161613-e49c8866685a
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.52.0
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.53.0
 	github.com/newstack-cloud/bluelink/libs/common v0.4.0
 	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.16.0
 	github.com/newstack-cloud/ls-builder v0.2.5
-	github.com/sourcegraph/jsonrpc2 v0.2.1
+	github.com/sourcegraph/jsonrpc2 v0.2.2
 	github.com/spf13/afero v1.15.0
-	github.com/stretchr/testify v1.11.1
-	github.com/tailscale/hujson v0.0.0-20260718110524-10d7940d4c87
+	github.com/stretchr/testify v1.12.1
+	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f
 	github.com/tree-sitter-grammars/tree-sitter-yaml v0.7.2
 	github.com/tree-sitter/go-tree-sitter v0.25.0
 	github.com/tree-sitter/tree-sitter-json v0.24.8
@@ -29,6 +29,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
