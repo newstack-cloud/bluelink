@@ -87,6 +87,37 @@ func (s *LinkSlots) Release() {
 	close(waiter)
 }
 
+// CancelWait discards a registration made by Wait, for a scheduler that is stopping before
+// a slot became available.
+//
+// A waiter left behind is one Release will hand a slot to and that nothing will answer, and
+// with a budget shared across blueprint instances that release is lost to a sibling
+// scheduler still waiting for it. Where the registration has already been woken, the
+// wake-up is passed to the next waiter rather than dropped, for the same reason.
+func (s *LinkSlots) CancelWait(waiter <-chan struct{}) {
+	if waiter == nil {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, queued := range s.waiters {
+		if queued == waiter {
+			s.waiters = append(s.waiters[:i], s.waiters[i+1:]...)
+			return
+		}
+	}
+
+	if len(s.waiters) == 0 {
+		return
+	}
+
+	next := s.waiters[0]
+	s.waiters = s.waiters[1:]
+	close(next)
+}
+
 type linkCompletion struct {
 	linkName string
 	holds    []string
@@ -267,11 +298,13 @@ func (s *linkScheduler) dispatch(ctx context.Context) {
 			}
 			s.slots.Release()
 		case leftover := <-s.drainCh:
+			s.slots.CancelWait(slotWait)
 			leftover <- pending
 			return
 		case <-slotWait:
 			slotWait = nil
 		case <-ctx.Done():
+			s.slots.CancelWait(slotWait)
 			return
 		}
 

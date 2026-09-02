@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
@@ -322,10 +323,23 @@ func (d *defaultResourceDeployer) recoverUnresolvedContributions(
 	if err != nil || externalState == nil {
 		// The resource cannot be read, so there is nothing to recover from. The caller
 		// still has the unresolved contributions and refuses to deploy without them.
+		//
+		// The reason why it could not be read is the only account of this the user gets,
+		// since the caller reports the unresolved contributions rather than this error.
+		reason := "the deployed resource could not be read, so the contributions it holds " +
+			"could not be recovered"
+		if err != nil {
+			reason = fmt.Sprintf("%s: %s", reason, err)
+			deployCtx.Logger.Debug(
+				"failed to read the deployed resource to recover link contributions from it",
+				core.ErrorLogField("error", err),
+			)
+		}
+
 		return &specmerge.LinkProjectionResult{
 			Spec: resolvedResource.Spec,
 			Unresolved: []specmerge.UnresolvedProjection{
-				{ResourceFieldPath: resourceName},
+				{ResourceFieldPath: resourceName, Reason: reason},
 			},
 		}, nil
 	}

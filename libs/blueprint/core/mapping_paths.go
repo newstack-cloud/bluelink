@@ -310,6 +310,13 @@ func injectIntoItemsWithSelector(
 	}
 
 	if i == len(parsedPath)-1 {
+		// Replacing a matched item with a value the selector does not match would leave an
+		// item nothing can find again, so the next injection would append a second copy
+		// rather than replace this one. The same condition the append path enforces.
+		if !objectHasPropertyWithValue(pathItem.arrayItemSelector)(valueToInject) {
+			return -1, selectorMismatchReason(pathItem.arrayItemSelector, valueToInject)
+		}
+
 		target.Items[targetItemIndex] = valueToInject
 	}
 	return targetItemIndex, ""

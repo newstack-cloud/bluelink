@@ -265,12 +265,12 @@ func latencyObservedAWSProvider(
 }
 
 func generateLinkThroughputBlueprint(shape linkThroughputShape) string {
-	var spec strings.Builder
-	spec.WriteString("version: 2025-11-02\nresources:\n")
-
 	if shape.sharedTable {
 		return generateSharedTableBlueprint(shape)
 	}
+
+	var spec strings.Builder
+	spec.WriteString("version: 2025-11-02\nresources:\n")
 
 	for functionIndex := range shape.functions {
 		group := fmt.Sprintf("group%d", functionIndex)
@@ -306,7 +306,7 @@ func generateSharedTableBlueprint(shape linkThroughputShape) string {
 	spec.WriteString("version: 2025-11-02\nresources:\n")
 
 	for tableIndex := range shape.tablesPerFunction {
-		spec.WriteString(fmt.Sprintf(`  sharedTable%d:
+		fmt.Fprintf(&spec, `  sharedTable%d:
     type: aws/dynamodb/table
     metadata:
       labels:
@@ -314,18 +314,18 @@ func generateSharedTableBlueprint(shape linkThroughputShape) string {
     spec:
       tableName: "shared-table-%d"
       region: "eu-west-2"
-`, tableIndex, tableIndex))
+`, tableIndex, tableIndex)
 	}
 
 	for functionIndex := range shape.functions {
-		spec.WriteString(fmt.Sprintf(`  function%d:
+		fmt.Fprintf(&spec, `  function%d:
     type: aws/lambda/function
     linkSelector:
       byLabel:
         linkGroup: shared
     spec:
       handler: "src/handler%d.handler"
-`, functionIndex, functionIndex))
+`, functionIndex, functionIndex)
 	}
 
 	return spec.String()
