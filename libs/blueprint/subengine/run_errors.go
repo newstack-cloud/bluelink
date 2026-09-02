@@ -2,9 +2,11 @@ package subengine
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/errors"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 )
 
@@ -473,6 +475,60 @@ func errMissingResourceSpecProperty(
 			path,
 			property.ResourceName,
 			depthWarning,
+		),
+	}
+}
+
+// Reports a resource spec property that is missing from the state of a resource this
+// deployment has already deployed.
+//
+// The bare "missing property" error says only that a value could not be found, which is
+// the same thing whether the resource was never deployed, was deployed and produced no
+// such field, or was read too early and gave back the placeholder state written when a
+// resource is dispatched. Those need different fixes, and telling them apart afterwards
+// has meant reproducing the deployment.
+//
+// The field names are reported, and never their values, since a spec holds configuration
+// that a deployment log should not.
+func errMissingResourceSpecPropertyInState(
+	elementName string,
+	property *substitutions.SubstitutionResourceProperty,
+	resourceState *state.ResourceState,
+	readFromCache bool,
+) error {
+	path, _ := substitutions.SubResourcePropertyToString(property)
+
+	source := "read from the state container"
+	if readFromCache {
+		source = "read from the resolver's cache of resource state"
+	}
+
+	specDescription := "no spec recorded"
+	if resourceState != nil && resourceState.SpecData != nil {
+		fieldNames := make([]string, 0, len(resourceState.SpecData.Fields))
+		for fieldName := range resourceState.SpecData.Fields {
+			fieldNames = append(fieldNames, fieldName)
+		}
+		sort.Strings(fieldNames)
+		specDescription = fmt.Sprintf("spec fields %v", fieldNames)
+	}
+
+	status := core.ResourceStatusUnknown
+	if resourceState != nil {
+		status = resourceState.Status
+	}
+
+	return &errors.RunError{
+		ReasonCode: ErrorReasonCodeMissingResourceSpecProperty,
+		Err: fmt.Errorf(
+			"[%s]: missing property %q in the state of resource %q, which has status %d "+
+				"and %s (%s)",
+			elementName,
+			path,
+			property.ResourceName,
+			status,
+			specDescription,
+			source,
 		),
 	}
 }

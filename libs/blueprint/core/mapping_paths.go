@@ -198,6 +198,7 @@ func injectPathValue(
 
 	current := injectInto
 	pathExists := true
+	selectorMismatch := ""
 	i := 0
 	maxDepth := int(math.Min(float64(maxTraverseDepth), float64(len(parsedPath))))
 	for pathExists && current != nil && i < maxDepth {
@@ -213,7 +214,7 @@ func injectPathValue(
 			)
 			current = current.Items[int(arrayIndex)]
 		} else if pathItem.arrayItemSelector != nil && current.Items != nil {
-			injectedIndex := injectIntoItemsWithSelector(
+			injectedIndex, mismatch := injectIntoItemsWithSelector(
 				current,
 				pathItem,
 				parsedPath,
@@ -222,6 +223,7 @@ func injectPathValue(
 			)
 			if injectedIndex < 0 {
 				pathExists = false
+				selectorMismatch = mismatch
 			} else {
 				current = current.Items[injectedIndex]
 			}
@@ -233,6 +235,14 @@ func injectPathValue(
 	}
 
 	if !pathExists {
+		if selectorMismatch != "" {
+			return fmt.Errorf(
+				"path %q could not be injected into the mapping node, %s",
+				path,
+				selectorMismatch,
+			)
+		}
+
 		return fmt.Errorf(
 			"path %q could not be injected into the mapping node, "+
 				"the structure of the mapping node does not match the path",
@@ -251,13 +261,16 @@ func injectPathValue(
 	return nil
 }
 
+// Reports the index the value was injected at, or -1 with a reason describing why the
+// selector could not be satisfied, for the cases where the reason is not simply that the
+// node's structure does not match the path.
 func injectIntoItemsWithSelector(
 	target *MappingNode,
 	pathItem *pathItem,
 	parsedPath []*pathItem,
 	valueToInject *MappingNode,
 	i int,
-) int {
+) (int, string) {
 	targetItemIndex := slices.IndexFunc(
 		target.Items,
 		objectHasPropertyWithValue(
@@ -275,11 +288,11 @@ func injectIntoItemsWithSelector(
 		// would append another copy.
 		if i == len(parsedPath)-1 {
 			if !objectHasPropertyWithValue(pathItem.arrayItemSelector)(valueToInject) {
-				return -1
+				return -1, selectorMismatchReason(pathItem.arrayItemSelector, valueToInject)
 			}
 
 			target.Items = append(target.Items, valueToInject)
-			return len(target.Items) - 1
+			return len(target.Items) - 1, ""
 		}
 
 		// A selector that is traversed through rather than injected into describes the
@@ -289,17 +302,63 @@ func injectIntoItemsWithSelector(
 		// that created it on every later injection.
 		newItem := createItemForSelector(pathItem.arrayItemSelector)
 		if newItem == nil {
-			return -1
+			return -1, ""
 		}
 
 		target.Items = append(target.Items, newItem)
-		return len(target.Items) - 1
+		return len(target.Items) - 1, ""
 	}
 
 	if i == len(parsedPath)-1 {
 		target.Items[targetItemIndex] = valueToInject
 	}
-	return targetItemIndex
+	return targetItemIndex, ""
+}
+
+// Explains a value that a final-position selector does not match, which is otherwise
+// indistinguishable from a structural mismatch and reads as though the data is missing
+// when the value is present but keyed differently.
+//
+// It names the conditions and what the value carries for them, without reporting any
+// value the caller supplied beyond the keys, since a contribution can hold credentials
+// or other data that must not reach an error message.
+func selectorMismatchReason(selector *arrayItemSelector, valueToInject *MappingNode) string {
+	if selector.isScalar() {
+		return fmt.Sprintf(
+			"the value to inject does not match the selector's expected item value %q",
+			selector.conditions[0].value,
+		)
+	}
+
+	missing := []string{}
+	differing := []string{}
+	for _, condition := range selector.conditions {
+		value, exists := fieldsOf(valueToInject)[condition.key]
+		if !exists {
+			missing = append(missing, condition.key)
+			continue
+		}
+		if StringValue(value) != condition.value {
+			differing = append(differing, condition.key)
+		}
+	}
+
+	reason := "the value to inject does not match the selector that would locate it"
+	if len(missing) > 0 {
+		reason += fmt.Sprintf(", it has no %s field", strings.Join(missing, ", "))
+	}
+	if len(differing) > 0 {
+		reason += fmt.Sprintf(", its %s field holds a different value", strings.Join(differing, ", "))
+	}
+
+	return reason + ". A contribution has to carry the fields its own path selects on"
+}
+
+func fieldsOf(node *MappingNode) map[string]*MappingNode {
+	if node == nil || node.Fields == nil {
+		return map[string]*MappingNode{}
+	}
+	return node.Fields
 }
 
 func objectHasPropertyWithValue(selector *arrayItemSelector) func(*MappingNode) bool {

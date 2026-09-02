@@ -1,0 +1,26 @@
+version: 2025-11-02
+resources:
+  orderingProducer:
+    type: aws/lambda2/function
+    description: >
+      Holds in Deploy until the test has parked a readiness evaluation, so that
+      its config complete handling runs while that evaluation is in flight.
+    spec:
+      handler: "src/producer.handler"
+
+  orderingTrigger:
+    type: aws/lambda2/function
+    description: >
+      Completes immediately and with no dependencies of its own. Its completion
+      is what spawns the concurrent readiness evaluation the test parks.
+    spec:
+      handler: "src/trigger.handler"
+
+  orderingConsumer:
+    type: aws/consumer2/record
+    description: >
+      Reads a computed property of the producer, which is absent from the
+      blueprint and only readable from the producer's persisted state.
+    spec:
+      sourceId: "${resources.orderingProducer.spec.id}"
+      otherId: "static-value"

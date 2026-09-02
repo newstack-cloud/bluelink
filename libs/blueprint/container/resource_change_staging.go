@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"slices"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -121,7 +122,7 @@ func (s *defaultResourceChangeStager) composeLinkContributions(
 	ctx context.Context,
 	stageResourceInfo *stageResourceChangeInfo,
 	resourceInfo *provider.ResourceInfo,
-) (map[string]string, error) {
+) (*composedLinkContributions, error) {
 	// A blueprint that has never been deployed has no instance to hold links, and a
 	// resource that is being created has nothing contributed to it yet.
 	if stageResourceInfo.instanceID == "" {
@@ -146,6 +147,8 @@ func (s *defaultResourceChangeStager) composeLinkContributions(
 		return nil, nil
 	}
 
+	unapplied := []provider.UnappliedLinkField{}
+
 	// Composed specs are swapped onto this ResourceInfo rather than written into what it
 	// points at: the resolved resource is cached and read again to deploy the resource,
 	// where the declared spec is the one that gets persisted. The current state is already
@@ -160,6 +163,8 @@ func (s *defaultResourceChangeStager) composeLinkContributions(
 		if err != nil {
 			return nil, err
 		}
+
+		unapplied = appendUnappliedLinkFields(unapplied, current.Unresolved)
 
 		currentState := *resourceInfo.CurrentResourceState
 		currentState.SpecData = current.Spec
@@ -176,12 +181,52 @@ func (s *defaultResourceChangeStager) composeLinkContributions(
 			return nil, err
 		}
 
+		unapplied = appendUnappliedLinkFields(unapplied, desired.Unresolved)
+
 		composedResource := *resourceInfo.ResourceWithResolvedSubs
 		composedResource.Spec = desired.Spec
 		resourceInfo.ResourceWithResolvedSubs = &composedResource
 	}
 
-	return specmerge.LinkOwnedFields(resourceName, linksWithMappings), nil
+	return &composedLinkContributions{
+		linkOwnedFields: specmerge.LinkOwnedFields(resourceName, linksWithMappings),
+		unappliedFields: unapplied,
+	}, nil
+}
+
+// What composing a resource's link contributions produced, for the change set to carry.
+type composedLinkContributions struct {
+	linkOwnedFields map[string]string
+	unappliedFields []provider.UnappliedLinkField
+}
+
+// Both sides of the comparison are composed from the same links, so a contribution that
+// cannot be applied is reported by each of them. Reporting it once keeps the change set
+// from stating the same problem twice.
+func appendUnappliedLinkFields(
+	unapplied []provider.UnappliedLinkField,
+	unresolved []specmerge.UnresolvedProjection,
+) []provider.UnappliedLinkField {
+	for _, projection := range unresolved {
+		alreadyReported := slices.ContainsFunc(
+			unapplied,
+			func(existing provider.UnappliedLinkField) bool {
+				return existing.LinkName == projection.LinkName &&
+					existing.FieldPath == projection.ResourceFieldPath
+			},
+		)
+		if alreadyReported {
+			continue
+		}
+
+		unapplied = append(unapplied, provider.UnappliedLinkField{
+			LinkName:  projection.LinkName,
+			FieldPath: projection.ResourceFieldPath,
+			Reason:    projection.Reason,
+		})
+	}
+
+	return unapplied
 }
 
 // The links that contribute to a resource and that the blueprint being staged still has.
@@ -247,7 +292,7 @@ func (s *defaultResourceChangeStager) stageChanges(
 	declaredResource := resourceInfo.ResourceWithResolvedSubs
 	declaredResourceState := resourceInfo.CurrentResourceState
 
-	linkOwnedFields, err := s.composeLinkContributions(ctx, stageResourceInfo, resourceInfo)
+	composed, err := s.composeLinkContributions(ctx, stageResourceInfo, resourceInfo)
 	if err != nil {
 		resourceIDLogger.Debug(
 			"failed to compose the contributions links have made to the resource",
@@ -283,8 +328,11 @@ func (s *defaultResourceChangeStager) stageChanges(
 
 	// Says which link each field a link owns belongs to, so that a change to one can be
 	// reported against the link that made it rather than as an unexplained change to the
-	// resource.
-	changes.LinkOwnedFields = linkOwnedFields
+	// resource, along with any contribution that could not be composed at all.
+	if composed != nil {
+		changes.LinkOwnedFields = composed.linkOwnedFields
+		changes.UnappliedLinkFields = composed.unappliedFields
+	}
 
 	// The resource must be recreated if an element that it previously depended on
 	// has been removed.

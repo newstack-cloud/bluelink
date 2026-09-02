@@ -2197,13 +2197,15 @@ func (c *defaultBlueprintContainer) handleSuccessfulResourceDeployment(
 	saveElementInEphemeralState func(state.Element),
 	internalChannels *DeployChannels,
 ) error {
-	// Update the ephemeral deploy state before persisting
-	// the status update with the state container
-	// to make sure deployment state is consistent
-	// as the deploy state will be used across multiple goroutines
-	// to determine the next elements to deploy.
-	saveElementInEphemeralState(element)
-
+	// The spec has to reach the state container before the ephemeral state marks this
+	// element as satisfied. Dependants resolve computed fields such as IDs and ARNs by
+	// reading the dependency's state, and the ephemeral state is what releases them,
+	// concurrently, from goroutines this handler does not wait on. Marking first would
+	// advertise the element as ready while its spec is still absent from the state
+	// container, and a dependant that read it in that window would fail to resolve.
+	//
+	// Nothing is missed by marking second, the goroutine spawned below re-evaluates
+	// every dependant after both steps have completed.
 	resourceDeps := deployCtx.State.GetElementDependencies(element)
 	err := resources.Save(
 		ctx,
@@ -2212,6 +2214,8 @@ func (c *defaultBlueprintContainer) handleSuccessfulResourceDeployment(
 	if err != nil {
 		return err
 	}
+
+	saveElementInEphemeralState(element)
 
 	node := getDeploymentNode(
 		element,
@@ -2249,12 +2253,14 @@ func (c *defaultBlueprintContainer) handleResourceConfigComplete(
 	resources state.ResourcesContainer,
 	internalChannels *DeployChannels,
 ) error {
-	deployCtx.State.SetElementConfigComplete(element)
-
 	// Persist the full resource state (not just the status) at config-complete so the
 	// resource's computed fields are available to dependants.
 	// Some field values such as IDs are known at the config complete stage and
 	// are needed for dependants to deploy successfully.
+	//
+	// This has to complete before the element is marked config complete, since that mark
+	// is what allows dependants to be released, concurrently and from goroutines this
+	// handler does not wait on. See the note in handleSuccessfulResourceDeployment.
 	resourceDeps := deployCtx.State.GetElementDependencies(element)
 	err := resources.Save(
 		ctx,
@@ -2263,6 +2269,8 @@ func (c *defaultBlueprintContainer) handleResourceConfigComplete(
 	if err != nil {
 		return err
 	}
+
+	deployCtx.State.SetElementConfigComplete(element)
 
 	// To avoid blocking the handler from processing other messages
 	// run the logic to deploy the next elements in a separate goroutine.
