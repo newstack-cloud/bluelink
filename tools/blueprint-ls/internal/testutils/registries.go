@@ -217,9 +217,9 @@ func (r *ResourceRegistryMock) AcquireResourceLock(
 
 func (r *ResourceRegistryMock) ReleaseResourceLock(
 	ctx context.Context,
-	instanceID string,
-	resourceName string,
-) {
+	input *provider.ReleaseResourceLockInput,
+) error {
+	return nil
 }
 
 func (r *ResourceRegistryMock) ReleaseResourceLocks(
