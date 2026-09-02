@@ -1826,77 +1826,117 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterElement(
 	for groupIndex := deployCtx.CurrentGroupIndex + 1; groupIndex < len(deployCtx.DeploymentGroups); groupIndex++ {
 		beyondAdjacentGroup := groupIndex > deployCtx.CurrentGroupIndex+1
 		for _, node := range deployCtx.DeploymentGroups[groupIndex] {
-			dependencyNode := commoncore.Find(
-				node.DirectDependencies,
-				func(dep *DeploymentNode, _ int) bool {
-					return dep.Name() == elementName
-				},
-			)
-			isDependant := dependencyNode != nil
-			if beyondAdjacentGroup && !isDependant &&
-				c.hasPendingDependencies(node, deployCtx) {
-				continue
-			}
-
-			stabilisedDependencies, err := c.getStabilisedDependencies(
+			err := c.deployNodeIfReleasedBy(
 				ctx,
 				node,
-				deployCtx.ResourceRegistry,
-				deployCtx.ParamOverrides,
+				&releasedByElement{
+					elementName:         elementName,
+					configComplete:      configComplete,
+					instanceID:          instanceID,
+					groupIndex:          groupIndex,
+					beyondAdjacentGroup: beyondAdjacentGroup,
+				},
+				deployCtx,
+				internalChannels,
 			)
 			if err != nil {
 				deployCtx.Channels.ErrChan <- err
 				return
 			}
-
-			hasBlockedDependencies := c.checkBlockedDependencies(
-				node,
-				stabilisedDependencies,
-				[]string{elementName},
-				deployCtx.State,
-				deployCtx.InputChanges,
-			)
-
-			readyAfterCompletedElement := readyToDeployAfterDependency(
-				node,
-				dependencyNode,
-				stabilisedDependencies,
-				configComplete,
-			)
-
-			dependenciesComplete := (isDependant &&
-				!hasBlockedDependencies &&
-				readyAfterCompletedElement) ||
-				(!isDependant && !hasBlockedDependencies)
-
-			canDeploy := c.checkUpdateNodeCanDeploy(
-				node,
-				deployCtx.State,
-				// Elements that have no dependencies can appear in any group
-				// as the ordering only ensures that elements with dependencies
-				// are deployed after their dependencies.
-				dependenciesComplete || len(node.DirectDependencies) == 0,
-			)
-
-			// Only deploy nodes that have changes.
-			// This is essential for retry scenarios where some resources may have already
-			// been deployed successfully and have no pending changes.
-			if canDeploy && nodeHasChanges(node, deployCtx.InputChanges) {
-				instanceTreePath := getInstanceTreePath(deployCtx.ParamOverrides, instanceID)
-				c.deployNode(
-					ctx,
-					node,
-					instanceID,
-					instanceTreePath,
-					deployCtx.InputChanges,
-					DeployContextWithGroup(
-						DeployContextWithChannels(deployCtx, internalChannels),
-						groupIndex,
-					),
-				)
-			}
 		}
 	}
+}
+
+// The element whose completion is being evaluated, along with where in the traversal the
+// node being considered sits. Grouped so the per-node evaluation keeps to a signature that
+// can be read, since none of it varies across the nodes of one traversal except the group.
+type releasedByElement struct {
+	elementName         string
+	configComplete      bool
+	instanceID          string
+	groupIndex          int
+	beyondAdjacentGroup bool
+}
+
+// Starts one node if the completion described by released has left it with nothing to wait
+// for, reporting only the errors that must stop the traversal.
+func (c *defaultBlueprintContainer) deployNodeIfReleasedBy(
+	ctx context.Context,
+	node *DeploymentNode,
+	released *releasedByElement,
+	deployCtx *DeployContext,
+	internalChannels *DeployChannels,
+) error {
+	dependencyNode := commoncore.Find(
+		node.DirectDependencies,
+		func(dep *DeploymentNode, _ int) bool {
+			return dep.Name() == released.elementName
+		},
+	)
+	isDependant := dependencyNode != nil
+	if released.beyondAdjacentGroup && !isDependant &&
+		c.hasPendingDependencies(node, deployCtx) {
+		return nil
+	}
+
+	stabilisedDependencies, err := c.getStabilisedDependencies(
+		ctx,
+		node,
+		deployCtx.ResourceRegistry,
+		deployCtx.ParamOverrides,
+	)
+	if err != nil {
+		return err
+	}
+
+	hasBlockedDependencies := c.checkBlockedDependencies(
+		node,
+		stabilisedDependencies,
+		[]string{released.elementName},
+		deployCtx.State,
+		deployCtx.InputChanges,
+	)
+
+	readyAfterCompletedElement := readyToDeployAfterDependency(
+		node,
+		dependencyNode,
+		stabilisedDependencies,
+		released.configComplete,
+	)
+
+	dependenciesComplete := (isDependant &&
+		!hasBlockedDependencies &&
+		readyAfterCompletedElement) ||
+		(!isDependant && !hasBlockedDependencies)
+
+	canDeploy := c.checkUpdateNodeCanDeploy(
+		node,
+		deployCtx.State,
+		// Elements that have no dependencies can appear in any group
+		// as the ordering only ensures that elements with dependencies
+		// are deployed after their dependencies.
+		dependenciesComplete || len(node.DirectDependencies) == 0,
+	)
+
+	// Only deploy nodes that have changes.
+	// This is essential for retry scenarios where some resources may have already
+	// been deployed successfully and have no pending changes.
+	if canDeploy && nodeHasChanges(node, deployCtx.InputChanges) {
+		instanceTreePath := getInstanceTreePath(deployCtx.ParamOverrides, released.instanceID)
+		c.deployNode(
+			ctx,
+			node,
+			released.instanceID,
+			instanceTreePath,
+			deployCtx.InputChanges,
+			DeployContextWithGroup(
+				DeployContextWithChannels(deployCtx, internalChannels),
+				released.groupIndex,
+			),
+		)
+	}
+
+	return nil
 }
 
 func (c *defaultBlueprintContainer) getStabilisedDependencies(

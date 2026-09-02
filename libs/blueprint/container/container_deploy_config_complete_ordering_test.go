@@ -35,6 +35,7 @@ import (
 func TestDeployPersistsResourceSpecBeforeMarkingConfigComplete(t *testing.T) {
 	evaluatorParked := make(chan struct{})
 	releaseEvaluator := make(chan struct{})
+	evaluatorResumed := make(chan struct{})
 	producerGate := make(chan struct{})
 	producerSaving := make(chan struct{})
 	releaseProducerSave := make(chan struct{})
@@ -45,6 +46,7 @@ func TestDeployPersistsResourceSpecBeforeMarkingConfigComplete(t *testing.T) {
 		},
 		parked:  evaluatorParked,
 		release: releaseEvaluator,
+		resumed: evaluatorResumed,
 	}
 	stateContainer := newGatedSaveStateContainer(
 		memstate.NewMemoryStateContainer(),
@@ -150,12 +152,20 @@ func TestDeployPersistsResourceSpecBeforeMarkingConfigComplete(t *testing.T) {
 		// The producer's spec is now in flight to the state container and has not
 		// landed. Releasing the evaluation here is the moment we want to capture, it
 		// reads the producer's readiness while the spec is still absent.
-		windowEntered = true
 		consumer.releaseIfHeld()
 
-		// Give the released evaluation time to act on what it read before the
-		// save is allowed to complete. This bounds how long the window is held
-		// open, it is not what makes the outcome deterministic.
+		// Wait for the evaluation to actually resume before letting the save complete,
+		// so the window is held open until the released evaluation is running in it
+		// rather than for a guessed interval.
+		select {
+		case <-evaluatorResumed:
+			windowEntered = true
+		case <-time.After(defaultDrainTimeout):
+			return
+		}
+
+		// The readiness check the evaluation makes is the next thing it does after the
+		// signal above, not part of it, so the window has to stay open past the signal.
 		time.Sleep(200 * time.Millisecond)
 		stateContainer.releaseIfHeld()
 	}()
@@ -201,6 +211,7 @@ type orderingConsumerResource struct {
 	*unlinkedConsumerResource
 	parked   chan struct{}
 	release  chan struct{}
+	resumed  chan struct{}
 	mu       sync.Mutex
 	armed    bool
 	held     bool
@@ -234,6 +245,11 @@ func (r *orderingConsumerResource) GetStabilisedDependencies(
 	r.mu.Unlock()
 
 	if shouldPark {
+		// Closed on the way out rather than on release, so waiting on it proves the
+		// parked evaluation resumed inside the window rather than only that the test
+		// let it go.
+		defer close(r.resumed)
+
 		close(r.parked)
 		select {
 		case <-r.release:
