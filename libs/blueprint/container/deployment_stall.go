@@ -5,6 +5,7 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 )
 
 const (
@@ -118,6 +119,42 @@ func outstandingElementNames(
 	}
 	for _, childName := range inputChanges.RecreateChildren {
 		outstanding = appendIfUnfinished(outstanding, core.ChildElementID(childName), finished)
+	}
+
+	// Links are awaited alongside resources and children, so a stall caused by one has to
+	// name it. The sets here mirror those counted by countElementsToDeploy, or the report
+	// would either miss a link the deployment is waiting for or name one it is not.
+	for resourceName, resourceChanges := range inputChanges.NewResources {
+		outstanding = appendOutstandingLinks(
+			outstanding, resourceName, resourceChanges.NewOutboundLinks, finished,
+		)
+	}
+	for resourceName, resourceChanges := range inputChanges.ResourceChanges {
+		outstanding = appendOutstandingLinks(
+			outstanding, resourceName, resourceChanges.NewOutboundLinks, finished,
+		)
+		outstanding = appendOutstandingLinks(
+			outstanding, resourceName, resourceChanges.OutboundLinkChanges, finished,
+		)
+	}
+
+	return outstanding
+}
+
+// Both link change sets are keyed by the linked-to resource, with the linked-from resource
+// implied by the change set they hang off, so the logical name is built from the pair.
+func appendOutstandingLinks(
+	outstanding []string,
+	resourceName string,
+	linkChanges map[string]provider.LinkChanges,
+	finished map[string]*deployUpdateMessageWrapper,
+) []string {
+	for targetName := range linkChanges {
+		outstanding = appendIfUnfinished(
+			outstanding,
+			linkElementID(core.LogicalLinkName(resourceName, targetName)),
+			finished,
+		)
 	}
 
 	return outstanding

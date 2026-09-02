@@ -597,6 +597,35 @@ func (s *MappingPathsTestSuite) Test_inject_creates_nested_items_for_traversed_s
 	s.Assert().Len(node.Fields["policies"].Items, 2)
 }
 
+// Replacing an existing item is guarded in the same way as appending one, or the replaced
+// item could never be matched again and the next injection would append a duplicate beside
+// it rather than replace it.
+func (s *MappingPathsTestSuite) Test_inject_reports_a_replacement_that_its_selector_would_not_match() {
+	path := "$.statement[@.sid = \"Expected\"]"
+	node := &MappingNode{Fields: map[string]*MappingNode{
+		"statement": {Items: []*MappingNode{
+			{Fields: map[string]*MappingNode{
+				"sid":    MappingNodeFromString("Expected"),
+				"effect": MappingNodeFromString("Allow"),
+			}},
+		}},
+	}}
+	value := &MappingNode{Fields: map[string]*MappingNode{
+		"Sid":    MappingNodeFromString("Expected"),
+		"effect": MappingNodeFromString("Deny"),
+	}}
+
+	err := InjectPathValue(path, value, node, 10)
+	s.Require().Error(err)
+	s.Assert().Contains(err.Error(), "it has no sid field")
+	// The existing item is left as it was rather than replaced by one nothing can find.
+	s.Require().Len(node.Fields["statement"].Items, 1)
+	s.Assert().Equal(
+		"Allow",
+		StringValue(node.Fields["statement"].Items[0].Fields["effect"]),
+	)
+}
+
 func (s *MappingPathsTestSuite) Test_inject_reports_a_value_missing_the_field_its_selector_matches_on() {
 	path := "$.policies[@.policyName = \"bluelink-link-access\"]" +
 		".policyDocument.statement[@.sid = \"VPCNetworkInterfaces\"]"

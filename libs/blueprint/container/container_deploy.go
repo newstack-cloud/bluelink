@@ -1781,13 +1781,35 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterResource(
 	configComplete bool,
 	internalChannels *DeployChannels,
 ) {
+	c.deployNextElementsAfterElement(
+		ctx,
+		instanceID,
+		deployCtx,
+		core.ResourceElementID(deployedResource.ResourceName),
+		configComplete,
+		internalChannels,
+	)
+}
 
+// Evaluates the groups after the one that is currently being deployed and starts every
+// element whose dependencies are now satisfied, following the completion of one element.
+//
+// Shared by resource and child blueprint completions. The two differ only in how the
+// completed element is named and in whether a dependant may start once the element is
+// config complete, which only a resource reports, so both are taken as arguments.
+func (c *defaultBlueprintContainer) deployNextElementsAfterElement(
+	ctx context.Context,
+	instanceID string,
+	deployCtx *DeployContext,
+	elementName string,
+	configComplete bool,
+	internalChannels *DeployChannels,
+) {
 	if deployCtx.CurrentGroupIndex == len(deployCtx.DeploymentGroups)-1 {
 		// No more groups to deploy.
 		return
 	}
 
-	elementName := core.ResourceElementID(deployedResource.ResourceName)
 	// Evaluate the immediately-following group in full and then every subsequent group.
 	// A node can have direct dependencies spanning non-adjacent groups so that needs to
 	// be considered to avoid deadlocks where a node in a later group is waiting for a
@@ -1835,7 +1857,7 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterResource(
 				deployCtx.InputChanges,
 			)
 
-			readyToDeployAfterResource := readyToDeployAfterDependency(
+			readyAfterCompletedElement := readyToDeployAfterDependency(
 				node,
 				dependencyNode,
 				stabilisedDependencies,
@@ -1844,7 +1866,7 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterResource(
 
 			dependenciesComplete := (isDependant &&
 				!hasBlockedDependencies &&
-				readyToDeployAfterResource) ||
+				readyAfterCompletedElement) ||
 				(!isDependant && !hasBlockedDependencies)
 
 			canDeploy := c.checkUpdateNodeCanDeploy(
@@ -2405,104 +2427,16 @@ func (c *defaultBlueprintContainer) deployNextElementsAfterChild(
 	deployedChild *ChildBlueprintIDInfo,
 	internalChannels *DeployChannels,
 ) {
-
-	if deployCtx.CurrentGroupIndex == len(deployCtx.DeploymentGroups)-1 {
-		// No more groups to deploy.
-		return
-	}
-
-	elementName := core.ChildElementID(deployedChild.ChildName)
-	// Evaluate the immediately-following group in full and then every subsequent group.
-	// A node can have direct dependencies spanning non-adjacent groups so that needs to
-	// be considered to avoid deadlocks where a node in a later group is waiting for a
-	// dependency in an earlier group to complete.
-	//
-	// Earlier groups are not revisited. A dependency is always in an earlier group than
-	// the element that depends on it, since dependencies come from references and from
-	// hard links, which are recorded as references, and grouping follows that same
-	// ordering. So the element that a completion could release is always after it.
-	//
-	// Beyond the adjacent group a node is only evaluated when it could actually start,
-	// which is either because it depends on the element that just completed or because
-	// it is not waiting on anything this deployment will deploy.
-	for groupIndex := deployCtx.CurrentGroupIndex + 1; groupIndex < len(deployCtx.DeploymentGroups); groupIndex++ {
-		beyondAdjacentGroup := groupIndex > deployCtx.CurrentGroupIndex+1
-		for _, node := range deployCtx.DeploymentGroups[groupIndex] {
-			dependencyNode := commoncore.Find(
-				node.DirectDependencies,
-				func(dep *DeploymentNode, _ int) bool {
-					return dep.Name() == elementName
-				},
-			)
-			isDependant := dependencyNode != nil
-			if beyondAdjacentGroup && !isDependant &&
-				c.hasPendingDependencies(node, deployCtx) {
-				continue
-			}
-
-			// The next element may be a resource that depends on another resource
-			// that is expected to be stable before the resource in question can be deployed.
-			// For this reason, even when we are choosing elements to deploy after a child blueprint,
-			// other dependencies must be considered and stabilised dependencies must be checked.
-			stabilisedDependencies, err := c.getStabilisedDependencies(
-				ctx,
-				node,
-				deployCtx.ResourceRegistry,
-				deployCtx.ParamOverrides,
-			)
-			if err != nil {
-				deployCtx.Channels.ErrChan <- err
-				return
-			}
-
-			hasBlockedDependencies := c.checkBlockedDependencies(
-				node,
-				stabilisedDependencies,
-				[]string{elementName},
-				deployCtx.State,
-				deployCtx.InputChanges,
-			)
-
-			readyToDeployAfterChild := readyToDeployAfterDependency(
-				node,
-				dependencyNode,
-				stabilisedDependencies,
-				/* configComplete */ false,
-			)
-
-			dependenciesComplete := (isDependant &&
-				!hasBlockedDependencies &&
-				readyToDeployAfterChild) ||
-				(!isDependant && !hasBlockedDependencies)
-
-			canDeploy := c.checkUpdateNodeCanDeploy(
-				node,
-				deployCtx.State,
-				// Elements that have no dependencies can appear in any group
-				// as the ordering only ensures that elements with dependencies
-				// are deployed after their dependencies.
-				dependenciesComplete || len(node.DirectDependencies) == 0,
-			)
-
-			// Only deploy nodes that have changes.
-			// This is essential for retry scenarios where some resources may have already
-			// been deployed successfully and have no pending changes.
-			if canDeploy && nodeHasChanges(node, deployCtx.InputChanges) {
-				instanceTreePath := getInstanceTreePath(deployCtx.ParamOverrides, instanceID)
-				c.deployNode(
-					ctx,
-					node,
-					instanceID,
-					instanceTreePath,
-					deployCtx.InputChanges,
-					DeployContextWithGroup(
-						DeployContextWithChannels(deployCtx, internalChannels),
-						groupIndex,
-					),
-				)
-			}
-		}
-	}
+	// A child blueprint has no config complete stage of its own, so a dependant that only
+	// needs its dependency configured rather than stable is not released any earlier by it.
+	c.deployNextElementsAfterElement(
+		ctx,
+		instanceID,
+		deployCtx,
+		core.ChildElementID(deployedChild.ChildName),
+		/* configComplete */ false,
+		internalChannels,
+	)
 }
 
 func (c *defaultBlueprintContainer) handleChildDeployEvent(

@@ -1080,8 +1080,23 @@ func (c *defaultBlueprintContainer) applyResourceReconciliation(
 		currentState.PreciseStatus = action.NewStatus
 		currentState.LastStatusUpdateTimestamp = currentTime
 
+		// The links that contribute to this resource, read once and used for both the
+		// link data update and the removal below. Updating a link's data does not change
+		// its ResourceDataMappings, and removal is driven by those, so the second use
+		// does not need a re-read.
+		linksWithMappings, err := c.stateContainer.Links().ListWithResourceDataMappings(
+			ctx,
+			currentState.InstanceID,
+			currentState.Name,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to list links with resource data mappings: %w", err)
+		}
+
 		// Update any link.Data that references this resource via ResourceDataMappings
-		if err := c.updateAffectedLinkData(ctx, currentState, action.ExternalState); err != nil {
+		if err := c.updateAffectedLinkData(
+			ctx, currentState, action.ExternalState, linksWithMappings,
+		); err != nil {
 			return fmt.Errorf("failed to update affected link data: %w", err)
 		}
 
@@ -1089,10 +1104,10 @@ func (c *defaultBlueprintContainer) applyResourceReconciliation(
 		// everything links have written to it. Those values have just been recorded
 		// against the links that own them, and the resource's own spec holds what the
 		// blueprint declares, so they are taken back out rather than stored twice.
-		declaredSpec, err := c.specWithoutLinkContributions(
-			ctx,
+		declaredSpec, err := specWithoutLinkContributions(
 			&currentState,
 			action.ExternalState,
+			linksWithMappings,
 		)
 		if err != nil {
 			return err
@@ -1464,20 +1479,11 @@ func reconcilePreciseLinkToLinkStatus(preciseStatus core.PreciseLinkStatus) core
 // what a deployment composes back in. Holding the same values in the resource's spec as
 // well would leave two records of one thing, with nothing to say which link owns which
 // value where several contribute to the same resource.
-func (c *defaultBlueprintContainer) specWithoutLinkContributions(
-	ctx context.Context,
+func specWithoutLinkContributions(
 	resourceState *state.ResourceState,
 	externalState *core.MappingNode,
+	linksWithMappings []state.LinkState,
 ) (*core.MappingNode, error) {
-	linksWithMappings, err := c.stateContainer.Links().ListWithResourceDataMappings(
-		ctx,
-		resourceState.InstanceID,
-		resourceState.Name,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list links with resource data mappings: %w", err)
-	}
-
 	if len(linksWithMappings) == 0 {
 		return externalState, nil
 	}
@@ -1496,18 +1502,9 @@ func (c *defaultBlueprintContainer) updateAffectedLinkData(
 	ctx context.Context,
 	resourceState state.ResourceState,
 	externalState *core.MappingNode,
+	affectedLinks []state.LinkState,
 ) error {
 	links := c.stateContainer.Links()
-
-	// Find all links with ResourceDataMappings that reference this resource
-	affectedLinks, err := links.ListWithResourceDataMappings(
-		ctx,
-		resourceState.InstanceID,
-		resourceState.Name,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to list links with resource data mappings: %w", err)
-	}
 
 	for _, linkState := range affectedLinks {
 		linkDataUpdates := extractLinkDataUpdatesFromExternalState(

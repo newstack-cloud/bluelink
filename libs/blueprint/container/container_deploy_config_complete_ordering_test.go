@@ -119,6 +119,11 @@ func TestDeployPersistsResourceSpecBeforeMarkingConfigComplete(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// Whether the sequence actually reached the window this test exists to enter. Without
+	// it, a gate that never opens leaves the deployment to run normally and the test
+	// passes having proved nothing.
+	windowEntered := false
+
 	sequenceDone := make(chan struct{})
 	go func() {
 		defer close(sequenceDone)
@@ -145,6 +150,7 @@ func TestDeployPersistsResourceSpecBeforeMarkingConfigComplete(t *testing.T) {
 		// The producer's spec is now in flight to the state container and has not
 		// landed. Releasing the evaluation here is the moment we want to capture, it
 		// reads the producer's readiness while the spec is still absent.
+		windowEntered = true
 		consumer.releaseIfHeld()
 
 		// Give the released evaluation time to act on what it read before the
@@ -173,6 +179,12 @@ func TestDeployPersistsResourceSpecBeforeMarkingConfigComplete(t *testing.T) {
 	stateContainer.releaseIfHeld()
 	<-sequenceDone
 
+	require.True(
+		t,
+		windowEntered,
+		"the deployment never reached the window this test exists to enter, "+
+			"so a passing result says nothing about the ordering",
+	)
 	require.NoError(t, err)
 	require.NotNil(t, finishedMessage)
 	require.Equal(

@@ -31,6 +31,13 @@ func (s *LinkDeployerTestSuite) SetupTest() {
 	s.deployer = &defaultLinkDeployer{
 		clock:          &core.SystemClock{},
 		stateContainer: s.stateContainer,
+		// Settling is polled through this, so leaving it nil panics as soon as a
+		// fixture reaches a phase that writes a resource. Intervals are short so a
+		// resource that never settles fails the test rather than stalling it.
+		settlePollingConfig: &LinkSettlePollingConfig{
+			PollingInterval: 10 * time.Millisecond,
+			PollingTimeout:  2 * time.Second,
+		},
 	}
 	s.resourceRegistry = internal.NewResourceRegistryMock(
 		map[string]provider.Resource{

@@ -101,7 +101,7 @@ func (d *defaultLinkDeployer) waitForResourceToSettle(
 		return err
 	}
 
-	err = d.pollUntilResourceSettles(settleCtx, resourceImpl, input, resourceInfo, deployCtx)
+	err = d.pollUntilResourceSettles(ctx, settleCtx, resourceImpl, input, resourceInfo, deployCtx)
 	deployCtx.Logger.Debug(
 		"link settle wait polled until the resource stabilised",
 		core.StringLogField("resourceName", resourceInfo.ResourceName),
@@ -112,8 +112,13 @@ func (d *defaultLinkDeployer) waitForResourceToSettle(
 	return err
 }
 
+// The settle context carries the polling timeout on top of the deployment's own context,
+// so it finishes for either reason. Reporting both as a settle timeout would tell the user
+// a resource took longer than the timeout to stabilise whenever a deployment was cancelled,
+// which is why the parent is checked first.
 func (d *defaultLinkDeployer) pollUntilResourceSettles(
 	ctx context.Context,
+	settleCtx context.Context,
 	resourceImpl provider.Resource,
 	input *provider.ResourceHasStabilisedInput,
 	resourceInfo *provider.ResourceInfo,
@@ -121,13 +126,17 @@ func (d *defaultLinkDeployer) pollUntilResourceSettles(
 ) error {
 	for {
 		select {
-		case <-ctx.Done():
+		case <-settleCtx.Done():
+			if parentErr := ctx.Err(); parentErr != nil {
+				return parentErr
+			}
+
 			return errLinkResourceSettleTimeout(
 				resourceInfo.ResourceName,
 				d.settlePollingConfig.PollingTimeout,
 			)
 		case <-time.After(d.settlePollingConfig.PollingInterval):
-			settled, err := d.hasResourceSettled(ctx, resourceImpl, input)
+			settled, err := d.hasResourceSettled(settleCtx, resourceImpl, input)
 			if err != nil {
 				return err
 			}
