@@ -640,7 +640,11 @@ func LinkChangesHasFieldChanges(changes *LinkChanges) bool {
 	}
 	return len(changes.ModifiedFields) > 0 ||
 		len(changes.NewFields) > 0 ||
-		len(changes.RemovedFields) > 0
+		len(changes.RemovedFields) > 0 ||
+		// A link reporting only that a value will be known on deploy is still a link with
+		// something to report. Dropping it leaves the change set silent about a field that
+		// changes when the deployment runs.
+		len(changes.FieldChangesKnownOnDeploy) > 0
 }
 
 // LinkContext provides access to information about providers

@@ -1,0 +1,20 @@
+version: 2025-11-02
+resources:
+  linkedFunction:
+    type: aws/lambda2/function
+    metadata:
+      labels:
+        app: sync
+    spec:
+      handler: "src/sync.handler"
+
+  eventsRule:
+    type: aws/events2/rule
+    description: >
+      Declares targetArn only. otherArn is contributed by the link and is held in
+      the link's data rather than in the blueprint.
+    linkSelector:
+      byLabel:
+        app: sync
+    spec:
+      targetArn: "arn:aws:lambda:eu-west-2:123456789012:function:sync"

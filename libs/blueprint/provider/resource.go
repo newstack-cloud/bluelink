@@ -504,6 +504,11 @@ func HasAnyChanges(changes *Changes) bool {
 		return false
 	}
 	return ChangesHasFieldChanges(changes) ||
+		// A field whose value is settled only once the blueprint is deployed is a change,
+		// and a resource holding one has to be deployed for the value to be applied. It is
+		// counted here rather than in ChangesHasFieldChanges because it is not a field
+		// change to render, there is no before and after to show yet.
+		len(changes.FieldChangesKnownOnDeploy) > 0 ||
 		len(changes.NewOutboundLinks) > 0 ||
 		len(changes.OutboundLinkChanges) > 0 ||
 		len(changes.RemovedOutboundLinks) > 0
