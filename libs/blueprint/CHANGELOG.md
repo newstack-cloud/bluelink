@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.53.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.52.0...blueprint/v0.53.0) (2026-09-02)
+
+
+### Features
+
+* **blueprint:** add functionality to release resource locks held by links ([13b4295](https://github.com/newstack-cloud/bluelink/commit/13b4295dbdfc0aaecd34644a016eeb53087dd99f))
+* **blueprint:** compare resources with the contributions links made to them ([9b2bad8](https://github.com/newstack-cloud/bluelink/commit/9b2bad8324ab62c43c19362a8094bafa2667c78a))
+* **blueprint:** deploy links concurrently with a scheduler ([beae5db](https://github.com/newstack-cloud/bluelink/commit/beae5db428716199d59454f3746eca2728767ab0))
+* **blueprint:** deploy resources with the contributions links made to them ([fea51f4](https://github.com/newstack-cloud/bluelink/commit/fea51f471060a838602f7be87e6cae7dcda379d6))
+* **blueprint:** keep link contributions out of the persisted resource spec ([1c64759](https://github.com/newstack-cloud/bluelink/commit/1c64759ee496cca4b729c16d5a3baa2db66151fa))
+* **blueprint:** let links declare which resources they write ([bcab6e9](https://github.com/newstack-cloud/bluelink/commit/bcab6e99cfa3e6d316c07d8316b3bb93dbdc9b65))
+* **blueprint:** recover a link contribution from the deployed resource ([6387ee0](https://github.com/newstack-cloud/bluelink/commit/6387ee0f2419a974549f7d2096e74a3e5e88bb9b))
+* **blueprint:** say which link contributes each field a link owns ([56e826c](https://github.com/newstack-cloud/bluelink/commit/56e826c4144f75229283f8edcac506dcdc22dacb))
+* **blueprint:** share link data projections as a spec composition ([d551c70](https://github.com/newstack-cloud/bluelink/commit/d551c70cb5cd103769cac0426094ac3b11ef8128))
+* **blueprint:** wait for a resource to settle before a link releases it ([8e49533](https://github.com/newstack-cloud/bluelink/commit/8e49533fc2fe32c6a124938945a7d26e731d2340))
+
+
+### Bug Fixes
+
+* **blueprint:** add correction to resolve the namespace for a transformer plugin ([7822981](https://github.com/newstack-cloud/bluelink/commit/78229810efc3c3dd25291da7b446c94cf1f5df86))
+* **blueprint:** add corrections to handling of sensitive fields ([d4a058d](https://github.com/newstack-cloud/bluelink/commit/d4a058dac9a443b56bd1fddf6e1f5ef31d81139c))
+* **blueprint:** add missing behaviour on the wire for handling empty mapping nodes ([0ecbfac](https://github.com/newstack-cloud/bluelink/commit/0ecbfac5140d95308578ec68c95f1aaa488e4e2e))
+* **blueprint:** address review findings on link scheduling and composition ([b1a3087](https://github.com/newstack-cloud/bluelink/commit/b1a308754d25b14cc1988a46813ef298e3f71807))
+* **blueprint:** deploy elements an update is not waiting on anything for ([5a5edd7](https://github.com/newstack-cloud/bluelink/commit/5a5edd73308c8303f86d867bf7b1151ffdf2d23d))
+* **blueprint:** deploy elements grouped before what they depend on ([109036f](https://github.com/newstack-cloud/bluelink/commit/109036fa0d7ae2418908f35afc2114a68f1bc175))
+* **blueprint:** deploy elements stranded beyond the adjacent group ([85cac86](https://github.com/newstack-cloud/bluelink/commit/85cac869d9d2ba0f603cb333f808b41a93328651))
+* **blueprint:** make sure direct deps are computed from expanded blueprint template ([812219e](https://github.com/newstack-cloud/bluelink/commit/812219e12d46313288f0ea88681ea08650d0dfa3))
+* **blueprint:** make sure link durations are tracked correctly ([68a810b](https://github.com/newstack-cloud/bluelink/commit/68a810bfb288774378518847224688fa5ef0fb18))
+* **blueprint:** only treat a hard link as a dependency ([eba8b14](https://github.com/newstack-cloud/bluelink/commit/eba8b145c70b8f715bdfef613cdbe061f9721181))
+* **blueprint:** persist a resource's spec before releasing its dependants ([3813fcc](https://github.com/newstack-cloud/bluelink/commit/3813fcc6b1a7359bb3b558d307201dfce44a0f3c))
+* **blueprint:** resolve references to resources a deployment is not touching ([c79e55f](https://github.com/newstack-cloud/bluelink/commit/c79e55f11db14f3e663833c791259b7f1c6957b1))
+* **blueprint:** stop an unreportable link error stalling the deployment ([b1ed271](https://github.com/newstack-cloud/bluelink/commit/b1ed271c117d5100e19f2d17eb8487526573c9d9))
+* **blueprint:** tell a resource why its stabilisation is being checked ([e7498c8](https://github.com/newstack-cloud/bluelink/commit/e7498c894cc949c92bbff6809b65bcb06dc3920a))
+
 ## [0.52.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.51.2...blueprint/v0.52.0) (2026-08-07)
 
 
