@@ -1,6 +1,6 @@
 module github.com/newstack-cloud/bluelink/tools/bluelink-manager
 
-go 1.25.0
+go 1.26.4
 
 toolchain go1.26.5
 
