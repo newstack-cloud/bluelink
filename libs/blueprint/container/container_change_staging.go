@@ -161,6 +161,21 @@ func (c *defaultBlueprintContainer) stageChanges(
 		return
 	}
 
+	// Applied once every group has been staged rather than while a resource is staged,
+	// since it lines a resource's fields up against the changes staged for the links that
+	// contribute them and the two are produced separately. It runs before the changes are
+	// extracted, because extraction drops resources with no changes and a resource whose
+	// only change is a contribution the link says will move would go with them.
+	err = c.reclassifyLinkOwnedFields(ctx, instanceID, state, parallelGroups)
+	if err != nil {
+		changeStagingLogger.Debug(
+			"error reclassifying link-owned fields the contributing link reports as changing",
+			core.ErrorLogField("error", err),
+		)
+		channels.ErrChan <- wrapErrorForChildContext(err, paramOverrides)
+		return
+	}
+
 	channels.CompleteChan <- state.ExtractBlueprintChanges()
 }
 

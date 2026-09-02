@@ -237,6 +237,41 @@ func RemoveLinkProjections(
 	return stripped, nil
 }
 
+// LinkFieldSource identifies where the value of a link-contributed resource field comes
+// from, which is the link that owns it and the path in that link's data holding the value.
+type LinkFieldSource struct {
+	// LinkName is the logical name of the link that contributes the field.
+	LinkName string
+	// LinkDataPath is the path in the link's data the value is read from. It is the same
+	// vocabulary a link reports its own field changes in, so the two can be compared.
+	LinkDataPath string
+}
+
+// LinkFieldSources reports, for each field of a resource that links contribute, the link
+// that owns it and the path in that link's data the value comes from.
+//
+// LinkOwnedFields answers who owns a field, which is what a change set reports. This
+// answers where the value comes from as well, which is what a caller needs to line a
+// resource's fields up against the changes a link has staged for its own data.
+func LinkFieldSources(
+	resourceName string,
+	links []state.LinkState,
+) map[string]LinkFieldSource {
+	sources := map[string]LinkFieldSource{}
+	for _, projection := range orderedProjectionsFor(resourceName, links) {
+		sources[projection.fieldPath] = LinkFieldSource{
+			LinkName:     projection.linkName,
+			LinkDataPath: projection.linkDataPath,
+		}
+	}
+
+	if len(sources) == 0 {
+		return nil
+	}
+
+	return sources
+}
+
 // LinkOwnedFields reports the field paths of a resource that links contribute, mapped to
 // the logical name of the link that contributes each one.
 //
