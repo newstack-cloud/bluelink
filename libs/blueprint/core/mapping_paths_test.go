@@ -567,6 +567,71 @@ func fixtureCompoundSelectorNode() *MappingNode {
 	}
 }
 
+func (s *MappingPathsTestSuite) Test_inject_creates_nested_items_for_traversed_selectors() {
+	path := "$.policies[@.policyName = \"bluelink-link-access\"]" +
+		".policyDocument.statement[@.sid = \"VPCNetworkInterfaces\"]"
+	node := &MappingNode{Fields: map[string]*MappingNode{
+		"policies": {Items: []*MappingNode{
+			{Fields: map[string]*MappingNode{
+				"policyName": MappingNodeFromString("celerity-resource-links-store"),
+			}},
+		}},
+	}}
+	value := &MappingNode{Fields: map[string]*MappingNode{
+		"sid":    MappingNodeFromString("VPCNetworkInterfaces"),
+		"effect": MappingNodeFromString("Allow"),
+	}}
+
+	err := InjectPathValue(path, value, node, 10)
+	s.Require().NoError(err)
+
+	injected, err := GetPathValue(path, node, 10)
+	s.Require().NoError(err)
+	s.Assert().Equal(value, injected)
+
+	// The declared policy is untouched and the created one is matched by the
+	// selector that created it, so a second injection is a no-op.
+	s.Require().Len(node.Fields["policies"].Items, 2)
+	err = InjectPathValue(path, value, node, 10)
+	s.Require().NoError(err)
+	s.Assert().Len(node.Fields["policies"].Items, 2)
+}
+
+func (s *MappingPathsTestSuite) Test_inject_reports_a_value_missing_the_field_its_selector_matches_on() {
+	path := "$.policies[@.policyName = \"bluelink-link-access\"]" +
+		".policyDocument.statement[@.sid = \"VPCNetworkInterfaces\"]"
+	node := &MappingNode{Fields: map[string]*MappingNode{
+		"policies": {Items: []*MappingNode{}},
+	}}
+	// Carries the selected field under a different casing, which is how an IAM
+	// JSON statement reaches a spec that names the field "sid".
+	value := &MappingNode{Fields: map[string]*MappingNode{
+		"Sid":    MappingNodeFromString("VPCNetworkInterfaces"),
+		"Effect": MappingNodeFromString("Allow"),
+	}}
+
+	err := InjectPathValue(path, value, node, 10)
+	s.Require().Error(err)
+	s.Assert().Contains(err.Error(), "it has no sid field")
+	s.Assert().Contains(err.Error(), "carry the fields its own path selects on")
+	// The mismatched value must not be reported, only the field names.
+	s.Assert().NotContains(err.Error(), "Allow")
+}
+
+func (s *MappingPathsTestSuite) Test_inject_reports_a_value_holding_a_different_value_for_its_selector() {
+	path := "$.statement[@.sid = \"Expected\"]"
+	node := &MappingNode{Fields: map[string]*MappingNode{
+		"statement": {Items: []*MappingNode{}},
+	}}
+	value := &MappingNode{Fields: map[string]*MappingNode{
+		"sid": MappingNodeFromString("Different"),
+	}}
+
+	err := InjectPathValue(path, value, node, 10)
+	s.Require().Error(err)
+	s.Assert().Contains(err.Error(), "its sid field holds a different value")
+}
+
 func TestMappingPathsTestSuite(t *testing.T) {
 	suite.Run(t, new(MappingPathsTestSuite))
 }

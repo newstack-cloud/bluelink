@@ -168,6 +168,60 @@ func (s *LinkProjectionsTestSuite) Test_reports_a_contribution_that_cannot_be_re
 	s.Assert().Equal("spec.vpcConfig.subnetIds", result.Unresolved[0].ResourceFieldPath)
 }
 
+// A contribution recorded against a path that cannot locate it is reported rather than
+// raised, so that data already in state, which nothing the user changes in the blueprint
+// can repair, does not make the resource permanently unstageable. The observed case was a
+// link recording a statement keyed "Sid" under a path selecting on "@.sid".
+func (s *LinkProjectionsTestSuite) Test_reports_a_contribution_that_does_not_fit_its_path() {
+	link := state.LinkState{
+		Name: "appVpc::listUsersFunction",
+		Data: map[string]*core.MappingNode{
+			"executionRole": core.MappingNodeFields(
+				"permission",
+				core.MappingNodeFields(
+					"Sid", core.MappingNodeFromString("VPCNetworkInterfaces"),
+					"Effect", core.MappingNodeFromString("Allow"),
+				),
+			),
+		},
+		ResourceDataMappings: map[string]string{
+			"lambdaExecutionRole::spec.policies[@.policyName=\"bluelink-link-access\"]" +
+				".policyDocument.statement[@.sid=\"VPCNetworkInterfaces\"]": "[\"executionRole\"].permission",
+		},
+	}
+	declared := core.MappingNodeFields(
+		"policies", &core.MappingNode{Items: []*core.MappingNode{}},
+	)
+
+	result, err := ApplyLinkProjections(declared, "lambdaExecutionRole", []state.LinkState{link})
+
+	s.Require().NoError(err, "an unapplicable contribution must be reported, not raised")
+	s.Require().Len(result.Unresolved, 1)
+	s.Assert().Equal("appVpc::listUsersFunction", result.Unresolved[0].LinkName)
+	s.Assert().Contains(result.Unresolved[0].Reason, "it has no sid field")
+	// The spec is still usable, with the contribution simply absent from it.
+	s.Assert().NotNil(result.Spec)
+}
+
+// The two reasons must be distinguishable, since one is a link that recorded nothing and
+// the other is a link whose recorded value does not fit the path it claims.
+func (s *LinkProjectionsTestSuite) Test_distinguishes_a_missing_contribution_from_an_unfitting_one() {
+	link := vpcLinkState()
+	link.Data = map[string]*core.MappingNode{}
+
+	result, err := ApplyLinkProjections(
+		core.MappingNodeFields("handler", core.MappingNodeFromString("src/handler.handler")),
+		"listUsersFunction",
+		[]state.LinkState{link},
+	)
+	s.Require().NoError(err)
+	s.Require().NotEmpty(result.Unresolved)
+	s.Assert().Equal(
+		"the link's data holds no value at this path",
+		result.Unresolved[0].Reason,
+	)
+}
+
 func (s *LinkProjectionsTestSuite) Test_applies_nothing_when_no_link_contributes() {
 	result, err := ApplyLinkProjections(
 		core.MappingNodeFields("handler", core.MappingNodeFromString("src/handler.handler")),

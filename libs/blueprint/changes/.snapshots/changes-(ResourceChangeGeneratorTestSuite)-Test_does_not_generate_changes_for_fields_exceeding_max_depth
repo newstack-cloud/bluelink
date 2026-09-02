@@ -466,6 +466,7 @@
     (string) (len=18) "spec.vendorTags[0]"
   },
   LinkOwnedFields: (map[string]string) <nil>,
+  UnappliedLinkFields: ([]provider.UnappliedLinkField) <nil>,
   ComputedFields: ([]string) (len=2) {
     (string) (len=28) "spec.computedFieldTrackDrift",
     (string) (len=7) "spec.id"

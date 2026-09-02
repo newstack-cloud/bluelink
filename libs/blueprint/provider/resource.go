@@ -407,6 +407,18 @@ type ResourceDestroyInput struct {
 	ProviderContext Context
 }
 
+// UnappliedLinkField is a contribution a link records against a resource that could not
+// be composed into the resource's spec, reported so that the field the deployed resource
+// holds is not silently absent from the change set.
+type UnappliedLinkField struct {
+	// LinkName is the logical name of the link that owns the field.
+	LinkName string `json:"linkName"`
+	// FieldPath is the path in the resource spec the link owns.
+	FieldPath string `json:"fieldPath"`
+	// Reason says why the contribution could not be composed.
+	Reason string `json:"reason"`
+}
+
 // Changes provides a set of modified fields along with a version
 // of the resource schema (includes metadata labels and annotations) and spec
 // that has already had all it's variables substituted.
@@ -430,6 +442,15 @@ type Changes struct {
 	// be reported as the loss of what a named link contributes rather than as a field
 	// disappearing for no stated reason.
 	LinkOwnedFields map[string]string `json:"linkOwnedFields,omitempty"`
+	// UnappliedLinkFields lists contributions a link records against this resource that
+	// could not be composed into its spec.
+	//
+	// Composition reports these rather than failing, so that data already written to
+	// state, which nothing the user changes in the blueprint can repair, does not make
+	// a resource permanently unstageable. Each one is a field the deployed resource
+	// holds that the change set could not account for, so deploying without resolving
+	// it removes that field, and it has to reach the user rather than be dropped.
+	UnappliedLinkFields []UnappliedLinkField `json:"unappliedLinkFields,omitempty"`
 	// ComputedFields holds a list of field paths that are computed
 	// at deploy time. This is primarily useful to give fast access to
 	// information about which fields are computed without having to inspect

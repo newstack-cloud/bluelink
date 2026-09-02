@@ -2283,12 +2283,37 @@ func (r *defaultSubstitutionResolver) resolveResourceSpecPropertyFromStateOrDefa
 			resourceState = &freshResourceState
 		}
 
-		return getResourceSpecPropertyFromState(
+		resolved, err := getResourceSpecPropertyFromState(
 			resourceState,
 			prop,
 			definition,
 			resolveCtx,
 		)
+		if err != nil {
+			runErr, isRunErr := err.(*errors.RunError)
+			if isRunErr && runErr.ReasonCode == ErrorReasonCodeMissingResourceSpecProperty {
+				// A state without the property may be one that was read before the
+				// resource finished deploying, so it must not be retained. The cache
+				// lives for the whole deployment and is never otherwise invalidated,
+				// which would turn a single early read into a failure that persists
+				// for every later read of this resource, retries included.
+				r.resourceStateCache.Delete(resourceName)
+
+				// Says what was actually read, so that a resource deployed without the
+				// field, one read before it had been deployed, and one whose state was
+				// never written can be told apart from the failure alone.
+				return nil, errMissingResourceSpecPropertyInState(
+					resolveCtx.currentElementName,
+					prop,
+					resourceState,
+					hasResourceState,
+				)
+			}
+
+			return nil, err
+		}
+
+		return resolved, nil
 	}
 
 	// A computed-when-omitted property (e.g. an auto-generated resource name)

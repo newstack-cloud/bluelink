@@ -9,7 +9,7 @@ import (
 )
 
 // UnresolvedProjection identifies a link contribution that a resource's state claims
-// exists and that could not be read back from the link's data.
+// exists and that could not be composed into the resource's spec.
 type UnresolvedProjection struct {
 	// LinkName is the logical name of the link that owns the field.
 	LinkName string
@@ -18,6 +18,10 @@ type UnresolvedProjection struct {
 	ResourceFieldPath string
 	// LinkDataPath is the path in the link's data the value was expected at.
 	LinkDataPath string
+	// Reason says why the contribution could not be composed, so that a contribution
+	// missing from the link's data can be told apart from one that was found but does
+	// not fit the resource field it claims.
+	Reason string
 }
 
 // LinkProjectionResult holds a spec with link contributions applied, along with any
@@ -132,6 +136,7 @@ func applyLinkProjection(
 			LinkName:          projection.linkName,
 			ResourceFieldPath: projection.fieldPath,
 			LinkDataPath:      projection.linkDataPath,
+			Reason:            "the link's data holds no value at this path",
 		})
 		return nil
 	}
@@ -143,7 +148,17 @@ func applyLinkProjection(
 		core.MappingNodeMaxTraverseDepth,
 	)
 	if err != nil {
-		return errApplyLinkProjection(projection.linkName, projection.fieldPath, err)
+		// A contribution that does not fit the field it claims is reported in the same
+		// way as one that is missing, rather than raised. Raising it stops the caller on
+		// data it cannot do anything about, the mapping and the value are both already
+		// recorded, so nothing the user changes in the blueprint repairs them, and a
+		// caller that cannot proceed refuses on its own terms further up.
+		result.Unresolved = append(result.Unresolved, UnresolvedProjection{
+			LinkName:          projection.linkName,
+			ResourceFieldPath: projection.fieldPath,
+			LinkDataPath:      projection.linkDataPath,
+			Reason:            err.Error(),
+		})
 	}
 
 	return nil
