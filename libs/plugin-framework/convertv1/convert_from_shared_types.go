@@ -1128,7 +1128,27 @@ func FromPBResourceChanges(changes *sharedtypesv1.Changes) (*provider.Changes, e
 		OutboundLinkChanges:       outboundLinkChanges,
 		RemovedOutboundLinks:      changes.RemovedOutboundLinks,
 		LinkOwnedFields:           changes.LinkOwnedFields,
+		UnappliedLinkFields:       fromPBUnappliedLinkFields(changes.UnappliedLinkFields),
 	}, nil
+}
+
+func fromPBUnappliedLinkFields(
+	pbUnapplied []*sharedtypesv1.UnappliedLinkField,
+) []provider.UnappliedLinkField {
+	if pbUnapplied == nil {
+		return nil
+	}
+
+	unapplied := make([]provider.UnappliedLinkField, len(pbUnapplied))
+	for i, field := range pbUnapplied {
+		unapplied[i] = provider.UnappliedLinkField{
+			LinkName:  field.GetLinkName(),
+			FieldPath: field.GetFieldPath(),
+			Reason:    field.GetReason(),
+		}
+	}
+
+	return unapplied
 }
 
 // FromPBResourceInfo converts a ResourceInfo from a protobuf message to a core type

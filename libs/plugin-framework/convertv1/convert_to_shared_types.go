@@ -543,7 +543,27 @@ func ToPBChanges(
 		OutboundLinkChanges:       outboundLinkChanges,
 		RemovedOutboundLinks:      changes.RemovedOutboundLinks,
 		LinkOwnedFields:           changes.LinkOwnedFields,
+		UnappliedLinkFields:       toPBUnappliedLinkFields(changes.UnappliedLinkFields),
 	}, nil
+}
+
+func toPBUnappliedLinkFields(
+	unapplied []provider.UnappliedLinkField,
+) []*sharedtypesv1.UnappliedLinkField {
+	if unapplied == nil {
+		return nil
+	}
+
+	pbUnapplied := make([]*sharedtypesv1.UnappliedLinkField, len(unapplied))
+	for i, field := range unapplied {
+		pbUnapplied[i] = &sharedtypesv1.UnappliedLinkField{
+			LinkName:  field.LinkName,
+			FieldPath: field.FieldPath,
+			Reason:    field.Reason,
+		}
+	}
+
+	return pbUnapplied
 }
 
 // ToPBResourceInfo converts a blueprint framework ResourceInfo

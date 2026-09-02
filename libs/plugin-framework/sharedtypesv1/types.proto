@@ -894,6 +894,10 @@ message Changes {
     // appear in modified_fields, new_fields and removed_fields like any other,
     // and this says which link each one belongs to.
     map<string, string> link_owned_fields = 13;
+    // Contributions a link records against this resource that could not be composed
+    // into its spec. Each one is a field the deployed resource holds that the change
+    // set could not account for, so deploying without resolving it removes that field.
+    repeated UnappliedLinkField unapplied_link_fields = 14;
 }
 
 // FieldChange represents a change in a field value of
@@ -1665,4 +1669,16 @@ enum ErrorCode {
     // the deploy engine host to provide a more specific
     // error message to the user.
     ERROR_CODE_BAD_INPUT = 2;
+}
+
+// UnappliedLinkField is a contribution a link records against a resource that could
+// not be composed into the resource's spec, reported so that the field the deployed
+// resource holds is not silently absent from the change set.
+message UnappliedLinkField {
+    // The logical name of the link that owns the field.
+    string link_name = 1;
+    // The path in the resource spec the link owns.
+    string field_path = 2;
+    // Why the contribution could not be composed.
+    string reason = 3;
 }
