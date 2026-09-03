@@ -407,6 +407,27 @@ type ResourceDriftState struct {
 	// Timestamp holds the unix timestamp of when the drift
 	// was detected.
 	Timestamp *int `json:"timestamp,omitempty"`
+	// UnappliedLinkContributions holds the contributions links record against the
+	// resource that could not be composed into the spec the drift was measured against.
+	//
+	// A drift check compares the resource as it was deployed, which includes what links
+	// wrote to it, against the resource as it is. A contribution that could not be
+	// composed leaves the deployed side missing a field the live resource holds, so drift
+	// is reported from a partial picture. Tolerating that is deliberate, since reporting
+	// drift from a partial picture is a lesser problem than a deployment applying one.
+	// Reporting it without saying so is not, and this is what says so.
+	UnappliedLinkContributions []UnappliedLinkContribution `json:"unappliedLinkContributions,omitempty"`
+}
+
+// UnappliedLinkContribution identifies a contribution a link records against a resource
+// that could not be composed into the resource's spec.
+type UnappliedLinkContribution struct {
+	// LinkName is the logical name of the link that owns the field.
+	LinkName string `json:"linkName"`
+	// FieldPath is the path in the resource spec the link owns.
+	FieldPath string `json:"fieldPath"`
+	// Reason says why the contribution could not be composed.
+	Reason string `json:"reason"`
 }
 
 // ResourceDriftChanges holds the changes that have been detected

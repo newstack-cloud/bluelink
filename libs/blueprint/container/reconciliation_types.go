@@ -3,6 +3,7 @@ package container
 import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
 // ReconciliationType indicates why reconciliation is needed for an element.
@@ -121,6 +122,10 @@ type ResourceReconcileResult struct {
 	ResourceExists bool `json:"resourceExists"`
 	// RecommendedAction is the suggested action based on the reconciliation analysis.
 	RecommendedAction ReconciliationAction `json:"recommendedAction"`
+	// UnappliedLinkContributions holds the contributions links record against the resource
+	// that could not be composed into the spec for drift, so a difference reported from
+	// an incomplete picture says which part of it is missing.
+	UnappliedLinkContributions []state.UnappliedLinkContribution `json:"unappliedLinkContributions,omitempty"`
 }
 
 // HasStateChanges returns true if the reconcile result has detected

@@ -424,6 +424,8 @@ func (c *defaultBlueprintContainer) checkResourceDriftReconciliation(
 		Changes:           convertResourceDriftChangesToProviderChanges(driftState.Difference),
 		ResourceExists:    true,
 		RecommendedAction: ReconciliationActionAcceptExternal,
+
+		UnappliedLinkContributions: driftState.UnappliedLinkContributions,
 	}, nil
 }
 

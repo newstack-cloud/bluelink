@@ -271,7 +271,7 @@ func (c *defaultChecker) CheckResourceDrift(
 		return nil, err
 	}
 
-	finalResourceState, err := applyLinksToResourceState(
+	finalResourceState, unappliedContributions, err := applyLinksToResourceState(
 		&resourceState,
 		linksWithResourceDataMappings,
 	)
@@ -283,7 +283,19 @@ func (c *defaultChecker) CheckResourceDrift(
 		return nil, err
 	}
 
-	return c.checkResourceDrift(ctx, &finalResourceState, instanceName, params, taggingConfig, resourceLogger)
+	driftState, err := c.checkResourceDrift(
+		ctx, &finalResourceState, instanceName, params, taggingConfig, resourceLogger,
+	)
+	if err != nil || driftState == nil {
+		return driftState, err
+	}
+
+	// Carried onto the drift rather than raised,
+	// the check reports the resource is not as it should be, and this says which part
+	// of that picture the framework could not assemble.
+	driftState.UnappliedLinkContributions = unappliedContributions
+
+	return driftState, nil
 }
 
 func (c *defaultChecker) checkResourceDrift(
@@ -852,11 +864,12 @@ func toResourceDriftFieldChanges(
 //
 // Contributions that cannot be resolved are tolerated here. Reporting drift from a
 // partial picture is a lesser problem than a deployment applying one, which is where
-// the same composition is strict.
+// the same composition is strict. They are returned rather than discarded, so the drift
+// they cause is reported with the reason it was measured against an incomplete resource.
 func applyLinksToResourceState(
 	resourceState *state.ResourceState,
 	linksWithResourceDataMappings []state.LinkState,
-) (state.ResourceState, error) {
+) (state.ResourceState, []state.UnappliedLinkContribution, error) {
 	appliedResourceState := *resourceState
 
 	projected, err := specmerge.ApplyLinkProjections(
@@ -865,11 +878,30 @@ func applyLinksToResourceState(
 		linksWithResourceDataMappings,
 	)
 	if err != nil {
-		return state.ResourceState{}, err
+		return state.ResourceState{}, nil, err
 	}
 	appliedResourceState.SpecData = projected.Spec
 
-	return appliedResourceState, nil
+	return appliedResourceState, unappliedContributionsFrom(projected.Unresolved), nil
+}
+
+func unappliedContributionsFrom(
+	unresolved []specmerge.UnresolvedProjection,
+) []state.UnappliedLinkContribution {
+	if len(unresolved) == 0 {
+		return nil
+	}
+
+	contributions := make([]state.UnappliedLinkContribution, len(unresolved))
+	for i, projection := range unresolved {
+		contributions[i] = state.UnappliedLinkContribution{
+			LinkName:  projection.LinkName,
+			FieldPath: projection.ResourceFieldPath,
+			Reason:    projection.Reason,
+		}
+	}
+
+	return contributions
 }
 
 func (c *defaultChecker) CheckInterruptedResources(

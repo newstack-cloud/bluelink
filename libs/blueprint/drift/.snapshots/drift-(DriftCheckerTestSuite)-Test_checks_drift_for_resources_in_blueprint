@@ -516,7 +516,8 @@
         (string) (len=36) "spec.vendorConfig[0].vendorNamespace"
       }
     }),
-    Timestamp: (*int)(-1)
+    Timestamp: (*int)(-1),
+    UnappliedLinkContributions: ([]state.UnappliedLinkContribution) <nil>
   }),
   (string) (len=12) "orders-table": (*state.ResourceDriftState)({
     ResourceID: (string) (len=12) "orders-table",
@@ -643,7 +644,8 @@
         (string) (len=11) "spec.global"
       }
     }),
-    Timestamp: (*int)(-1)
+    Timestamp: (*int)(-1),
+    UnappliedLinkContributions: ([]state.UnappliedLinkContribution) <nil>
   }),
   (string) (len=19) "save-order-function": (*state.ResourceDriftState)({
     ResourceID: (string) (len=19) "save-order-function",
@@ -734,6 +736,7 @@
       UnchangedFields: ([]string) {
       }
     }),
-    Timestamp: (*int)(-1)
+    Timestamp: (*int)(-1),
+    UnappliedLinkContributions: ([]state.UnappliedLinkContribution) <nil>
   })
 }
