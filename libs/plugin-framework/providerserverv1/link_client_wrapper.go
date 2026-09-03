@@ -9,14 +9,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/convertv1"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/errorsv1"
 	"github.com/newstack-cloud/bluelink/libs/plugin-framework/sharedtypesv1"
-	"google.golang.org/grpc"
 )
-
-type linkResourceUpdateFunc func(
-	ctx context.Context,
-	input *UpdateLinkResourceRequest,
-	opts ...grpc.CallOption,
-) (*UpdateLinkResourceResponse, error)
 
 type linkProviderClientWrapper struct {
 	client        ProviderClient
@@ -109,36 +102,18 @@ func (l *linkProviderClientWrapper) buildStageChangesRequest(
 	}, nil
 }
 
-func (l *linkProviderClientWrapper) UpdateResourceA(
+func (l *linkProviderClientWrapper) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return l.updateResource(
-		ctx,
-		input,
-		l.client.UpdateLinkResourceA,
-		errorsv1.PluginActionProviderUpdateLinkResourceA,
-	)
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return l.updateLinkedResources(ctx, input)
 }
 
-func (l *linkProviderClientWrapper) UpdateResourceB(
+func (l *linkProviderClientWrapper) updateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return l.updateResource(
-		ctx,
-		input,
-		l.client.UpdateLinkResourceB,
-		errorsv1.PluginActionProviderUpdateLinkResourceB,
-	)
-}
-
-func (l *linkProviderClientWrapper) updateResource(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-	updateFunc linkResourceUpdateFunc,
-	action errorsv1.PluginAction,
-) (*provider.LinkUpdateResourceOutput, error) {
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	action := errorsv1.PluginActionProviderUpdateLinkedResources
 	updateLinkResourceReq, err := l.buildUpdateResourceRequest(input)
 	if err != nil {
 		return nil, errorsv1.CreateGeneralError(
@@ -147,7 +122,7 @@ func (l *linkProviderClientWrapper) updateResource(
 		)
 	}
 
-	response, err := updateFunc(ctx, updateLinkResourceReq)
+	response, err := l.client.UpdateLinkedResources(ctx, updateLinkResourceReq)
 	if err != nil {
 		return nil, errorsv1.CreateGeneralError(
 			err,
@@ -156,7 +131,7 @@ func (l *linkProviderClientWrapper) updateResource(
 	}
 
 	switch result := response.Response.(type) {
-	case *UpdateLinkResourceResponse_CompleteResponse:
+	case *UpdateLinkedResourcesResponse_CompleteResponse:
 		linkData, err := serialisation.FromMappingNodePB(
 			result.CompleteResponse.LinkData,
 			/* optional */ true,
@@ -168,11 +143,11 @@ func (l *linkProviderClientWrapper) updateResource(
 			)
 		}
 
-		return &provider.LinkUpdateResourceOutput{
+		return &provider.LinkUpdateLinkedResourcesOutput{
 			LinkData:             linkData,
 			ResourceDataMappings: result.CompleteResponse.ResourceDataMappings,
 		}, nil
-	case *UpdateLinkResourceResponse_ErrorResponse:
+	case *UpdateLinkedResourcesResponse_ErrorResponse:
 		return nil, errorsv1.CreateErrorFromResponse(
 			result.ErrorResponse,
 			action,
@@ -186,8 +161,8 @@ func (l *linkProviderClientWrapper) updateResource(
 }
 
 func (l *linkProviderClientWrapper) buildUpdateResourceRequest(
-	input *provider.LinkUpdateResourceInput,
-) (*UpdateLinkResourceRequest, error) {
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*UpdateLinkedResourcesRequest, error) {
 	linkChangesPB, err := toPBLinkChanges(input.Changes)
 	if err != nil {
 		return nil, err
@@ -198,12 +173,12 @@ func (l *linkProviderClientWrapper) buildUpdateResourceRequest(
 		return nil, err
 	}
 
-	resourceInfoPB, err := convertv1.ToPBResourceInfo(input.ResourceInfo)
+	resourceInfoPB, err := convertv1.ToPBResourceInfo(input.ResourceAInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	otherResourceInfoPB, err := convertv1.ToPBResourceInfo(input.OtherResourceInfo)
+	otherResourceInfoPB, err := convertv1.ToPBResourceInfo(input.ResourceBInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -213,22 +188,22 @@ func (l *linkProviderClientWrapper) buildUpdateResourceRequest(
 		return nil, err
 	}
 
-	return &UpdateLinkResourceRequest{
+	return &UpdateLinkedResourcesRequest{
 		LinkType: &LinkType{
 			Type: core.LinkType(
 				l.resourceTypeA,
 				l.resourceTypeB,
 			),
 		},
-		HostId:            l.hostID,
-		Changes:           linkChangesPB,
-		ResourceInfo:      resourceInfoPB,
-		OtherResourceInfo: otherResourceInfoPB,
-		LinkId:            input.LinkID,
-		InstanceName:      input.InstanceName,
-		UpdateType:        LinkUpdateType(input.LinkUpdateType),
-		CurrentLinkState:  currentLinkStatePB,
-		Context:           linkCtx,
+		HostId:           l.hostID,
+		Changes:          linkChangesPB,
+		ResourceAInfo:    resourceInfoPB,
+		ResourceBInfo:    otherResourceInfoPB,
+		LinkId:           input.LinkID,
+		InstanceName:     input.InstanceName,
+		UpdateType:       LinkUpdateType(input.LinkUpdateType),
+		CurrentLinkState: currentLinkStatePB,
+		Context:          linkCtx,
 	}, nil
 }
 

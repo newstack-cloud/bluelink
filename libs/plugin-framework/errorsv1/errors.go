@@ -127,13 +127,8 @@ func createGeneralErrorFromResponse(
 			ChildError:     createPluginResponseError(errorResponse, action, details),
 			FailureReasons: failureReasonsFromErrorResponse(errorResponse, details),
 		}
-	case PluginActionProviderUpdateLinkResourceA:
-		return &provider.LinkUpdateResourceAError{
-			ChildError:     createPluginResponseError(errorResponse, action, details),
-			FailureReasons: failureReasonsFromErrorResponse(errorResponse, details),
-		}
-	case PluginActionProviderUpdateLinkResourceB:
-		return &provider.LinkUpdateResourceBError{
+	case PluginActionProviderUpdateLinkedResources:
+		return &provider.LinkUpdateLinkedResourcesError{
 			ChildError:     createPluginResponseError(errorResponse, action, details),
 			FailureReasons: failureReasonsFromErrorResponse(errorResponse, details),
 		}
@@ -179,13 +174,8 @@ func CreateGeneralError(
 			ChildError:     err,
 			FailureReasons: []string{err.Error()},
 		}
-	case PluginActionProviderUpdateLinkResourceA:
-		return &provider.LinkUpdateResourceAError{
-			ChildError:     err,
-			FailureReasons: []string{err.Error()},
-		}
-	case PluginActionProviderUpdateLinkResourceB:
-		return &provider.LinkUpdateResourceBError{
+	case PluginActionProviderUpdateLinkedResources:
+		return &provider.LinkUpdateLinkedResourcesError{
 			ChildError:     err,
 			FailureReasons: []string{err.Error()},
 		}
@@ -202,8 +192,7 @@ func CreateGeneralError(
 func isDeploymentAction(action PluginAction) bool {
 	return action == PluginActionProviderDeployResource ||
 		action == PluginActionProviderDestroyResource ||
-		action == PluginActionProviderUpdateLinkResourceA ||
-		action == PluginActionProviderUpdateLinkResourceB ||
+		action == PluginActionProviderUpdateLinkedResources ||
 		action == PluginActionProviderUpdateLinkIntermediaryResources
 }
 
@@ -222,13 +211,8 @@ func createDeploymentErrorFromBadInput(
 			ChildError:     badInputErr,
 			FailureReasons: badInputErr.FailureReasons,
 		}
-	case PluginActionProviderUpdateLinkResourceA:
-		return &provider.LinkUpdateResourceAError{
-			ChildError:     badInputErr,
-			FailureReasons: badInputErr.FailureReasons,
-		}
-	case PluginActionProviderUpdateLinkResourceB:
-		return &provider.LinkUpdateResourceBError{
+	case PluginActionProviderUpdateLinkedResources:
+		return &provider.LinkUpdateLinkedResourcesError{
 			ChildError:     badInputErr,
 			FailureReasons: badInputErr.FailureReasons,
 		}

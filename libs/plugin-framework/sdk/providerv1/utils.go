@@ -1,7 +1,6 @@
 package providerv1
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -99,28 +98,4 @@ func expandProviderConfigVars(
 	}
 
 	return expandedProviderConfigVars, nil
-}
-
-type linkUpdateResourceFunc func(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error)
-
-func selectLinkUpdateResourceFunc(
-	link provider.Link,
-	linkResource provider.LinkPriorityResource,
-) linkUpdateResourceFunc {
-	switch linkResource {
-	case provider.LinkPriorityResourceA:
-		return link.UpdateResourceA
-	case provider.LinkPriorityResourceB:
-		return link.UpdateResourceB
-	default:
-		return func(
-			ctx context.Context,
-			input *provider.LinkUpdateResourceInput,
-		) (*provider.LinkUpdateResourceOutput, error) {
-			return nil, fmt.Errorf("unknown link resource type: %d", linkResource)
-		}
-	}
 }

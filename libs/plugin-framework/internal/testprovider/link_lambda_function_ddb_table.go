@@ -31,8 +31,7 @@ func linkLambdaFunctionDynamoDBTable() provider.Link {
 		Modifies:                         provider.LinkModifiesResourceA,
 		ValidateFunc:                     linkLambdaFunctionDDBTableValidate,
 		StageChangesFunc:                 linkLambdaFunctionDDBTableStageChanges,
-		UpdateResourceAFunc:              linkLambdaFunctionDDBTableUpdateResourceA,
-		UpdateResourceBFunc:              linkLambdaFunctionDDBTableUpdateResourceB,
+		UpdateLinkedResourcesFunc:        linkLambdaFunctionDDBTableUpdateLinkedResources,
 		UpdateIntermediaryResourcesFunc:  linkLambdaFunctionDDBTableUpdateIntermediaryResources,
 		GetIntermediaryExternalStateFunc: linkLambdaFunctionDDBTableGetIntermediaryExternalState,
 	}
@@ -94,19 +93,19 @@ func LinkLambdaDynamoDBChangesOutput() *provider.LinkStageChangesOutput {
 	}
 }
 
-func linkLambdaFunctionDDBTableUpdateResourceA(
+func linkLambdaFunctionDDBTableUpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
 	// A link often has to modify a shared intermediary resource, under a lock, before it
 	// can touch resource A at all, so the resource service and the link ID that scopes
 	// its locks have to reach the plugin here and not only in the intermediaries phase.
-	err := checkLinkResourceServiceAccess(ctx, input, input.ResourceInfo)
+	err := checkLinkResourceServiceAccess(ctx, input, input.ResourceAInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	return LinkLambdaDynamoDBUpdateResourceAOutput(input.LinkID), nil
+	return LinkLambdaDynamoDBUpdateLinkedResourcesOutput(input.LinkID), nil
 }
 
 // Exercises the resource service the way a real link would, so the test fails if the
@@ -116,7 +115,7 @@ func linkLambdaFunctionDDBTableUpdateResourceA(
 // implementation registered for the dynamodb table.
 func checkLinkResourceServiceAccess(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
+	input *provider.LinkUpdateLinkedResourcesInput,
 	lookupTarget *provider.ResourceInfo,
 ) error {
 	if input.ResourceService == nil {
@@ -141,8 +140,8 @@ func checkLinkResourceServiceAccess(
 	return err
 }
 
-func LinkLambdaDynamoDBUpdateResourceAOutput(linkID string) *provider.LinkUpdateResourceOutput {
-	return &provider.LinkUpdateResourceOutput{
+func LinkLambdaDynamoDBUpdateLinkedResourcesOutput(linkID string) *provider.LinkUpdateLinkedResourcesOutput {
+	return &provider.LinkUpdateLinkedResourcesOutput{
 		LinkData: &core.MappingNode{
 			Fields: map[string]*core.MappingNode{
 				"environmentVariables.TABLE_NAME_ordersTable": core.MappingNodeFromString("orders-updated"),
@@ -158,20 +157,8 @@ func LinkLambdaDynamoDBUpdateResourceAOutput(linkID string) *provider.LinkUpdate
 	}
 }
 
-func linkLambdaFunctionDDBTableUpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	err := checkLinkResourceServiceAccess(ctx, input, input.OtherResourceInfo)
-	if err != nil {
-		return nil, err
-	}
-
-	return LinkLambdaDynamoDBUpdateResourceBOutput(), nil
-}
-
-func LinkLambdaDynamoDBUpdateResourceBOutput() *provider.LinkUpdateResourceOutput {
-	return &provider.LinkUpdateResourceOutput{
+func LinkLambdaDynamoDBUpdateResourceBOutput() *provider.LinkUpdateLinkedResourcesOutput {
+	return &provider.LinkUpdateLinkedResourcesOutput{
 		LinkData: &core.MappingNode{
 			Fields: map[string]*core.MappingNode{},
 		},

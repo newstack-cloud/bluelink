@@ -18,27 +18,15 @@ func linkStageChangesInput() *provider.LinkStageChangesInput {
 	}
 }
 
-func linkUpdateResourceAInput() *provider.LinkUpdateResourceInput {
-	return &provider.LinkUpdateResourceInput{
-		Changes:           testprovider.LinkLambdaDynamoDBChangesOutput().Changes,
-		ResourceInfo:      createLinkResourceAInfo(),
-		OtherResourceInfo: createLinkResourceBInfo(),
-		LinkID:            testLinkID,
-		LinkUpdateType:    provider.LinkUpdateTypeCreate,
-		CurrentLinkState:  createCurrentLinkState(),
-		LinkContext:       testutils.CreateTestLinkContext(),
-	}
-}
-
-func linkUpdateResourceBInput() *provider.LinkUpdateResourceInput {
-	return &provider.LinkUpdateResourceInput{
-		Changes:           testprovider.LinkLambdaDynamoDBChangesOutput().Changes,
-		ResourceInfo:      createLinkResourceBInfo(),
-		OtherResourceInfo: createLinkResourceAInfo(),
-		LinkID:            testLinkID,
-		LinkUpdateType:    provider.LinkUpdateTypeCreate,
-		CurrentLinkState:  createCurrentLinkState(),
-		LinkContext:       testutils.CreateTestLinkContext(),
+func linkUpdateLinkedResourcesInput() *provider.LinkUpdateLinkedResourcesInput {
+	return &provider.LinkUpdateLinkedResourcesInput{
+		Changes:          testprovider.LinkLambdaDynamoDBChangesOutput().Changes,
+		ResourceAInfo:    createLinkResourceAInfo(),
+		ResourceBInfo:    createLinkResourceBInfo(),
+		LinkID:           testLinkID,
+		LinkUpdateType:   provider.LinkUpdateTypeCreate,
+		CurrentLinkState: createCurrentLinkState(),
+		LinkContext:      testutils.CreateTestLinkContext(),
 	}
 }
 
@@ -151,7 +139,6 @@ func linkUpdateIntermediaryResourcesInput() *provider.LinkUpdateIntermediaryReso
 
 func createCurrentLinkState() *state.LinkState {
 	resourceAUpdateDuration := 8.5
-	resourceBUpdateDuration := 12.5
 	intermediaryResourcesUpdateDuraition := 18.2
 	return &state.LinkState{
 		LinkID:                     testLinkID,
@@ -175,13 +162,9 @@ func createCurrentLinkState() *state.LinkState {
 			},
 		},
 		Durations: &state.LinkCompletionDurations{
-			ResourceAUpdate: &state.LinkComponentCompletionDurations{
+			LinkedResourcesUpdate: &state.LinkComponentCompletionDurations{
 				TotalDuration:    &resourceAUpdateDuration,
 				AttemptDurations: []float64{resourceAUpdateDuration},
-			},
-			ResourceBUpdate: &state.LinkComponentCompletionDurations{
-				TotalDuration:    &resourceBUpdateDuration,
-				AttemptDurations: []float64{resourceBUpdateDuration},
 			},
 			IntermediaryResources: &state.LinkComponentCompletionDurations{
 				TotalDuration:    &intermediaryResourcesUpdateDuraition,

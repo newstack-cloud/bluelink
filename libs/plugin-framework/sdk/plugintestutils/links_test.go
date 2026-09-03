@@ -82,7 +82,6 @@ func (s *LinkTestRunnerSuite) Test_update_link_resource_suite_runner() {
 	]{
 		s.createMockLinkUpdateResourceATestCase(collectedCalls),
 		s.createMockLinkUpdateResourceRealTestCase(&cleanedUp),
-		s.createMockLinkUpdateResourceBTestCase(),
 		s.createMockLinkUpdateErrorTestCase(),
 	}
 
@@ -123,16 +122,15 @@ func (s *LinkTestRunnerSuite) createMockLinkUpdateResourceATestCase(
 		*mockService,
 	]{
 		Name:                    "Update Resource A",
-		Input:                   &provider.LinkUpdateResourceInput{},
-		Resource:                LinkUpdateResourceA,
+		Input:                   &provider.LinkUpdateLinkedResourcesInput{},
 		ServiceFactoryA:         serviceFactory,
 		ConfigStoreA:            s.configStore,
 		ServiceFactoryB:         serviceFactory,
 		ConfigStoreB:            s.configStore,
 		CurrentServiceMockCalls: &service.MockCalls,
-		ExpectedOutputMatcher: func(actual *provider.LinkUpdateResourceOutput) (EqualityCheckValues, error) {
+		ExpectedOutputMatcher: func(actual *provider.LinkUpdateLinkedResourcesOutput) (EqualityCheckValues, error) {
 			return EqualityCheckValues{
-				Expected: &provider.LinkUpdateResourceOutput{
+				Expected: &provider.LinkUpdateLinkedResourcesOutput{
 					LinkData: &core.MappingNode{
 						Fields: map[string]*core.MappingNode{
 							"resourceAId": core.MappingNodeFromString("new-resource-id"),
@@ -145,7 +143,7 @@ func (s *LinkTestRunnerSuite) createMockLinkUpdateResourceATestCase(
 		ExtraAssertions: func(
 			ctx context.Context,
 			suite *suite.Suite,
-			output *provider.LinkUpdateResourceOutput,
+			output *provider.LinkUpdateLinkedResourcesOutput,
 		) {
 			callCollector.RegisterNamedCall("ExtraAssertions")
 		},
@@ -186,16 +184,15 @@ func (s *LinkTestRunnerSuite) createMockLinkUpdateResourceRealTestCase(
 		*mockService,
 	]{
 		Name:            "Update Resource A",
-		Input:           &provider.LinkUpdateResourceInput{},
-		Resource:        LinkUpdateResourceA,
+		Input:           &provider.LinkUpdateLinkedResourcesInput{},
 		ServiceFactoryA: serviceFactory,
 		ConfigStoreA:    s.configStore,
 		ServiceFactoryB: serviceFactory,
 		ConfigStoreB:    s.configStore,
 		// No service mock calls for a real service.
-		ExpectedOutputMatcher: func(actual *provider.LinkUpdateResourceOutput) (EqualityCheckValues, error) {
+		ExpectedOutputMatcher: func(actual *provider.LinkUpdateLinkedResourcesOutput) (EqualityCheckValues, error) {
 			return EqualityCheckValues{
-				Expected: &provider.LinkUpdateResourceOutput{
+				Expected: &provider.LinkUpdateLinkedResourcesOutput{
 					LinkData: &core.MappingNode{
 						Fields: map[string]*core.MappingNode{
 							"resourceAId": core.MappingNodeFromString("new-resource-id"),
@@ -208,55 +205,10 @@ func (s *LinkTestRunnerSuite) createMockLinkUpdateResourceRealTestCase(
 		Cleanup: func(
 			ctx context.Context,
 			failed bool,
-			output *provider.LinkUpdateResourceOutput,
+			output *provider.LinkUpdateLinkedResourcesOutput,
 		) error {
 			*cleanedUp = append(*cleanedUp, core.StringValue(output.LinkData.Fields["resourceAId"]))
 			return nil
-		},
-	}
-}
-
-func (s *LinkTestRunnerSuite) createMockLinkUpdateResourceBTestCase() LinkUpdateResourceTestCase[
-	*mockConfig,
-	*mockService,
-	*mockConfig,
-	*mockService,
-] {
-	service := newMockService(
-		withSaveMockResourceOutput(
-			&saveMockResourceOutput{
-				ID: "new-resource-id-b",
-			},
-		),
-	)
-
-	serviceFactory := func(_ *mockConfig, _ provider.Context) *mockService {
-		return service
-	}
-
-	return LinkUpdateResourceTestCase[
-		*mockConfig,
-		*mockService,
-		*mockConfig,
-		*mockService,
-	]{
-		Name:                    "Update Resource B",
-		Input:                   &provider.LinkUpdateResourceInput{},
-		Resource:                LinkUpdateResourceB,
-		ServiceFactoryA:         serviceFactory,
-		ConfigStoreA:            s.configStore,
-		ServiceFactoryB:         serviceFactory,
-		ConfigStoreB:            s.configStore,
-		CurrentServiceMockCalls: &service.MockCalls,
-		ExpectedOutput: &provider.LinkUpdateResourceOutput{
-			LinkData: &core.MappingNode{
-				Fields: map[string]*core.MappingNode{
-					"resourceBId": core.MappingNodeFromString("new-resource-id-b"),
-				},
-			},
-		},
-		UpdateActionsCalled: map[string]any{
-			"SaveResource": &saveMockResourceInput{},
 		},
 	}
 }
@@ -284,8 +236,7 @@ func (s *LinkTestRunnerSuite) createMockLinkUpdateErrorTestCase() LinkUpdateReso
 		*mockService,
 	]{
 		Name:                    "Update Resource Error",
-		Input:                   &provider.LinkUpdateResourceInput{},
-		Resource:                LinkUpdateResourceA,
+		Input:                   &provider.LinkUpdateLinkedResourcesInput{},
 		ServiceFactoryA:         serviceFactory,
 		ConfigStoreA:            s.configStore,
 		ServiceFactoryB:         serviceFactory,

@@ -191,8 +191,7 @@ func fromPBLinkCompletionDurations(
 	}
 
 	return &state.LinkCompletionDurations{
-		ResourceAUpdate: fromPBLinkComponentCompletionDurations(pbDurations.ResourceAUpdate),
-		ResourceBUpdate: fromPBLinkComponentCompletionDurations(pbDurations.ResourceBUpdate),
+		LinkedResourcesUpdate: fromPBLinkComponentCompletionDurations(pbDurations.LinkedResourcesUpdate),
 		IntermediaryResources: fromPBLinkComponentCompletionDurations(
 			pbDurations.IntermediaryResources,
 		),
@@ -215,21 +214,21 @@ func fromPBLinkComponentCompletionDurations(
 	}
 }
 
-func fromPBUpdateLinkResourceRequest(
-	req *providerserverv1.UpdateLinkResourceRequest,
+func fromPBUpdateLinkedResourcesRequest(
+	req *providerserverv1.UpdateLinkedResourcesRequest,
 	resourceService provider.ResourceService,
-) (*provider.LinkUpdateResourceInput, error) {
+) (*provider.LinkUpdateLinkedResourcesInput, error) {
 	changes, err := convertv1.FromPBLinkChanges(req.Changes)
 	if err != nil {
 		return nil, err
 	}
 
-	resourceInfo, err := convertv1.FromPBResourceInfo(req.ResourceInfo)
+	resourceAInfo, err := convertv1.FromPBResourceInfo(req.ResourceAInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	otherResourceInfo, err := convertv1.FromPBResourceInfo(req.OtherResourceInfo)
+	resourceBInfo, err := convertv1.FromPBResourceInfo(req.ResourceBInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -244,16 +243,16 @@ func fromPBUpdateLinkResourceRequest(
 		return nil, err
 	}
 
-	return &provider.LinkUpdateResourceInput{
-		Changes:           &changes,
-		ResourceInfo:      &resourceInfo,
-		OtherResourceInfo: &otherResourceInfo,
-		LinkID:            req.LinkId,
-		LinkUpdateType:    provider.LinkUpdateType(req.UpdateType),
-		CurrentLinkState:  currentLinkState,
-		InstanceName:      req.InstanceName,
-		LinkContext:       linkContext,
-		ResourceService:   resourceService,
+	return &provider.LinkUpdateLinkedResourcesInput{
+		Changes:          &changes,
+		ResourceAInfo:    &resourceAInfo,
+		ResourceBInfo:    &resourceBInfo,
+		LinkID:           req.LinkId,
+		LinkUpdateType:   provider.LinkUpdateType(req.UpdateType),
+		CurrentLinkState: currentLinkState,
+		InstanceName:     req.InstanceName,
+		LinkContext:      linkContext,
+		ResourceService:  resourceService,
 	}, nil
 }
 

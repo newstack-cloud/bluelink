@@ -131,31 +131,18 @@ type LinkDefinition struct {
 		input *provider.LinkStageChangesInput,
 	) (*provider.LinkStageChangesOutput, error)
 
-	// A function that deals with applying the changes to the first of the two linked resources
-	// for the creation or removal of a link between two resources.
+	// A function that deals with applying the changes to the blueprint-declared resources
+	// in a link relationship, for the creation, update or removal of the link.
 	// The value of the `LinkData` field returned in the output will be combined
-	// with the LinkData output from updating resource B and intermediary resources
+	// with the LinkData output from updating intermediary resources
 	// to form the final LinkData that will be persisted in the state of the blueprint instance.
-	// Parameters are passed into UpdateResourceA for extra context, blueprint variables will have already
+	// Parameters are passed in for extra context, blueprint variables will have already
 	// been substituted at this stage and must be used instead of the passed in params argument
 	// to ensure consistency between the staged changes that are reviewed and the deployment itself.
-	UpdateResourceAFunc func(
+	UpdateLinkedResourcesFunc func(
 		ctx context.Context,
-		input *provider.LinkUpdateResourceInput,
-	) (*provider.LinkUpdateResourceOutput, error)
-
-	// A function that deals with applying the changes to the second of the two linked resources
-	// for the creation or removal of a link between two resources.
-	// The value of the `LinkData` field returned in the output will be combined
-	// with the LinkData output from updating resource A and intermediary resources
-	// to form the final LinkData that will be persisted in the state of the blueprint instance.
-	// Parameters are passed into UpdateResourceB for extra context, blueprint variables will have already
-	// been substituted at this stage and must be used instead of the passed in params argument
-	// to ensure consistency between the staged changes that are reviewed and the deployment itself.
-	UpdateResourceBFunc func(
-		ctx context.Context,
-		input *provider.LinkUpdateResourceInput,
-	) (*provider.LinkUpdateResourceOutput, error)
+		input *provider.LinkUpdateLinkedResourcesInput,
+	) (*provider.LinkUpdateLinkedResourcesOutput, error)
 
 	// A function that deals with creating, updating or deleting intermediary resources
 	// that are required for the link between two resources.
@@ -243,18 +230,11 @@ func (l *LinkDefinition) StageChanges(
 	return l.StageChangesFunc(ctx, input)
 }
 
-func (l *LinkDefinition) UpdateResourceA(
+func (l *LinkDefinition) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return l.UpdateResourceAFunc(ctx, input)
-}
-
-func (l *LinkDefinition) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return l.UpdateResourceBFunc(ctx, input)
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return l.UpdateLinkedResourcesFunc(ctx, input)
 }
 
 func (l *LinkDefinition) UpdateIntermediaryResources(

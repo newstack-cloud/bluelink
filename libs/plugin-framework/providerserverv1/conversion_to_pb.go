@@ -57,11 +57,8 @@ func toPBLinkCompletionDurations(
 	}
 
 	return &LinkCompletionDurations{
-		ResourceAUpdate: toPBLinkComponentCompletionDurations(
-			durations.ResourceAUpdate,
-		),
-		ResourceBUpdate: toPBLinkComponentCompletionDurations(
-			durations.ResourceBUpdate,
+		LinkedResourcesUpdate: toPBLinkComponentCompletionDurations(
+			durations.LinkedResourcesUpdate,
 		),
 		IntermediaryResources: toPBLinkComponentCompletionDurations(
 			durations.IntermediaryResources,
