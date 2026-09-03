@@ -71,5 +71,12 @@
     UnchangedFields: ([]string) {
     }
   }),
-  Timestamp: (*int)(1733145728)
+  Timestamp: (*int)(1733145728),
+  UnappliedLinkContributions: ([]state.UnappliedLinkContribution) (len=1) {
+    (state.UnappliedLinkContribution) {
+      LinkName: (string) (len=21) "appVpc::ordersTable_0",
+      FieldPath: (string) (len=44) "spec.policies[0].policyDocument.statement[0]",
+      Reason: (string) (len=68) "the value to inject does not match the selector that would locate it"
+    }
+  }
 }

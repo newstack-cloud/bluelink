@@ -302,10 +302,11 @@ func prepareUpsertResourceDriftQuery(resourceDriftState *state.ResourceDriftStat
 
 func buildResourceDriftArgs(resourceDriftState *state.ResourceDriftState) *pgx.NamedArgs {
 	return &pgx.NamedArgs{
-		"resourceId": resourceDriftState.ResourceID,
-		"specData":   resourceDriftState.SpecData,
-		"difference": resourceDriftState.Difference,
-		"timestamp":  ptrToNullableTimestamp(resourceDriftState.Timestamp),
+		"resourceId":                 resourceDriftState.ResourceID,
+		"specData":                   resourceDriftState.SpecData,
+		"difference":                 resourceDriftState.Difference,
+		"timestamp":                  ptrToNullableTimestamp(resourceDriftState.Timestamp),
+		"unappliedLinkContributions": resourceDriftState.UnappliedLinkContributions,
 	}
 }
 

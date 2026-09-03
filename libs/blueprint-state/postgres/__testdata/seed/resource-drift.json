@@ -17,7 +17,14 @@
       "removedFields": [],
       "unchangedFields": []
     },
-    "timestamp": 1733145728
+    "timestamp": 1733145728,
+    "unappliedLinkContributions": [
+      {
+        "linkName": "appVpc::ordersTable_0",
+        "fieldPath": "spec.policies[0].policyDocument.statement[0]",
+        "reason": "the value to inject does not match the selector that would locate it"
+      }
+    ]
   },
   {
     "resourceId": "1710c9d9-4276-46a2-af77-fa59cb69a586",

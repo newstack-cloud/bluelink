@@ -103,5 +103,6 @@
     UnchangedFields: ([]string) {
     }
   }),
-  Timestamp: (*int)(1733145728)
+  Timestamp: (*int)(1733145728),
+  UnappliedLinkContributions: ([]state.UnappliedLinkContribution) <nil>
 }
