@@ -633,7 +633,7 @@ var sourceStubDeploymentEvents = []types.BlueprintInstanceEvent{
 				LinkID:          "link-1",
 				LinkName:        "resource-1::resource-2",
 				Status:          core.LinkStatusCreating,
-				PreciseStatus:   core.PreciseLinkStatusUpdatingResourceA,
+				PreciseStatus:   core.PreciseLinkStatusUpdatingLinkedResources,
 				UpdateTimestamp: testTime.Unix(),
 			},
 		},

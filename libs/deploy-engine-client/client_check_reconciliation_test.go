@@ -64,8 +64,8 @@ func (s *ClientSuite) Test_check_reconciliation() {
 	s.Assert().Equal("link-1-id", result.Links[0].LinkID)
 	s.Assert().Equal("resource-1::resource-2", result.Links[0].LinkName)
 	s.Assert().Equal(container.ReconciliationTypeInterrupted, result.Links[0].Type)
-	s.Assert().Equal(core.PreciseLinkStatusResourceBUpdateRollingBack, result.Links[0].OldStatus)
-	s.Assert().Equal(core.PreciseLinkStatusResourceBUpdated, result.Links[0].NewStatus)
+	s.Assert().Equal(core.PreciseLinkStatusLinkedResourcesUpdateRollingBack, result.Links[0].OldStatus)
+	s.Assert().Equal(core.PreciseLinkStatusLinkedResourcesUpdated, result.Links[0].NewStatus)
 	s.Assert().Equal(container.ReconciliationActionUpdateStatus, result.Links[0].RecommendedAction)
 }
 
