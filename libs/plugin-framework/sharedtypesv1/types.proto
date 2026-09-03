@@ -929,6 +929,13 @@ message LinkChanges {
     // A list of field names for which changes
     // will be known when the host blueprint is deployed.
     repeated string field_changes_known_on_deploy = 5;
+    // The resource fields the link will contribute to, mapped to the path in the link's
+    // data that each field's value will be read from.
+    //
+    // Keys take the "{resourceName}::{fieldPath}" form the link goes on to return once it
+    // has run, declared ahead of time and without the values, which are not known until
+    // both endpoints have deployed.
+    map<string, string> resource_data_mappings = 6;
 }
 
 // ResourceInfo provides all the information needed for a resource including

@@ -89,6 +89,9 @@ func LinkLambdaDynamoDBChangesOutput() *provider.LinkStageChangesOutput {
 			RemovedFields:             []string{},
 			UnchangedFields:           []string{},
 			FieldChangesKnownOnDeploy: []string{},
+			ResourceDataMappings: map[string]string{
+				"saveOrderFunction::spec.environment.variables.TABLE_NAME_ordersTable": "saveOrderFunction.environmentVariables.TABLE_NAME_ordersTable",
+			},
 		},
 	}
 }
