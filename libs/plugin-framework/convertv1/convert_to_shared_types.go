@@ -950,6 +950,7 @@ func ToPBLinkChanges(
 		RemovedFields:             linkChanges.RemovedFields,
 		UnchangedFields:           linkChanges.UnchangedFields,
 		FieldChangesKnownOnDeploy: linkChanges.FieldChangesKnownOnDeploy,
+		ResourceDataMappings:      linkChanges.ResourceDataMappings,
 	}, nil
 }
 

@@ -1511,6 +1511,7 @@ func FromPBLinkChanges(
 		RemovedFields:             pbLinkChanges.RemovedFields,
 		UnchangedFields:           pbLinkChanges.UnchangedFields,
 		FieldChangesKnownOnDeploy: pbLinkChanges.FieldChangesKnownOnDeploy,
+		ResourceDataMappings:      pbLinkChanges.ResourceDataMappings,
 	}, nil
 }
 

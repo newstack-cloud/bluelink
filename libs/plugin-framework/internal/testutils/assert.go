@@ -45,6 +45,7 @@ func AssertLinkChangesEquals(
 	AssertSlicesEqual(expected.RemovedFields, actual.RemovedFields, testSuite)
 	AssertSlicesEqual(expected.UnchangedFields, actual.UnchangedFields, testSuite)
 	AssertSlicesEqual(expected.FieldChangesKnownOnDeploy, actual.FieldChangesKnownOnDeploy, testSuite)
+	testSuite.Assert().Equal(expected.ResourceDataMappings, actual.ResourceDataMappings)
 }
 
 // AssertInvalidHost asserts that the given error is an invalid host error
