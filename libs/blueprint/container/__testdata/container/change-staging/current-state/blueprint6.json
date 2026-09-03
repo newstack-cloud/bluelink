@@ -111,7 +111,9 @@
         "handler": "src/saveOrder.handler"
       },
       "description": "Function that saves an order to the database.",
-      "dependsOnResources": ["preprocessOrderFunction"],
+      "dependsOnResources": [
+        "preprocessOrderFunction"
+      ],
       "failureReasons": []
     },
     "test-invoices-table-id": {
@@ -138,7 +140,7 @@
       "name": "saveOrderFunction::ordersTable_0",
       "instanceId": "blueprint-instance-6",
       "status": 2,
-      "preciseStatus": 8,
+      "preciseStatus": 2,
       "lastDeployedTimestamp": 1733145428,
       "lastDeployAttemptTimestamp": 1733145428,
       "intermediaryResourceStates": [],
@@ -151,7 +153,9 @@
           "iam.policyStatements": [
             {
               "effect": "Allow",
-              "action": ["dynamodb:PutItem"],
+              "action": [
+                "dynamodb:PutItem"
+              ],
               "resource": "arn:aws:dynamodb:eu-west-1:123456789012:table/legacy-production-orders-1"
             }
           ]
@@ -164,7 +168,7 @@
       "name": "saveOrderFunction::ordersTable_1",
       "instanceId": "blueprint-instance-6",
       "status": 2,
-      "preciseStatus": 8,
+      "preciseStatus": 2,
       "lastDeployedTimestamp": 1733145428,
       "lastDeployAttemptTimestamp": 1733145428,
       "intermediaryResourceStates": [],
@@ -177,7 +181,9 @@
           "iam.policyStatements": [
             {
               "effect": "Allow",
-              "action": ["dynamodb:PutItem"],
+              "action": [
+                "dynamodb:PutItem"
+              ],
               "resource": "arn:aws:dynamodb:eu-west-2:123456789012:table/legacy-production-orders-2"
             }
           ]
@@ -188,7 +194,9 @@
   },
   "childDependencies": {
     "coreInfra": {
-      "dependsOnResources": ["preprocessOrderFunction"]
+      "dependsOnResources": [
+        "preprocessOrderFunction"
+      ]
     }
   },
   "metadata": {

@@ -72,7 +72,7 @@ func (s *DataSourceTestSuite) Test_parses_valid_data_source_field_yaml_input(c *
 						Line:   2,
 						Column: 58,
 					},
-				ColumnAccuracy: dataSourceExactColAccuracy(),
+					ColumnAccuracy: dataSourceExactColAccuracy(),
 				},
 			},
 		},
@@ -85,7 +85,7 @@ func (s *DataSourceTestSuite) Test_parses_valid_data_source_field_yaml_input(c *
 				Line:   2,
 				Column: 58,
 			},
-		ColumnAccuracy: dataSourceExactColAccuracy(),
+			ColumnAccuracy: dataSourceExactColAccuracy(),
 		},
 	})
 	c.Assert(targetField.Type.Value, Equals, DataSourceFieldType("boolean"))
@@ -215,7 +215,7 @@ func (s *DataSourceTestSuite) Test_parses_valid_data_source_filter_yaml_input(c 
 										Line:   3,
 										Column: 32,
 									},
-								ColumnAccuracy: dataSourceExactColAccuracy(),
+									ColumnAccuracy: dataSourceExactColAccuracy(),
 								},
 							},
 							SourceMeta: &source.Meta{
@@ -227,7 +227,7 @@ func (s *DataSourceTestSuite) Test_parses_valid_data_source_filter_yaml_input(c 
 									Line:   3,
 									Column: 32,
 								},
-							ColumnAccuracy: dataSourceExactColAccuracy(),
+								ColumnAccuracy: dataSourceExactColAccuracy(),
 							},
 						},
 						SourceMeta: &source.Meta{
@@ -239,7 +239,7 @@ func (s *DataSourceTestSuite) Test_parses_valid_data_source_filter_yaml_input(c 
 								Line:   3,
 								Column: 33,
 							},
-						ColumnAccuracy: dataSourceExactColAccuracy(),
+							ColumnAccuracy: dataSourceExactColAccuracy(),
 						},
 					},
 				},
@@ -252,7 +252,7 @@ func (s *DataSourceTestSuite) Test_parses_valid_data_source_filter_yaml_input(c 
 						Line:   3,
 						Column: 33,
 					},
-				ColumnAccuracy: dataSourceExactColAccuracy(),
+					ColumnAccuracy: dataSourceExactColAccuracy(),
 				},
 			},
 		},

@@ -23,9 +23,11 @@
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
+          "linkedResourcesUpdate": {
             "totalDuration": -1,
-            "attemptDurations": [-1]
+            "attemptDurations": [
+              -1
+            ]
           }
         }
       },
@@ -43,38 +45,8 @@
         "instanceId": "link-deploy-test--blueprint-instance-9",
         "linkId": "test-link-9",
         "linkName": "saveOrderFunctionFail2::ordersTableFail2",
-        "status": 1,
-        "preciseStatus": 8,
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1,
-        "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          }
-        }
-      },
-      {
-        "instanceId": "link-deploy-test--blueprint-instance-9",
-        "linkId": "test-link-9",
-        "linkName": "saveOrderFunctionFail2::ordersTableFail2",
-        "status": 1,
-        "preciseStatus": 13,
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1
-      },
-      {
-        "instanceId": "link-deploy-test--blueprint-instance-9",
-        "linkId": "test-link-9",
-        "linkName": "saveOrderFunctionFail2::ordersTableFail2",
         "status": 3,
-        "preciseStatus": 15,
+        "preciseStatus": 9,
         "failureReasons": [
           "intermediary resources update failed due to terminal error"
         ],
@@ -82,19 +54,19 @@
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
           "intermediaryResources": {
             "totalDuration": -1,
-            "attemptDurations": [-1]
+            "attemptDurations": [
+              -1
+            ]
           },
-          "totalDuration": -1
+          "totalDuration": -1,
+          "linkedResourcesUpdate": {
+            "totalDuration": -1,
+            "attemptDurations": [
+              -1
+            ]
+          }
         }
       }
     ]

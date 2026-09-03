@@ -71,14 +71,14 @@ type concurrencyObservedLink struct {
 	recorder *linkConcurrencyRecorder
 }
 
-func (l *concurrencyObservedLink) UpdateResourceA(
+func (l *concurrencyObservedLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
 	l.recorder.enter()
 	defer l.recorder.leave()
 
-	return l.Link.UpdateResourceA(ctx, input)
+	return l.Link.UpdateLinkedResources(ctx, input)
 }
 
 func observedLinkAWSProvider(

@@ -503,64 +503,30 @@ func determineLinkUpdateRollbackFailedStatus(
 	return core.LinkStatusCreateRollbackFailed
 }
 
-func determinePreciseLinkUpdatingResourceAStatus(rollingBack bool) core.PreciseLinkStatus {
+func determinePreciseLinkUpdatingLinkedResourcesStatus(rollingBack bool) core.PreciseLinkStatus {
 	if rollingBack {
-		// Updating resource A in the context of rolling back is to roll back
-		// the latest changes made to resource A specific to the current link.
-		return core.PreciseLinkStatusResourceAUpdateRollingBack
+		// Updating the resources a link relates, in the context of rolling back, is to
+		// roll back the latest changes the link made to them.
+		return core.PreciseLinkStatusLinkedResourcesUpdateRollingBack
 	}
 
-	return core.PreciseLinkStatusUpdatingResourceA
+	return core.PreciseLinkStatusUpdatingLinkedResources
 }
 
-func determinePreciseLinkUpdatingResourceBStatus(rollingBack bool) core.PreciseLinkStatus {
+func determinePreciseLinkedResourcesUpdateFailedStatus(rollingBack bool) core.PreciseLinkStatus {
 	if rollingBack {
-		// Updating resource B in the context of rolling back is to roll back
-		// the latest changes made to resource B specific to the current link.
-		return core.PreciseLinkStatusResourceBUpdateRollingBack
+		return core.PreciseLinkStatusLinkedResourcesUpdateRollbackFailed
 	}
 
-	return core.PreciseLinkStatusUpdatingResourceB
+	return core.PreciseLinkStatusLinkedResourcesUpdateFailed
 }
 
-func determinePreciseLinkResourceAUpdateFailedStatus(rollingBack bool) core.PreciseLinkStatus {
+func determinePreciseLinkedResourcesUpdatedStatus(rollingBack bool) core.PreciseLinkStatus {
 	if rollingBack {
-		// Updating resource A in the context of rolling back is to roll back
-		// the latest changes made to resource A specific to the current link.
-		return core.PreciseLinkStatusResourceAUpdateRollbackFailed
+		return core.PreciseLinkStatusLinkedResourcesUpdateRollbackComplete
 	}
 
-	return core.PreciseLinkStatusResourceAUpdateFailed
-}
-
-func determinePreciseLinkResourceAUpdatedStatus(rollingBack bool) core.PreciseLinkStatus {
-	if rollingBack {
-		// Updating resource A in the context of rolling back is to roll back
-		// the latest changes made to resource A specific to the current link.
-		return core.PreciseLinkStatusResourceAUpdateRollbackComplete
-	}
-
-	return core.PreciseLinkStatusResourceAUpdated
-}
-
-func determinePreciseLinkResourceBUpdatedStatus(rollingBack bool) core.PreciseLinkStatus {
-	if rollingBack {
-		// Updating resource B in the context of rolling back is to roll back
-		// the latest changes made to resource B specific to the current link.
-		return core.PreciseLinkStatusResourceBUpdateRollbackComplete
-	}
-
-	return core.PreciseLinkStatusResourceBUpdated
-}
-
-func determinePreciseLinkResourceBUpdateFailedStatus(rollingBack bool) core.PreciseLinkStatus {
-	if rollingBack {
-		// Updating resource B in the context of rolling back is to roll back
-		// the latest changes made to resource B specific to the current link.
-		return core.PreciseLinkStatusResourceBUpdateRollbackFailed
-	}
-
-	return core.PreciseLinkStatusResourceBUpdateFailed
+	return core.PreciseLinkStatusLinkedResourcesUpdated
 }
 
 func determinePreciseLinkUpdatingIntermediariesStatus(rollingBack bool) core.PreciseLinkStatus {
@@ -1277,13 +1243,13 @@ func addTotalToResourceCompletionDurations(
 	}
 }
 
-func determineLinkUpdateResourceARetryFailureDurations(
+func determineLinkUpdateLinkedResourcesRetryFailureDurations(
 	currentRetryInfo *provider.RetryContext,
 ) *state.LinkCompletionDurations {
 	if currentRetryInfo.ExceededMaxRetries {
 		totalDuration := core.Sum(currentRetryInfo.AttemptDurations)
 		return &state.LinkCompletionDurations{
-			ResourceAUpdate: &state.LinkComponentCompletionDurations{
+			LinkedResourcesUpdate: &state.LinkComponentCompletionDurations{
 				TotalDuration:    &totalDuration,
 				AttemptDurations: currentRetryInfo.AttemptDurations,
 			},
@@ -1291,13 +1257,13 @@ func determineLinkUpdateResourceARetryFailureDurations(
 	}
 
 	return &state.LinkCompletionDurations{
-		ResourceAUpdate: &state.LinkComponentCompletionDurations{
+		LinkedResourcesUpdate: &state.LinkComponentCompletionDurations{
 			AttemptDurations: currentRetryInfo.AttemptDurations,
 		},
 	}
 }
 
-func determineLinkUpdateResourceAFinishedDurations(
+func determineLinkUpdateLinkedResourcesFinishedDurations(
 	currentRetryInfo *provider.RetryContext,
 	currentAttemptDuration time.Duration,
 ) *state.LinkCompletionDurations {
@@ -1307,52 +1273,11 @@ func determineLinkUpdateResourceAFinishedDurations(
 	)
 	totalDuration := core.Sum(updatedAttemptDurations)
 	return &state.LinkCompletionDurations{
-		ResourceAUpdate: &state.LinkComponentCompletionDurations{
+		LinkedResourcesUpdate: &state.LinkComponentCompletionDurations{
 			TotalDuration:    &totalDuration,
 			AttemptDurations: updatedAttemptDurations,
 		},
 	}
-}
-
-func determineLinkUpdateResourceBRetryFailureDurations(
-	currentRetryInfo *provider.RetryContext,
-) *state.LinkCompletionDurations {
-	if currentRetryInfo.ExceededMaxRetries {
-		totalDuration := core.Sum(currentRetryInfo.AttemptDurations)
-		return &state.LinkCompletionDurations{
-			ResourceBUpdate: &state.LinkComponentCompletionDurations{
-				TotalDuration:    &totalDuration,
-				AttemptDurations: currentRetryInfo.AttemptDurations,
-			},
-		}
-	}
-
-	return &state.LinkCompletionDurations{
-		ResourceBUpdate: &state.LinkComponentCompletionDurations{
-			AttemptDurations: currentRetryInfo.AttemptDurations,
-		},
-	}
-}
-
-func determineLinkUpdateResourceBFinishedDurations(
-	currentRetryInfo *provider.RetryContext,
-	currentAttemptDuration time.Duration,
-	accumDurationInfo *state.LinkCompletionDurations,
-) *state.LinkCompletionDurations {
-	updatedAttemptDurations := append(
-		currentRetryInfo.AttemptDurations,
-		core.FractionalMilliseconds(currentAttemptDuration),
-	)
-	totalDuration := core.Sum(updatedAttemptDurations)
-	durationInfo := accumDurationInfo
-	if durationInfo == nil {
-		durationInfo = &state.LinkCompletionDurations{}
-	}
-	durationInfo.ResourceBUpdate = &state.LinkComponentCompletionDurations{
-		TotalDuration:    &totalDuration,
-		AttemptDurations: updatedAttemptDurations,
-	}
-	return durationInfo
 }
 
 func determineLinkUpdateIntermediariesFinishedDurations(
@@ -1381,8 +1306,7 @@ func determineLinkUpdateIntermediariesFinishedDurations(
 func sumLinkComponentCompletionDurations(
 	durations *state.LinkCompletionDurations,
 ) float64 {
-	return getLinkComponentTotalDuration(durations.ResourceAUpdate) +
-		getLinkComponentTotalDuration(durations.ResourceBUpdate) +
+	return getLinkComponentTotalDuration(durations.LinkedResourcesUpdate) +
 		getLinkComponentTotalDuration(durations.IntermediaryResources)
 }
 
@@ -2366,13 +2290,11 @@ func isTerminalLinkFailure(msg LinkDeployUpdateMessage, rollback bool) bool {
 	}
 
 	if rollback {
-		return msg.PreciseStatus == core.PreciseLinkStatusResourceAUpdateRollbackFailed ||
-			msg.PreciseStatus == core.PreciseLinkStatusResourceBUpdateRollbackFailed ||
+		return msg.PreciseStatus == core.PreciseLinkStatusLinkedResourcesUpdateRollbackFailed ||
 			msg.PreciseStatus == core.PreciseLinkStatusIntermediaryResourceUpdateRollbackFailed
 	}
 
-	return msg.PreciseStatus == core.PreciseLinkStatusResourceAUpdateFailed ||
-		msg.PreciseStatus == core.PreciseLinkStatusResourceBUpdateFailed ||
+	return msg.PreciseStatus == core.PreciseLinkStatusLinkedResourcesUpdateFailed ||
 		msg.PreciseStatus == core.PreciseLinkStatusIntermediaryResourceUpdateFailed
 }
 

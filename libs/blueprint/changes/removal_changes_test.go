@@ -487,7 +487,7 @@ func (s *RemovalChangesTestSuite) Test_skips_nil_links() {
 	instanceState := &state.InstanceState{
 		InstanceID: "test-instance",
 		Links: map[string]*state.LinkState{
-			"nilLink":   nil,
+			"nilLink": nil,
 			"validLink": {
 				LinkID: "link-2",
 				Name:   "validLink",

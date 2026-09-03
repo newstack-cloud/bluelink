@@ -279,18 +279,11 @@ func (l *testNoPriorityRuleLambda2Link) GetAnnotationDefinitions(
 	}, nil
 }
 
-func (l *testNoPriorityRuleLambda2Link) UpdateResourceA(
+func (l *testNoPriorityRuleLambda2Link) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
-
-func (l *testNoPriorityRuleLambda2Link) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 func (l *testNoPriorityRuleLambda2Link) UpdateIntermediaryResources(

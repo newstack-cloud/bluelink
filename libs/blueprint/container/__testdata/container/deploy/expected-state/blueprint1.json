@@ -264,32 +264,26 @@
       "name": "invoiceStream::processInvoiceFunction",
       "instanceId": "blueprint-instance-1",
       "status": 2,
-      "preciseStatus": 14,
+      "preciseStatus": 8,
       "lastDeployedTimestamp": -1,
       "lastDeployAttemptTimestamp": -1,
       "intermediaryResourceStates": null,
       "data": {},
       "failureReasons": null,
       "durations": {
-        "resourceAUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
-        "resourceBUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
         "intermediaryResources": {
           "totalDuration": -1,
           "attemptDurations": [
             -1
           ]
         },
-        "totalDuration": -1
+        "totalDuration": -1,
+        "linkedResourcesUpdate": {
+          "totalDuration": -1,
+          "attemptDurations": [
+            -1
+          ]
+        }
       }
     },
     "saveOrderFunction::ordersTable_0": {
@@ -297,7 +291,7 @@
       "name": "saveOrderFunction::ordersTable_0",
       "instanceId": "blueprint-instance-1",
       "status": 14,
-      "preciseStatus": 14,
+      "preciseStatus": 8,
       "lastDeployedTimestamp": -1,
       "lastDeployAttemptTimestamp": -1,
       "intermediaryResourceStates": null,
@@ -317,25 +311,19 @@
       },
       "failureReasons": null,
       "durations": {
-        "resourceAUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
-        "resourceBUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
         "intermediaryResources": {
           "totalDuration": -1,
           "attemptDurations": [
             -1
           ]
         },
-        "totalDuration": -1
+        "totalDuration": -1,
+        "linkedResourcesUpdate": {
+          "totalDuration": -1,
+          "attemptDurations": [
+            -1
+          ]
+        }
       }
     },
     "saveOrderFunction::ordersTable_1": {
@@ -343,7 +331,7 @@
       "name": "saveOrderFunction::ordersTable_1",
       "instanceId": "blueprint-instance-1",
       "status": 14,
-      "preciseStatus": 14,
+      "preciseStatus": 8,
       "lastDeployedTimestamp": -1,
       "lastDeployAttemptTimestamp": -1,
       "intermediaryResourceStates": null,
@@ -363,27 +351,21 @@
       },
       "failureReasons": null,
       "durations": {
-        "resourceAUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1,
-            -1,
-            -1
-          ]
-        },
-        "resourceBUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
         "intermediaryResources": {
           "totalDuration": -1,
           "attemptDurations": [
             -1
           ]
         },
-        "totalDuration": -1
+        "totalDuration": -1,
+        "linkedResourcesUpdate": {
+          "totalDuration": -1,
+          "attemptDurations": [
+            -1,
+            -1,
+            -1
+          ]
+        }
       }
     },
     "saveOrderFunction::ordersTable_2": {
@@ -391,7 +373,7 @@
       "name": "saveOrderFunction::ordersTable_2",
       "instanceId": "blueprint-instance-1",
       "status": 2,
-      "preciseStatus": 14,
+      "preciseStatus": 8,
       "lastDeployedTimestamp": -1,
       "lastDeployAttemptTimestamp": -1,
       "intermediaryResourceStates": null,
@@ -411,25 +393,19 @@
       },
       "failureReasons": null,
       "durations": {
-        "resourceAUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
-        "resourceBUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
         "intermediaryResources": {
           "totalDuration": -1,
           "attemptDurations": [
             -1
           ]
         },
-        "totalDuration": -1
+        "totalDuration": -1,
+        "linkedResourcesUpdate": {
+          "totalDuration": -1,
+          "attemptDurations": [
+            -1
+          ]
+        }
       }
     }
   },

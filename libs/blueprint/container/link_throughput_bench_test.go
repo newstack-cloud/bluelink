@@ -197,32 +197,18 @@ type latencyObservedLink struct {
 	recorder *linkThroughputRecorder
 }
 
-func (l *latencyObservedLink) UpdateResourceA(
+func (l *latencyObservedLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	l.recorder.enter(input.ResourceInfo.ResourceName)
-	defer l.recorder.leave(input.ResourceInfo.ResourceName)
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	l.recorder.enter(input.ResourceAInfo.ResourceName)
+	defer l.recorder.leave(input.ResourceAInfo.ResourceName)
 
 	if err := sleepWithContext(ctx, l.shape.updateResourceA); err != nil {
 		return nil, err
 	}
 
-	return l.Link.UpdateResourceA(ctx, input)
-}
-
-func (l *latencyObservedLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	l.recorder.enter(input.ResourceInfo.ResourceName)
-	defer l.recorder.leave(input.ResourceInfo.ResourceName)
-
-	if err := sleepWithContext(ctx, l.shape.updateResourceB); err != nil {
-		return nil, err
-	}
-
-	return l.Link.UpdateResourceB(ctx, input)
+	return l.Link.UpdateLinkedResources(ctx, input)
 }
 
 func (l *latencyObservedLink) UpdateIntermediaryResources(

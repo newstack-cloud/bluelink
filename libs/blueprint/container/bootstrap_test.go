@@ -202,18 +202,11 @@ func (l *testApiGatewayLambdaLink) GetAnnotationDefinitions(
 	}, nil
 }
 
-func (l *testApiGatewayLambdaLink) UpdateResourceA(
+func (l *testApiGatewayLambdaLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
-
-func (l *testApiGatewayLambdaLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 func (l *testApiGatewayLambdaLink) UpdateIntermediaryResources(
@@ -434,22 +427,22 @@ func (l *testLambdaDynamoDBTableLink) GetAnnotationDefinitions(
 	}, nil
 }
 
-func (l *testLambdaDynamoDBTableLink) UpdateResourceA(
+func (l *testLambdaDynamoDBTableLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	if slices.Contains(l.failResourceANames, input.ResourceInfo.ResourceName) {
-		return nil, &provider.LinkUpdateResourceAError{
+	if slices.Contains(l.failResourceANames, input.ResourceAInfo.ResourceName) {
+		return nil, &provider.LinkUpdateLinkedResourcesError{
 			FailureReasons: []string{"resource A update failed due to terminal error"},
 		}
 	}
 
 	logicalLinkName := core.LogicalLinkName(
-		input.ResourceInfo.ResourceName,
-		input.OtherResourceInfo.ResourceName,
+		input.ResourceAInfo.ResourceName,
+		input.ResourceBInfo.ResourceName,
 	)
 	attemptCount, exists := l.resourceAUpdateAttempts[logicalLinkName]
 	if !exists {
@@ -460,41 +453,47 @@ func (l *testLambdaDynamoDBTableLink) UpdateResourceA(
 
 	// Provider retry policy allows for a maximum of 3 attempts before failing.
 	if attemptCount < 3 &&
-		!slices.Contains(l.skipRetryFailuresForInstance, input.ResourceInfo.InstanceID) &&
+		!slices.Contains(l.skipRetryFailuresForInstance, input.ResourceAInfo.InstanceID) &&
 		!slices.Contains(l.skipRetryFailuresForLinkNames, logicalLinkName) {
 		return nil, &provider.RetryableError{
 			ChildError: errors.New("resource A update failed due to transient error"),
 		}
 	}
 
-	tableNameEnvVar := fmt.Sprintf("TABLE_NAME_%s", input.OtherResourceInfo.ResourceName)
-	tableRegionEnvVar := fmt.Sprintf("TABLE_REGION_%s", input.OtherResourceInfo.ResourceName)
+	if slices.Contains(l.failResourceBNames, input.ResourceBInfo.ResourceName) {
+		return nil, &provider.LinkUpdateLinkedResourcesError{
+			FailureReasons: []string{"resource B update failed due to terminal error"},
+		}
+	}
+
+	tableNameEnvVar := fmt.Sprintf("TABLE_NAME_%s", input.ResourceBInfo.ResourceName)
+	tableRegionEnvVar := fmt.Sprintf("TABLE_REGION_%s", input.ResourceBInfo.ResourceName)
 
 	resourceEnvVarTableNameFieldPath := fmt.Sprintf(
 		"%s::spec.environment.variables.%s",
-		input.ResourceInfo.ResourceName,
+		input.ResourceAInfo.ResourceName,
 		tableNameEnvVar,
 	)
 	linkEnvVarTableNameFieldPath := fmt.Sprintf(
 		"%s.environmentVariables.%s",
-		input.ResourceInfo.ResourceName,
+		input.ResourceAInfo.ResourceName,
 		tableNameEnvVar,
 	)
 	resourceEnvVarTableRegionFieldPath := fmt.Sprintf(
 		"%s::spec.environment.variables.%s",
-		input.ResourceInfo.ResourceName,
+		input.ResourceAInfo.ResourceName,
 		tableRegionEnvVar,
 	)
 	linkEnvVarTableRegionFieldPath := fmt.Sprintf(
 		"%s.environmentVariables.%s",
-		input.ResourceInfo.ResourceName,
+		input.ResourceAInfo.ResourceName,
 		tableRegionEnvVar,
 	)
 
-	return &provider.LinkUpdateResourceOutput{
+	return &provider.LinkUpdateLinkedResourcesOutput{
 		LinkData: &core.MappingNode{
 			Fields: map[string]*core.MappingNode{
-				input.ResourceInfo.ResourceName: {
+				input.ResourceAInfo.ResourceName: {
 					Fields: map[string]*core.MappingNode{
 						"environmentVariables": {
 							Fields: map[string]*core.MappingNode{
@@ -504,33 +503,12 @@ func (l *testLambdaDynamoDBTableLink) UpdateResourceA(
 						},
 					},
 				},
+				input.ResourceBInfo.ResourceName: core.MappingNodeFromString("testResourceBValue"),
 			},
 		},
 		ResourceDataMappings: map[string]string{
 			resourceEnvVarTableNameFieldPath:   linkEnvVarTableNameFieldPath,
 			resourceEnvVarTableRegionFieldPath: linkEnvVarTableRegionFieldPath,
-		},
-	}, nil
-}
-
-func (l *testLambdaDynamoDBTableLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	if slices.Contains(l.failResourceBNames, input.ResourceInfo.ResourceName) {
-		return nil, &provider.LinkUpdateResourceBError{
-			FailureReasons: []string{"resource B update failed due to terminal error"},
-		}
-	}
-
-	return &provider.LinkUpdateResourceOutput{
-		LinkData: &core.MappingNode{
-			Fields: map[string]*core.MappingNode{
-				input.ResourceInfo.ResourceName: core.MappingNodeFromString("testResourceBValue"),
-			},
 		},
 	}, nil
 }
@@ -681,18 +659,11 @@ func (l *testDynamoDBTableStreamLink) GetAnnotationDefinitions(
 	}, nil
 }
 
-func (l *testDynamoDBTableStreamLink) UpdateResourceA(
+func (l *testDynamoDBTableStreamLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
-
-func (l *testDynamoDBTableStreamLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 func (l *testDynamoDBTableStreamLink) UpdateIntermediaryResources(
@@ -773,18 +744,11 @@ func (l *testDynamoDBStreamLambdaLink) GetAnnotationDefinitions(
 	}, nil
 }
 
-func (l *testDynamoDBStreamLambdaLink) UpdateResourceA(
+func (l *testDynamoDBStreamLambdaLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
-
-func (l *testDynamoDBStreamLambdaLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 func (l *testDynamoDBStreamLambdaLink) UpdateIntermediaryResources(
@@ -865,18 +829,11 @@ func (l *testDynamoDBTableLambdaLink) GetAnnotationDefinitions(
 	}, nil
 }
 
-func (l *testDynamoDBTableLambdaLink) UpdateResourceA(
+func (l *testDynamoDBTableLambdaLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
-
-func (l *testDynamoDBTableLambdaLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 func (l *testDynamoDBTableLambdaLink) UpdateIntermediaryResources(
@@ -957,18 +914,11 @@ func (l *testLambdaLambdaLink) GetAnnotationDefinitions(
 	}, nil
 }
 
-func (l *testLambdaLambdaLink) UpdateResourceA(
+func (l *testLambdaLambdaLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
-
-func (l *testLambdaLambdaLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 func (l *testLambdaLambdaLink) UpdateIntermediaryResources(
@@ -1051,18 +1001,11 @@ func (l *testLambdaLambda2Link) GetAnnotationDefinitions(
 	}, nil
 }
 
-func (l *testLambdaLambda2Link) UpdateResourceA(
+func (l *testLambdaLambda2Link) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
-
-func (l *testLambdaLambda2Link) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 func (l *testLambdaLambda2Link) UpdateIntermediaryResources(
@@ -1143,18 +1086,11 @@ func (l *testSubnetVPCLink) GetAnnotationDefinitions(
 	}, nil
 }
 
-func (l *testSubnetVPCLink) UpdateResourceA(
+func (l *testSubnetVPCLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
-
-func (l *testSubnetVPCLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 func (l *testSubnetVPCLink) UpdateIntermediaryResources(
@@ -1235,18 +1171,11 @@ func (l *testSecurityGroupVPCLink) GetAnnotationDefinitions(
 	}, nil
 }
 
-func (l *testSecurityGroupVPCLink) UpdateResourceA(
+func (l *testSecurityGroupVPCLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
-
-func (l *testSecurityGroupVPCLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 func (l *testSecurityGroupVPCLink) UpdateIntermediaryResources(
@@ -1327,18 +1256,11 @@ func (l *testRouteTableVPCLink) GetAnnotationDefinitions(
 	}, nil
 }
 
-func (l *testRouteTableVPCLink) UpdateResourceA(
+func (l *testRouteTableVPCLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
-
-func (l *testRouteTableVPCLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 func (l *testRouteTableVPCLink) UpdateIntermediaryResources(
@@ -1419,18 +1341,11 @@ func (l *testRouteRouteTableLink) GetAnnotationDefinitions(
 	}, nil
 }
 
-func (l *testRouteRouteTableLink) UpdateResourceA(
+func (l *testRouteRouteTableLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
-
-func (l *testRouteRouteTableLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 func (l *testRouteRouteTableLink) UpdateIntermediaryResources(
@@ -1511,18 +1426,11 @@ func (l *testRouteInternetGatewayLink) GetAnnotationDefinitions(
 	}, nil
 }
 
-func (l *testRouteInternetGatewayLink) UpdateResourceA(
+func (l *testRouteInternetGatewayLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
-
-func (l *testRouteInternetGatewayLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 func (l *testRouteInternetGatewayLink) UpdateIntermediaryResources(

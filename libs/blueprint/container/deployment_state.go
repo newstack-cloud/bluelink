@@ -673,8 +673,7 @@ func copyLinkCompletionDurations(durations *state.LinkCompletionDurations) *stat
 	}
 
 	return &state.LinkCompletionDurations{
-		ResourceAUpdate:       copyLinkComponentCompletionDurations(durations.ResourceAUpdate),
-		ResourceBUpdate:       copyLinkComponentCompletionDurations(durations.ResourceBUpdate),
+		LinkedResourcesUpdate: copyLinkComponentCompletionDurations(durations.LinkedResourcesUpdate),
 		IntermediaryResources: copyLinkComponentCompletionDurations(durations.IntermediaryResources),
 	}
 }

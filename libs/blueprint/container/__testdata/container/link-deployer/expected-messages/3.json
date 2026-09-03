@@ -23,9 +23,11 @@
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
+          "linkedResourcesUpdate": {
             "totalDuration": -1,
-            "attemptDurations": [-1]
+            "attemptDurations": [
+              -1
+            ]
           }
         }
       },
@@ -43,55 +45,25 @@
         "instanceId": "link-deploy-test--blueprint-instance-3",
         "linkId": "test-link-3",
         "linkName": "saveOrderFunction::ordersTable",
-        "status": 7,
+        "status": 8,
         "preciseStatus": 8,
         "currentStageAttempt": 0,
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          }
-        }
-      },
-      {
-        "instanceId": "link-deploy-test--blueprint-instance-3",
-        "linkId": "test-link-3",
-        "linkName": "saveOrderFunction::ordersTable",
-        "status": 7,
-        "preciseStatus": 13,
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1
-      },
-      {
-        "instanceId": "link-deploy-test--blueprint-instance-3",
-        "linkId": "test-link-3",
-        "linkName": "saveOrderFunction::ordersTable",
-        "status": 8,
-        "preciseStatus": 14,
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1,
-        "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
           "intermediaryResources": {
             "totalDuration": -1,
-            "attemptDurations": [-1]
+            "attemptDurations": [
+              -1
+            ]
           },
-          "totalDuration": -1
+          "totalDuration": -1,
+          "linkedResourcesUpdate": {
+            "totalDuration": -1,
+            "attemptDurations": [
+              -1
+            ]
+          }
         }
       }
     ]

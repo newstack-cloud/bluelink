@@ -218,9 +218,9 @@ func (s *LinkDeployerTestSuite) Test_releases_lock_when_context_cancelled_after_
 }
 
 // A link often has to modify a shared intermediary resource, under a lock, before it can
-// touch resource A or B at all. Attaching an AWS Lambda function to a VPC is one example:
-// the function's IAM role has to grant the network interface permissions first, or the
-// attachment is rejected outright.
+// touch the resources it relates at all. Attaching an AWS Lambda function to a VPC is one
+// example, the function's IAM role has to grant the network interface permissions first,
+// or the attachment is rejected outright.
 func (s *LinkDeployerTestSuite) Test_resource_updates_can_lock_intermediary_resources() {
 	fixture := s.fixtures[1]
 	link := &lockAcquiringLink{
@@ -232,13 +232,13 @@ func (s *LinkDeployerTestSuite) Test_resource_updates_can_lock_intermediary_reso
 
 	s.runDeployWithLink(fixture, link)
 
-	// Both phases have to see the link ID, otherwise the lock each one takes is recorded
-	// against an empty owner and the deployer's release, which matches on the link ID,
-	// silently leaves it held.
+	// The update has to see the link ID, otherwise the lock it takes is recorded against
+	// an empty owner and the deployer's release, which matches on the link ID, silently
+	// leaves it held.
 	s.Assert().Equal(
-		[]string{fixture.linkElement.ID(), fixture.linkElement.ID()},
+		[]string{fixture.linkElement.ID()},
 		link.observedLinkIDs,
-		"resource A and resource B updates should both receive the link ID",
+		"the linked resources update should receive the link ID",
 	)
 	s.Assert().False(
 		s.resourceRegistry.(*internal.ResourceRegistryMock).HasLocks(),
@@ -246,40 +246,26 @@ func (s *LinkDeployerTestSuite) Test_resource_updates_can_lock_intermediary_reso
 	)
 }
 
-// Takes a lock on a shared intermediary resource from both resource updates, the way a
-// link that has to grant permissions before touching a resource would.
+// Takes a lock on a shared intermediary resource from the linked resources update, the way
+// a link that has to grant permissions before touching a resource would.
 type lockAcquiringLink struct {
 	*testLambdaDynamoDBTableLink
 	observedLinkIDs []string
 	mu              sync.Mutex
 }
 
-func (l *lockAcquiringLink) UpdateResourceA(
+func (l *lockAcquiringLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
 	err := l.lockIntermediary(ctx, input, "testRoleForResourceA")
 	if err != nil {
-		return nil, &provider.LinkUpdateResourceAError{
+		return nil, &provider.LinkUpdateLinkedResourcesError{
 			FailureReasons: []string{err.Error()},
 		}
 	}
 
-	return l.testLambdaDynamoDBTableLink.UpdateResourceA(ctx, input)
-}
-
-func (l *lockAcquiringLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	err := l.lockIntermediary(ctx, input, "testRoleForResourceB")
-	if err != nil {
-		return nil, &provider.LinkUpdateResourceBError{
-			FailureReasons: []string{err.Error()},
-		}
-	}
-
-	return l.testLambdaDynamoDBTableLink.UpdateResourceB(ctx, input)
+	return l.testLambdaDynamoDBTableLink.UpdateLinkedResources(ctx, input)
 }
 
 // Each phase locks a resource of its own, so that a release the deployer fails to make
@@ -287,7 +273,7 @@ func (l *lockAcquiringLink) UpdateResourceB(
 // on it until the lock times out.
 func (l *lockAcquiringLink) lockIntermediary(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
+	input *provider.LinkUpdateLinkedResourcesInput,
 	resourceName string,
 ) error {
 	l.mu.Lock()
@@ -301,7 +287,7 @@ func (l *lockAcquiringLink) lockIntermediary(
 	return input.ResourceService.AcquireResourceLock(
 		ctx,
 		&provider.AcquireResourceLockInput{
-			InstanceID:   input.ResourceInfo.InstanceID,
+			InstanceID:   input.ResourceAInfo.InstanceID,
 			ResourceName: resourceName,
 			AcquiredBy:   input.LinkID,
 		},

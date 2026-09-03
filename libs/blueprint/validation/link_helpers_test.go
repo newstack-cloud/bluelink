@@ -123,18 +123,11 @@ func (l *testResourceTypeAResourceTypeBLink) GetKind(
 	}, nil
 }
 
-func (l *testResourceTypeAResourceTypeBLink) UpdateResourceA(
+func (l *testResourceTypeAResourceTypeBLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
-
-func (l *testResourceTypeAResourceTypeBLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 func (l *testResourceTypeAResourceTypeBLink) UpdateIntermediaryResources(
@@ -228,18 +221,11 @@ func (l *testConfigurableLink) GetKind(
 	}, nil
 }
 
-func (l *testConfigurableLink) UpdateResourceA(
+func (l *testConfigurableLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
-
-func (l *testConfigurableLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 func (l *testConfigurableLink) UpdateIntermediaryResources(

@@ -19,13 +19,17 @@
         "linkName": "preprocessOrderFunction::ordersTableFailingLink_0",
         "status": 9,
         "preciseStatus": 3,
-        "failureReasons": ["resource A update failed due to transient error"],
+        "failureReasons": [
+          "resource A update failed due to transient error"
+        ],
         "currentStageAttempt": 0,
         "canRetryCurrentStage": true,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
-            "attemptDurations": [-1]
+          "linkedResourcesUpdate": {
+            "attemptDurations": [
+              -1
+            ]
           }
         }
       },
@@ -45,13 +49,18 @@
         "linkName": "preprocessOrderFunction::ordersTableFailingLink_0",
         "status": 9,
         "preciseStatus": 3,
-        "failureReasons": ["resource A update failed due to transient error"],
+        "failureReasons": [
+          "resource A update failed due to transient error"
+        ],
         "currentStageAttempt": 1,
         "canRetryCurrentStage": true,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
-            "attemptDurations": [-1, -1]
+          "linkedResourcesUpdate": {
+            "attemptDurations": [
+              -1,
+              -1
+            ]
           }
         }
       },
@@ -69,45 +78,22 @@
         "instanceId": "blueprint-instance-4",
         "linkId": "test-link-1",
         "linkName": "preprocessOrderFunction::ordersTableFailingLink_0",
-        "status": 7,
-        "preciseStatus": 2,
+        "status": 9,
+        "preciseStatus": 3,
+        "failureReasons": [
+          "resource B update failed due to terminal error"
+        ],
         "currentStageAttempt": 2,
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
+          "linkedResourcesUpdate": {
             "totalDuration": -1,
-            "attemptDurations": [-1, -1, -1]
-          }
-        }
-      },
-      {
-        "instanceId": "blueprint-instance-4",
-        "linkId": "test-link-1",
-        "linkName": "preprocessOrderFunction::ordersTableFailingLink_0",
-        "status": 7,
-        "preciseStatus": 7,
-        "currentStageAttempt": 0,
-        "updateTimestamp": -1
-      },
-      {
-        "instanceId": "blueprint-instance-4",
-        "linkId": "test-link-1",
-        "linkName": "preprocessOrderFunction::ordersTableFailingLink_0",
-        "status": 9,
-        "preciseStatus": 9,
-        "failureReasons": ["resource B update failed due to terminal error"],
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1,
-        "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1, -1, -1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
+            "attemptDurations": [
+              -1,
+              -1,
+              -1
+            ]
           }
         }
       }

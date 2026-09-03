@@ -2,6 +2,8 @@ package container
 
 import (
 	"context"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
@@ -127,42 +129,18 @@ func (d *defaultLinkDeployer) Deploy(
 		deployCtx.ResourceRegistry,
 		linkElement.ID(),
 	)
-	resourceAOutput, stop, err := d.updateLinkResourceA(
+	linkedResourcesOutput, stop, err := d.updateLinkedResources(
 		ctx,
 		linkImplementation,
-		&provider.LinkUpdateResourceInput{
-			ResourceInfo:      resourceAInfo,
-			OtherResourceInfo: resourceBInfo,
-			LinkID:            linkElement.ID(),
-			InstanceName:      instanceName,
-			LinkUpdateType:    linkUpdateType,
-			CurrentLinkState:  currentLinkState,
-			LinkContext:       linkCtx,
-			ResourceService:   linkResourceService,
-		},
-		linkInfo,
-		provider.CreateRetryContext(retryPolicy),
-		deployCtx,
-	)
-	if err != nil {
-		return err
-	}
-	if stop {
-		return nil
-	}
-
-	resourceBOutput, stop, err := d.updateLinkResourceB(
-		ctx,
-		linkImplementation,
-		&provider.LinkUpdateResourceInput{
-			ResourceInfo:      resourceBInfo,
-			OtherResourceInfo: resourceAInfo,
-			LinkID:            linkElement.ID(),
-			InstanceName:      instanceName,
-			LinkUpdateType:    linkUpdateType,
-			CurrentLinkState:  currentLinkState,
-			LinkContext:       linkCtx,
-			ResourceService:   linkResourceService,
+		&provider.LinkUpdateLinkedResourcesInput{
+			ResourceAInfo:    resourceAInfo,
+			ResourceBInfo:    resourceBInfo,
+			LinkID:           linkElement.ID(),
+			InstanceName:     instanceName,
+			LinkUpdateType:   linkUpdateType,
+			CurrentLinkState: currentLinkState,
+			LinkContext:      linkCtx,
+			ResourceService:  linkResourceService,
 		},
 		linkInfo,
 		provider.CreateRetryContext(retryPolicy),
@@ -191,8 +169,7 @@ func (d *defaultLinkDeployer) Deploy(
 		linkInfo,
 		provider.CreateRetryContext(retryPolicy),
 		&linkUpdateResourceOutputs{
-			resourceAOutput: resourceAOutput,
-			resourceBOutput: resourceBOutput,
+			linkedResourcesOutput: linkedResourcesOutput,
 		},
 		deployCtx,
 	)
@@ -203,97 +180,56 @@ func (d *defaultLinkDeployer) Deploy(
 	return nil
 }
 
-// Whether the deployer takes an exclusive lock on a resource for a link phase, and waits
-// for it to settle afterwards.
-//
-// A link that declared it does not write a side is only reading it, so locking it would
-// serialise every link that reads the same resource against one another for no benefit,
-// and waiting for it to settle would poll a resource this link did not change. A link that
-// declared nothing is treated as writing both sides.
-func (d *defaultLinkDeployer) writesResource(
-	linkInfo *deploymentElementInfo,
-	deployCtx *DeployContext,
-	side provider.LinkPriorityResource,
-) bool {
-	modifies := deployCtx.State.LinkModifies(linkInfo.element.LogicalName())
-	if side == provider.LinkPriorityResourceB {
-		return modifies.WritesResourceB()
-	}
-
-	return modifies.WritesResourceA()
-}
-
-func (d *defaultLinkDeployer) updateLinkResourceA(
+func (d *defaultLinkDeployer) updateLinkedResources(
 	ctx context.Context,
 	linkImplementation provider.Link,
-	input *provider.LinkUpdateResourceInput,
+	input *provider.LinkUpdateLinkedResourcesInput,
 	linkInfo *deploymentElementInfo,
-	updateResourceARetryInfo *provider.RetryContext,
+	updateRetryInfo *provider.RetryContext,
 	deployCtx *DeployContext,
-) (*provider.LinkUpdateResourceOutput, bool, error) {
-	updateResourceAStartTime := d.clock.Now()
-	deployCtx.Channels.LinkUpdateChan <- d.createLinkUpdatingResourceAMessage(
+) (*provider.LinkUpdateLinkedResourcesOutput, bool, error) {
+	updateStartTime := d.clock.Now()
+	deployCtx.Channels.LinkUpdateChan <- d.createLinkUpdatingLinkedResourcesMessage(
 		linkInfo,
 		deployCtx,
-		updateResourceARetryInfo,
+		updateRetryInfo,
 		input.LinkUpdateType,
 	)
 
-	writesResource := d.writesResource(linkInfo, deployCtx, provider.LinkPriorityResourceA)
-	var err error
-	if writesResource {
-		deployCtx.Logger.Debug(
-			"acquiring resource lock for link resource A update",
-			core.StringLogField("linkId", linkInfo.element.ID()),
-			core.StringLogField("resourceName", input.ResourceInfo.ResourceName),
-		)
-		err = deployCtx.ResourceRegistry.AcquireResourceLock(
-			ctx,
-			&provider.AcquireResourceLockInput{
-				InstanceID:   linkInfo.instanceID,
-				ResourceName: input.ResourceInfo.ResourceName,
-				AcquiredBy:   linkInfo.element.ID(),
-			},
-		)
-	}
+	written := d.resourcesWrittenByLink(linkInfo, deployCtx, input)
+	err := d.acquireLocksForWrittenResources(ctx, linkInfo, written, deployCtx)
 	if err != nil {
-		deployCtx.Logger.Error(
-			"failed to acquire resource lock for link resource A update",
-			core.StringLogField("linkId", linkInfo.element.ID()),
-			core.StringLogField("resourceName", input.ResourceInfo.ResourceName),
-			core.ErrorLogField("error", err),
-		)
 		return nil, true, err
 	}
 
 	// Check for context cancellation before calling the plugin.
 	select {
 	case <-ctx.Done():
-		// Release the lock we just acquired before returning.
+		// Release the locks we just acquired before returning.
 		deployCtx.ResourceRegistry.ReleaseResourceLocksAcquiredBy(
 			ctx,
 			linkInfo.instanceID,
 			linkInfo.element.ID(),
 		)
-		deployCtx.Logger.Debug("context cancelled before link resource A update")
+		deployCtx.Logger.Debug("context cancelled before link resource update")
 		return nil, true, ctx.Err()
 	default:
 	}
 
 	deployCtx.Logger.Info(
-		"calling link plugin implementation to update resource A",
-		core.IntegerLogField("attempt", int64(updateResourceARetryInfo.Attempt)),
+		"calling link plugin implementation to update the resources it links",
+		core.IntegerLogField("attempt", int64(updateRetryInfo.Attempt)),
 	)
 
-	resourceAOutput, err := linkImplementation.UpdateResourceA(ctx, input)
-	if err == nil && writesResource {
-		// Inside the lock, so the next link cannot reach the resource while it is still
+	output, err := linkImplementation.UpdateLinkedResources(ctx, input)
+	if err == nil {
+		// Inside the locks, so the next link cannot reach a resource while it is still
 		// applying what this one wrote.
-		err = d.waitForResourceToSettle(ctx, input.ResourceInfo, deployCtx)
+		err = d.waitForWrittenResourcesToSettle(ctx, written, deployCtx)
 	}
-	// Regardless of whether or not the resource A update was successful,
-	// we need to ensure that all locks acquired by the link implementation's UpdateResourceA
-	// method are released before retrying or moving on.
+	// Regardless of whether or not the update was successful, all locks acquired for this
+	// link must be released before retrying or moving on. This covers both the locks taken
+	// above and any the link implementation took for itself.
 	deployCtx.ResourceRegistry.ReleaseResourceLocksAcquiredBy(
 		ctx,
 		linkInfo.instanceID,
@@ -303,17 +239,17 @@ func (d *defaultLinkDeployer) updateLinkResourceA(
 		var retryErr *provider.RetryableError
 		if provider.AsRetryableError(err, &retryErr) {
 			deployCtx.Logger.Debug(
-				"retryable error occurred during resource A update",
-				core.IntegerLogField("attempt", int64(updateResourceARetryInfo.Attempt)),
+				"retryable error occurred during link resource update",
+				core.IntegerLogField("attempt", int64(updateRetryInfo.Attempt)),
 				core.ErrorLogField("error", err),
 			)
-			return d.handleUpdateLinkResourceARetry(
+			return d.handleUpdateLinkedResourcesRetry(
 				ctx,
 				linkInfo,
 				linkImplementation,
 				provider.RetryContextWithStartTime(
-					updateResourceARetryInfo,
-					updateResourceAStartTime,
+					updateRetryInfo,
+					updateStartTime,
 				),
 				&linkUpdateResourceInfo{
 					failureReasons: []string{retryErr.ChildError.Error()},
@@ -323,21 +259,21 @@ func (d *defaultLinkDeployer) updateLinkResourceA(
 			)
 		}
 
-		var linkUpdateResourceAError *provider.LinkUpdateResourceAError
-		if provider.AsLinkUpdateResourceAError(err, &linkUpdateResourceAError) {
+		var linkUpdateError *provider.LinkUpdateLinkedResourcesError
+		if provider.AsLinkUpdateLinkedResourcesError(err, &linkUpdateError) {
 			deployCtx.Logger.Debug(
-				"terminal error occurred during resource A update",
-				core.IntegerLogField("attempt", int64(updateResourceARetryInfo.Attempt)),
+				"terminal error occurred during link resource update",
+				core.IntegerLogField("attempt", int64(updateRetryInfo.Attempt)),
 				core.ErrorLogField("error", err),
 			)
-			stop, err := d.handleUpdateResourceATerminalFailure(
+			stop, err := d.handleUpdateLinkedResourcesTerminalFailure(
 				linkInfo,
 				provider.RetryContextWithStartTime(
-					updateResourceARetryInfo,
-					updateResourceAStartTime,
+					updateRetryInfo,
+					updateStartTime,
 				),
 				&linkUpdateResourceInfo{
-					failureReasons: linkUpdateResourceAError.FailureReasons,
+					failureReasons: linkUpdateError.FailureReasons,
 					input:          input,
 				},
 				deployCtx,
@@ -346,8 +282,8 @@ func (d *defaultLinkDeployer) updateLinkResourceA(
 		}
 
 		deployCtx.Logger.Warn(
-			unknownErrorWarningText("link resource A update"),
-			core.IntegerLogField("attempt", int64(updateResourceARetryInfo.Attempt)),
+			unknownErrorWarningText("link resource update"),
+			core.IntegerLogField("attempt", int64(updateRetryInfo.Attempt)),
 			core.ErrorLogField("error", err),
 		)
 		// For errors that are not wrapped in a provider error, the error is assumed to be fatal
@@ -357,29 +293,115 @@ func (d *defaultLinkDeployer) updateLinkResourceA(
 		return nil, true, err
 	}
 
-	deployCtx.Channels.LinkUpdateChan <- d.createLinkResourceAUpdatedMessage(
+	deployCtx.Channels.LinkUpdateChan <- d.createLinkedResourcesUpdatedMessage(
 		linkInfo,
 		deployCtx,
 		provider.RetryContextWithStartTime(
-			updateResourceARetryInfo,
-			updateResourceAStartTime,
+			updateRetryInfo,
+			updateStartTime,
 		),
 		input.LinkUpdateType,
 	)
 
-	return resourceAOutput, false, nil
+	return output, false, nil
 }
 
-func (d *defaultLinkDeployer) handleUpdateLinkResourceARetry(
+// The resources of the link relationship this link declared it writes.
+//
+// A link that declared it does not write a side is only reading it, so locking it would
+// serialise every link that reads the same resource against one another for no benefit,
+// and waiting for it to settle would poll a resource this link did not change. A link
+// that declared nothing is treated as writing both.
+//
+// Ordered by resource name rather than by side, so two links that write the same pair
+// acquire in the same order and cannot hold what the other is waiting for.
+func (d *defaultLinkDeployer) resourcesWrittenByLink(
+	linkInfo *deploymentElementInfo,
+	deployCtx *DeployContext,
+	input *provider.LinkUpdateLinkedResourcesInput,
+) []*provider.ResourceInfo {
+	modifies := deployCtx.State.LinkModifies(linkInfo.element.LogicalName())
+
+	written := []*provider.ResourceInfo{}
+	if modifies.WritesResourceA() && input.ResourceAInfo != nil {
+		written = append(written, input.ResourceAInfo)
+	}
+	if modifies.WritesResourceB() && input.ResourceBInfo != nil {
+		written = append(written, input.ResourceBInfo)
+	}
+
+	slices.SortFunc(written, func(a, b *provider.ResourceInfo) int {
+		return strings.Compare(a.ResourceName, b.ResourceName)
+	})
+
+	return written
+}
+
+func (d *defaultLinkDeployer) acquireLocksForWrittenResources(
+	ctx context.Context,
+	linkInfo *deploymentElementInfo,
+	written []*provider.ResourceInfo,
+	deployCtx *DeployContext,
+) error {
+	for _, resourceInfo := range written {
+		deployCtx.Logger.Debug(
+			"acquiring resource lock for link resource update",
+			core.StringLogField("linkId", linkInfo.element.ID()),
+			core.StringLogField("resourceName", resourceInfo.ResourceName),
+		)
+		err := deployCtx.ResourceRegistry.AcquireResourceLock(
+			ctx,
+			&provider.AcquireResourceLockInput{
+				InstanceID:   linkInfo.instanceID,
+				ResourceName: resourceInfo.ResourceName,
+				AcquiredBy:   linkInfo.element.ID(),
+			},
+		)
+		if err != nil {
+			deployCtx.Logger.Error(
+				"failed to acquire resource lock for link resource update",
+				core.StringLogField("linkId", linkInfo.element.ID()),
+				core.StringLogField("resourceName", resourceInfo.ResourceName),
+				core.ErrorLogField("error", err),
+			)
+			// Locks taken before the one that failed are released here, since the caller
+			// returns without reaching the release that follows a successful call.
+			deployCtx.ResourceRegistry.ReleaseResourceLocksAcquiredBy(
+				ctx,
+				linkInfo.instanceID,
+				linkInfo.element.ID(),
+			)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (d *defaultLinkDeployer) waitForWrittenResourcesToSettle(
+	ctx context.Context,
+	written []*provider.ResourceInfo,
+	deployCtx *DeployContext,
+) error {
+	for _, resourceInfo := range written {
+		if err := d.waitForResourceToSettle(ctx, resourceInfo, deployCtx); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (d *defaultLinkDeployer) handleUpdateLinkedResourcesRetry(
 	ctx context.Context,
 	linkInfo *deploymentElementInfo,
 	linkImplementation provider.Link,
-	updateResourceARetryInfo *provider.RetryContext,
+	updateRetryInfo *provider.RetryContext,
 	updateInfo *linkUpdateResourceInfo,
 	deployCtx *DeployContext,
-) (*provider.LinkUpdateResourceOutput, bool, error) {
-	currentAttemptDuration := d.clock.Since(updateResourceARetryInfo.AttemptStartTime)
-	nextRetryInfo := provider.RetryContextWithNextAttempt(updateResourceARetryInfo, currentAttemptDuration)
+) (*provider.LinkUpdateLinkedResourcesOutput, bool, error) {
+	currentAttemptDuration := d.clock.Since(updateRetryInfo.AttemptStartTime)
+	nextRetryInfo := provider.RetryContextWithNextAttempt(updateRetryInfo, currentAttemptDuration)
 	deployCtx.Channels.LinkUpdateChan <- LinkDeployUpdateMessage{
 		InstanceID: linkInfo.instanceID,
 		LinkID:     linkInfo.element.ID(),
@@ -388,20 +410,20 @@ func (d *defaultLinkDeployer) handleUpdateLinkResourceARetry(
 			deployCtx.Rollback,
 			updateInfo.input.LinkUpdateType,
 		),
-		PreciseStatus: determinePreciseLinkResourceAUpdateFailedStatus(
+		PreciseStatus: determinePreciseLinkedResourcesUpdateFailedStatus(
 			deployCtx.Rollback,
 		),
 		FailureReasons: updateInfo.failureReasons,
-		// Attempt and retry information included the status update is specific to
-		// updating resource A, each component of a link change will have its own
+		// Attempt and retry information in the status update is specific to updating the
+		// resources the link relates, each component of a link change will have its own
 		// number of attempts and retry information.
-		CurrentStageAttempt:  updateResourceARetryInfo.Attempt,
+		CurrentStageAttempt:  updateRetryInfo.Attempt,
 		CanRetryCurrentStage: !nextRetryInfo.ExceededMaxRetries,
 		UpdateTimestamp:      d.clock.Now().Unix(),
 		// Attempt durations will be accumulated and sent in the status updates
 		// for each subsequent retry.
 		// Total duration will be calculated if retry limit is exceeded.
-		Durations: determineLinkUpdateResourceARetryFailureDurations(
+		Durations: determineLinkUpdateLinkedResourcesRetryFailureDurations(
 			nextRetryInfo,
 		),
 	}
@@ -409,10 +431,10 @@ func (d *defaultLinkDeployer) handleUpdateLinkResourceARetry(
 	if !nextRetryInfo.ExceededMaxRetries {
 		waitTimeMS := provider.CalculateRetryWaitTimeMS(nextRetryInfo.Policy, nextRetryInfo.Attempt)
 		if err := sleepWithContext(ctx, time.Duration(waitTimeMS)*time.Millisecond); err != nil {
-			deployCtx.Logger.Debug("context cancelled during link resource A retry wait")
+			deployCtx.Logger.Debug("context cancelled during link resource update retry wait")
 			return nil, true, err
 		}
-		return d.updateLinkResourceA(
+		return d.updateLinkedResources(
 			ctx,
 			linkImplementation,
 			updateInfo.input,
@@ -423,7 +445,7 @@ func (d *defaultLinkDeployer) handleUpdateLinkResourceARetry(
 	}
 
 	deployCtx.Logger.Debug(
-		"link resource A update failed after reaching the maximum number of retries",
+		"link resource update failed after reaching the maximum number of retries",
 		core.IntegerLogField("attempt", int64(nextRetryInfo.Attempt)),
 		core.IntegerLogField("maxRetries", int64(nextRetryInfo.Policy.MaxRetries)),
 	)
@@ -431,13 +453,13 @@ func (d *defaultLinkDeployer) handleUpdateLinkResourceARetry(
 	return nil, true, nil
 }
 
-func (d *defaultLinkDeployer) handleUpdateResourceATerminalFailure(
+func (d *defaultLinkDeployer) handleUpdateLinkedResourcesTerminalFailure(
 	linkInfo *deploymentElementInfo,
-	updateResourceARetryInfo *provider.RetryContext,
+	updateRetryInfo *provider.RetryContext,
 	updateInfo *linkUpdateResourceInfo,
 	deployCtx *DeployContext,
 ) (bool, error) {
-	currentAttemptDuration := d.clock.Since(updateResourceARetryInfo.AttemptStartTime)
+	currentAttemptDuration := d.clock.Since(updateRetryInfo.AttemptStartTime)
 	deployCtx.Channels.LinkUpdateChan <- LinkDeployUpdateMessage{
 		InstanceID: linkInfo.instanceID,
 		LinkID:     linkInfo.element.ID(),
@@ -446,14 +468,14 @@ func (d *defaultLinkDeployer) handleUpdateResourceATerminalFailure(
 			deployCtx.Rollback,
 			updateInfo.input.LinkUpdateType,
 		),
-		PreciseStatus: determinePreciseLinkResourceAUpdateFailedStatus(
+		PreciseStatus: determinePreciseLinkedResourcesUpdateFailedStatus(
 			deployCtx.Rollback,
 		),
 		FailureReasons:      updateInfo.failureReasons,
-		CurrentStageAttempt: updateResourceARetryInfo.Attempt,
+		CurrentStageAttempt: updateRetryInfo.Attempt,
 		UpdateTimestamp:     d.clock.Now().Unix(),
-		Durations: determineLinkUpdateResourceAFinishedDurations(
-			updateResourceARetryInfo,
+		Durations: determineLinkUpdateLinkedResourcesFinishedDurations(
+			updateRetryInfo,
 			currentAttemptDuration,
 		),
 	}
@@ -461,10 +483,10 @@ func (d *defaultLinkDeployer) handleUpdateResourceATerminalFailure(
 	return true, nil
 }
 
-func (d *defaultLinkDeployer) createLinkUpdatingResourceAMessage(
+func (d *defaultLinkDeployer) createLinkUpdatingLinkedResourcesMessage(
 	linkInfo *deploymentElementInfo,
 	deployCtx *DeployContext,
-	updateResourceARetryInfo *provider.RetryContext,
+	updateRetryInfo *provider.RetryContext,
 	linkUpdateType provider.LinkUpdateType,
 ) LinkDeployUpdateMessage {
 	return LinkDeployUpdateMessage{
@@ -475,23 +497,23 @@ func (d *defaultLinkDeployer) createLinkUpdatingResourceAMessage(
 			deployCtx.Rollback,
 			linkUpdateType,
 		),
-		PreciseStatus: determinePreciseLinkUpdatingResourceAStatus(
+		PreciseStatus: determinePreciseLinkUpdatingLinkedResourcesStatus(
 			deployCtx.Rollback,
 		),
 		UpdateTimestamp:     d.clock.Now().Unix(),
-		CurrentStageAttempt: updateResourceARetryInfo.Attempt,
+		CurrentStageAttempt: updateRetryInfo.Attempt,
 	}
 }
 
-func (d *defaultLinkDeployer) createLinkResourceAUpdatedMessage(
+func (d *defaultLinkDeployer) createLinkedResourcesUpdatedMessage(
 	linkInfo *deploymentElementInfo,
 	deployCtx *DeployContext,
-	updateResourceARetryInfo *provider.RetryContext,
+	updateRetryInfo *provider.RetryContext,
 	linkUpdateType provider.LinkUpdateType,
 ) LinkDeployUpdateMessage {
-	durations := determineLinkUpdateResourceAFinishedDurations(
-		updateResourceARetryInfo,
-		d.clock.Since(updateResourceARetryInfo.AttemptStartTime),
+	durations := determineLinkUpdateLinkedResourcesFinishedDurations(
+		updateRetryInfo,
+		d.clock.Since(updateRetryInfo.AttemptStartTime),
 	)
 	linkName := linkInfo.element.LogicalName()
 	deployCtx.State.SetLinkDurationInfo(linkName, durations)
@@ -501,314 +523,17 @@ func (d *defaultLinkDeployer) createLinkResourceAUpdatedMessage(
 		LinkID:     linkInfo.element.ID(),
 		LinkName:   linkName,
 		// We are still in the process of updating the link,
-		// resource B and intermediary resources still need to be updated.
-		Status: determineLinkUpdatingStatus(
-			deployCtx.Rollback,
-			linkUpdateType,
-		),
-		PreciseStatus:       determinePreciseLinkResourceAUpdatedStatus(deployCtx.Rollback),
-		UpdateTimestamp:     d.clock.Now().Unix(),
-		CurrentStageAttempt: updateResourceARetryInfo.Attempt,
-		Durations:           durations,
-	}
-}
-
-func (d *defaultLinkDeployer) updateLinkResourceB(
-	ctx context.Context,
-	linkImplementation provider.Link,
-	input *provider.LinkUpdateResourceInput,
-	linkInfo *deploymentElementInfo,
-	updateResourceBRetryInfo *provider.RetryContext,
-	deployCtx *DeployContext,
-) (*provider.LinkUpdateResourceOutput, bool, error) {
-	updateResourceBStartTime := d.clock.Now()
-	deployCtx.Channels.LinkUpdateChan <- d.createLinkUpdatingResourceBMessage(
-		linkInfo,
-		deployCtx,
-		updateResourceBRetryInfo,
-		input.LinkUpdateType,
-	)
-
-	writesResource := d.writesResource(linkInfo, deployCtx, provider.LinkPriorityResourceB)
-	var err error
-	if writesResource {
-		deployCtx.Logger.Debug(
-			"acquiring resource lock for link resource B update",
-			core.StringLogField("linkId", linkInfo.element.ID()),
-			core.StringLogField("resourceName", input.ResourceInfo.ResourceName),
-		)
-		err = deployCtx.ResourceRegistry.AcquireResourceLock(
-			ctx,
-			&provider.AcquireResourceLockInput{
-				InstanceID:   linkInfo.instanceID,
-				ResourceName: input.ResourceInfo.ResourceName,
-				AcquiredBy:   linkInfo.element.ID(),
-			},
-		)
-	}
-	if err != nil {
-		deployCtx.Logger.Error(
-			"failed to acquire resource lock for link resource B update",
-			core.StringLogField("linkId", linkInfo.element.ID()),
-			core.StringLogField("resourceName", input.ResourceInfo.ResourceName),
-			core.ErrorLogField("error", err),
-		)
-		return nil, true, err
-	}
-
-	// Check for context cancellation before calling the plugin.
-	select {
-	case <-ctx.Done():
-		// Release the lock we just acquired before returning.
-		deployCtx.ResourceRegistry.ReleaseResourceLocksAcquiredBy(
-			ctx,
-			linkInfo.instanceID,
-			linkInfo.element.ID(),
-		)
-		deployCtx.Logger.Debug("context cancelled before link resource B update")
-		return nil, true, ctx.Err()
-	default:
-	}
-
-	deployCtx.Logger.Info(
-		"calling link plugin implementation to update resource B",
-		core.IntegerLogField("attempt", int64(updateResourceBRetryInfo.Attempt)),
-	)
-
-	resourceBOutput, err := linkImplementation.UpdateResourceB(ctx, input)
-	if err == nil && writesResource {
-		// Inside the lock, so the next link cannot reach the resource while it is still
-		// applying what this one wrote.
-		err = d.waitForResourceToSettle(ctx, input.ResourceInfo, deployCtx)
-	}
-	// Regardless of whether or not the resource B update was successful,
-	// we need to ensure that all locks acquired by the link implementation's UpdateResourceB
-	// method are released before retrying or moving on.
-	deployCtx.ResourceRegistry.ReleaseResourceLocksAcquiredBy(
-		ctx,
-		linkInfo.instanceID,
-		linkInfo.element.ID(),
-	)
-	if err != nil {
-		var retryErr *provider.RetryableError
-		if provider.AsRetryableError(err, &retryErr) {
-			deployCtx.Logger.Debug(
-				"retryable error occurred during resource B update",
-				core.IntegerLogField("attempt", int64(updateResourceBRetryInfo.Attempt)),
-				core.ErrorLogField("error", err),
-			)
-			return d.handleUpdateLinkResourceBRetry(
-				ctx,
-				linkInfo,
-				linkImplementation,
-				provider.RetryContextWithStartTime(
-					updateResourceBRetryInfo,
-					updateResourceBStartTime,
-				),
-				&linkUpdateResourceInfo{
-					failureReasons: []string{retryErr.ChildError.Error()},
-					input:          input,
-				},
-				deployCtx,
-			)
-		}
-
-		var linkUpdateResourceBError *provider.LinkUpdateResourceBError
-		if provider.AsLinkUpdateResourceBError(err, &linkUpdateResourceBError) {
-			deployCtx.Logger.Debug(
-				"terminal error occurred during resource B update",
-				core.IntegerLogField("attempt", int64(updateResourceBRetryInfo.Attempt)),
-				core.ErrorLogField("error", err),
-			)
-			stop, err := d.handleUpdateResourceBTerminalFailure(
-				linkInfo,
-				provider.RetryContextWithStartTime(
-					updateResourceBRetryInfo,
-					updateResourceBStartTime,
-				),
-				&linkUpdateResourceInfo{
-					failureReasons: linkUpdateResourceBError.FailureReasons,
-					input:          input,
-				},
-				deployCtx,
-			)
-			return nil, stop, err
-		}
-
-		deployCtx.Logger.Warn(
-			unknownErrorWarningText("link resource B update"),
-			core.IntegerLogField("attempt", int64(updateResourceBRetryInfo.Attempt)),
-			core.ErrorLogField("error", err),
-		)
-		// For errors that are not wrapped in a provider error, the error is assumed to be fatal
-		// and the deployment process will be stopped without reporting a failure state.
-		// It is really important that adequate guidance is provided for provider developers
-		// to ensure that all errors are wrapped in the appropriate provider error.
-		return nil, true, err
-	}
-
-	deployCtx.Channels.LinkUpdateChan <- d.createLinkResourceBUpdatedMessage(
-		linkInfo,
-		deployCtx,
-		provider.RetryContextWithStartTime(
-			updateResourceBRetryInfo,
-			updateResourceBStartTime,
-		),
-		input.LinkUpdateType,
-	)
-
-	return resourceBOutput, false, nil
-}
-
-func (d *defaultLinkDeployer) handleUpdateLinkResourceBRetry(
-	ctx context.Context,
-	linkInfo *deploymentElementInfo,
-	linkImplementation provider.Link,
-	updateResourceBRetryInfo *provider.RetryContext,
-	updateInfo *linkUpdateResourceInfo,
-	deployCtx *DeployContext,
-) (*provider.LinkUpdateResourceOutput, bool, error) {
-	currentAttemptDuration := d.clock.Since(updateResourceBRetryInfo.AttemptStartTime)
-	nextRetryInfo := provider.RetryContextWithNextAttempt(updateResourceBRetryInfo, currentAttemptDuration)
-	deployCtx.Channels.LinkUpdateChan <- LinkDeployUpdateMessage{
-		InstanceID: linkInfo.instanceID,
-		LinkID:     linkInfo.element.ID(),
-		LinkName:   linkInfo.element.LogicalName(),
-		Status: determineLinkUpdateFailedStatus(
-			deployCtx.Rollback,
-			updateInfo.input.LinkUpdateType,
-		),
-		PreciseStatus: determinePreciseLinkResourceBUpdateFailedStatus(
-			deployCtx.Rollback,
-		),
-		FailureReasons: updateInfo.failureReasons,
-		// Attempt and retry information included the status update is specific to
-		// updating resource B, each component of a link change will have its own
-		// number of attempts and retry information.
-		CurrentStageAttempt:  updateResourceBRetryInfo.Attempt,
-		CanRetryCurrentStage: !nextRetryInfo.ExceededMaxRetries,
-		UpdateTimestamp:      d.clock.Now().Unix(),
-		// Attempt durations will be accumulated and sent in the status updates
-		// for each subsequent retry.
-		// Total duration will be calculated if retry limit is exceeded.
-		Durations: determineLinkUpdateResourceBRetryFailureDurations(
-			nextRetryInfo,
-		),
-	}
-
-	if !nextRetryInfo.ExceededMaxRetries {
-		waitTimeMS := provider.CalculateRetryWaitTimeMS(nextRetryInfo.Policy, nextRetryInfo.Attempt)
-		if err := sleepWithContext(ctx, time.Duration(waitTimeMS)*time.Millisecond); err != nil {
-			deployCtx.Logger.Debug("context cancelled during link resource B retry wait")
-			return nil, true, err
-		}
-		return d.updateLinkResourceB(
-			ctx,
-			linkImplementation,
-			updateInfo.input,
-			linkInfo,
-			nextRetryInfo,
-			deployCtx,
-		)
-	}
-
-	deployCtx.Logger.Debug(
-		"link resource B update failed after reaching the maximum number of retries",
-		core.IntegerLogField("attempt", int64(nextRetryInfo.Attempt)),
-		core.IntegerLogField("maxRetries", int64(nextRetryInfo.Policy.MaxRetries)),
-	)
-
-	return nil, true, nil
-}
-
-func (d *defaultLinkDeployer) handleUpdateResourceBTerminalFailure(
-	linkInfo *deploymentElementInfo,
-	updateResourceBRetryInfo *provider.RetryContext,
-	updateInfo *linkUpdateResourceInfo,
-	deployCtx *DeployContext,
-) (bool, error) {
-	currentAttemptDuration := d.clock.Since(updateResourceBRetryInfo.AttemptStartTime)
-	linkName := linkInfo.element.LogicalName()
-	accumDurationInfo := deployCtx.State.GetLinkDurationInfo(linkName)
-	durations := determineLinkUpdateResourceBFinishedDurations(
-		updateResourceBRetryInfo,
-		currentAttemptDuration,
-		accumDurationInfo,
-	)
-	deployCtx.State.SetLinkDurationInfo(linkName, durations)
-	deployCtx.Channels.LinkUpdateChan <- LinkDeployUpdateMessage{
-		InstanceID: linkInfo.instanceID,
-		LinkID:     linkInfo.element.ID(),
-		LinkName:   linkInfo.element.LogicalName(),
-		Status: determineLinkUpdateFailedStatus(
-			deployCtx.Rollback,
-			updateInfo.input.LinkUpdateType,
-		),
-		PreciseStatus: determinePreciseLinkResourceBUpdateFailedStatus(
-			deployCtx.Rollback,
-		),
-		FailureReasons:      updateInfo.failureReasons,
-		CurrentStageAttempt: updateResourceBRetryInfo.Attempt,
-		UpdateTimestamp:     d.clock.Now().Unix(),
-		Durations:           durations,
-	}
-
-	return true, nil
-}
-
-func (d *defaultLinkDeployer) createLinkUpdatingResourceBMessage(
-	linkInfo *deploymentElementInfo,
-	deployCtx *DeployContext,
-	updateResourceBRetryInfo *provider.RetryContext,
-	linkUpdateType provider.LinkUpdateType,
-) LinkDeployUpdateMessage {
-	return LinkDeployUpdateMessage{
-		InstanceID: linkInfo.instanceID,
-		LinkID:     linkInfo.element.ID(),
-		LinkName:   linkInfo.element.LogicalName(),
-		Status: determineLinkUpdatingStatus(
-			deployCtx.Rollback,
-			linkUpdateType,
-		),
-		PreciseStatus: determinePreciseLinkUpdatingResourceBStatus(
-			deployCtx.Rollback,
-		),
-		UpdateTimestamp:     d.clock.Now().Unix(),
-		CurrentStageAttempt: updateResourceBRetryInfo.Attempt,
-	}
-}
-
-func (d *defaultLinkDeployer) createLinkResourceBUpdatedMessage(
-	linkInfo *deploymentElementInfo,
-	deployCtx *DeployContext,
-	updateResourceBRetryInfo *provider.RetryContext,
-	linkUpdateType provider.LinkUpdateType,
-) LinkDeployUpdateMessage {
-	linkName := linkInfo.element.LogicalName()
-	accumDurationInfo := deployCtx.State.GetLinkDurationInfo(linkName)
-	durations := determineLinkUpdateResourceBFinishedDurations(
-		updateResourceBRetryInfo,
-		d.clock.Since(updateResourceBRetryInfo.AttemptStartTime),
-		accumDurationInfo,
-	)
-	deployCtx.State.SetLinkDurationInfo(linkName, durations)
-	return LinkDeployUpdateMessage{
-		InstanceID: linkInfo.instanceID,
-		LinkID:     linkInfo.element.ID(),
-		LinkName:   linkInfo.element.LogicalName(),
-		// We are still in the process of updating the link,
 		// intermediary resources still need to be updated.
 		Status: determineLinkUpdatingStatus(
 			deployCtx.Rollback,
 			linkUpdateType,
 		),
-		PreciseStatus:       determinePreciseLinkResourceBUpdatedStatus(deployCtx.Rollback),
+		PreciseStatus:       determinePreciseLinkedResourcesUpdatedStatus(deployCtx.Rollback),
 		UpdateTimestamp:     d.clock.Now().Unix(),
-		CurrentStageAttempt: updateResourceBRetryInfo.Attempt,
+		CurrentStageAttempt: updateRetryInfo.Attempt,
 		Durations:           durations,
 	}
 }
-
 func (d *defaultLinkDeployer) updateLinkIntermediaryResources(
 	ctx context.Context,
 	linkImplementation provider.Link,
@@ -911,8 +636,7 @@ func (d *defaultLinkDeployer) updateLinkIntermediaryResources(
 	// This makes sure that the link deploy result is available in the ephemeral state
 	// when the status update handler persists the results to the state container.
 	result := createLinkDeployResult(
-		resourceOutputs.resourceAOutput,
-		resourceOutputs.resourceBOutput,
+		resourceOutputs.linkedResourcesOutput,
 		intermediaryResourcesOutput,
 	)
 	deployCtx.State.SetLinkDeployResult(linkInfo.element.LogicalName(), result)
@@ -1132,17 +856,14 @@ func getResolvedResourceFromInputChanges(
 }
 
 func createLinkDeployResult(
-	resourceAOutput *provider.LinkUpdateResourceOutput,
-	resourceBOutput *provider.LinkUpdateResourceOutput,
+	linkedResourcesOutput *provider.LinkUpdateLinkedResourcesOutput,
 	intermediaryResourcesOutput *provider.LinkUpdateIntermediaryResourcesOutput,
 ) *LinkDeployResult {
-	resourceAOutputLinkData := getResourceOutputLinkData(resourceAOutput)
-	resourceBOutputLinkData := getResourceOutputLinkData(resourceBOutput)
+	linkedResourcesLinkData := getLinkedResourcesOutputLinkData(linkedResourcesOutput)
 	intermediaryResourcesOutputLinkData := getIntermediaryResourcesOutputLinkData(
 		intermediaryResourcesOutput,
 	)
-	resADataMappings := getOutputResourceDataMappings(resourceAOutput)
-	resBDataMappings := getOutputResourceDataMappings(resourceBOutput)
+	linkedResourcesDataMappings := getLinkedResourcesOutputDataMappings(linkedResourcesOutput)
 	intermediaryResourcesDataMappings := getIntermediaryResourcesOutputDataMappings(
 		intermediaryResourcesOutput,
 	)
@@ -1153,19 +874,17 @@ func createLinkDeployResult(
 	return &LinkDeployResult{
 		IntermediaryResourceStates: intermediaryResourceStates,
 		LinkData: core.MergeMaps(
-			resourceAOutputLinkData,
-			resourceBOutputLinkData,
+			linkedResourcesLinkData,
 			intermediaryResourcesOutputLinkData,
 		),
 		ResourceDataMappings: core.MergeNativeMaps(
-			resADataMappings,
-			resBDataMappings,
+			linkedResourcesDataMappings,
 			intermediaryResourcesDataMappings,
 		),
 	}
 }
 
-func getResourceOutputLinkData(output *provider.LinkUpdateResourceOutput) *core.MappingNode {
+func getLinkedResourcesOutputLinkData(output *provider.LinkUpdateLinkedResourcesOutput) *core.MappingNode {
 	if output == nil {
 		return nil
 	}
@@ -1173,8 +892,8 @@ func getResourceOutputLinkData(output *provider.LinkUpdateResourceOutput) *core.
 	return output.LinkData
 }
 
-func getOutputResourceDataMappings(
-	output *provider.LinkUpdateResourceOutput,
+func getLinkedResourcesOutputDataMappings(
+	output *provider.LinkUpdateLinkedResourcesOutput,
 ) map[string]string {
 	if output == nil {
 		return nil
@@ -1219,6 +938,5 @@ func unknownErrorWarningText(operation string) string {
 }
 
 type linkUpdateResourceOutputs struct {
-	resourceAOutput *provider.LinkUpdateResourceOutput
-	resourceBOutput *provider.LinkUpdateResourceOutput
+	linkedResourcesOutput *provider.LinkUpdateLinkedResourcesOutput
 }

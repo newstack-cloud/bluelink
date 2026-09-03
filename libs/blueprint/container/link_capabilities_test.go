@@ -38,18 +38,11 @@ func (l *capabilityTestLink) StageChanges(
 	return &provider.LinkStageChangesOutput{}, nil
 }
 
-func (l *capabilityTestLink) UpdateResourceA(
+func (l *capabilityTestLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
-
-func (l *capabilityTestLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 func (l *capabilityTestLink) UpdateIntermediaryResources(

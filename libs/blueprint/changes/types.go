@@ -92,15 +92,15 @@ type IntermediaryBlueprintChanges struct {
 	RemovedResources  []string
 	RetainedResources []string
 	RemovedLinks      []string
-	NewChildren      map[string]*NewBlueprintDefinition
-	ChildChanges     map[string]*BlueprintChanges
-	RemovedChildren  []string
-	NewExports       map[string]*provider.FieldChange
-	ExportChanges    map[string]*provider.FieldChange
-	RemovedExports   []string
-	MetadataChanges  *MetadataChanges
-	UnchangedExports []string
-	ResolveOnDeploy  []string
+	NewChildren       map[string]*NewBlueprintDefinition
+	ChildChanges      map[string]*BlueprintChanges
+	RemovedChildren   []string
+	NewExports        map[string]*provider.FieldChange
+	ExportChanges     map[string]*provider.FieldChange
+	RemovedExports    []string
+	MetadataChanges   *MetadataChanges
+	UnchangedExports  []string
+	ResolveOnDeploy   []string
 }
 
 // NewBlueprintDefinition provides a definition for a new child blueprint
