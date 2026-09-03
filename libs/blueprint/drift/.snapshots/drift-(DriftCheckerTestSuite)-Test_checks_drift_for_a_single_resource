@@ -87,5 +87,6 @@
     UnchangedFields: ([]string) {
     }
   }),
-  Timestamp: (*int)(-1)
+  Timestamp: (*int)(-1),
+  UnappliedLinkContributions: ([]state.UnappliedLinkContribution) <nil>
 })
