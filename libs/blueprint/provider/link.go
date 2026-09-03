@@ -642,6 +642,23 @@ type LinkChanges struct {
 	// FieldChangesKnownOnDeploy holds a list of field names
 	// for which changes will be known when the host blueprint is deployed.
 	FieldChangesKnownOnDeploy []string `json:"fieldChangesKnownOnDeploy"`
+	// ResourceDataMappings declares the resource fields the link will contribute to,
+	// mapped to the path in the link's data that each field's value will be read from.
+	//
+	// Keys take the "{resourceName}::{fieldPath}" form used by
+	// state.LinkState.ResourceDataMappings, which is what the link goes on to return once
+	// it has run. This is the same correspondence declared ahead of time, without the
+	// values, which are not known until both endpoints have deployed.
+	//
+	// A link that has never run has no mappings in state, so a resource field it
+	// contributes cannot otherwise be attributed to it while changes are being staged.
+	// Declaring them here is what lets a change set report a contribution from a link
+	// that is new in this deployment.
+	//
+	// A mapping the link cannot determine from the blueprint alone is omitted rather than
+	// guessed at. Declaring a field and then not contributing to it is allowed but not
+	// the opposite.
+	ResourceDataMappings map[string]string `json:"resourceDataMappings,omitempty"`
 }
 
 // LinkChangesHasFieldChanges returns true if the provided LinkChanges has any field-level changes

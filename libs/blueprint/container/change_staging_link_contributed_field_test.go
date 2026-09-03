@@ -64,11 +64,118 @@ func (s *ChangeStagingLinkContributedFieldTestSuite) Test_leaves_a_contributed_f
 	s.Assert().Contains(ruleChanges.UnchangedFields, "spec.otherArn")
 }
 
+// A link created by this deployment has nothing in state saying what it contributes, so
+// the resource it contributes to reports nothing about the field at all, rather than
+// reporting it wrongly.
+//
+// Composition draws on link data recorded at the last deploy. The link itself is reported
+// through NewOutboundLinks, so the deployment is not wholly silent about it, but the
+// effect on the resource's spec goes missing: a field that appears when the deployment
+// runs is absent from every category of the resource's changes beforehand. The link
+// declaring the mappings it will produce is the only account of it that exists before the
+// link has run.
+func (s *ChangeStagingLinkContributedFieldTestSuite) Test_reports_a_contributed_field_declared_by_a_new_link() {
+	changeSet := s.stageChangesWithNewLinkDeclaring(
+		map[string]string{
+			"eventsRule::spec.otherArn": contributedFieldLinkDataPath,
+		},
+	)
+
+	ruleChanges, hasRuleChanges := changeSet.ResourceChanges["eventsRule"]
+	s.Require().True(hasRuleChanges, "the rule was dropped from the change set")
+	s.Assert().Contains(
+		ruleChanges.FieldChangesKnownOnDeploy,
+		"spec.otherArn",
+		"a field the new link declared and reports as changing must be reported",
+	)
+	s.Assert().Equal(
+		"eventsRule::linkedFunction",
+		ruleChanges.LinkOwnedFields["spec.otherArn"],
+		"the reported field must be attributed to the link that declared it",
+	)
+}
+
+// A declared contribution to a field the resource's changes account for in no category at
+// all still has to be reported.
+//
+// A field the blueprint does not declare and no link in state contributes is composed into
+// neither side of the resource's comparison, so it is not reported as unchanged and cannot
+// be reached by moving fields between categories. It has to be added, or a field that
+// appears when the deployment runs is absent from the change set entirely.
+func (s *ChangeStagingLinkContributedFieldTestSuite) Test_reports_a_declared_field_absent_from_the_resource_comparison() {
+	changeSet := s.stageChangesWithNewLinkReporting(
+		map[string]string{
+			"eventsRule::spec.unwrittenArn": "eventsRule.neverWrittenValue",
+		},
+		"eventsRule.neverWrittenValue",
+	)
+
+	ruleChanges, hasRuleChanges := changeSet.ResourceChanges["eventsRule"]
+	s.Require().True(hasRuleChanges, "the rule was dropped from the change set")
+	s.Assert().Contains(
+		ruleChanges.FieldChangesKnownOnDeploy,
+		"spec.unwrittenArn",
+		"a declared contribution the link reports as changing must be reported",
+	)
+	s.Assert().Equal(
+		"eventsRule::linkedFunction",
+		ruleChanges.LinkOwnedFields["spec.unwrittenArn"],
+	)
+}
+
+// Declaring a target and then contributing nothing to it is allowed, so a declaration on
+// its own does not put a field into the change set. The link has to report the path behind
+// it as changing, which is the same gate a contribution already held in state passes.
+func (s *ChangeStagingLinkContributedFieldTestSuite) Test_leaves_a_field_a_new_link_declares_but_does_not_touch() {
+	changeSet := s.stageChangesWithNewLinkDeclaring(
+		map[string]string{
+			"eventsRule::spec.unwrittenArn": "eventsRule.neverWrittenValue",
+		},
+	)
+
+	ruleChanges, hasRuleChanges := changeSet.ResourceChanges["eventsRule"]
+	s.Require().True(hasRuleChanges, "the rule was dropped from the change set")
+	s.Assert().NotContains(ruleChanges.FieldChangesKnownOnDeploy, "spec.unwrittenArn")
+	s.Assert().NotContains(ruleChanges.LinkOwnedFields, "spec.unwrittenArn")
+}
+
 func (s *ChangeStagingLinkContributedFieldTestSuite) stageChangesWithContributedField(
 	linkReportsChangeAt string,
 ) *changes.BlueprintChanges {
+	return s.stageChangesForLink(
+		seedContributedFieldInstance,
+		&contributingRuleLambda2Link{knownOnDeployPath: linkReportsChangeAt},
+	)
+}
+
+// Staged against an instance holding no link, which is what state looks like when the
+// link is created by the deployment being staged. The link reports the same data path as
+// the existing-link cases, so what differs is only where its mappings come from.
+func (s *ChangeStagingLinkContributedFieldTestSuite) stageChangesWithNewLinkDeclaring(
+	declaredMappings map[string]string,
+) *changes.BlueprintChanges {
+	return s.stageChangesWithNewLinkReporting(declaredMappings, contributedFieldLinkDataPath)
+}
+
+func (s *ChangeStagingLinkContributedFieldTestSuite) stageChangesWithNewLinkReporting(
+	declaredMappings map[string]string,
+	linkReportsChangeAt string,
+) *changes.BlueprintChanges {
+	return s.stageChangesForLink(
+		seedContributedFieldInstanceWithoutLink,
+		&contributingRuleLambda2Link{
+			knownOnDeployPath: linkReportsChangeAt,
+			declaredMappings:  declaredMappings,
+		},
+	)
+}
+
+func (s *ChangeStagingLinkContributedFieldTestSuite) stageChangesForLink(
+	seedInstance func(state.Container) error,
+	ruleLambdaLink provider.Link,
+) *changes.BlueprintChanges {
 	stateContainer := memstate.NewMemoryStateContainer()
-	s.Require().NoError(seedContributedFieldInstance(stateContainer))
+	s.Require().NoError(seedInstance(stateContainer))
 
 	providers := map[string]provider.Provider{
 		"aws": &internal.ProviderMock{
@@ -80,9 +187,7 @@ func (s *ChangeStagingLinkContributedFieldTestSuite) stageChangesWithContributed
 				},
 			},
 			Links: map[string]provider.Link{
-				"aws/events2/rule::aws/lambda2/function": &contributingRuleLambda2Link{
-					knownOnDeployPath: linkReportsChangeAt,
-				},
+				"aws/events2/rule::aws/lambda2/function": ruleLambdaLink,
 			},
 			CustomVariableTypes: map[string]provider.CustomVariableType{},
 			DataSources:         map[string]provider.DataSource{},
@@ -139,6 +244,34 @@ func (s *ChangeStagingLinkContributedFieldTestSuite) stageChangesWithContributed
 // blueprint declares, and the link holds the value it contributed to spec.otherArn along
 // with the mapping saying which field of the rule that value belongs to.
 func seedContributedFieldInstance(stateContainer state.Container) error {
+	return saveContributedFieldInstance(stateContainer, map[string]*state.LinkState{
+		"eventsRule::linkedFunction": {
+			LinkID:     "link-1",
+			Name:       "eventsRule::linkedFunction",
+			InstanceID: contributedFieldInstanceID,
+			Status:     core.LinkStatusCreated,
+			Data: map[string]*core.MappingNode{
+				"eventsRule": core.MappingNodeFields(
+					"otherArnValue",
+					core.MappingNodeFromString("arn:aws:events:eu-west-2:123456789012:rule/old"),
+				),
+			},
+			ResourceDataMappings: map[string]string{
+				"eventsRule::spec.otherArn": contributedFieldLinkDataPath,
+			},
+		},
+	})
+}
+
+// The same instance with the link absent, so nothing in state records what it contributes.
+func seedContributedFieldInstanceWithoutLink(stateContainer state.Container) error {
+	return saveContributedFieldInstance(stateContainer, map[string]*state.LinkState{})
+}
+
+func saveContributedFieldInstance(
+	stateContainer state.Container,
+	links map[string]*state.LinkState,
+) error {
 	return stateContainer.Instances().Save(context.Background(), state.InstanceState{
 		InstanceID:   contributedFieldInstanceID,
 		InstanceName: "LinkContributedFieldInstance",
@@ -173,23 +306,7 @@ func seedContributedFieldInstance(stateContainer state.Container) error {
 				),
 			},
 		},
-		Links: map[string]*state.LinkState{
-			"eventsRule::linkedFunction": {
-				LinkID:     "link-1",
-				Name:       "eventsRule::linkedFunction",
-				InstanceID: contributedFieldInstanceID,
-				Status:     core.LinkStatusCreated,
-				Data: map[string]*core.MappingNode{
-					"eventsRule": core.MappingNodeFields(
-						"otherArnValue",
-						core.MappingNodeFromString("arn:aws:events:eu-west-2:123456789012:rule/old"),
-					),
-				},
-				ResourceDataMappings: map[string]string{
-					"eventsRule::spec.otherArn": contributedFieldLinkDataPath,
-				},
-			},
-		},
+		Links: links,
 	})
 }
 
@@ -198,6 +315,7 @@ func seedContributedFieldInstance(stateContainer state.Container) error {
 type contributingRuleLambda2Link struct {
 	testNoPriorityRuleLambda2Link
 	knownOnDeployPath string
+	declaredMappings  map[string]string
 }
 
 func (l *contributingRuleLambda2Link) StageChanges(
@@ -207,6 +325,7 @@ func (l *contributingRuleLambda2Link) StageChanges(
 	return &provider.LinkStageChangesOutput{
 		Changes: &provider.LinkChanges{
 			FieldChangesKnownOnDeploy: []string{l.knownOnDeployPath},
+			ResourceDataMappings:      l.declaredMappings,
 		},
 	}, nil
 }

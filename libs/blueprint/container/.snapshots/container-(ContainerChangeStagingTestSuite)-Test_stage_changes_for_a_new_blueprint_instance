@@ -266,7 +266,8 @@
           NewFields: ([]*provider.FieldChange) <nil>,
           RemovedFields: ([]string) <nil>,
           UnchangedFields: ([]string) <nil>,
-          FieldChangesKnownOnDeploy: ([]string) <nil>
+          FieldChangesKnownOnDeploy: ([]string) <nil>,
+          ResourceDataMappings: (map[string]string) <nil>
         }
       },
       OutboundLinkChanges: (map[string]provider.LinkChanges) <nil>,
@@ -596,14 +597,16 @@
           NewFields: ([]*provider.FieldChange) <nil>,
           RemovedFields: ([]string) <nil>,
           UnchangedFields: ([]string) <nil>,
-          FieldChangesKnownOnDeploy: ([]string) <nil>
+          FieldChangesKnownOnDeploy: ([]string) <nil>,
+          ResourceDataMappings: (map[string]string) <nil>
         },
         (string) (len=22) "processInvoiceFunction": (provider.LinkChanges) {
           ModifiedFields: ([]*provider.FieldChange) <nil>,
           NewFields: ([]*provider.FieldChange) <nil>,
           RemovedFields: ([]string) <nil>,
           UnchangedFields: ([]string) <nil>,
-          FieldChangesKnownOnDeploy: ([]string) <nil>
+          FieldChangesKnownOnDeploy: ([]string) <nil>,
+          ResourceDataMappings: (map[string]string) <nil>
         }
       },
       OutboundLinkChanges: (map[string]provider.LinkChanges) <nil>,
@@ -2298,7 +2301,8 @@
           UnchangedFields: ([]string) <nil>,
           FieldChangesKnownOnDeploy: ([]string) (len=1) {
             (string) (len=53) "saveOrderFunction[\"iam.policyStatements\"][0].resource"
-          }
+          },
+          ResourceDataMappings: (map[string]string) <nil>
         },
         (string) (len=13) "ordersTable_1": (provider.LinkChanges) {
           ModifiedFields: ([]*provider.FieldChange) <nil>,
@@ -2405,7 +2409,8 @@
           UnchangedFields: ([]string) <nil>,
           FieldChangesKnownOnDeploy: ([]string) (len=1) {
             (string) (len=53) "saveOrderFunction[\"iam.policyStatements\"][0].resource"
-          }
+          },
+          ResourceDataMappings: (map[string]string) <nil>
         }
       },
       OutboundLinkChanges: (map[string]provider.LinkChanges) <nil>,
