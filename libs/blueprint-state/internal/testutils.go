@@ -507,7 +507,7 @@ func CreateTestLinkStatusInfo() state.LinkStatusInfo {
 		FailureReasons:             []string{"Failed to update resource A due to network error"},
 		Durations: &state.LinkCompletionDurations{
 			TotalDuration: &totalDuration,
-			ResourceAUpdate: &state.LinkComponentCompletionDurations{
+			LinkedResourcesUpdate: &state.LinkComponentCompletionDurations{
 				AttemptDurations: resourceAAttemptDurations,
 				TotalDuration:    &totalDuration,
 			},
