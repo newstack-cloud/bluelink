@@ -1377,8 +1377,7 @@ func determineResourceRecommendedAction(dr drift.ReconcileResult) Reconciliation
 
 func determineLinkReconciliationAction(newStatus core.PreciseLinkStatus) ReconciliationAction {
 	switch newStatus {
-	case core.PreciseLinkStatusResourceAUpdateFailed,
-		core.PreciseLinkStatusResourceBUpdateFailed,
+	case core.PreciseLinkStatusLinkedResourcesUpdateFailed,
 		core.PreciseLinkStatusIntermediaryResourceUpdateFailed:
 		return ReconciliationActionManualCleanupRequired
 	default:
@@ -1399,34 +1398,29 @@ func isFailedPreciseResourceStatus(status core.PreciseResourceStatus) bool {
 }
 
 func isInterruptedLinkStatus(status core.PreciseLinkStatus) bool {
-	return status == core.PreciseLinkStatusResourceAUpdateInterrupted ||
-		status == core.PreciseLinkStatusResourceBUpdateInterrupted ||
+	return status == core.PreciseLinkStatusLinkedResourcesUpdateInterrupted ||
 		status == core.PreciseLinkStatusIntermediaryResourceUpdateInterrupted
 }
 
 func deriveLinkFailedStatus(oldStatus core.PreciseLinkStatus) core.PreciseLinkStatus {
 	switch oldStatus {
-	case core.PreciseLinkStatusResourceAUpdateInterrupted:
-		return core.PreciseLinkStatusResourceAUpdateFailed
-	case core.PreciseLinkStatusResourceBUpdateInterrupted:
-		return core.PreciseLinkStatusResourceBUpdateFailed
+	case core.PreciseLinkStatusLinkedResourcesUpdateInterrupted:
+		return core.PreciseLinkStatusLinkedResourcesUpdateFailed
 	case core.PreciseLinkStatusIntermediaryResourceUpdateInterrupted:
 		return core.PreciseLinkStatusIntermediaryResourceUpdateFailed
 	default:
-		return core.PreciseLinkStatusResourceAUpdateFailed // Default to resource A failed
+		return core.PreciseLinkStatusLinkedResourcesUpdateFailed
 	}
 }
 
 func deriveLinkSuccessStatus(oldStatus core.PreciseLinkStatus) core.PreciseLinkStatus {
 	switch oldStatus {
-	case core.PreciseLinkStatusResourceAUpdateInterrupted:
-		return core.PreciseLinkStatusResourceAUpdated
-	case core.PreciseLinkStatusResourceBUpdateInterrupted:
-		return core.PreciseLinkStatusResourceBUpdated
+	case core.PreciseLinkStatusLinkedResourcesUpdateInterrupted:
+		return core.PreciseLinkStatusLinkedResourcesUpdated
 	case core.PreciseLinkStatusIntermediaryResourceUpdateInterrupted:
 		return core.PreciseLinkStatusIntermediaryResourcesUpdated
 	default:
-		return core.PreciseLinkStatusResourceAUpdated // Default
+		return core.PreciseLinkStatusLinkedResourcesUpdated // Default
 	}
 }
 
@@ -1457,16 +1451,13 @@ func reconcilePreciseToResourceStatus(preciseStatus core.PreciseResourceStatus) 
 
 func reconcilePreciseLinkToLinkStatus(preciseStatus core.PreciseLinkStatus) core.LinkStatus {
 	switch preciseStatus {
-	case core.PreciseLinkStatusResourceAUpdated,
-		core.PreciseLinkStatusResourceBUpdated,
+	case core.PreciseLinkStatusLinkedResourcesUpdated,
 		core.PreciseLinkStatusIntermediaryResourcesUpdated:
 		return core.LinkStatusCreated // Links use Created for successful state
-	case core.PreciseLinkStatusResourceAUpdateFailed,
-		core.PreciseLinkStatusResourceBUpdateFailed,
+	case core.PreciseLinkStatusLinkedResourcesUpdateFailed,
 		core.PreciseLinkStatusIntermediaryResourceUpdateFailed:
 		return core.LinkStatusCreateFailed
-	case core.PreciseLinkStatusUpdatingResourceA,
-		core.PreciseLinkStatusUpdatingResourceB,
+	case core.PreciseLinkStatusUpdatingLinkedResources,
 		core.PreciseLinkStatusUpdatingIntermediaryResources:
 		return core.LinkStatusCreating
 	default:

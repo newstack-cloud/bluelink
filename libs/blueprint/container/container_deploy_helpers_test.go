@@ -306,18 +306,10 @@ func assertLinkMessageDurations(
 			assertMeasuredDuration(actualDurations.TotalDuration, "link total", testSuite)
 		}
 
-		if expectedDurations.ResourceAUpdate != nil {
+		if expectedDurations.LinkedResourcesUpdate != nil {
 			assertLinkComponentAttemptDurationsPresent(
-				expectedDurations.ResourceAUpdate,
-				actualDurations.ResourceAUpdate,
-				testSuite,
-			)
-		}
-
-		if expectedDurations.ResourceBUpdate != nil {
-			assertLinkComponentAttemptDurationsPresent(
-				expectedDurations.ResourceBUpdate,
-				actualDurations.ResourceBUpdate,
+				expectedDurations.LinkedResourcesUpdate,
+				actualDurations.LinkedResourcesUpdate,
 				testSuite,
 			)
 		}

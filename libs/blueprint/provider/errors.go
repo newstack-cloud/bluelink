@@ -395,53 +395,28 @@ func AsResourceDestroyError(err error, target **ResourceDestroyError) bool {
 	return nativeerrors.As(err, target)
 }
 
-// LinkUpdateResourceAError is an error that indicates a failure to update
-// resource A in a link relationship.
-type LinkUpdateResourceAError struct {
+// LinkUpdateLinkedResourcesError is an error that indicates a failure to update the
+// blueprint-declared resources in a link relationship.
+type LinkUpdateLinkedResourcesError struct {
 	FailureReasons []string
 	ChildError     error
 }
 
-func (e *LinkUpdateResourceAError) Error() string {
+func (e *LinkUpdateLinkedResourcesError) Error() string {
 	if len(e.FailureReasons) == 1 {
-		return fmt.Sprintf("link resource A update failed: %s", e.FailureReasons[0])
+		return fmt.Sprintf("link resource update failed: %s", e.FailureReasons[0])
 	}
 
-	return fmt.Sprintf("link resource A update failed with %d failures", len(e.FailureReasons))
+	return fmt.Sprintf("link resource update failed with %d failures", len(e.FailureReasons))
 }
 
-func (e *LinkUpdateResourceAError) GetFailureReasons() []string {
+func (e *LinkUpdateLinkedResourcesError) GetFailureReasons() []string {
 	return e.FailureReasons
 }
 
-// AsLinkUpdateResourceAError returns true if the error is a link update resource A error
-// and assigns the error to the target.
-func AsLinkUpdateResourceAError(err error, target **LinkUpdateResourceAError) bool {
-	return nativeerrors.As(err, target)
-}
-
-// LinkUpdateResourceBError is an error that indicates a failure to update
-// resource B in a link relationship.
-type LinkUpdateResourceBError struct {
-	FailureReasons []string
-	ChildError     error
-}
-
-func (e *LinkUpdateResourceBError) Error() string {
-	if len(e.FailureReasons) == 1 {
-		return fmt.Sprintf("link resource B update failed: %s", e.FailureReasons[0])
-	}
-
-	return fmt.Sprintf("link resource B update failed with %d failures", len(e.FailureReasons))
-}
-
-func (e *LinkUpdateResourceBError) GetFailureReasons() []string {
-	return e.FailureReasons
-}
-
-// AsLinkUpdateResourceBError returns true if the error is a link update resource B error
-// and assigns the error to the target.
-func AsLinkUpdateResourceBError(err error, target **LinkUpdateResourceBError) bool {
+// AsLinkUpdateLinkedResourcesError returns true if the error is a link update linked
+// resources error and assigns the error to the target.
+func AsLinkUpdateLinkedResourcesError(err error, target **LinkUpdateLinkedResourcesError) bool {
 	return nativeerrors.As(err, target)
 }
 

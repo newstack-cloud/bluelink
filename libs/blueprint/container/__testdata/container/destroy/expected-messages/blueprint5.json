@@ -22,7 +22,9 @@
         "updateTimestamp": -1,
         "durations": {
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       }
     ],
@@ -48,7 +50,9 @@
         "updateTimestamp": -1,
         "durations": {
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       }
     ],
@@ -74,7 +78,9 @@
         "updateTimestamp": -1,
         "durations": {
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       }
     ],
@@ -95,12 +101,16 @@
         "resourceName": "saveOrderFunction",
         "status": 6,
         "preciseStatus": 10,
-        "failureReasons": ["destroy failed due to transient error"],
+        "failureReasons": [
+          "destroy failed due to transient error"
+        ],
         "attempt": 0,
         "canRetry": true,
         "updateTimestamp": -1,
         "durations": {
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       },
       {
@@ -119,12 +129,17 @@
         "resourceName": "saveOrderFunction",
         "status": 6,
         "preciseStatus": 10,
-        "failureReasons": ["destroy failed due to transient error"],
+        "failureReasons": [
+          "destroy failed due to transient error"
+        ],
         "attempt": 1,
         "canRetry": true,
         "updateTimestamp": -1,
         "durations": {
-          "attemptDurations": [-1, -1]
+          "attemptDurations": [
+            -1,
+            -1
+          ]
         }
       },
       {
@@ -148,7 +163,11 @@
         "updateTimestamp": -1,
         "durations": {
           "totalDuration": -1,
-          "attemptDurations": [-1, -1, -1]
+          "attemptDurations": [
+            -1,
+            -1,
+            -1
+          ]
         }
       }
     ],
@@ -174,7 +193,9 @@
         "updateTimestamp": -1,
         "durations": {
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       }
     ]
@@ -218,13 +239,17 @@
         "linkName": "saveOrderFunction::ordersTable_1",
         "status": 9,
         "preciseStatus": 3,
-        "failureReasons": ["resource A update failed due to transient error"],
+        "failureReasons": [
+          "resource A update failed due to transient error"
+        ],
         "currentStageAttempt": 0,
         "canRetryCurrentStage": true,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
-            "attemptDurations": [-1]
+          "linkedResourcesUpdate": {
+            "attemptDurations": [
+              -1
+            ]
           }
         }
       },
@@ -244,13 +269,18 @@
         "linkName": "saveOrderFunction::ordersTable_1",
         "status": 9,
         "preciseStatus": 3,
-        "failureReasons": ["resource A update failed due to transient error"],
+        "failureReasons": [
+          "resource A update failed due to transient error"
+        ],
         "currentStageAttempt": 1,
         "canRetryCurrentStage": true,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
-            "attemptDurations": [-1, -1]
+          "linkedResourcesUpdate": {
+            "attemptDurations": [
+              -1,
+              -1
+            ]
           }
         }
       },
@@ -274,9 +304,13 @@
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
+          "linkedResourcesUpdate": {
             "totalDuration": -1,
-            "attemptDurations": [-1, -1, -1]
+            "attemptDurations": [
+              -1,
+              -1,
+              -1
+            ]
           }
         }
       },
@@ -294,55 +328,27 @@
         "instanceId": "blueprint-instance-5",
         "linkId": "test-link-5-2",
         "linkName": "saveOrderFunction::ordersTable_1",
-        "status": 7,
+        "status": 8,
         "preciseStatus": 8,
         "currentStageAttempt": 0,
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1, -1, -1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          }
-        }
-      },
-      {
-        "instanceId": "blueprint-instance-5",
-        "linkId": "test-link-5-2",
-        "linkName": "saveOrderFunction::ordersTable_1",
-        "status": 7,
-        "preciseStatus": 13,
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1
-      },
-      {
-        "instanceId": "blueprint-instance-5",
-        "linkId": "test-link-5-2",
-        "linkName": "saveOrderFunction::ordersTable_1",
-        "status": 8,
-        "preciseStatus": 14,
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1,
-        "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1, -1, -1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
           "intermediaryResources": {
             "totalDuration": -1,
-            "attemptDurations": [-1]
+            "attemptDurations": [
+              -1
+            ]
           },
-          "totalDuration": -1
+          "totalDuration": -1,
+          "linkedResourcesUpdate": {
+            "totalDuration": -1,
+            "attemptDurations": [
+              -1,
+              -1,
+              -1
+            ]
+          }
         }
       }
     ],
@@ -363,13 +369,17 @@
         "linkName": "saveOrderFunction::ordersTable_0",
         "status": 9,
         "preciseStatus": 3,
-        "failureReasons": ["resource A update failed due to transient error"],
+        "failureReasons": [
+          "resource A update failed due to transient error"
+        ],
         "currentStageAttempt": 0,
         "canRetryCurrentStage": true,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
-            "attemptDurations": [-1]
+          "linkedResourcesUpdate": {
+            "attemptDurations": [
+              -1
+            ]
           }
         }
       },
@@ -389,13 +399,18 @@
         "linkName": "saveOrderFunction::ordersTable_0",
         "status": 9,
         "preciseStatus": 3,
-        "failureReasons": ["resource A update failed due to transient error"],
+        "failureReasons": [
+          "resource A update failed due to transient error"
+        ],
         "currentStageAttempt": 1,
         "canRetryCurrentStage": true,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
-            "attemptDurations": [-1, -1]
+          "linkedResourcesUpdate": {
+            "attemptDurations": [
+              -1,
+              -1
+            ]
           }
         }
       },
@@ -419,9 +434,13 @@
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
+          "linkedResourcesUpdate": {
             "totalDuration": -1,
-            "attemptDurations": [-1, -1, -1]
+            "attemptDurations": [
+              -1,
+              -1,
+              -1
+            ]
           }
         }
       },
@@ -439,55 +458,27 @@
         "instanceId": "blueprint-instance-5",
         "linkId": "test-link-5-1",
         "linkName": "saveOrderFunction::ordersTable_0",
-        "status": 7,
+        "status": 8,
         "preciseStatus": 8,
         "currentStageAttempt": 0,
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1, -1, -1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          }
-        }
-      },
-      {
-        "instanceId": "blueprint-instance-5",
-        "linkId": "test-link-5-1",
-        "linkName": "saveOrderFunction::ordersTable_0",
-        "status": 7,
-        "preciseStatus": 13,
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1
-      },
-      {
-        "instanceId": "blueprint-instance-5",
-        "linkId": "test-link-5-1",
-        "linkName": "saveOrderFunction::ordersTable_0",
-        "status": 8,
-        "preciseStatus": 14,
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1,
-        "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1, -1, -1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
           "intermediaryResources": {
             "totalDuration": -1,
-            "attemptDurations": [-1]
+            "attemptDurations": [
+              -1
+            ]
           },
-          "totalDuration": -1
+          "totalDuration": -1,
+          "linkedResourcesUpdate": {
+            "totalDuration": -1,
+            "attemptDurations": [
+              -1,
+              -1,
+              -1
+            ]
+          }
         }
       }
     ]

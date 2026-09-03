@@ -21,12 +21,16 @@
         "preciseStatus": 3,
         "currentStageAttempt": 0,
         "canRetryCurrentStage": false,
-        "failureReasons": ["resource A update failed due to terminal error"],
+        "failureReasons": [
+          "resource A update failed due to terminal error"
+        ],
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
+          "linkedResourcesUpdate": {
             "totalDuration": -1,
-            "attemptDurations": [-1]
+            "attemptDurations": [
+              -1
+            ]
           }
         }
       }

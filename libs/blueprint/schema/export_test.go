@@ -64,7 +64,7 @@ func (s *ExportTestSuite) Test_parses_valid_string_export_yaml_input(c *C) {
 					Line:   1,
 					Column: 13,
 				},
-			ColumnAccuracy: exportExactColAccuracy(),
+				ColumnAccuracy: exportExactColAccuracy(),
 			},
 		},
 		Description: &substitutions.StringOrSubstitutions{
@@ -80,7 +80,7 @@ func (s *ExportTestSuite) Test_parses_valid_string_export_yaml_input(c *C) {
 							Line:   2,
 							Column: 66,
 						},
-					ColumnAccuracy: exportExactColAccuracy(),
+						ColumnAccuracy: exportExactColAccuracy(),
 					},
 				},
 			},
@@ -93,7 +93,7 @@ func (s *ExportTestSuite) Test_parses_valid_string_export_yaml_input(c *C) {
 					Line:   2,
 					Column: 66,
 				},
-			ColumnAccuracy: exportExactColAccuracy(),
+				ColumnAccuracy: exportExactColAccuracy(),
 			},
 		},
 		Field: &core.ScalarValue{
@@ -107,7 +107,7 @@ func (s *ExportTestSuite) Test_parses_valid_string_export_yaml_input(c *C) {
 					Line:   3,
 					Column: 37,
 				},
-			ColumnAccuracy: exportExactColAccuracy(),
+				ColumnAccuracy: exportExactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{

@@ -1169,7 +1169,7 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 	state := &deploymentEventLoopState{}
 
 	// A deployment waiting for an element that will never be dispatched has nothing else
-	// to bound it, so it is detected here rather than left to the engine's deployment
+	// that it is bound to, so it is detected here rather than left to the engine's deployment
 	// timeout with no indication of what it was waiting for.
 	stallDetector := newDeploymentStallDetector(elementsToDeploy, c.clock)
 	stallCheck := time.NewTicker(stalledDeploymentCheckInterval)
@@ -3030,7 +3030,7 @@ type deployUpdateMessageWrapper struct {
 
 type linkUpdateResourceInfo struct {
 	failureReasons []string
-	input          *provider.LinkUpdateResourceInput
+	input          *provider.LinkUpdateLinkedResourcesInput
 }
 
 type linkUpdateIntermediaryResourcesInfo struct {

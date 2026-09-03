@@ -105,14 +105,14 @@ type LinkDeployUpdateMessage struct {
 	UpdateTimestamp int64 `json:"updateTimestamp"`
 	// Durations holds duration information for a link deployment.
 	// Duration information is attached on one of the following precise status updates:
-	// - PreciseLinkStatusResourceAUpdated
-	// - PreciseLinkStatusResourceAUpdateFailed
-	// - PreciseLinkStatusResourceAUpdateRollbackFailed
-	// - PreciseLinkStatusResourceAUpdateRollbackComplete
-	// - PreciseLinkStatusResourceBUpdated
-	// - PreciseLinkStatusResourceBUpdateFailed
-	// - PreciseLinkStatusResourceBUpdateRollbackFailed
-	// - PreciseLinkStatusResourceBUpdateRollbackComplete
+	// - PreciseLinkStatusLinkedResourcesUpdated
+	// - PreciseLinkStatusLinkedResourcesUpdateFailed
+	// - PreciseLinkStatusLinkedResourcesUpdateRollbackFailed
+	// - PreciseLinkStatusLinkedResourcesUpdateRollbackComplete
+	// - PreciseLinkStatusLinkedResourcesUpdated
+	// - PreciseLinkStatusLinkedResourcesUpdateFailed
+	// - PreciseLinkStatusLinkedResourcesUpdateRollbackFailed
+	// - PreciseLinkStatusLinkedResourcesUpdateRollbackComplete
 	// - PreciseLinkStatusIntermediaryResourcesUpdated
 	// - PreciseLinkStatusIntermediaryResourceUpdateFailed
 	// - PreciseLinkStatusIntermediaryResourceUpdateRollbackFailed

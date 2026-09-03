@@ -1052,20 +1052,14 @@ func (l *testApiGatewayLambdaLink) GetKind(ctx context.Context, input *provider.
 }
 
 // UpdateResourceA is not used for spec link info!
-func (l *testApiGatewayLambdaLink) UpdateResourceA(
+func (l *testApiGatewayLambdaLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 // UpdateResourceB is not used for spec link info!
-func (l *testApiGatewayLambdaLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
 
 // UpdateIntermediaryResources is not used for spec link info!
 func (l *testApiGatewayLambdaLink) UpdateIntermediaryResources(
@@ -1153,20 +1147,14 @@ func (l *testSQSQueueLambdaLink) GetKind(ctx context.Context, input *provider.Li
 }
 
 // UpdateResourceA is not used for spec link info!
-func (l *testSQSQueueLambdaLink) UpdateResourceA(
+func (l *testSQSQueueLambdaLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 // UpdateResourceB is not used for spec link info!
-func (l *testSQSQueueLambdaLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
 
 // UpdateIntermediaryResources is not used for spec link info!
 func (l *testSQSQueueLambdaLink) UpdateIntermediaryResources(
@@ -1255,20 +1243,14 @@ func (l *testLambdaDynamoDBTableLink) GetKind(ctx context.Context, input *provid
 }
 
 // UpdateResourceA is not used for spec link info!
-func (l *testLambdaDynamoDBTableLink) UpdateResourceA(
+func (l *testLambdaDynamoDBTableLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 // UpdateResourceB is not used for spec link info!
-func (l *testLambdaDynamoDBTableLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
 
 // UpdateIntermediaryResources is not used for spec link info!
 func (l *testLambdaDynamoDBTableLink) UpdateIntermediaryResources(
@@ -1356,20 +1338,14 @@ func (l *testStratosLambdaDynamoDBTableLink) GetKind(ctx context.Context, input 
 }
 
 // UpdateResourceA is not used for spec link info!
-func (l *testStratosLambdaDynamoDBTableLink) UpdateResourceA(
+func (l *testStratosLambdaDynamoDBTableLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 // UpdateResourceB is not used for spec link info!
-func (l *testStratosLambdaDynamoDBTableLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
 
 // UpdateIntermediaryResources is not used for spec link info!
 func (l *testStratosLambdaDynamoDBTableLink) UpdateIntermediaryResources(
@@ -1457,20 +1433,14 @@ func (l *testLambdaSQSQueueLink) GetKind(ctx context.Context, input *provider.Li
 }
 
 // UpdateResourceA is not used for spec link info!
-func (l *testLambdaSQSQueueLink) UpdateResourceA(
+func (l *testLambdaSQSQueueLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 // UpdateResourceB is not used for spec link info!
-func (l *testLambdaSQSQueueLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
 
 // UpdateIntermediaryResources is not used for spec link info!
 func (l *testLambdaSQSQueueLink) UpdateIntermediaryResources(
@@ -1559,20 +1529,14 @@ func (l *testDynamoDBTableStreamLink) GetKind(ctx context.Context, input *provid
 }
 
 // UpdateResourceA is not used for spec link info!
-func (l *testDynamoDBTableStreamLink) UpdateResourceA(
+func (l *testDynamoDBTableStreamLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 // UpdateResourceB is not used for spec link info!
-func (l *testDynamoDBTableStreamLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
 
 // UpdateIntermediaryResources is not used for spec link info!
 func (l *testDynamoDBTableStreamLink) UpdateIntermediaryResources(
@@ -1661,20 +1625,14 @@ func (l *testDynamoDBStreamLambdaLink) GetKind(ctx context.Context, input *provi
 }
 
 // UpdateResourceA is not used for spec link info!
-func (l *testDynamoDBStreamLambdaLink) UpdateResourceA(
+func (l *testDynamoDBStreamLambdaLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 // UpdateResourceB is not used for spec link info!
-func (l *testDynamoDBStreamLambdaLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
 
 // UpdateIntermediaryResources is not used for spec link info!
 func (l *testDynamoDBStreamLambdaLink) UpdateIntermediaryResources(
@@ -1763,20 +1721,14 @@ func (l *testDynamoDBStreamStratosLambdaLink) GetKind(ctx context.Context, input
 }
 
 // UpdateResourceA is not used for spec link info!
-func (l *testDynamoDBStreamStratosLambdaLink) UpdateResourceA(
+func (l *testDynamoDBStreamStratosLambdaLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 // UpdateResourceB is not used for spec link info!
-func (l *testDynamoDBStreamStratosLambdaLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
 
 // UpdateIntermediaryResources is not used for spec link info!
 func (l *testDynamoDBStreamStratosLambdaLink) UpdateIntermediaryResources(
@@ -1865,20 +1817,14 @@ func (l *testIAMRoleLambdaLink) GetKind(ctx context.Context, input *provider.Lin
 }
 
 // UpdateResourceA is not used for spec link info!
-func (l *testIAMRoleLambdaLink) UpdateResourceA(
+func (l *testIAMRoleLambdaLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 // UpdateResourceB is not used for spec link info!
-func (l *testIAMRoleLambdaLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
 
 // UpdateIntermediaryResources is not used for spec link info!
 func (l *testIAMRoleLambdaLink) UpdateIntermediaryResources(
@@ -1966,20 +1912,14 @@ func (l *testStratosIAMRoleLambdaLink) GetKind(ctx context.Context, input *provi
 }
 
 // UpdateResourceA is not used for spec link info!
-func (l *testStratosIAMRoleLambdaLink) UpdateResourceA(
+func (l *testStratosIAMRoleLambdaLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 // UpdateResourceB is not used for spec link info!
-func (l *testStratosIAMRoleLambdaLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
 
 // UpdateIntermediaryResources is not used for spec link info!
 func (l *testStratosIAMRoleLambdaLink) UpdateIntermediaryResources(
@@ -2068,20 +2008,14 @@ func (l *testLambdaIAMRoleLink) GetKind(ctx context.Context, input *provider.Lin
 }
 
 // UpdateResourceA is not used for spec link info!
-func (l *testLambdaIAMRoleLink) UpdateResourceA(
+func (l *testLambdaIAMRoleLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 // UpdateResourceB is not used for spec link info!
-func (l *testLambdaIAMRoleLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
 
 // UpdateIntermediaryResources is not used for spec link info!
 func (l *testLambdaIAMRoleLink) UpdateIntermediaryResources(
@@ -2169,20 +2103,14 @@ func (l *testLambdaStratosIAMRoleLink) GetKind(ctx context.Context, input *provi
 }
 
 // UpdateResourceA is not used for spec link info!
-func (l *testLambdaStratosIAMRoleLink) UpdateResourceA(
+func (l *testLambdaStratosIAMRoleLink) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
 
 // UpdateResourceB is not used for spec link info!
-func (l *testLambdaStratosIAMRoleLink) UpdateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	return &provider.LinkUpdateResourceOutput{}, nil
-}
 
 // UpdateIntermediaryResources is not used for spec link info!
 func (l *testLambdaStratosIAMRoleLink) UpdateIntermediaryResources(

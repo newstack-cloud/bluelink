@@ -84,7 +84,7 @@
       "name": "saveOrderFunction::ordersTable",
       "instanceId": "link-deploy-test--blueprint-instance-3",
       "status": 2,
-      "preciseStatus": 8,
+      "preciseStatus": 2,
       "lastDeployedTimestamp": 1733145428,
       "lastDeployAttemptTimestamp": 1733145428,
       "intermediaryResourceStates": [],
@@ -97,7 +97,9 @@
           "iam.policyStatements": {
             "0": {
               "effect": "Allow",
-              "action": ["dynamodb:PutItem"],
+              "action": [
+                "dynamodb:PutItem"
+              ],
               "resource": "arn:aws:dynamodb:us-west-2:123456789012:table/legacy-production-orders"
             }
           }

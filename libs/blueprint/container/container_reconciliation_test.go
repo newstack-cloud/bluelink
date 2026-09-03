@@ -218,7 +218,7 @@ func (s *ContainerReconciliationTestSuite) Test_check_reconciliation_returns_int
 				Name:          "resourceA::resourceB",
 				InstanceID:    testReconciliationInstanceID,
 				Status:        core.LinkStatusCreating,
-				PreciseStatus: core.PreciseLinkStatusResourceAUpdateInterrupted,
+				PreciseStatus: core.PreciseLinkStatusLinkedResourcesUpdateInterrupted,
 			},
 		},
 	)
@@ -242,9 +242,9 @@ func (s *ContainerReconciliationTestSuite) Test_check_reconciliation_returns_int
 	s.Equal("link-1", link.LinkID)
 	s.Equal("resourceA::resourceB", link.LinkName)
 	s.Equal(ReconciliationTypeInterrupted, link.Type)
-	s.Equal(core.PreciseLinkStatusResourceAUpdateInterrupted, link.OldStatus)
+	s.Equal(core.PreciseLinkStatusLinkedResourcesUpdateInterrupted, link.OldStatus)
 	// Since both resources are in Created state, link should be marked as succeeded
-	s.Equal(core.PreciseLinkStatusResourceAUpdated, link.NewStatus)
+	s.Equal(core.PreciseLinkStatusLinkedResourcesUpdated, link.NewStatus)
 }
 
 func (s *ContainerReconciliationTestSuite) Test_apply_reconciliation_returns_error_when_input_is_nil() {
@@ -462,7 +462,7 @@ func (s *ContainerReconciliationTestSuite) Test_apply_reconciliation_updates_lin
 				Name:          "resourceA::resourceB",
 				InstanceID:    testReconciliationInstanceID,
 				Status:        core.LinkStatusCreating,
-				PreciseStatus: core.PreciseLinkStatusResourceAUpdateInterrupted,
+				PreciseStatus: core.PreciseLinkStatusLinkedResourcesUpdateInterrupted,
 			},
 		},
 	)
@@ -476,7 +476,7 @@ func (s *ContainerReconciliationTestSuite) Test_apply_reconciliation_updates_lin
 				{
 					LinkID:    "link-1",
 					Action:    ReconciliationActionUpdateStatus,
-					NewStatus: core.PreciseLinkStatusResourceAUpdated,
+					NewStatus: core.PreciseLinkStatusLinkedResourcesUpdated,
 				},
 			},
 		},
@@ -492,7 +492,7 @@ func (s *ContainerReconciliationTestSuite) Test_apply_reconciliation_updates_lin
 	linkState, err := s.stateContainer.Links().Get(context.Background(), "link-1")
 	s.Require().NoError(err)
 	s.Equal(core.LinkStatusCreated, linkState.Status)
-	s.Equal(core.PreciseLinkStatusResourceAUpdated, linkState.PreciseStatus)
+	s.Equal(core.PreciseLinkStatusLinkedResourcesUpdated, linkState.PreciseStatus)
 }
 
 func (s *ContainerReconciliationTestSuite) Test_apply_reconciliation_updates_link_data() {
@@ -1558,7 +1558,7 @@ func (s *ContainerReconciliationTestSuite) Test_apply_link_reconciliation_update
 				Name:                       "resourceA::resourceB",
 				InstanceID:                 testReconciliationInstanceID,
 				Status:                     core.LinkStatusCreating,
-				PreciseStatus:              core.PreciseLinkStatusResourceAUpdateInterrupted,
+				PreciseStatus:              core.PreciseLinkStatusLinkedResourcesUpdateInterrupted,
 				Drifted:                    true,
 				LastDriftDetectedTimestamp: &driftTimestamp,
 				Data: map[string]*core.MappingNode{
@@ -1611,7 +1611,7 @@ func (s *ContainerReconciliationTestSuite) Test_apply_link_reconciliation_update
 				{
 					LinkID:    "link-1",
 					Action:    ReconciliationActionUpdateStatus,
-					NewStatus: core.PreciseLinkStatusResourceAUpdated,
+					NewStatus: core.PreciseLinkStatusLinkedResourcesUpdated,
 					// Needs IntermediaryActions to trigger full save path
 					IntermediaryActions: map[string]*IntermediaryReconcileAction{
 						"intermediary-1": {
@@ -1672,7 +1672,7 @@ func (s *ContainerReconciliationTestSuite) Test_apply_link_reconciliation_manual
 				Name:                       "resourceA::resourceB",
 				InstanceID:                 testReconciliationInstanceID,
 				Status:                     core.LinkStatusCreating,
-				PreciseStatus:              core.PreciseLinkStatusResourceAUpdateInterrupted,
+				PreciseStatus:              core.PreciseLinkStatusLinkedResourcesUpdateInterrupted,
 				Drifted:                    true,
 				LastDriftDetectedTimestamp: &driftTimestamp,
 				Data: map[string]*core.MappingNode{
@@ -1725,7 +1725,7 @@ func (s *ContainerReconciliationTestSuite) Test_apply_link_reconciliation_manual
 				{
 					LinkID:    "link-1",
 					Action:    ReconciliationActionManualCleanupRequired,
-					NewStatus: core.PreciseLinkStatusResourceAUpdateFailed,
+					NewStatus: core.PreciseLinkStatusLinkedResourcesUpdateFailed,
 					// Needs IntermediaryActions to trigger full save path
 					IntermediaryActions: map[string]*IntermediaryReconcileAction{
 						"intermediary-1": {
@@ -2496,7 +2496,7 @@ func (s *ContainerReconciliationTestSuite) Test_check_reconciliation_includes_ch
 				Name:          "resourceA::resourceB",
 				InstanceID:    testReconciliationInstanceID,
 				Status:        core.LinkStatusCreating,
-				PreciseStatus: core.PreciseLinkStatusResourceAUpdateInterrupted,
+				PreciseStatus: core.PreciseLinkStatusLinkedResourcesUpdateInterrupted,
 			},
 		},
 		map[string]*state.InstanceState{
@@ -2528,7 +2528,7 @@ func (s *ContainerReconciliationTestSuite) Test_check_reconciliation_includes_ch
 						Name:          "childResourceA::childResourceB",
 						InstanceID:    testChildInstanceID,
 						Status:        core.LinkStatusCreating,
-						PreciseStatus: core.PreciseLinkStatusResourceAUpdateInterrupted,
+						PreciseStatus: core.PreciseLinkStatusLinkedResourcesUpdateInterrupted,
 					},
 				},
 			},
@@ -2716,7 +2716,7 @@ func (s *ContainerReconciliationTestSuite) Test_apply_reconciliation_updates_chi
 						Name:          "childResourceA::childResourceB",
 						InstanceID:    testChildInstanceID,
 						Status:        core.LinkStatusCreating,
-						PreciseStatus: core.PreciseLinkStatusResourceAUpdateInterrupted,
+						PreciseStatus: core.PreciseLinkStatusLinkedResourcesUpdateInterrupted,
 					},
 				},
 			},
@@ -2733,7 +2733,7 @@ func (s *ContainerReconciliationTestSuite) Test_apply_reconciliation_updates_chi
 					LinkID:    "child-link-1",
 					ChildPath: "childA",
 					Action:    ReconciliationActionUpdateStatus,
-					NewStatus: core.PreciseLinkStatusResourceAUpdated,
+					NewStatus: core.PreciseLinkStatusLinkedResourcesUpdated,
 				},
 			},
 		},
@@ -2749,7 +2749,7 @@ func (s *ContainerReconciliationTestSuite) Test_apply_reconciliation_updates_chi
 	linkState, err := s.stateContainer.Links().Get(context.Background(), "child-link-1")
 	s.Require().NoError(err)
 	s.Equal(core.LinkStatusCreated, linkState.Status)
-	s.Equal(core.PreciseLinkStatusResourceAUpdated, linkState.PreciseStatus)
+	s.Equal(core.PreciseLinkStatusLinkedResourcesUpdated, linkState.PreciseStatus)
 }
 
 func (s *ContainerReconciliationTestSuite) Test_apply_reconciliation_populates_child_path_in_error() {

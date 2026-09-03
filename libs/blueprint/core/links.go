@@ -133,60 +133,33 @@ const (
 	// PreciseLinkStatusUnknown is used when we can't
 	// determine an accurate status for a link.
 	PreciseLinkStatusUnknown PreciseLinkStatus = iota
-	// PreciseLinkStatusUpdatingResourceA is used when
-	// the configuration for a link is being applied to resource A
-	// in the link.
-	PreciseLinkStatusUpdatingResourceA
-	// PreciseLinkStatusResourceAUpdated is used when
-	// the configuration for a link has been applied to resource A
-	// in the link.
-	PreciseLinkStatusResourceAUpdated
-	// PreciseLinkStatusResourceAUpdateFailed is used when
-	// the configuration for a link has failed to be applied to resource A
-	// in the link.
-	PreciseLinkStatusResourceAUpdateFailed
-	// PreciseLinkStatusResourceAUpdateRollingBack is used when
+	// PreciseLinkStatusUpdatingLinkedResources is used when
+	// the configuration for a link is being applied to the blueprint-declared
+	// resources the link relates.
+	PreciseLinkStatusUpdatingLinkedResources
+	// PreciseLinkStatusLinkedResourcesUpdated is used when
+	// the configuration for a link has been applied to the blueprint-declared
+	// resources the link relates.
+	PreciseLinkStatusLinkedResourcesUpdated
+	// PreciseLinkStatusLinkedResourcesUpdateFailed is used when
+	// the configuration for a link has failed to be applied to the
+	// blueprint-declared resources the link relates.
+	PreciseLinkStatusLinkedResourcesUpdateFailed
+	// PreciseLinkStatusLinkedResourcesUpdateRollingBack is used when
 	// another change in the same blueprint has failed
-	// and the current link for which resource A was successfully
-	// updated is being rolled back.
-	PreciseLinkStatusResourceAUpdateRollingBack
-	// PreciseLinkStatusResourceAUpdateRollbackFailed is used when
+	// and the current link for which the resources it relates were
+	// successfully updated is being rolled back.
+	PreciseLinkStatusLinkedResourcesUpdateRollingBack
+	// PreciseLinkStatusLinkedResourcesUpdateRollbackFailed is used when
 	// another change in the same blueprint has failed
-	// and the current link for which resource A was successfully
-	// updated failed to be rolled back.
-	PreciseLinkStatusResourceAUpdateRollbackFailed
-	// PreciseLinkStatusResourceAUpdateRollbackComplete is used when
+	// and the current link for which the resources it relates were
+	// successfully updated failed to be rolled back.
+	PreciseLinkStatusLinkedResourcesUpdateRollbackFailed
+	// PreciseLinkStatusLinkedResourcesUpdateRollbackComplete is used when
 	// another change in the same blueprint has failed
-	// and the current link for which resource A was succsefully updated
-	// has been rolled back.
-	PreciseLinkStatusResourceAUpdateRollbackComplete
-	// PreciseLinkStatusUpdatingResourceB is used when
-	// the configuration for a link is being applied to resource B
-	// in the link.
-	PreciseLinkStatusUpdatingResourceB
-	// PreciseLinkStatusResourceBUpdated is used when
-	// the configuration for a link has been applied to resource B
-	// in the link.
-	PreciseLinkStatusResourceBUpdated
-	// PreciseLinkStatusResourceBUpdateFailed is used when
-	// the configuration for a link has failed to be applied to resource B
-	// in the link.
-	PreciseLinkStatusResourceBUpdateFailed
-	// PreciseLinkStatusResourceBUpdateRollingBack is used when
-	// another change in the same blueprint has failed
-	// and the current link for which resource B was successfully
-	// updated is being rolled back.
-	PreciseLinkStatusResourceBUpdateRollingBack
-	// PreciseLinkStatusResourceBUpdateRollbackFailed is used when
-	// another change in the same blueprint has failed
-	// and the current link for which resource B was successfully
-	// updated failed to be rolled back.
-	PreciseLinkStatusResourceBUpdateRollbackFailed
-	// PreciseLinkStatusResourceBUpdateRollbackComplete is used when
-	// another change in the same blueprint has failed
-	// and the current link for which resource B was succsefully updated
-	// has been rolled back.
-	PreciseLinkStatusResourceBUpdateRollbackComplete
+	// and the current link for which the resources it relates were
+	// successfully updated has been rolled back.
+	PreciseLinkStatusLinkedResourcesUpdateRollbackComplete
 	// PreciseLinkStatusUpdatingIntermediaryResources is used when
 	// intermediary resources are being created, updated or destroyed.
 	// This status is a high level indication of progress,
@@ -216,16 +189,11 @@ const (
 	// and the current link for which intermediary resources were succsefully updated
 	// has been rolled back.
 	PreciseLinkStatusIntermediaryResourceUpdateRollbackComplete
-	// PreciseLinkStatusResourceAUpdateInterrupted is used when
-	// the resource A update for a link was interrupted due to deployment
+	// PreciseLinkStatusLinkedResourcesUpdateInterrupted is used when
+	// the update of the resources a link relates was interrupted due to deployment
 	// being cancelled (e.g., drain timeout after terminal failure).
 	// The actual state is unknown and needs reconciliation.
-	PreciseLinkStatusResourceAUpdateInterrupted
-	// PreciseLinkStatusResourceBUpdateInterrupted is used when
-	// the resource B update for a link was interrupted due to deployment
-	// being cancelled (e.g., drain timeout after terminal failure).
-	// The actual state is unknown and needs reconciliation.
-	PreciseLinkStatusResourceBUpdateInterrupted
+	PreciseLinkStatusLinkedResourcesUpdateInterrupted
 	// PreciseLinkStatusIntermediaryResourceUpdateInterrupted is used when
 	// the intermediary resources update for a link was interrupted due to deployment
 	// being cancelled (e.g., drain timeout after terminal failure).
@@ -235,26 +203,19 @@ const (
 
 var preciseLinkStatusStrings = map[PreciseLinkStatus]string{
 	PreciseLinkStatusUnknown:                                    "UNKNOWN",
-	PreciseLinkStatusUpdatingResourceA:                          "UPDATING RESOURCE A",
-	PreciseLinkStatusResourceAUpdated:                           "RESOURCE A UPDATED",
-	PreciseLinkStatusResourceAUpdateFailed:                      "RESOURCE A UPDATE FAILED",
-	PreciseLinkStatusResourceAUpdateRollingBack:                 "RESOURCE A UPDATE ROLLING BACK",
-	PreciseLinkStatusResourceAUpdateRollbackFailed:              "RESOURCE A UPDATE ROLLBACK FAILED",
-	PreciseLinkStatusResourceAUpdateRollbackComplete:            "RESOURCE A UPDATE ROLLBACK COMPLETE",
-	PreciseLinkStatusUpdatingResourceB:                          "UPDATING RESOURCE B",
-	PreciseLinkStatusResourceBUpdated:                           "RESOURCE B UPDATED",
-	PreciseLinkStatusResourceBUpdateFailed:                      "RESOURCE B UPDATE FAILED",
-	PreciseLinkStatusResourceBUpdateRollingBack:                 "RESOURCE B UPDATE ROLLING BACK",
-	PreciseLinkStatusResourceBUpdateRollbackFailed:              "RESOURCE B UPDATE ROLLBACK FAILED",
-	PreciseLinkStatusResourceBUpdateRollbackComplete:            "RESOURCE B UPDATE ROLLBACK COMPLETE",
+	PreciseLinkStatusUpdatingLinkedResources:                    "UPDATING LINKED RESOURCES",
+	PreciseLinkStatusLinkedResourcesUpdated:                     "LINKED RESOURCES UPDATED",
+	PreciseLinkStatusLinkedResourcesUpdateFailed:                "LINKED RESOURCES UPDATE FAILED",
+	PreciseLinkStatusLinkedResourcesUpdateRollingBack:           "LINKED RESOURCES UPDATE ROLLING BACK",
+	PreciseLinkStatusLinkedResourcesUpdateRollbackFailed:        "LINKED RESOURCES UPDATE ROLLBACK FAILED",
+	PreciseLinkStatusLinkedResourcesUpdateRollbackComplete:      "LINKED RESOURCES UPDATE ROLLBACK COMPLETE",
 	PreciseLinkStatusUpdatingIntermediaryResources:              "UPDATING INTERMEDIARY RESOURCES",
 	PreciseLinkStatusIntermediaryResourcesUpdated:               "INTERMEDIARY RESOURCES UPDATED",
 	PreciseLinkStatusIntermediaryResourceUpdateFailed:           "INTERMEDIARY RESOURCES UPDATE FAILED",
 	PreciseLinkStatusIntermediaryResourceUpdateRollingBack:      "INTERMEDIARY RESOURCES UPDATE ROLLING BACK",
 	PreciseLinkStatusIntermediaryResourceUpdateRollbackFailed:   "INTERMEDIARY RESOURCES UPDATE ROLLBACK FAILED",
 	PreciseLinkStatusIntermediaryResourceUpdateRollbackComplete: "INTERMEDIARY RESOURCES UPDATE ROLLBACK COMPLETE",
-	PreciseLinkStatusResourceAUpdateInterrupted:                 "RESOURCE A UPDATE INTERRUPTED",
-	PreciseLinkStatusResourceBUpdateInterrupted:                 "RESOURCE B UPDATE INTERRUPTED",
+	PreciseLinkStatusLinkedResourcesUpdateInterrupted:           "LINKED RESOURCES UPDATE INTERRUPTED",
 	PreciseLinkStatusIntermediaryResourceUpdateInterrupted:      "INTERMEDIARY RESOURCES UPDATE INTERRUPTED",
 }
 

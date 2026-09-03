@@ -15,8 +15,12 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
+
+type ContainerDeployConfigCompleteOrderingTestSuite struct {
+	suite.Suite
+}
 
 // A resource's spec must reach the state container before the resource is marked
 // config complete, since that mark is what releases dependants to read it.
@@ -32,7 +36,7 @@ import (
 // "ready to be read from" while there is still nothing to read. This test parks
 // one of those evaluations, then holds the producer's save open, so the window
 // is entered deliberately rather than by chance.
-func TestDeployPersistsResourceSpecBeforeMarkingConfigComplete(t *testing.T) {
+func (s *ContainerDeployConfigCompleteOrderingTestSuite) Test_deploy_persists_resource_spec_before_marking_config_complete() {
 	evaluatorParked := make(chan struct{})
 	releaseEvaluator := make(chan struct{})
 	evaluatorResumed := make(chan struct{})
@@ -95,14 +99,14 @@ func TestDeployPersistsResourceSpecBeforeMarkingConfigComplete(t *testing.T) {
 		"__testdata/container/deploy/blueprint-config-complete-ordering.yml",
 		params,
 	)
-	require.NoError(t, err)
+	s.NoError(err)
 
 	deployChanges, err := stageChangesForTest(
 		context.Background(),
 		blueprintContainer,
 		params,
 	)
-	require.NoError(t, err)
+	s.NoError(err)
 
 	// Only park a readiness evaluation once the deployment itself is under way,
 	// so that change staging's own calls are left alone.
@@ -119,7 +123,7 @@ func TestDeployPersistsResourceSpecBeforeMarkingConfigComplete(t *testing.T) {
 		channels,
 		params,
 	)
-	require.NoError(t, err)
+	s.NoError(err)
 
 	// Whether the sequence actually reached the window this test exists to enter. Without
 	// it, a gate that never opens leaves the deployment to run normally and the test
@@ -189,16 +193,14 @@ func TestDeployPersistsResourceSpecBeforeMarkingConfigComplete(t *testing.T) {
 	stateContainer.releaseIfHeld()
 	<-sequenceDone
 
-	require.True(
-		t,
+	s.True(
 		windowEntered,
 		"the deployment never reached the window this test exists to enter, "+
 			"so a passing result says nothing about the ordering",
 	)
-	require.NoError(t, err)
-	require.NotNil(t, finishedMessage)
-	require.Equal(
-		t,
+	s.NoError(err)
+	s.NotNil(finishedMessage)
+	s.Equal(
 		core.InstanceStatusDeployed,
 		finishedMessage.Status,
 		fmt.Sprintf("deployment failed: %v", finishedMessage.FailureReasons),
@@ -338,4 +340,8 @@ func (r *gatedSaveResources) Save(
 	}
 
 	return r.ResourcesContainer.Save(ctx, resourceState)
+}
+
+func TestContainerDeployConfigCompleteOrderingTestSuite(t *testing.T) {
+	suite.Run(t, new(ContainerDeployConfigCompleteOrderingTestSuite))
 }

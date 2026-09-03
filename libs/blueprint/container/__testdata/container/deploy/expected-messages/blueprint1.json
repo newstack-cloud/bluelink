@@ -22,7 +22,9 @@
         "updateTimestamp": -1,
         "durations": {
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       }
     ],
@@ -43,12 +45,16 @@
         "resourceName": "processInvoiceFunction",
         "status": 3,
         "preciseStatus": 4,
-        "failureReasons": ["deploy failed due to transient error"],
+        "failureReasons": [
+          "deploy failed due to transient error"
+        ],
         "attempt": 0,
         "canRetry": true,
         "updateTimestamp": -1,
         "durations": {
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       },
       {
@@ -67,12 +73,17 @@
         "resourceName": "processInvoiceFunction",
         "status": 3,
         "preciseStatus": 4,
-        "failureReasons": ["deploy failed due to transient error"],
+        "failureReasons": [
+          "deploy failed due to transient error"
+        ],
         "attempt": 1,
         "canRetry": true,
         "updateTimestamp": -1,
         "durations": {
-          "attemptDurations": [-1, -1]
+          "attemptDurations": [
+            -1,
+            -1
+          ]
         }
       },
       {
@@ -96,7 +107,11 @@
         "updateTimestamp": -1,
         "durations": {
           "configCompleteDuration": -1,
-          "attemptDurations": [-1, -1, -1]
+          "attemptDurations": [
+            -1,
+            -1,
+            -1
+          ]
         }
       },
       {
@@ -111,7 +126,11 @@
         "durations": {
           "configCompleteDuration": -1,
           "totalDuration": -1,
-          "attemptDurations": [-1, -1, -1]
+          "attemptDurations": [
+            -1,
+            -1,
+            -1
+          ]
         }
       }
     ],
@@ -137,7 +156,9 @@
         "updateTimestamp": -1,
         "durations": {
           "configCompleteDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       },
       {
@@ -152,7 +173,9 @@
         "durations": {
           "configCompleteDuration": -1,
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       }
     ],
@@ -178,7 +201,9 @@
         "updateTimestamp": -1,
         "durations": {
           "configCompleteDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       },
       {
@@ -193,7 +218,9 @@
         "durations": {
           "configCompleteDuration": -1,
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       }
     ],
@@ -219,7 +246,9 @@
         "updateTimestamp": -1,
         "durations": {
           "configCompleteDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       },
       {
@@ -234,7 +263,9 @@
         "durations": {
           "configCompleteDuration": -1,
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       }
     ],
@@ -255,12 +286,16 @@
         "resourceName": "saveOrderFunction",
         "status": 9,
         "preciseStatus": 18,
-        "failureReasons": ["deploy failed due to transient error"],
+        "failureReasons": [
+          "deploy failed due to transient error"
+        ],
         "attempt": 0,
         "canRetry": true,
         "updateTimestamp": -1,
         "durations": {
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       },
       {
@@ -279,12 +314,17 @@
         "resourceName": "saveOrderFunction",
         "status": 9,
         "preciseStatus": 18,
-        "failureReasons": ["deploy failed due to transient error"],
+        "failureReasons": [
+          "deploy failed due to transient error"
+        ],
         "attempt": 1,
         "canRetry": true,
         "updateTimestamp": -1,
         "durations": {
-          "attemptDurations": [-1, -1]
+          "attemptDurations": [
+            -1,
+            -1
+          ]
         }
       },
       {
@@ -308,7 +348,11 @@
         "updateTimestamp": -1,
         "durations": {
           "configCompleteDuration": -1,
-          "attemptDurations": [-1, -1, -1]
+          "attemptDurations": [
+            -1,
+            -1,
+            -1
+          ]
         }
       },
       {
@@ -323,7 +367,11 @@
         "durations": {
           "configCompleteDuration": -1,
           "totalDuration": -1,
-          "attemptDurations": [-1, -1, -1]
+          "attemptDurations": [
+            -1,
+            -1,
+            -1
+          ]
         }
       }
     ],
@@ -349,7 +397,9 @@
         "updateTimestamp": -1,
         "durations": {
           "configCompleteDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       },
       {
@@ -364,7 +414,9 @@
         "durations": {
           "configCompleteDuration": -1,
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       }
     ],
@@ -390,7 +442,9 @@
         "updateTimestamp": -1,
         "durations": {
           "configCompleteDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       },
       {
@@ -405,7 +459,9 @@
         "durations": {
           "configCompleteDuration": -1,
           "totalDuration": -1,
-          "attemptDurations": [-1]
+          "attemptDurations": [
+            -1
+          ]
         }
       }
     ]
@@ -454,9 +510,11 @@
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
+          "linkedResourcesUpdate": {
             "totalDuration": -1,
-            "attemptDurations": [-1]
+            "attemptDurations": [
+              -1
+            ]
           }
         }
       },
@@ -474,55 +532,25 @@
         "instanceId": "blueprint-instance-1",
         "linkId": "test-link-1",
         "linkName": "saveOrderFunction::ordersTable_0",
-        "status": 13,
+        "status": 14,
         "preciseStatus": 8,
         "currentStageAttempt": 0,
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          }
-        }
-      },
-      {
-        "instanceId": "blueprint-instance-1",
-        "linkId": "test-link-1",
-        "linkName": "saveOrderFunction::ordersTable_0",
-        "status": 13,
-        "preciseStatus": 13,
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1
-      },
-      {
-        "instanceId": "blueprint-instance-1",
-        "linkId": "test-link-1",
-        "linkName": "saveOrderFunction::ordersTable_0",
-        "status": 14,
-        "preciseStatus": 14,
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1,
-        "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
           "intermediaryResources": {
             "totalDuration": -1,
-            "attemptDurations": [-1]
+            "attemptDurations": [
+              -1
+            ]
           },
-          "totalDuration": -1
+          "totalDuration": -1,
+          "linkedResourcesUpdate": {
+            "totalDuration": -1,
+            "attemptDurations": [
+              -1
+            ]
+          }
         }
       }
     ],
@@ -543,13 +571,17 @@
         "linkName": "saveOrderFunction::ordersTable_1",
         "status": 15,
         "preciseStatus": 3,
-        "failureReasons": ["resource A update failed due to transient error"],
+        "failureReasons": [
+          "resource A update failed due to transient error"
+        ],
         "currentStageAttempt": 0,
         "canRetryCurrentStage": true,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
-            "attemptDurations": [-1]
+          "linkedResourcesUpdate": {
+            "attemptDurations": [
+              -1
+            ]
           }
         }
       },
@@ -569,13 +601,18 @@
         "linkName": "saveOrderFunction::ordersTable_1",
         "status": 15,
         "preciseStatus": 3,
-        "failureReasons": ["resource A update failed due to transient error"],
+        "failureReasons": [
+          "resource A update failed due to transient error"
+        ],
         "currentStageAttempt": 1,
         "canRetryCurrentStage": true,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
-            "attemptDurations": [-1, -1]
+          "linkedResourcesUpdate": {
+            "attemptDurations": [
+              -1,
+              -1
+            ]
           }
         }
       },
@@ -599,9 +636,13 @@
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
+          "linkedResourcesUpdate": {
             "totalDuration": -1,
-            "attemptDurations": [-1, -1, -1]
+            "attemptDurations": [
+              -1,
+              -1,
+              -1
+            ]
           }
         }
       },
@@ -611,36 +652,6 @@
         "linkName": "saveOrderFunction::ordersTable_1",
         "status": 13,
         "preciseStatus": 7,
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1
-      },
-      {
-        "instanceId": "blueprint-instance-1",
-        "linkId": "test-link-2",
-        "linkName": "saveOrderFunction::ordersTable_1",
-        "status": 13,
-        "preciseStatus": 8,
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1,
-        "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1, -1, -1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          }
-        }
-      },
-      {
-        "instanceId": "blueprint-instance-1",
-        "linkId": "test-link-2",
-        "linkName": "saveOrderFunction::ordersTable_1",
-        "status": 13,
-        "preciseStatus": 13,
         "currentStageAttempt": 0,
         "canRetryCurrentStage": false,
         "updateTimestamp": -1
@@ -650,24 +661,26 @@
         "linkId": "test-link-2",
         "linkName": "saveOrderFunction::ordersTable_1",
         "status": 14,
-        "preciseStatus": 14,
+        "preciseStatus": 8,
         "currentStageAttempt": 0,
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1, -1, -1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
           "intermediaryResources": {
             "totalDuration": -1,
-            "attemptDurations": [-1]
+            "attemptDurations": [
+              -1
+            ]
           },
-          "totalDuration": -1
+          "totalDuration": -1,
+          "linkedResourcesUpdate": {
+            "totalDuration": -1,
+            "attemptDurations": [
+              -1,
+              -1,
+              -1
+            ]
+          }
         }
       }
     ],
@@ -692,9 +705,11 @@
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
+          "linkedResourcesUpdate": {
             "totalDuration": -1,
-            "attemptDurations": [-1]
+            "attemptDurations": [
+              -1
+            ]
           }
         }
       },
@@ -712,55 +727,25 @@
         "instanceId": "blueprint-instance-1",
         "linkId": "{dynamicValue}",
         "linkName": "saveOrderFunction::ordersTable_2",
-        "status": 1,
+        "status": 2,
         "preciseStatus": 8,
         "currentStageAttempt": 0,
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          }
-        }
-      },
-      {
-        "instanceId": "blueprint-instance-1",
-        "linkId": "{dynamicValue}",
-        "linkName": "saveOrderFunction::ordersTable_2",
-        "status": 1,
-        "preciseStatus": 13,
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1
-      },
-      {
-        "instanceId": "blueprint-instance-1",
-        "linkId": "{dynamicValue}",
-        "linkName": "saveOrderFunction::ordersTable_2",
-        "status": 2,
-        "preciseStatus": 14,
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1,
-        "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
           "intermediaryResources": {
             "totalDuration": -1,
-            "attemptDurations": [-1]
+            "attemptDurations": [
+              -1
+            ]
           },
-          "totalDuration": -1
+          "totalDuration": -1,
+          "linkedResourcesUpdate": {
+            "totalDuration": -1,
+            "attemptDurations": [
+              -1
+            ]
+          }
         }
       }
     ],
@@ -785,9 +770,11 @@
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
+          "linkedResourcesUpdate": {
             "totalDuration": -1,
-            "attemptDurations": [-1]
+            "attemptDurations": [
+              -1
+            ]
           }
         }
       },
@@ -805,55 +792,25 @@
         "instanceId": "blueprint-instance-1",
         "linkId": "{dynamicValue}",
         "linkName": "invoiceStream::processInvoiceFunction",
-        "status": 1,
+        "status": 2,
         "preciseStatus": 8,
         "currentStageAttempt": 0,
         "canRetryCurrentStage": false,
         "updateTimestamp": -1,
         "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          }
-        }
-      },
-      {
-        "instanceId": "blueprint-instance-1",
-        "linkId": "{dynamicValue}",
-        "linkName": "invoiceStream::processInvoiceFunction",
-        "status": 1,
-        "preciseStatus": 13,
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1
-      },
-      {
-        "instanceId": "blueprint-instance-1",
-        "linkId": "{dynamicValue}",
-        "linkName": "invoiceStream::processInvoiceFunction",
-        "status": 2,
-        "preciseStatus": 14,
-        "currentStageAttempt": 0,
-        "canRetryCurrentStage": false,
-        "updateTimestamp": -1,
-        "durations": {
-          "resourceAUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
-          "resourceBUpdate": {
-            "totalDuration": -1,
-            "attemptDurations": [-1]
-          },
           "intermediaryResources": {
             "totalDuration": -1,
-            "attemptDurations": [-1]
+            "attemptDurations": [
+              -1
+            ]
           },
-          "totalDuration": -1
+          "totalDuration": -1,
+          "linkedResourcesUpdate": {
+            "totalDuration": -1,
+            "attemptDurations": [
+              -1
+            ]
+          }
         }
       }
     ]

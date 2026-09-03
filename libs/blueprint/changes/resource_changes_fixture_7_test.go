@@ -45,7 +45,7 @@ func (s *ResourceChangeGeneratorTestSuite) resourceInfoFixture7CurrentState() *s
 func (s *ResourceChangeGeneratorTestSuite) resourceInfoFixture7NewResolvedResource() *provider.ResolvedResource {
 	// Simulates GetExternalState returning the default values
 	queueName := "my-queue"
-	delaySeconds := 0       // Default value
+	delaySeconds := 0        // Default value
 	maxMessageSize := 262144 // Default value
 
 	return &provider.ResolvedResource{

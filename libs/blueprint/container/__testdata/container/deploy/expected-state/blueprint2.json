@@ -305,32 +305,26 @@
       "name": "invoiceStream::processInvoiceFunction",
       "instanceId": "{dynamicValue}",
       "status": 2,
-      "preciseStatus": 14,
+      "preciseStatus": 8,
       "lastDeployedTimestamp": -1,
       "lastDeployAttemptTimestamp": -1,
       "intermediaryResourceStates": [],
       "data": {},
       "failureReasons": null,
       "durations": {
-        "resourceAUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
-        "resourceBUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
         "intermediaryResources": {
           "totalDuration": -1,
           "attemptDurations": [
             -1
           ]
         },
-        "totalDuration": -1
+        "totalDuration": -1,
+        "linkedResourcesUpdate": {
+          "totalDuration": -1,
+          "attemptDurations": [
+            -1
+          ]
+        }
       }
     },
     "invoicesTable::invoiceStream": {
@@ -338,32 +332,26 @@
       "name": "invoicesTable::invoiceStream",
       "instanceId": "{dynamicValue}",
       "status": 2,
-      "preciseStatus": 14,
+      "preciseStatus": 8,
       "lastDeployedTimestamp": -1,
       "lastDeployAttemptTimestamp": -1,
       "intermediaryResourceStates": [],
       "data": {},
       "failureReasons": null,
       "durations": {
-        "resourceAUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
-        "resourceBUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
         "intermediaryResources": {
           "totalDuration": -1,
           "attemptDurations": [
             -1
           ]
         },
-        "totalDuration": -1
+        "totalDuration": -1,
+        "linkedResourcesUpdate": {
+          "totalDuration": -1,
+          "attemptDurations": [
+            -1
+          ]
+        }
       }
     },
     "invoicesTable::processInvoiceFunction": {
@@ -371,32 +359,26 @@
       "name": "invoicesTable::processInvoiceFunction",
       "instanceId": "{dynamicValue}",
       "status": 2,
-      "preciseStatus": 14,
+      "preciseStatus": 8,
       "lastDeployedTimestamp": -1,
       "lastDeployAttemptTimestamp": -1,
       "intermediaryResourceStates": [],
       "data": {},
       "failureReasons": null,
       "durations": {
-        "resourceAUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
-        "resourceBUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
         "intermediaryResources": {
           "totalDuration": -1,
           "attemptDurations": [
             -1
           ]
         },
-        "totalDuration": -1
+        "totalDuration": -1,
+        "linkedResourcesUpdate": {
+          "totalDuration": -1,
+          "attemptDurations": [
+            -1
+          ]
+        }
       }
     },
     "saveOrderFunction::ordersTable_0": {
@@ -404,7 +386,7 @@
       "name": "saveOrderFunction::ordersTable_0",
       "instanceId": "{dynamicValue}",
       "status": 2,
-      "preciseStatus": 14,
+      "preciseStatus": 8,
       "lastDeployedTimestamp": -1,
       "lastDeployAttemptTimestamp": -1,
       "intermediaryResourceStates": [],
@@ -424,25 +406,19 @@
       },
       "failureReasons": null,
       "durations": {
-        "resourceAUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
-        "resourceBUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
         "intermediaryResources": {
           "totalDuration": -1,
           "attemptDurations": [
             -1
           ]
         },
-        "totalDuration": -1
+        "totalDuration": -1,
+        "linkedResourcesUpdate": {
+          "totalDuration": -1,
+          "attemptDurations": [
+            -1
+          ]
+        }
       }
     },
     "saveOrderFunction::ordersTable_1": {
@@ -450,7 +426,7 @@
       "name": "saveOrderFunction::ordersTable_1",
       "instanceId": "{dynamicValue}",
       "status": 2,
-      "preciseStatus": 14,
+      "preciseStatus": 8,
       "lastDeployedTimestamp": -1,
       "lastDeployAttemptTimestamp": -1,
       "intermediaryResourceStates": [],
@@ -470,27 +446,21 @@
       },
       "failureReasons": null,
       "durations": {
-        "resourceAUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1,
-            -1,
-            -1
-          ]
-        },
-        "resourceBUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
         "intermediaryResources": {
           "totalDuration": -1,
           "attemptDurations": [
             -1
           ]
         },
-        "totalDuration": -1
+        "totalDuration": -1,
+        "linkedResourcesUpdate": {
+          "totalDuration": -1,
+          "attemptDurations": [
+            -1,
+            -1,
+            -1
+          ]
+        }
       }
     },
     "saveOrderFunction::ordersTable_2": {
@@ -498,7 +468,7 @@
       "name": "saveOrderFunction::ordersTable_2",
       "instanceId": "{dynamicValue}",
       "status": 2,
-      "preciseStatus": 14,
+      "preciseStatus": 8,
       "lastDeployedTimestamp": -1,
       "lastDeployAttemptTimestamp": -1,
       "intermediaryResourceStates": [],
@@ -518,25 +488,19 @@
       },
       "failureReasons": null,
       "durations": {
-        "resourceAUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
-        "resourceBUpdate": {
-          "totalDuration": -1,
-          "attemptDurations": [
-            -1
-          ]
-        },
         "intermediaryResources": {
           "totalDuration": -1,
           "attemptDurations": [
             -1
           ]
         },
-        "totalDuration": -1
+        "totalDuration": -1,
+        "linkedResourcesUpdate": {
+          "totalDuration": -1,
+          "attemptDurations": [
+            -1
+          ]
+        }
       }
     }
   },

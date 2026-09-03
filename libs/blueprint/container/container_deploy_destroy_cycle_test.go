@@ -268,14 +268,14 @@ type failOnDestroyRuleLambda2Link struct {
 	testNoPriorityRuleLambda2Link
 }
 
-func (l *failOnDestroyRuleLambda2Link) UpdateResourceA(
+func (l *failOnDestroyRuleLambda2Link) UpdateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
 	if input.LinkUpdateType == provider.LinkUpdateTypeDestroy {
 		return nil, errors.New(failOnDestroyLinkErrorMessage)
 	}
-	return l.testNoPriorityRuleLambda2Link.UpdateResourceA(ctx, input)
+	return l.testNoPriorityRuleLambda2Link.UpdateLinkedResources(ctx, input)
 }
 
 func consumeUntilFinishForTest(

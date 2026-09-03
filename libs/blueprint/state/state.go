@@ -778,12 +778,10 @@ type ResourceCompletionDurations struct {
 // LinkCompletionDurations holds duration information
 // for the deployment of a link change.
 type LinkCompletionDurations struct {
-	// ResourceAUpdate is the duration information for the update of resource A in the link.
-	// This will only be present if the link has reached resource A updated status.
-	ResourceAUpdate *LinkComponentCompletionDurations `json:"resourceAUpdate,omitempty"`
-	// ResourceBUpdate is the duration information for the update of resource B in the link.
-	// This will only be present if the link has reached resource B updated status.
-	ResourceBUpdate *LinkComponentCompletionDurations `json:"resourceBUpdate,omitempty"`
+	// LinkedResourcesUpdate is the duration information for the update of the
+	// blueprint-declared resources the link relates.
+	// This will only be present if the link has reached the linked resources updated status.
+	LinkedResourcesUpdate *LinkComponentCompletionDurations `json:"linkedResourcesUpdate,omitempty"`
 	// IntermediaryResources is the duration information for the update, creation or removal
 	// of intermediary resources in the link.
 	// This will only be present if the link has reached intermediary resources updated status.

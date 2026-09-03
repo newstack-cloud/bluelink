@@ -18,25 +18,22 @@ type Link interface {
 		input *LinkStageChangesInput,
 	) (*LinkStageChangesOutput, error)
 
-	// UpdateResourceA deals with applying the changes to the first of the two linked resources
-	// for the creation or removal of a link between two resources.
-	// The value of the `LinkData` field returned in the output will be combined
-	// with the LinkData output from updating resource B and intermediary resources
-	// to form the final LinkData that will be persisted in the state of the blueprint instance.
-	// Parameters are passed into UpdateResourceA for extra context, blueprint variables will have already
-	// been substituted at this stage and must be used instead of the passed in params argument
-	// to ensure consistency between the staged changes that are reviewed and the deployment itself.
-	UpdateResourceA(ctx context.Context, input *LinkUpdateResourceInput) (*LinkUpdateResourceOutput, error)
-
-	// UpdateResourceB deals with applying the changes to the second of the two linked resources
-	// for the creation or removal of a link between two resources.
-	// The value of the `LinkData` field returned in the output will be combined
-	// with the LinkData output from updating resource A and intermediary resources
-	// to form the final LinkData that will be persisted in the state of the blueprint instance.
-	// Parameters are passed into UpdateResourceB for extra context, blueprint variables will have already
-	// been substituted at this stage and must be used instead of the passed in params argument
-	// to ensure consistency between the staged changes that are reviewed and the deployment itself.
-	UpdateResourceB(ctx context.Context, input *LinkUpdateResourceInput) (*LinkUpdateResourceOutput, error)
+	// UpdateLinkedResources deals with applying the changes to the blueprint-declared
+	// resources in a link relationship, for the creation, update or removal of the link.
+	//
+	// Both resources are given, and a link writes whichever of them it declared it
+	// modifies through the link definition's Modifies field. The framework holds a lock on
+	// each declared side for the duration of this call and waits for it to settle
+	// afterwards, so a link that declares a side it does not write serialises other links
+	// against it for no reason.
+	//
+	// The value of the `LinkData` field returned in the output will be combined with the
+	// LinkData output from updating intermediary resources to form the final LinkData that
+	// will be persisted in the state of the blueprint instance.
+	UpdateLinkedResources(
+		ctx context.Context,
+		input *LinkUpdateLinkedResourcesInput,
+	) (*LinkUpdateLinkedResourcesOutput, error)
 
 	// UpdateIntermediaryResources deals with creating, updating or deleting intermediary resources
 	// that are required for the link between two resources.
@@ -154,13 +151,13 @@ type LinkStageChangesOutput struct {
 	Changes *LinkChanges
 }
 
-// LinkUpdateResourceInput provides the input required to
-// update a resource in a link relationship
-// with data that will contribute to "activating" or "de-activating" the link.
-type LinkUpdateResourceInput struct {
-	Changes           *LinkChanges
-	ResourceInfo      *ResourceInfo
-	OtherResourceInfo *ResourceInfo
+// LinkUpdateLinkedResourcesInput provides the input required to update the
+// blueprint-declared resources in a link relationship with data that will contribute to
+// "activating" or "de-activating" the link.
+type LinkUpdateLinkedResourcesInput struct {
+	Changes       *LinkChanges
+	ResourceAInfo *ResourceInfo
+	ResourceBInfo *ResourceInfo
 	// A handle for the link being deployed that can be used for tasks
 	// like acquiring locks on resources that are being updated
 	// in the same blueprint instance.
@@ -179,12 +176,28 @@ type LinkUpdateResourceInput struct {
 	// This carries the same capabilities as the equivalent field on
 	// LinkUpdateIntermediaryResourcesInput. It is available here because a link
 	// often has to modify a shared intermediary resource before it can touch
-	// resource A or B at all, rather than afterwards. For example, in AWS an
-	// AWS Lambda function cannot be attached to a VPC until its IAM role already
-	// grants the network interface permissions, so the link must reconcile the
-	// role, under a lock shared with every other link modifying that role,
-	// before updating the function itself.
+	// the resources it links at all. For example, in AWS an AWS Lambda function
+	// cannot be attached to a VPC until its IAM role already grants the network
+	// interface permissions, so the link must reconcile the role, under a lock
+	// shared with every other link modifying that role, before updating the function.
 	ResourceService ResourceService
+}
+
+// LinkUpdateLinkedResourcesOutput provides the output from updating the
+// blueprint-declared resources in a link relationship.
+type LinkUpdateLinkedResourcesOutput struct {
+	LinkData *core.MappingNode
+	// ResourceDataMappings provides mappings of resource spec fields
+	// to the link data fields created when updating the resources in a link
+	// relationship.
+	// The format is:
+	// {resourceName}::{fieldPath} -> {linkDataFieldPath}
+	// e.g. "orderServiceRole::spec.policy.name" -> "orderServiceRole.policy"
+	// This is useful for applying link data projections to resources to take
+	// link changes into account when checking for drift.
+	//
+	// {resourceName} represents the logical name of the resource in single blueprint instance.
+	ResourceDataMappings map[string]string
 }
 
 // LinkUpdateType represents the type of update that is being carried out

@@ -66,7 +66,7 @@ func (s *ValueTestSuite) Test_parses_valid_value_yaml_input(c *C) {
 						Line:   3,
 						Column: 46,
 					},
-				ColumnAccuracy: exactColAccuracy(),
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 		},
@@ -79,16 +79,16 @@ func (s *ValueTestSuite) Test_parses_valid_value_yaml_input(c *C) {
 				Line:   3,
 				Column: 46,
 			},
-		ColumnAccuracy: exactColAccuracy(),
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 	c.Assert(*targetVal.Secret.BoolValue, Equals, false)
 	c.Assert(targetVal.Type, DeepEquals, &ValueTypeWrapper{
 		Value: ValueTypeBoolean,
 		SourceMeta: &source.Meta{
-			Position:    source.Position{Line: 1, Column: 7},
-			EndPosition: &source.Position{Line: 1, Column: 14},
-		ColumnAccuracy: exactColAccuracy(),
+			Position:       source.Position{Line: 1, Column: 7},
+			EndPosition:    &source.Position{Line: 1, Column: 14},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 	c.Assert(targetVal.Value, DeepEquals, &core.MappingNode{
@@ -174,7 +174,7 @@ func (s *ValueTestSuite) Test_parses_valid_value_yaml_input(c *C) {
 					Line:   2,
 					Column: 49,
 				},
-			ColumnAccuracy: exactColAccuracy(),
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
@@ -241,9 +241,9 @@ func (s *ValueTestSuite) Test_serialise_valid_value_yaml_input(c *C) {
 	c.Assert(targetVal.Type, DeepEquals, &ValueTypeWrapper{
 		Value: expected.Type.Value,
 		SourceMeta: &source.Meta{
-			Position:    source.Position{Line: 1, Column: 7},
-			EndPosition: &source.Position{Line: 1, Column: 13},
-		ColumnAccuracy: exactColAccuracy(),
+			Position:       source.Position{Line: 1, Column: 7},
+			EndPosition:    &source.Position{Line: 1, Column: 13},
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 	c.Assert(targetVal.Description, DeepEquals, &substitutions.StringOrSubstitutions{
@@ -259,7 +259,7 @@ func (s *ValueTestSuite) Test_serialise_valid_value_yaml_input(c *C) {
 						Line:   3,
 						Column: 60,
 					},
-				ColumnAccuracy: exactColAccuracy(),
+					ColumnAccuracy: exactColAccuracy(),
 				},
 			},
 		},
@@ -272,7 +272,7 @@ func (s *ValueTestSuite) Test_serialise_valid_value_yaml_input(c *C) {
 				Line:   3,
 				Column: 60,
 			},
-		ColumnAccuracy: exactColAccuracy(),
+			ColumnAccuracy: exactColAccuracy(),
 		},
 	})
 	c.Assert(*targetVal.Secret.BoolValue, Equals, *expected.Secret.BoolValue)
@@ -288,7 +288,7 @@ func (s *ValueTestSuite) Test_serialise_valid_value_yaml_input(c *C) {
 					Line:   2,
 					Column: 17,
 				},
-			ColumnAccuracy: exactColAccuracy(),
+				ColumnAccuracy: exactColAccuracy(),
 			},
 		},
 		SourceMeta: &source.Meta{
