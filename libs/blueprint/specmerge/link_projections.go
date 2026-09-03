@@ -272,6 +272,48 @@ func LinkFieldSources(
 	return sources
 }
 
+// DeclaredLinkFieldSources reports the same correspondence as LinkFieldSources, read from
+// what links declare at change staging rather than from what they recorded in state.
+//
+// Declarations are keyed by the logical name of the link that made them, each holding the
+// "{resourceName}::{fieldPath}" to link data path mappings that link expects to produce.
+//
+// A link that has never run has nothing in state, so this is the only account of the
+// fields it contributes while changes are being staged.
+func DeclaredLinkFieldSources(
+	resourceName string,
+	declarations map[string]map[string]string,
+) map[string]LinkFieldSource {
+	linkNames := make([]string, 0, len(declarations))
+	for linkName := range declarations {
+		linkNames = append(linkNames, linkName)
+	}
+	// Sorted so a field two links both declare resolves to the same one of them on every
+	// run, matching how LinkFieldSources orders the projections it reads from state.
+	slices.Sort(linkNames)
+
+	sources := map[string]LinkFieldSource{}
+	for _, linkName := range linkNames {
+		for resourceFieldPath, linkDataPath := range declarations[linkName] {
+			fieldPath, ownedByResource := resourceFieldPathFor(resourceFieldPath, resourceName)
+			if !ownedByResource {
+				continue
+			}
+
+			sources[fieldPath] = LinkFieldSource{
+				LinkName:     linkName,
+				LinkDataPath: linkDataPath,
+			}
+		}
+	}
+
+	if len(sources) == 0 {
+		return nil
+	}
+
+	return sources
+}
+
 // LinkOwnedFields reports the field paths of a resource that links contribute, mapped to
 // the logical name of the link that contributes each one.
 //
