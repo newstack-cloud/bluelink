@@ -19,8 +19,8 @@ type EnhancedDiagnostic struct {
 
 	// Original error location fields for precise text edits
 	// These are 1-indexed (matching blueprint error conventions)
-	Line       *int
-	Column     *int
-	EndLine    *int
-	EndColumn  *int
+	Line      *int
+	Column    *int
+	EndLine   *int
+	EndColumn *int
 }

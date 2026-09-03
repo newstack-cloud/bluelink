@@ -83,11 +83,11 @@ func (s *SchemaDefinitionsSuite) Test_RenderSectionDefinition() {
 
 func (s *SchemaDefinitionsSuite) Test_RenderFieldDefinition() {
 	tests := []struct {
-		name    string
-		field   string
-		parent  string
+		name     string
+		field    string
+		parent   string
 		contains string
-		empty   bool
+		empty    bool
 	}{
 		{"resource type field", "type", "resource", "type", false},
 		{"resource metadata field", "metadata", "resource", "metadata", false},
@@ -153,8 +153,8 @@ func (s *SchemaDefinitionsSuite) Test_RenderMetadataFieldDefinition() {
 
 func (s *SchemaDefinitionsSuite) Test_RenderMetadataDefinition() {
 	tests := []struct {
-		name    string
-		parent  string
+		name     string
+		parent   string
 		contains string
 	}{
 		{"resource context", "resource", "resource"},
