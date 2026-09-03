@@ -102,7 +102,7 @@ func (s *ProviderPluginV1Suite) Test_stage_link_changes_reports_expected_error_f
 	s.Assert().Contains(err.Error(), "internal error occurred when staging changes for link")
 }
 
-func (s *ProviderPluginV1Suite) Test_link_update_resource_a() {
+func (s *ProviderPluginV1Suite) Test_link_update_linked_resources() {
 	link, err := s.provider.Link(
 		context.Background(),
 		lambdaFunctionResourceType,
@@ -110,16 +110,16 @@ func (s *ProviderPluginV1Suite) Test_link_update_resource_a() {
 	)
 	s.Require().NoError(err)
 
-	output, err := link.UpdateResourceA(
+	output, err := link.UpdateLinkedResources(
 		context.Background(),
-		linkUpdateResourceAInput(),
+		linkUpdateLinkedResourcesInput(),
 	)
 	s.Require().NoError(err)
-	expected := testprovider.LinkLambdaDynamoDBUpdateResourceAOutput(testLinkID)
+	expected := testprovider.LinkLambdaDynamoDBUpdateLinkedResourcesOutput(testLinkID)
 	s.Assert().Equal(expected, output)
 }
 
-func (s *ProviderPluginV1Suite) Test_link_update_resource_a_fails_for_unexpected_host() {
+func (s *ProviderPluginV1Suite) Test_link_update_linked_resources_fails_for_unexpected_host() {
 	link, err := s.providerWrongHost.Link(
 		context.Background(),
 		lambdaFunctionResourceType,
@@ -127,19 +127,19 @@ func (s *ProviderPluginV1Suite) Test_link_update_resource_a_fails_for_unexpected
 	)
 	s.Require().NoError(err)
 
-	_, err = link.UpdateResourceA(
+	_, err = link.UpdateLinkedResources(
 		context.Background(),
-		linkUpdateResourceAInput(),
+		linkUpdateLinkedResourcesInput(),
 	)
 	testutils.AssertInvalidHost(
 		err,
-		errorsv1.PluginActionProviderUpdateLinkResourceA,
+		errorsv1.PluginActionProviderUpdateLinkedResources,
 		testWrongHostID,
 		&s.Suite,
 	)
 }
 
-func (s *ProviderPluginV1Suite) Test_link_update_resource_a_reports_expected_error_for_failure() {
+func (s *ProviderPluginV1Suite) Test_link_update_linked_resources_reports_expected_error_for_failure() {
 	link, err := s.failingProvider.Link(
 		context.Background(),
 		lambdaFunctionResourceType,
@@ -147,69 +147,12 @@ func (s *ProviderPluginV1Suite) Test_link_update_resource_a_reports_expected_err
 	)
 	s.Require().NoError(err)
 
-	_, err = link.UpdateResourceA(
+	_, err = link.UpdateLinkedResources(
 		context.Background(),
-		linkUpdateResourceAInput(),
+		linkUpdateLinkedResourcesInput(),
 	)
 	s.Assert().Error(err)
 	s.Assert().Contains(err.Error(), "internal error occurred when updating resource A for link")
-}
-
-func (s *ProviderPluginV1Suite) Test_link_update_resource_b() {
-	link, err := s.provider.Link(
-		context.Background(),
-		lambdaFunctionResourceType,
-		dynamoDBTableResourceType,
-	)
-	s.Require().NoError(err)
-
-	output, err := link.UpdateResourceB(
-		context.Background(),
-		linkUpdateResourceBInput(),
-	)
-	s.Require().NoError(err)
-	s.Assert().Equal(
-		&provider.LinkUpdateResourceOutput{
-			LinkData: &core.MappingNode{Fields: map[string]*core.MappingNode{}},
-		},
-		output,
-	)
-}
-
-func (s *ProviderPluginV1Suite) Test_link_update_resource_b_fails_for_unexpected_host() {
-	link, err := s.providerWrongHost.Link(
-		context.Background(),
-		lambdaFunctionResourceType,
-		dynamoDBTableResourceType,
-	)
-	s.Require().NoError(err)
-
-	_, err = link.UpdateResourceB(
-		context.Background(),
-		linkUpdateResourceBInput(),
-	)
-	testutils.AssertInvalidHost(
-		err,
-		errorsv1.PluginActionProviderUpdateLinkResourceB,
-		testWrongHostID,
-		&s.Suite,
-	)
-}
-
-func (s *ProviderPluginV1Suite) Test_link_update_resource_b_reports_expected_error_for_failure() {
-	link, err := s.failingProvider.Link(
-		context.Background(),
-		lambdaFunctionResourceType,
-		dynamoDBTableResourceType,
-	)
-	s.Require().NoError(err)
-
-	_, err = link.UpdateResourceB(
-		context.Background(),
-		linkUpdateResourceBInput(),
-	)
-	s.Assert().Error(err)
-	s.Assert().Contains(err.Error(), "internal error occurred when updating resource B for link")
 }
 
 func (s *ProviderPluginV1Suite) Test_link_update_intermediary_resources() {

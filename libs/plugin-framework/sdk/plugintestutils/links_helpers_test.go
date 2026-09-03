@@ -26,8 +26,7 @@ func newMockLink(
 		ResourceTypeA:                   "aws/lambda/function",
 		ResourceTypeB:                   "aws/dynamodb/table",
 		Kind:                            provider.LinkKindSoft,
-		UpdateResourceAFunc:             actions.updateResourceA,
-		UpdateResourceBFunc:             actions.updateResourceB,
+		UpdateLinkedResourcesFunc:       actions.updateLinkedResources,
 		UpdateIntermediaryResourcesFunc: actions.updateIntermediaryResources,
 		StageChangesFunc:                actions.stageChanges,
 	}
@@ -48,10 +47,10 @@ func newMockLinkActions(
 	}
 }
 
-func (a *mockLinkActions) updateResourceA(
+func (a *mockLinkActions) updateLinkedResources(
 	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
+	input *provider.LinkUpdateLinkedResourcesInput,
+) (*provider.LinkUpdateLinkedResourcesOutput, error) {
 	providerContext := provider.NewProviderContextFromLinkContext(
 		input.LinkContext,
 		"aws",
@@ -72,43 +71,10 @@ func (a *mockLinkActions) updateResourceA(
 		return nil, err
 	}
 
-	return &provider.LinkUpdateResourceOutput{
+	return &provider.LinkUpdateLinkedResourcesOutput{
 		LinkData: &core.MappingNode{
 			Fields: map[string]*core.MappingNode{
 				"resourceAId": core.MappingNodeFromString(saveOutput.ID),
-			},
-		},
-	}, nil
-}
-
-func (a *mockLinkActions) updateResourceB(
-	ctx context.Context,
-	input *provider.LinkUpdateResourceInput,
-) (*provider.LinkUpdateResourceOutput, error) {
-	providerContext := provider.NewProviderContextFromLinkContext(
-		input.LinkContext,
-		"aws",
-	)
-	serviceConfig, err := a.configStore.FromProviderContext(
-		ctx,
-		providerContext,
-		map[string]*core.MappingNode{},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	service := a.serviceFactory(serviceConfig, providerContext)
-
-	saveOutput, err := service.SaveResource(ctx, &saveMockResourceInput{})
-	if err != nil {
-		return nil, err
-	}
-
-	return &provider.LinkUpdateResourceOutput{
-		LinkData: &core.MappingNode{
-			Fields: map[string]*core.MappingNode{
-				"resourceBId": core.MappingNodeFromString(saveOutput.ID),
 			},
 		},
 	}, nil

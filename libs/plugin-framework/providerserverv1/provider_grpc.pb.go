@@ -41,8 +41,7 @@ const (
 	Provider_GetResourceExternalState_FullMethodName         = "/providerserverv1.Provider/GetResourceExternalState"
 	Provider_DestroyResource_FullMethodName                  = "/providerserverv1.Provider/DestroyResource"
 	Provider_StageLinkChanges_FullMethodName                 = "/providerserverv1.Provider/StageLinkChanges"
-	Provider_UpdateLinkResourceA_FullMethodName              = "/providerserverv1.Provider/UpdateLinkResourceA"
-	Provider_UpdateLinkResourceB_FullMethodName              = "/providerserverv1.Provider/UpdateLinkResourceB"
+	Provider_UpdateLinkedResources_FullMethodName            = "/providerserverv1.Provider/UpdateLinkedResources"
 	Provider_UpdateLinkIntermediaryResources_FullMethodName  = "/providerserverv1.Provider/UpdateLinkIntermediaryResources"
 	Provider_GetLinkPriorityResource_FullMethodName          = "/providerserverv1.Provider/GetLinkPriorityResource"
 	Provider_GetLinkTypeDescription_FullMethodName           = "/providerserverv1.Provider/GetLinkTypeDescription"
@@ -187,24 +186,17 @@ type ProviderClient interface {
 	// Unlike resources, links do not map to a specification for a single deployable unit,
 	// so link implementations must specify the changes that will be made across multiple resources.
 	StageLinkChanges(ctx context.Context, in *StageLinkChangesRequest, opts ...grpc.CallOption) (*StageLinkChangesResponse, error)
-	// UpdateLinkResourceA deals with applying the changes to the first of the two linked resources
-	// for the creation or removal of a link between two resources.
+	// UpdateLinkedResources deals with applying the changes to the blueprint-declared
+	// resources in a link relationship, for the creation, update or removal of the link.
+	// Both resources are provided, and a link writes whichever of them it declared it
+	// modifies through the link definition's modifies field.
 	// The value of the `link_data` field returned in the response will be combined
-	// with the link data output from updating resource B and intermediary resources
+	// with the link data output from updating intermediary resources
 	// to form the final link data that will be persisted in the state of the blueprint instance.
-	// Parameters are passed into UpdateLinkResourceA for extra context, blueprint variables will have already
+	// Parameters are passed in for extra context, blueprint variables will have already
 	// been substituted at this stage and must be used instead of the passed in params argument
 	// to ensure consistency between the staged changes that are reviewed and the deployment itself.
-	UpdateLinkResourceA(ctx context.Context, in *UpdateLinkResourceRequest, opts ...grpc.CallOption) (*UpdateLinkResourceResponse, error)
-	// UpdateLinkResourceB deals with applying the changes to the second of the two linked resources
-	// for the creation or removal of a link between two resources.
-	// The value of the `link_data` field returned in the output will be combined
-	// with the link data output from updating resource A and intermediary resources
-	// to form the final link data that will be persisted in the state of the blueprint instance.
-	// Parameters are passed into UpdateResourceB for extra context, blueprint variables will have already
-	// been substituted at this stage and must be used instead of the passed in params argument
-	// to ensure consistency between the staged changes that are reviewed and the deployment itself.
-	UpdateLinkResourceB(ctx context.Context, in *UpdateLinkResourceRequest, opts ...grpc.CallOption) (*UpdateLinkResourceResponse, error)
+	UpdateLinkedResources(ctx context.Context, in *UpdateLinkedResourcesRequest, opts ...grpc.CallOption) (*UpdateLinkedResourcesResponse, error)
 	// UpdateLinkIntermediaryResources deals with creating, updating or deleting intermediary resources
 	// that are required for the link between two resources.
 	// This is called for both the creation and removal of a link between two resources.
@@ -521,20 +513,10 @@ func (c *providerClient) StageLinkChanges(ctx context.Context, in *StageLinkChan
 	return out, nil
 }
 
-func (c *providerClient) UpdateLinkResourceA(ctx context.Context, in *UpdateLinkResourceRequest, opts ...grpc.CallOption) (*UpdateLinkResourceResponse, error) {
+func (c *providerClient) UpdateLinkedResources(ctx context.Context, in *UpdateLinkedResourcesRequest, opts ...grpc.CallOption) (*UpdateLinkedResourcesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateLinkResourceResponse)
-	err := c.cc.Invoke(ctx, Provider_UpdateLinkResourceA_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *providerClient) UpdateLinkResourceB(ctx context.Context, in *UpdateLinkResourceRequest, opts ...grpc.CallOption) (*UpdateLinkResourceResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateLinkResourceResponse)
-	err := c.cc.Invoke(ctx, Provider_UpdateLinkResourceB_FullMethodName, in, out, cOpts...)
+	out := new(UpdateLinkedResourcesResponse)
+	err := c.cc.Invoke(ctx, Provider_UpdateLinkedResources_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -881,24 +863,17 @@ type ProviderServer interface {
 	// Unlike resources, links do not map to a specification for a single deployable unit,
 	// so link implementations must specify the changes that will be made across multiple resources.
 	StageLinkChanges(context.Context, *StageLinkChangesRequest) (*StageLinkChangesResponse, error)
-	// UpdateLinkResourceA deals with applying the changes to the first of the two linked resources
-	// for the creation or removal of a link between two resources.
+	// UpdateLinkedResources deals with applying the changes to the blueprint-declared
+	// resources in a link relationship, for the creation, update or removal of the link.
+	// Both resources are provided, and a link writes whichever of them it declared it
+	// modifies through the link definition's modifies field.
 	// The value of the `link_data` field returned in the response will be combined
-	// with the link data output from updating resource B and intermediary resources
+	// with the link data output from updating intermediary resources
 	// to form the final link data that will be persisted in the state of the blueprint instance.
-	// Parameters are passed into UpdateLinkResourceA for extra context, blueprint variables will have already
+	// Parameters are passed in for extra context, blueprint variables will have already
 	// been substituted at this stage and must be used instead of the passed in params argument
 	// to ensure consistency between the staged changes that are reviewed and the deployment itself.
-	UpdateLinkResourceA(context.Context, *UpdateLinkResourceRequest) (*UpdateLinkResourceResponse, error)
-	// UpdateLinkResourceB deals with applying the changes to the second of the two linked resources
-	// for the creation or removal of a link between two resources.
-	// The value of the `link_data` field returned in the output will be combined
-	// with the link data output from updating resource A and intermediary resources
-	// to form the final link data that will be persisted in the state of the blueprint instance.
-	// Parameters are passed into UpdateResourceB for extra context, blueprint variables will have already
-	// been substituted at this stage and must be used instead of the passed in params argument
-	// to ensure consistency between the staged changes that are reviewed and the deployment itself.
-	UpdateLinkResourceB(context.Context, *UpdateLinkResourceRequest) (*UpdateLinkResourceResponse, error)
+	UpdateLinkedResources(context.Context, *UpdateLinkedResourcesRequest) (*UpdateLinkedResourcesResponse, error)
 	// UpdateLinkIntermediaryResources deals with creating, updating or deleting intermediary resources
 	// that are required for the link between two resources.
 	// This is called for both the creation and removal of a link between two resources.
@@ -1068,11 +1043,8 @@ func (UnimplementedProviderServer) DestroyResource(context.Context, *sharedtypes
 func (UnimplementedProviderServer) StageLinkChanges(context.Context, *StageLinkChangesRequest) (*StageLinkChangesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StageLinkChanges not implemented")
 }
-func (UnimplementedProviderServer) UpdateLinkResourceA(context.Context, *UpdateLinkResourceRequest) (*UpdateLinkResourceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateLinkResourceA not implemented")
-}
-func (UnimplementedProviderServer) UpdateLinkResourceB(context.Context, *UpdateLinkResourceRequest) (*UpdateLinkResourceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateLinkResourceB not implemented")
+func (UnimplementedProviderServer) UpdateLinkedResources(context.Context, *UpdateLinkedResourcesRequest) (*UpdateLinkedResourcesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateLinkedResources not implemented")
 }
 func (UnimplementedProviderServer) UpdateLinkIntermediaryResources(context.Context, *UpdateLinkIntermediaryResourcesRequest) (*UpdateLinkIntermediaryResourcesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateLinkIntermediaryResources not implemented")
@@ -1539,38 +1511,20 @@ func _Provider_StageLinkChanges_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Provider_UpdateLinkResourceA_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateLinkResourceRequest)
+func _Provider_UpdateLinkedResources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateLinkedResourcesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ProviderServer).UpdateLinkResourceA(ctx, in)
+		return srv.(ProviderServer).UpdateLinkedResources(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Provider_UpdateLinkResourceA_FullMethodName,
+		FullMethod: Provider_UpdateLinkedResources_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ProviderServer).UpdateLinkResourceA(ctx, req.(*UpdateLinkResourceRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Provider_UpdateLinkResourceB_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateLinkResourceRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ProviderServer).UpdateLinkResourceB(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Provider_UpdateLinkResourceB_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ProviderServer).UpdateLinkResourceB(ctx, req.(*UpdateLinkResourceRequest))
+		return srv.(ProviderServer).UpdateLinkedResources(ctx, req.(*UpdateLinkedResourcesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2063,12 +2017,8 @@ var Provider_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Provider_StageLinkChanges_Handler,
 		},
 		{
-			MethodName: "UpdateLinkResourceA",
-			Handler:    _Provider_UpdateLinkResourceA_Handler,
-		},
-		{
-			MethodName: "UpdateLinkResourceB",
-			Handler:    _Provider_UpdateLinkResourceB_Handler,
+			MethodName: "UpdateLinkedResources",
+			Handler:    _Provider_UpdateLinkedResources_Handler,
 		},
 		{
 			MethodName: "UpdateLinkIntermediaryResources",

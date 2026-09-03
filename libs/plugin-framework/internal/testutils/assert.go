@@ -81,10 +81,8 @@ func assertExtractPluginError(
 		return assertExtractDeployResourceError(err, testSuite)
 	case errorsv1.PluginActionProviderDestroyResource:
 		return assertExtractDestroyResourceError(err, testSuite)
-	case errorsv1.PluginActionProviderUpdateLinkResourceA:
-		return assertExtractUpdateResourceAError(err, testSuite)
-	case errorsv1.PluginActionProviderUpdateLinkResourceB:
-		return assertExtractUpdateResourceBError(err, testSuite)
+	case errorsv1.PluginActionProviderUpdateLinkedResources:
+		return assertExtractUpdateLinkedResourcesError(err, testSuite)
 	case errorsv1.PluginActionProviderUpdateLinkIntermediaryResources:
 		return assertExtractUpdateIntermediaryResourcesError(err, testSuite)
 	default:
@@ -120,30 +118,16 @@ func assertExtractDestroyResourceError(
 	)
 }
 
-func assertExtractUpdateResourceAError(
+func assertExtractUpdateLinkedResourcesError(
 	err error,
 	testSuite *suite.Suite,
 ) *errorsv1.PluginResponseError {
-	updateResAErr, isUpdateResAErr := err.(*provider.LinkUpdateResourceAError)
-	testSuite.Require().True(isUpdateResAErr)
-	testSuite.Require().NotNil(updateResAErr)
+	updateErr, isUpdateErr := err.(*provider.LinkUpdateLinkedResourcesError)
+	testSuite.Require().True(isUpdateErr)
+	testSuite.Require().NotNil(updateErr)
 
 	return assertExtractPluginResponseError(
-		updateResAErr.ChildError,
-		testSuite,
-	)
-}
-
-func assertExtractUpdateResourceBError(
-	err error,
-	testSuite *suite.Suite,
-) *errorsv1.PluginResponseError {
-	updateResBErr, isUpdateResBErr := err.(*provider.LinkUpdateResourceBError)
-	testSuite.Require().True(isUpdateResBErr)
-	testSuite.Require().NotNil(updateResBErr)
-
-	return assertExtractPluginResponseError(
-		updateResBErr.ChildError,
+		updateErr.ChildError,
 		testSuite,
 	)
 }

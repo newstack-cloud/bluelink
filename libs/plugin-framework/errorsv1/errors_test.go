@@ -238,14 +238,14 @@ func (s *ErrorsTestSuite) Test_create_link_resource_a_update_bad_input_error_fro
 			Message: "Invalid input provided with 2 input errors",
 			Details: errorDetails,
 		},
-		PluginActionProviderUpdateLinkResourceA,
+		PluginActionProviderUpdateLinkedResources,
 	)
 	s.Assert().Equal(
-		&provider.LinkUpdateResourceAError{
+		&provider.LinkUpdateLinkedResourcesError{
 			ChildError: &provider.BadInputError{
 				ChildError: &PluginResponseError{
 					Code:    sharedtypesv1.ErrorCode_ERROR_CODE_BAD_INPUT,
-					Action:  PluginActionProviderUpdateLinkResourceA,
+					Action:  PluginActionProviderUpdateLinkedResources,
 					Message: "Invalid input provided with 2 input errors",
 					Details: map[string]any{
 						"failureReasons": []any{
@@ -284,14 +284,14 @@ func (s *ErrorsTestSuite) Test_create_link_resource_b_update_bad_input_error_fro
 			Message: "Invalid input provided with 2 input errors",
 			Details: errorDetails,
 		},
-		PluginActionProviderUpdateLinkResourceB,
+		PluginActionProviderUpdateLinkedResources,
 	)
 	s.Assert().Equal(
-		&provider.LinkUpdateResourceBError{
+		&provider.LinkUpdateLinkedResourcesError{
 			ChildError: &provider.BadInputError{
 				ChildError: &PluginResponseError{
 					Code:    sharedtypesv1.ErrorCode_ERROR_CODE_BAD_INPUT,
-					Action:  PluginActionProviderUpdateLinkResourceB,
+					Action:  PluginActionProviderUpdateLinkedResources,
 					Message: "Invalid input provided with 2 input errors",
 					Details: map[string]any{
 						"failureReasons": []any{

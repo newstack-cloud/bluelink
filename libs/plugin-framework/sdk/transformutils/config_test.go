@@ -207,12 +207,12 @@ func (s *ResourceConfigVariableSeqTestSuite) Test_returns_resource_scoped_seq_wh
 	transformCtx := newTransformerContextWithConfig(
 		testConfigTransformerID,
 		map[string]*core.ScalarValue{
-			"aws.sns.ordersTopic.statusLogging.0.protocol":                core.ScalarFromString("https"),
-			"aws.sns.ordersTopic.statusLogging.0.failureFeedbackRoleArn":  core.ScalarFromString("arn:resource:0"),
-			"aws.sns.ordersTopic.statusLogging.1.protocol":                core.ScalarFromString("lambda"),
-			"aws.sns.ordersTopic.statusLogging.1.failureFeedbackRoleArn":  core.ScalarFromString("arn:resource:1"),
-			"aws.sns.statusLogging.0.protocol":                            core.ScalarFromString("sqs"),
-			"aws.sns.statusLogging.0.failureFeedbackRoleArn":              core.ScalarFromString("arn:service:0"),
+			"aws.sns.ordersTopic.statusLogging.0.protocol":               core.ScalarFromString("https"),
+			"aws.sns.ordersTopic.statusLogging.0.failureFeedbackRoleArn": core.ScalarFromString("arn:resource:0"),
+			"aws.sns.ordersTopic.statusLogging.1.protocol":               core.ScalarFromString("lambda"),
+			"aws.sns.ordersTopic.statusLogging.1.failureFeedbackRoleArn": core.ScalarFromString("arn:resource:1"),
+			"aws.sns.statusLogging.0.protocol":                           core.ScalarFromString("sqs"),
+			"aws.sns.statusLogging.0.failureFeedbackRoleArn":             core.ScalarFromString("arn:service:0"),
 		},
 	)
 

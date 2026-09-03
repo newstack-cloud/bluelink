@@ -448,11 +448,11 @@ func toPBStageLinkChangesResponse(
 	}, nil
 }
 
-func toUpdateLinkResourceErrorResponse(
+func toUpdateLinkedResourcesErrorResponse(
 	err error,
-) *providerserverv1.UpdateLinkResourceResponse {
-	return &providerserverv1.UpdateLinkResourceResponse{
-		Response: &providerserverv1.UpdateLinkResourceResponse_ErrorResponse{
+) *providerserverv1.UpdateLinkedResourcesResponse {
+	return &providerserverv1.UpdateLinkedResourcesResponse{
+		Response: &providerserverv1.UpdateLinkedResourcesResponse_ErrorResponse{
 			ErrorResponse: errorsv1.CreateResponseFromError(err),
 		},
 	}
@@ -468,12 +468,12 @@ func toPBLinkChanges(
 	return convertv1.ToPBLinkChanges(*changes)
 }
 
-func toPBUpdateLinkResourceResponse(
-	output *provider.LinkUpdateResourceOutput,
-) (*providerserverv1.UpdateLinkResourceResponse, error) {
+func toPBUpdateLinkedResourcesResponse(
+	output *provider.LinkUpdateLinkedResourcesOutput,
+) (*providerserverv1.UpdateLinkedResourcesResponse, error) {
 	if output == nil {
-		return &providerserverv1.UpdateLinkResourceResponse{
-			Response: &providerserverv1.UpdateLinkResourceResponse_ErrorResponse{
+		return &providerserverv1.UpdateLinkedResourcesResponse{
+			Response: &providerserverv1.UpdateLinkedResourcesResponse_ErrorResponse{
 				ErrorResponse: sharedtypesv1.NoResponsePBError(),
 			},
 		}, nil
@@ -487,8 +487,8 @@ func toPBUpdateLinkResourceResponse(
 		return nil, err
 	}
 
-	return &providerserverv1.UpdateLinkResourceResponse{
-		Response: &providerserverv1.UpdateLinkResourceResponse_CompleteResponse{
+	return &providerserverv1.UpdateLinkedResourcesResponse{
+		Response: &providerserverv1.UpdateLinkedResourcesResponse_CompleteResponse{
 			CompleteResponse: &providerserverv1.UpdateLinkResourceCompleteResponse{
 				LinkData:             linkData,
 				ResourceDataMappings: output.ResourceDataMappings,

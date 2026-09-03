@@ -671,41 +671,18 @@ func (p *blueprintProviderPluginImpl) StageLinkChanges(
 	return response, nil
 }
 
-func (p *blueprintProviderPluginImpl) UpdateLinkResourceA(
+func (p *blueprintProviderPluginImpl) UpdateLinkedResources(
 	ctx context.Context,
-	req *providerserverv1.UpdateLinkResourceRequest,
-) (*providerserverv1.UpdateLinkResourceResponse, error) {
-	return p.updateLinkResource(
-		ctx,
-		req,
-		provider.LinkPriorityResourceA,
-	)
-}
-
-func (p *blueprintProviderPluginImpl) UpdateLinkResourceB(
-	ctx context.Context,
-	req *providerserverv1.UpdateLinkResourceRequest,
-) (*providerserverv1.UpdateLinkResourceResponse, error) {
-	return p.updateLinkResource(
-		ctx,
-		req,
-		provider.LinkPriorityResourceB,
-	)
-}
-
-func (p *blueprintProviderPluginImpl) updateLinkResource(
-	ctx context.Context,
-	req *providerserverv1.UpdateLinkResourceRequest,
-	linkResource provider.LinkPriorityResource,
-) (*providerserverv1.UpdateLinkResourceResponse, error) {
+	req *providerserverv1.UpdateLinkedResourcesRequest,
+) (*providerserverv1.UpdateLinkedResourcesResponse, error) {
 	err := p.checkHostID(req.HostId)
 	if err != nil {
-		return toUpdateLinkResourceErrorResponse(err), nil
+		return toUpdateLinkedResourcesErrorResponse(err), nil
 	}
 
 	linkTypeInfo, err := extractLinkTypeInfo(req.LinkType)
 	if err != nil {
-		return toUpdateLinkResourceErrorResponse(err), nil
+		return toUpdateLinkedResourcesErrorResponse(err), nil
 	}
 
 	link, err := p.bpProvider.Link(
@@ -714,32 +691,31 @@ func (p *blueprintProviderPluginImpl) updateLinkResource(
 		linkTypeInfo.resourceTypeB,
 	)
 	if err != nil {
-		return toUpdateLinkResourceErrorResponse(err), nil
+		return toUpdateLinkedResourcesErrorResponse(err), nil
 	}
 
 	resourceService := pluginservicev1.ResourceServiceFromClient(
 		p.serviceClient,
 	)
-	updateLinkResourceInput, err := fromPBUpdateLinkResourceRequest(
+	updateLinkedResourcesInput, err := fromPBUpdateLinkedResourcesRequest(
 		req,
 		resourceService,
 	)
 	if err != nil {
-		return toUpdateLinkResourceErrorResponse(err), nil
+		return toUpdateLinkedResourcesErrorResponse(err), nil
 	}
 
-	updateFunc := selectLinkUpdateResourceFunc(link, linkResource)
-	output, err := updateFunc(
+	output, err := link.UpdateLinkedResources(
 		ctx,
-		updateLinkResourceInput,
+		updateLinkedResourcesInput,
 	)
 	if err != nil {
-		return toUpdateLinkResourceErrorResponse(err), nil
+		return toUpdateLinkedResourcesErrorResponse(err), nil
 	}
 
-	response, err := toPBUpdateLinkResourceResponse(output)
+	response, err := toPBUpdateLinkedResourcesResponse(output)
 	if err != nil {
-		return toUpdateLinkResourceErrorResponse(err), nil
+		return toUpdateLinkedResourcesErrorResponse(err), nil
 	}
 
 	return response, nil

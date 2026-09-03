@@ -174,14 +174,14 @@ type LinkUpdateResourceTestCase[
 	// uses mocks instead of a real service.
 	CurrentServiceMockCalls *MockCalls
 	// Input for the link resource update operation.
-	Input *provider.LinkUpdateResourceInput
+	Input *provider.LinkUpdateLinkedResourcesInput
 	// Expected output from the link resource update operation.
-	ExpectedOutput *provider.LinkUpdateResourceOutput
+	ExpectedOutput *provider.LinkUpdateLinkedResourcesOutput
 	// ExpectedOutputMatcher is a function that takes the actual output
-	// from the `UpdateResource(A|B)` method and returns a prepared actual
+	// from the `UpdateLinkedResources` method and returns a prepared actual
 	// value along with the expected value to be used in an equality check.
 	ExpectedOutputMatcher func(
-		actual *provider.LinkUpdateResourceOutput,
+		actual *provider.LinkUpdateLinkedResourcesOutput,
 	) (EqualityCheckValues, error)
 	// ExtraAssertions is an optional function that is called after the output of
 	// the operation successfully matches the expected output or matcher.
@@ -190,10 +190,8 @@ type LinkUpdateResourceTestCase[
 	ExtraAssertions func(
 		ctx context.Context,
 		suite *suite.Suite,
-		output *provider.LinkUpdateResourceOutput,
+		output *provider.LinkUpdateLinkedResourcesOutput,
 	)
-	// Resource defines the resource in the link relationship that should be updated.
-	Resource LinkUpdateResource
 	// UpdateActionsCalled is a mapping of method name to the
 	// expected second argument for the method.
 	// When the value is a slice of any, it is expected that the method
@@ -222,23 +220,10 @@ type LinkUpdateResourceTestCase[
 	// This is useful for integration tests with real services where the resource
 	// needs to be cleaned up after the test case has run regardless of whether
 	// the test case passes or fails.
-	Cleanup func(ctx context.Context, failed bool, output *provider.LinkUpdateResourceOutput) error
+	Cleanup func(ctx context.Context, failed bool, output *provider.LinkUpdateLinkedResourcesOutput) error
 }
 
-// LinkUpdateResource is a type that represents a resource
-// that should be updated in a link update operation.
-type LinkUpdateResource string
-
-const (
-	// LinkUpdateResourceA is used to select "resource A" in a link
-	// update operation for testing purposes.
-	LinkUpdateResourceA LinkUpdateResource = "resourceA"
-	// LinkUpdateResourceB is used to select "resource B" in a link
-	// update operation for testing purposes.
-	LinkUpdateResourceB LinkUpdateResource = "resourceB"
-)
-
-// RunLinkUpdateResourceTestCases runs a set of test cases for the `UpdateResource(A|B)` methods
+// RunLinkUpdateResourceTestCases runs a set of test cases for the `UpdateLinkedResources` methods
 // of a link implementation in a provider plugin.
 func RunLinkUpdateResourceTestCases[
 	ResourceAServiceConfig any,
@@ -288,23 +273,12 @@ func RunLinkUpdateResourceTestCases[
 				},
 			)
 
-			var output *provider.LinkUpdateResourceOutput
+			var output *provider.LinkUpdateLinkedResourcesOutput
 			var err error
-			switch tc.Resource {
-			case LinkUpdateResourceA:
-				output, err = link.UpdateResourceA(
-					context.Background(),
-					tc.Input,
-				)
-			case LinkUpdateResourceB:
-				output, err = link.UpdateResourceB(
-					context.Background(),
-					tc.Input,
-				)
-			default:
-				testSuite.Failf("Invalid link resource", "Resource %s is not supported", tc.Resource)
-				return
-			}
+			output, err = link.UpdateLinkedResources(
+				context.Background(),
+				tc.Input,
+			)
 
 			if tc.Cleanup != nil {
 				defer func() {
