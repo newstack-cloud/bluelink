@@ -124,7 +124,7 @@
       "name": "saveOrderFunction::ordersTable_0",
       "instanceId": "8f8a7db1-d01f-4250-8ae0-1af4a950cc6a",
       "status": 2,
-      "preciseStatus": 8,
+      "preciseStatus": 2,
       "lastDeployedTimestamp": 1733145428,
       "lastDeployAttemptTimestamp": 1733145428,
       "intermediaryResourceStates": [],
@@ -137,7 +137,9 @@
           "iam.policyStatements": {
             "0": {
               "effect": "Allow",
-              "action": ["dynamodb:PutItem"],
+              "action": [
+                "dynamodb:PutItem"
+              ],
               "resource": "arn:aws:dynamodb:eu-west-1:123456789012:table/legacy-production-orders-1"
             }
           }
@@ -150,7 +152,7 @@
       "name": "saveOrderFunction::ordersTable_1",
       "instanceId": "8f8a7db1-d01f-4250-8ae0-1af4a950cc6a",
       "status": 2,
-      "preciseStatus": 8,
+      "preciseStatus": 2,
       "lastDeployedTimestamp": 1733145428,
       "lastDeployAttemptTimestamp": 1733145428,
       "intermediaryResourceStates": [],
@@ -163,7 +165,9 @@
           "iam.policyStatements": {
             "0": {
               "effect": "Allow",
-              "action": ["dynamodb:PutItem"],
+              "action": [
+                "dynamodb:PutItem"
+              ],
               "resource": "arn:aws:dynamodb:eu-west-2:123456789012:table/legacy-production-orders-2"
             }
           }

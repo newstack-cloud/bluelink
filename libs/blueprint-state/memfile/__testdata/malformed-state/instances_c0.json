@@ -125,7 +125,7 @@
         "name": "saveOrderFunction::ordersTable_0",
         "instanceId": "non-existent-blueprint",
         "status": 2,
-        "preciseStatus": 8,
+        "preciseStatus": 2,
         "lastDeployedTimestamp": 1733145428,
         "lastDeployAttemptTimestamp": 1733145428,
         "intermediaryResourceStates": [],
@@ -138,7 +138,9 @@
             "iam.policyStatements": {
               "0": {
                 "effect": "Allow",
-                "action": ["dynamodb:PutItem"],
+                "action": [
+                  "dynamodb:PutItem"
+                ],
                 "resource": "arn:aws:dynamodb:eu-west-1:123456789012:table/legacy-production-orders-1"
               }
             }
@@ -151,7 +153,7 @@
         "name": "saveOrderFunction::ordersTable_1",
         "instanceId": "blueprint-instance-1",
         "status": 2,
-        "preciseStatus": 8,
+        "preciseStatus": 2,
         "lastDeployedTimestamp": 1733145428,
         "lastDeployAttemptTimestamp": 1733145428,
         "intermediaryResourceStates": [],
@@ -164,7 +166,9 @@
             "iam.policyStatements": {
               "0": {
                 "effect": "Allow",
-                "action": ["dynamodb:PutItem"],
+                "action": [
+                  "dynamodb:PutItem"
+                ],
                 "resource": "arn:aws:dynamodb:eu-west-2:123456789012:table/legacy-production-orders-2"
               }
             }

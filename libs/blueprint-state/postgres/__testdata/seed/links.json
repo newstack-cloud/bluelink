@@ -2,7 +2,7 @@
   {
     "id": "c0d6d914-21a6-4a99-afb3-f6f45eefbdd3",
     "status": 2,
-    "preciseStatus": 8,
+    "preciseStatus": 2,
     "lastDeployedTimestamp": 1733145428,
     "lastDeployAttemptTimestamp": 1733145428,
     "intermediaryResourcesState": [],
@@ -31,7 +31,7 @@
   {
     "id": "e4a4a3be-f494-4dc8-87e0-3bd0ac33707b",
     "status": 2,
-    "preciseStatus": 8,
+    "preciseStatus": 2,
     "lastDeployedTimestamp": 1733145428,
     "lastDeployAttemptTimestamp": 1733145428,
     "intermediaryResourcesState": [],
@@ -55,7 +55,7 @@
   {
     "id": "fe050735-d406-43aa-8375-7fbc66eb3a7b",
     "status": 2,
-    "preciseStatus": 8,
+    "preciseStatus": 2,
     "lastDeployedTimestamp": 1733145428,
     "lastDeployAttemptTimestamp": 1733145428,
     "intermediaryResourcesState": [],
@@ -79,7 +79,7 @@
   {
     "id": "7a3a3779-6add-484c-b050-50c63a6947a7",
     "status": 2,
-    "preciseStatus": 8,
+    "preciseStatus": 2,
     "lastDeployedTimestamp": 1733145428,
     "lastDeployAttemptTimestamp": 1733145428,
     "intermediaryResourcesState": [],
@@ -103,7 +103,7 @@
   {
     "id": "d97e379c-7e85-4c70-bd31-d7a6f9a5dbd6",
     "status": 2,
-    "preciseStatus": 8,
+    "preciseStatus": 2,
     "lastDeployedTimestamp": 1733145428,
     "lastDeployAttemptTimestamp": 1733145428,
     "intermediaryResourcesState": [],
