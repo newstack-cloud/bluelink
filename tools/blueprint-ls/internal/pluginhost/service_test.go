@@ -23,10 +23,10 @@ func (s *ServiceSuite) TestLoadDefaultService_creates_service() {
 	defer listener.Close()
 
 	config := &mockConfig{
-		pluginPath:              "",
-		launchWaitTimeoutMS:     5000,
-		totalLaunchWaitTimeout:  60000,
-		enabled:                 true,
+		pluginPath:             "",
+		launchWaitTimeoutMS:    5000,
+		totalLaunchWaitTimeout: 60000,
+		enabled:                true,
 	}
 
 	service, err := LoadDefaultService(
@@ -53,10 +53,10 @@ func (s *ServiceSuite) TestLoadDefaultService_with_initial_providers() {
 	defer listener.Close()
 
 	config := &mockConfig{
-		pluginPath:              "",
-		launchWaitTimeoutMS:     5000,
-		totalLaunchWaitTimeout:  60000,
-		enabled:                 true,
+		pluginPath:             "",
+		launchWaitTimeoutMS:    5000,
+		totalLaunchWaitTimeout: 60000,
+		enabled:                true,
 	}
 
 	initialProviders := map[string]provider.Provider{
@@ -86,10 +86,10 @@ func (s *ServiceSuite) TestService_close_is_idempotent() {
 	defer listener.Close()
 
 	config := &mockConfig{
-		pluginPath:              "",
-		launchWaitTimeoutMS:     5000,
-		totalLaunchWaitTimeout:  60000,
-		enabled:                 true,
+		pluginPath:             "",
+		launchWaitTimeoutMS:    5000,
+		totalLaunchWaitTimeout: 60000,
+		enabled:                true,
 	}
 
 	service, err := LoadDefaultService(

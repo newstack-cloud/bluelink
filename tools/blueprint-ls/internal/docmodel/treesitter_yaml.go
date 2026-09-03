@@ -448,4 +448,3 @@ func mapYAMLNodeKind(kind string) NodeKind {
 		return NodeKindScalar
 	}
 }
-

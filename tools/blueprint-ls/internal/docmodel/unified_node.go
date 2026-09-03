@@ -20,15 +20,15 @@ const (
 type UnifiedNode struct {
 	Kind      NodeKind
 	Range     source.Range
-	KeyRange  *source.Range   // Range of the key if this is a map value
-	Value     string          // Scalar value if NodeKindScalar
-	Tag       string          // Type tag (e.g., "string", "integer")
-	Children  []*UnifiedNode  // Child nodes
-	Parent    *UnifiedNode    // Parent reference for upward traversal
-	FieldName string          // Field name if child of a mapping
-	Index     int             // Index if child of a sequence (-1 if not applicable)
-	IsError   bool            // True if this node represents an error region
-	TSKind    string          // Original tree-sitter node kind for debugging
+	KeyRange  *source.Range  // Range of the key if this is a map value
+	Value     string         // Scalar value if NodeKindScalar
+	Tag       string         // Type tag (e.g., "string", "integer")
+	Children  []*UnifiedNode // Child nodes
+	Parent    *UnifiedNode   // Parent reference for upward traversal
+	FieldName string         // Field name if child of a mapping
+	Index     int            // Index if child of a sequence (-1 if not applicable)
+	IsError   bool           // True if this node represents an error region
+	TSKind    string         // Original tree-sitter node kind for debugging
 }
 
 // ContainsPosition returns true if the node's range contains the given position.

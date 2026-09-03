@@ -218,8 +218,8 @@ func (s *PathSuite) TestStructuredPath_IsResourceDefinition() {
 			expected: false,
 		},
 		{
-			name: "empty path",
-			path: StructuredPath{},
+			name:     "empty path",
+			path:     StructuredPath{},
 			expected: false,
 		},
 	}
@@ -1077,8 +1077,8 @@ func (s *PathSuite) TestStructuredPath_IsDataSourceFilterDefinition() {
 			expected: false,
 		},
 		{
-			name: "empty path",
-			path: StructuredPath{},
+			name:     "empty path",
+			path:     StructuredPath{},
 			expected: false,
 		},
 	}
@@ -1139,8 +1139,8 @@ func (s *PathSuite) TestStructuredPath_IsExportField() {
 			expected: false,
 		},
 		{
-			name: "empty path",
-			path: StructuredPath{},
+			name:     "empty path",
+			path:     StructuredPath{},
 			expected: false,
 		},
 	}
@@ -1196,14 +1196,14 @@ func (s *PathSuite) TestStructuredPath_SegmentBasics() {
 
 func (s *PathSuite) TestStructuredPath_SectionCheckers() {
 	tests := []struct {
-		name     string
-		path     StructuredPath
-		inRes    bool
-		inDS     bool
-		inVars   bool
-		inVals   bool
-		inExps   bool
-		inIncl   bool
+		name   string
+		path   StructuredPath
+		inRes  bool
+		inDS   bool
+		inVars bool
+		inVals bool
+		inExps bool
+		inIncl bool
 	}{
 		{
 			name: "resources path",
@@ -1254,8 +1254,8 @@ func (s *PathSuite) TestStructuredPath_SectionCheckers() {
 			inIncl: true,
 		},
 		{
-			name:  "empty path",
-			path:  StructuredPath{},
+			name: "empty path",
+			path: StructuredPath{},
 		},
 	}
 
@@ -1455,11 +1455,11 @@ func (s *PathSuite) TestStructuredPath_AnnotationAndExportGetters() {
 
 func (s *PathSuite) TestStructuredPath_TypeCheckers() {
 	tests := []struct {
-		name    string
-		path    StructuredPath
-		isVarT  bool
-		isValT  bool
-		isExpT  bool
+		name   string
+		path   StructuredPath
+		isVarT bool
+		isValT bool
+		isExpT bool
 	}{
 		{
 			name: "variable type",
@@ -1516,14 +1516,14 @@ func (s *PathSuite) TestStructuredPath_TypeCheckers() {
 
 func (s *PathSuite) TestStructuredPath_ResourceMetadataCheckers() {
 	tests := []struct {
-		name        string
-		path        StructuredPath
-		isMeta      bool
-		isAnnot     bool
-		isAnnotVal  bool
-		isLabels    bool
-		isLinkSel   bool
-		isLinkExcl  bool
+		name       string
+		path       StructuredPath
+		isMeta     bool
+		isAnnot    bool
+		isAnnotVal bool
+		isLabels   bool
+		isLinkSel  bool
+		isLinkExcl bool
 	}{
 		{
 			name: "resource metadata root",
