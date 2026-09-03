@@ -87,7 +87,8 @@ func resourceDriftQuery() string {
 		'resourceName', bir.resource_name,
 		'specData', rd.drifted_spec_data,
 		'difference', rd.difference,
-		'timestamp', EXTRACT(EPOCH FROM rd.timestamp)::bigint
+		'timestamp', EXTRACT(EPOCH FROM rd.timestamp)::bigint,
+		'unappliedLinkContributions', rd.unapplied_link_contributions
 		) as json 
 	FROM resource_drift rd
 	LEFT JOIN blueprint_instance_resources bir ON bir.resource_id = rd.resource_id
@@ -107,16 +108,19 @@ func upsertResourceDriftQuery() string {
 		resource_id,
 		drifted_spec_data,
 		difference,
-		"timestamp"
+		"timestamp",
+		unapplied_link_contributions
 	) VALUES (
 		@resourceId,
 		@specData,
 		@difference,
-		@timestamp
+		@timestamp,
+		@unappliedLinkContributions
 	) ON CONFLICT (resource_id) DO UPDATE SET
 	 	drifted_spec_data = excluded.drifted_spec_data,
 		difference = excluded.difference,
-		"timestamp" = excluded."timestamp"
+		"timestamp" = excluded."timestamp",
+		unapplied_link_contributions = excluded.unapplied_link_contributions
 	`
 }
 

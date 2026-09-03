@@ -121,14 +121,16 @@ INSERT INTO resource_drift (
     instance_id,
     drifted_spec_data,
     difference,
-    "timestamp"
+    "timestamp",
+    unapplied_link_contributions
 )
 SELECT
     (data->>'resourceId')::uuid,
     (data->>'instanceId')::uuid,
     (data->>'specData')::jsonb,
     (data->>'difference')::jsonb,
-    TO_TIMESTAMP((data->>'timestamp')::bigint)
+    TO_TIMESTAMP((data->>'timestamp')::bigint),
+    (data->>'unappliedLinkContributions')::jsonb
 FROM temp_resource_drift;
 
 DROP TABLE IF EXISTS temp_resource_drift;
