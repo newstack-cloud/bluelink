@@ -164,7 +164,7 @@ func deployEventSequence(instanceID string) []container.DeployEvent {
 				LinkID:          "link-1",
 				LinkName:        "Resource1::Resource2",
 				Status:          core.LinkStatusCreating,
-				PreciseStatus:   core.PreciseLinkStatusUpdatingResourceA,
+				PreciseStatus:   core.PreciseLinkStatusUpdatingLinkedResources,
 				UpdateTimestamp: testTime.Unix(),
 			},
 		},
