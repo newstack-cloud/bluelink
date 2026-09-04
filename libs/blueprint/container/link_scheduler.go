@@ -136,6 +136,9 @@ type linkScheduler struct {
 	loadInstanceState func(context.Context) (*state.InstanceState, error)
 	markSettled       func(linkName string)
 	awaitingProviders func(linkName string) []string
+	// Reports a link that can never run, having already reported and settled it. The
+	// scheduler drops it rather than holding it for a capability that will not arrive.
+	abandonUnreachable func(linkName string) bool
 	// Reports an error to whoever is listening, returning false if it could not be
 	// delivered without waiting. The scheduler never waits on it.
 	trySendError func(err error) bool
@@ -146,7 +149,14 @@ type linkScheduler struct {
 	pendingMu    sync.Mutex
 	pendingCount int
 
-	submitCh   chan []*LinkPendingCompletion
+	// Links handed over since the dispatcher last collected them, with a wake to say so.
+	//
+	// Held rather than sent, because the dispatcher blocks while it applies the resource
+	// updates a settling link releases, and a submit that waited for it would be a
+	// deployment event loop waiting on the goroutine that is waiting on the event loop.
+	submitMu   sync.Mutex
+	submitted  []*LinkPendingCompletion
+	wake       chan struct{}
 	completeCh chan *linkCompletion
 	drainCh    chan chan []*LinkPendingCompletion
 	stopped    chan struct{}
@@ -161,20 +171,22 @@ func newLinkScheduler(
 	loadInstanceState func(context.Context) (*state.InstanceState, error),
 	markSettled func(linkName string),
 	awaitingProviders func(linkName string) []string,
+	abandonUnreachable func(linkName string) bool,
 	trySendError func(err error) bool,
 ) *linkScheduler {
 	return &linkScheduler{
-		slots:             slots,
-		modifies:          modifies,
-		deployLink:        deployLink,
-		loadInstanceState: loadInstanceState,
-		markSettled:       markSettled,
-		awaitingProviders: awaitingProviders,
-		trySendError:      trySendError,
-		submitCh:          make(chan []*LinkPendingCompletion, 1),
-		completeCh:        make(chan *linkCompletion, 1),
-		drainCh:           make(chan chan []*LinkPendingCompletion),
-		stopped:           make(chan struct{}),
+		slots:              slots,
+		modifies:           modifies,
+		deployLink:         deployLink,
+		loadInstanceState:  loadInstanceState,
+		markSettled:        markSettled,
+		awaitingProviders:  awaitingProviders,
+		abandonUnreachable: abandonUnreachable,
+		trySendError:       trySendError,
+		wake:               make(chan struct{}, 1),
+		completeCh:         make(chan *linkCompletion, 1),
+		drainCh:            make(chan chan []*LinkPendingCompletion),
+		stopped:            make(chan struct{}),
 	}
 }
 
@@ -186,17 +198,36 @@ func (s *linkScheduler) Start(ctx context.Context) {
 
 // Submit hands links that have become ready to the dispatcher.
 //
-// It never blocks on a stopped scheduler, so a resource completing after a terminal
-// failure does not wedge the deployment event loop that reported it.
+// It never blocks, on a stopped scheduler or a busy one. The deployment event loop calls
+// this, and the dispatcher blocks on that same event loop whenever it reports a resource
+// update, so a submit that waited for the dispatcher could leave the two waiting on each
+// other. Links submitted to a stopped scheduler are simply never collected, which is what
+// Drain reports as never having started.
 func (s *linkScheduler) Submit(links []*LinkPendingCompletion) {
 	if len(links) == 0 {
 		return
 	}
 
+	s.submitMu.Lock()
+	s.submitted = append(s.submitted, links...)
+	s.submitMu.Unlock()
+
 	select {
-	case s.submitCh <- links:
-	case <-s.stopped:
+	case s.wake <- struct{}{}:
+	default:
+		// A wake is already outstanding, and the dispatcher collects everything held
+		// when it acts on it.
 	}
+}
+
+func (s *linkScheduler) collectSubmitted() []*LinkPendingCompletion {
+	s.submitMu.Lock()
+	defer s.submitMu.Unlock()
+
+	collected := s.submitted
+	s.submitted = nil
+
+	return collected
 }
 
 // Drain stops dispatching, waits for links already running to finish, and returns the
@@ -289,8 +320,8 @@ func (s *linkScheduler) dispatch(ctx context.Context) {
 
 	for {
 		select {
-		case links := <-s.submitCh:
-			pending = append(pending, links...)
+		case <-s.wake:
+			pending = append(pending, s.collectSubmitted()...)
 		case completed := <-s.completeCh:
 			s.markSettled(completed.linkName)
 			for _, resourceName := range completed.holds {
@@ -299,7 +330,9 @@ func (s *linkScheduler) dispatch(ctx context.Context) {
 			s.slots.Release()
 		case leftover := <-s.drainCh:
 			s.slots.CancelWait(slotWait)
-			leftover <- pending
+			// Anything handed over and not yet collected has not started either, and is
+			// reported alongside what the dispatcher is holding.
+			leftover <- append(pending, s.collectSubmitted()...)
 			return
 		case <-slotWait:
 			slotWait = nil
@@ -345,6 +378,12 @@ func (s *linkScheduler) dispatchReady(
 	var instanceState *state.InstanceState
 
 	for _, link := range pending {
+		// Checked before readiness, since a link waiting on a capability that can no
+		// longer be established is not held back, it is finished with.
+		if s.abandonUnreachable(pendingLinkName(link)) {
+			continue
+		}
+
 		if !s.readyToDispatch(link, writing) {
 			held = append(held, link)
 			continue

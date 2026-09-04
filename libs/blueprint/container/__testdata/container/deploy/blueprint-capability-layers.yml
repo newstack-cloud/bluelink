@@ -1,0 +1,30 @@
+version: 2025-11-02
+resources:
+  ordersRole:
+    type: aws/iam/role
+    description: "Execution role the access link grants permissions through."
+    metadata:
+      labels:
+        grants: orders
+    spec: {}
+
+  saveOrderFunction:
+    type: aws/lambda/function
+    description: "Function placed in the VPC and granted access through the role."
+    metadata:
+      labels:
+        network: orders
+    linkSelector:
+      byLabel:
+        grants: orders
+    spec:
+      handler: "src/save_order.handler"
+
+  appVpc:
+    type: aws/ec2/vpc
+    description: "VPC the function is placed into, establishing network-attached."
+    linkSelector:
+      byLabel:
+        network: orders
+    spec:
+      cidr: "10.0.0.0/16"

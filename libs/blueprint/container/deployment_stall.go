@@ -71,7 +71,11 @@ func (d *deploymentStallDetector) check(
 		return nil
 	}
 
-	return outstandingElementNames(deployCtx.InputChanges, finished)
+	return outstandingElementNames(
+		deployCtx.InputChanges,
+		deployCtx.State.ContributionLayers(),
+		finished,
+	)
 }
 
 // A draining deployment is excluded because it is already ending and counts only the
@@ -98,6 +102,7 @@ func (d *deploymentStallDetector) looksStalled(
 // deployment is waiting for.
 func outstandingElementNames(
 	inputChanges *changes.BlueprintChanges,
+	layers []ContributionLayer,
 	finished map[string]*deployUpdateMessageWrapper,
 ) []string {
 	if inputChanges == nil {
@@ -138,13 +143,11 @@ func outstandingElementNames(
 		)
 	}
 
-	// Mirrors countElementsToDeploy, which waits for each resource that links contribute to.
-	for _, resourceName := range ContributionTargetNames(
-		BuildLinkContributionTargets(inputChanges),
-	) {
+	// Mirrors countElementsToDeploy, which waits for each update carrying contributions.
+	for _, layer := range layers {
 		outstanding = appendIfUnfinished(
 			outstanding,
-			contributionTargetElementID(resourceName),
+			contributionLayerElementID(layer),
 			finished,
 		)
 	}

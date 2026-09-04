@@ -34,6 +34,48 @@ type LinkCapabilityGraph struct {
 	// that produced the ordering. A link with no entry is treated as writing both
 	// resources, which is the behaviour that predates the declaration.
 	modifies map[string]provider.LinkModifies
+	// How far down the ordering each link sits, zero for a link that requires nothing
+	// provided in this deployment, otherwise one more than the deepest link it waits for.
+	//
+	// Well defined because the ordering is acyclic, which is checked before this is
+	// resolved. It is what lets a resource's contributions be applied in layers rather
+	// than in one write, so a link can require a capability on a resource it also
+	// contributes to.
+	depth map[string]int
+	// The resource updates each link waits for, for a capability that is established by
+	// a contribution rather than by a write. Empty for every link whose providers write
+	// their resources directly, which is every link today.
+	waitsForLayers map[string][]ContributionLayer
+}
+
+// ContributionLayer identifies one update of a resource carrying the contributions of the
+// links at a given depth and above it in the capability ordering.
+//
+// A resource whose contributors all sit at one depth, which is every resource in a
+// deployment with no capability ordering over it, has a single layer and is written once.
+type ContributionLayer struct {
+	ResourceName string
+	Depth        int
+}
+
+// Depth returns how far down the capability ordering the named link sits, zero for a link
+// that requires nothing provided in this deployment.
+func (g *LinkCapabilityGraph) Depth(linkName string) int {
+	if g == nil {
+		return 0
+	}
+
+	return g.depth[linkName]
+}
+
+// WaitsForLayers returns the resource updates the named link must see land before it runs,
+// for capabilities its providers establish by contributing rather than by writing.
+func (g *LinkCapabilityGraph) WaitsForLayers(linkName string) []ContributionLayer {
+	if g == nil {
+		return nil
+	}
+
+	return g.waitsForLayers[linkName]
 }
 
 // WaitsFor returns the logical names of the links that must finish deploying
@@ -124,6 +166,51 @@ func (i *capabilityIndex) edges() map[string][]string {
 	return edges
 }
 
+// The resource updates each requiring link has to see land, for the capabilities whose
+// providers establish them by contributing to the resource rather than by writing it.
+//
+// A provider that writes its resource directly has established the capability by the time
+// it settles, which is what the link ordering already waits for, so it adds no layer.
+func (i *capabilityIndex) contributionLayers(
+	depth map[string]int,
+	contributionTargets map[string][]string,
+) map[string][]ContributionLayer {
+	layers := map[string][]ContributionLayer{}
+	for linkName, refs := range i.requirements {
+		for _, ref := range refs {
+			for _, providerName := range i.providers[ref] {
+				if providerName == linkName {
+					continue
+				}
+
+				if !slices.Contains(contributionTargets[providerName], ref.resource) {
+					continue
+				}
+
+				layer := ContributionLayer{
+					ResourceName: ref.resource,
+					Depth:        depth[providerName],
+				}
+				if !slices.Contains(layers[linkName], layer) {
+					layers[linkName] = append(layers[linkName], layer)
+				}
+			}
+		}
+	}
+
+	for linkName := range layers {
+		sort.Slice(layers[linkName], func(a, b int) bool {
+			left, right := layers[linkName][a], layers[linkName][b]
+			if left.ResourceName != right.ResourceName {
+				return left.ResourceName < right.ResourceName
+			}
+			return left.Depth < right.Depth
+		})
+	}
+
+	return layers
+}
+
 func (i *capabilityIndex) providersFor(linkName string, refs []capabilityRef) []string {
 	waiting := []string{}
 	for _, ref := range refs {
@@ -175,10 +262,69 @@ func BuildLinkCapabilityGraph(
 		return nil, errLinkCapabilityCycle(cycle)
 	}
 
+	// Resolved after the cycle check, since both the depth of a link and the layers it
+	// waits for are only well defined over an acyclic ordering.
+	depth := capabilityDepths(waitsFor)
+
 	return &LinkCapabilityGraph{
 		waitsFor: waitsFor,
 		modifies: modifies,
+		depth:    depth,
+		waitsForLayers: index.contributionLayers(
+			depth,
+			BuildLinkContributionTargets(blueprintChanges),
+		),
 	}, nil
+}
+
+// The depth of every link in an acyclic ordering which is zero
+// for a link that waits for nothing,
+// otherwise one more than the deepest link it waits for.
+//
+// Longest path rather than shortest, so that a link sits below every provider it depends
+// on rather than only the nearest one. A link reached from several depths takes the
+// greatest, which is what keeps its layer after all of theirs.
+func capabilityDepths(waitsFor map[string][]string) map[string]int {
+	depths := map[string]int{}
+
+	var resolve func(linkName string, visiting map[string]bool) int
+	resolve = func(linkName string, visiting map[string]bool) int {
+		if known, resolved := depths[linkName]; resolved {
+			return known
+		}
+
+		// The ordering is checked for cycles before this runs, so this guards against a
+		// caller resolving depths over an unchecked graph rather than against a graph
+		// this package would build.
+		if visiting[linkName] {
+			return 0
+		}
+		visiting[linkName] = true
+
+		deepest := 0
+		for _, providerName := range waitsFor[linkName] {
+			if below := resolve(providerName, visiting) + 1; below > deepest {
+				deepest = below
+			}
+		}
+
+		delete(visiting, linkName)
+		depths[linkName] = deepest
+
+		return deepest
+	}
+
+	linkNames := make([]string, 0, len(waitsFor))
+	for linkName := range waitsFor {
+		linkNames = append(linkNames, linkName)
+	}
+	sort.Strings(linkNames)
+
+	for _, linkName := range linkNames {
+		resolve(linkName, map[string]bool{})
+	}
+
+	return depths
 }
 
 // BuildLinkCapabilityRemovalEdges resolves the capabilities declared by the links being

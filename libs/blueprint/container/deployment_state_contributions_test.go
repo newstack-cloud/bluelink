@@ -10,7 +10,7 @@ type DeploymentStateContributionsTestSuite struct {
 	suite.Suite
 }
 
-func (s *DeploymentStateContributionsTestSuite) Test_a_target_waits_on_every_link_that_declared_it() {
+func (s *DeploymentStateContributionsTestSuite) Test_a_layer_waits_on_every_link_that_declared_it() {
 	deployState := s.stateWithTargets(map[string][]string{
 		"saveOrderFunction::ordersTable": {"saveOrderFunction", "ordersRole"},
 		"saveOrderFunction::appVpc":      {"saveOrderFunction"},
@@ -18,17 +18,17 @@ func (s *DeploymentStateContributionsTestSuite) Test_a_target_waits_on_every_lin
 
 	s.Assert().Equal(
 		[]string{"saveOrderFunction::appVpc", "saveOrderFunction::ordersTable"},
-		deployState.AwaitingContributors("saveOrderFunction"),
+		deployState.AwaitingContributors(ContributionLayer{ResourceName: "saveOrderFunction"}),
 		"both links declared a contribution to the function",
 	)
 	s.Assert().Equal(
 		[]string{"saveOrderFunction::ordersTable"},
-		deployState.AwaitingContributors("ordersRole"),
+		deployState.AwaitingContributors(ContributionLayer{ResourceName: "ordersRole"}),
 	)
-	s.Assert().False(deployState.ContributionSetComplete("saveOrderFunction"))
+	s.Assert().False(deployState.ContributionSetComplete(ContributionLayer{ResourceName: "saveOrderFunction"}))
 }
 
-func (s *DeploymentStateContributionsTestSuite) Test_a_target_is_complete_once_its_links_settle() {
+func (s *DeploymentStateContributionsTestSuite) Test_a_layer_is_complete_once_its_links_settle() {
 	deployState := s.stateWithTargets(map[string][]string{
 		"saveOrderFunction::ordersTable": {"saveOrderFunction"},
 		"saveOrderFunction::appVpc":      {"saveOrderFunction"},
@@ -36,13 +36,13 @@ func (s *DeploymentStateContributionsTestSuite) Test_a_target_is_complete_once_i
 
 	deployState.MarkLinkSettled("saveOrderFunction::ordersTable")
 	s.Require().False(
-		deployState.ContributionSetComplete("saveOrderFunction"),
+		deployState.ContributionSetComplete(ContributionLayer{ResourceName: "saveOrderFunction"}),
 		"one of the two links has yet to say what it contributes",
 	)
 
 	deployState.MarkLinkSettled("saveOrderFunction::appVpc")
-	s.Assert().True(deployState.ContributionSetComplete("saveOrderFunction"))
-	s.Assert().Empty(deployState.AwaitingContributors("saveOrderFunction"))
+	s.Assert().True(deployState.ContributionSetComplete(ContributionLayer{ResourceName: "saveOrderFunction"}))
+	s.Assert().Empty(deployState.AwaitingContributors(ContributionLayer{ResourceName: "saveOrderFunction"}))
 }
 
 // Declaring a target and contributing nothing to it is allowed, so the join counts links
@@ -52,8 +52,8 @@ func (s *DeploymentStateContributionsTestSuite) Test_a_link_declaring_no_targets
 		"saveOrderFunction::ordersTable": {},
 	})
 
-	s.Assert().True(deployState.ContributionSetComplete("saveOrderFunction"))
-	s.Assert().Empty(deployState.AwaitingContributors("saveOrderFunction"))
+	s.Assert().True(deployState.ContributionSetComplete(ContributionLayer{ResourceName: "saveOrderFunction"}))
+	s.Assert().Empty(deployState.AwaitingContributors(ContributionLayer{ResourceName: "saveOrderFunction"}))
 }
 
 // A resource nothing contributes to is complete from the outset, which is every resource
@@ -63,10 +63,10 @@ func (s *DeploymentStateContributionsTestSuite) Test_a_resource_with_no_contribu
 		"saveOrderFunction::ordersTable": {"saveOrderFunction"},
 	})
 
-	s.Assert().True(deployState.ContributionSetComplete("ordersTable"))
+	s.Assert().True(deployState.ContributionSetComplete(ContributionLayer{ResourceName: "ordersTable"}))
 }
 
-func (s *DeploymentStateContributionsTestSuite) Test_claims_a_target_once_its_links_have_all_settled() {
+func (s *DeploymentStateContributionsTestSuite) Test_claims_a_layer_once_its_links_have_all_settled() {
 	deployState := s.stateWithTargets(map[string][]string{
 		"saveOrderFunction::ordersTable": {"saveOrderFunction"},
 		"saveOrderFunction::appVpc":      {"saveOrderFunction"},
@@ -74,33 +74,33 @@ func (s *DeploymentStateContributionsTestSuite) Test_claims_a_target_once_its_li
 
 	deployState.MarkLinkSettled("saveOrderFunction::ordersTable")
 	s.Assert().Empty(
-		deployState.ClaimContributionTargetsReadyToUpdate(),
-		"a resource one of whose links has yet to settle is not ready",
+		deployState.ClaimContributionLayersReadyToUpdate(),
+		"a layer one of whose links has yet to settle is not ready",
 	)
 
 	deployState.MarkLinkSettled("saveOrderFunction::appVpc")
 	s.Assert().Equal(
-		[]string{"saveOrderFunction"},
-		deployState.ClaimContributionTargetsReadyToUpdate(),
+		[]ContributionLayer{{ResourceName: "saveOrderFunction"}},
+		deployState.ClaimContributionLayersReadyToUpdate(),
 	)
 }
 
 // Links settle from several goroutines, and the last contributors to a resource can settle
 // together, so more than one of them can find the resource complete. A resource updated
 // once per link that noticed would be written concurrently with itself.
-func (s *DeploymentStateContributionsTestSuite) Test_claims_a_target_only_once() {
+func (s *DeploymentStateContributionsTestSuite) Test_claims_a_layer_only_once() {
 	deployState := s.stateWithTargets(map[string][]string{
 		"saveOrderFunction::ordersTable": {"saveOrderFunction"},
 	})
 	deployState.MarkLinkSettled("saveOrderFunction::ordersTable")
 
 	s.Require().Equal(
-		[]string{"saveOrderFunction"},
-		deployState.ClaimContributionTargetsReadyToUpdate(),
+		[]ContributionLayer{{ResourceName: "saveOrderFunction"}},
+		deployState.ClaimContributionLayersReadyToUpdate(),
 	)
 	s.Assert().Empty(
-		deployState.ClaimContributionTargetsReadyToUpdate(),
-		"the second caller finds the resource already claimed",
+		deployState.ClaimContributionLayersReadyToUpdate(),
+		"the second caller finds the layer already claimed",
 	)
 }
 
@@ -112,7 +112,7 @@ func (s *DeploymentStateContributionsTestSuite) Test_never_claims_a_resource_wit
 	})
 	deployState.MarkLinkSettled("saveOrderFunction::ordersTable")
 
-	s.Assert().Empty(deployState.ClaimContributionTargetsReadyToUpdate())
+	s.Assert().Empty(deployState.ClaimContributionLayersReadyToUpdate())
 }
 
 func (s *DeploymentStateContributionsTestSuite) stateWithTargets(
