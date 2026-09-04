@@ -18,6 +18,30 @@ type Link interface {
 		input *LinkStageChangesInput,
 	) (*LinkStageChangesOutput, error)
 
+	// ProduceResourceContributions returns what this link needs the specs of the
+	// blueprint-declared resources it writes to say, for the creation, update or removal
+	// of the link. It runs once both of the link's endpoints have deployed.
+	//
+	// It performs no write to any blueprint-declared resource. The framework merges the
+	// contributions every link makes to a resource and applies them as a single update of
+	// that resource, so two links contributing to the same resource cost one update of it
+	// rather than one each.
+	//
+	// It is not always a pure computation, it can read live state, and it may create resources the
+	// link owns whose identity is part of a value it contributes.
+	//
+	// A link implements this or UpdateLinkedResources for a given resource, never both.
+	// Contributing to a resource and imperatively writing the same resource would double
+	// write it, so the framework reports it as an error naming the link and the resource
+	// rather than trusting the boundary to be observed.
+	//
+	// A link that contributes nothing to any resource leaves this unimplemented and
+	// behaves exactly as it did before the method existed.
+	ProduceResourceContributions(
+		ctx context.Context,
+		input *LinkProduceResourceContributionsInput,
+	) (*LinkProduceResourceContributionsOutput, error)
+
 	// UpdateLinkedResources deals with applying the changes to the blueprint-declared
 	// resources in a link relationship, for the creation, update or removal of the link.
 	//
@@ -199,6 +223,87 @@ type LinkUpdateLinkedResourcesOutput struct {
 	// {resourceName} represents the logical name of the resource in single blueprint instance.
 	ResourceDataMappings map[string]string
 }
+
+// LinkProduceResourceContributionsInput provides the input required to produce a link's
+// contributions to the blueprint-declared resources it writes.
+type LinkProduceResourceContributionsInput struct {
+	Changes       *LinkChanges
+	ResourceAInfo *ResourceInfo
+	ResourceBInfo *ResourceInfo
+	// A handle for the link being deployed that can be used for tasks
+	// like acquiring locks on resources that are being updated
+	// in the same blueprint instance.
+	LinkID string
+	// Additional user-defined blueprint instance name
+	// that can be used in ID/unique name generation and for debugging.
+	InstanceName     string
+	LinkUpdateType   LinkUpdateType
+	CurrentLinkState *state.LinkState
+	LinkContext      LinkContext
+	// ResourceService allows a link implementation to hook into
+	// the framework's existing mechanism to manage resource deployments,
+	// look up resources and acquire locks when updating existing resources
+	// in the same blueprint instance.
+	//
+	// Producing a contribution is not always a pure computation, a link may have to create one
+	// of its own resources here because the identity of that resource is part of the
+	// value it contributes. A VPC placement link creates the function's security group
+	// at this point, since the group's ID is part of the vpcConfig it contributes.
+	ResourceService ResourceService
+}
+
+// LinkProduceResourceContributionsOutput provides the contributions a link makes to the
+// blueprint-declared resources it writes, along with anything it created in the process.
+type LinkProduceResourceContributionsOutput struct {
+	// Contributions holds what this link needs each resource's spec to say.
+	//
+	// The link doesn't perform a write of its own to a blueprint-declared resource here. The
+	// framework merges the contributions every link makes to a resource and applies them
+	// as a single update of that resource.
+	Contributions []*ResourceContribution
+	// IntermediaryResourceStates holds the state of any resources the link created here
+	// because a contribution needed their identity.
+	IntermediaryResourceStates []*state.LinkIntermediaryResourceState
+	LinkData                   *core.MappingNode
+}
+
+// ResourceContribution is one link's contribution to one field of one resource.
+type ResourceContribution struct {
+	// ResourceName is the logical name of the resource in the blueprint the contribution
+	// is made to.
+	//
+	// It is not restricted to the two resources the link relates. An access link
+	// contributes to an execution role that is neither of its endpoints.
+	ResourceName string
+	// FieldPath is the path of the field in the resource's spec the contribution sets or
+	// appends to, in the same vocabulary as the keys of ResourceDataMappings.
+	FieldPath string
+	Value     *core.MappingNode
+	// Action determines whether the value replaces what is at the field path or is added
+	// to the end of the list there.
+	Action ContributionAction
+	// RetainOnRemoval keeps the contribution on the resource after the link that made it
+	// is removed.
+	//
+	// Contributions are desired state, so removing the link that stated a value ordinarily
+	// retracts it, which is what leaving this unset means. Set it where retraction is
+	// destructive and that has been weighed, for example, a DynamoDB stream the table may still be
+	// needed for other purposes, a Redis AUTH token live clients are holding.
+	RetainOnRemoval bool
+}
+
+// ContributionAction determines how a link's contribution is combined with what is
+// already at the field path it targets.
+type ContributionAction int
+
+const (
+	// ContributionActionSet replaces the value at the field path, which is what a scalar
+	// or map-keyed path needs.
+	ContributionActionSet ContributionAction = iota
+	// ContributionActionAppend adds the value to the end of the list at the field path,
+	// leaving what other links have contributed to the same list in place.
+	ContributionActionAppend
+)
 
 // LinkUpdateType represents the type of update that is being carried out
 // for a link between two resources.
@@ -482,9 +587,10 @@ type LinkGetCapabilitiesOutput struct {
 // Capabilities exist to order links that are otherwise independent. Most links
 // are self-contained and declare none. A minority establish a fact about a
 // resource that other links must observe before they can do their own work
-// correctly, and the direction of a link does not carry that information: the
-// framework provides both UpdateResourceA and UpdateResourceB precisely because
-// "A links to B" describes a relationship rather than which side is written to.
+// correctly, and the direction of a link does not carry that information: a link
+// is handed both of its resources by a single UpdateLinkedResources precisely
+// because "A links to B" describes a relationship rather than which side is
+// written to.
 //
 // The primary example is an AWS Lambda function placed in a VPC. The placement
 // link sets the function's network attachment; the links granting the function

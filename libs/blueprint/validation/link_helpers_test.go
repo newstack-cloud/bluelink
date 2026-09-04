@@ -123,6 +123,13 @@ func (l *testResourceTypeAResourceTypeBLink) GetKind(
 	}, nil
 }
 
+func (l *testResourceTypeAResourceTypeBLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
+}
+
 func (l *testResourceTypeAResourceTypeBLink) UpdateLinkedResources(
 	ctx context.Context,
 	input *provider.LinkUpdateLinkedResourcesInput,
@@ -219,6 +226,13 @@ func (l *testConfigurableLink) GetKind(
 	return &provider.LinkGetKindOutput{
 		Kind: provider.LinkKindHard,
 	}, nil
+}
+
+func (l *testConfigurableLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
 }
 
 func (l *testConfigurableLink) UpdateLinkedResources(

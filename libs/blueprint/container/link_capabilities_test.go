@@ -38,6 +38,13 @@ func (l *capabilityTestLink) StageChanges(
 	return &provider.LinkStageChangesOutput{}, nil
 }
 
+func (l *capabilityTestLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
+}
+
 func (l *capabilityTestLink) UpdateLinkedResources(
 	ctx context.Context,
 	input *provider.LinkUpdateLinkedResourcesInput,
