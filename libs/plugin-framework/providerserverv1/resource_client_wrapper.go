@@ -466,12 +466,13 @@ func (r *resourceProviderClientWrapper) Deploy(
 			ResourceType: &sharedtypesv1.ResourceType{
 				Type: r.resourceType,
 			},
-			HostId:       r.hostID,
-			InstanceId:   input.InstanceID,
-			InstanceName: input.InstanceName,
-			ResourceId:   input.ResourceID,
-			Changes:      resourceChangesPB,
-			Context:      providerCtx,
+			HostId:                r.hostID,
+			InstanceId:            input.InstanceID,
+			InstanceName:          input.InstanceName,
+			ResourceId:            input.ResourceID,
+			Changes:               resourceChangesPB,
+			FromLinkContributions: input.FromLinkContributions,
+			Context:               providerCtx,
 		},
 	)
 	if err != nil {

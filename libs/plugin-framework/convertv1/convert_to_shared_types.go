@@ -148,11 +148,13 @@ func ToPBDeployResourceRequest(
 	}
 
 	return &sharedtypesv1.DeployResourceRequest{
-		ResourceType: StringToResourceType(resourceType),
-		InstanceId:   input.InstanceID,
-		ResourceId:   input.ResourceID,
-		Changes:      changes,
-		Context:      providerContext,
+		ResourceType:          StringToResourceType(resourceType),
+		InstanceId:            input.InstanceID,
+		InstanceName:          input.InstanceName,
+		ResourceId:            input.ResourceID,
+		Changes:               changes,
+		FromLinkContributions: input.FromLinkContributions,
+		Context:               providerContext,
 	}, nil
 }
 
