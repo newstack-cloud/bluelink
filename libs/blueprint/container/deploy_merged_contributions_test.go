@@ -30,7 +30,7 @@ func (s *MergedContributionsDeployerTestSuite) Test_deploys_the_resource_with_ev
 	err := NewDefaultMergedContributionsDeployer(stateContainer, &mockclock.StaticClock{}).Deploy(
 		context.Background(),
 		"test-instance",
-		"ordersRole",
+		ContributionLayer{ResourceName: "ordersRole"},
 		[]string{"saveOrderFunction::ordersTable"},
 		deployCtx,
 	)
@@ -67,7 +67,7 @@ func (s *MergedContributionsDeployerTestSuite) Test_reports_the_update_as_one_ca
 	err := NewDefaultMergedContributionsDeployer(stateContainer, &mockclock.StaticClock{}).Deploy(
 		context.Background(),
 		"test-instance",
-		"ordersRole",
+		ContributionLayer{ResourceName: "ordersRole"},
 		[]string{"saveOrderFunction::ordersTable"},
 		deployCtx,
 	)
@@ -101,7 +101,7 @@ func (s *MergedContributionsDeployerTestSuite) Test_tells_the_provider_the_deplo
 	err := NewDefaultMergedContributionsDeployer(stateContainer, &mockclock.StaticClock{}).Deploy(
 		context.Background(),
 		"test-instance",
-		"ordersRole",
+		ContributionLayer{ResourceName: "ordersRole"},
 		[]string{"saveOrderFunction::ordersTable"},
 		deployCtx,
 	)
@@ -123,7 +123,7 @@ func (s *MergedContributionsDeployerTestSuite) Test_does_not_deploy_when_a_contr
 	err := NewDefaultMergedContributionsDeployer(stateContainer, &mockclock.StaticClock{}).Deploy(
 		context.Background(),
 		"test-instance",
-		"ordersRole",
+		ContributionLayer{ResourceName: "ordersRole"},
 		nil,
 		deployCtx,
 	)
@@ -151,7 +151,7 @@ func (s *MergedContributionsDeployerTestSuite) Test_reports_a_resource_that_is_n
 	err := NewDefaultMergedContributionsDeployer(stateContainer, &mockclock.StaticClock{}).Deploy(
 		context.Background(),
 		"test-instance",
-		"neverDeployedRole",
+		ContributionLayer{ResourceName: "neverDeployedRole"},
 		nil,
 		deployCtx,
 	)

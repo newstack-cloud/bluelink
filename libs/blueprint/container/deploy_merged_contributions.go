@@ -21,13 +21,13 @@ import (
 // deploys a change starts from a change set entry, refuses without one, and reports what
 // it does as a change to the blueprint, none of which holds here.
 type MergedContributionsDeployer interface {
-	// Deploy updates the named resource with the contributions of the links that target
-	// it, reporting the update as one carrying link contributions rather than one the
+	// Deploy updates a layer's resource with the contributions of the links it carries,
+	// reporting the update as one carrying link contributions rather than one the
 	// blueprint asked for.
 	Deploy(
 		ctx context.Context,
 		instanceID string,
-		resourceName string,
+		layer ContributionLayer,
 		contributingLinkNames []string,
 		deployCtx *DeployContext,
 	) error
@@ -53,10 +53,12 @@ func NewDefaultMergedContributionsDeployer(
 func (d *defaultMergedContributionsDeployer) Deploy(
 	ctx context.Context,
 	instanceID string,
-	resourceName string,
+	layer ContributionLayer,
 	contributingLinkNames []string,
 	deployCtx *DeployContext,
 ) error {
+	resourceName := layer.ResourceName
+
 	// Read live rather than from the deployment's snapshot of instance state. A resource
 	// links contribute to is commonly created by the same deployment that runs them, and
 	// the snapshot was taken before it existed.
@@ -73,7 +75,7 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 		return d.reportFailure(
 			instanceID,
 			resourceState,
-			resourceName,
+			layer,
 			deployCtx,
 			[]string{
 				fmt.Sprintf(
@@ -89,7 +91,7 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 
 	merged, err := ComposeMergedResourceSpec(
 		deployCtx,
-		resourceName,
+		layer,
 		declaredSpec,
 		contributingLinkNames,
 	)
@@ -97,7 +99,7 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 		return d.reportFailure(
 			instanceID,
 			resourceState,
-			resourceName,
+			layer,
 			deployCtx,
 			[]string{err.Error()},
 		)
@@ -110,7 +112,7 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 		return d.reportFailure(
 			instanceID,
 			resourceState,
-			resourceName,
+			layer,
 			deployCtx,
 			unresolvedContributionReasons(merged.Unresolved),
 		)
@@ -123,7 +125,7 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 		deployCtx.ResourceProviders,
 	)
 	if err != nil {
-		return d.reportFailure(instanceID, resourceState, resourceName, deployCtx, []string{err.Error()})
+		return d.reportFailure(instanceID, resourceState, layer, deployCtx, []string{err.Error()})
 	}
 
 	contributors := LinkContributorsFor(
@@ -134,7 +136,7 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 	deployCtx.Channels.ResourceUpdateChan <- d.updateMessage(
 		instanceID,
 		resourceState,
-		resourceName,
+		layer,
 		deployCtx,
 		core.ResourceStatusUpdating,
 		core.PreciseResourceStatusUpdatingLinkContributions,
@@ -165,13 +167,19 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 		},
 	)
 	if err != nil {
-		return d.reportFailure(instanceID, resourceState, resourceName, deployCtx, []string{err.Error()})
+		return d.reportFailure(instanceID, resourceState, layer, deployCtx, []string{err.Error()})
 	}
+
+	// Recorded before the message is sent. A link held for a capability this layer carries
+	// is released by the scheduler on its own goroutine, which is the one that got here,
+	// so the layer has to be applied by the time this returns rather than by the time the
+	// message is read.
+	deployCtx.State.MarkContributionLayerUpdated(layer)
 
 	deployCtx.Channels.ResourceUpdateChan <- d.updateMessage(
 		instanceID,
 		resourceState,
-		resourceName,
+		layer,
 		deployCtx,
 		core.ResourceStatusUpdated,
 		core.PreciseResourceStatusLinkContributionsUpdated,
@@ -206,14 +214,18 @@ func (d *defaultMergedContributionsDeployer) currentResourceState(
 func (d *defaultMergedContributionsDeployer) reportFailure(
 	instanceID string,
 	resourceState *state.ResourceState,
-	resourceName string,
+	layer ContributionLayer,
 	deployCtx *DeployContext,
 	failureReasons []string,
 ) error {
+	// Recorded before the message is sent, for the same reason applying one is, a link
+	// waiting on this layer is abandoned by the scheduler on the goroutine that got here.
+	deployCtx.State.MarkContributionLayerFailed(layer)
+
 	deployCtx.Channels.ResourceUpdateChan <- d.updateMessage(
 		instanceID,
 		resourceState,
-		resourceName,
+		layer,
 		deployCtx,
 		core.ResourceStatusUpdateFailed,
 		core.PreciseResourceStatusLinkContributionsUpdateFailed,
@@ -227,7 +239,7 @@ func (d *defaultMergedContributionsDeployer) reportFailure(
 func (d *defaultMergedContributionsDeployer) updateMessage(
 	instanceID string,
 	resourceState *state.ResourceState,
-	resourceName string,
+	layer ContributionLayer,
 	deployCtx *DeployContext,
 	status core.ResourceStatus,
 	preciseStatus core.PreciseResourceStatus,
@@ -235,16 +247,17 @@ func (d *defaultMergedContributionsDeployer) updateMessage(
 	failureReasons []string,
 ) ResourceDeployUpdateMessage {
 	return ResourceDeployUpdateMessage{
-		InstanceID:            instanceID,
-		ResourceID:            resourceIDOrEmpty(resourceState),
-		ResourceName:          resourceName,
-		Group:                 deployCtx.CurrentGroupIndex,
-		Status:                status,
-		PreciseStatus:         preciseStatus,
-		FromLinkContributions: true,
-		LinkContributors:      contributors,
-		FailureReasons:        failureReasons,
-		UpdateTimestamp:       d.clock.Now().Unix(),
+		InstanceID:             instanceID,
+		ResourceID:             resourceIDOrEmpty(resourceState),
+		ResourceName:           layer.ResourceName,
+		Group:                  deployCtx.CurrentGroupIndex,
+		ContributionLayerDepth: layer.Depth,
+		Status:                 status,
+		PreciseStatus:          preciseStatus,
+		FromLinkContributions:  true,
+		LinkContributors:       contributors,
+		FailureReasons:         failureReasons,
+		UpdateTimestamp:        d.clock.Now().Unix(),
 	}
 }
 

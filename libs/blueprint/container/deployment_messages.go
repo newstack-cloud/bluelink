@@ -57,6 +57,15 @@ type ResourceDeployUpdateMessage struct {
 	// of an update rather than of a comparison, and answered with every link rather than
 	// the last one.
 	LinkContributors map[string][]string `json:"linkContributors,omitempty"`
+	// ContributionLayerDepth says which layer of an ordered set of contributions this
+	// update carries, for an update carrying link contributions.
+	//
+	// A resource is ordinarily updated once, at depth zero. A resource that a link
+	// contributes a capability to, which other contributing links require, is updated
+	// once per layer. The capability comes first, then the contributions of the links that
+	// needed it established before they could run. Without this, a client sees the same
+	// resource updated twice with nothing to say why.
+	ContributionLayerDepth int `json:"contributionLayerDepth,omitempty"`
 	// Attempt is the current attempt number for deploying or destroying the resource.
 	Attempt int `json:"attempt"`
 	// CanRetry indicates if the operation for the resource can be retried

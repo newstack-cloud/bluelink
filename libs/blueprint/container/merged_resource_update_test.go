@@ -32,7 +32,7 @@ func (s *MergedResourceUpdateTestSuite) Test_carries_the_statements_of_links_the
 
 	result, err := ComposeMergedResourceSpec(
 		deployCtx,
-		"ordersRole",
+		ContributionLayer{ResourceName: "ordersRole"},
 		core.MappingNodeFields(),
 		[]string{"saveOrderFunction::ordersTable"},
 	)
@@ -69,7 +69,7 @@ func (s *MergedResourceUpdateTestSuite) Test_a_link_that_ran_is_not_also_read_fr
 
 	result, err := ComposeMergedResourceSpec(
 		deployCtx,
-		"ordersRole",
+		ContributionLayer{ResourceName: "ordersRole"},
 		core.MappingNodeFields(),
 		[]string{"saveOrderFunction::ordersTable"},
 	)
@@ -95,7 +95,7 @@ func (s *MergedResourceUpdateTestSuite) Test_reads_from_state_a_link_that_produc
 
 	result, err := ComposeMergedResourceSpec(
 		deployCtx,
-		"ordersRole",
+		ContributionLayer{ResourceName: "ordersRole"},
 		core.MappingNodeFields(),
 		[]string{"archiveFunction::appQueue"},
 	)

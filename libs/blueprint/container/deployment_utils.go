@@ -1424,7 +1424,10 @@ func getFailedElementDeploymentsAndUpdateState(
 	)
 	failed = append(failed, failedElementsWithoutDetail(failedChildren)...)
 
-	failed = append(failed, getFailedContributionUpdates(finished, changes)...)
+	failed = append(
+		failed,
+		getFailedContributionUpdates(finished, deployCtx.State.ContributionLayers())...,
+	)
 
 	return failed
 }
@@ -1442,20 +1445,18 @@ func getFailedElementDeploymentsAndUpdateState(
 // successfully has already been recorded by the check that walks the change set.
 func getFailedContributionUpdates(
 	finished map[string]*deployUpdateMessageWrapper,
-	changes *changes.BlueprintChanges,
+	layers []ContributionLayer,
 ) []*failedElementInfo {
 	failed := []*failedElementInfo{}
 
-	for _, resourceName := range ContributionTargetNames(
-		BuildLinkContributionTargets(changes),
-	) {
-		msgWrapper, reported := finished[contributionTargetElementID(resourceName)]
+	for _, layer := range layers {
+		msgWrapper, reported := finished[contributionLayerElementID(layer)]
 		if reported && contributionUpdateWasSuccessful(msgWrapper) {
 			continue
 		}
 
 		failed = append(failed, &failedElementInfo{
-			elementName: core.ResourceElementID(resourceName),
+			elementName: core.ResourceElementID(layer.ResourceName),
 			detail:      contributionUpdateFailureDetail(msgWrapper),
 		})
 	}
@@ -1998,7 +1999,12 @@ func linkInChangeSet(
 	return false
 }
 
-func countElementsToDeploy(changes *changes.BlueprintChanges) int {
+// contributionLayerCount is the number of updates the deployment will make to carry link
+// contributions, work it is not finished without and which the change set does not name.
+func countElementsToDeploy(
+	changes *changes.BlueprintChanges,
+	contributionLayerCount int,
+) int {
 	linksToDeployCount := 0
 	for _, newResourceChanges := range changes.NewResources {
 		linksToDeployCount += len(newResourceChanges.NewOutboundLinks)
@@ -2009,20 +2015,13 @@ func countElementsToDeploy(changes *changes.BlueprintChanges) int {
 			len(resourceChanges.OutboundLinkChanges)
 	}
 
-	// A resource that links contribute to is updated with what they contribute once they have
-	// all settled, this is work that the deployment is not finished without and which the
-	// change set does not name.
-	contributionTargetCount := len(
-		ContributionTargetNames(BuildLinkContributionTargets(changes)),
-	)
-
 	return len(changes.NewResources) +
 		len(changes.ResourceChanges) +
 		len(changes.NewChildren) +
 		len(changes.RecreateChildren) +
 		len(changes.ChildChanges) +
 		linksToDeployCount +
-		contributionTargetCount
+		contributionLayerCount
 }
 
 func getRetryPolicy(

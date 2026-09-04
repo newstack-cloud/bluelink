@@ -1171,7 +1171,10 @@ func (c *defaultBlueprintContainer) listenToAndProcessDeploymentEvents(
 	// the loaded blueprint.
 	// The count must reflect the number of elements that will be deployed
 	// taking resources, links and child blueprints into account.
-	elementsToDeploy := countElementsToDeploy(changes)
+	elementsToDeploy := countElementsToDeploy(
+		changes,
+		len(deployCtx.State.ContributionLayers()),
+	)
 
 	state := &deploymentEventLoopState{}
 
@@ -1358,7 +1361,11 @@ func trackContributionUpdateCompletion(
 		return
 	}
 
-	finished[contributionTargetElementID(msg.ResourceName)] = &deployUpdateMessageWrapper{
+	layer := ContributionLayer{
+		ResourceName: msg.ResourceName,
+		Depth:        msg.ContributionLayerDepth,
+	}
+	finished[contributionLayerElementID(layer)] = &deployUpdateMessageWrapper{
 		resourceUpdateMessage: &msg,
 	}
 }
@@ -1666,7 +1673,7 @@ func (c *defaultBlueprintContainer) submitReadyLinks(
 
 	deployCtx.LinkScheduler.Submit(newlyReady)
 
-	c.deployReadyContributionTargets(ctx, instanceID, deployCtx)
+	c.deployReadyContributionLayers(ctx, instanceID, deployCtx)
 }
 
 // Updates the resources whose contributing links have all settled.
@@ -1675,17 +1682,17 @@ func (c *defaultBlueprintContainer) submitReadyLinks(
 // of them, and a resource is claimed once however many links find it ready at the same
 // moment. A resource nothing contributes to is never claimed, which is every resource in a
 // deployment whose links do not contribute.
-func (c *defaultBlueprintContainer) deployReadyContributionTargets(
+func (c *defaultBlueprintContainer) deployReadyContributionLayers(
 	ctx context.Context,
 	instanceID string,
 	deployCtx *DeployContext,
 ) {
-	for _, resourceName := range deployCtx.State.ClaimContributionTargetsReadyToUpdate() {
+	for _, layer := range deployCtx.State.ClaimContributionLayersReadyToUpdate() {
 		err := c.mergedContributionsDeployer.Deploy(
 			ctx,
 			instanceID,
-			resourceName,
-			deployCtx.State.ContributorsFor(resourceName),
+			layer,
+			deployCtx.State.ContributorsFor(layer),
 			deployCtx,
 		)
 		if err != nil {
@@ -1723,10 +1730,12 @@ func (c *defaultBlueprintContainer) createLinkScheduler(
 			return &instanceState, nil
 		},
 		func(linkName string) {
-			deployCtx.State.MarkLinkSettled(linkName)
-			c.deployReadyContributionTargets(ctx, instanceID, linkDeployCtx)
+			c.markLinkSettled(ctx, linkName, instanceID, linkDeployCtx)
 		},
 		deployCtx.State.AwaitingCapabilityProviders,
+		func(linkName string) bool {
+			return c.abandonLinkBlockedByFailedLayer(ctx, linkName, instanceID, linkDeployCtx)
+		},
 		// Never waits. The error channel is unbuffered, so a send blocks whenever the
 		// deployment event loop is busy elsewhere, and the scheduler holds anything
 		// that will not go rather than parking a worker on it.
@@ -1739,6 +1748,74 @@ func (c *defaultBlueprintContainer) createLinkScheduler(
 			}
 		},
 	)
+}
+
+func (c *defaultBlueprintContainer) markLinkSettled(
+	ctx context.Context,
+	linkName string,
+	instanceID string,
+	deployCtx *DeployContext,
+) {
+	deployCtx.State.MarkLinkSettled(linkName)
+	c.deployReadyContributionLayers(ctx, instanceID, deployCtx)
+}
+
+// Interrupts a link waiting on a layer that failed to apply, since the capability it
+// requires will never be established.
+//
+// Running it anyway is the silent success the capability ordering exists to prevent, and
+// leaving it pending hangs the deployment where the link is counted work, and a deployment
+// waiting on a held link does not look stalled to the stall detector, which treats a
+// pending link as progress still to come.
+//
+// Settling it releases what was waiting on it. A link that never ran contributes what it
+// recorded at its last deployment rather than nothing, so the layers carrying it still
+// state their resource's spec correctly.
+func (c *defaultBlueprintContainer) abandonLinkBlockedByFailedLayer(
+	ctx context.Context,
+	linkName string,
+	instanceID string,
+	deployCtx *DeployContext,
+) bool {
+	blocking := deployCtx.State.FailedLayersBlocking(linkName)
+	if len(blocking) == 0 {
+		return false
+	}
+
+	linkStatus, _ := determineLinkInterruptedStatus(
+		/* destroying */ false,
+		deployCtx.Rollback,
+		/* linkUpdateType */ nil,
+	)
+
+	deployCtx.Channels.LinkUpdateChan <- LinkDeployUpdateMessage{
+		InstanceID: instanceID,
+		LinkName:   linkName,
+		Status:     linkStatus,
+		// The link never reached its intermediary resources, so the earlier phase is the
+		// one it was interrupted in.
+		PreciseStatus:   core.PreciseLinkStatusLinkedResourcesUpdateInterrupted,
+		UpdateTimestamp: c.clock.Now().Unix(),
+		FailureReasons:  failedLayerReasons(linkName, blocking),
+	}
+
+	c.markLinkSettled(ctx, linkName, instanceID, deployCtx)
+
+	return true
+}
+
+func failedLayerReasons(linkName string, blocking []ContributionLayer) []string {
+	reasons := make([]string, 0, len(blocking))
+	for _, layer := range blocking {
+		reasons = append(reasons, fmt.Sprintf(
+			"link %q was not deployed because %q could not be updated with the "+
+				"contributions it requires",
+			linkName,
+			layer.ResourceName,
+		))
+	}
+
+	return reasons
 }
 
 func (c *defaultBlueprintContainer) deployReadyLink(
@@ -2644,6 +2721,15 @@ func (c *defaultBlueprintContainer) handleLinkUpdateMessage(
 
 	elementName := linkElementID(msg.LinkName)
 
+	if isInterruptedLinkStatus(msg.PreciseStatus) {
+		// A link that will never run is finished with, so it is surfaced and counted. It
+		// is not a destroy, update or creation event as none of them happened, and treating
+		// it as one would have the deployment record a link operation that never ran.
+		deployCtx.Channels.LinkUpdateChan <- msg
+		finished[elementName] = &deployUpdateMessageWrapper{linkUpdateMessage: &msg}
+		return nil
+	}
+
 	if isLinkDestroyEvent(msg.Status, deployCtx.Rollback) {
 		return c.handleLinkDestroyEvent(ctx, msg, deployCtx, finished, elementName)
 	}
@@ -3169,7 +3255,7 @@ func warnOnElementsMissingFromGroups(
 	}
 
 	missing := []string{}
-	for _, elementName := range outstandingElementNames(inputChanges, nil) {
+	for _, elementName := range outstandingElementNames(inputChanges, nil, nil) {
 		if !grouped[elementName] {
 			missing = append(missing, elementName)
 		}

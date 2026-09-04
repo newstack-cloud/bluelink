@@ -3,6 +3,7 @@ package container
 import (
 	"maps"
 	"slices"
+	"sort"
 	"sync"
 	"time"
 
@@ -115,24 +116,42 @@ type DeploymentState interface {
 	// SetLinkContributionTargets records which resources each link declared it will
 	// contribute to, resolved once for the deployment before any link runs.
 	SetLinkContributionTargets(targets map[string][]string)
-	// AwaitingContributors returns the names of the links that declared a contribution to
-	// the named resource and have not settled yet.
-	AwaitingContributors(resourceName string) []string
-	// ContributionSetComplete reports whether every link that declared a contribution to
-	// the named resource has settled, which is when the resource's merged update can be
-	// built from what those links contributed.
-	ContributionSetComplete(resourceName string) bool
-	// ContributorsFor returns the logical names of the links that declared a contribution
-	// to the named resource, settled or not.
-	ContributorsFor(resourceName string) []string
-	// ClaimContributionTargetsReadyToUpdate returns the resources whose contribution set
-	// has become complete and that have not been claimed before.
+	// AwaitingContributors returns the names of the links carried by the given layer that
+	// have not settled yet.
+	AwaitingContributors(layer ContributionLayer) []string
+	// ContributionSetComplete reports whether every link a layer carries has settled, which
+	// is when that layer's update can be built from what those links contributed.
+	ContributionSetComplete(layer ContributionLayer) bool
+	// ContributorsFor returns the logical names of the links a layer carries, settled or
+	// not, those contributing to its resource at its depth or above it.
+	ContributorsFor(layer ContributionLayer) []string
+	// ContributionLayers returns every update this deployment plans to make to carry link
+	// contributions, one per depth among the links contributing to each resource.
 	//
-	// Links settle from several goroutines at once, and the last few contributors to a
-	// resource can settle together, so more than one of them can find the same resource
-	// complete. Claiming is what makes a resource's merged update happen once rather than
-	// once per link that noticed.
-	ClaimContributionTargetsReadyToUpdate() []string
+	// A resource with no capability ordering over its contributors has one layer and is
+	// written once, which is every resource in a deployment where no link requires a
+	// capability another link establishes by contributing.
+	ContributionLayers() []ContributionLayer
+	// MarkContributionLayerUpdated records that a layer has been applied to its resource,
+	// releasing the links waiting on a capability it carries.
+	MarkContributionLayerUpdated(layer ContributionLayer)
+	// MarkContributionLayerFailed records that a layer could not be applied to its
+	// resource, so that the links waiting on a capability it carries can be interrupted
+	// rather than left waiting for an update that will never land.
+	MarkContributionLayerFailed(layer ContributionLayer)
+	// FailedLayersBlocking returns the layers the named link waits for that have failed,
+	// which is what makes the link unreachable: the capability it requires cannot be
+	// established, and running it anyway is the silent success the ordering exists to
+	// prevent.
+	FailedLayersBlocking(linkName string) []ContributionLayer
+	// ClaimContributionLayersReadyToUpdate returns the layers whose links have all settled
+	// and that have not been claimed before.
+	//
+	// Links settle from several goroutines at once, and the last few links a layer carries
+	// can settle together, so more than one of them can find the same layer complete.
+	// Claiming is what makes a layer's update happen once rather than once per link that
+	// noticed.
+	ClaimContributionLayersReadyToUpdate() []ContributionLayer
 	// MarkLinkSettled records that a link will produce no further work, whatever the
 	// outcome, and releases anything waiting on the capabilities it provides, along with
 	// the targets it declared a contribution to.
@@ -202,7 +221,9 @@ func NewDefaultDeploymentState() DeploymentState {
 		elementDependencies:        make(map[string]*state.DependencyInfo),
 		settledLinks:               make(map[string]bool),
 		contributionTargets:        make(map[string][]string),
-		claimedContributionTargets: make(map[string]bool),
+		claimedContributionLayers:  make(map[ContributionLayer]bool),
+		updatedContributionLayers:  make(map[ContributionLayer]bool),
+		failedContributionLayers:   make(map[ContributionLayer]bool),
 	}
 }
 
@@ -281,9 +302,16 @@ type defaultDeploymentState struct {
 	// will contribute to it. Held target-first because the question asked of it is what
 	// one resource is waiting on.
 	contributionTargets map[string][]string
-	// The resources whose merged update has already been claimed, so that it is not
-	// issued again by the next link to settle.
-	claimedContributionTargets map[string]bool
+	// The layers already claimed, so that one is not issued again by the next link to
+	// settle. A resource has one layer per depth among the links contributing to it.
+	claimedContributionLayers map[ContributionLayer]bool
+	// The layers that have been applied to their resource, which is what a link waiting on
+	// a contributed capability waits for.
+	updatedContributionLayers map[ContributionLayer]bool
+	// The layers that could not be applied. A link waiting on one of these is waiting for
+	// a capability that will never be established, so it is interrupted rather than left
+	// pending or released to run without it.
+	failedContributionLayers map[ContributionLayer]bool
 	// Mutex is required as resources can be deployed concurrently.
 	mu sync.Mutex
 }
@@ -313,6 +341,15 @@ func (d *defaultDeploymentState) AwaitingCapabilityProviders(linkName string) []
 		}
 	}
 
+	// A provider that contributes has written nothing when it settles. What it needs the
+	// resource to say arrives with that resource's layer, so the layer is what the link
+	// waits for rather than the provider.
+	for _, layer := range d.linkCapabilities.WaitsForLayers(linkName) {
+		if !d.updatedContributionLayers[layer] {
+			outstanding = append(outstanding, contributionLayerElementID(layer))
+		}
+	}
+
 	return outstanding
 }
 
@@ -339,12 +376,12 @@ func (d *defaultDeploymentState) SetLinkContributionTargets(targets map[string][
 	d.contributionTargets = contributionTargets
 }
 
-func (d *defaultDeploymentState) AwaitingContributors(resourceName string) []string {
+func (d *defaultDeploymentState) AwaitingContributors(layer ContributionLayer) []string {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	outstanding := []string{}
-	for _, linkName := range d.contributionTargets[resourceName] {
+	for _, linkName := range d.contributorsUpTo(layer) {
 		if !d.settledLinks[linkName] {
 			outstanding = append(outstanding, linkName)
 		}
@@ -353,41 +390,117 @@ func (d *defaultDeploymentState) AwaitingContributors(resourceName string) []str
 	return outstanding
 }
 
-func (d *defaultDeploymentState) ContributionSetComplete(resourceName string) bool {
-	return len(d.AwaitingContributors(resourceName)) == 0
+func (d *defaultDeploymentState) ContributionSetComplete(layer ContributionLayer) bool {
+	return len(d.AwaitingContributors(layer)) == 0
 }
 
-func (d *defaultDeploymentState) ContributorsFor(resourceName string) []string {
+func (d *defaultDeploymentState) ContributorsFor(layer ContributionLayer) []string {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	return slices.Clone(d.contributionTargets[resourceName])
+	return d.contributorsUpTo(layer)
 }
 
-func (d *defaultDeploymentState) ClaimContributionTargetsReadyToUpdate() []string {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	claimed := []string{}
-	for resourceName, linkNames := range d.contributionTargets {
-		if d.claimedContributionTargets[resourceName] {
-			continue
+// The links contributing to a layer's resource that sit at its depth or above it. A link
+// deeper than the layer has not run yet and is carried by a later layer.
+func (d *defaultDeploymentState) contributorsUpTo(layer ContributionLayer) []string {
+	contributors := []string{}
+	for _, linkName := range d.contributionTargets[layer.ResourceName] {
+		if d.linkCapabilities.Depth(linkName) <= layer.Depth {
+			contributors = append(contributors, linkName)
 		}
-
-		hasUnsettledLinks := slices.ContainsFunc(linkNames, func(linkName string) bool {
-			return !d.settledLinks[linkName]
-		})
-		if hasUnsettledLinks {
-			continue
-		}
-
-		d.claimedContributionTargets[resourceName] = true
-		claimed = append(claimed, resourceName)
 	}
 
-	// Sorted so that several resources becoming ready together are reported in the same
-	// order on every run.
-	slices.Sort(claimed)
+	return contributors
+}
+
+// ContributionLayers returns every update this deployment plans to make to carry link
+// contributions, one per depth among the links contributing to each resource.
+func (d *defaultDeploymentState) ContributionLayers() []ContributionLayer {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	return d.plannedLayers()
+}
+
+func (d *defaultDeploymentState) plannedLayers() []ContributionLayer {
+	layers := []ContributionLayer{}
+	for resourceName, linkNames := range d.contributionTargets {
+		for _, linkName := range linkNames {
+			layer := ContributionLayer{
+				ResourceName: resourceName,
+				Depth:        d.linkCapabilities.Depth(linkName),
+			}
+			if !slices.Contains(layers, layer) {
+				layers = append(layers, layer)
+			}
+		}
+	}
+
+	sort.Slice(layers, func(a, b int) bool {
+		if layers[a].ResourceName != layers[b].ResourceName {
+			return layers[a].ResourceName < layers[b].ResourceName
+		}
+		return layers[a].Depth < layers[b].Depth
+	})
+
+	return layers
+}
+
+func (d *defaultDeploymentState) MarkContributionLayerUpdated(layer ContributionLayer) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	d.updatedContributionLayers[layer] = true
+}
+
+func (d *defaultDeploymentState) MarkContributionLayerFailed(layer ContributionLayer) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	d.failedContributionLayers[layer] = true
+}
+
+func (d *defaultDeploymentState) FailedLayersBlocking(linkName string) []ContributionLayer {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	blocking := []ContributionLayer{}
+	for _, layer := range d.linkCapabilities.WaitsForLayers(linkName) {
+		if d.failedContributionLayers[layer] {
+			blocking = append(blocking, layer)
+		}
+	}
+
+	return blocking
+}
+
+func (d *defaultDeploymentState) ClaimContributionLayersReadyToUpdate() []ContributionLayer {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	claimed := []ContributionLayer{}
+	for _, layer := range d.plannedLayers() {
+		if d.claimedContributionLayers[layer] {
+			continue
+		}
+
+		// A layer carries the contributions of the links at its depth and above, so it is
+		// those links it waits for. A link deeper in the ordering is waiting on this very
+		// layer, and waiting for it here is the deadlock the layering prevents.
+		hasUnsettledContributors := slices.ContainsFunc(
+			d.contributorsUpTo(layer),
+			func(linkName string) bool {
+				return !d.settledLinks[linkName]
+			},
+		)
+		if hasUnsettledContributors {
+			continue
+		}
+
+		d.claimedContributionLayers[layer] = true
+		claimed = append(claimed, layer)
+	}
 
 	return claimed
 }

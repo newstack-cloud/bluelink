@@ -95,26 +95,6 @@ func contributionTargetName(resourceFieldPath string) (string, bool) {
 	return resourceName, true
 }
 
-// ContributionTargetNames returns the distinct resources contributed to across every link's
-// declarations, sorted.
-//
-// Each of them is updated once with what its contributing links need it to include, so the
-// count is what a deployment has to wait for beyond the elements the change set names.
-func ContributionTargetNames(targets map[string][]string) []string {
-	names := []string{}
-	for _, resourceNames := range targets {
-		for _, resourceName := range resourceNames {
-			if !slices.Contains(names, resourceName) {
-				names = append(names, resourceName)
-			}
-		}
-	}
-
-	slices.Sort(names)
-
-	return names
-}
-
-func contributionTargetElementID(resourceName string) string {
-	return fmt.Sprintf("contributions(%s)", resourceName)
+func contributionLayerElementID(layer ContributionLayer) string {
+	return fmt.Sprintf("contributions(%s,%d)", layer.ResourceName, layer.Depth)
 }

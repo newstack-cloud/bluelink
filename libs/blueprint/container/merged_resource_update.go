@@ -71,11 +71,17 @@ func CollectResourceContributionSources(
 	return sources
 }
 
-// ComposeMergedResourceSpec builds the spec a resource's merged update carries, from the
-// resource's own declared spec and the contributions of every link that targets it.
+// ComposeMergedResourceSpec builds the spec a layer's update carries, from the resource's
+// own declared spec and the contributions of every link that targets it.
+//
+// The links deeper in the capability ordering than the layer have not run, so what they
+// recorded at their last deployment is read back rather than dropped. That is what keeps an
+// earlier layer from stripping the fields a later one will restate, for example, the environment
+// variables an access link contributed last time stay on the function while the layer
+// carrying its network attachment lands.
 func ComposeMergedResourceSpec(
 	deployCtx *DeployContext,
-	resourceName string,
+	layer ContributionLayer,
 	declaredSpec *core.MappingNode,
 	contributingLinkNames []string,
 ) (*specmerge.ContributionMergeResult, error) {
@@ -83,7 +89,7 @@ func ComposeMergedResourceSpec(
 
 	return specmerge.ComposeResourceContributions(
 		declaredSpec,
-		resourceName,
+		layer.ResourceName,
 		&specmerge.ContributionInputs{
 			Produced:            sources.Produced,
 			StoredLinks:         sources.Stored,

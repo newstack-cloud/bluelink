@@ -16,6 +16,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/refgraph"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -168,6 +169,15 @@ func (s *MergedContributionsDeployTestSuite) deployMergedContributionsBlueprint(
 func (s *MergedContributionsDeployTestSuite) collectUntilFinishForTest(
 	channels *DeployChannels,
 ) ([]ResourceDeployUpdateMessage, *DeploymentFinishedMessage) {
+	return collectDeployMessages(s.T(), channels)
+}
+
+// Every resource update message a deployment produced, which is what a client rendering
+// progress sees.
+func collectDeployMessages(
+	t *testing.T,
+	channels *DeployChannels,
+) ([]ResourceDeployUpdateMessage, *DeploymentFinishedMessage) {
 
 	collected := []ResourceDeployUpdateMessage{}
 	var err error
@@ -186,8 +196,8 @@ func (s *MergedContributionsDeployTestSuite) collectUntilFinishForTest(
 			err = errors.New(timeoutMessage)
 		}
 	}
-	s.Require().NoError(err)
-	s.Require().NotNil(finishedMessage)
+	require.NoError(t, err)
+	require.NotNil(t, finishedMessage)
 
 	return collected, finishedMessage
 }

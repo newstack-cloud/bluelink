@@ -30,6 +30,7 @@ func stallTestDeployContext(deployState DeploymentState) *DeployContext {
 			nil,
 			func(string) {},
 			func(string) []string { return nil },
+			func(string) bool { return false },
 			func(error) bool { return true },
 		),
 	}
