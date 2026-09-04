@@ -24,6 +24,13 @@ func (l *MockLink) StageChanges(
 	return &provider.LinkStageChangesOutput{}, nil
 }
 
+func (l *MockLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
+}
+
 func (l *MockLink) UpdateLinkedResources(
 	ctx context.Context,
 	input *provider.LinkUpdateLinkedResourcesInput,

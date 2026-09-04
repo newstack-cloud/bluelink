@@ -260,6 +260,13 @@ func (l *mockLambdaDynamoDBLinkForDiagnostics) StageChanges(ctx context.Context,
 	return &provider.LinkStageChangesOutput{}, nil
 }
 
+func (l *mockLambdaDynamoDBLinkForDiagnostics) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
+}
+
 func (l *mockLambdaDynamoDBLinkForDiagnostics) UpdateLinkedResources(ctx context.Context, input *provider.LinkUpdateLinkedResourcesInput) (*provider.LinkUpdateLinkedResourcesOutput, error) {
 	return &provider.LinkUpdateLinkedResourcesOutput{}, nil
 }
