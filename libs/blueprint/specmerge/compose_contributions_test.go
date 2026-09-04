@@ -20,13 +20,14 @@ func (s *ComposeContributionsTestSuite) Test_keeps_the_contributions_of_a_link_t
 	result, err := ComposeResourceContributions(
 		core.MappingNodeFields(),
 		"ordersRole",
-		[]LinkResourceContribution{
-			s.appended("saveOrderFunction::ordersTable", "spec.policies", "dynamodb:PutItem"),
+		&ContributionInputs{
+			Produced: []LinkResourceContribution{
+				s.appended("saveOrderFunction::ordersTable", "spec.policies", "dynamodb:PutItem"),
+			},
+			StoredLinks: []state.LinkState{
+				s.storedAppend("archiveFunction::appQueue", "spec.policies", "sqs:SendMessage"),
+			},
 		},
-		[]state.LinkState{
-			s.storedAppend("archiveFunction::appQueue", "spec.policies", "sqs:SendMessage"),
-		},
-		nil,
 	)
 
 	s.Require().NoError(err)
@@ -54,15 +55,17 @@ func (s *ComposeContributionsTestSuite) Test_a_link_that_ran_supersedes_what_it_
 	result, err := ComposeResourceContributions(
 		core.MappingNodeFields(),
 		"saveOrderFunction",
-		[]LinkResourceContribution{
-			s.set(
-				"saveOrderFunction::ordersTable",
-				"spec.environment.variables.TABLE_NAME",
-				"orders-new",
-			),
+		&ContributionInputs{
+			Produced: []LinkResourceContribution{
+				s.set(
+					"saveOrderFunction::ordersTable",
+					"spec.environment.variables.TABLE_NAME",
+					"orders-new",
+				),
+			},
+			StoredLinks:         []state.LinkState{stored},
+			SupersededLinkNames: []string{"saveOrderFunction::ordersTable"},
 		},
-		[]state.LinkState{stored},
-		nil,
 	)
 
 	s.Require().NoError(err)
@@ -76,15 +79,59 @@ func (s *ComposeContributionsTestSuite) Test_a_link_that_ran_supersedes_what_it_
 	)
 }
 
+func (s *ComposeContributionsTestSuite) Test_does_not_read_back_what_a_superseded_link_recorded() {
+	stored := s.storedSet(
+		"saveOrderFunction::ordersTable",
+		"saveOrderFunction::spec.tableName",
+		"orders",
+	)
+
+	result, err := ComposeResourceContributions(
+		core.MappingNodeFields(),
+		"saveOrderFunction",
+		&ContributionInputs{
+			StoredLinks:         []state.LinkState{stored},
+			SupersededLinkNames: []string{"saveOrderFunction::ordersTable"},
+		},
+	)
+
+	s.Require().NoError(err)
+	s.Assert().Nil(
+		result.Spec.Fields["tableName"],
+		"the contribution it withdrew is not put back",
+	)
+}
+
+func (s *ComposeContributionsTestSuite) Test_reads_back_what_a_link_that_is_not_superseded_recorded() {
+	stored := s.storedSet(
+		"saveOrderFunction::ordersTable",
+		"saveOrderFunction::spec.tableName",
+		"orders",
+	)
+
+	result, err := ComposeResourceContributions(
+		core.MappingNodeFields(),
+		"saveOrderFunction",
+		&ContributionInputs{
+			StoredLinks: []state.LinkState{stored},
+		},
+	)
+
+	s.Require().NoError(err)
+	s.Assert().Equal("orders", s.valueAt(result.Spec, "$.tableName"))
+}
+
 func (s *ComposeContributionsTestSuite) Test_drops_the_contributions_of_a_removed_link() {
 	result, err := ComposeResourceContributions(
 		core.MappingNodeFields(),
 		"ordersRole",
-		nil,
-		[]state.LinkState{
-			s.storedAppend("archiveFunction::appQueue", "spec.policies", "sqs:SendMessage"),
+		&ContributionInputs{
+			Produced: nil,
+			StoredLinks: []state.LinkState{
+				s.storedAppend("archiveFunction::appQueue", "spec.policies", "sqs:SendMessage"),
+			},
+			RemovedLinkNames: []string{"archiveFunction::appQueue"},
 		},
-		[]string{"archiveFunction::appQueue"},
 	)
 
 	s.Require().NoError(err)
@@ -106,9 +153,11 @@ func (s *ComposeContributionsTestSuite) Test_keeps_a_removed_links_contribution_
 	result, err := ComposeResourceContributions(
 		core.MappingNodeFields(),
 		"ordersTable",
-		nil,
-		[]state.LinkState{stored},
-		[]string{"ordersTable::archiveFunction"},
+		&ContributionInputs{
+			Produced:         nil,
+			StoredLinks:      []state.LinkState{stored},
+			RemovedLinkNames: []string{"ordersTable::archiveFunction"},
+		},
 	)
 
 	s.Require().NoError(err)
@@ -124,9 +173,10 @@ func (s *ComposeContributionsTestSuite) Test_orders_by_link_rather_than_by_which
 	bothRan, err := ComposeResourceContributions(
 		core.MappingNodeFields(),
 		"ordersRole",
-		[]LinkResourceContribution{first, second},
-		nil,
-		nil,
+		&ContributionInputs{
+			Produced:    []LinkResourceContribution{first, second},
+			StoredLinks: nil,
+		},
 	)
 	s.Require().NoError(err)
 
@@ -135,11 +185,12 @@ func (s *ComposeContributionsTestSuite) Test_orders_by_link_rather_than_by_which
 	onlySecondRan, err := ComposeResourceContributions(
 		core.MappingNodeFields(),
 		"ordersRole",
-		[]LinkResourceContribution{second},
-		[]state.LinkState{
-			s.storedAppend("aFunction::aTable", "spec.policies", "a-statement"),
+		&ContributionInputs{
+			Produced: []LinkResourceContribution{second},
+			StoredLinks: []state.LinkState{
+				s.storedAppend("aFunction::aTable", "spec.policies", "a-statement"),
+			},
 		},
-		nil,
 	)
 	s.Require().NoError(err)
 
@@ -158,13 +209,45 @@ func (s *ComposeContributionsTestSuite) Test_applies_a_stored_contribution_with_
 	result, err := ComposeResourceContributions(
 		core.MappingNodeFields(),
 		"saveOrderFunction",
-		nil,
-		[]state.LinkState{stored},
-		nil,
+		&ContributionInputs{
+			Produced:    nil,
+			StoredLinks: []state.LinkState{stored},
+		},
 	)
 
 	s.Require().NoError(err)
 	s.Assert().Equal("orders", s.valueAt(result.Spec, "$.tableName"))
+}
+
+// A contribution the link's data no longer holds a value for has to be reported rather
+// than passed over. Composing without it produces a spec missing the field, which deploys
+// as the contribution having been withdrawn by nobody.
+func (s *ComposeContributionsTestSuite) Test_reports_a_stored_contribution_whose_value_has_gone() {
+	stored := s.storedSet(
+		"saveOrderFunction::ordersTable",
+		"saveOrderFunction::spec.tableName",
+		"orders",
+	)
+	// The mapping still points into the link's data, and the data no longer holds it.
+	stored.Data = map[string]*core.MappingNode{}
+
+	result, err := ComposeResourceContributions(
+		core.MappingNodeFields(),
+		"saveOrderFunction",
+		&ContributionInputs{
+			StoredLinks: []state.LinkState{stored},
+		},
+	)
+
+	s.Require().NoError(err)
+	s.Require().Len(result.Unresolved, 1)
+	s.Assert().Equal("saveOrderFunction::ordersTable", result.Unresolved[0].LinkName)
+	s.Assert().Equal("spec.tableName", result.Unresolved[0].ResourceFieldPath)
+	s.Assert().Equal(
+		"link.value",
+		result.Unresolved[0].LinkDataPath,
+		"the path the value was expected at says whether the data or the resource is at fault",
+	)
 }
 
 func (s *ComposeContributionsTestSuite) set(

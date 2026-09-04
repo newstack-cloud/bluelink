@@ -1424,7 +1424,66 @@ func getFailedElementDeploymentsAndUpdateState(
 	)
 	failed = append(failed, failedElementsWithoutDetail(failedChildren)...)
 
+	failed = append(failed, getFailedContributionUpdates(finished, changes)...)
+
 	return failed
+}
+
+// A resource that could not be updated with what the links contributing to it need it to
+// say fails the deployment.
+//
+// The merged update is the only way a contribution reaches the resource. Reporting a
+// deployment as successful while a resource is missing the permissions, networking or
+// configuration its links grant it is the silent failure the reporting of contributions
+// exists to prevent.
+//
+// Nothing is marked as updated here, unlike the resource and link equivalents. The merged
+// update is not a part of the resource's own lifecycle, and a resource that deployed
+// successfully has already been recorded by the check that walks the change set.
+func getFailedContributionUpdates(
+	finished map[string]*deployUpdateMessageWrapper,
+	changes *changes.BlueprintChanges,
+) []*failedElementInfo {
+	failed := []*failedElementInfo{}
+
+	for _, resourceName := range ContributionTargetNames(
+		BuildLinkContributionTargets(changes),
+	) {
+		msgWrapper, reported := finished[contributionTargetElementID(resourceName)]
+		if reported && contributionUpdateWasSuccessful(msgWrapper) {
+			continue
+		}
+
+		failed = append(failed, &failedElementInfo{
+			elementName: core.ResourceElementID(resourceName),
+			detail:      contributionUpdateFailureDetail(msgWrapper),
+		})
+	}
+
+	return failed
+}
+
+func contributionUpdateWasSuccessful(msgWrapper *deployUpdateMessageWrapper) bool {
+	if msgWrapper == nil || msgWrapper.resourceUpdateMessage == nil {
+		return false
+	}
+
+	return msgWrapper.resourceUpdateMessage.PreciseStatus ==
+		core.PreciseResourceStatusLinkContributionsUpdated
+}
+
+func contributionUpdateFailureDetail(msgWrapper *deployUpdateMessageWrapper) string {
+	reasons := []string{}
+	if msgWrapper != nil && msgWrapper.resourceUpdateMessage != nil {
+		reasons = msgWrapper.resourceUpdateMessage.FailureReasons
+	}
+
+	if len(reasons) == 0 {
+		return "the contributions made to the resource by the links that write it " +
+			"could not be applied"
+	}
+
+	return strings.Join(reasons, ", ")
 }
 
 func getFailedResourceDeploymentsAndUpdateState(
@@ -1950,12 +2009,20 @@ func countElementsToDeploy(changes *changes.BlueprintChanges) int {
 			len(resourceChanges.OutboundLinkChanges)
 	}
 
+	// A resource that links contribute to is updated with what they contribute once they have
+	// all settled, this is work that the deployment is not finished without and which the
+	// change set does not name.
+	contributionTargetCount := len(
+		ContributionTargetNames(BuildLinkContributionTargets(changes)),
+	)
+
 	return len(changes.NewResources) +
 		len(changes.ResourceChanges) +
 		len(changes.NewChildren) +
 		len(changes.RecreateChildren) +
 		len(changes.ChildChanges) +
-		linksToDeployCount
+		linksToDeployCount +
+		contributionTargetCount
 }
 
 func getRetryPolicy(

@@ -107,6 +107,12 @@ func (s ResourceStatus) String() string {
 // in deploying a blueprint, by avoiding blocking on resource finalisation
 // that isn't always needed to be able to successfully deploy the resources
 // that are dependent on the resource in question.
+//
+// Most of these statuses are both reported on the deployment event stream and recorded as
+// the resource's status in blueprint instance state. The link contribution statuses are
+// reported on the event stream only, and are never persisted in instance state, since the
+// update they describe is not a deployment of the resource that the blueprint asked for.
+// IsLinkContributionStatus reports which is which.
 type PreciseResourceStatus int
 
 const (
@@ -234,10 +240,45 @@ const (
 	// infrastructure in the provider, as a result of the resource having
 	// a removal policy of "retain".
 	PreciseResourceStatusRetained
+	// PreciseResourceStatusUpdatingLinkContributions is used when a resource is being
+	// updated to carry what the links that contribute to it need its spec to say, rather
+	// than because anything the blueprint declares about it changed.
+	//
+	// A resource can reach this without appearing in the change set at all: an execution
+	// role several links write to is ordinarily untouched by a deployment that changes
+	// one of those links.
+	//
+	// This and the two statuses that follow it are reported on the deployment event stream
+	// and never recorded as the resource's status in instance state. A resource's recorded
+	// status is that of its own deployment, and an update carrying link contributions is
+	// not one, it is a write the framework makes on behalf of the links that need it,
+	// which leaves the resource exactly as deployed prior to the link contributions.
+	PreciseResourceStatusUpdatingLinkContributions
+	// PreciseResourceStatusLinkContributionsUpdated is used when a resource has been
+	// updated with what the links contributing to it need its spec to say.
+	PreciseResourceStatusLinkContributionsUpdated
+	// PreciseResourceStatusLinkContributionsUpdateFailed is used when a resource could
+	// not be updated with what the links contributing to it need its spec to say.
+	PreciseResourceStatusLinkContributionsUpdateFailed
 )
+
+// IsLinkContributionStatus reports whether the status describes an update carrying what the
+// links contributing to a resource need its spec to say.
+//
+// These statuses are reported on the deployment event stream and are never recorded as a
+// resource's status in blueprint instance state, so a status enum documenting what instance
+// state can hold excludes them, and one documenting the event stream does not.
+func (s PreciseResourceStatus) IsLinkContributionStatus() bool {
+	return s == PreciseResourceStatusUpdatingLinkContributions ||
+		s == PreciseResourceStatusLinkContributionsUpdated ||
+		s == PreciseResourceStatusLinkContributionsUpdateFailed
+}
 
 var preciseResourceStatusStrings = map[PreciseResourceStatus]string{
 	PreciseResourceStatusUnknown:                       "UNKNOWN",
+	PreciseResourceStatusUpdatingLinkContributions:     "UPDATING LINK CONTRIBUTIONS",
+	PreciseResourceStatusLinkContributionsUpdated:      "LINK CONTRIBUTIONS UPDATED",
+	PreciseResourceStatusLinkContributionsUpdateFailed: "LINK CONTRIBUTIONS UPDATE FAILED",
 	PreciseResourceStatusCreating:                      "CREATING",
 	PreciseResourceStatusConfigComplete:                "CONFIG COMPLETE",
 	PreciseResourceStatusCreated:                       "CREATED",

@@ -122,6 +122,17 @@ type DeploymentState interface {
 	// the named resource has settled, which is when the resource's merged update can be
 	// built from what those links contributed.
 	ContributionSetComplete(resourceName string) bool
+	// ContributorsFor returns the logical names of the links that declared a contribution
+	// to the named resource, settled or not.
+	ContributorsFor(resourceName string) []string
+	// ClaimContributionTargetsReadyToUpdate returns the resources whose contribution set
+	// has become complete and that have not been claimed before.
+	//
+	// Links settle from several goroutines at once, and the last few contributors to a
+	// resource can settle together, so more than one of them can find the same resource
+	// complete. Claiming is what makes a resource's merged update happen once rather than
+	// once per link that noticed.
+	ClaimContributionTargetsReadyToUpdate() []string
 	// MarkLinkSettled records that a link will produce no further work, whatever the
 	// outcome, and releases anything waiting on the capabilities it provides, along with
 	// the targets it declared a contribution to.
@@ -191,6 +202,7 @@ func NewDefaultDeploymentState() DeploymentState {
 		elementDependencies:        make(map[string]*state.DependencyInfo),
 		settledLinks:               make(map[string]bool),
 		contributionTargets:        make(map[string][]string),
+		claimedContributionTargets: make(map[string]bool),
 	}
 }
 
@@ -269,6 +281,9 @@ type defaultDeploymentState struct {
 	// will contribute to it. Held target-first because the question asked of it is what
 	// one resource is waiting on.
 	contributionTargets map[string][]string
+	// The resources whose merged update has already been claimed, so that it is not
+	// issued again by the next link to settle.
+	claimedContributionTargets map[string]bool
 	// Mutex is required as resources can be deployed concurrently.
 	mu sync.Mutex
 }
@@ -340,6 +355,41 @@ func (d *defaultDeploymentState) AwaitingContributors(resourceName string) []str
 
 func (d *defaultDeploymentState) ContributionSetComplete(resourceName string) bool {
 	return len(d.AwaitingContributors(resourceName)) == 0
+}
+
+func (d *defaultDeploymentState) ContributorsFor(resourceName string) []string {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	return slices.Clone(d.contributionTargets[resourceName])
+}
+
+func (d *defaultDeploymentState) ClaimContributionTargetsReadyToUpdate() []string {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	claimed := []string{}
+	for resourceName, linkNames := range d.contributionTargets {
+		if d.claimedContributionTargets[resourceName] {
+			continue
+		}
+
+		hasUnsettledLinks := slices.ContainsFunc(linkNames, func(linkName string) bool {
+			return !d.settledLinks[linkName]
+		})
+		if hasUnsettledLinks {
+			continue
+		}
+
+		d.claimedContributionTargets[resourceName] = true
+		claimed = append(claimed, resourceName)
+	}
+
+	// Sorted so that several resources becoming ready together are reported in the same
+	// order on every run.
+	slices.Sort(claimed)
+
+	return claimed
 }
 
 func (d *defaultDeploymentState) MarkLinkSettled(linkName string) {
@@ -682,10 +732,20 @@ func (d *defaultDeploymentState) UpdateElementID(element state.Element) {
 func copyLinkDeployResult(result *LinkDeployResult) *LinkDeployResult {
 	resourceDataMappings := make(map[string]string)
 	maps.Copy(resourceDataMappings, result.ResourceDataMappings)
+	// Left nil where the link recorded nothing, rather than becoming an empty map, so a
+	// copy of a link that contributes nothing compares equal to the link itself.
+	var contributionRecords map[string]state.ContributionRecord
+	if result.ContributionRecords != nil {
+		contributionRecords = make(map[string]state.ContributionRecord)
+		maps.Copy(contributionRecords, result.ContributionRecords)
+	}
+
 	return &LinkDeployResult{
 		LinkData:                   core.CopyMappingNode(result.LinkData),
 		ResourceDataMappings:       resourceDataMappings,
 		IntermediaryResourceStates: copyLinkIntermediaryResourceStates(result.IntermediaryResourceStates),
+		Contributions:              slices.Clone(result.Contributions),
+		ContributionRecords:        contributionRecords,
 	}
 }
 

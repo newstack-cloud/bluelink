@@ -138,6 +138,17 @@ func outstandingElementNames(
 		)
 	}
 
+	// Mirrors countElementsToDeploy, which waits for each resource that links contribute to.
+	for _, resourceName := range ContributionTargetNames(
+		BuildLinkContributionTargets(inputChanges),
+	) {
+		outstanding = appendIfUnfinished(
+			outstanding,
+			contributionTargetElementID(resourceName),
+			finished,
+		)
+	}
+
 	return outstanding
 }
 

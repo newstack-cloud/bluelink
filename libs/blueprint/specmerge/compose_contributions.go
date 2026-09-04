@@ -8,6 +8,30 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
+// ContributionInputs holds the links a resource's spec is composed from, grouped by what
+// this deployment has done with each of them.
+type ContributionInputs struct {
+	// Produced holds the contributions of the links that ran, paired with the link that
+	// produced each one.
+	Produced []LinkResourceContribution
+	// StoredLinks holds every link recorded against the instance, whose contributions are
+	// read back from what each recorded at its last deploy.
+	StoredLinks []state.LinkState
+	// RemovedLinkNames holds the links this deployment removes, which keep only the
+	// contributions they marked as outliving them.
+	RemovedLinkNames []string
+	// SupersededLinkNames holds the links whose stored contributions are not to be read,
+	// because what they produced in this deployment is the whole of what they contribute.
+	//
+	// This is not the same as the links that appear in Produced. A link that contributes
+	// and has withdrawn everything it used to contribute produces nothing, and reading its
+	// stored contributions would reinstate exactly what it withdrew. A link that never
+	// contributed produces nothing either, and its stored mappings are all there is of it,
+	// so the two cannot be told apart by what they produced and have to be told apart by
+	// whether they contribute at all.
+	SupersededLinkNames []string
+}
+
 // ComposeResourceContributions builds the spec a resource's merged update carries, from
 // the contributions of every link that targets it rather than only the links a deployment
 // happens to be touching.
@@ -19,9 +43,11 @@ import (
 //
 // Contributions come from three places, and which one applies is decided per link:
 //
-//   - a link that ran supplies what it just produced, and nothing it recorded before. A
-//     field it contributed last time and did not contribute now has been withdrawn, and
-//     reading its stored contributions alongside the new ones would put the old value back.
+//   - a link that contributes and ran supplies what it just produced, and nothing it
+//     recorded before. A field it contributed last time and did not contribute now has
+//     been withdrawn, and reading its stored contributions alongside the new ones would
+//     put the old value back. This holds even where it produced nothing at all, which is
+//     a link that has withdrawn every contribution it used to make.
 //   - a link that did not run supplies what it recorded at its last deploy, since it still
 //     targets the resource and has not been asked to say so again.
 //   - a link being removed supplies only the contributions it marked as outliving it.
@@ -29,19 +55,12 @@ import (
 func ComposeResourceContributions(
 	spec *core.MappingNode,
 	resourceName string,
-	produced []LinkResourceContribution,
-	storedLinks []state.LinkState,
-	removedLinkNames []string,
+	inputs *ContributionInputs,
 ) (*ContributionMergeResult, error) {
-	contributions := slices.Clone(produced)
+	contributions := slices.Clone(inputs.Produced)
 	contributions = append(
 		contributions,
-		carriedOverContributions(
-			resourceName,
-			produced,
-			storedLinks,
-			removedLinkNames,
-		)...,
+		carriedOverContributions(resourceName, inputs)...,
 	)
 
 	// Merged in one pass rather than stored first and produced second, so that the order
@@ -53,22 +72,15 @@ func ComposeResourceContributions(
 
 func carriedOverContributions(
 	resourceName string,
-	produced []LinkResourceContribution,
-	storedLinks []state.LinkState,
-	removedLinkNames []string,
+	inputs *ContributionInputs,
 ) []LinkResourceContribution {
-	ranThisDeployment := map[string]bool{}
-	for _, contribution := range produced {
-		ranThisDeployment[contribution.LinkName] = true
-	}
-
 	carriedOver := []LinkResourceContribution{}
-	for _, link := range storedLinks {
-		if ranThisDeployment[link.Name] {
+	for _, link := range inputs.StoredLinks {
+		if slices.Contains(inputs.SupersededLinkNames, link.Name) {
 			continue
 		}
 
-		retainedOnly := slices.Contains(removedLinkNames, link.Name)
+		retainedOnly := slices.Contains(inputs.RemovedLinkNames, link.Name)
 		carriedOver = append(carriedOver, StoredResourceContributions(
 			resourceName,
 			link,
@@ -108,19 +120,20 @@ func StoredResourceContributions(
 			continue
 		}
 
+		// A value the link's data no longer holds is carried through with the
+		// contribution rather than passed over, so the merge reports it against the link
+		// it belongs to. Dropping it here would leave the caller composing a spec that
+		// silently lacks the field, which is the contribution being retracted by an
+		// absence rather than by anyone deciding to retract it.
 		value, _ := core.GetPathValue(
 			core.AddRootToPath(linkDataPath),
 			&core.MappingNode{Fields: link.Data},
 			core.MappingNodeMaxTraverseDepth,
 		)
-		if value == nil {
-			// Left to the merge to report, so a contribution whose value has gone missing
-			// is named against its link in the same way as one that will not apply.
-			continue
-		}
 
 		contributions = append(contributions, LinkResourceContribution{
-			LinkName: link.Name,
+			LinkName:     link.Name,
+			LinkDataPath: linkDataPath,
 			Contribution: &provider.ResourceContribution{
 				ResourceName:    resourceName,
 				FieldPath:       fieldPath,
