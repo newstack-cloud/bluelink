@@ -1105,6 +1105,7 @@ func copyLink(linkState *state.LinkState) state.LinkState {
 		),
 		Data:                 linkState.Data,
 		ResourceDataMappings: linkState.ResourceDataMappings,
+		ContributionRecords:  linkState.ContributionRecords,
 		FailureReasons:       linkState.FailureReasons,
 		Durations:            linkState.Durations,
 	}
@@ -1123,10 +1124,14 @@ func copyIntermediaryResources(
 			intermediaryResourcesCopy,
 			&state.LinkIntermediaryResourceState{
 				ResourceID:                 value.ResourceID,
+				ResourceType:               value.ResourceType,
 				InstanceID:                 value.InstanceID,
+				Status:                     value.Status,
+				PreciseStatus:              value.PreciseStatus,
 				LastDeployedTimestamp:      value.LastDeployedTimestamp,
 				LastDeployAttemptTimestamp: value.LastDeployAttemptTimestamp,
 				ResourceSpecData:           value.ResourceSpecData,
+				FailureReasons:             value.FailureReasons,
 			},
 		)
 	}
@@ -1158,9 +1163,10 @@ func copyExport(
 	}
 
 	return &state.ExportState{
-		Value: exportState.Value,
-		Type:  exportState.Type,
-		Field: exportState.Field,
+		Value:       exportState.Value,
+		Type:        exportState.Type,
+		Description: exportState.Description,
+		Field:       exportState.Field,
 	}
 }
 
