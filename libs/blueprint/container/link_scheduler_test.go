@@ -56,11 +56,10 @@ func Test_links_on_distinct_resources_are_deployed_concurrently(t *testing.T) {
 	// immediately, one finishes before the next is dispatched however concurrent the
 	// scheduler is, and the measurement says nothing.
 	shape := linkThroughputShape{
-		functions:            20,
-		tablesPerFunction:    3,
-		updateResourceA:      20 * time.Millisecond,
-		updateResourceB:      20 * time.Millisecond,
-		updateIntermediaries: 20 * time.Millisecond,
+		functions:             20,
+		tablesPerFunction:     3,
+		updateLinkedResources: 40 * time.Millisecond,
+		updateIntermediaries:  20 * time.Millisecond,
 	}
 
 	result, err := runLinkThroughputDeployment(context.Background(), shape, 0)
@@ -170,12 +169,11 @@ func Test_a_link_waits_for_the_resource_it_wrote_to_settle(t *testing.T) {
 // writes lets the read side go unlocked.
 func Test_links_reading_a_shared_resource_are_not_serialised_by_it(t *testing.T) {
 	shape := linkThroughputShape{
-		functions:            12,
-		tablesPerFunction:    1,
-		sharedTable:          true,
-		updateResourceA:      20 * time.Millisecond,
-		updateResourceB:      20 * time.Millisecond,
-		updateIntermediaries: 20 * time.Millisecond,
+		functions:             12,
+		tablesPerFunction:     1,
+		sharedTable:           true,
+		updateLinkedResources: 40 * time.Millisecond,
+		updateIntermediaries:  20 * time.Millisecond,
 	}
 
 	result, err := runLinkThroughputDeployment(context.Background(), shape, 0)

@@ -98,9 +98,9 @@ type DeploymentState interface {
 	//
 	// A link waits on the guarantees it declared a need for rather than on anything
 	// inferred from the direction of the relationship. Direction cannot carry that
-	// information: the framework provides both UpdateResourceA and UpdateResourceB
-	// precisely because "A links to B" describes a relationship rather than which
-	// side is written to.
+	// information: a link is handed both of its resources by a single
+	// UpdateLinkedResources precisely because "A links to B" describes a relationship
+	// rather than which side is written to.
 	//
 	// The canonical case is an AWS Lambda function placed in a VPC. The placement
 	// link provides "network-attached" on the function; the links granting it access

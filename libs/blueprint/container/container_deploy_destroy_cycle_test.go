@@ -268,6 +268,13 @@ type failOnDestroyRuleLambda2Link struct {
 	testNoPriorityRuleLambda2Link
 }
 
+func (l *failOnDestroyRuleLambda2Link) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
+}
+
 func (l *failOnDestroyRuleLambda2Link) UpdateLinkedResources(
 	ctx context.Context,
 	input *provider.LinkUpdateLinkedResourcesInput,

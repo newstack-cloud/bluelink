@@ -202,6 +202,13 @@ func (l *testApiGatewayLambdaLink) GetAnnotationDefinitions(
 	}, nil
 }
 
+func (l *testApiGatewayLambdaLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
+}
+
 func (l *testApiGatewayLambdaLink) UpdateLinkedResources(
 	ctx context.Context,
 	input *provider.LinkUpdateLinkedResourcesInput,
@@ -425,6 +432,13 @@ func (l *testLambdaDynamoDBTableLink) GetAnnotationDefinitions(
 	return &provider.LinkGetAnnotationDefinitionsOutput{
 		AnnotationDefinitions: map[string]*provider.LinkAnnotationDefinition{},
 	}, nil
+}
+
+func (l *testLambdaDynamoDBTableLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
 }
 
 func (l *testLambdaDynamoDBTableLink) UpdateLinkedResources(
@@ -659,6 +673,13 @@ func (l *testDynamoDBTableStreamLink) GetAnnotationDefinitions(
 	}, nil
 }
 
+func (l *testDynamoDBTableStreamLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
+}
+
 func (l *testDynamoDBTableStreamLink) UpdateLinkedResources(
 	ctx context.Context,
 	input *provider.LinkUpdateLinkedResourcesInput,
@@ -742,6 +763,13 @@ func (l *testDynamoDBStreamLambdaLink) GetAnnotationDefinitions(
 	return &provider.LinkGetAnnotationDefinitionsOutput{
 		AnnotationDefinitions: map[string]*provider.LinkAnnotationDefinition{},
 	}, nil
+}
+
+func (l *testDynamoDBStreamLambdaLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
 }
 
 func (l *testDynamoDBStreamLambdaLink) UpdateLinkedResources(
@@ -829,6 +857,13 @@ func (l *testDynamoDBTableLambdaLink) GetAnnotationDefinitions(
 	}, nil
 }
 
+func (l *testDynamoDBTableLambdaLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
+}
+
 func (l *testDynamoDBTableLambdaLink) UpdateLinkedResources(
 	ctx context.Context,
 	input *provider.LinkUpdateLinkedResourcesInput,
@@ -912,6 +947,13 @@ func (l *testLambdaLambdaLink) GetAnnotationDefinitions(
 	return &provider.LinkGetAnnotationDefinitionsOutput{
 		AnnotationDefinitions: map[string]*provider.LinkAnnotationDefinition{},
 	}, nil
+}
+
+func (l *testLambdaLambdaLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
 }
 
 func (l *testLambdaLambdaLink) UpdateLinkedResources(
@@ -1001,6 +1043,13 @@ func (l *testLambdaLambda2Link) GetAnnotationDefinitions(
 	}, nil
 }
 
+func (l *testLambdaLambda2Link) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
+}
+
 func (l *testLambdaLambda2Link) UpdateLinkedResources(
 	ctx context.Context,
 	input *provider.LinkUpdateLinkedResourcesInput,
@@ -1084,6 +1133,13 @@ func (l *testSubnetVPCLink) GetAnnotationDefinitions(
 	return &provider.LinkGetAnnotationDefinitionsOutput{
 		AnnotationDefinitions: map[string]*provider.LinkAnnotationDefinition{},
 	}, nil
+}
+
+func (l *testSubnetVPCLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
 }
 
 func (l *testSubnetVPCLink) UpdateLinkedResources(
@@ -1171,6 +1227,13 @@ func (l *testSecurityGroupVPCLink) GetAnnotationDefinitions(
 	}, nil
 }
 
+func (l *testSecurityGroupVPCLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
+}
+
 func (l *testSecurityGroupVPCLink) UpdateLinkedResources(
 	ctx context.Context,
 	input *provider.LinkUpdateLinkedResourcesInput,
@@ -1254,6 +1317,13 @@ func (l *testRouteTableVPCLink) GetAnnotationDefinitions(
 	return &provider.LinkGetAnnotationDefinitionsOutput{
 		AnnotationDefinitions: map[string]*provider.LinkAnnotationDefinition{},
 	}, nil
+}
+
+func (l *testRouteTableVPCLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
 }
 
 func (l *testRouteTableVPCLink) UpdateLinkedResources(
@@ -1341,6 +1411,13 @@ func (l *testRouteRouteTableLink) GetAnnotationDefinitions(
 	}, nil
 }
 
+func (l *testRouteRouteTableLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
+}
+
 func (l *testRouteRouteTableLink) UpdateLinkedResources(
 	ctx context.Context,
 	input *provider.LinkUpdateLinkedResourcesInput,
@@ -1424,6 +1501,13 @@ func (l *testRouteInternetGatewayLink) GetAnnotationDefinitions(
 	return &provider.LinkGetAnnotationDefinitionsOutput{
 		AnnotationDefinitions: map[string]*provider.LinkAnnotationDefinition{},
 	}, nil
+}
+
+func (l *testRouteInternetGatewayLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
 }
 
 func (l *testRouteInternetGatewayLink) UpdateLinkedResources(

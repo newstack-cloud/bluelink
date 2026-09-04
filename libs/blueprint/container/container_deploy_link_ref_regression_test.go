@@ -279,6 +279,13 @@ func (l *testNoPriorityRuleLambda2Link) GetAnnotationDefinitions(
 	}, nil
 }
 
+func (l *testNoPriorityRuleLambda2Link) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
+}
+
 func (l *testNoPriorityRuleLambda2Link) UpdateLinkedResources(
 	ctx context.Context,
 	input *provider.LinkUpdateLinkedResourcesInput,

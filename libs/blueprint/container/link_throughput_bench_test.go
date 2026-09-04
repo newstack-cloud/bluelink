@@ -40,14 +40,13 @@ type linkThroughputShape struct {
 	functions         int
 	tablesPerFunction int
 	// sharedTable puts every function's links on one table instead of giving each
-	// function its own, so the links share their resource B while their resource A
-	// differs. Several functions reading one table is an ordinary blueprint, and it is
+	// function its own, so the links share one endpoint while the other differs. Several functions reading one table is an ordinary blueprint, and it is
 	// the shape that distinguishes resource affinity keyed on A from affinity keyed on
 	// both endpoints.
-	sharedTable          bool
-	updateResourceA      time.Duration
-	updateResourceB      time.Duration
-	updateIntermediaries time.Duration
+	sharedTable bool
+	// The cost of the merged update of the resources the link writes.
+	updateLinkedResources time.Duration
+	updateIntermediaries  time.Duration
 }
 
 func (s linkThroughputShape) links() int {
@@ -185,16 +184,28 @@ func (r *linkThroughputRecorder) worstResourceBusy() time.Duration {
 	return worst
 }
 
-// Gives a link a configurable cost in each of its three phases, and reports when it is
-// inside one.
+// Gives a link a configurable cost in each of the phases that write, and reports when it
+// is inside one.
 //
-// Only the resource each phase actually writes is recorded as busy, resource A for
-// UpdateResourceA and resource B for UpdateResourceB. Attributing both phases to both
-// resources would report serialisation that is not there.
+// Busy time is recorded against resource A because every link in this benchmark declares
+// LinkModifiesResourceA, the function is written and the table only read. It is the
+// declaration that decides this rather than the side being A, so a link here that wrote
+// the other side, or declared nothing and so counted as writing both, would need the
+// resources taken from LinkModifies instead of hardcoded.
+//
+// Both phases record it because the scheduler holds a link's written resources for the
+// whole run rather than per phase, so the resource is busy across both.
 type latencyObservedLink struct {
 	provider.Link
 	shape    linkThroughputShape
 	recorder *linkThroughputRecorder
+}
+
+func (l *latencyObservedLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
 }
 
 func (l *latencyObservedLink) UpdateLinkedResources(
@@ -204,7 +215,7 @@ func (l *latencyObservedLink) UpdateLinkedResources(
 	l.recorder.enter(input.ResourceAInfo.ResourceName)
 	defer l.recorder.leave(input.ResourceAInfo.ResourceName)
 
-	if err := sleepWithContext(ctx, l.shape.updateResourceA); err != nil {
+	if err := sleepWithContext(ctx, l.shape.updateLinkedResources); err != nil {
 		return nil, err
 	}
 
@@ -544,8 +555,9 @@ func BenchmarkLinkThroughput(b *testing.B) {
 	}
 
 	for _, shape := range shapes {
-		shape.updateResourceA = 20 * time.Millisecond
-		shape.updateResourceB = 20 * time.Millisecond
+		// 40ms across the merged update, which is what the two per-side updates cost
+		// between them before they became one call.
+		shape.updateLinkedResources = 40 * time.Millisecond
 		shape.updateIntermediaries = 20 * time.Millisecond
 
 		b.Run(shape.name(), func(b *testing.B) {

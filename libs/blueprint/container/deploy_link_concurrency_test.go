@@ -71,6 +71,13 @@ type concurrencyObservedLink struct {
 	recorder *linkConcurrencyRecorder
 }
 
+func (l *concurrencyObservedLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
+}
+
 func (l *concurrencyObservedLink) UpdateLinkedResources(
 	ctx context.Context,
 	input *provider.LinkUpdateLinkedResourcesInput,
