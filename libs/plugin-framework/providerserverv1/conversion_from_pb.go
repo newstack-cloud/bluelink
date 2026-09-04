@@ -395,3 +395,45 @@ func fromPBValidateLinkResponse(
 		Diagnostics: diagnostics,
 	}, nil
 }
+
+func fromPBResourceContributions(
+	pbContributions []*ResourceContribution,
+) ([]*provider.ResourceContribution, error) {
+	contributions := make([]*provider.ResourceContribution, 0, len(pbContributions))
+	for _, pbContribution := range pbContributions {
+		contribution, err := fromPBResourceContribution(pbContribution)
+		if err != nil {
+			return nil, err
+		}
+
+		if contribution != nil {
+			contributions = append(contributions, contribution)
+		}
+	}
+
+	return contributions, nil
+}
+
+func fromPBResourceContribution(
+	pbContribution *ResourceContribution,
+) (*provider.ResourceContribution, error) {
+	if pbContribution == nil {
+		return nil, nil
+	}
+
+	value, err := serialisation.FromMappingNodePB(
+		pbContribution.Value,
+		/* optional */ true,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &provider.ResourceContribution{
+		ResourceName:    pbContribution.ResourceName,
+		FieldPath:       pbContribution.FieldPath,
+		Value:           value,
+		Action:          provider.ContributionAction(pbContribution.Action),
+		RetainOnRemoval: pbContribution.RetainOnRemoval,
+	}, nil
+}

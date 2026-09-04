@@ -1391,3 +1391,84 @@ func toPBLinkKind(kind provider.LinkKind) providerserverv1.LinkKind {
 
 	return providerserverv1.LinkKind_LINK_KIND_HARD
 }
+
+func toProduceResourceContributionsErrorResponse(
+	err error,
+) *providerserverv1.ProduceResourceContributionsResponse {
+	return &providerserverv1.ProduceResourceContributionsResponse{
+		Response: &providerserverv1.ProduceResourceContributionsResponse_ErrorResponse{
+			ErrorResponse: errorsv1.CreateResponseFromError(err),
+		},
+	}
+}
+
+func toPBProduceResourceContributionsResponse(
+	output *provider.LinkProduceResourceContributionsOutput,
+) (*providerserverv1.ProduceResourceContributionsResponse, error) {
+	if output == nil {
+		return &providerserverv1.ProduceResourceContributionsResponse{
+			Response: &providerserverv1.ProduceResourceContributionsResponse_ErrorResponse{
+				ErrorResponse: sharedtypesv1.NoResponsePBError(),
+			},
+		}, nil
+	}
+
+	contributions, err := toPBResourceContributions(output.Contributions)
+	if err != nil {
+		return nil, err
+	}
+
+	intermediaryResourceStates, err := toPBLinkIntermediaryResourceStates(
+		output.IntermediaryResourceStates,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	linkData, err := serialisation.ToMappingNodePB(
+		output.LinkData,
+		/* optional */ true,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &providerserverv1.ProduceResourceContributionsResponse{
+		Response: &providerserverv1.ProduceResourceContributionsResponse_CompleteResponse{
+			CompleteResponse: &providerserverv1.ProduceResourceContributionsCompleteResponse{
+				Contributions:              contributions,
+				IntermediaryResourceStates: intermediaryResourceStates,
+				LinkData:                   linkData,
+			},
+		},
+	}, nil
+}
+
+func toPBResourceContributions(
+	contributions []*provider.ResourceContribution,
+) ([]*providerserverv1.ResourceContribution, error) {
+	pbContributions := make([]*providerserverv1.ResourceContribution, 0, len(contributions))
+	for _, contribution := range contributions {
+		if contribution == nil {
+			continue
+		}
+
+		value, err := serialisation.ToMappingNodePB(
+			contribution.Value,
+			/* optional */ true,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		pbContributions = append(pbContributions, &providerserverv1.ResourceContribution{
+			ResourceName:    contribution.ResourceName,
+			FieldPath:       contribution.FieldPath,
+			Value:           value,
+			Action:          providerserverv1.ContributionAction(contribution.Action),
+			RetainOnRemoval: contribution.RetainOnRemoval,
+		})
+	}
+
+	return pbContributions, nil
+}

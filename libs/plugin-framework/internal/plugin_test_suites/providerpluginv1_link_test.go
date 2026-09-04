@@ -119,6 +119,45 @@ func (s *ProviderPluginV1Suite) Test_link_update_linked_resources() {
 	s.Assert().Equal(expected, output)
 }
 
+// The contributions a link produces have to survive the round trip to the plugin and back,
+// including the action and retention on each one, which decide whether a value replaces or
+// joins what is already there and whether removing the link takes it away again.
+func (s *ProviderPluginV1Suite) Test_produce_resource_contributions() {
+	link, err := s.provider.Link(
+		context.Background(),
+		lambdaFunctionResourceType,
+		dynamoDBTableResourceType,
+	)
+	s.Require().NoError(err)
+
+	output, err := link.ProduceResourceContributions(
+		context.Background(),
+		linkProduceResourceContributionsInput(),
+	)
+	s.Require().NoError(err)
+	s.Assert().Equal(testprovider.LinkLambdaDynamoDBContributionsOutput(), output)
+}
+
+func (s *ProviderPluginV1Suite) Test_produce_resource_contributions_fails_for_unexpected_host() {
+	link, err := s.providerWrongHost.Link(
+		context.Background(),
+		lambdaFunctionResourceType,
+		dynamoDBTableResourceType,
+	)
+	s.Require().NoError(err)
+
+	_, err = link.ProduceResourceContributions(
+		context.Background(),
+		linkProduceResourceContributionsInput(),
+	)
+	testutils.AssertInvalidHost(
+		err,
+		errorsv1.PluginActionProviderProduceResourceContributions,
+		testWrongHostID,
+		&s.Suite,
+	)
+}
+
 func (s *ProviderPluginV1Suite) Test_link_update_linked_resources_fails_for_unexpected_host() {
 	link, err := s.providerWrongHost.Link(
 		context.Background(),

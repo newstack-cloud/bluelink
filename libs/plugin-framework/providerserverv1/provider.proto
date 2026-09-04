@@ -140,8 +140,18 @@ service Provider {
     // Unlike resources, links do not map to a specification for a single deployable unit,
     // so link implementations must specify the changes that will be made across multiple resources.
     rpc StageLinkChanges(StageLinkChangesRequest) returns (StageLinkChangesResponse) {}
+	// ProduceResourceContributions returns what a link needs the specs of the
+	// blueprint-declared resources it writes to say, for the creation, update or removal
+	// of the link. It runs once both of the link's endpoints have deployed.
+	// It performs no write of its own, the framework merges the contributions every link
+	// makes to a resource and applies them as a single update of that resource.
+	// The value of the `link_data` field returned in the response will be combined
+	// with the link data output from the other phases of the link
+	// to form the final link data that will be persisted in the state of the blueprint instance.
+    rpc ProduceResourceContributions(ProduceResourceContributionsRequest) returns (ProduceResourceContributionsResponse) {}
 	// UpdateLinkedResources deals with applying the changes to the blueprint-declared
 	// resources in a link relationship, for the creation, update or removal of the link.
+	// This is for changes that no contribution expresses.
 	// Both resources are provided, and a link writes whichever of them it declared it
 	// modifies through the link definition's modifies field.
 	// The value of the `link_data` field returned in the response will be combined
@@ -602,6 +612,68 @@ message UpdateLinkedResourcesRequest {
     // like acquiring locks on resources that are being updated
     // in the same blueprint instance.
     string link_id = 10;
+}
+
+// ProduceResourceContributionsRequest provides the input data needed to produce a link's
+// contributions to the blueprint-declared resources it writes.
+message ProduceResourceContributionsRequest {
+    LinkType link_type = 1;
+    // The ID of the host making the request
+    // to the provider.
+    string host_id = 2;
+    sharedtypesv1.LinkChanges changes = 3;
+    sharedtypesv1.ResourceInfo resource_a_info = 4;
+    sharedtypesv1.ResourceInfo resource_b_info = 5;
+    string instance_name = 6;
+    LinkUpdateType update_type = 7;
+    LinkState current_link_state = 8;
+    LinkContext context = 9;
+    // A handle for the link being deployed that can be used for tasks
+    // like acquiring locks on resources that are being updated
+    // in the same blueprint instance.
+    string link_id = 10;
+}
+
+// ProduceResourceContributionsResponse is the response containing the contributions a
+// link makes to the resources it writes.
+message ProduceResourceContributionsResponse {
+    oneof response {
+        ProduceResourceContributionsCompleteResponse complete_response = 1;
+        sharedtypesv1.ErrorResponse error_response = 2;
+    }
+}
+
+// ProduceResourceContributionsCompleteResponse contains the contributions a link makes,
+// along with the state of any resources it created because a contribution needed their
+// identity.
+message ProduceResourceContributionsCompleteResponse {
+    repeated ResourceContribution contributions = 1;
+    repeated LinkIntermediaryResourceState intermediary_resource_states = 2;
+    schema.MappingNode link_data = 3;
+}
+
+// ResourceContribution is one link's contribution to one field of one resource.
+message ResourceContribution {
+    // The logical name of the resource in the blueprint the contribution is made to,
+    // which is not restricted to the two resources the link relates.
+    string resource_name = 1;
+    // The path of the field in the resource's spec the contribution sets or appends to.
+    string field_path = 2;
+    schema.MappingNode value = 3;
+    ContributionAction action = 4;
+    // Keeps the contribution on the resource after the link that made it is removed.
+    // Contributions are desired state, so leaving this unset retracts the value along
+    // with the link.
+    bool retain_on_removal = 5;
+}
+
+// ContributionAction determines how a contribution is combined with what is already at
+// the field path it targets.
+enum ContributionAction {
+    // Replaces the value at the field path.
+    CONTRIBUTION_ACTION_SET = 0;
+    // Adds the value to the end of the list at the field path.
+    CONTRIBUTION_ACTION_APPEND = 1;
 }
 
 // UpdateLinkedResourcesResponse is the response

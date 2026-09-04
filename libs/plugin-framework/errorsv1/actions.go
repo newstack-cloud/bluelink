@@ -33,6 +33,7 @@ const (
 	PluginActionProviderDestroyResource               = PluginAction("Provider::DestroyResource")
 
 	PluginActionProviderStageLinkChanges                 = PluginAction("Provider::StageLinkChanges")
+	PluginActionProviderProduceResourceContributions     = PluginAction("Provider::ProduceResourceContributions")
 	PluginActionProviderUpdateLinkedResources            = PluginAction("Provider::UpdateLinkedResources")
 	PluginActionProviderUpdateLinkIntermediaryResources  = PluginAction("Provider::UpdateLinkIntermediaryResources")
 	PluginActionProviderGetLinkPriorityResource          = PluginAction("Provider::GetLinkPriorityResource")

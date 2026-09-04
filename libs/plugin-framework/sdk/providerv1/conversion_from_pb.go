@@ -717,3 +717,45 @@ func customVariableTypeToString(
 	}
 	return customVariableType.Type
 }
+
+func fromPBProduceResourceContributionsRequest(
+	req *providerserverv1.ProduceResourceContributionsRequest,
+	resourceService provider.ResourceService,
+) (*provider.LinkProduceResourceContributionsInput, error) {
+	changes, err := convertv1.FromPBLinkChanges(req.Changes)
+	if err != nil {
+		return nil, err
+	}
+
+	resourceAInfo, err := convertv1.FromPBResourceInfo(req.ResourceAInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	resourceBInfo, err := convertv1.FromPBResourceInfo(req.ResourceBInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	linkContext, err := fromPBLinkContext(req.Context)
+	if err != nil {
+		return nil, err
+	}
+
+	currentLinkState, err := fromPBLinkState(req.CurrentLinkState)
+	if err != nil {
+		return nil, err
+	}
+
+	return &provider.LinkProduceResourceContributionsInput{
+		Changes:          &changes,
+		ResourceAInfo:    &resourceAInfo,
+		ResourceBInfo:    &resourceBInfo,
+		LinkID:           req.LinkId,
+		LinkUpdateType:   provider.LinkUpdateType(req.UpdateType),
+		CurrentLinkState: currentLinkState,
+		InstanceName:     req.InstanceName,
+		LinkContext:      linkContext,
+		ResourceService:  resourceService,
+	}, nil
+}
