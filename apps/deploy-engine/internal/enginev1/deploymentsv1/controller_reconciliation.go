@@ -357,6 +357,9 @@ func parsePreciseResourceStatus(status string) core.PreciseResourceStatus {
 	// Map of string representations to PreciseResourceStatus values
 	statusMap := map[string]core.PreciseResourceStatus{
 		"UNKNOWN":                          core.PreciseResourceStatusUnknown,
+		"UPDATING LINK CONTRIBUTIONS":      core.PreciseResourceStatusUpdatingLinkContributions,
+		"LINK CONTRIBUTIONS UPDATED":       core.PreciseResourceStatusLinkContributionsUpdated,
+		"LINK CONTRIBUTIONS UPDATE FAILED": core.PreciseResourceStatusLinkContributionsUpdateFailed,
 		"CREATING":                         core.PreciseResourceStatusCreating,
 		"CONFIG COMPLETE":                  core.PreciseResourceStatusConfigComplete,
 		"CREATED":                          core.PreciseResourceStatusCreated,
