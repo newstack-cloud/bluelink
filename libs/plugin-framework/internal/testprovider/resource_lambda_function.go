@@ -93,6 +93,12 @@ func deployLambdaFunction(
 		}
 	}
 
+	// Echoed only when set, so the tests that assert the plain deploy output are not
+	// asked to carry a field that says nothing.
+	if input.FromLinkContributions {
+		output.ComputedFieldValues["__test_from_link_contributions"] = core.MappingNodeFromBool(true)
+	}
+
 	return output, nil
 }
 

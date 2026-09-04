@@ -923,11 +923,12 @@ func FromPBDeployResourceRequest(
 	}
 
 	return &provider.ResourceDeployInput{
-		InstanceID:      req.InstanceId,
-		InstanceName:    req.InstanceName,
-		ResourceID:      req.ResourceId,
-		Changes:         changes,
-		ProviderContext: providerCtx,
+		InstanceID:            req.InstanceId,
+		InstanceName:          req.InstanceName,
+		ResourceID:            req.ResourceId,
+		Changes:               changes,
+		FromLinkContributions: req.FromLinkContributions,
+		ProviderContext:       providerCtx,
 	}, nil
 }
 

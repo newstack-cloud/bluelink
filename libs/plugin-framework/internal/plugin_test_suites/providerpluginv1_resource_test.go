@@ -554,6 +554,29 @@ func (s *ProviderPluginV1Suite) Test_deploy_resource_for_new_resource() {
 	)
 }
 
+// A deployment carrying link contributions is not a change the blueprint asked for, and
+// the plugin cannot tell the two apart from the changes it is handed.
+func (s *ProviderPluginV1Suite) Test_deploy_resource_tells_the_plugin_the_deployment_carries_contributions() {
+	resource, err := s.provider.Resource(context.Background(), lambdaFunctionResourceType)
+	s.Require().NoError(err)
+
+	output, err := resource.Deploy(
+		context.Background(),
+		&provider.ResourceDeployInput{
+			ResourceID:            testResource1ID,
+			InstanceID:            testInstance1ID,
+			Changes:               createDeployResourceChanges( /* mustRecreate */ false),
+			FromLinkContributions: true,
+			ProviderContext:       testutils.CreateTestProviderContext("aws"),
+		},
+	)
+	s.Require().NoError(err)
+	s.Assert().Equal(
+		core.MappingNodeFromBool(true),
+		output.ComputedFieldValues["__test_from_link_contributions"],
+	)
+}
+
 func (s *ProviderPluginV1Suite) Test_deploy_resource_for_existing_resource_update() {
 	resource, err := s.provider.Resource(context.Background(), lambdaFunctionResourceType)
 	s.Require().NoError(err)
