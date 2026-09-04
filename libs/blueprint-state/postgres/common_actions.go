@@ -94,6 +94,7 @@ func upsertLinks(
 			"intermediaryResourcesState": sliceOrEmpty(link.IntermediaryResourceStates),
 			"data":                       mapOrEmpty(link.Data),
 			"resourceDataMappings":       link.ResourceDataMappings,
+			"contributionRecords":        link.ContributionRecords,
 			"failureReasons":             sliceOrEmpty(link.FailureReasons),
 			"durations":                  link.Durations,
 		}

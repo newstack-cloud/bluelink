@@ -181,6 +181,7 @@ func copyLink(linkState *state.LinkState) state.LinkState {
 		IntermediaryResourceStates: copyIntermediaryResources(linkState.IntermediaryResourceStates),
 		Data:                       linkState.Data,
 		ResourceDataMappings:       linkState.ResourceDataMappings,
+		ContributionRecords:        linkState.ContributionRecords,
 		FailureReasons:             linkState.FailureReasons,
 		Drifted:                    linkState.Drifted,
 		LastDriftDetectedTimestamp: linkState.LastDriftDetectedTimestamp,
@@ -198,11 +199,12 @@ func copyResourceDrift(driftState *state.ResourceDriftState) state.ResourceDrift
 		timestampPtr = &v
 	}
 	return state.ResourceDriftState{
-		ResourceID:   driftState.ResourceID,
-		ResourceName: driftState.ResourceName,
-		SpecData:     driftState.SpecData,
-		Difference:   copyResourceDriftDifference(driftState.Difference),
-		Timestamp:    timestampPtr,
+		ResourceID:                 driftState.ResourceID,
+		ResourceName:               driftState.ResourceName,
+		SpecData:                   driftState.SpecData,
+		Difference:                 copyResourceDriftDifference(driftState.Difference),
+		Timestamp:                  timestampPtr,
+		UnappliedLinkContributions: driftState.UnappliedLinkContributions,
 	}
 }
 
