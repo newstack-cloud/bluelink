@@ -30,6 +30,18 @@ func linkUpdateLinkedResourcesInput() *provider.LinkUpdateLinkedResourcesInput {
 	}
 }
 
+func linkProduceResourceContributionsInput() *provider.LinkProduceResourceContributionsInput {
+	return &provider.LinkProduceResourceContributionsInput{
+		Changes:          testprovider.LinkLambdaDynamoDBChangesOutput().Changes,
+		ResourceAInfo:    createLinkResourceAInfo(),
+		ResourceBInfo:    createLinkResourceBInfo(),
+		LinkID:           testLinkID,
+		LinkUpdateType:   provider.LinkUpdateTypeCreate,
+		CurrentLinkState: createCurrentLinkState(),
+		LinkContext:      testutils.CreateTestLinkContext(),
+	}
+}
+
 func createLinkResourceAInfo() *provider.ResourceInfo {
 	resourceInfo := createDeployResourceInfo()
 	return &resourceInfo

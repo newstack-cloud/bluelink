@@ -812,3 +812,109 @@ func (l *linkProviderClientWrapper) buildLinkRequest(
 		Context: pbLinkContext,
 	}, nil
 }
+
+func (l *linkProviderClientWrapper) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	action := errorsv1.PluginActionProviderProduceResourceContributions
+	req, err := l.buildProduceResourceContributionsRequest(input)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(err, action)
+	}
+
+	response, err := l.client.ProduceResourceContributions(ctx, req)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(err, action)
+	}
+
+	switch result := response.Response.(type) {
+	case *ProduceResourceContributionsResponse_CompleteResponse:
+		return fromPBProduceResourceContributionsResponse(result.CompleteResponse, action)
+	case *ProduceResourceContributionsResponse_ErrorResponse:
+		return nil, errorsv1.CreateErrorFromResponse(result.ErrorResponse, action)
+	}
+
+	return nil, errorsv1.CreateGeneralError(
+		errorsv1.ErrUnexpectedResponseType(action),
+		action,
+	)
+}
+
+func fromPBProduceResourceContributionsResponse(
+	completeResponse *ProduceResourceContributionsCompleteResponse,
+	action errorsv1.PluginAction,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	contributions, err := fromPBResourceContributions(completeResponse.Contributions)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(err, action)
+	}
+
+	intermediaryStates, err := fromPBLinkIntermediaryResourceStates(
+		completeResponse.IntermediaryResourceStates,
+	)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(err, action)
+	}
+
+	linkData, err := serialisation.FromMappingNodePB(
+		completeResponse.LinkData,
+		/* optional */ true,
+	)
+	if err != nil {
+		return nil, errorsv1.CreateGeneralError(err, action)
+	}
+
+	return &provider.LinkProduceResourceContributionsOutput{
+		Contributions:              contributions,
+		IntermediaryResourceStates: intermediaryStates,
+		LinkData:                   linkData,
+	}, nil
+}
+
+func (l *linkProviderClientWrapper) buildProduceResourceContributionsRequest(
+	input *provider.LinkProduceResourceContributionsInput,
+) (*ProduceResourceContributionsRequest, error) {
+	linkChangesPB, err := toPBLinkChanges(input.Changes)
+	if err != nil {
+		return nil, err
+	}
+
+	linkCtx, err := toPBLinkContext(input.LinkContext)
+	if err != nil {
+		return nil, err
+	}
+
+	resourceInfoPB, err := convertv1.ToPBResourceInfo(input.ResourceAInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	otherResourceInfoPB, err := convertv1.ToPBResourceInfo(input.ResourceBInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	currentLinkStatePB, err := toPBLinkState(input.CurrentLinkState)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ProduceResourceContributionsRequest{
+		LinkType: &LinkType{
+			Type: core.LinkType(
+				l.resourceTypeA,
+				l.resourceTypeB,
+			),
+		},
+		HostId:           l.hostID,
+		Changes:          linkChangesPB,
+		ResourceAInfo:    resourceInfoPB,
+		ResourceBInfo:    otherResourceInfoPB,
+		LinkId:           input.LinkID,
+		InstanceName:     input.InstanceName,
+		UpdateType:       LinkUpdateType(input.LinkUpdateType),
+		CurrentLinkState: currentLinkStatePB,
+		Context:          linkCtx,
+	}, nil
+}

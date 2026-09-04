@@ -1582,3 +1582,50 @@ func (p *blueprintProviderPluginImpl) checkHostID(hostID string) error {
 
 	return nil
 }
+
+func (p *blueprintProviderPluginImpl) ProduceResourceContributions(
+	ctx context.Context,
+	req *providerserverv1.ProduceResourceContributionsRequest,
+) (*providerserverv1.ProduceResourceContributionsResponse, error) {
+	err := p.checkHostID(req.HostId)
+	if err != nil {
+		return toProduceResourceContributionsErrorResponse(err), nil
+	}
+
+	linkTypeInfo, err := extractLinkTypeInfo(req.LinkType)
+	if err != nil {
+		return toProduceResourceContributionsErrorResponse(err), nil
+	}
+
+	link, err := p.bpProvider.Link(
+		ctx,
+		linkTypeInfo.resourceTypeA,
+		linkTypeInfo.resourceTypeB,
+	)
+	if err != nil {
+		return toProduceResourceContributionsErrorResponse(err), nil
+	}
+
+	resourceService := pluginservicev1.ResourceServiceFromClient(
+		p.serviceClient,
+	)
+	input, err := fromPBProduceResourceContributionsRequest(
+		req,
+		resourceService,
+	)
+	if err != nil {
+		return toProduceResourceContributionsErrorResponse(err), nil
+	}
+
+	output, err := link.ProduceResourceContributions(ctx, input)
+	if err != nil {
+		return toProduceResourceContributionsErrorResponse(err), nil
+	}
+
+	response, err := toPBProduceResourceContributionsResponse(output)
+	if err != nil {
+		return toProduceResourceContributionsErrorResponse(err), nil
+	}
+
+	return response, nil
+}

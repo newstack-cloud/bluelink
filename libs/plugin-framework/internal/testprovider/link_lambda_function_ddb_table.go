@@ -31,6 +31,7 @@ func linkLambdaFunctionDynamoDBTable() provider.Link {
 		Modifies:                         provider.LinkModifiesResourceA,
 		ValidateFunc:                     linkLambdaFunctionDDBTableValidate,
 		StageChangesFunc:                 linkLambdaFunctionDDBTableStageChanges,
+		ProduceResourceContributionsFunc: linkLambdaFunctionDDBTableProduceResourceContributions,
 		UpdateLinkedResourcesFunc:        linkLambdaFunctionDDBTableUpdateLinkedResources,
 		UpdateIntermediaryResourcesFunc:  linkLambdaFunctionDDBTableUpdateIntermediaryResources,
 		GetIntermediaryExternalStateFunc: linkLambdaFunctionDDBTableGetIntermediaryExternalState,
@@ -96,6 +97,42 @@ func LinkLambdaDynamoDBChangesOutput() *provider.LinkStageChangesOutput {
 	}
 }
 
+func linkLambdaFunctionDDBTableProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return LinkLambdaDynamoDBContributionsOutput(), nil
+}
+
+// Contributes to a resource that is neither of the link's endpoints, and mixes the two
+// actions and both retention behaviours, so the round trip covers each of them.
+func LinkLambdaDynamoDBContributionsOutput() *provider.LinkProduceResourceContributionsOutput {
+	return &provider.LinkProduceResourceContributionsOutput{
+		Contributions: []*provider.ResourceContribution{
+			{
+				ResourceName: "saveOrderFunction",
+				FieldPath:    "spec.environment.variables.TABLE_NAME_ordersTable",
+				Value:        core.MappingNodeFromString("orders-updated"),
+				Action:       provider.ContributionActionSet,
+			},
+			{
+				ResourceName:    "ordersRole",
+				FieldPath:       "spec.policies[0].statements",
+				Value:           core.MappingNodeFromString("dynamodb:PutItem"),
+				Action:          provider.ContributionActionAppend,
+				RetainOnRemoval: true,
+			},
+		},
+		LinkData: core.MappingNodeFields(
+			"saveOrderFunction",
+			core.MappingNodeFields(
+				"tableName",
+				core.MappingNodeFromString("orders-updated"),
+			),
+		),
+	}
+}
+
 func linkLambdaFunctionDDBTableUpdateLinkedResources(
 	ctx context.Context,
 	input *provider.LinkUpdateLinkedResourcesInput,
@@ -156,14 +193,6 @@ func LinkLambdaDynamoDBUpdateLinkedResourcesOutput(linkID string) *provider.Link
 		},
 		ResourceDataMappings: map[string]string{
 			"saveOrderFunction::spec.environment.variables.TABLE_NAME_ordersTable": "saveOrderFunction.environmentVariables.TABLE_NAME_ordersTable",
-		},
-	}
-}
-
-func LinkLambdaDynamoDBUpdateResourceBOutput() *provider.LinkUpdateLinkedResourcesOutput {
-	return &provider.LinkUpdateLinkedResourcesOutput{
-		LinkData: &core.MappingNode{
-			Fields: map[string]*core.MappingNode{},
 		},
 	}
 }

@@ -41,6 +41,7 @@ const (
 	Provider_GetResourceExternalState_FullMethodName         = "/providerserverv1.Provider/GetResourceExternalState"
 	Provider_DestroyResource_FullMethodName                  = "/providerserverv1.Provider/DestroyResource"
 	Provider_StageLinkChanges_FullMethodName                 = "/providerserverv1.Provider/StageLinkChanges"
+	Provider_ProduceResourceContributions_FullMethodName     = "/providerserverv1.Provider/ProduceResourceContributions"
 	Provider_UpdateLinkedResources_FullMethodName            = "/providerserverv1.Provider/UpdateLinkedResources"
 	Provider_UpdateLinkIntermediaryResources_FullMethodName  = "/providerserverv1.Provider/UpdateLinkIntermediaryResources"
 	Provider_GetLinkPriorityResource_FullMethodName          = "/providerserverv1.Provider/GetLinkPriorityResource"
@@ -186,8 +187,18 @@ type ProviderClient interface {
 	// Unlike resources, links do not map to a specification for a single deployable unit,
 	// so link implementations must specify the changes that will be made across multiple resources.
 	StageLinkChanges(ctx context.Context, in *StageLinkChangesRequest, opts ...grpc.CallOption) (*StageLinkChangesResponse, error)
+	// ProduceResourceContributions returns what a link needs the specs of the
+	// blueprint-declared resources it writes to say, for the creation, update or removal
+	// of the link. It runs once both of the link's endpoints have deployed.
+	// It performs no write of its own, the framework merges the contributions every link
+	// makes to a resource and applies them as a single update of that resource.
+	// The value of the `link_data` field returned in the response will be combined
+	// with the link data output from the other phases of the link
+	// to form the final link data that will be persisted in the state of the blueprint instance.
+	ProduceResourceContributions(ctx context.Context, in *ProduceResourceContributionsRequest, opts ...grpc.CallOption) (*ProduceResourceContributionsResponse, error)
 	// UpdateLinkedResources deals with applying the changes to the blueprint-declared
 	// resources in a link relationship, for the creation, update or removal of the link.
+	// This is for changes that no contribution expresses.
 	// Both resources are provided, and a link writes whichever of them it declared it
 	// modifies through the link definition's modifies field.
 	// The value of the `link_data` field returned in the response will be combined
@@ -507,6 +518,16 @@ func (c *providerClient) StageLinkChanges(ctx context.Context, in *StageLinkChan
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(StageLinkChangesResponse)
 	err := c.cc.Invoke(ctx, Provider_StageLinkChanges_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *providerClient) ProduceResourceContributions(ctx context.Context, in *ProduceResourceContributionsRequest, opts ...grpc.CallOption) (*ProduceResourceContributionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ProduceResourceContributionsResponse)
+	err := c.cc.Invoke(ctx, Provider_ProduceResourceContributions_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -863,8 +884,18 @@ type ProviderServer interface {
 	// Unlike resources, links do not map to a specification for a single deployable unit,
 	// so link implementations must specify the changes that will be made across multiple resources.
 	StageLinkChanges(context.Context, *StageLinkChangesRequest) (*StageLinkChangesResponse, error)
+	// ProduceResourceContributions returns what a link needs the specs of the
+	// blueprint-declared resources it writes to say, for the creation, update or removal
+	// of the link. It runs once both of the link's endpoints have deployed.
+	// It performs no write of its own, the framework merges the contributions every link
+	// makes to a resource and applies them as a single update of that resource.
+	// The value of the `link_data` field returned in the response will be combined
+	// with the link data output from the other phases of the link
+	// to form the final link data that will be persisted in the state of the blueprint instance.
+	ProduceResourceContributions(context.Context, *ProduceResourceContributionsRequest) (*ProduceResourceContributionsResponse, error)
 	// UpdateLinkedResources deals with applying the changes to the blueprint-declared
 	// resources in a link relationship, for the creation, update or removal of the link.
+	// This is for changes that no contribution expresses.
 	// Both resources are provided, and a link writes whichever of them it declared it
 	// modifies through the link definition's modifies field.
 	// The value of the `link_data` field returned in the response will be combined
@@ -1042,6 +1073,9 @@ func (UnimplementedProviderServer) DestroyResource(context.Context, *sharedtypes
 }
 func (UnimplementedProviderServer) StageLinkChanges(context.Context, *StageLinkChangesRequest) (*StageLinkChangesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StageLinkChanges not implemented")
+}
+func (UnimplementedProviderServer) ProduceResourceContributions(context.Context, *ProduceResourceContributionsRequest) (*ProduceResourceContributionsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProduceResourceContributions not implemented")
 }
 func (UnimplementedProviderServer) UpdateLinkedResources(context.Context, *UpdateLinkedResourcesRequest) (*UpdateLinkedResourcesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateLinkedResources not implemented")
@@ -1507,6 +1541,24 @@ func _Provider_StageLinkChanges_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ProviderServer).StageLinkChanges(ctx, req.(*StageLinkChangesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Provider_ProduceResourceContributions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProduceResourceContributionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProviderServer).ProduceResourceContributions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Provider_ProduceResourceContributions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProviderServer).ProduceResourceContributions(ctx, req.(*ProduceResourceContributionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2015,6 +2067,10 @@ var Provider_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "StageLinkChanges",
 			Handler:    _Provider_StageLinkChanges_Handler,
+		},
+		{
+			MethodName: "ProduceResourceContributions",
+			Handler:    _Provider_ProduceResourceContributions_Handler,
 		},
 		{
 			MethodName: "UpdateLinkedResources",

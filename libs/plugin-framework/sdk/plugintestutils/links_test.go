@@ -80,7 +80,7 @@ func (s *LinkTestRunnerSuite) Test_update_link_resource_suite_runner() {
 		*mockConfig,
 		*mockService,
 	]{
-		s.createMockLinkUpdateResourceATestCase(collectedCalls),
+		s.createMockLinkUpdateLinkedResourcesTestCase(collectedCalls),
 		s.createMockLinkUpdateResourceRealTestCase(&cleanedUp),
 		s.createMockLinkUpdateErrorTestCase(),
 	}
@@ -95,7 +95,7 @@ func (s *LinkTestRunnerSuite) Test_update_link_resource_suite_runner() {
 	collectedCalls.AssertCalled(&s.Suite, "ExtraAssertions")
 }
 
-func (s *LinkTestRunnerSuite) createMockLinkUpdateResourceATestCase(
+func (s *LinkTestRunnerSuite) createMockLinkUpdateLinkedResourcesTestCase(
 	callCollector *MockCalls,
 ) LinkUpdateResourceTestCase[
 	*mockConfig,

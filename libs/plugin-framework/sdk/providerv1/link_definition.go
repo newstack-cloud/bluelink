@@ -131,8 +131,24 @@ type LinkDefinition struct {
 		input *provider.LinkStageChangesInput,
 	) (*provider.LinkStageChangesOutput, error)
 
+	// A function that returns what the link needs the specs of the blueprint-declared
+	// resources it writes to say, once both of its endpoints have deployed.
+	//
+	// The framework merges the contributions every link makes to a resource and applies
+	// them as a single update of that resource, so this performs no write of its own.
+	// A link implements this or UpdateLinkedResourcesFunc for a given resource, never
+	// both.
+	//
+	// Optional. A link that contributes to no resource leaves this unset and behaves
+	// exactly as it did before contributions existed.
+	ProduceResourceContributionsFunc func(
+		ctx context.Context,
+		input *provider.LinkProduceResourceContributionsInput,
+	) (*provider.LinkProduceResourceContributionsOutput, error)
+
 	// A function that deals with applying the changes to the blueprint-declared resources
 	// in a link relationship, for the creation, update or removal of the link.
+	// This is for changes that no contribution expresses.
 	// The value of the `LinkData` field returned in the output will be combined
 	// with the LinkData output from updating intermediary resources
 	// to form the final LinkData that will be persisted in the state of the blueprint instance.
@@ -228,6 +244,25 @@ func (l *LinkDefinition) StageChanges(
 	input *provider.LinkStageChangesInput,
 ) (*provider.LinkStageChangesOutput, error) {
 	return l.StageChangesFunc(ctx, input)
+}
+
+func (l *LinkDefinition) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	if l.ProduceResourceContributionsFunc == nil {
+		// Contributing nothing is the behaviour of every link that has not moved to
+		// contributions, so it is an empty result rather than an error.
+		return &provider.LinkProduceResourceContributionsOutput{}, nil
+	}
+
+	// Attach link ID to the context so that it can be automatically
+	// attached to calls from the plugin to the plugin service, which matters here
+	// because producing a contribution can create a resource the link owns and
+	// acquire locks to do so.
+	ctxWithLinkID := context.WithValue(ctx, utils.ContextKeyLinkID, input.LinkID)
+
+	return l.ProduceResourceContributionsFunc(ctxWithLinkID, input)
 }
 
 func (l *LinkDefinition) UpdateLinkedResources(
