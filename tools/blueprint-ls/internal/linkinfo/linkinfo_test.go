@@ -223,6 +223,13 @@ func (l *stubLink) StageChanges(
 	return &provider.LinkStageChangesOutput{}, nil
 }
 
+func (l *stubLink) ProduceResourceContributions(
+	ctx context.Context,
+	input *provider.LinkProduceResourceContributionsInput,
+) (*provider.LinkProduceResourceContributionsOutput, error) {
+	return &provider.LinkProduceResourceContributionsOutput{}, nil
+}
+
 func (l *stubLink) UpdateLinkedResources(
 	ctx context.Context,
 	input *provider.LinkUpdateLinkedResourcesInput,
