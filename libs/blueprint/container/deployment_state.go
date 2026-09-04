@@ -112,8 +112,19 @@ type DeploymentState interface {
 	// exclusion between links that write the same resource without depending on one
 	// another is a separate concern, and comes from resource locks.
 	AwaitingCapabilityProviders(linkName string) []string
+	// SetLinkContributionTargets records which resources each link declared it will
+	// contribute to, resolved once for the deployment before any link runs.
+	SetLinkContributionTargets(targets map[string][]string)
+	// AwaitingContributors returns the names of the links that declared a contribution to
+	// the named resource and have not settled yet.
+	AwaitingContributors(resourceName string) []string
+	// ContributionSetComplete reports whether every link that declared a contribution to
+	// the named resource has settled, which is when the resource's merged update can be
+	// built from what those links contributed.
+	ContributionSetComplete(resourceName string) bool
 	// MarkLinkSettled records that a link will produce no further work, whatever the
-	// outcome, and releases anything waiting on the capabilities it provides.
+	// outcome, and releases anything waiting on the capabilities it provides, along with
+	// the targets it declared a contribution to.
 	//
 	// Called for a link that deployed, one that failed, and one that is not in the
 	// change set and will never run. A link that never reports leaves every link
@@ -179,6 +190,7 @@ func NewDefaultDeploymentState() DeploymentState {
 		resourceDurationInfo:       make(map[string]*state.ResourceCompletionDurations),
 		elementDependencies:        make(map[string]*state.DependencyInfo),
 		settledLinks:               make(map[string]bool),
+		contributionTargets:        make(map[string][]string),
 	}
 }
 
@@ -253,6 +265,10 @@ type defaultDeploymentState struct {
 	// report again, so a requirer left waiting for one would wait for a completion that
 	// never arrives.
 	settledLinks map[string]bool
+	// A mapping of a resource name to the logical names of the links that declared they
+	// will contribute to it. Held target-first because the question asked of it is what
+	// one resource is waiting on.
+	contributionTargets map[string][]string
 	// Mutex is required as resources can be deployed concurrently.
 	mu sync.Mutex
 }
@@ -283,6 +299,47 @@ func (d *defaultDeploymentState) AwaitingCapabilityProviders(linkName string) []
 	}
 
 	return outstanding
+}
+
+func (d *defaultDeploymentState) SetLinkContributionTargets(targets map[string][]string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	// Inverted on the way in so the lookup a stalled target makes is a map read rather
+	// than a scan of every link's declarations.
+	contributionTargets := map[string][]string{}
+	for linkName, resourceNames := range targets {
+		for _, resourceName := range resourceNames {
+			contributionTargets[resourceName] = append(
+				contributionTargets[resourceName],
+				linkName,
+			)
+		}
+	}
+
+	for resourceName := range contributionTargets {
+		slices.Sort(contributionTargets[resourceName])
+	}
+
+	d.contributionTargets = contributionTargets
+}
+
+func (d *defaultDeploymentState) AwaitingContributors(resourceName string) []string {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	outstanding := []string{}
+	for _, linkName := range d.contributionTargets[resourceName] {
+		if !d.settledLinks[linkName] {
+			outstanding = append(outstanding, linkName)
+		}
+	}
+
+	return outstanding
+}
+
+func (d *defaultDeploymentState) ContributionSetComplete(resourceName string) bool {
+	return len(d.AwaitingContributors(resourceName)) == 0
 }
 
 func (d *defaultDeploymentState) MarkLinkSettled(linkName string) {

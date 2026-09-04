@@ -345,6 +345,12 @@ func (c *defaultBlueprintContainer) deploy(
 	}
 	deployState.SetLinkCapabilityGraph(linkCapabilities)
 
+	// Resolved once for the same reason, what a link will contribute is declared at change
+	// staging, so it is known before any link runs and does not change while they do.
+	deployState.SetLinkContributionTargets(
+		BuildLinkContributionTargets(input.Changes),
+	)
+
 	// One budget for the whole deployment. A child blueprint is handed the budget its
 	// parent is using rather than creating its own, so the bound holds across the
 	// instance tree instead of being multiplied by it.
