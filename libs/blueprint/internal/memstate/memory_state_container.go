@@ -1142,6 +1142,7 @@ func copyLink(linkState *state.LinkState) state.LinkState {
 		),
 		Data:                       linkState.Data,
 		ResourceDataMappings:       resourceDataMappings,
+		ContributionRecords:        linkState.ContributionRecords,
 		FailureReasons:             linkState.FailureReasons,
 		Drifted:                    linkState.Drifted,
 		LastDriftDetectedTimestamp: linkState.LastDriftDetectedTimestamp,
@@ -1201,9 +1202,10 @@ func copyExport(
 	}
 
 	return &state.ExportState{
-		Value: exportState.Value,
-		Type:  exportState.Type,
-		Field: exportState.Field,
+		Value:       exportState.Value,
+		Type:        exportState.Type,
+		Description: exportState.Description,
+		Field:       exportState.Field,
 	}
 }
 
