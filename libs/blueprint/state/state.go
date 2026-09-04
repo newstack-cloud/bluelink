@@ -703,6 +703,19 @@ type LinkState struct {
 	//
 	// {resourceName} represents the logical name of the resource in single blueprint instance.
 	ResourceDataMappings map[string]string `json:"resourceDataMappings,omitempty"`
+	// ContributionRecords holds how each contribution this link makes is to be combined
+	// with what is already at the field it targets, and whether it outlives the link.
+	//
+	// Keyed by the same "{resourceName}::{fieldPath}" as ResourceDataMappings, which says
+	// where a contribution's value comes from but not how to apply it.
+	//
+	// Both are needed to rebuild a resource's contributions for a link that does not run
+	// in a deployment, which is the case the rebuild exists for. A link that appended one
+	// statement to a shared role and is replayed as a replacement would leave the role
+	// holding that statement alone, having discarded what every other link contributed.
+	// A link that has been removed never runs at all, so this is the only account of
+	// whether its contribution was meant to outlive it.
+	ContributionRecords map[string]ContributionRecord `json:"contributionRecords,omitempty"`
 	// Holds the latest reasons for failures in deploying a link,
 	// this only ever holds the results of the latest deployment attempt.
 	FailureReasons []string `json:"failureReasons"`
@@ -746,6 +759,22 @@ type LinkIntermediaryResourceState struct {
 	// fields derived from the deployed resource in the provider.
 	ResourceSpecData *core.MappingNode `json:"resourceSpecData"`
 	FailureReasons   []string          `json:"failureReasons,omitempty"`
+}
+
+// ContributionRecord holds what a link's contribution to a resource field needs in order
+// to be reapplied without the link running again.
+//
+// The value itself is not held here. It is read from the link's data through the mapping
+// in ResourceDataMappings, and this says what to do with it.
+type ContributionRecord struct {
+	// Action determines whether the contribution replaces the value at the field it
+	// targets or is added to the list there. It matches the contribution action a link
+	// returns when it produces the contribution.
+	Action int `json:"action"`
+	// RetainOnRemoval keeps the contribution on the resource after the link that made it
+	// has been removed. Contributions are desired state, so a contribution is otherwise
+	// retracted along with the link that stated it.
+	RetainOnRemoval bool `json:"retainOnRemoval,omitempty"`
 }
 
 // LinkStatusInfo holds information about the status of a link
