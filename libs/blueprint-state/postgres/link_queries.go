@@ -30,6 +30,7 @@ func upsertLinksQuery() string {
 		intermediary_resources_state,
 		data,
 		resource_data_mappings,
+		contribution_records,
 		failure_reasons,
 		durations
 	) VALUES (
@@ -42,6 +43,7 @@ func upsertLinksQuery() string {
 		@intermediaryResourcesState,
 		@data,
 		@resourceDataMappings,
+		@contributionRecords,
 		@failureReasons,
 		@durations
 	) ON CONFLICT (id) DO UPDATE SET
@@ -53,6 +55,7 @@ func upsertLinksQuery() string {
 		intermediary_resources_state = excluded.intermediary_resources_state,
 		data = excluded.data,
 		resource_data_mappings = excluded.resource_data_mappings,
+		contribution_records = excluded.contribution_records,
 		failure_reasons = excluded.failure_reasons,
 		durations = excluded.durations
 	`
