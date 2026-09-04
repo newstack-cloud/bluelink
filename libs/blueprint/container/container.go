@@ -261,32 +261,33 @@ func getErrorChannelDrainTimeout(configuredDrainTimeout time.Duration) time.Dura
 type defaultBlueprintContainer struct {
 	stateContainer state.Container
 	// Should be a namespace to provider map.
-	providers                map[string]provider.Provider
-	resourceRegistry         resourcehelpers.Registry
-	linkRegistry             provider.LinkRegistry
-	spec                     speccore.BlueprintSpec
-	linkInfo                 links.SpecLinkInfo
-	resourceTemplates        map[string]string
-	refChainCollector        refgraph.RefChainCollector
-	substitutionResolver     subengine.SubstitutionResolver
-	changeStager             ResourceChangeStager
-	diagnostics              []*core.Diagnostic
-	clock                    core.Clock
-	idGenerator              core.IDGenerator
-	createDeploymentState    func() DeploymentState
-	createChangeStagingState func() ChangeStagingState
-	blueprintPreparer        BlueprintPreparer
-	linkChangeStager         LinkChangeStager
-	childChangeStager        ChildChangeStager
-	resourceDestroyer        ResourceDestroyer
-	childBlueprintDestroyer  ChildBlueprintDestroyer
-	linkDestroyer            LinkDestroyer
-	linkDeployer             LinkDeployer
-	driftChecker             drift.Checker
-	resourceDeployer         ResourceDeployer
-	childDeployer            ChildBlueprintDeployer
-	defaultRetryPolicy       *provider.RetryPolicy
-	logger                   core.Logger
+	providers                   map[string]provider.Provider
+	resourceRegistry            resourcehelpers.Registry
+	linkRegistry                provider.LinkRegistry
+	spec                        speccore.BlueprintSpec
+	linkInfo                    links.SpecLinkInfo
+	resourceTemplates           map[string]string
+	refChainCollector           refgraph.RefChainCollector
+	substitutionResolver        subengine.SubstitutionResolver
+	changeStager                ResourceChangeStager
+	diagnostics                 []*core.Diagnostic
+	clock                       core.Clock
+	idGenerator                 core.IDGenerator
+	createDeploymentState       func() DeploymentState
+	createChangeStagingState    func() ChangeStagingState
+	blueprintPreparer           BlueprintPreparer
+	linkChangeStager            LinkChangeStager
+	childChangeStager           ChildChangeStager
+	resourceDestroyer           ResourceDestroyer
+	childBlueprintDestroyer     ChildBlueprintDestroyer
+	linkDestroyer               LinkDestroyer
+	linkDeployer                LinkDeployer
+	driftChecker                drift.Checker
+	resourceDeployer            ResourceDeployer
+	mergedContributionsDeployer MergedContributionsDeployer
+	childDeployer               ChildBlueprintDeployer
+	defaultRetryPolicy          *provider.RetryPolicy
+	logger                      core.Logger
 }
 
 // ChildBlueprintLoaderFactory provides a factory function for creating a new loader
@@ -331,9 +332,12 @@ type BlueprintContainerDependencies struct {
 	LinkDeployer              LinkDeployer
 	DriftChecker              drift.Checker
 	ResourceDeployer          ResourceDeployer
-	ChildBlueprintDeployer    ChildBlueprintDeployer
-	DefaultRetryPolicy        *provider.RetryPolicy
-	Logger                    core.Logger
+	// MergedContributionsDeployer updates a resource with what the links contributing to
+	// it need its spec to say, once every contributing link has settled.
+	MergedContributionsDeployer MergedContributionsDeployer
+	ChildBlueprintDeployer      ChildBlueprintDeployer
+	DefaultRetryPolicy          *provider.RetryPolicy
+	Logger                      core.Logger
 }
 
 // NewDefaultBlueprintContainer creates a new instance of the default
@@ -370,6 +374,7 @@ func NewDefaultBlueprintContainer(
 		deps.LinkDeployer,
 		deps.DriftChecker,
 		deps.ResourceDeployer,
+		deps.MergedContributionsDeployer,
 		deps.ChildBlueprintDeployer,
 		deps.DefaultRetryPolicy,
 		deps.Logger,

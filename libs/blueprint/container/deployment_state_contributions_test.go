@@ -66,6 +66,55 @@ func (s *DeploymentStateContributionsTestSuite) Test_a_resource_with_no_contribu
 	s.Assert().True(deployState.ContributionSetComplete("ordersTable"))
 }
 
+func (s *DeploymentStateContributionsTestSuite) Test_claims_a_target_once_its_links_have_all_settled() {
+	deployState := s.stateWithTargets(map[string][]string{
+		"saveOrderFunction::ordersTable": {"saveOrderFunction"},
+		"saveOrderFunction::appVpc":      {"saveOrderFunction"},
+	})
+
+	deployState.MarkLinkSettled("saveOrderFunction::ordersTable")
+	s.Assert().Empty(
+		deployState.ClaimContributionTargetsReadyToUpdate(),
+		"a resource one of whose links has yet to settle is not ready",
+	)
+
+	deployState.MarkLinkSettled("saveOrderFunction::appVpc")
+	s.Assert().Equal(
+		[]string{"saveOrderFunction"},
+		deployState.ClaimContributionTargetsReadyToUpdate(),
+	)
+}
+
+// Links settle from several goroutines, and the last contributors to a resource can settle
+// together, so more than one of them can find the resource complete. A resource updated
+// once per link that noticed would be written concurrently with itself.
+func (s *DeploymentStateContributionsTestSuite) Test_claims_a_target_only_once() {
+	deployState := s.stateWithTargets(map[string][]string{
+		"saveOrderFunction::ordersTable": {"saveOrderFunction"},
+	})
+	deployState.MarkLinkSettled("saveOrderFunction::ordersTable")
+
+	s.Require().Equal(
+		[]string{"saveOrderFunction"},
+		deployState.ClaimContributionTargetsReadyToUpdate(),
+	)
+	s.Assert().Empty(
+		deployState.ClaimContributionTargetsReadyToUpdate(),
+		"the second caller finds the resource already claimed",
+	)
+}
+
+// A resource nothing contributes to has no merged update to issue, so it must never be
+// claimed as one, however many links the deployment runs.
+func (s *DeploymentStateContributionsTestSuite) Test_never_claims_a_resource_with_no_contributors() {
+	deployState := s.stateWithTargets(map[string][]string{
+		"saveOrderFunction::ordersTable": {},
+	})
+	deployState.MarkLinkSettled("saveOrderFunction::ordersTable")
+
+	s.Assert().Empty(deployState.ClaimContributionTargetsReadyToUpdate())
+}
+
 func (s *DeploymentStateContributionsTestSuite) stateWithTargets(
 	targets map[string][]string,
 ) DeploymentState {

@@ -39,6 +39,12 @@ type LinkDeployResult struct {
 	IntermediaryResourceStates []*state.LinkIntermediaryResourceState
 	LinkData                   *core.MappingNode
 	ResourceDataMappings       map[string]string
+	// Contributions holds what the link needs the resources it contributes to include, for
+	// the merged update of each of those resources to carry.
+	Contributions []*provider.ResourceContribution
+	// ContributionRecords holds how each contribution is applied and whether it outlives
+	// the link, keyed the same way as ResourceDataMappings.
+	ContributionRecords map[string]state.ContributionRecord
 }
 
 // NewDefaultLinkDeployer creates a new instance of the default implementation
@@ -129,6 +135,23 @@ func (d *defaultLinkDeployer) Deploy(
 		deployCtx.ResourceRegistry,
 		linkElement.ID(),
 	)
+	contributionsOutput, err := linkImplementation.ProduceResourceContributions(
+		ctx,
+		&provider.LinkProduceResourceContributionsInput{
+			ResourceAInfo:    resourceAInfo,
+			ResourceBInfo:    resourceBInfo,
+			LinkID:           linkElement.ID(),
+			InstanceName:     instanceName,
+			LinkUpdateType:   linkUpdateType,
+			CurrentLinkState: currentLinkState,
+			LinkContext:      linkCtx,
+			ResourceService:  linkResourceService,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
 	linkedResourcesOutput, stop, err := d.updateLinkedResources(
 		ctx,
 		linkImplementation,
@@ -170,6 +193,7 @@ func (d *defaultLinkDeployer) Deploy(
 		provider.CreateRetryContext(retryPolicy),
 		&linkUpdateResourceOutputs{
 			linkedResourcesOutput: linkedResourcesOutput,
+			contributionsOutput:   contributionsOutput,
 		},
 		deployCtx,
 	)
@@ -638,6 +662,7 @@ func (d *defaultLinkDeployer) updateLinkIntermediaryResources(
 	result := createLinkDeployResult(
 		resourceOutputs.linkedResourcesOutput,
 		intermediaryResourcesOutput,
+		resourceOutputs.contributionsOutput,
 	)
 	deployCtx.State.SetLinkDeployResult(linkInfo.element.LogicalName(), result)
 
@@ -858,6 +883,7 @@ func getResolvedResourceFromInputChanges(
 func createLinkDeployResult(
 	linkedResourcesOutput *provider.LinkUpdateLinkedResourcesOutput,
 	intermediaryResourcesOutput *provider.LinkUpdateIntermediaryResourcesOutput,
+	contributionsOutput *provider.LinkProduceResourceContributionsOutput,
 ) *LinkDeployResult {
 	linkedResourcesLinkData := getLinkedResourcesOutputLinkData(linkedResourcesOutput)
 	intermediaryResourcesOutputLinkData := getIntermediaryResourcesOutputLinkData(
@@ -871,17 +897,58 @@ func createLinkDeployResult(
 		intermediaryResourcesOutput,
 	)
 
+	contributions := getProducedContributions(contributionsOutput)
+	contributed := ContributionsToLinkData(contributions)
+
 	return &LinkDeployResult{
-		IntermediaryResourceStates: intermediaryResourceStates,
+		IntermediaryResourceStates: append(
+			intermediaryResourceStates,
+			getProducedIntermediaryStates(contributionsOutput)...,
+		),
 		LinkData: core.MergeMaps(
 			linkedResourcesLinkData,
 			intermediaryResourcesOutputLinkData,
+			getProducedContributionsLinkData(contributionsOutput),
+			&core.MappingNode{Fields: contributed.Data},
 		),
 		ResourceDataMappings: core.MergeNativeMaps(
 			linkedResourcesDataMappings,
 			intermediaryResourcesDataMappings,
+			contributed.ResourceDataMappings,
 		),
+		Contributions:       contributions,
+		ContributionRecords: contributed.ContributionRecords,
 	}
+}
+
+func getProducedContributions(
+	output *provider.LinkProduceResourceContributionsOutput,
+) []*provider.ResourceContribution {
+	if output == nil {
+		return nil
+	}
+
+	return output.Contributions
+}
+
+func getProducedContributionsLinkData(
+	output *provider.LinkProduceResourceContributionsOutput,
+) *core.MappingNode {
+	if output == nil {
+		return nil
+	}
+
+	return output.LinkData
+}
+
+func getProducedIntermediaryStates(
+	output *provider.LinkProduceResourceContributionsOutput,
+) []*state.LinkIntermediaryResourceState {
+	if output == nil {
+		return nil
+	}
+
+	return output.IntermediaryResourceStates
 }
 
 func getLinkedResourcesOutputLinkData(output *provider.LinkUpdateLinkedResourcesOutput) *core.MappingNode {
@@ -939,4 +1006,5 @@ func unknownErrorWarningText(operation string) string {
 
 type linkUpdateResourceOutputs struct {
 	linkedResourcesOutput *provider.LinkUpdateLinkedResourcesOutput
+	contributionsOutput   *provider.LinkProduceResourceContributionsOutput
 }

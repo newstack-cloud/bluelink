@@ -1,0 +1,27 @@
+version: 2025-11-02
+resources:
+  ordersRole:
+    type: aws/iam/role
+    description: "Execution role two functions are granted access through."
+    metadata:
+      labels:
+        system: orders
+    spec: {}
+
+  saveOrderFunction:
+    type: aws/lambda/function
+    description: "Function granted access through the shared role."
+    linkSelector:
+      byLabel:
+        system: orders
+    spec:
+      handler: "src/save_order.handler"
+
+  archiveOrderFunction:
+    type: aws/lambda/function
+    description: "Second function granted access through the same shared role."
+    linkSelector:
+      byLabel:
+        system: orders
+    spec:
+      handler: "src/archive_order.handler"

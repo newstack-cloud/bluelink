@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sync"
 	"testing"
 	"time"
@@ -15,8 +16,12 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/specmerge"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
+
+type LinkProjectionDeployTestSuite struct {
+	suite.Suite
+}
 
 // A resource that a link has written to must be deployed with what the link wrote, when
 // it is updated for a reason that has nothing to do with the link.
@@ -33,7 +38,7 @@ import (
 // stripped every link-granted IAM policy from the application's execution roles and
 // reported success. The application was left running without the permissions its handlers
 // depend on.
-func TestUpdateDeployKeepsFieldsContributedByLinks(t *testing.T) {
+func (s *LinkProjectionDeployTestSuite) Test_update_deploy_keeps_fields_contributed_by_links() {
 	stateContainer := memstate.NewMemoryStateContainer()
 	deployedResource := &recordingLambdaResource{}
 	loader, _ := newLinkProjectionLoader(
@@ -47,8 +52,8 @@ func TestUpdateDeployKeepsFieldsContributedByLinks(t *testing.T) {
 
 	// The initial deploy runs the link, which writes the function's environment
 	// variables and records that it owns them.
-	instanceID := deployInitialInstanceForProjectionTest(t, loader, params)
-	requireLinkRecordedItsContribution(t, stateContainer, instanceID)
+	instanceID := s.deployInitialInstanceForProjectionTest(loader, params)
+	s.requireLinkRecordedItsContribution(stateContainer, instanceID)
 	deployedResource.forget()
 
 	updatedContainer, err := loader.Load(
@@ -56,7 +61,7 @@ func TestUpdateDeployKeepsFieldsContributedByLinks(t *testing.T) {
 		"__testdata/container/deploy/blueprint-link-projection-update.yml",
 		params,
 	)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	updateChangeStagingChannels := createChangeStagingChannels()
 	err = updatedContainer.StageChanges(
@@ -65,14 +70,14 @@ func TestUpdateDeployKeepsFieldsContributedByLinks(t *testing.T) {
 		updateChangeStagingChannels,
 		params,
 	)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	updateChanges, err := consumeStagedChangesForTest(updateChangeStagingChannels)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 	// The change this deployment is for has nothing to do with the link, which is what
 	// makes the contribution's removal silent.
-	require.Contains(t, updateChanges.ResourceChanges, "ordersFunction")
-	requireNoChangesReportedForContribution(t, updateChanges.ResourceChanges["ordersFunction"])
+	s.Require().Contains(updateChanges.ResourceChanges, "ordersFunction")
+	s.requireNoChangesReportedForContribution(updateChanges.ResourceChanges["ordersFunction"])
 
 	updateChannels := CreateDeployChannels()
 	err = updatedContainer.Deploy(
@@ -85,37 +90,35 @@ func TestUpdateDeployKeepsFieldsContributedByLinks(t *testing.T) {
 		updateChannels,
 		params,
 	)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
-	finishedMessage := consumeUntilFinishForTest(t, updateChannels, "update deploy")
-	require.Equal(
-		t,
+	finishedMessage := consumeUntilFinishForTest(s.T(), updateChannels, "update deploy")
+	s.Require().Equal(
 		core.InstanceStatusUpdated,
 		finishedMessage.Status,
 		fmt.Sprintf("update deploy failed: %v", finishedMessage.FailureReasons),
 	)
 
 	deployedSpec := deployedResource.lastDeployedSpec()
-	require.NotNil(t, deployedSpec)
+	s.Require().NotNil(deployedSpec)
 
 	tableName, _ := core.GetPathValue(
 		"$.environment.variables.TABLE_NAME_ordersTable",
 		deployedSpec,
 		core.MappingNodeMaxTraverseDepth,
 	)
-	require.NotNil(
-		t,
+	s.Require().NotNil(
 		tableName,
 		"the environment variable the link contributed was not part of the deployed spec, "+
 			"so deploying removes it from the live resource",
 	)
-	require.Equal(t, "production-orders", core.StringValue(tableName))
+	s.Require().Equal("production-orders", core.StringValue(tableName))
 
 	// The change the deployment is actually for must still be applied.
 	handler, _ := core.GetPathValue("$.handler", deployedSpec, core.MappingNodeMaxTraverseDepth)
-	require.Equal(t, "src/orders_v2.handler", core.StringValue(handler))
+	s.Require().Equal("src/orders_v2.handler", core.StringValue(handler))
 
-	requireStateHoldsOnlyTheDeclaredSpec(t, stateContainer, instanceID)
+	s.requireStateHoldsOnlyTheDeclaredSpec(stateContainer, instanceID)
 }
 
 // The resource's persisted spec holds what the blueprint declares, and not what links
@@ -128,27 +131,24 @@ func TestUpdateDeployKeepsFieldsContributedByLinks(t *testing.T) {
 // from what the blueprint declares without cross-referencing with link data mappings.
 // This is especially an issue for debugging when a deployment doesn't go to plan,
 // when resource or link operations fail or are interrupted.
-func requireStateHoldsOnlyTheDeclaredSpec(
-	t *testing.T,
+func (s *LinkProjectionDeployTestSuite) requireStateHoldsOnlyTheDeclaredSpec(
 	stateContainer state.Container,
 	instanceID string,
 ) {
-	t.Helper()
 
 	resourceState, err := stateContainer.Resources().GetByName(
 		context.Background(),
 		instanceID,
 		"ordersFunction",
 	)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	contributed, _ := core.GetPathValue(
 		"$.environment.variables.TABLE_NAME_ordersTable",
 		resourceState.SpecData,
 		core.MappingNodeMaxTraverseDepth,
 	)
-	require.Nil(
-		t,
+	s.Require().Nil(
 		contributed,
 		"the link's contribution was copied into the resource's own spec, which leaves "+
 			"two records of it that can disagree",
@@ -161,7 +161,7 @@ func requireStateHoldsOnlyTheDeclaredSpec(
 		resourceState.SpecData,
 		core.MappingNodeMaxTraverseDepth,
 	)
-	require.Equal(t, "src/orders_v2.handler", core.StringValue(handler))
+	s.Require().Equal("src/orders_v2.handler", core.StringValue(handler))
 }
 
 // Removing a link takes away everything it contributed, and that has to be visible in the
@@ -171,7 +171,7 @@ func requireStateHoldsOnlyTheDeclaredSpec(
 // when the link does. That is a correct consequence of removing the link, and an operator
 // approving the change set is entitled to see it rather than discover it from the
 // behaviour of a deployed application.
-func TestStagingReportsFieldsLostWhenALinkIsRemoved(t *testing.T) {
+func (s *LinkProjectionDeployTestSuite) Test_staging_reports_fields_lost_when_a_link_is_removed() {
 	stateContainer := memstate.NewMemoryStateContainer()
 	deployedResource := &recordingLambdaResource{}
 	loader, _ := newLinkProjectionLoader(
@@ -183,15 +183,15 @@ func TestStagingReportsFieldsLostWhenALinkIsRemoved(t *testing.T) {
 	)
 	params := newLinkProjectionParams()
 
-	instanceID := deployInitialInstanceForProjectionTest(t, loader, params)
-	requireLinkRecordedItsContribution(t, stateContainer, instanceID)
+	instanceID := s.deployInitialInstanceForProjectionTest(loader, params)
+	s.requireLinkRecordedItsContribution(stateContainer, instanceID)
 
 	unlinkedContainer, err := loader.Load(
 		context.Background(),
 		"__testdata/container/deploy/blueprint-link-projection-unlinked.yml",
 		params,
 	)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	stagingChannels := createChangeStagingChannels()
 	err = unlinkedContainer.StageChanges(
@@ -200,26 +200,23 @@ func TestStagingReportsFieldsLostWhenALinkIsRemoved(t *testing.T) {
 		stagingChannels,
 		params,
 	)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	stagedChanges, err := consumeStagedChangesForTest(stagingChannels)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
-	require.Contains(
-		t,
+	s.Require().Contains(
 		stagedChanges.RemovedLinks,
 		"ordersFunction::ordersTable",
 		"the link itself must be staged for removal",
 	)
 
 	functionChanges, hasChanges := stagedChanges.ResourceChanges["ordersFunction"]
-	require.True(
-		t,
+	s.Require().True(
 		hasChanges,
 		"the resource loses the fields the link contributed, so it has changes",
 	)
-	require.Contains(
-		t,
+	s.Require().Contains(
 		functionChanges.RemovedFields,
 		"spec.environment.variables.TABLE_NAME_ordersTable",
 		"the field the removed link contributed is taken away without being reported",
@@ -227,8 +224,7 @@ func TestStagingReportsFieldsLostWhenALinkIsRemoved(t *testing.T) {
 
 	// Reporting the path alone leaves an operator to work out why a field they never
 	// wrote is disappearing.
-	require.Equal(
-		t,
+	s.Require().Equal(
 		"ordersFunction::ordersTable",
 		functionChanges.LinkOwnedFields["spec.environment.variables.TABLE_NAME_ordersTable"],
 		"the removed field is not attributed to the link that contributed it",
@@ -242,7 +238,7 @@ func TestStagingReportsFieldsLostWhenALinkIsRemoved(t *testing.T) {
 // saved leaves exactly this. The value is on the live resource, the mapping says where it
 // belongs, and nothing holds the value itself. Recovering it is the difference between
 // carrying on and refusing to deploy a resource that would lose the field.
-func TestUpdateDeployRecoversContributionMissingFromLinkData(t *testing.T) {
+func (s *LinkProjectionDeployTestSuite) Test_update_deploy_recovers_contribution_missing_from_link_data() {
 	stateContainer := memstate.NewMemoryStateContainer()
 	deployedResource := &recordingLambdaResource{}
 	loader, _ := newLinkProjectionLoader(
@@ -254,10 +250,10 @@ func TestUpdateDeployRecoversContributionMissingFromLinkData(t *testing.T) {
 	)
 	params := newLinkProjectionParams()
 
-	instanceID := deployInitialInstanceForProjectionTest(t, loader, params)
-	requireLinkRecordedItsContribution(t, stateContainer, instanceID)
-	simulateLinkWritesToLiveResource(t, stateContainer, instanceID, deployedResource)
-	forgetLinkData(t, stateContainer, instanceID)
+	instanceID := s.deployInitialInstanceForProjectionTest(loader, params)
+	s.requireLinkRecordedItsContribution(stateContainer, instanceID)
+	s.simulateLinkWritesToLiveResource(stateContainer, instanceID, deployedResource)
+	s.forgetLinkData(stateContainer, instanceID)
 	deployedResource.forget()
 
 	updatedContainer, err := loader.Load(
@@ -265,7 +261,7 @@ func TestUpdateDeployRecoversContributionMissingFromLinkData(t *testing.T) {
 		"__testdata/container/deploy/blueprint-link-projection-update.yml",
 		params,
 	)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	stagingChannels := createChangeStagingChannels()
 	err = updatedContainer.StageChanges(
@@ -274,10 +270,10 @@ func TestUpdateDeployRecoversContributionMissingFromLinkData(t *testing.T) {
 		stagingChannels,
 		params,
 	)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	updateChanges, err := consumeStagedChangesForTest(stagingChannels)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	updateChannels := CreateDeployChannels()
 	err = updatedContainer.Deploy(
@@ -290,26 +286,24 @@ func TestUpdateDeployRecoversContributionMissingFromLinkData(t *testing.T) {
 		updateChannels,
 		params,
 	)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
-	finishedMessage := consumeUntilFinishForTest(t, updateChannels, "update deploy")
-	require.Equal(
-		t,
+	finishedMessage := consumeUntilFinishForTest(s.T(), updateChannels, "update deploy")
+	s.Require().Equal(
 		core.InstanceStatusUpdated,
 		finishedMessage.Status,
 		fmt.Sprintf("update deploy failed: %v", finishedMessage.FailureReasons),
 	)
 
 	deployedSpec := deployedResource.lastDeployedSpec()
-	require.NotNil(t, deployedSpec)
+	s.Require().NotNil(deployedSpec)
 
 	tableName, _ := core.GetPathValue(
 		"$.environment.variables.TABLE_NAME_ordersTable",
 		deployedSpec,
 		core.MappingNodeMaxTraverseDepth,
 	)
-	require.NotNil(
-		t,
+	s.Require().NotNil(
 		tableName,
 		"the contribution was not read back from the deployed resource, so the resource "+
 			"was either deployed without it or not deployed at all",
@@ -322,10 +316,9 @@ func TestUpdateDeployRecoversContributionMissingFromLinkData(t *testing.T) {
 		instanceID,
 		"ordersFunction",
 	)
-	require.NoError(t, err)
-	require.NotEmpty(t, links)
-	require.NotEmpty(
-		t,
+	s.Require().NoError(err)
+	s.Require().NotEmpty(links)
+	s.Require().NotEmpty(
 		links[0].Data,
 		"the recovered value was not recorded against the link",
 	)
@@ -337,28 +330,26 @@ func TestUpdateDeployRecoversContributionMissingFromLinkData(t *testing.T) {
 // own API rather than through the framework, so the deployed resource carries the
 // contribution while the spec the framework applied did not. The test provider's link does
 // not reach a real service, so the effect of it is applied here.
-func simulateLinkWritesToLiveResource(
-	t *testing.T,
+func (s *LinkProjectionDeployTestSuite) simulateLinkWritesToLiveResource(
 	stateContainer state.Container,
 	instanceID string,
 	resource *recordingLambdaResource,
 ) {
-	t.Helper()
 
 	links, err := stateContainer.Links().ListWithResourceDataMappings(
 		context.Background(),
 		instanceID,
 		"ordersFunction",
 	)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	live, err := specmerge.ApplyLinkProjections(
 		resource.lastDeployedSpec(),
 		"ordersFunction",
 		links,
 	)
-	require.NoError(t, err)
-	require.Empty(t, live.Unresolved)
+	s.Require().NoError(err)
+	s.Require().Empty(live.Unresolved)
 
 	resource.setLiveSpec(live.Spec)
 }
@@ -369,7 +360,7 @@ func simulateLinkWritesToLiveResource(
 // Deploying applies the resource's complete intended state, so a field a link owns that is
 // missing from the spec is removed from the deployed resource. Leaving the resource alone
 // keeps what links contributed to it live and intact.
-func TestUpdateDeployFailsResourceWhenAContributionCannotBeRecovered(t *testing.T) {
+func (s *LinkProjectionDeployTestSuite) Test_update_deploy_fails_resource_when_a_contribution_cannot_be_recovered() {
 	stateContainer := memstate.NewMemoryStateContainer()
 	deployedResource := &recordingLambdaResource{}
 	loader, _ := newLinkProjectionLoader(
@@ -381,19 +372,19 @@ func TestUpdateDeployFailsResourceWhenAContributionCannotBeRecovered(t *testing.
 	)
 	params := newLinkProjectionParams()
 
-	instanceID := deployInitialInstanceForProjectionTest(t, loader, params)
-	requireLinkRecordedItsContribution(t, stateContainer, instanceID)
+	instanceID := s.deployInitialInstanceForProjectionTest(loader, params)
+	s.requireLinkRecordedItsContribution(stateContainer, instanceID)
 
 	// The value is in neither place it could be: not recorded against the link, and not
 	// on the deployed resource to read back, since the link never reached it.
-	forgetLinkData(t, stateContainer, instanceID)
+	s.forgetLinkData(stateContainer, instanceID)
 
 	updatedContainer, err := loader.Load(
 		context.Background(),
 		"__testdata/container/deploy/blueprint-link-projection-update.yml",
 		params,
 	)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	stagingChannels := createChangeStagingChannels()
 	err = updatedContainer.StageChanges(
@@ -402,10 +393,10 @@ func TestUpdateDeployFailsResourceWhenAContributionCannotBeRecovered(t *testing.
 		stagingChannels,
 		params,
 	)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	updateChanges, err := consumeStagedChangesForTest(stagingChannels)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	updateChannels := CreateDeployChannels()
 	err = updatedContainer.Deploy(
@@ -418,38 +409,35 @@ func TestUpdateDeployFailsResourceWhenAContributionCannotBeRecovered(t *testing.
 		updateChannels,
 		params,
 	)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
-	finishedMessage := consumeUntilFinishForTest(t, updateChannels, "update deploy")
-	require.NotEqual(
-		t,
+	finishedMessage := consumeUntilFinishForTest(s.T(), updateChannels, "update deploy")
+	s.Require().NotEqual(
 		core.InstanceStatusUpdated,
 		finishedMessage.Status,
 		"the resource was deployed without a field a link is recorded as contributing",
 	)
-	require.NotEmpty(t, finishedMessage.FailureReasons)
+	s.Require().NotEmpty(finishedMessage.FailureReasons)
 }
 
 // Empties a link's data while leaving its mappings in place, which is the state a
 // deployment interrupted between writing a resource and saving its link leaves behind.
-func forgetLinkData(
-	t *testing.T,
+func (s *LinkProjectionDeployTestSuite) forgetLinkData(
 	stateContainer state.Container,
 	instanceID string,
 ) {
-	t.Helper()
 
 	links, err := stateContainer.Links().ListWithResourceDataMappings(
 		context.Background(),
 		instanceID,
 		"ordersFunction",
 	)
-	require.NoError(t, err)
-	require.NotEmpty(t, links)
+	s.Require().NoError(err)
+	s.Require().NotEmpty(links)
 
 	for _, link := range links {
 		link.Data = map[string]*core.MappingNode{}
-		require.NoError(t, stateContainer.Links().Save(context.Background(), link))
+		s.Require().NoError(stateContainer.Links().Save(context.Background(), link))
 	}
 }
 
@@ -459,17 +447,14 @@ func forgetLinkData(
 // The change set is what a user reads before approving a deployment. A link's fields
 // appearing as new or modified on every update, when nothing about them has changed, is
 // noise that makes a real change harder to see.
-func requireNoChangesReportedForContribution(
-	t *testing.T,
+func (s *LinkProjectionDeployTestSuite) requireNoChangesReportedForContribution(
 	resourceChanges provider.Changes,
 ) {
-	t.Helper()
 
 	contributedField := "spec.environment.variables.TABLE_NAME_ordersTable"
 
 	for _, fieldChange := range resourceChanges.NewFields {
-		require.NotEqual(
-			t,
+		s.Require().NotEqual(
 			contributedField,
 			fieldChange.FieldPath,
 			"a field the link contributed is reported as new when the link has not changed",
@@ -477,16 +462,14 @@ func requireNoChangesReportedForContribution(
 	}
 
 	for _, fieldChange := range resourceChanges.ModifiedFields {
-		require.NotEqual(
-			t,
+		s.Require().NotEqual(
 			contributedField,
 			fieldChange.FieldPath,
 			"a field the link contributed is reported as modified when the link has not changed",
 		)
 	}
 
-	require.NotContains(
-		t,
+	s.Require().NotContains(
 		resourceChanges.RemovedFields,
 		contributedField,
 		"a field the link contributed is reported as removed when the link still contributes it",
@@ -496,40 +479,35 @@ func requireNoChangesReportedForContribution(
 // The link's own record of what it contributed, written by the initial deploy. The
 // framework has no other record of it: the function's persisted spec does not carry the
 // link's environment variables.
-func requireLinkRecordedItsContribution(
-	t *testing.T,
+func (s *LinkProjectionDeployTestSuite) requireLinkRecordedItsContribution(
 	stateContainer state.Container,
 	instanceID string,
 ) {
-	t.Helper()
 
 	links, err := stateContainer.Links().ListWithResourceDataMappings(
 		context.Background(),
 		instanceID,
 		"ordersFunction",
 	)
-	require.NoError(t, err)
-	require.NotEmpty(
-		t,
+	s.Require().NoError(err)
+	s.Require().NotEmpty(
 		links,
 		"the link recorded no contribution to the function, so this test would pass "+
 			"whether or not the deployment composes them",
 	)
 }
 
-func deployInitialInstanceForProjectionTest(
-	t *testing.T,
+func (s *LinkProjectionDeployTestSuite) deployInitialInstanceForProjectionTest(
 	loader Loader,
 	params core.BlueprintParams,
 ) string {
-	t.Helper()
 
 	initialContainer, err := loader.Load(
 		context.Background(),
 		"__testdata/container/deploy/blueprint-link-projection-initial.yml",
 		params,
 	)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	stagingChannels := createChangeStagingChannels()
 	err = initialContainer.StageChanges(
@@ -538,10 +516,10 @@ func deployInitialInstanceForProjectionTest(
 		stagingChannels,
 		params,
 	)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	initialChanges, err := consumeStagedChangesForTest(stagingChannels)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	deployChannels := CreateDeployChannels()
 	err = initialContainer.Deploy(
@@ -554,11 +532,10 @@ func deployInitialInstanceForProjectionTest(
 		deployChannels,
 		params,
 	)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
-	finishedMessage := consumeUntilFinishForTest(t, deployChannels, "initial deploy")
-	require.Equal(
-		t,
+	finishedMessage := consumeUntilFinishForTest(s.T(), deployChannels, "initial deploy")
+	s.Require().Equal(
 		core.InstanceStatusDeployed,
 		finishedMessage.Status,
 		fmt.Sprintf("initial deploy failed: %v", finishedMessage.FailureReasons),
@@ -640,6 +617,13 @@ func (r *recordingLambdaResource) GetSpecDefinition(
 					"handler": {
 						Type: provider.ResourceDefinitionsSchemaTypeString,
 					},
+					"policies": {
+						Type:     provider.ResourceDefinitionsSchemaTypeArray,
+						Nullable: true,
+						Items: &provider.ResourceDefinitionsSchema{
+							Type: provider.ResourceDefinitionsSchemaTypeString,
+						},
+					},
 					"environment": {
 						Type:     provider.ResourceDefinitionsSchemaTypeObject,
 						Nullable: true,
@@ -712,4 +696,131 @@ func (r *recordingLambdaResource) forget() {
 	defer r.mu.Unlock()
 
 	r.deployedAs = nil
+}
+
+// A contribution recorded as appended has to be deployed as an addition to the field it
+// targets, not as its whole value.
+func (s *LinkProjectionDeployTestSuite) Test_update_deploy_applies_an_appended_contribution_as_an_addition() {
+	stateContainer := memstate.NewMemoryStateContainer()
+	deployedResource := &recordingLambdaResource{}
+	loader, _ := newLinkProjectionLoader(
+		stateContainer,
+		func(lambdaResource provider.Resource) provider.Resource {
+			deployedResource.Resource = lambdaResource
+			return deployedResource
+		},
+	)
+	params := newLinkProjectionParams()
+
+	instanceID := s.deployInitialInstanceForProjectionTest(loader, params)
+	s.seedAppendedContributionForProjectionTest(stateContainer, instanceID)
+	deployedResource.forget()
+
+	updatedContainer, err := loader.Load(
+		context.Background(),
+		"__testdata/container/deploy/blueprint-link-projection-update.yml",
+		params,
+	)
+	s.Require().NoError(err)
+
+	updateChangeStagingChannels := createChangeStagingChannels()
+	err = updatedContainer.StageChanges(
+		context.Background(),
+		&StageChangesInput{InstanceID: instanceID},
+		updateChangeStagingChannels,
+		params,
+	)
+	s.Require().NoError(err)
+
+	updateChanges, err := consumeStagedChangesForTest(updateChangeStagingChannels)
+	s.Require().NoError(err)
+
+	updateChannels := CreateDeployChannels()
+	err = updatedContainer.Deploy(
+		context.Background(),
+		&DeployInput{
+			InstanceID: instanceID,
+			Changes:    updateChanges,
+		},
+		updateChannels,
+		params,
+	)
+	s.Require().NoError(err)
+
+	finishedMessage := consumeUntilFinishForTest(s.T(), updateChannels, "update deploy")
+	s.Require().Equal(core.InstanceStatusUpdated, finishedMessage.Status)
+
+	s.Require().NotContains(
+		updateChanges.RemovedLinks,
+		"ordersFunction::ordersTable",
+		"the contributing link is still in the blueprint, so its contribution stands",
+	)
+
+	deployedSpec := deployedResource.lastDeployedSpec()
+	s.Require().NotNil(deployedSpec, "the function was not deployed")
+
+	policies, err := core.GetPathValue(
+		"$.policies",
+		deployedSpec,
+		core.MappingNodeMaxTraverseDepth,
+	)
+	s.Require().NoError(err)
+	s.Require().NotNil(policies, "the contribution is absent from the deployed spec")
+	s.Require().Equal(
+		[]string{"dynamodb:PutItem"},
+		mappingNodeItemsAsStrings(policies),
+		"the contribution was deployed as the field's whole value rather than added to it",
+	)
+}
+
+func mappingNodeItemsAsStrings(node *core.MappingNode) []string {
+	items := []string{}
+	for _, item := range node.Items {
+		items = append(items, core.StringValue(item))
+	}
+
+	return items
+}
+
+// Records an appended contribution against the link the blueprint already has, as state
+// holds one once a link has contributed.
+//
+// The link is left in the blueprint so that the deployment does not remove it, and it
+// declares no contribution targets, so what it recorded is read back rather than replaced
+// by what it produces when it runs.
+func (s *LinkProjectionDeployTestSuite) seedAppendedContributionForProjectionTest(
+	stateContainer state.Container,
+	instanceID string,
+) {
+
+	existing, err := stateContainer.Links().GetByName(
+		context.Background(),
+		instanceID,
+		"ordersFunction::ordersTable",
+	)
+	s.Require().NoError(err)
+
+	contributed := ContributionsToLinkData([]*provider.ResourceContribution{
+		{
+			ResourceName: "ordersFunction",
+			FieldPath:    "spec.policies",
+			Value:        core.MappingNodeFromString("dynamodb:PutItem"),
+			Action:       provider.ContributionActionAppend,
+		},
+	})
+
+	// Kept alongside what the link already recorded, since a link contributes through the
+	// same mappings it writes imperatively through.
+	maps.Copy(contributed.ResourceDataMappings, existing.ResourceDataMappings)
+	maps.Copy(contributed.Data, existing.Data)
+
+	existing.Data = contributed.Data
+	existing.ResourceDataMappings = contributed.ResourceDataMappings
+	existing.ContributionRecords = contributed.ContributionRecords
+
+	s.Require().NoError(stateContainer.Links().Save(context.Background(), existing))
+}
+
+func TestLinkProjectionDeployTestSuite(t *testing.T) {
+	suite.Run(t, new(LinkProjectionDeployTestSuite))
 }

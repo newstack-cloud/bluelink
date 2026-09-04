@@ -255,13 +255,30 @@ func (d *defaultResourceDeployer) composeLinkContributions(
 		return resolvedResource, nil
 	}
 
-	projected, err := specmerge.ApplyLinkProjections(
+	linkNames := make([]string, 0, len(linksWithMappings))
+	for _, linkState := range linksWithMappings {
+		linkNames = append(linkNames, linkState.Name)
+	}
+
+	merged, err := specmerge.ComposeResourceContributions(
 		resolvedResource.Spec,
 		resourceName,
-		linksWithMappings,
+		&specmerge.ContributionInputs{
+			Produced:    producedContributionsFor(resourceName, linksWithMappings, deployCtx),
+			StoredLinks: linksWithMappings,
+			// Removals are not carried as a link this deployment removes is destroyed
+			// before any resource is deployed, so it is already out of the links
+			// recorded against the instance by the time this runs.
+			SupersededLinkNames: supersededLinkNames(deployCtx, linkNames),
+		},
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	projected := &specmerge.LinkProjectionResult{
+		Spec:       merged.Spec,
+		Unresolved: merged.Unresolved,
 	}
 
 	// A contribution the framework holds a record of and cannot find a value for must not
@@ -289,6 +306,34 @@ func (d *defaultResourceDeployer) composeLinkContributions(
 	composedResource.Spec = projected.Spec
 
 	return &composedResource, nil
+}
+
+// The contributions of links that have already run in this deployment, which is what a
+// resource updated after its links have contributed is being updated to carry.
+//
+// A link's contributions reach state when the link's deployment is recorded, and a
+// resource composed before that would carry what the link contributed last time rather
+// than what it has just produced.
+func producedContributionsFor(
+	resourceName string,
+	linksWithMappings []state.LinkState,
+	deployCtx *DeployContext,
+) []specmerge.LinkResourceContribution {
+	produced := []specmerge.LinkResourceContribution{}
+	for _, linkState := range linksWithMappings {
+		result := deployCtx.State.GetLinkDeployResult(linkState.Name)
+		if result == nil {
+			continue
+		}
+
+		for _, contribution := range LinkContributionsFor(linkState.Name, result.Contributions) {
+			if contribution.Contribution.ResourceName == resourceName {
+				produced = append(produced, contribution)
+			}
+		}
+	}
+
+	return produced
 }
 
 // Reads the resource as it actually is and records what links contributed to it, then

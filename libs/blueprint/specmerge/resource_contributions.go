@@ -19,6 +19,14 @@ type LinkResourceContribution struct {
 	LinkName string
 	// Contribution is what the link needs the resource's spec to say.
 	Contribution *provider.ResourceContribution
+	// LinkDataPath is where in the link's data the value was read from, for a
+	// contribution read back from state. It is empty for one a link has just produced,
+	// which carries its value directly.
+	//
+	// Held for reporting as a contribution that cannot be applied names the path it came
+	// from, which is what says whether the link's data is missing the value or the
+	// resource will not take it.
+	LinkDataPath string
 }
 
 // ContributionMergeResult holds a resource's spec with the contributions made to it
@@ -196,6 +204,7 @@ func unresolvedContribution(
 	return UnresolvedProjection{
 		LinkName:          contribution.LinkName,
 		ResourceFieldPath: contribution.Contribution.FieldPath,
+		LinkDataPath:      contribution.LinkDataPath,
 		Reason:            reason,
 	}
 }

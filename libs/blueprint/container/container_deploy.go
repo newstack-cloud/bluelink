@@ -751,6 +751,7 @@ func (c *defaultBlueprintContainer) deployElements(
 	schedulerCtx, stopScheduler := context.WithCancel(ctx)
 	defer stopScheduler()
 	deployCtx.LinkScheduler = c.createLinkScheduler(
+		schedulerCtx,
 		input.InstanceID,
 		deployCtx,
 		internalChannels,
@@ -1346,6 +1347,22 @@ func (c *defaultBlueprintContainer) trackResourceCompletion(
 	}
 }
 
+// The deployment waits for each resource that links contribute to, so the update that carries
+// those contributions has to report a completion of its own.
+func trackContributionUpdateCompletion(
+	msg ResourceDeployUpdateMessage,
+	finished map[string]*deployUpdateMessageWrapper,
+) {
+	if msg.PreciseStatus != core.PreciseResourceStatusLinkContributionsUpdated &&
+		msg.PreciseStatus != core.PreciseResourceStatusLinkContributionsUpdateFailed {
+		return
+	}
+
+	finished[contributionTargetElementID(msg.ResourceName)] = &deployUpdateMessageWrapper{
+		resourceUpdateMessage: &msg,
+	}
+}
+
 // trackChildCompletion tracks when a child blueprint has finished deploying (success or failure)
 // without triggering new deployments. This is used during the draining phase after an error occurs.
 func (c *defaultBlueprintContainer) trackChildCompletion(
@@ -1395,6 +1412,18 @@ func (c *defaultBlueprintContainer) handleResourceUpdateMessage(
 		// This allows for the client to provide more detailed feedback to the user
 		// for the progress within a child blueprint.
 		deployCtx.Channels.ResourceUpdateChan <- msg
+		return nil
+	}
+
+	if msg.FromLinkContributions {
+		// An update carrying link contributions is surfaced to the client and is waited
+		// for, but is not a part of the resource's own lifecycle. It does not mark the
+		// resource finished, release what depends on it or advance the group, and the
+		// resource's persisted status stays that of the deployment the blueprint asked
+		// for. The resource may not even be in the change set, it is reached because links
+		// write it, not because anything about it changed.
+		deployCtx.Channels.ResourceUpdateChan <- msg
+		trackContributionUpdateCompletion(msg, finished)
 		return nil
 	}
 
@@ -1619,6 +1648,8 @@ func (c *defaultBlueprintContainer) buildResourceState(
 // links change staging determined had no changes, and a completion the deployment event
 // loop does not count would let the loop exit before every planned element is done.
 func (c *defaultBlueprintContainer) submitReadyLinks(
+	ctx context.Context,
+	instanceID string,
 	linksReadyToBeDeployed []*LinkPendingCompletion,
 	deployCtx *DeployContext,
 ) {
@@ -1634,11 +1665,40 @@ func (c *defaultBlueprintContainer) submitReadyLinks(
 	}
 
 	deployCtx.LinkScheduler.Submit(newlyReady)
+
+	c.deployReadyContributionTargets(ctx, instanceID, deployCtx)
+}
+
+// Updates the resources whose contributing links have all settled.
+
+// Called wherever a link settles, since the last link a resource is waiting on can be any
+// of them, and a resource is claimed once however many links find it ready at the same
+// moment. A resource nothing contributes to is never claimed, which is every resource in a
+// deployment whose links do not contribute.
+func (c *defaultBlueprintContainer) deployReadyContributionTargets(
+	ctx context.Context,
+	instanceID string,
+	deployCtx *DeployContext,
+) {
+	for _, resourceName := range deployCtx.State.ClaimContributionTargetsReadyToUpdate() {
+		err := c.mergedContributionsDeployer.Deploy(
+			ctx,
+			instanceID,
+			resourceName,
+			deployCtx.State.ContributorsFor(resourceName),
+			deployCtx,
+		)
+		if err != nil {
+			deployCtx.Channels.ErrChan <- err
+			return
+		}
+	}
 }
 
 // Builds the scheduler that deploys this instance's links for the lifetime of the
 // deployment.
 func (c *defaultBlueprintContainer) createLinkScheduler(
+	ctx context.Context,
 	instanceID string,
 	deployCtx *DeployContext,
 	internalChannels *DeployChannels,
@@ -1662,7 +1722,10 @@ func (c *defaultBlueprintContainer) createLinkScheduler(
 			}
 			return &instanceState, nil
 		},
-		deployCtx.State.MarkLinkSettled,
+		func(linkName string) {
+			deployCtx.State.MarkLinkSettled(linkName)
+			c.deployReadyContributionTargets(ctx, instanceID, linkDeployCtx)
+		},
 		deployCtx.State.AwaitingCapabilityProviders,
 		// Never waits. The error channel is unbuffered, so a send blocks whenever the
 		// deployment event loop is busy elsewhere, and the scheduler holds anything
@@ -2297,7 +2360,7 @@ func (c *defaultBlueprintContainer) handleSuccessfulResourceDeployment(
 		},
 	)
 
-	c.submitReadyLinks(linksReadyToBeDeployed, deployCtx)
+	c.submitReadyLinks(ctx, msg.InstanceID, linksReadyToBeDeployed, deployCtx)
 
 	// To avoid blocking the handler from processing other messages
 	// run the logic to deploy the next elements in a separate goroutine.
@@ -2709,6 +2772,9 @@ func (c *defaultBlueprintContainer) buildLinkState(
 			}
 			if linkDeployResult.ResourceDataMappings != nil {
 				linkState.ResourceDataMappings = linkDeployResult.ResourceDataMappings
+			}
+			if len(linkDeployResult.ContributionRecords) > 0 {
+				linkState.ContributionRecords = linkDeployResult.ContributionRecords
 			}
 			linkState.IntermediaryResourceStates = linkDeployResult.IntermediaryResourceStates
 		}

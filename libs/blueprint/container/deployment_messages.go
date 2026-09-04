@@ -35,6 +35,28 @@ type ResourceDeployUpdateMessage struct {
 	// FailureReasons holds a list of reasons why the resource failed to deploy
 	// if the status update is for a failure.
 	FailureReasons []string `json:"failureReasons,omitempty"`
+	// FromLinkContributions reports that the resource is being updated to carry what the
+	// links contributing to it need its spec to include, rather than because anything the
+	// blueprint declares about it changed.
+	//
+	// A resource updated this way may not be in the change set at all, so anything
+	// reporting a deployment by walking the change set has nowhere to put it, and
+	// anything treating a status update as a change the user made would be reporting a
+	// change they did not make.
+	FromLinkContributions bool `json:"fromLinkContributions,omitempty"`
+	// LinkContributors maps a resource spec field path to the logical names of every link
+	// that contributed to it, for an update carrying link contributions.
+	//
+	// Several links contributing to one field is the ordinary case rather than an edge case.
+	// For example, a shared execution role holds a policy statement from each of the links that
+	// needs one, all appended to the same list. Naming one contributor per field would
+	// answer "which link put this here" with one of them and no indication that the rest
+	// exist.
+	//
+	// This is the same question Changes.LinkOwnedFields answers for a change set, asked
+	// of an update rather than of a comparison, and answered with every link rather than
+	// the last one.
+	LinkContributors map[string][]string `json:"linkContributors,omitempty"`
 	// Attempt is the current attempt number for deploying or destroying the resource.
 	Attempt int `json:"attempt"`
 	// CanRetry indicates if the operation for the resource can be retried

@@ -261,10 +261,18 @@ type ResourceDeployInput struct {
 	InstanceID string
 	// Additional user-defined blueprint instance name
 	// that can be used in ID/unique name generation and for debugging.
-	InstanceName    string
-	ResourceID      string
-	Changes         *Changes
-	ProviderContext Context
+	InstanceName string
+	ResourceID   string
+	Changes      *Changes
+	// FromLinkContributions marks a deployment that carries what the links contributing
+	// to the resource need its spec to include, rather than a change the blueprint asked for.
+	//
+	// The framework reaches the resource this way once every link writing it has settled,
+	// and the resource may not be in the change set at all. A provider that treats the two
+	// alike will report a contribution update as a change the user made, and one that
+	// derives behaviour from the change set has nothing to derive it from here.
+	FromLinkContributions bool
+	ProviderContext       Context
 }
 
 // ResourceGetTypeInput provides the input data needed for a resource to
