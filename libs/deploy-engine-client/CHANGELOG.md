@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.2](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.5.1...deploy-engine-client/v0.5.2) (2026-09-05)
+
+
+### Bug Fixes
+
+* **deploy-engine-client:** increase max buffer size and client stream timeout ([33b5f3b](https://github.com/newstack-cloud/bluelink/commit/33b5f3b12a382ce3f55da9282150dc240a385be5))
+
+
+### Dependencies
+
+* **deploy-engine-client:** update deploy-engine-client go modules ([#275](https://github.com/newstack-cloud/bluelink/issues/275)) ([a4469fa](https://github.com/newstack-cloud/bluelink/commit/a4469faa377e5907c32b38f63d9fd1d79de731a8))
+* **deploy-engine-client:** update module go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp to v0.69.0 ([#258](https://github.com/newstack-cloud/bluelink/issues/258)) ([ee2d76f](https://github.com/newstack-cloud/bluelink/commit/ee2d76f59fb482f1f21f75fc8b635fedafe3f8f6))
+
 ## [0.5.1](https://github.com/newstack-cloud/bluelink/compare/deploy-engine-client/v0.5.0...deploy-engine-client/v0.5.1) (2026-07-19)
 
 
