@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.2](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.8.1...deploy-engine/v0.8.2) (2026-09-05)
+
+
+### Bug Fixes
+
+* **deploy-engine:** add fixes to validation stream, config mapping and unix socket ([633f7f4](https://github.com/newstack-cloud/bluelink/commit/633f7f4e39c62b2c39cc6b84a07b6d461827a428))
+* **deploy-engine:** map the merged link statuses when parsing reconciliation input ([915b12a](https://github.com/newstack-cloud/bluelink/commit/915b12a0c2551187e8edb39917b562296ca1dc0c))
+* **deploy-engine:** stop the test state container dropping fields on copy ([8a18a91](https://github.com/newstack-cloud/bluelink/commit/8a18a91c0946c10b705f3534f232f8313f6f8cbb))
+
 ## [0.8.1](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.8.0...deploy-engine/v0.8.1) (2026-07-19)
 
 
