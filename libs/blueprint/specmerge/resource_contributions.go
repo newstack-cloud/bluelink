@@ -64,6 +64,15 @@ func MergeResourceContributions(
 		Unresolved: []UnresolvedProjection{},
 	}
 
+	// Checked before anything is applied. A spec built from contributions that disagree
+	// would be applied whole, and the field would hold whichever value happened to land
+	// last, so there is nothing to gain from composing it.
+	conflicts := conflictingContributions(resourceName, contributions)
+	if len(conflicts) > 0 {
+		result.Unresolved = conflicts
+		return result, nil
+	}
+
 	ordered := orderedContributionsFor(resourceName, contributions)
 	for _, contribution := range ordered {
 		err := applyResourceContribution(result, contribution)
@@ -209,44 +218,82 @@ func unresolvedContribution(
 	}
 }
 
-// ConflictingContributions reports the fields of a resource that more than one link claims
-// the whole value of.
+// A field that more than one link states the whole value of is a disagreement rather than
+// a merge.
 //
 // Two links appending to one list is the case appending exists for. Two links setting one
-// field is not. Each states a whole value, the one applied last wins by an ordering that
-// says nothing about which is right, and the deployment reports success having silently
-// discarded one of them.
-func ConflictingContributions(
+// field to different values is not: each states a whole value, the one applied last wins by
+// an ordering that says nothing about which is right, and the deployment reports success
+// having silently discarded the other. Reported rather than resolved, because nothing here
+// can know which link is correct.
+//
+// Two links setting the same field to the same value agree, and agreement is not a
+// conflict. A pair of access links naming the same VPC for one function is not a mistake to
+// refuse a deployment over.
+func conflictingContributions(
 	resourceName string,
 	contributions []LinkResourceContribution,
-) []string {
-	settingLinks := map[string][]string{}
+) []UnresolvedProjection {
+	settingLinks := map[string][]LinkResourceContribution{}
+	fieldPaths := []string{}
 	for _, contribution := range orderedContributionsFor(resourceName, contributions) {
 		if contribution.Contribution.Action != provider.ContributionActionSet {
 			continue
 		}
 
 		fieldPath := contribution.Contribution.FieldPath
-		if !slices.Contains(settingLinks[fieldPath], contribution.LinkName) {
-			settingLinks[fieldPath] = append(
-				settingLinks[fieldPath],
-				contribution.LinkName,
-			)
+		if _, seen := settingLinks[fieldPath]; !seen {
+			fieldPaths = append(fieldPaths, fieldPath)
 		}
+		settingLinks[fieldPath] = append(settingLinks[fieldPath], contribution)
 	}
 
-	conflicts := []string{}
-	for fieldPath, linkNames := range settingLinks {
-		if len(linkNames) > 1 {
-			conflicts = append(conflicts, fmt.Sprintf(
-				"%s is set by %s",
-				fieldPath,
-				strings.Join(linkNames, " and "),
-			))
-		}
+	conflicts := []UnresolvedProjection{}
+	for _, fieldPath := range fieldPaths {
+		conflicts = append(conflicts, fieldConflicts(settingLinks[fieldPath])...)
 	}
-
-	slices.Sort(conflicts)
 
 	return conflicts
+}
+
+func fieldConflicts(setting []LinkResourceContribution) []UnresolvedProjection {
+	if len(setting) < 2 || contributionsAgree(setting) {
+		return nil
+	}
+
+	linkNames := make([]string, 0, len(setting))
+	for _, contribution := range setting {
+		linkNames = append(linkNames, contribution.LinkName)
+	}
+
+	conflicts := make([]UnresolvedProjection, 0, len(setting))
+	for index, contribution := range setting {
+		others := slices.Concat(
+			slices.Clone(linkNames[:index]),
+			slices.Clone(linkNames[index+1:]),
+		)
+		conflicts = append(conflicts, unresolvedContribution(
+			contribution,
+			fmt.Sprintf(
+				"the field is also set to a different value by %s, so which value the "+
+					"resource holds would depend on the order the links ran in",
+				strings.Join(others, " and "),
+			),
+		))
+	}
+
+	return conflicts
+}
+
+func contributionsAgree(setting []LinkResourceContribution) bool {
+	for _, contribution := range setting[1:] {
+		if !core.MappingNodeEqual(
+			setting[0].Contribution.Value,
+			contribution.Contribution.Value,
+		) {
+			return false
+		}
+	}
+
+	return true
 }
