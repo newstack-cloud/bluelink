@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.54.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.53.0...blueprint/v0.54.0) (2026-09-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **blueprint:** provider.Link implementations must implement ProduceResourceContributions. Links built with the SDK's LinkDefinition are unaffected, since the function it takes is optional and a link that contributes nothing behaves exactly as it did before.
+* **blueprint:** provider.Link implementations must replace UpdateResourceA and UpdateResourceB with UpdateLinkedResources. Precise link status values are renumbered, so persisted statuses from earlier versions do not carry over.
+
+### Features
+
+* **blueprint:** add ProduceResourceContributions to the link interface ([588a55c](https://github.com/newstack-cloud/bluelink/commit/588a55c0c87a9296cfd14e237fafd730ac8141f9))
+* **blueprint:** compose a resource's contributions from every link that targets it ([1b049e7](https://github.com/newstack-cloud/bluelink/commit/1b049e70bb71bee1e253ffd0611036d896ef5a14))
+* **blueprint:** let a link declare the resource fields it will contribute ([49a6ba6](https://github.com/newstack-cloud/bluelink/commit/49a6ba61d3caf5de0b746700ac4c742bd18ccbd3))
+* **blueprint:** merge link resource updates into a single interface method ([ec673d7](https://github.com/newstack-cloud/bluelink/commit/ec673d728f0622dc472a402233aa3a993aaa96d0))
+* **blueprint:** merge the contributions links make to a resource ([75fcf09](https://github.com/newstack-cloud/bluelink/commit/75fcf09716b0ec4be40b0873fff96d2c9cab2087))
+* **blueprint:** order links against the contributions that establish what they require ([3436869](https://github.com/newstack-cloud/bluelink/commit/3436869c261b7ce696b8b9946c12746869cbca0d))
+* **blueprint:** track which links a resource is waiting on to contribute ([ccbe100](https://github.com/newstack-cloud/bluelink/commit/ccbe100ce509aca27fe218785f05ea37d1b1db64))
+* **blueprint:** update resources with the contributions links make to them ([b378a5c](https://github.com/newstack-cloud/bluelink/commit/b378a5c592cddb367cbaa6f4904ce2337e3f7643))
+
+
+### Bug Fixes
+
+* **blueprint:** refuse to merge contributions that disagree over a field ([822805c](https://github.com/newstack-cloud/bluelink/commit/822805ce8e049b1a027aa1ebc58256541fcfa41f))
+* **blueprint:** report a link-contributed field the link says will change ([d50e2e5](https://github.com/newstack-cloud/bluelink/commit/d50e2e54d5ac88d922571bca8d2febb8c3a21e5b))
+* **blueprint:** report the link contributions a drift check could not compose ([7765a35](https://github.com/newstack-cloud/bluelink/commit/7765a35d7da80ef709c0be5c4837b4e18d0f912e))
+
 ## [0.53.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.52.0...blueprint/v0.53.0) (2026-09-02)
 
 
