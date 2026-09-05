@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.17.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.16.0...plugin-framework/v0.17.0) (2026-09-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **plugin-framework:** provider plugins must serve UpdateLinkedResources in place of UpdateLinkResourceA and UpdateLinkResourceB, and the SDK's LinkDefinition takes UpdateLinkedResourcesFunc instead of the two per-side functions. LinkCompletionDurations field numbers have changed, so plugins must be rebuilt against this version.
+
+### Features
+
+* **plugin-framework:** add functionality to allow providers to release resource locks ([ae17b76](https://github.com/newstack-cloud/bluelink/commit/ae17b76604e006a9361f09e802ff87fba20f5807))
+* **plugin-framework:** add resource role for grouping resources and enrich shared parents ([854889b](https://github.com/newstack-cloud/bluelink/commit/854889b0059461213b7e29599cbbf2bcc3944510))
+* **plugin-framework:** add test helper for declarative link contributions ([a15e3c1](https://github.com/newstack-cloud/bluelink/commit/a15e3c1a334d49c107e8bad4b2505f277c27d82f))
+* **plugin-framework:** carry a link's contribution declaration over the wire ([fcd20ea](https://github.com/newstack-cloud/bluelink/commit/fcd20ea643e54e38ac10453a81fe52a7732ddf14))
+* **plugin-framework:** carry link field ownership over the protocol ([4b92e16](https://github.com/newstack-cloud/bluelink/commit/4b92e1668c434f7aa7ad6d71195ef111a65dbd70))
+* **plugin-framework:** carry link modified resources over the protocol ([37c05de](https://github.com/newstack-cloud/bluelink/commit/37c05de19d356c087557871fcd7477404f2c0ffd))
+* **plugin-framework:** carry the reason a stabilisation check was made ([b2b9fd8](https://github.com/newstack-cloud/bluelink/commit/b2b9fd836ef199795f177daad2678601a5d9f5d0))
+* **plugin-framework:** carry unapplied link contributions over the wire ([74abadc](https://github.com/newstack-cloud/bluelink/commit/74abadc36bf31472c44591f7e689faf2b80dbc55))
+* **plugin-framework:** replace the link resource A and B update RPCs ([ec12ed2](https://github.com/newstack-cloud/bluelink/commit/ec12ed298cbfbde4acdfb3423c494254b92fbed0))
+* **plugin-framework:** serve ProduceResourceContributions for link plugins ([c5bab7b](https://github.com/newstack-cloud/bluelink/commit/c5bab7b952570a63d2e6176d20ea8339cbf28cbf))
+* **plugin-framework:** tell a provider a deployment carries link contributions ([20d27b5](https://github.com/newstack-cloud/bluelink/commit/20d27b56f3ec76f6a5f0444a492086b51a9b8ed7))
+
+
+### Bug Fixes
+
+* **plugin-framework:** add corection to support multiple asserts for service mock calls ([6ba5ea0](https://github.com/newstack-cloud/bluelink/commit/6ba5ea055e8f3025587d0c5edf29d67a6325a6a9))
+* **plugin-framework:** stop the test state container dropping fields on copy ([806cc5f](https://github.com/newstack-cloud/bluelink/commit/806cc5fb5e04a025ca6ea9a5a346114e1a719f57))
+
+
+### Dependencies
+
+* **plugin-framework:** bump blueprint lib to 0.52.0 ([d1e8d6d](https://github.com/newstack-cloud/bluelink/commit/d1e8d6d34a9f967681b724868f43db63ba2d44b9))
+* **plugin-framework:** update plugin-framework go modules ([#277](https://github.com/newstack-cloud/bluelink/issues/277)) ([2f426dd](https://github.com/newstack-cloud/bluelink/commit/2f426ddbc127f411e8c6ff69cce07dbd70e9a4b5))
+
 ## [0.16.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.15.0...plugin-framework/v0.16.0) (2026-08-07)
 
 
