@@ -180,7 +180,7 @@ func (s *ResourceContributionsTestSuite) Test_reports_a_contribution_carrying_no
 
 // Two links each stating the whole value of one field is not a merge, it is a
 // disagreement, and applying one of them quietly is the outcome worth refusing.
-func (s *ResourceContributionsTestSuite) Test_reports_two_links_setting_one_field() {
+func (s *ResourceContributionsTestSuite) Test_refuses_to_merge_two_links_setting_one_field() {
 	contributions := []LinkResourceContribution{
 		s.contribution(
 			"saveOrderFunction::ordersTable",
@@ -198,16 +198,65 @@ func (s *ResourceContributionsTestSuite) Test_reports_two_links_setting_one_fiel
 		),
 	}
 
+	result, err := MergeResourceContributions(
+		core.MappingNodeFields(),
+		"saveOrderFunction",
+		contributions,
+	)
+	s.Require().NoError(err)
+
+	s.Assert().Nil(
+		result.Spec.Fields["environment"],
+		"one of the two values was applied rather than the disagreement being reported",
+	)
+	s.Require().Len(result.Unresolved, 2, "both links are named, not just one of them")
+
+	for _, unresolved := range result.Unresolved {
+		s.Assert().Equal(
+			"spec.environment.variables.TABLE_NAME",
+			unresolved.ResourceFieldPath,
+		)
+		s.Assert().Contains(unresolved.Reason, "also set to a different value by")
+	}
+	s.Assert().Contains(result.Unresolved[0].Reason, "saveOrderFunction::ordersTable")
+	s.Assert().Contains(result.Unresolved[1].Reason, "saveOrderFunction::archiveTable")
+}
+
+// Links that agree are not in conflict. Refusing a deployment because two links independently
+// arrived at the same value would be refusing over the absence of a problem.
+func (s *ResourceContributionsTestSuite) Test_merges_two_links_setting_one_field_to_the_same_value() {
+	contributions := []LinkResourceContribution{
+		s.contribution(
+			"saveOrderFunction::appVpc",
+			"saveOrderFunction",
+			"spec.vpcConfig",
+			core.MappingNodeFromString("vpc-1"),
+			provider.ContributionActionSet,
+		),
+		s.contribution(
+			"saveOrderFunction::appVpcEndpoint",
+			"saveOrderFunction",
+			"spec.vpcConfig",
+			core.MappingNodeFromString("vpc-1"),
+			provider.ContributionActionSet,
+		),
+	}
+
+	result, err := MergeResourceContributions(
+		core.MappingNodeFields(),
+		"saveOrderFunction",
+		contributions,
+	)
+	s.Require().NoError(err)
+
+	s.Assert().Empty(result.Unresolved)
 	s.Assert().Equal(
-		[]string{
-			"spec.environment.variables.TABLE_NAME is set by " +
-				"saveOrderFunction::archiveTable and saveOrderFunction::ordersTable",
-		},
-		ConflictingContributions("saveOrderFunction", contributions),
+		"vpc-1",
+		core.StringValue(result.Spec.Fields["vpcConfig"]),
 	)
 }
 
-func (s *ResourceContributionsTestSuite) Test_reports_no_conflict_for_links_appending_to_one_field() {
+func (s *ResourceContributionsTestSuite) Test_merges_links_appending_to_one_field() {
 	contributions := []LinkResourceContribution{
 		s.contribution(
 			"saveOrderFunction::ordersTable",
@@ -225,7 +274,15 @@ func (s *ResourceContributionsTestSuite) Test_reports_no_conflict_for_links_appe
 		),
 	}
 
-	s.Assert().Empty(ConflictingContributions("ordersRole", contributions))
+	result, err := MergeResourceContributions(
+		core.MappingNodeFields(),
+		"ordersRole",
+		contributions,
+	)
+	s.Require().NoError(err)
+
+	s.Assert().Empty(result.Unresolved)
+	s.Assert().Len(result.Spec.Fields["policies"].Items, 2)
 }
 
 func (s *ResourceContributionsTestSuite) contribution(
