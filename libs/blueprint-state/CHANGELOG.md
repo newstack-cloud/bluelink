@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.8.3...blueprint-state/v0.9.0) (2026-09-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **blueprint-state:** link state written by earlier versions carries resourceAUpdate and resourceBUpdate durations that are not read back, and precise link statuses recorded under the old numbering are reinterpreted rather than migrated.
+
+### Features
+
+* **blueprint-state:** persist the merged link completion duration ([3dcf3aa](https://github.com/newstack-cloud/bluelink/commit/3dcf3aaa77acfb2e850873ccb2e9ab7917b50c52))
+* **blueprint-state:** persist unapplied link contributions on resource drift ([d09d136](https://github.com/newstack-cloud/bluelink/commit/d09d136b7dd68b3fb963c1ac47563a2e3e3d542a))
+
+
+### Bug Fixes
+
+* **blueprint-state:** stop dropping link contributions a drift check could not apply ([452f1d8](https://github.com/newstack-cloud/bluelink/commit/452f1d87b1100417f1dca2a45dc3be474c751f03))
+
 ## [0.8.3](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.8.2...blueprint-state/v0.8.3) (2026-07-19)
 
 
