@@ -1,11 +1,7 @@
 # Architecture Overview
 
-TODO: replace with simpler architecture overview for Bluelink
+Bluelink is a collection of tools for defining and deploying infrastructure in a declarative manner based around an _"infrastructure as relationships"_ model, where configuration such as permissions and network access is determined by stating relationships between resources via [links](https://www.bluelink.dev/docs/bluelink/blueprints/links/). It is designed to be extensible and can be used to deploy resources in any environment, including cloud providers, on-premise environments and local development environments.
 
-Celerity is a backend toolkit that gets you moving fast. It is designed to be a set of libraries, example projects and tools that can be used to build, test, package, and deploy high quality applications at a fast pace.
+The following diagram provides an overview of the components that make up Bluelink and how they interact with each other:
 
-Utilising Celerity as an application development framework allows developers to focus on solving problems and delivering value to their customers without having to worry about the underlying infrastructure and tooling without being locked in to a specific vendor. If you need to delve deeper, Celerity provides enough flexibility to give as much control as needed by developers and infrastructure specialists.
-
-The following diagram provides an overview of the components that make up Celerity and how they interact with each other:
-
-![Celerity Architecture Overview](/resources/celerity-architecture-overview.png)
+![Bluelink Architecture Overview](/resources/bluelink-architecture-overview.png)
