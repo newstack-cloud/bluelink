@@ -317,6 +317,151 @@ func RunLinkUpdateResourceTestCases[
 	}
 }
 
+// LinkProduceContributionsTestCase defines a test case for producing the contributions a
+// link makes to the blueprint-declared resources it writes.
+//
+// Producing contributions is not always a pure computation. A link may read live state to
+// decide what to contribute, or create a resource it owns because the identity of that
+// resource is part of a value it contributes, so the service factories and mock call
+// assertions are the same as those for updating linked resources.
+type LinkProduceContributionsTestCase[
+	ResourceAServiceConfig any,
+	ResourceAService any,
+	ResourceBServiceConfig any,
+	ResourceBService any,
+] struct {
+	// The name of the test case used for errors and debugging.
+	Name string
+	// ServiceFactoryA is a function that creates an instance of the service
+	// for the first resource (resource A).
+	ServiceFactoryA pluginutils.ServiceFactory[ResourceAServiceConfig, ResourceAService]
+	// ServiceFactoryB is a function that creates an instance of the service
+	// for the second resource (resource B).
+	ServiceFactoryB pluginutils.ServiceFactory[ResourceBServiceConfig, ResourceBService]
+	// ConfigStoreA is a store that generates service-specific configuration
+	// for the service factory for the first resource (resource A).
+	ConfigStoreA pluginutils.ServiceConfigStore[ResourceAServiceConfig]
+	// ConfigStoreB is a store that generates service-specific configuration
+	// for the service factory for the second resource (resource B).
+	ConfigStoreB pluginutils.ServiceConfigStore[ResourceBServiceConfig]
+	// CurrentServiceMockCalls is a mock calls tracker embedded into a mock
+	// implementation of the service interface.
+	//
+	// This is optional and only needs to be set if the test case
+	// uses mocks instead of a real service.
+	CurrentServiceMockCalls *MockCalls
+	// Input for producing the link's contributions.
+	Input *provider.LinkProduceResourceContributionsInput
+	// Expected output from producing the link's contributions.
+	ExpectedOutput *provider.LinkProduceResourceContributionsOutput
+	// ExpectedOutputMatcher is a function that takes the actual output from the
+	// `ProduceResourceContributions` method and returns a prepared actual value along
+	// with the expected value to be used in an equality check.
+	ExpectedOutputMatcher func(
+		actual *provider.LinkProduceResourceContributionsOutput,
+	) (EqualityCheckValues, error)
+	// ExtraAssertions is an optional function that is called after the output of
+	// the operation successfully matches the expected output or matcher.
+	ExtraAssertions func(
+		ctx context.Context,
+		suite *suite.Suite,
+		output *provider.LinkProduceResourceContributionsOutput,
+	)
+	// ActionsCalled is a mapping of method name to the expected second argument for the
+	// method, for a link that reaches a service while producing its contributions.
+	//
+	// A link that only computes what it needs a resource's spec to say reaches no
+	// service, and leaving this empty alongside ActionsNotCalled is how a test says so.
+	ActionsCalled map[string]any
+	// ActionsNotCalled is a list of method names that are not expected to be called.
+	ActionsNotCalled []string
+	// If true, the test case expects an error to be returned.
+	ExpectError bool
+	// The expected error message if an error is expected.
+	// This doesn't have to be an exact match, the error message
+	// just needs to contain the provided string.
+	ExpectedErrorMessage string
+}
+
+// RunLinkProduceContributionsTestCases runs a set of test cases for the
+// `ProduceResourceContributions` method of a link implementation in a provider plugin.
+func RunLinkProduceContributionsTestCases[
+	ResourceAServiceConfig any,
+	ResourceAService any,
+	ResourceBServiceConfig any,
+	ResourceBService any,
+](
+	testCases []LinkProduceContributionsTestCase[
+		ResourceAServiceConfig,
+		ResourceAService,
+		ResourceBServiceConfig,
+		ResourceBService,
+	],
+	createLink func(
+		linkServiceDeps pluginutils.LinkServiceDeps[
+			ResourceAServiceConfig,
+			ResourceAService,
+			ResourceBServiceConfig,
+			ResourceBService,
+		],
+	) provider.Link,
+	testSuite *suite.Suite,
+) {
+	for _, tc := range testCases {
+		testSuite.Run(tc.Name, func() {
+			link := createLink(
+				pluginutils.LinkServiceDeps[
+					ResourceAServiceConfig,
+					ResourceAService,
+					ResourceBServiceConfig,
+					ResourceBService,
+				]{
+					ResourceAService: pluginutils.ServiceWithConfigStore[
+						ResourceAServiceConfig,
+						ResourceAService,
+					]{
+						ServiceFactory: tc.ServiceFactoryA,
+						ConfigStore:    tc.ConfigStoreA,
+					},
+					ResourceBService: pluginutils.ServiceWithConfigStore[
+						ResourceBServiceConfig,
+						ResourceBService,
+					]{
+						ServiceFactory: tc.ServiceFactoryB,
+						ConfigStore:    tc.ConfigStoreB,
+					},
+				},
+			)
+
+			output, err := link.ProduceResourceContributions(
+				context.Background(),
+				tc.Input,
+			)
+
+			if tc.ExpectError {
+				testSuite.Error(err)
+				testSuite.ErrorContains(err, tc.ExpectedErrorMessage)
+				return
+			}
+
+			testSuite.NoError(err)
+			assertExpectedOutput(
+				tc.ExpectedOutput,
+				tc.ExpectedOutputMatcher,
+				output,
+				testSuite,
+			)
+
+			assertActionsCalled(testSuite, tc.CurrentServiceMockCalls, tc.ActionsCalled)
+			assertActionsNotCalled(testSuite, tc.CurrentServiceMockCalls, tc.ActionsNotCalled)
+
+			if tc.ExtraAssertions != nil {
+				tc.ExtraAssertions(context.Background(), testSuite, output)
+			}
+		})
+	}
+}
+
 // LinkUpdateIntermediaryResourcesTestCase defines a test case for
 // updating intermediary resources in a link.
 type LinkUpdateIntermediaryResourcesTestCase[
