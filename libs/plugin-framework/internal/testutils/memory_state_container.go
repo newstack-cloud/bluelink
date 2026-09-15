@@ -511,6 +511,48 @@ func (c *memoryResourcesContainer) RemoveDrift(
 	return state.ResourceDriftState{}, nil
 }
 
+func (c *memoryResourcesContainer) SaveContributionFailure(
+	ctx context.Context,
+	resourceID string,
+	failure state.ResourceLinkContributionFailure,
+) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	resource, ok := c.resources[resourceID]
+	if !ok {
+		return state.ResourceNotFoundError(resourceID)
+	}
+
+	resource.LinkContributionFailures = state.UpsertContributionFailure(
+		resource.LinkContributionFailures,
+		failure,
+	)
+
+	return nil
+}
+
+func (c *memoryResourcesContainer) RemoveContributionFailure(
+	ctx context.Context,
+	resourceID string,
+	layerDepth int,
+) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	resource, ok := c.resources[resourceID]
+	if !ok {
+		return state.ResourceNotFoundError(resourceID)
+	}
+
+	resource.LinkContributionFailures = state.RemoveContributionFailureForLayer(
+		resource.LinkContributionFailures,
+		layerDepth,
+	)
+
+	return nil
+}
+
 type memoryLinksContainer struct {
 	instances              map[string]*state.InstanceState
 	links                  map[string]*state.LinkState
