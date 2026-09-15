@@ -159,6 +159,28 @@ type ResourcesContainer interface {
 	SaveDrift(ctx context.Context, driftState ResourceDriftState) error
 	// RemoveDrift deals with removing the drift state for a given resource.
 	RemoveDrift(ctx context.Context, resourceID string) (ResourceDriftState, error)
+	// SaveContributionFailure deals with persisting a layer of link contributions that
+	// could not be applied to a given resource, replacing any failure already held for the
+	// same layer depth.
+	//
+	// This does not change the resource's own status. The resource's deployment and the
+	// update carrying what its links contribute are separate outcomes, and the resource
+	// commonly deploys successfully and is then left without its contributions.
+	SaveContributionFailure(
+		ctx context.Context,
+		resourceID string,
+		failure ResourceLinkContributionFailure,
+	) error
+	// RemoveContributionFailure deals with removing the failure held for one layer depth of
+	// a given resource's link contributions, for when that layer is applied successfully.
+	//
+	// Removing a layer that has no failure held against it is not an error, since the
+	// common case is a layer that applies successfully having never failed.
+	RemoveContributionFailure(
+		ctx context.Context,
+		resourceID string,
+		layerDepth int,
+	) error
 }
 
 // LinksContainer provides an interface for functionality related
@@ -329,6 +351,19 @@ type ResourceState struct {
 	// Holds the latest reasons for failures in deploying a resource,
 	// this only ever holds the results of the latest deployment attempt.
 	FailureReasons []string `json:"failureReasons"`
+	// LinkContributionFailures holds the layers of link contributions that the last
+	// deployment could not apply to the resource, one entry per failed layer.
+	//
+	// A resource can deploy successfully and still be left without what its links
+	// contribute, since the merged update carrying those contributions is applied after the
+	// resource's own deployment and is not part of its lifecycle. The resource's own status
+	// therefore says nothing about it, and FailureReasons above belongs to the resource's
+	// own deployment, so neither can carry this.
+	//
+	// Held here rather than only on the event stream because the stream is not durable. A
+	// deployment's events age out under their retention period, and after that this is the
+	// only account of which links a resource is missing contributions from.
+	LinkContributionFailures []ResourceLinkContributionFailure `json:"linkContributionFailures,omitempty"`
 	// Drifted indicates whether or not the resource state has drifted
 	// due to changes in the upstream provider.
 	Drifted bool `json:"drifted,omitempty"`
@@ -417,6 +452,35 @@ type ResourceDriftState struct {
 	// drift from a partial picture is a lesser problem than a deployment applying one.
 	// Reporting it without saying so is not, and this is what says so.
 	UnappliedLinkContributions []UnappliedLinkContribution `json:"unappliedLinkContributions,omitempty"`
+}
+
+// ResourceLinkContributionFailure holds one layer of link contributions that a deployment
+// could not apply to a resource.
+//
+// A resource's contributions are applied in layers, one per depth in the capability
+// ordering over the links that contribute to it, so a resource whose contributors are
+// ordered can have more than one of these at a time.
+type ResourceLinkContributionFailure struct {
+	// LayerDepth is the depth in the capability ordering of the links whose contributions
+	// this layer carries. Zero for a resource with no ordering over its contributors,
+	// which has a single layer.
+	LayerDepth int `json:"layerDepth"`
+	// Reasons holds why the layer could not be applied, for a failure that belongs to the
+	// update as a whole rather than to a particular contribution. A provider rejecting the
+	// update and a resource that is not deployed are both reported here.
+	Reasons []string `json:"reasons,omitempty"`
+	// UnappliedContributions holds the individual contributions that could not be
+	// composed, for a failure that can be attributed to particular fields.
+	UnappliedContributions []UnappliedLinkContribution `json:"unappliedContributions,omitempty"`
+	// ContributingLinks holds the logical names of the links whose contributions this
+	// layer was carrying.
+	//
+	// Snapshotted rather than rebuilt from link state on read. A link removed from the
+	// blueprint after the failure takes its resource data mappings with it, and a failure
+	// that named its contributors only through those mappings would then name nobody.
+	ContributingLinks []string `json:"contributingLinks,omitempty"`
+	// Timestamp holds the unix timestamp of when the layer failed to apply.
+	Timestamp int `json:"timestamp"`
 }
 
 // UnappliedLinkContribution identifies a contribution a link records against a resource

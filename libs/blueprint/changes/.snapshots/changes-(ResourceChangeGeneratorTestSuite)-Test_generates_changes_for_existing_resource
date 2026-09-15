@@ -469,6 +469,7 @@
       DependsOnResources: ([]string) <nil>,
       DependsOnChildren: ([]string) <nil>,
       FailureReasons: ([]string) <nil>,
+      LinkContributionFailures: ([]state.ResourceLinkContributionFailure) <nil>,
       Drifted: (bool) false,
       LastDriftDetectedTimestamp: (*int)(<nil>),
       Durations: (*state.ResourceCompletionDurations)(<nil>),

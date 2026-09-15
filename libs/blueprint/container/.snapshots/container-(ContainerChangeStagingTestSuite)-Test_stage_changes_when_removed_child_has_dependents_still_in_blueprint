@@ -669,6 +669,7 @@
           DependsOnChildren: ([]string) <nil>,
           FailureReasons: ([]string) {
           },
+          LinkContributionFailures: ([]state.ResourceLinkContributionFailure) <nil>,
           Drifted: (bool) false,
           LastDriftDetectedTimestamp: (*int)(<nil>),
           Durations: (*state.ResourceCompletionDurations)(<nil>),
@@ -1536,6 +1537,7 @@
           DependsOnChildren: ([]string) <nil>,
           FailureReasons: ([]string) {
           },
+          LinkContributionFailures: ([]state.ResourceLinkContributionFailure) <nil>,
           Drifted: (bool) false,
           LastDriftDetectedTimestamp: (*int)(<nil>),
           Durations: (*state.ResourceCompletionDurations)(<nil>),
@@ -2252,6 +2254,7 @@
           },
           FailureReasons: ([]string) {
           },
+          LinkContributionFailures: ([]state.ResourceLinkContributionFailure) <nil>,
           Drifted: (bool) false,
           LastDriftDetectedTimestamp: (*int)(<nil>),
           Durations: (*state.ResourceCompletionDurations)(<nil>),
@@ -2829,6 +2832,7 @@
               DependsOnChildren: ([]string) <nil>,
               FailureReasons: ([]string) {
               },
+              LinkContributionFailures: ([]state.ResourceLinkContributionFailure) <nil>,
               Drifted: (bool) false,
               LastDriftDetectedTimestamp: (*int)(<nil>),
               Durations: (*state.ResourceCompletionDurations)(<nil>),

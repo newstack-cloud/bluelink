@@ -299,6 +299,18 @@ type ResourcesContainer interface {
         ctx context.Context,
         resourceID string,
     ) (ResourceDriftState, error)
+
+    SaveContributionFailure(
+        ctx context.Context,
+        resourceID string,
+        failure ResourceLinkContributionFailure,
+    ) error
+
+    RemoveContributionFailure(
+        ctx context.Context,
+        resourceID string,
+        layerDepth int,
+    ) error
 }
 
 type LinksContainer interface {
@@ -424,6 +436,23 @@ type ExportsContainer interface {
 ```
 
 A state container deals with persisting and loading state for blueprint instances, this could be to files on disk, to a NoSQL or relational database or a remote object/file storage service.
+
+`SaveContributionFailure` and `RemoveContributionFailure` on the resources container record
+the layers of [merged link contributions](#merged-link-contributions) that a deployment
+could not apply to a resource. They are deliberately separate from the resource's status, a
+resource commonly deploys successfully and is then left without what its links contribute,
+since the update carrying those contributions is applied afterwards and is not part of the
+resource's own lifecycle. An implementation must therefore leave the resource's status and
+`FailureReasons` untouched when saving one. Failures are held per layer depth, so applying
+one layer successfully must clear only that layer's failure, and saving a failure for a
+layer that already has one must replace it rather than accumulate an entry per attempt. The
+`UpsertContributionFailure` and `RemoveContributionFailureForLayer` helpers in the `state`
+package implement those semantics, so an implementation only has to read the list, apply the
+helper and write it back.
+
+This is persisted rather than only reported on the deployment's event stream because the
+stream is not durable. Once a deployment's events age out, the persisted failure is the only
+account of which links a resource is missing contributions from.
 
 The core blueprint framework does NOT come with any state container implementations, you must implement them yourself or use a library that extends the blueprint framework.
 
