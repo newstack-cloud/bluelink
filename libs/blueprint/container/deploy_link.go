@@ -9,6 +9,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
@@ -89,12 +90,12 @@ func (d *defaultLinkDeployer) Deploy(
 	resourceAInfo := getResourceInfoFromStateForLinkDeployment(
 		deployCtx.InstanceStateSnapshot,
 		linkDependencyInfo.resourceAName,
-		getResolvedResourceFromInputChanges(deployCtx.InputChanges, linkDependencyInfo.resourceAName),
+		resolvedResourceForLink(deployCtx, linkDependencyInfo.resourceAName),
 	)
 	resourceBInfo := getResourceInfoFromStateForLinkDeployment(
 		deployCtx.InstanceStateSnapshot,
 		linkDependencyInfo.resourceBName,
-		getResolvedResourceFromInputChanges(deployCtx.InputChanges, linkDependencyInfo.resourceBName),
+		resolvedResourceForLink(deployCtx, linkDependencyInfo.resourceBName),
 	)
 
 	var currentLinkState *state.LinkState
@@ -862,6 +863,62 @@ func getResourceInfoFromStateForLinkDeployment(
 		CurrentResourceState:     resourceState,
 		ResourceWithResolvedSubs: resolvedResource,
 	}
+}
+
+// The resource a link is given, as this deployment resolved it rather than as change
+// staging left it.
+//
+// A link's behaviour is determined by the annotations on the resources it relates, and an
+// annotation naming a field another resource computes doesn't hold anything until that resource
+// has been deployed. Change staging runs before any of that, so the resource it produced
+// carries the empty value, while the deployment resolved the real one and recorded it. A
+// link handed the staged resource decides on the empty value and cannot tell that is what
+// happened, since an annotation that was never set and one that failed to resolve look the
+// same.
+//
+// Only the metadata is taken from the deployment. The spec recorded alongside it has the
+// provider's computed values merged into it, which is the resource as it now is rather
+// than as the blueprint asks for it, and that is what CurrentResourceState is for.
+func resolvedResourceForLink(
+	deployCtx *DeployContext,
+	resourceName string,
+) *provider.ResolvedResource {
+	staged := getResolvedResourceFromInputChanges(deployCtx.InputChanges, resourceName)
+	if staged == nil || deployCtx.State == nil {
+		return staged
+	}
+
+	deployed := deployCtx.State.GetResourceData(resourceName)
+	if deployed == nil || deployed.Metadata == nil {
+		return staged
+	}
+
+	withDeployedMetadata := *staged
+	withDeployedMetadata.Metadata = stateToResolvedMetadata(deployed.Metadata)
+
+	return &withDeployedMetadata
+}
+
+func stateToResolvedMetadata(
+	metadataState *state.ResourceMetadataState,
+) *provider.ResolvedResourceMetadata {
+	resolved := &provider.ResolvedResourceMetadata{
+		Custom: metadataState.Custom,
+	}
+
+	if metadataState.DisplayName != "" {
+		resolved.DisplayName = core.MappingNodeFromString(metadataState.DisplayName)
+	}
+
+	if metadataState.Annotations != nil {
+		resolved.Annotations = &core.MappingNode{Fields: metadataState.Annotations}
+	}
+
+	if metadataState.Labels != nil {
+		resolved.Labels = &schema.StringMap{Values: metadataState.Labels}
+	}
+
+	return resolved
 }
 
 func getResolvedResourceFromInputChanges(

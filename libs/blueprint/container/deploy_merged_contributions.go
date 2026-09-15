@@ -36,6 +36,9 @@ type MergedContributionsDeployer interface {
 type defaultMergedContributionsDeployer struct {
 	stateContainer state.Container
 	clock          core.Clock
+	// Holds each resource as it was resolved for its own deployment in this run, which is
+	// the only place a reference to a field computed by another resource is resolved.
+	resourceCache *core.Cache[*provider.ResolvedResource]
 }
 
 // NewDefaultMergedContributionsDeployer creates the default implementation of the service
@@ -43,10 +46,12 @@ type defaultMergedContributionsDeployer struct {
 func NewDefaultMergedContributionsDeployer(
 	stateContainer state.Container,
 	clock core.Clock,
+	resourceCache *core.Cache[*provider.ResolvedResource],
 ) MergedContributionsDeployer {
 	return &defaultMergedContributionsDeployer{
 		stateContainer: stateContainer,
 		clock:          clock,
+		resourceCache:  resourceCache,
 	}
 }
 
@@ -58,6 +63,33 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 	deployCtx *DeployContext,
 ) error {
 	resourceName := layer.ResourceName
+
+	// Read the live state as a link records what it contributes
+	// when it deploys, so a link that ran in this deployment has mappings the snapshot
+	// taken before it started does not, and composing from the snapshot would withdraw
+	// them from the resource.
+	storedLinks, err := d.stateContainer.Links().ListWithResourceDataMappings(
+		ctx,
+		instanceID,
+		resourceName,
+	)
+	if err != nil {
+		return err
+	}
+
+	// Resolved before anything can fail. Every outcome of this update, successful or not,
+	// is about what a set of links needed the resource's spec to include, and a failure that
+	// names none of them leaves the resource reported as broken with nothing pointing at
+	// the contribution responsible.
+	contributors := LinkContributorsFor(
+		resourceName,
+		CollectResourceContributionSources(
+			deployCtx,
+			resourceName,
+			contributingLinkNames,
+			storedLinks,
+		),
+	)
 
 	// Read live rather than from the deployment's snapshot of instance state. A resource
 	// links contribute to is commonly created by the same deployment that runs them, and
@@ -77,6 +109,7 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 			resourceState,
 			layer,
 			deployCtx,
+			contributors,
 			[]string{
 				fmt.Sprintf(
 					"the resource %q that links contribute to is not deployed, so the "+
@@ -87,13 +120,14 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 		)
 	}
 
-	declaredSpec := declaredSpecForMergedUpdate(deployCtx, resourceName, resourceState)
+	declaredSpec := d.declaredSpecForMergedUpdate(deployCtx, resourceName, resourceState)
 
 	merged, err := ComposeMergedResourceSpec(
 		deployCtx,
 		layer,
 		declaredSpec,
 		contributingLinkNames,
+		storedLinks,
 	)
 	if err != nil {
 		return d.reportFailure(
@@ -101,6 +135,7 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 			resourceState,
 			layer,
 			deployCtx,
+			contributors,
 			[]string{err.Error()},
 		)
 	}
@@ -114,6 +149,7 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 			resourceState,
 			layer,
 			deployCtx,
+			contributors,
 			unresolvedContributionReasons(merged.Unresolved),
 		)
 	}
@@ -125,13 +161,15 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 		deployCtx.ResourceProviders,
 	)
 	if err != nil {
-		return d.reportFailure(instanceID, resourceState, layer, deployCtx, []string{err.Error()})
+		return d.reportFailure(
+			instanceID,
+			resourceState,
+			layer,
+			deployCtx,
+			contributors,
+			[]string{err.Error()},
+		)
 	}
-
-	contributors := LinkContributorsFor(
-		resourceName,
-		CollectResourceContributionSources(deployCtx, contributingLinkNames),
-	)
 
 	deployCtx.Channels.ResourceUpdateChan <- d.updateMessage(
 		instanceID,
@@ -167,7 +205,14 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 		},
 	)
 	if err != nil {
-		return d.reportFailure(instanceID, resourceState, layer, deployCtx, []string{err.Error()})
+		return d.reportFailure(
+			instanceID,
+			resourceState,
+			layer,
+			deployCtx,
+			contributors,
+			[]string{err.Error()},
+		)
 	}
 
 	// Recorded before the message is sent. A link held for a capability this layer carries
@@ -216,6 +261,7 @@ func (d *defaultMergedContributionsDeployer) reportFailure(
 	resourceState *state.ResourceState,
 	layer ContributionLayer,
 	deployCtx *DeployContext,
+	contributors map[string][]string,
 	failureReasons []string,
 ) error {
 	// Recorded before the message is sent, for the same reason applying one is, a link
@@ -229,7 +275,7 @@ func (d *defaultMergedContributionsDeployer) reportFailure(
 		deployCtx,
 		core.ResourceStatusUpdateFailed,
 		core.PreciseResourceStatusLinkContributionsUpdateFailed,
-		/* contributors */ nil,
+		contributors,
 		failureReasons,
 	)
 
@@ -271,17 +317,18 @@ func resourceIDOrEmpty(resourceState *state.ResourceState) string {
 	return resourceState.ResourceID
 }
 
-// The resource as the blueprint declares it, without the contributions links have made to
-// it, which is what the merged spec is composed on top of.
-//
-// A resource in the change set has a resolved spec there. One that is not in the change
-// set at all has only what state holds, which is the declared spec, since contributions
-// are applied at deploy time and kept out of what is persisted.
-func declaredSpecForMergedUpdate(
+func (d *defaultMergedContributionsDeployer) declaredSpecForMergedUpdate(
 	deployCtx *DeployContext,
 	resourceName string,
 	resourceState *state.ResourceState,
 ) *core.MappingNode {
+	if d.resourceCache != nil {
+		if deployed, cached := d.resourceCache.Get(resourceName); cached &&
+			deployed != nil && deployed.Spec != nil {
+			return deployed.Spec
+		}
+	}
+
 	resolved := getResolvedResourceFromInputChanges(deployCtx.InputChanges, resourceName)
 	if resolved != nil && resolved.Spec != nil {
 		return resolved.Spec

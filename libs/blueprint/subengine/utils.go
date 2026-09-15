@@ -527,12 +527,26 @@ func filterOutResolvedAnnotations(
 	}
 
 	for key, value := range inputAnnotations.Values {
-		if _, ok := resolvedAnnotations.Fields[key]; !ok {
+		resolved, present := resolvedAnnotations.Fields[key]
+		// Present but holding nothing is what an annotation looks like when the earlier
+		// attempt could not resolve it, since a reference to something that did not exist
+		// yet produces no value rather than no entry. Treating the entry as an answer
+		// leaves the annotation empty for the rest of the deployment, with nothing said
+		// about it, so it is resolved again here.
+		if !present || isUnresolvedAnnotation(resolved) {
 			filteredAnnotations.Values[key] = value
 		}
 	}
 
 	return filteredAnnotations
+}
+
+func isUnresolvedAnnotation(annotation *bpcore.MappingNode) bool {
+	return annotation == nil ||
+		(annotation.Scalar == nil &&
+			annotation.Fields == nil &&
+			annotation.Items == nil &&
+			annotation.StringWithSubstitutions == nil)
 }
 
 func getPartiallyResolvedResourceSpec(

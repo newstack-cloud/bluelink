@@ -489,13 +489,21 @@ Finally, a provider is also responsible for implementing link implementations fo
 
 In the case where there are links between resources that span multiple providers (e.g. AWS and Google Cloud), a provider needs to be implemented that represents the relationship between providers. In most cases this would be an abstraction that fulfils the provider interface that internally holds multiple providers. This will have it's own set of link implementations for resource types across providers.
 
+The interface for a provider includes `context.Context` and returns an `error` to allow for provider implementations over the network boundary like with an RPC-based plugin system.
+
+The core framework does NOT come with any provider implementations, you must implement them yourself or use provider libraries that can be used to extend the blueprint framework.
+
 ### Link deployment phases
 
-Deploying a link runs three phases in a fixed order, each of which the link deployer retries independently under the provider's retry policy:
+Deploying a link runs three phases in a fixed order:
 
-1. `UpdateResourceA` — modify the first resource in the link relationship.
-2. `UpdateResourceB` — modify the second resource in the link relationship.
+1. `ProduceResourceContributions` — return what the link needs the specs of the blueprint-declared resources it writes to include. It performs no write of its own; the framework merges what every link contributes to a resource and applies the result as a single update of that resource.
+2. `UpdateLinkedResources` — imperatively modify the blueprint-declared resources in the relationship. Both resources are given, and a link writes whichever of them it declared under the link definition's `Modifies` field.
 3. `UpdateIntermediaryResources` — create, update or remove resources that exist only to support the link, such as an IAM role policy shared with other links.
+
+A link implements `ProduceResourceContributions` or `UpdateLinkedResources` for a given resource, never both as contributing to a resource and imperatively writing the same resource would lead to double writes. A link that contributes to no resource leaves the first phase unimplemented and behaves exactly as it did before contributions existed.
+
+The last two phases are retried independently under the provider's retry policy. `ProduceResourceContributions` is not retried, since it is not the phase that applies anything.
 
 All three phases receive a `ResourceService` and a `LinkID`. The resource service is the link implementation's route back into the framework's own machinery for deploying resources, looking up resources in state, and acquiring locks on resources that other links in the same blueprint instance may be modifying concurrently. The link ID identifies the link holding a lock, and is what the deployer matches on when releasing.
 
@@ -509,8 +517,8 @@ rest back, so two running at once could have one take a link the other was about
 release and leave it with nothing to run it.
 
 Keeping two links off the same resource is a separate concern from ordering, handled by
-the resource locks the deployer holds around each of `UpdateResourceA` and
-`UpdateResourceB`, and by the locks a link takes on shared intermediaries such as an
+the locks the deployer holds around `UpdateLinkedResources` on each side the link declared
+under `Modifies`, and by the locks a link takes on shared intermediaries such as an
 execution role that several links write policy permissions to. A lock is attributed to the link that
 takes it and released when its phase ends; it is never taken from its holder, since
 expiring a lock would let two links write the same resource at once without saying so.
@@ -549,9 +557,38 @@ attached to the network.
 
 Locks are scoped to the phase that took them. After each phase the deployer releases every lock acquired by that link, whether the phase succeeded, failed, or was cancelled, so a lock never survives into the next phase or into a retry. A link is therefore free to acquire locks in any phase, but must not rely on one it acquired in an earlier phase still being held.
 
-The interface for a provider includes `context.Context` and returns an `error` to allow for provider implementations over the network boundary like with an RPC-based plugin system.
+### Merged link contributions
 
-The core framework does NOT come with any provider implementations, you must implement them yourself or use provider libraries that can be used to extend the blueprint framework.
+A link that contributes rather than writes states what it needs a resource's spec to include,
+and the framework applies what every contributing link needs as one update of that
+resource. An execution role that a dozen links write policy permissions to costs one update
+of the role rather than one per link, and a link never has to read what another link wrote
+to avoid overwriting it.
+
+Each contribution names a field path in the resource's spec and an action: `Set` replaces
+the value at that path, which is what a scalar field takes, and `Append` adds to the list
+at the given path.
+Contributions are desired state, so a link that stops contributing a value ordinarily removes it.
+
+Contributions that disagree are refused rather than resolved. Two links appending to one
+list is the case appending exists for; two links setting the same field to _different_
+values is not, since each states a whole value, the one applied last would win by an
+ordering that says nothing about which is right, and the deployment would report success
+having silently discarded the other. The framework reports the field and the links that set
+it instead. Two links setting the same field to the same value agree, and agreement is not
+a conflict.
+
+The update is applied by a `MergedContributionsDeployer`, which is a container dependency
+rather than something a link calls. It runs outside the path that deploys a change the user
+made, because a resource reached this way may not be in the change set at all.
+
+A resource's contributions are applied in _layers_ rather than in one write. A layer is one
+update of a resource carrying the contributions of the links at a given depth in the
+capability ordering, and it is applied once every link at that depth has settled. A
+resource whose contributors all sit at one depth (which is every resource in a deployment
+with no capability ordering) has a single layer and is written once. Layers are
+what let a link require a capability on a resource it also contributes to as it waits for the
+layer that establishes the capability to land, rather than for a write that never happens.
 
 ## SpecTransformer (transformer.SpecTransformer)
 

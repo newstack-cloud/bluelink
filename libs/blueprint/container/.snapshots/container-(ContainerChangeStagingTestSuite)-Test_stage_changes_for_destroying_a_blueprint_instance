@@ -1,4 +1,5 @@
 (*changes.BlueprintChanges)({
+  Diagnostics: ([]*core.Diagnostic) <nil>,
   NewResources: (map[string]provider.Changes) {
   },
   ResourceChanges: (map[string]provider.Changes) {
@@ -18,6 +19,7 @@
   },
   ChildChanges: (map[string]changes.BlueprintChanges) (len=1) {
     (string) (len=9) "coreInfra": (changes.BlueprintChanges) {
+      Diagnostics: ([]*core.Diagnostic) <nil>,
       NewResources: (map[string]provider.Changes) {
       },
       ResourceChanges: (map[string]provider.Changes) {

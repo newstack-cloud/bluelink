@@ -244,7 +244,13 @@ func (s *linkScheduler) Drain(ctx context.Context) ([]*LinkPendingCompletion, []
 		return nil, s.takeHeldErrors()
 	}
 
-	s.inFlight.Wait()
+	if !s.waitForInFlight(ctx) {
+		// The links still running are left to the caller, which marks what is in flight
+		// as interrupted. Reporting a link whose outcome is unknown as interrupted is
+		// truthful, and it is the only account anyone gets if the drain never returns.
+		s.forwardErrors()
+		return collectedLeftover(leftover), s.takeHeldErrors()
+	}
 
 	// A worker that finished after the dispatcher returned has no one left to forward
 	// its error, so this is the last chance to collect it.
@@ -255,6 +261,37 @@ func (s *linkScheduler) Drain(ctx context.Context) ([]*LinkPendingCompletion, []
 		return pending, s.takeHeldErrors()
 	case <-ctx.Done():
 		return nil, s.takeHeldErrors()
+	}
+}
+
+// Waits for the links already running, reporting whether all of them finished.
+func (s *linkScheduler) waitForInFlight(ctx context.Context) bool {
+	waited := make(chan struct{})
+	go func() {
+		s.inFlight.Wait()
+		close(waited)
+	}()
+
+	select {
+	case <-waited:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+// The links the dispatcher handed over, when they are already there to be taken.
+//
+// The dispatcher sends these before it returns, so they are usually waiting. A drain that
+// gave up on its workers must not then block to collect them.
+func collectedLeftover(
+	leftover chan []*LinkPendingCompletion,
+) []*LinkPendingCompletion {
+	select {
+	case pending := <-leftover:
+		return pending
+	default:
+		return nil
 	}
 }
 

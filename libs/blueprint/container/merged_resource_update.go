@@ -29,6 +29,11 @@ type ResourceContributionSources struct {
 	RemovedLinkNames []string
 	// SupersededLinkNames holds the links whose stored contributions are not to be read
 	// because what they produced in this deployment is all of what they contribute.
+	//
+	// Only a link that produced contributions for the resource being composed belongs
+	// here. A link that writes its resources itself contributes through the mappings it
+	// records rather than by producing anything, so superseding it for having run would
+	// withdraw everything it contributes.
 	SupersededLinkNames []string
 }
 
@@ -40,7 +45,9 @@ type ResourceContributionSources struct {
 // a link whose contributions are withdrawn from the resource when the update lands.
 func CollectResourceContributionSources(
 	deployCtx *DeployContext,
+	resourceName string,
 	contributingLinkNames []string,
+	storedLinks []state.LinkState,
 ) *ResourceContributionSources {
 	sources := &ResourceContributionSources{
 		Produced: []specmerge.LinkResourceContribution{},
@@ -65,8 +72,12 @@ func CollectResourceContributionSources(
 		)
 	}
 
-	sources.Stored = storedLinkStates(deployCtx)
-	sources.SupersededLinkNames = supersededLinkNames(deployCtx, contributingLinkNames)
+	sources.Stored = sortedLinkStates(storedLinks)
+	sources.SupersededLinkNames = supersededLinkNames(
+		deployCtx,
+		resourceName,
+		contributingLinkNames,
+	)
 
 	return sources
 }
@@ -84,8 +95,14 @@ func ComposeMergedResourceSpec(
 	layer ContributionLayer,
 	declaredSpec *core.MappingNode,
 	contributingLinkNames []string,
+	storedLinks []state.LinkState,
 ) (*specmerge.ContributionMergeResult, error) {
-	sources := CollectResourceContributionSources(deployCtx, contributingLinkNames)
+	sources := CollectResourceContributionSources(
+		deployCtx,
+		layer.ResourceName,
+		contributingLinkNames,
+		storedLinks,
+	)
 
 	return specmerge.ComposeResourceContributions(
 		declaredSpec,
@@ -156,17 +173,8 @@ func LinkContributorsFor(
 	return contributors
 }
 
-func storedLinkStates(deployCtx *DeployContext) []state.LinkState {
-	if deployCtx.InstanceStateSnapshot == nil {
-		return nil
-	}
-
-	linkStates := []state.LinkState{}
-	for _, linkState := range deployCtx.InstanceStateSnapshot.Links {
-		if linkState != nil {
-			linkStates = append(linkStates, *linkState)
-		}
-	}
+func sortedLinkStates(storedLinks []state.LinkState) []state.LinkState {
+	linkStates := slices.Clone(storedLinks)
 
 	// Sorted so a resource's merged update is composed from its links in the same order on
 	// every run, since the order contributions are applied in decides where an appended
@@ -181,14 +189,34 @@ func storedLinkStates(deployCtx *DeployContext) []state.LinkState {
 // The links whose stored contributions will be replaced by the current deployment.
 func supersededLinkNames(
 	deployCtx *DeployContext,
+	resourceName string,
 	contributingLinkNames []string,
 ) []string {
 	superseded := []string{}
 	for _, linkName := range contributingLinkNames {
-		if deployCtx.State.GetLinkDeployResult(linkName) != nil {
+		result := deployCtx.State.GetLinkDeployResult(linkName)
+		if result == nil {
+			continue
+		}
+
+		if producedContributionsForResource(linkName, resourceName, result) {
 			superseded = append(superseded, linkName)
 		}
 	}
 
 	return superseded
+}
+
+func producedContributionsForResource(
+	linkName string,
+	resourceName string,
+	result *LinkDeployResult,
+) bool {
+	for _, contribution := range LinkContributionsFor(linkName, result.Contributions) {
+		if contribution.Contribution.ResourceName == resourceName {
+			return true
+		}
+	}
+
+	return false
 }

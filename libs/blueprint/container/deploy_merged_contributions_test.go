@@ -27,7 +27,13 @@ func (s *MergedContributionsDeployerTestSuite) Test_deploys_the_resource_with_ev
 		s.storedAppend("archiveFunction::appQueue", "spec.policies", "sqs:SendMessage"),
 	})
 
-	err := NewDefaultMergedContributionsDeployer(stateContainer, &mockclock.StaticClock{}).Deploy(
+	err := NewDefaultMergedContributionsDeployer(
+		stateContainer,
+		&mockclock.StaticClock{},
+		// Empty as these exercise a deployer whose run has resolved nothing, so the
+		// declared spec comes from the change set or state.
+		core.NewCache[*provider.ResolvedResource](),
+	).Deploy(
 		context.Background(),
 		"test-instance",
 		ContributionLayer{ResourceName: "ordersRole"},
@@ -64,7 +70,13 @@ func (s *MergedContributionsDeployerTestSuite) Test_reports_the_update_as_one_ca
 		s.storedAppend("archiveFunction::appQueue", "spec.policies", "sqs:SendMessage"),
 	})
 
-	err := NewDefaultMergedContributionsDeployer(stateContainer, &mockclock.StaticClock{}).Deploy(
+	err := NewDefaultMergedContributionsDeployer(
+		stateContainer,
+		&mockclock.StaticClock{},
+		// Empty as these exercise a deployer whose run has resolved nothing, so the
+		// declared spec comes from the change set or state.
+		core.NewCache[*provider.ResolvedResource](),
+	).Deploy(
 		context.Background(),
 		"test-instance",
 		ContributionLayer{ResourceName: "ordersRole"},
@@ -98,7 +110,13 @@ func (s *MergedContributionsDeployerTestSuite) Test_tells_the_provider_the_deplo
 		"saveOrderFunction::ordersTable": s.produced("spec.policies", "dynamodb:PutItem"),
 	}, nil)
 
-	err := NewDefaultMergedContributionsDeployer(stateContainer, &mockclock.StaticClock{}).Deploy(
+	err := NewDefaultMergedContributionsDeployer(
+		stateContainer,
+		&mockclock.StaticClock{},
+		// Empty as these exercise a deployer whose run has resolved nothing, so the
+		// declared spec comes from the change set or state.
+		core.NewCache[*provider.ResolvedResource](),
+	).Deploy(
 		context.Background(),
 		"test-instance",
 		ContributionLayer{ResourceName: "ordersRole"},
@@ -120,7 +138,13 @@ func (s *MergedContributionsDeployerTestSuite) Test_does_not_deploy_when_a_contr
 
 	deployCtx, stateContainer, messages := s.deployContext(deployed, nil, []*state.LinkState{unreadable})
 
-	err := NewDefaultMergedContributionsDeployer(stateContainer, &mockclock.StaticClock{}).Deploy(
+	err := NewDefaultMergedContributionsDeployer(
+		stateContainer,
+		&mockclock.StaticClock{},
+		// Empty as these exercise a deployer whose run has resolved nothing, so the
+		// declared spec comes from the change set or state.
+		core.NewCache[*provider.ResolvedResource](),
+	).Deploy(
 		context.Background(),
 		"test-instance",
 		ContributionLayer{ResourceName: "ordersRole"},
@@ -148,7 +172,13 @@ func (s *MergedContributionsDeployerTestSuite) Test_reports_a_resource_that_is_n
 	deployed := &capturingContributionResource{}
 	deployCtx, stateContainer, messages := s.deployContext(deployed, nil, nil)
 
-	err := NewDefaultMergedContributionsDeployer(stateContainer, &mockclock.StaticClock{}).Deploy(
+	err := NewDefaultMergedContributionsDeployer(
+		stateContainer,
+		&mockclock.StaticClock{},
+		// Empty as these exercise a deployer whose run has resolved nothing, so the
+		// declared spec comes from the change set or state.
+		core.NewCache[*provider.ResolvedResource](),
+	).Deploy(
 		context.Background(),
 		"test-instance",
 		ContributionLayer{ResourceName: "neverDeployedRole"},
@@ -259,8 +289,12 @@ func (s *MergedContributionsDeployerTestSuite) storedAppend(
 		},
 	})
 
+	// Identified as it would be in a real state container, which resolves a link by its
+	// id when reading back what it contributes.
 	return &state.LinkState{
+		LinkID:               linkName,
 		Name:                 linkName,
+		InstanceID:           "test-instance",
 		Data:                 contributed.Data,
 		ResourceDataMappings: contributed.ResourceDataMappings,
 		ContributionRecords:  contributed.ContributionRecords,

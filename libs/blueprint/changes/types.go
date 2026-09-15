@@ -1,6 +1,9 @@
 package changes
 
-import "github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+import (
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+)
 
 // MetadataChanges holds information about changes to blueprint-wide metadata.
 type MetadataChanges struct {
@@ -27,6 +30,19 @@ type MetadataChanges struct {
 // We must check the resource types associated with a set of changes
 // at runtime.
 type BlueprintChanges struct {
+	// Diagnostics holds the warnings and informational messages raised while the
+	// blueprint was loaded and transformed, which the change set carries so that a client
+	// can report them alongside what will be deployed.
+	//
+	// A transform that cannot act on part of a blueprint says so and carries on, since the
+	// rest of it is still deployable. What it produces is a diagnostic, and without one
+	// travelling with the change set there is nothing to tell the operator that something
+	// they wrote was left out as the resources are all correct, because what was skipped
+	// never became a resource.
+	//
+	// Errors are not carried here. A diagnostic that is an error fails the load, so
+	// nothing reaches this point holding one.
+	Diagnostics []*core.Diagnostic `json:"diagnostics,omitempty"`
 	// NewResources contains the resources that will be created
 	// when deploying the changes.
 	NewResources map[string]provider.Changes `json:"newResources"`

@@ -332,9 +332,9 @@ func collectArrayFieldChanges(
 	// Sort arrays by the specified field if configured for order-independent comparison.
 	// This is useful for arrays like tags where the logical identity is a key field
 	// but the order may vary between the blueprint spec and external state.
-	if schema.SortArrayByField != "" {
-		newSpecItems = sortArrayItemsByField(newSpecItems, schema.SortArrayByField)
-		currentStateItems = sortArrayItemsByField(currentStateItems, schema.SortArrayByField)
+	if schema.SortArrayByField != "" || schema.IgnoreItemOrder {
+		newSpecItems = SortArrayItemsForComparison(newSpecItems, schema)
+		currentStateItems = SortArrayItemsForComparison(currentStateItems, schema)
 	}
 
 	for i, newValue := range newSpecItems {
@@ -709,7 +709,65 @@ func getArrayItem(node []*bpcore.MappingNode, index int) *bpcore.MappingNode {
 	return node[index]
 }
 
-// sortArrayItemsByField returns a sorted copy of the array items based on the
+// SortArrayItemsForComparison returns the items in the order two arrays must be in to be
+// compared without their order being read as a difference.
+//
+// Which order that is comes from the schema, since only the resource type knows whether a
+// field's order carries meaning. Items are ordered by the field that carries their
+// identity when the schema names one, and by their own value when it declares the order
+// insignificant. An array the schema says nothing about is returned untouched, so order
+// remains significant unless a resource type says otherwise.
+func SortArrayItemsForComparison(
+	items []*bpcore.MappingNode,
+	schema *provider.ResourceDefinitionsSchema,
+) []*bpcore.MappingNode {
+	if schema == nil {
+		return items
+	}
+
+	if schema.SortArrayByField != "" {
+		return sortArrayItemsByField(items, schema.SortArrayByField)
+	}
+
+	if schema.IgnoreItemOrder {
+		return sortArrayItemsByValue(items)
+	}
+
+	return items
+}
+
+// Ordered by each item's own value, for an array the schema declares unordered.
+//
+// Items that are not scalars sort to the end and keep their relative order. A schema
+// declaring the order of an array of objects insignificant has no identity field to
+// compare them by, which is what SortArrayByField is for, so there is nothing better to do
+// with them than leave them as they are.
+func sortArrayItemsByValue(items []*bpcore.MappingNode) []*bpcore.MappingNode {
+	if len(items) == 0 {
+		return items
+	}
+
+	sorted := make([]*bpcore.MappingNode, len(items))
+	copy(sorted, items)
+
+	slices.SortStableFunc(sorted, func(a, b *bpcore.MappingNode) int {
+		return strings.Compare(scalarSortKey(a), scalarSortKey(b))
+	})
+
+	return sorted
+}
+
+// Ranked so that scalars order among themselves by value and anything else follows them,
+// which keeps a non-scalar from sorting ahead of every scalar on an empty key.
+func scalarSortKey(node *bpcore.MappingNode) string {
+	if node == nil || node.Scalar == nil {
+		return "1"
+	}
+
+	return "0" + node.Scalar.ToString()
+}
+
+// Returns a sorted copy of the array items based on the
 // string value of the specified field. Items without the field or with non-string
 // values for the field are sorted to the end.
 // This is used for order-independent comparison of arrays like tags.

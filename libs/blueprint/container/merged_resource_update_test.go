@@ -35,6 +35,7 @@ func (s *MergedResourceUpdateTestSuite) Test_carries_the_statements_of_links_the
 		ContributionLayer{ResourceName: "ordersRole"},
 		core.MappingNodeFields(),
 		[]string{"saveOrderFunction::ordersTable"},
+		storedLinksForTest(deployCtx),
 	)
 
 	s.Require().NoError(err)
@@ -72,6 +73,7 @@ func (s *MergedResourceUpdateTestSuite) Test_a_link_that_ran_is_not_also_read_fr
 		ContributionLayer{ResourceName: "ordersRole"},
 		core.MappingNodeFields(),
 		[]string{"saveOrderFunction::ordersTable"},
+		storedLinksForTest(deployCtx),
 	)
 
 	s.Require().NoError(err)
@@ -98,6 +100,7 @@ func (s *MergedResourceUpdateTestSuite) Test_reads_from_state_a_link_that_produc
 		ContributionLayer{ResourceName: "ordersRole"},
 		core.MappingNodeFields(),
 		[]string{"archiveFunction::appQueue"},
+		storedLinksForTest(deployCtx),
 	)
 
 	s.Require().NoError(err)
@@ -129,7 +132,9 @@ func (s *MergedResourceUpdateTestSuite) Test_names_every_link_that_contributed_t
 		"ordersRole",
 		CollectResourceContributionSources(
 			deployCtx,
+			"ordersRole",
 			[]string{"saveOrderFunction::ordersTable"},
+			storedLinksForTest(deployCtx),
 		),
 	)
 
@@ -172,7 +177,9 @@ func (s *MergedResourceUpdateTestSuite) Test_names_a_link_that_ran_once() {
 		"ordersRole",
 		CollectResourceContributionSources(
 			deployCtx,
+			"ordersRole",
 			[]string{"saveOrderFunction::ordersTable"},
+			storedLinksForTest(deployCtx),
 		),
 	)
 
@@ -206,7 +213,9 @@ func (s *MergedResourceUpdateTestSuite) Test_does_not_name_a_link_against_a_fiel
 		"ordersRole",
 		CollectResourceContributionSources(
 			deployCtx,
+			"ordersRole",
 			[]string{"saveOrderFunction::ordersTable"},
+			storedLinksForTest(deployCtx),
 		),
 	)
 
@@ -239,6 +248,21 @@ func (s *MergedResourceUpdateTestSuite) deployContext(
 		InstanceStateSnapshot: &state.InstanceState{Links: links},
 		InputChanges:          &changes.BlueprintChanges{RemovedLinks: removedLinks},
 	}
+}
+
+func storedLinksForTest(deployCtx *DeployContext) []state.LinkState {
+	if deployCtx.InstanceStateSnapshot == nil {
+		return nil
+	}
+
+	linkStates := []state.LinkState{}
+	for _, linkState := range deployCtx.InstanceStateSnapshot.Links {
+		if linkState != nil {
+			linkStates = append(linkStates, *linkState)
+		}
+	}
+
+	return linkStates
 }
 
 func (s *MergedResourceUpdateTestSuite) produced(

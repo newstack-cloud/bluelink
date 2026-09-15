@@ -1,0 +1,39 @@
+version: 2025-11-02
+resources:
+  permissionsBoundary:
+    type: aws/iam/role
+    description: >
+      Deployed before the role that references it. Its id is computed, so the reference to
+      it cannot be resolved until this has been deployed.
+    spec: {}
+
+  ordersRole:
+    type: aws/iam/role
+    description: >
+      The role two functions are granted access through, which links contribute policies
+      to. Its boundaryId is a reference to a field computed when permissionsBoundary is
+      deployed, so it resolves to nothing while changes are staged and to a value once the
+      deployment has reached it.
+    metadata:
+      labels:
+        system: orders
+    spec:
+      boundaryId: "${resources.permissionsBoundary.spec.id}"
+
+  saveOrderFunction:
+    type: aws/lambda/function
+    description: "Function granted access through the shared role."
+    linkSelector:
+      byLabel:
+        system: orders
+    spec:
+      handler: "src/save_order.handler"
+
+  archiveOrderFunction:
+    type: aws/lambda/function
+    description: "Second function granted access through the same shared role."
+    linkSelector:
+      byLabel:
+        system: orders
+    spec:
+      handler: "src/archive_order.handler"

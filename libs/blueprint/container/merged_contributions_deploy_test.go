@@ -128,6 +128,87 @@ func (s *MergedContributionsDeployTestSuite) Test_fails_the_deployment_when_a_re
 	)
 }
 
+// A resource whose links could not give it what they contribute must say so in state.
+//
+// The resource's own deployment succeeded, so state records it as created and nothing else
+// in the persisted resource says the contribution update was ever attempted. Anyone
+// inspecting the instance afterwards sees a healthy resource, and the next deployment
+// stages against a state that claims the update it needs has already been applied. The
+// failure is reported on the event stream and to the deployment as a whole, and neither of
+// those is durable.
+//
+// The status itself stays the resource's own, because a link contribution status is only
+// ever reported on the stream. What has to reach state is the reason.
+func (s *MergedContributionsDeployTestSuite) Test_records_why_a_resource_did_not_get_what_its_links_contribute() {
+	stateContainer := memstate.NewMemoryStateContainer()
+	deployedRole := &recordingRoleResource{failContributionUpdate: true}
+	loader := newMergedContributionsLoader(stateContainer, deployedRole)
+
+	_, finished := s.deployMergedContributionsBlueprint(loader)
+
+	roleState, err := stateContainer.Resources().GetByName(
+		context.Background(),
+		finished.InstanceID,
+		"ordersRole",
+	)
+	s.Require().NoError(err)
+	s.Require().NotEmpty(
+		roleState.FailureReasons,
+		"state records the role as deployed without saying its links could not write to it",
+	)
+	s.Assert().Contains(
+		fmt.Sprintf("%v", roleState.FailureReasons),
+		"the role could not be given the statements its links need",
+	)
+
+	// The invariant the successful case relies on still holds. A status that is only ever
+	// reported on the event stream must not be written to state.
+	s.Assert().False(
+		roleState.PreciseStatus.IsLinkContributionStatus(),
+		"a stream-only status was recorded in state",
+	)
+	s.Assert().Equal(
+		core.ResourceStatusCreated,
+		roleState.Status,
+		"the role's own deployment succeeded and its status must still say so",
+	)
+}
+
+// A failed contribution update has to name the links whose contributions it was carrying.
+//
+// The resource is the thing that did not get its contributions, so the outcome is recorded
+// against it, but on its own that says a resource failed and nothing about why any link was
+// writing to it. The successful update already reports its contributors, and the failure is
+// where the attribution is worth more, since it is the only thing pointing at the link whose
+// contribution has to change.
+func (s *MergedContributionsDeployTestSuite) Test_names_the_contributing_links_when_the_update_fails() {
+	stateContainer := memstate.NewMemoryStateContainer()
+	deployedRole := &recordingRoleResource{failContributionUpdate: true}
+	loader := newMergedContributionsLoader(stateContainer, deployedRole)
+
+	messages, _ := s.deployMergedContributionsBlueprint(loader)
+
+	var failure *ResourceDeployUpdateMessage
+	for index, message := range messages {
+		if message.ResourceName == "ordersRole" &&
+			message.PreciseStatus == core.PreciseResourceStatusLinkContributionsUpdateFailed {
+			failure = &messages[index]
+			break
+		}
+	}
+
+	s.Require().NotNil(failure, "the failed contribution update was never reported")
+	s.Require().NotEmpty(
+		failure.LinkContributors,
+		"the failure names no link, so nothing points at the contribution that has to change",
+	)
+	s.Assert().Contains(
+		failure.LinkContributors,
+		"spec.policies",
+		"the field the links contributed is not attributed to them",
+	)
+}
+
 func (s *MergedContributionsDeployTestSuite) deployMergedContributionsBlueprint(
 	loader Loader,
 ) ([]ResourceDeployUpdateMessage, *DeploymentFinishedMessage) {

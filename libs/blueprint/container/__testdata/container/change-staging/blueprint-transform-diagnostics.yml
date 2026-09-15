@@ -1,0 +1,10 @@
+version: 2025-11-02
+transform: test-warning-2026
+resources:
+  ordersFunction:
+    type: aws/lambda2/function
+    description: >
+      A resource the transform leaves alone. The transform emits a warning about part of
+      the blueprint it could not act on, which is what this fixture exists to carry.
+    spec:
+      handler: "src/orders.handler"

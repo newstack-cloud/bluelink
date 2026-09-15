@@ -1431,6 +1431,13 @@ func (c *defaultBlueprintContainer) handleResourceUpdateMessage(
 		// write it, not because anything about it changed.
 		deployCtx.Channels.ResourceUpdateChan <- msg
 		trackContributionUpdateCompletion(msg, finished)
+
+		// The status is not the resource's own, but a failure to apply what its links
+		// contribute is still an outcome the instance has to carry.
+		if msg.PreciseStatus == core.PreciseResourceStatusLinkContributionsUpdateFailed {
+			return c.recordFailedContributionUpdate(ctx, msg, c.stateContainer.Resources())
+		}
+
 		return nil
 	}
 
@@ -1585,6 +1592,44 @@ func (c *defaultBlueprintContainer) handleFinishedUpdatingResource(
 	}
 
 	return nil
+}
+
+// A resource that could not be given what its links contribute has to say so in state.
+//
+// The failure is reported on the event stream and counted by the deployment, and neither
+// of those is durable. Without this, state holds the resource's own successful deployment
+// and nothing about the contributions that never reached it, so the instance reads as
+// healthy afterwards and the next deployment stages against a state claiming the update it
+// needs was already applied.
+//
+// The resource's own status is preserved rather than overwritten. A link contribution
+// status is only ever reported on the event stream, never recorded, and the resource's
+// deployment did succeed. What has to reach state is the reason, not a new status.
+func (c *defaultBlueprintContainer) recordFailedContributionUpdate(
+	ctx context.Context,
+	msg ResourceDeployUpdateMessage,
+	resources state.ResourcesContainer,
+) error {
+	current, err := resources.Get(ctx, msg.ResourceID)
+	if err != nil {
+		return err
+	}
+
+	updateTimestamp := int(msg.UpdateTimestamp)
+	currentTimestamp := int(c.clock.Now().Unix())
+
+	return resources.UpdateStatus(
+		ctx,
+		msg.ResourceID,
+		state.ResourceStatusInfo{
+			Status:                     current.Status,
+			PreciseStatus:              current.PreciseStatus,
+			LastDeployAttemptTimestamp: &currentTimestamp,
+			LastStatusUpdateTimestamp:  &updateTimestamp,
+			Durations:                  msg.Durations,
+			FailureReasons:             msg.FailureReasons,
+		},
+	)
 }
 
 func (c *defaultBlueprintContainer) buildResourceState(
@@ -2987,7 +3032,17 @@ func (c *defaultBlueprintContainer) drainLinkScheduler(
 		return nil
 	}
 
-	neverStarted, undelivered := deployCtx.LinkScheduler.Drain(ctx)
+	// Draining needs its own timeout that is separate from deployment
+	// so that it can't be blocked waiting for a link that will never return.
+	drainTimeout := deployCtx.DrainTimeout
+	if drainTimeout == 0 {
+		drainTimeout = DefaultDrainTimeout
+	}
+
+	drainCtx, cancelDrain := context.WithTimeout(ctx, drainTimeout)
+	defer cancelDrain()
+
+	neverStarted, undelivered := deployCtx.LinkScheduler.Drain(drainCtx)
 	for _, err := range undelivered {
 		deployCtx.Logger.Error(
 			"link deployment error that could not be reported while the deployment ran",

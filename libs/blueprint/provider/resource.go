@@ -740,6 +740,19 @@ type ResourceDefinitionsSchema struct {
 	// Example: For tags like [{key: "env", value: "prod"}, {key: "name", value: "foo"}],
 	// setting SortArrayByField to "key" ensures consistent comparison regardless of order.
 	SortArrayByField string
+	// IgnoreItemOrder specifies that the order of an array's items carries no meaning,
+	// so two arrays holding the same items in a different order are the same value.
+	//
+	// This is for arrays the upstream service treats as a set and returns in an
+	// unspecified order, the subnets and security groups a function is attached to being
+	// the primary example. Without it such a field is reported as changed on every
+	// comparison, and a resource that drifts on every check cannot be staged against
+	// again.
+	//
+	// Only applicable for schemas with Type set to "array". For arrays whose items are
+	// objects, prefer SortArrayByField, which orders them by the field that carries their
+	// identity. This compares items by value and suits arrays of scalars.
+	IgnoreItemOrder bool
 }
 
 // ResourceDefinitionsSchemaType holds the type of a resource schema.

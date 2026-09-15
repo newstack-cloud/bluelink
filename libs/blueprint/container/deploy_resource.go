@@ -269,7 +269,7 @@ func (d *defaultResourceDeployer) composeLinkContributions(
 			// Removals are not carried as a link this deployment removes is destroyed
 			// before any resource is deployed, so it is already out of the links
 			// recorded against the instance by the time this runs.
-			SupersededLinkNames: supersededLinkNames(deployCtx, linkNames),
+			SupersededLinkNames: supersededLinkNames(deployCtx, resourceName, linkNames),
 		},
 	)
 	if err != nil {

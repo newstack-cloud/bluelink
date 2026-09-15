@@ -176,7 +176,14 @@ func (c *defaultBlueprintContainer) stageChanges(
 		return
 	}
 
-	channels.CompleteChan <- state.ExtractBlueprintChanges()
+	// The diagnostics raised while the blueprint was loaded and transformed travel with
+	// the change set. A warning that a transform skipped something is the only account of
+	// it that exists, and it has nowhere else to go as the resources are all correct, and
+	// the load succeeded, so no error carries it.
+	stagedChanges := state.ExtractBlueprintChanges()
+	stagedChanges.Diagnostics = c.diagnostics
+
+	channels.CompleteChan <- stagedChanges
 }
 
 func (c *defaultBlueprintContainer) listenToAndProcessGroupChanges(

@@ -1525,16 +1525,25 @@ func (c *defaultChecker) checkResourceFieldsForLinkDrift(
 		return nil, nil
 	}
 
-	// Compare the mapped fields
-	changes := c.compareLinkedFields(mappings, linkData, externalStateOutput.ResourceSpecState)
-	if len(changes) == 0 {
+	// The comparison consults the resource's schema, since whether a field's order
+	// carries meaning is something only the resource type knows. A schema that cannot be
+	// read leaves every field compared as it was before, which is the stricter reading.
+	specSchema := c.linkedResourceSpecSchema(ctx, resourceImpl, providerCtx, resource.Type, linkLogger)
+
+	changesForResource := c.compareLinkedFields(
+		mappings,
+		linkData,
+		externalStateOutput.ResourceSpecState,
+		specSchema,
+	)
+	if len(changesForResource) == 0 {
 		return nil, nil
 	}
 
 	return &state.LinkResourceDrift{
 		ResourceID:         resource.ResourceID,
 		ResourceName:       resource.Name,
-		MappedFieldChanges: changes,
+		MappedFieldChanges: changesForResource,
 	}, nil
 }
 
@@ -1542,6 +1551,7 @@ func (c *defaultChecker) compareLinkedFields(
 	mappings map[string]string, // resourceFieldPath -> linkDataPath
 	linkData map[string]*core.MappingNode,
 	externalResourceState *core.MappingNode,
+	specSchema *provider.ResourceDefinitionsSchema,
 ) []*state.LinkDriftFieldChange {
 	var changes []*state.LinkDriftFieldChange
 
@@ -1565,8 +1575,11 @@ func (c *defaultChecker) compareLinkedFields(
 			core.MappingNodeMaxTraverseDepth,
 		)
 
-		// Compare the values
-		if !core.MappingNodeEqual(linkValue, externalValue) {
+		// Compare the values, through the schema for the field so that an array whose
+		// order the resource type declares insignificant is not reported as drifted
+		// every time the provider returns it in a different order.
+		fieldSchema := SchemaForResourceFieldPath(specSchema, resourceFieldPath)
+		if !linkedFieldValuesEqual(linkValue, externalValue, fieldSchema) {
 			changes = append(changes, &state.LinkDriftFieldChange{
 				ResourceFieldPath: resourceFieldPath,
 				LinkDataPath:      linkDataPath,
@@ -1577,6 +1590,119 @@ func (c *defaultChecker) compareLinkedFields(
 	}
 
 	return changes
+}
+
+// The resource's spec schema, or nil when it cannot be read.
+//
+// Nil is not an error here. The schema only ever relaxes a comparison, so a resource whose
+// definition cannot be read is compared exactly as it was before, and a drift check is not
+// worth failing over a detail that can only reduce what it reports.
+func (c *defaultChecker) linkedResourceSpecSchema(
+	ctx context.Context,
+	resourceImpl provider.Resource,
+	providerCtx provider.Context,
+	resourceType string,
+	linkLogger core.Logger,
+) *provider.ResourceDefinitionsSchema {
+	specDefinitionOutput, err := resourceImpl.GetSpecDefinition(
+		ctx,
+		&provider.ResourceGetSpecDefinitionInput{ProviderContext: providerCtx},
+	)
+	if err != nil {
+		linkLogger.Debug(
+			"failed to read the spec definition for a resource a link writes to, "+
+				"its fields will be compared without it",
+			core.StringLogField("resourceType", resourceType),
+			core.ErrorLogField("error", err),
+		)
+		return nil
+	}
+
+	if specDefinitionOutput == nil || specDefinitionOutput.SpecDefinition == nil {
+		return nil
+	}
+
+	return specDefinitionOutput.SpecDefinition.Schema
+}
+
+// Whether a field a link wrote still holds what the link recorded writing.
+//
+// Equal by value, except that an array the schema declares unordered is compared as a set.
+// Ordering both sides first rather than comparing them as sets keeps the comparison the
+// same one used everywhere else, so a difference in the items themselves is still found.
+func linkedFieldValuesEqual(
+	linkValue *core.MappingNode,
+	externalValue *core.MappingNode,
+	fieldSchema *provider.ResourceDefinitionsSchema,
+) bool {
+	if fieldSchema == nil || linkValue == nil || externalValue == nil {
+		return core.MappingNodeEqual(linkValue, externalValue)
+	}
+
+	// Dispatched on the same predicates the plain comparison uses, so that two values of
+	// different kinds are judged by it rather than here. This differs from an exact
+	// comparison in the order it puts arrays in, and in nothing else.
+	if core.IsArrayMappingNode(linkValue) && core.IsArrayMappingNode(externalValue) {
+		return linkedArraysEqual(linkValue, externalValue, fieldSchema)
+	}
+
+	if core.IsObjectMappingNode(linkValue) && core.IsObjectMappingNode(externalValue) {
+		return linkedObjectsEqual(linkValue, externalValue, fieldSchema)
+	}
+
+	return core.MappingNodeEqual(linkValue, externalValue)
+}
+
+// Ordered by what the schema says about the field before being compared element by
+// element, so that a reordering the schema declares insignificant is not a difference
+// while a change to the elements themselves still is.
+func linkedArraysEqual(
+	linkValue *core.MappingNode,
+	externalValue *core.MappingNode,
+	fieldSchema *provider.ResourceDefinitionsSchema,
+) bool {
+	if len(linkValue.Items) != len(externalValue.Items) {
+		return false
+	}
+
+	linkItems := changes.SortArrayItemsForComparison(linkValue.Items, fieldSchema)
+	externalItems := changes.SortArrayItemsForComparison(externalValue.Items, fieldSchema)
+
+	for index, linkItem := range linkItems {
+		if !linkedFieldValuesEqual(linkItem, externalItems[index], fieldSchema.Items) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Compared field by field so that each one is judged by its own schema.
+//
+// A link commonly writes a whole object, an IAM policy statement being the standing
+// example, and the field whose order does not matter is one of that object's own rather
+// than the thing the mapping addresses.
+func linkedObjectsEqual(
+	linkValue *core.MappingNode,
+	externalValue *core.MappingNode,
+	fieldSchema *provider.ResourceDefinitionsSchema,
+) bool {
+	if len(linkValue.Fields) != len(externalValue.Fields) {
+		return false
+	}
+
+	for name, linkField := range linkValue.Fields {
+		externalField, present := externalValue.Fields[name]
+		if !present {
+			return false
+		}
+
+		if !linkedFieldValuesEqual(linkField, externalField, fieldSchema.Attributes[name]) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (c *defaultChecker) checkIntermediaryResourceDrift(
