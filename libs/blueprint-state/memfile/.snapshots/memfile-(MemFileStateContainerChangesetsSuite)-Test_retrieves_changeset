@@ -5,6 +5,7 @@
   Status: (manage.ChangesetStatus) (len=14) "CHANGES_STAGED",
   BlueprintLocation: (string) (len=69) "s3://bluelink-test/project1/cleanup-before-310320251000.blueprint.yml",
   Changes: (*changes.BlueprintChanges)({
+    Diagnostics: ([]*core.Diagnostic) <nil>,
     NewResources: (map[string]provider.Changes) <nil>,
     ResourceChanges: (map[string]provider.Changes) <nil>,
     RemovedResources: ([]string) (len=3) {

@@ -105,6 +105,12 @@ func copyResource(resourceState *state.ResourceState) state.ResourceState {
 	computedFields := make([]string, len(resourceState.ComputedFields))
 	copy(computedFields, resourceState.ComputedFields)
 
+	contributionFailures := make(
+		[]state.ResourceLinkContributionFailure,
+		len(resourceState.LinkContributionFailures),
+	)
+	copy(contributionFailures, resourceState.LinkContributionFailures)
+
 	return state.ResourceState{
 		ResourceID:                 resourceState.ResourceID,
 		Name:                       resourceState.Name,
@@ -124,6 +130,7 @@ func copyResource(resourceState *state.ResourceState) state.ResourceState {
 		LastDeployedTimestamp:      resourceState.LastDeployedTimestamp,
 		LastDeployAttemptTimestamp: resourceState.LastDeployAttemptTimestamp,
 		LastStatusUpdateTimestamp:  resourceState.LastStatusUpdateTimestamp,
+		LinkContributionFailures:   contributionFailures,
 		Drifted:                    resourceState.Drifted,
 		LastDriftDetectedTimestamp: resourceState.LastDriftDetectedTimestamp,
 		Durations:                  resourceState.Durations,

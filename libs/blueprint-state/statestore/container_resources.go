@@ -168,6 +168,64 @@ func (c *ResourcesContainer) Remove(
 	return *resource, c.persister.UpdateInstance(ctx, inst)
 }
 
+func (c *ResourcesContainer) SaveContributionFailure(
+	ctx context.Context,
+	resourceID string,
+	failure state.ResourceLinkContributionFailure,
+) error {
+	return c.updateContributionFailures(
+		ctx,
+		resourceID,
+		func(failures []state.ResourceLinkContributionFailure) []state.ResourceLinkContributionFailure {
+			return state.UpsertContributionFailure(failures, failure)
+		},
+	)
+}
+
+func (c *ResourcesContainer) RemoveContributionFailure(
+	ctx context.Context,
+	resourceID string,
+	layerDepth int,
+) error {
+	return c.updateContributionFailures(
+		ctx,
+		resourceID,
+		func(failures []state.ResourceLinkContributionFailure) []state.ResourceLinkContributionFailure {
+			return state.RemoveContributionFailureForLayer(failures, layerDepth)
+		},
+	)
+}
+
+// The failures are held on the resource rather than in a store of their own, so both
+// operations are the same instance flush and differ only in what they do to the list.
+func (c *ResourcesContainer) updateContributionFailures(
+	ctx context.Context,
+	resourceID string,
+	update func([]state.ResourceLinkContributionFailure) []state.ResourceLinkContributionFailure,
+) error {
+	c.state.Lock()
+	defer c.state.Unlock()
+
+	resource, ok := c.state.resources[resourceID]
+	if !ok {
+		return state.ResourceNotFoundError(resourceID)
+	}
+	inst, ok := c.state.instances[resource.InstanceID]
+	if !ok {
+		return errMalformedState(
+			instanceNotFoundForResourceMessage(resource.InstanceID, resourceID),
+		)
+	}
+
+	resource.LinkContributionFailures = update(resource.LinkContributionFailures)
+
+	c.logger.Debug(
+		"persisting resource changes for latest link contribution failures",
+		core.StringLogField("resourceId", resourceID),
+	)
+	return c.persister.UpdateInstance(ctx, inst)
+}
+
 func (c *ResourcesContainer) GetDrift(
 	ctx context.Context,
 	resourceID string,

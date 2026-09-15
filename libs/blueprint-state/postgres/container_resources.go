@@ -258,6 +258,80 @@ func (c *resourcesContainerImpl) RemoveDrift(
 	return driftState, tx.Commit(ctx)
 }
 
+func (c *resourcesContainerImpl) SaveContributionFailure(
+	ctx context.Context,
+	resourceID string,
+	failure state.ResourceLinkContributionFailure,
+) error {
+	return c.updateContributionFailures(
+		ctx,
+		resourceID,
+		func(failures []state.ResourceLinkContributionFailure) []state.ResourceLinkContributionFailure {
+			return state.UpsertContributionFailure(failures, failure)
+		},
+	)
+}
+
+func (c *resourcesContainerImpl) RemoveContributionFailure(
+	ctx context.Context,
+	resourceID string,
+	layerDepth int,
+) error {
+	return c.updateContributionFailures(
+		ctx,
+		resourceID,
+		func(failures []state.ResourceLinkContributionFailure) []state.ResourceLinkContributionFailure {
+			return state.RemoveContributionFailureForLayer(failures, layerDepth)
+		},
+	)
+}
+
+// Read, change and write back in one transaction, the row locked for the duration.
+//
+// The change is applied in Go rather than in SQL so that the meaning of a layer, and of
+// replacing one, lives in the state package alongside every other implementation of this
+// rather than being restated as jsonb manipulation. Locking the row keeps two links whose
+// layers fail at the same moment from each writing a list that omits the other's failure.
+func (c *resourcesContainerImpl) updateContributionFailures(
+	ctx context.Context,
+	resourceID string,
+	update func([]state.ResourceLinkContributionFailure) []state.ResourceLinkContributionFailure,
+) error {
+	tx, err := c.connPool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var currentFailures []state.ResourceLinkContributionFailure
+	err = tx.QueryRow(
+		ctx,
+		resourceLinkContributionFailuresQuery(),
+		&pgx.NamedArgs{"resourceId": resourceID},
+	).Scan(&currentFailures)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return state.ResourceNotFoundError(resourceID)
+		}
+
+		return err
+	}
+
+	_, err = tx.Exec(
+		ctx,
+		updateResourceLinkContributionFailuresQuery(),
+		&pgx.NamedArgs{
+			"resourceId":               resourceID,
+			"linkContributionFailures": update(currentFailures),
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
 func (c *resourcesContainerImpl) removeDrift(
 	ctx context.Context,
 	tx pgx.Tx,

@@ -34,7 +34,8 @@ func upsertResourcesQuery() string {
 		drifted,
 		last_drift_detected_timestamp,
 		durations,
-		removal_policy
+		removal_policy,
+		link_contribution_failures
 	) VALUES (
 	 	@id,
 		@type,
@@ -55,7 +56,8 @@ func upsertResourcesQuery() string {
 		@drifted,
 		@lastDriftDetectedTimestamp,
 		@durations,
-		@removalPolicy
+		@removalPolicy,
+		@linkContributionFailures
 	) ON CONFLICT (id) DO UPDATE SET
 		type = excluded.type,
 		template_name = excluded.template_name,
@@ -75,7 +77,8 @@ func upsertResourcesQuery() string {
 		drifted = excluded.drifted,
 		last_drift_detected_timestamp = excluded.last_drift_detected_timestamp,
 		durations = excluded.durations,
-		removal_policy = excluded.removal_policy
+		removal_policy = excluded.removal_policy,
+		link_contribution_failures = excluded.link_contribution_failures
 	`
 }
 
@@ -181,4 +184,19 @@ func updateResourceStatusQuery(statusInfo *state.ResourceStatusInfo) string {
 	WHERE id = @resourceId`
 
 	return query
+}
+
+func resourceLinkContributionFailuresQuery() string {
+	return `
+	SELECT link_contribution_failures
+	FROM resources
+	WHERE id = @resourceId
+	FOR UPDATE`
+}
+
+func updateResourceLinkContributionFailuresQuery() string {
+	return `
+	UPDATE resources
+	SET link_contribution_failures = @linkContributionFailures
+	WHERE id = @resourceId`
 }

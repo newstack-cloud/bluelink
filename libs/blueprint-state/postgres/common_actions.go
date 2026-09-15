@@ -42,6 +42,7 @@ func upsertResources(
 			),
 			"durations":     resource.Durations,
 			"removalPolicy": toNullableText(resource.RemovalPolicy),
+			"linkContributionFailures": resource.LinkContributionFailures,
 		}
 		batch.Queue(
 			query,

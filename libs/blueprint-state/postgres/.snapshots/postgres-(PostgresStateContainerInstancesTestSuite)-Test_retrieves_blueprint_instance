@@ -209,6 +209,7 @@
       DependsOnChildren: ([]string) <nil>,
       FailureReasons: ([]string) {
       },
+      LinkContributionFailures: ([]state.ResourceLinkContributionFailure) <nil>,
       Drifted: (bool) true,
       LastDriftDetectedTimestamp: (*int)(1733145728),
       Durations: (*state.ResourceCompletionDurations)(<nil>),
@@ -290,6 +291,7 @@
       DependsOnChildren: ([]string) <nil>,
       FailureReasons: ([]string) {
       },
+      LinkContributionFailures: ([]state.ResourceLinkContributionFailure) <nil>,
       Drifted: (bool) false,
       LastDriftDetectedTimestamp: (*int)(<nil>),
       Durations: (*state.ResourceCompletionDurations)(<nil>),
@@ -339,6 +341,7 @@
       DependsOnChildren: ([]string) <nil>,
       FailureReasons: ([]string) {
       },
+      LinkContributionFailures: ([]state.ResourceLinkContributionFailure) <nil>,
       Drifted: (bool) false,
       LastDriftDetectedTimestamp: (*int)(<nil>),
       Durations: (*state.ResourceCompletionDurations)(<nil>),
@@ -541,6 +544,7 @@
       DependsOnChildren: ([]string) <nil>,
       FailureReasons: ([]string) {
       },
+      LinkContributionFailures: ([]state.ResourceLinkContributionFailure) <nil>,
       Drifted: (bool) false,
       LastDriftDetectedTimestamp: (*int)(<nil>),
       Durations: (*state.ResourceCompletionDurations)(<nil>),
@@ -1131,6 +1135,7 @@
           DependsOnChildren: ([]string) <nil>,
           FailureReasons: ([]string) {
           },
+          LinkContributionFailures: ([]state.ResourceLinkContributionFailure) <nil>,
           Drifted: (bool) false,
           LastDriftDetectedTimestamp: (*int)(<nil>),
           Durations: (*state.ResourceCompletionDurations)(<nil>),
@@ -1450,6 +1455,7 @@
               DependsOnChildren: ([]string) <nil>,
               FailureReasons: ([]string) {
               },
+              LinkContributionFailures: ([]state.ResourceLinkContributionFailure) <nil>,
               Drifted: (bool) false,
               LastDriftDetectedTimestamp: (*int)(<nil>),
               Durations: (*state.ResourceCompletionDurations)(<nil>),
