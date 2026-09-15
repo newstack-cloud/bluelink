@@ -65,3 +65,24 @@ func errFunctionCallFunctionMissing(functionName string) error {
 		functionName,
 	)
 }
+
+func errLinkStageChangesFunctionMissing(linkType string) error {
+	return fmt.Errorf(
+		"stage changes function missing in link definition for link type %q",
+		linkType,
+	)
+}
+
+func errLinkUpdateLinkedResourcesFunctionMissing(linkType string) error {
+	return fmt.Errorf(
+		"update linked resources function missing in link definition for link type %q",
+		linkType,
+	)
+}
+
+func errLinkUpdateIntermediaryResourcesFunctionMissing(linkType string) error {
+	return fmt.Errorf(
+		"update intermediary resources function missing in link definition for link type %q",
+		linkType,
+	)
+}

@@ -58,3 +58,34 @@ func mappingNodeFromStringSub(
 		StringWithSubstitutions: stringOrSubs,
 	}
 }
+
+// GetBoolAnnotation retrieves an annotation as a boolean flag, using the provided key and
+// fallback key, falling back to defaultValue and reporting whether a boolean was found.
+func GetBoolAnnotation(
+	resource *schema.Resource,
+	key string,
+	fallbackKey string,
+	defaultValue bool,
+) (bool, bool) {
+	annotation, found := GetAnnotation(resource, key, fallbackKey)
+	if !found || annotation == nil || annotation.Scalar == nil {
+		return defaultValue, false
+	}
+
+	if annotation.Scalar.BoolValue != nil {
+		return *annotation.Scalar.BoolValue, true
+	}
+
+	if annotation.Scalar.StringValue == nil {
+		return defaultValue, false
+	}
+
+	switch *annotation.Scalar.StringValue {
+	case "true":
+		return true, true
+	case "false":
+		return false, true
+	default:
+		return defaultValue, false
+	}
+}

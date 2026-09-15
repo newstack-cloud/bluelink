@@ -243,6 +243,12 @@ func (l *LinkDefinition) StageChanges(
 	ctx context.Context,
 	input *provider.LinkStageChangesInput,
 ) (*provider.LinkStageChangesOutput, error) {
+	if l.StageChangesFunc == nil {
+		return nil, errLinkStageChangesFunctionMissing(
+			core.LinkType(l.ResourceTypeA, l.ResourceTypeB),
+		)
+	}
+
 	return l.StageChangesFunc(ctx, input)
 }
 
@@ -269,6 +275,12 @@ func (l *LinkDefinition) UpdateLinkedResources(
 	ctx context.Context,
 	input *provider.LinkUpdateLinkedResourcesInput,
 ) (*provider.LinkUpdateLinkedResourcesOutput, error) {
+	if l.UpdateLinkedResourcesFunc == nil {
+		return nil, errLinkUpdateLinkedResourcesFunctionMissing(
+			core.LinkType(l.ResourceTypeA, l.ResourceTypeB),
+		)
+	}
+
 	return l.UpdateLinkedResourcesFunc(ctx, input)
 }
 
@@ -280,6 +292,12 @@ func (l *LinkDefinition) UpdateIntermediaryResources(
 	// attached to calls from the plugin to the plugin service,
 	// this is especially useful for ensuring the link ID is always attached
 	// as the "acquiredBy" field when acquiring a resource lock.
+	if l.UpdateIntermediaryResourcesFunc == nil {
+		return nil, errLinkUpdateIntermediaryResourcesFunctionMissing(
+			core.LinkType(l.ResourceTypeA, l.ResourceTypeB),
+		)
+	}
+
 	ctxWithLinkID := context.WithValue(ctx, utils.ContextKeyLinkID, input.LinkID)
 	return l.UpdateIntermediaryResourcesFunc(ctxWithLinkID, input)
 }
