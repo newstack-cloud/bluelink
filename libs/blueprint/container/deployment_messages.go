@@ -66,6 +66,15 @@ type ResourceDeployUpdateMessage struct {
 	// needed it established before they could run. Without this, a client sees the same
 	// resource updated twice with nothing to say why.
 	ContributionLayerDepth int `json:"contributionLayerDepth,omitempty"`
+	// UnappliedLinkContributions holds the individual contributions that could not be
+	// applied, for an update carrying link contributions that failed in a way that can be
+	// attributed to particular fields.
+	//
+	// FailureReasons carries the same failure as text, for a client that renders reasons
+	// without knowing what a contribution is. This carries it in a form that survives into
+	// state, so that a resource can still say which link is owed which field once the
+	// deployment's events have aged out.
+	UnappliedLinkContributions []state.UnappliedLinkContribution `json:"unappliedLinkContributions,omitempty"`
 	// Attempt is the current attempt number for deploying or destroying the resource.
 	Attempt int `json:"attempt"`
 	// CanRetry indicates if the operation for the resource can be retried

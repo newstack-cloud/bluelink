@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -135,10 +136,12 @@ func (s *MergedContributionsDeployTestSuite) Test_fails_the_deployment_when_a_re
 // inspecting the instance afterwards sees a healthy resource, and the next deployment
 // stages against a state that claims the update it needs has already been applied. The
 // failure is reported on the event stream and to the deployment as a whole, and neither of
-// those is durable.
+// those is durable, once a deployment's events have aged out, state is the only account
+// left.
 //
-// The status itself stays the resource's own, because a link contribution status is only
-// ever reported on the stream. What has to reach state is the reason.
+// Recorded beside the resource's status rather than in it. The status stays the resource's
+// own because a link contribution status is only ever reported on the stream, and the
+// resource's own FailureReasons belong to its own deployment.
 func (s *MergedContributionsDeployTestSuite) Test_records_why_a_resource_did_not_get_what_its_links_contribute() {
 	stateContainer := memstate.NewMemoryStateContainer()
 	deployedRole := &recordingRoleResource{failContributionUpdate: true}
@@ -152,13 +155,30 @@ func (s *MergedContributionsDeployTestSuite) Test_records_why_a_resource_did_not
 		"ordersRole",
 	)
 	s.Require().NoError(err)
-	s.Require().NotEmpty(
-		roleState.FailureReasons,
+	s.Require().Len(
+		roleState.LinkContributionFailures,
+		1,
 		"state records the role as deployed without saying its links could not write to it",
 	)
+
+	failure := roleState.LinkContributionFailures[0]
 	s.Assert().Contains(
-		fmt.Sprintf("%v", roleState.FailureReasons),
+		fmt.Sprintf("%v", failure.Reasons),
 		"the role could not be given the statements its links need",
+	)
+	s.Assert().ElementsMatch(
+		[]string{"archiveOrderFunction::ordersRole", "saveOrderFunction::ordersRole"},
+		failure.ContributingLinks,
+		"the failure does not name the links the role is owed contributions from",
+	)
+	s.Assert().NotZero(failure.Timestamp)
+
+	// The resource's own deployment said nothing, and must not be made to look as though
+	// it did. A reader cannot tell a resource that failed to deploy from one that deployed
+	// and was then left without its contributions if both are reported the same way.
+	s.Assert().Empty(
+		roleState.FailureReasons,
+		"a contribution failure was written to the reasons for the resource's own deployment",
 	)
 
 	// The invariant the successful case relies on still holds. A status that is only ever
@@ -172,6 +192,131 @@ func (s *MergedContributionsDeployTestSuite) Test_records_why_a_resource_did_not
 		roleState.Status,
 		"the role's own deployment succeeded and its status must still say so",
 	)
+}
+
+// A contribution that could not be composed reaches state as the link and field it belongs
+// to, not only as a line of text.
+func (s *MergedContributionsDeployTestSuite) Test_records_which_contributions_could_not_be_applied() {
+	stateContainer := memstate.NewMemoryStateContainer()
+	loader := newMergedContributionsLoaderWithLink(
+		stateContainer,
+		&recordingRoleResource{},
+		&testLambdaIAMRoleLink{statesWholeField: true},
+	)
+
+	_, finished := s.deployMergedContributionsBlueprint(loader)
+	s.Require().NotEqual(
+		core.InstanceStatusDeployed,
+		finished.Status,
+		"the deployment succeeded with the role holding whichever link ran last",
+	)
+
+	roleState, err := stateContainer.Resources().GetByName(
+		context.Background(),
+		finished.InstanceID,
+		"ordersRole",
+	)
+	s.Require().NoError(err)
+	s.Require().Len(roleState.LinkContributionFailures, 1)
+
+	failure := roleState.LinkContributionFailures[0]
+	s.Require().Len(
+		failure.UnappliedContributions,
+		2,
+		"state holds the failure without saying which contributions it was",
+	)
+
+	linkNames := []string{}
+	for _, unapplied := range failure.UnappliedContributions {
+		s.Assert().Equal("spec.policies", unapplied.FieldPath)
+		s.Assert().NotEmpty(unapplied.Reason)
+		linkNames = append(linkNames, unapplied.LinkName)
+	}
+	s.Assert().ElementsMatch(
+		[]string{"archiveOrderFunction::ordersRole", "saveOrderFunction::ordersRole"},
+		linkNames,
+		"a disagreement that names only one of the links leaves the other unaccounted for",
+	)
+}
+
+// A layer that applies successfully leaves no failure behind it.
+//
+// A failure that is recorded and never cleared reads as current for the life of the
+// instance, so a retry that put the contributions where they belong would be
+// indistinguishable from one that was never attempted.
+func (s *MergedContributionsDeployTestSuite) Test_clears_a_recorded_contribution_failure_once_the_layer_applies() {
+	inner := memstate.NewMemoryStateContainer()
+	stateContainer := newContributionClearRecordingStateContainer(inner)
+
+	loader := newMergedContributionsLoader(stateContainer, &recordingRoleResource{})
+	_, finished := s.deployMergedContributionsBlueprint(loader)
+	s.Require().Equal(core.InstanceStatusDeployed, finished.Status)
+
+	roleState, err := inner.Resources().GetByName(
+		context.Background(),
+		finished.InstanceID,
+		"ordersRole",
+	)
+	s.Require().NoError(err)
+
+	s.Assert().Contains(
+		stateContainer.resources.cleared(),
+		clearedContributionLayer{resourceID: roleState.ResourceID, layerDepth: 0},
+		"the layer applied without the failure held against it being cleared",
+	)
+}
+
+type clearedContributionLayer struct {
+	resourceID string
+	layerDepth int
+}
+
+type contributionClearRecordingStateContainer struct {
+	state.Container
+	resources *contributionClearRecordingResources
+}
+
+func newContributionClearRecordingStateContainer(
+	inner state.Container,
+) *contributionClearRecordingStateContainer {
+	return &contributionClearRecordingStateContainer{
+		Container: inner,
+		resources: &contributionClearRecordingResources{
+			ResourcesContainer: inner.Resources(),
+		},
+	}
+}
+
+func (c *contributionClearRecordingStateContainer) Resources() state.ResourcesContainer {
+	return c.resources
+}
+
+type contributionClearRecordingResources struct {
+	state.ResourcesContainer
+	mu       sync.Mutex
+	cleared_ []clearedContributionLayer
+}
+
+func (r *contributionClearRecordingResources) RemoveContributionFailure(
+	ctx context.Context,
+	resourceID string,
+	layerDepth int,
+) error {
+	r.mu.Lock()
+	r.cleared_ = append(r.cleared_, clearedContributionLayer{
+		resourceID: resourceID,
+		layerDepth: layerDepth,
+	})
+	r.mu.Unlock()
+
+	return r.ResourcesContainer.RemoveContributionFailure(ctx, resourceID, layerDepth)
+}
+
+func (r *contributionClearRecordingResources) cleared() []clearedContributionLayer {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return slices.Clone(r.cleared_)
 }
 
 // A failed contribution update has to name the links whose contributions it was carrying.
@@ -332,6 +477,18 @@ func newMergedContributionsLoader(
 	stateContainer state.Container,
 	deployedRole *recordingRoleResource,
 ) Loader {
+	return newMergedContributionsLoaderWithLink(
+		stateContainer,
+		deployedRole,
+		&testLambdaIAMRoleLink{},
+	)
+}
+
+func newMergedContributionsLoaderWithLink(
+	stateContainer state.Container,
+	deployedRole *recordingRoleResource,
+	link provider.Link,
+) Loader {
 	awsProvider := &internal.ProviderMock{
 		NamespaceValue: "aws",
 		Resources: map[string]provider.Resource{
@@ -350,7 +507,7 @@ func newMergedContributionsLoader(
 			iamRoleResourceType: deployedRole,
 		},
 		Links: map[string]provider.Link{
-			"aws/lambda/function::aws/iam/role": &testLambdaIAMRoleLink{},
+			"aws/lambda/function::aws/iam/role": link,
 		},
 		CustomVariableTypes: map[string]provider.CustomVariableType{},
 		DataSources:         map[string]provider.DataSource{},
@@ -448,7 +605,11 @@ func (r *recordingRoleResource) lastDeployedSpec() *core.MappingNode {
 
 // A link that grants a function access through a shared role, contributing a policy
 // statement to the role rather than writing it itself.
-type testLambdaIAMRoleLink struct{}
+type testLambdaIAMRoleLink struct {
+	// Makes each link state the whole value of the field rather than adding to it, so that
+	// two links writing the same role disagree over what it should hold.
+	statesWholeField bool
+}
 
 func (l *testLambdaIAMRoleLink) StageChanges(
 	ctx context.Context,
@@ -471,6 +632,11 @@ func (l *testLambdaIAMRoleLink) ProduceResourceContributions(
 	ctx context.Context,
 	input *provider.LinkProduceResourceContributionsInput,
 ) (*provider.LinkProduceResourceContributionsOutput, error) {
+	action := provider.ContributionActionAppend
+	if l.statesWholeField {
+		action = provider.ContributionActionSet
+	}
+
 	return &provider.LinkProduceResourceContributionsOutput{
 		Contributions: []*provider.ResourceContribution{
 			{
@@ -479,7 +645,7 @@ func (l *testLambdaIAMRoleLink) ProduceResourceContributions(
 				Value: core.MappingNodeFromString(
 					fmt.Sprintf("grant:%s", input.ResourceAInfo.ResourceName),
 				),
-				Action: provider.ContributionActionAppend,
+				Action: action,
 			},
 		},
 	}, nil

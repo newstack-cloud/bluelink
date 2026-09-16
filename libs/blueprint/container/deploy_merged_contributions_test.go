@@ -164,6 +164,48 @@ func (s *MergedContributionsDeployerTestSuite) Test_does_not_deploy_when_a_contr
 	s.Assert().Contains(updates[0].FailureReasons[0], "archiveFunction::appQueue")
 }
 
+// A contribution that could not be composed is reported as the link and field it belongs
+// to, not only as a line of text.
+func (s *MergedContributionsDeployerTestSuite) Test_attributes_an_unapplied_contribution_to_its_link_and_field() {
+	deployed := &capturingContributionResource{}
+	unreadable := s.storedAppend("archiveFunction::appQueue", "spec.policies", "sqs:SendMessage")
+	unreadable.Data = map[string]*core.MappingNode{}
+
+	deployCtx, stateContainer, messages := s.deployContext(deployed, nil, []*state.LinkState{unreadable})
+
+	err := NewDefaultMergedContributionsDeployer(
+		stateContainer,
+		&mockclock.StaticClock{},
+		core.NewCache[*provider.ResolvedResource](),
+	).Deploy(
+		context.Background(),
+		"test-instance",
+		ContributionLayer{ResourceName: "ordersRole"},
+		nil,
+		deployCtx,
+	)
+	s.Require().NoError(err)
+
+	updates := drainResourceMessages(messages)
+	s.Require().Len(updates, 1)
+	s.Require().Len(
+		updates[0].UnappliedLinkContributions,
+		1,
+		"the failure says what went wrong without saying which contribution it was",
+	)
+
+	unapplied := updates[0].UnappliedLinkContributions[0]
+	s.Assert().Equal("archiveFunction::appQueue", unapplied.LinkName)
+	s.Assert().Equal("spec.policies", unapplied.FieldPath)
+	s.Assert().NotEmpty(unapplied.Reason)
+
+	// The two accounts of the failure are built from the same projections, so neither can
+	// describe something the other does not.
+	s.Assert().Contains(updates[0].FailureReasons[0], unapplied.LinkName)
+	s.Assert().Contains(updates[0].FailureReasons[0], unapplied.FieldPath)
+	s.Assert().Contains(updates[0].FailureReasons[0], unapplied.Reason)
+}
+
 // A resource that links contribute to is either created by this deployment, which has saved it
 // by the time its links settle, or already in state. One that is in neither
 // is a resource a link declared a contribution to that does not exist,

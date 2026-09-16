@@ -110,13 +110,11 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 			layer,
 			deployCtx,
 			contributors,
-			[]string{
-				fmt.Sprintf(
-					"the resource %q that links contribute to is not deployed, so the "+
-						"contributions made to it cannot be applied",
-					resourceName,
-				),
-			},
+			layerFailure(fmt.Sprintf(
+				"the resource %q that links contribute to is not deployed, so the "+
+					"contributions made to it cannot be applied",
+				resourceName,
+			)),
 		)
 	}
 
@@ -136,7 +134,7 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 			layer,
 			deployCtx,
 			contributors,
-			[]string{err.Error()},
+			layerFailure(err.Error()),
 		)
 	}
 
@@ -150,7 +148,7 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 			layer,
 			deployCtx,
 			contributors,
-			unresolvedContributionReasons(merged.Unresolved),
+			unresolvedContributionFailure(merged.Unresolved),
 		)
 	}
 
@@ -167,7 +165,7 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 			layer,
 			deployCtx,
 			contributors,
-			[]string{err.Error()},
+			layerFailure(err.Error()),
 		)
 	}
 
@@ -179,7 +177,7 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 		core.ResourceStatusUpdating,
 		core.PreciseResourceStatusUpdatingLinkContributions,
 		contributors,
-		/* failureReasons */ nil,
+		contributionFailureDetail{},
 	)
 
 	providerNamespace := provider.ExtractProviderFromItemType(resourceState.Type)
@@ -211,7 +209,7 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 			layer,
 			deployCtx,
 			contributors,
-			[]string{err.Error()},
+			layerFailure(err.Error()),
 		)
 	}
 
@@ -229,7 +227,7 @@ func (d *defaultMergedContributionsDeployer) Deploy(
 		core.ResourceStatusUpdated,
 		core.PreciseResourceStatusLinkContributionsUpdated,
 		contributors,
-		/* failureReasons */ nil,
+		contributionFailureDetail{},
 	)
 
 	return nil
@@ -262,7 +260,7 @@ func (d *defaultMergedContributionsDeployer) reportFailure(
 	layer ContributionLayer,
 	deployCtx *DeployContext,
 	contributors map[string][]string,
-	failureReasons []string,
+	detail contributionFailureDetail,
 ) error {
 	// Recorded before the message is sent, for the same reason applying one is, a link
 	// waiting on this layer is abandoned by the scheduler on the goroutine that got here.
@@ -276,10 +274,47 @@ func (d *defaultMergedContributionsDeployer) reportFailure(
 		core.ResourceStatusUpdateFailed,
 		core.PreciseResourceStatusLinkContributionsUpdateFailed,
 		contributors,
-		failureReasons,
+		detail,
 	)
 
 	return nil
+}
+
+// What a failed layer has to say about itself, in both the form a client renders and the
+// form that survives into state.
+//
+// Carried together because every failure has the first and only some have the second, a
+// provider rejecting the update says nothing about which field was at fault, while a
+// contribution that could not be composed names the link and the field it belongs to.
+type contributionFailureDetail struct {
+	reasons   []string
+	unapplied []state.UnappliedLinkContribution
+}
+
+func layerFailure(reasons ...string) contributionFailureDetail {
+	return contributionFailureDetail{reasons: reasons}
+}
+
+// A failure attributed to the individual contributions that could not be composed.
+//
+// The text is built from the same projections rather than alongside them, so what a client
+// reads and what state holds cannot describe different failures.
+func unresolvedContributionFailure(
+	unresolved []specmerge.UnresolvedProjection,
+) contributionFailureDetail {
+	unapplied := make([]state.UnappliedLinkContribution, 0, len(unresolved))
+	for _, projection := range unresolved {
+		unapplied = append(unapplied, state.UnappliedLinkContribution{
+			LinkName:  projection.LinkName,
+			FieldPath: projection.ResourceFieldPath,
+			Reason:    projection.Reason,
+		})
+	}
+
+	return contributionFailureDetail{
+		reasons:   unresolvedContributionReasons(unresolved),
+		unapplied: unapplied,
+	}
 }
 
 func (d *defaultMergedContributionsDeployer) updateMessage(
@@ -290,7 +325,7 @@ func (d *defaultMergedContributionsDeployer) updateMessage(
 	status core.ResourceStatus,
 	preciseStatus core.PreciseResourceStatus,
 	contributors map[string][]string,
-	failureReasons []string,
+	detail contributionFailureDetail,
 ) ResourceDeployUpdateMessage {
 	return ResourceDeployUpdateMessage{
 		InstanceID:             instanceID,
@@ -302,8 +337,10 @@ func (d *defaultMergedContributionsDeployer) updateMessage(
 		PreciseStatus:          preciseStatus,
 		FromLinkContributions:  true,
 		LinkContributors:       contributors,
-		FailureReasons:         failureReasons,
-		UpdateTimestamp:        d.clock.Now().Unix(),
+		FailureReasons:         detail.reasons,
+
+		UnappliedLinkContributions: detail.unapplied,
+		UpdateTimestamp:            d.clock.Now().Unix(),
 	}
 }
 

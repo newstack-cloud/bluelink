@@ -1432,10 +1432,14 @@ func (c *defaultBlueprintContainer) handleResourceUpdateMessage(
 		deployCtx.Channels.ResourceUpdateChan <- msg
 		trackContributionUpdateCompletion(msg, finished)
 
-		// The status is not the resource's own, but a failure to apply what its links
-		// contribute is still an outcome the instance has to carry.
+		// The status is not the resource's own, but whether what its links contribute
+		// reached it is still an outcome the instance has to carry.
 		if msg.PreciseStatus == core.PreciseResourceStatusLinkContributionsUpdateFailed {
 			return c.recordFailedContributionUpdate(ctx, msg, c.stateContainer.Resources())
+		}
+
+		if msg.PreciseStatus == core.PreciseResourceStatusLinkContributionsUpdated {
+			return c.clearContributionFailure(ctx, msg, c.stateContainer.Resources())
 		}
 
 		return nil
@@ -1602,34 +1606,78 @@ func (c *defaultBlueprintContainer) handleFinishedUpdatingResource(
 // healthy afterwards and the next deployment stages against a state claiming the update it
 // needs was already applied.
 //
-// The resource's own status is preserved rather than overwritten. A link contribution
-// status is only ever reported on the event stream, never recorded, and the resource's
-// deployment did succeed. What has to reach state is the reason, not a new status.
+// Recorded beside the resource's status rather than in it. The resource's deployment did
+// succeed, and its own FailureReasons belong to that deployment, so writing this failure
+// there would both misreport the resource and discard whatever its own deployment had to
+// say.
 func (c *defaultBlueprintContainer) recordFailedContributionUpdate(
 	ctx context.Context,
 	msg ResourceDeployUpdateMessage,
 	resources state.ResourcesContainer,
 ) error {
-	current, err := resources.Get(ctx, msg.ResourceID)
-	if err != nil {
-		return err
+	if msg.ResourceID == "" {
+		// A resource that links contribute to but that is not deployed has no state to
+		// record the failure against. The deployment still fails on it, and the event
+		// naming the resource is all there is to carry it.
+		return nil
 	}
 
-	updateTimestamp := int(msg.UpdateTimestamp)
-	currentTimestamp := int(c.clock.Now().Unix())
-
-	return resources.UpdateStatus(
+	return resources.SaveContributionFailure(
 		ctx,
 		msg.ResourceID,
-		state.ResourceStatusInfo{
-			Status:                     current.Status,
-			PreciseStatus:              current.PreciseStatus,
-			LastDeployAttemptTimestamp: &currentTimestamp,
-			LastStatusUpdateTimestamp:  &updateTimestamp,
-			Durations:                  msg.Durations,
-			FailureReasons:             msg.FailureReasons,
+		state.ResourceLinkContributionFailure{
+			LayerDepth:             msg.ContributionLayerDepth,
+			Reasons:                msg.FailureReasons,
+			UnappliedContributions: msg.UnappliedLinkContributions,
+			ContributingLinks:      contributingLinkNames(msg.LinkContributors),
+			Timestamp:              int(msg.UpdateTimestamp),
 		},
 	)
+}
+
+// A layer that has been applied leaves no failure behind it.
+//
+// Without this a failure recorded once would read as current for the life of the instance,
+// and a retry that succeeded would be indistinguishable from one that was never attempted.
+func (c *defaultBlueprintContainer) clearContributionFailure(
+	ctx context.Context,
+	msg ResourceDeployUpdateMessage,
+	resources state.ResourcesContainer,
+) error {
+	if msg.ResourceID == "" {
+		return nil
+	}
+
+	return resources.RemoveContributionFailure(
+		ctx,
+		msg.ResourceID,
+		msg.ContributionLayerDepth,
+	)
+}
+
+// The links a failed layer was carrying contributions for, taken from the per-field
+// attribution the update reports.
+//
+// Flattened and sorted so the set is stable, since the same links reported against
+// different fields are the same answer to which links a resource is owed contributions
+// from.
+func contributingLinkNames(contributors map[string][]string) []string {
+	names := []string{}
+	for _, linkNames := range contributors {
+		for _, linkName := range linkNames {
+			if !slices.Contains(names, linkName) {
+				names = append(names, linkName)
+			}
+		}
+	}
+
+	if len(names) == 0 {
+		return nil
+	}
+
+	slices.Sort(names)
+
+	return names
 }
 
 func (c *defaultBlueprintContainer) buildResourceState(
