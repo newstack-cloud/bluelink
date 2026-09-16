@@ -50,8 +50,7 @@
   },
   FailureReasons: ([]string) {
   },
-  LinkContributionFailures: ([]state.ResourceLinkContributionFailure) {
-  },
+  LinkContributionFailures: ([]state.ResourceLinkContributionFailure) <nil>,
   Drifted: (bool) false,
   LastDriftDetectedTimestamp: (*int)(<nil>),
   Durations: (*state.ResourceCompletionDurations)(<nil>),

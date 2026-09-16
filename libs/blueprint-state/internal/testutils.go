@@ -60,6 +60,7 @@ func AssertResourceStatesEqual(expected, actual *state.ResourceState, s *suite.S
 	s.Assert().Equal(expected.LastDeployedTimestamp, actual.LastDeployedTimestamp)
 	s.Assert().Equal(expected.Durations, actual.Durations)
 	s.Assert().Equal(expected.RemovalPolicy, actual.RemovalPolicy)
+	s.Assert().Equal(expected.LinkContributionFailures, actual.LinkContributionFailures)
 }
 
 func assertResourceMetadataEqual(

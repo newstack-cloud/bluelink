@@ -105,11 +105,17 @@ func copyResource(resourceState *state.ResourceState) state.ResourceState {
 	computedFields := make([]string, len(resourceState.ComputedFields))
 	copy(computedFields, resourceState.ComputedFields)
 
-	contributionFailures := make(
-		[]state.ResourceLinkContributionFailure,
-		len(resourceState.LinkContributionFailures),
-	)
-	copy(contributionFailures, resourceState.LinkContributionFailures)
+	// Nil is preserved rather than copied into an empty slice, so that a resource with
+	// nothing outstanding stays indistinguishable from one that never failed. The other
+	// slices here are always allocated, but none of them carries that distinction.
+	var contributionFailures []state.ResourceLinkContributionFailure
+	if resourceState.LinkContributionFailures != nil {
+		contributionFailures = make(
+			[]state.ResourceLinkContributionFailure,
+			len(resourceState.LinkContributionFailures),
+		)
+		copy(contributionFailures, resourceState.LinkContributionFailures)
+	}
 
 	return state.ResourceState{
 		ResourceID:                 resourceState.ResourceID,
