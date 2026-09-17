@@ -20,7 +20,7 @@ require (
 	github.com/lestrrat-go/jwx v1.2.31
 	github.com/newstack-cloud/bluelink/libs/blueprint v0.54.0
 	github.com/newstack-cloud/bluelink/libs/blueprint-resolvers v0.1.4
-	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.9.0
+	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.9.1
 	github.com/newstack-cloud/bluelink/libs/common v0.4.0
 	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.16.0
 	github.com/r3labs/sse/v2 v2.10.0
