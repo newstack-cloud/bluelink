@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.3](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.8.2...deploy-engine/v0.8.3) (2026-09-17)
+
+
+### Dependencies
+
+* **deploy-engine:** update bluelink libs ([0036044](https://github.com/newstack-cloud/bluelink/commit/0036044765088a480a89670ecf5b239245835571))
+* **deploy-engine:** update blueprint state lib to v0.9.1 ([79aecd2](https://github.com/newstack-cloud/bluelink/commit/79aecd238511975db141d7b9e85586039609bb3f))
+
 ## [0.8.2](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.8.1...deploy-engine/v0.8.2) (2026-09-16)
 
 
