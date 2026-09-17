@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.1](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.9.0...blueprint-state/v0.9.1) (2026-09-17)
+
+
+### Dependencies
+
+* **blueprint-state:** update blueprint lib to v0.54.0 ([03c2ec4](https://github.com/newstack-cloud/bluelink/commit/03c2ec4ad9e41da67b3e5e71690392ea1da02e5f))
+
 ## [0.9.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.8.3...blueprint-state/v0.9.0) (2026-09-16)
 
 
