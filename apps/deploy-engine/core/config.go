@@ -689,7 +689,7 @@ func setDefaults(viperInstance *viper.Viper) {
 	viperInstance.SetDefault("api_version", "v1")
 	viperInstance.SetDefault("port", 8325)
 	viperInstance.SetDefault("use_unix_socket", false)
-	viperInstance.SetDefault("unix_socket_path", "/tmp/bluelink.sock")
+	viperInstance.SetDefault("unix_socket_path", getOSDefaultUnixSocketPath())
 	viperInstance.SetDefault("loopback_only", true)
 	viperInstance.SetDefault("environment", "production")
 	viperInstance.SetDefault("log_level", "info")
@@ -744,6 +744,16 @@ func getOSDefaultPluginLogFileRootDir() string {
 		return utils.ExpandEnv("%LOCALAPPDATA%\\NewStack\\Bluelink\\engine\\plugins\\logs")
 	}
 	return os.ExpandEnv("$HOME/.bluelink/engine/plugins/logs")
+}
+
+func getOSDefaultUnixSocketPath() string {
+	// Under a per-user directory rather than a world-writable one, so that the directory's
+	// permissions restrict who can reach the socket. On Windows the socket file's own mode
+	// is not enforced, which makes the directory the only control there.
+	if runtime.GOOS == "windows" {
+		return utils.ExpandEnv("%LOCALAPPDATA%\\NewStack\\Bluelink\\engine\\api.sock")
+	}
+	return os.ExpandEnv("$HOME/.bluelink/engine/api.sock")
 }
 
 func getOSDefaultMemFileStateDir() string {
