@@ -747,9 +747,10 @@ func getOSDefaultPluginLogFileRootDir() string {
 }
 
 func getOSDefaultUnixSocketPath() string {
-	// Under a per-user directory rather than a world-writable one, so that the directory's
-	// permissions restrict who can reach the socket. On Windows the socket file's own mode
-	// is not enforced, which makes the directory the only control there.
+	// Under a per-user directory rather than a world-writable one, so that the directory
+	// restricts who can reach the socket. On Windows the socket inherits the directory's
+	// ACL, which bind and connect are checked against, so the directory is the control on
+	// both platforms.
 	if runtime.GOOS == "windows" {
 		return utils.ExpandEnv("%LOCALAPPDATA%\\NewStack\\Bluelink\\engine\\api.sock")
 	}
