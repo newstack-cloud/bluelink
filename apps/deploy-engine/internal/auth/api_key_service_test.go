@@ -58,6 +58,19 @@ func (s *APIKeyServiceSuite) Test_check_fails_for_missing_api_key() {
 	s.Equal("missing API key", authErr.ChildErr.Error())
 }
 
+func (s *APIKeyServiceSuite) Test_check_fails_when_no_api_keys_are_configured() {
+	service := NewAPIKeyService(&core.AuthConfig{APIKeys: []string{}})
+
+	headers := make(http.Header)
+	headers.Set(BluelinkAPIKeyHeaderName, "any-key")
+
+	err := service.Check(context.Background(), headers)
+	s.Require().Error(err)
+	authErr, ok := err.(*Error)
+	s.Require().True(ok)
+	s.Equal("invalid API key", authErr.ChildErr.Error())
+}
+
 func TestAPIKeyServiceSuite(t *testing.T) {
 	suite.Run(t, new(APIKeyServiceSuite))
 }
