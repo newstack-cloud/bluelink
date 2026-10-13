@@ -109,36 +109,9 @@ func Open(
 	sealed []byte,
 	associatedData []byte,
 ) ([]byte, error) {
-	if !IsEnvelope(sealed) {
-		return nil, ErrNotEnvelope
-	}
-
-	rest := sealed[len(envelopeMagic):]
-	if len(rest) < headerLengthBytes {
-		return nil, errors.New("crypto: envelope truncated before header length")
-	}
-
-	headerLength := binary.BigEndian.Uint32(rest[:headerLengthBytes])
-	if headerLength > maxHeaderLength {
-		return nil, fmt.Errorf("crypto: envelope header length %d exceeds maximum", headerLength)
-	}
-
-	rest = rest[headerLengthBytes:]
-	if uint32(len(rest)) < headerLength {
-		return nil, errors.New("crypto: envelope truncated before end of header")
-	}
-
-	header := &envelopeHeader{}
-	if err := json.Unmarshal(rest[:headerLength], header); err != nil {
-		return nil, fmt.Errorf("crypto: decoding envelope header: %w", err)
-	}
-
-	if header.Version != envelopeVersion {
-		return nil, fmt.Errorf(
-			"crypto: unsupported envelope version %d, this build understands %d",
-			header.Version,
-			envelopeVersion,
-		)
+	header, ciphertext, err := parseEnvelope(sealed)
+	if err != nil {
+		return nil, err
 	}
 
 	dek, err := provider.UnwrapKey(ctx, header.KEKID, header.WrappedDEK)
@@ -159,7 +132,7 @@ func Open(
 		)
 	}
 
-	plaintext, err := gcm.Open(nil, header.Nonce, rest[headerLength:], associatedData)
+	plaintext, err := gcm.Open(nil, header.Nonce, ciphertext, associatedData)
 	if err != nil {
 		// Deliberately not wrapped with the underlying message, which says only "message
 		// authentication failed" and is indistinguishable between a corrupt payload, the
@@ -169,6 +142,62 @@ func Open(
 	}
 
 	return plaintext, nil
+}
+
+// EnvelopeKeyID returns the id of the key-encryption key an envelope was sealed with,
+// without decrypting it or reaching a key provider.
+//
+// This lets a caller tell which key protects an object, which is what makes re-encrypting a store
+// resumable, an object already sealed under the key being moved to can be left alone.
+//
+// Returns ErrNotEnvelope for a payload written before encryption was enabled.
+func EnvelopeKeyID(sealed []byte) (string, error) {
+	header, _, err := parseEnvelope(sealed)
+	if err != nil {
+		return "", err
+	}
+
+	return header.KEKID, nil
+}
+
+// Splits a sealed payload into its header and ciphertext, having checked the magic, the
+// length prefix and the format version.
+func parseEnvelope(sealed []byte) (*envelopeHeader, []byte, error) {
+	if !IsEnvelope(sealed) {
+		return nil, nil, ErrNotEnvelope
+	}
+
+	rest := sealed[len(envelopeMagic):]
+	if len(rest) < headerLengthBytes {
+		return nil, nil, errors.New("crypto: envelope truncated before header length")
+	}
+
+	headerLength := binary.BigEndian.Uint32(rest[:headerLengthBytes])
+	if headerLength > maxHeaderLength {
+		return nil, nil, fmt.Errorf(
+			"crypto: envelope header length %d exceeds maximum", headerLength,
+		)
+	}
+
+	rest = rest[headerLengthBytes:]
+	if uint32(len(rest)) < headerLength {
+		return nil, nil, errors.New("crypto: envelope truncated before end of header")
+	}
+
+	header := &envelopeHeader{}
+	if err := json.Unmarshal(rest[:headerLength], header); err != nil {
+		return nil, nil, fmt.Errorf("crypto: decoding envelope header: %w", err)
+	}
+
+	if header.Version != envelopeVersion {
+		return nil, nil, fmt.Errorf(
+			"crypto: unsupported envelope version %d, this build understands %d",
+			header.Version,
+			envelopeVersion,
+		)
+	}
+
+	return header, rest[headerLength:], nil
 }
 
 // IsEnvelope reports whether a payload carries the envelope magic.
