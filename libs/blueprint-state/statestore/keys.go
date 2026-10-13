@@ -147,6 +147,21 @@ func (k KeyBuilder) CleanupOperation(operationID string) string {
 	return k.join("cleanup_operations", operationID+".json")
 }
 
+// EncryptionSalt returns the storage key for the salt a passphrase-derived
+// key-encryption key is built from.
+//
+// Stored alongside state rather than beside the engine's configuration because
+// the salt belongs to the data: the same passphrase with a different salt derives
+// a different key and cannot read anything previously written. Moving or backing
+// up a state directory therefore carries the salt with it.
+//
+// Not secret, and written unencrypted, it is an input to deriving the key, not
+// key material. The eager loader skips keys it does not recognise, so this sits in
+// the store without being mistaken for state.
+func (k KeyBuilder) EncryptionSalt() string {
+	return k.join("encryption_salt.json")
+}
+
 // Prepends the prefix to the given parts. The leading "/" of an
 // absolute prefix is preserved so memfile state directories like
 // "/var/lib/bluelink/state" survive intact.
