@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0](https://github.com/newstack-cloud/bluelink/compare/common/v0.4.0...common/v0.5.0) (2026-10-13)
+
+
+### Features
+
+* **common:** add crypto package with helpers to encrypt data ([9eb28f2](https://github.com/newstack-cloud/bluelink/commit/9eb28f29e98fd648b0cf1d512ce6164ddb820641))
+* **common:** add key set to allow for enc key rotation and re-encryption ([266e89c](https://github.com/newstack-cloud/bluelink/commit/266e89c8e7e21592aa51656bcd2ee636980dbbaa))
+
 ## [0.4.0](https://github.com/newstack-cloud/bluelink/compare/common/v0.3.2...common/v0.4.0) (2026-01-27)
 
 
