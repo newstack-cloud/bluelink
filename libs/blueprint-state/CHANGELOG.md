@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.9.1...blueprint-state/v0.10.0) (2026-10-14)
+
+
+### Features
+
+* **blueprint-state:** add key provider implementations for the main providers ([a3775cc](https://github.com/newstack-cloud/bluelink/commit/a3775ccfac0662362eaf796055d425d8b651ac9b))
+* **blueprint-state:** add re-encryption helpers and make state container support encryption ([1bedc70](https://github.com/newstack-cloud/bluelink/commit/1bedc70132053e5bee13f88aed65541dbb190b4b))
+* **blueprint-state:** add support for encryption in statestore storage ([367bec6](https://github.com/newstack-cloud/bluelink/commit/367bec657850cf83dcd2b44bec1b13f32f7d9f6c))
+
 ## [0.9.1](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.9.0...blueprint-state/v0.9.1) (2026-09-17)
 
 
