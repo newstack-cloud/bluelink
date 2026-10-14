@@ -50,9 +50,9 @@ loopback hop is fine, however, the problem is that the engine host becomes the i
 The unauthenticated plugin service also listens on loopback, which an HTTP proxy cannot
 reach but any local process can, so it is the one asset that running the proxy and the engine
 as different users does not protect (see [Plugin transport](#5-plugin-transport)). State and
-credentials are also plaintext on that host, though both are mitigable by encrypting the volume
-holding the state directory, and injecting credentials from a secret manager rather than writing
-them to a config file.
+credentials are also on that host, though both are mitigable by encrypting the state with
+`state.encryption.enabled` or the volume holding it, and inject credentials from a secret
+manager rather than writing them to a config file.
 
 Prefer separating the terminator from the engine host. Where they must be co-located, proxy
 only the engine's own paths to the engine's own address, and never let a request choose its
@@ -111,12 +111,16 @@ Notes for compliance deployments:
 ## 3. Encryption at rest
 
 The engine persists blueprint instance state, resource and link state, drift records,
-changesets, validation results, reconciliation results and event partitions. **All of it is
-plaintext JSON at the application layer**, so at-rest protection comes from the storage layer
-beneath. What that means depends on `state.storage_engine`.
+changesets, validation results, reconciliation results and event partitions. Resolved secrets
+are among them whether it be a connection string in a resource spec, a token in a changeset, a credential
+in a persisted event.
 
-> `state.storage_engine` defaults to **`memfile`**, which has no storage layer beneath it.
-> A deployment that does not set this explicitly has no encryption at rest. See
+For `postgres` and `objectstore`, at-rest protection comes from the storage layer beneath, and
+what that means depends on the provider. For `memfile` there is no storage layer beneath, so
+the engine can encrypt the state itself before writing it.
+
+> `state.storage_engine` defaults to **`memfile`**, and `state.encryption.enabled` defaults to
+> **`false`**. A deployment that sets neither writes plaintext state to the host's disk. See
 > [`memfile`](#memfile) below.
 
 ### `postgres`
@@ -150,16 +154,71 @@ Supported for **single-instance production deployments**. State is plaintext JSO
 `state.memfile_state_dir`, chunked according to `state.memfile_max_guide_file_size` and
 `state.memfile_max_event_partition_size`.
 
-There is no storage layer beneath, and the engine does not currently encrypt this state
-itself, so protection today is host-level:
+There is no storage layer beneath, so there are two places to protect it: the engine, and the
+host.
+
+**At the engine.** Setting `state.encryption.enabled` makes the engine encrypt every object it
+writes to the state directory. Each object gets its own data key, sealed with AES-256-GCM and
+bound to the key it is stored under, and that data key is wrapped by a key-encryption key the
+`state.encryption.provider` selects:
+
+| Provider        | Key comes from                                                                              | Configuration                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `passphrase`    | Argon2id over a passphrase, with a salt generated once and persisted in the state directory | `state.encryption.passphrase` or `state.encryption.passphrase_file`                           |
+| `localkey`      | A raw 32-byte key in a file, which must not be readable by other users                      | `state.encryption.local_key_file`                                                             |
+| `awskms`        | AWS KMS, the key never leaving KMS                                                          | `state.encryption.awskms.key_id`, needing `kms:GenerateDataKey` and `kms:Decrypt`             |
+| `gcpkms`        | Google Cloud KMS, the key never leaving KMS                                                 | `state.encryption.gcpkms.key_name`, needing `useToEncrypt` and `useToDecrypt`                 |
+| `azurekeyvault` | Azure Key Vault or Managed HSM, the key never leaving the vault                             | `state.encryption.azurekeyvault.vault_url` and `.key_name`, needing `wrapKey` and `unwrapKey` |
+
+The KMS providers are the stronger choice where one is available as the key is held by a service
+with its own access control and audit trail rather than by the engine's host, and losing the
+host does not lose the key. They cost a wrap call per object written.
+
+What to know before enabling it:
+
+- **Losing the key loses the state.** Keep it wherever the deployment keeps its other
+  long-lived secrets, and back it up accordingly.
+- **Enabling it over an existing plaintext state directory fails at startup** rather than
+  reading it. Encrypt what is already there with `bluelink-deploy-engine reencrypt-state`, with
+  the engine stopped.
+- **Storage keys are not encrypted.** File names carry categories and entity ids, which the
+  index and the loader need, so they stay readable.
+- **For `azurekeyvault`, pin `key_version`.** A wrapped key does not name the version that
+  produced it, so rotating an unpinned key leaves state sealed under the previous version
+  unreadable.
+- Encryption protects what is at rest, not what is in memory or what the API returns. Secrets
+  are decrypted to be used.
+
+**Changing the key** is two steps, because state already written is sealed with the old one:
+
+1. Configure the new key under `state.encryption`, and list the old one under
+   `state.encryption.previous_keys`. The engine then writes with the new key and reads either,
+   so this step costs no more than a restart.
+2. Stop the engine and run `bluelink-deploy-engine reencrypt-state`, which copies the state
+   directory and then re-seals every object under the new key. `--dry-run` reports what it
+   would change without writing. Once nothing is left under the old key, drop it from
+   `previous_keys` and retire it.
+
+Until step 2 has run, the old key is still the only thing protecting most of the state, so a
+key that has been exposed is not contained by step 1 alone. The same command decrypts a state
+directory with `--decrypt`, so enabling encryption is not a one-way door.
+
+A pass is not atomic: objects are rewritten in place, so a failure part-way through leaves a
+directory holding a mix of keys, readable only by a configuration listing both. The command
+copies the state directory first for that reason, and an interrupted pass can be run again
+since objects already under the new key are recognised and left alone.
+
+**At the host**, whether or not engine encryption is on:
 
 - Put the state directory on an **encrypted volume** (LUKS/dm-crypt, EBS encryption,
   FileVault). The engine cannot verify this and does not claim to.
 - Restrict the directory to the engine's user.
-- Encrypt backups separately with tools such as `restic` or `age`.
+- Encrypt backups separately with tools such as `restic` or `age`. A backup of an encrypted
+  state directory is only readable with the key, which is one more reason the key has to
+  outlive the host.
 
 Be aware that container filesystems, bind mounts and CI runners frequently have no disk
-encryption at all.
+encryption at all, which is where engine-level encryption earns its keep.
 
 ## 4. Database connection security
 
@@ -213,8 +272,10 @@ lengthening them for audit convenience increases it.
 The engine does not provide these today. None should be described as a control of a
 deployment:
 
-- **No application-layer encryption of state.** At-rest protection is whatever the storage
-  layer provides, which for `memfile` is nothing.
+- **No application-layer encryption for `postgres` or `objectstore`.** At-rest protection for
+  those is whatever the database or bucket provides. Only `memfile` can encrypt its own state.
+- **A re-encryption pass needs the engine stopped**, and cannot be made atomic. There is no
+  online rotation and no schedule: rotating a key is an operator-run command.
 - **No redaction of secret values.** Resolved secrets appear in API responses, event streams
   and logs wherever they appear in a resource spec, changeset or drift record. The
   sensitivity flags in a blueprint and in provider schemas are recorded but not acted on.
@@ -244,10 +305,16 @@ engine removes them.
 - [ ] `auth.oauth2_oidc_jwt_issuer_secure: true` if using OIDC.
 - [ ] Engine configuration and environment treated as credential material.
 - [ ] `state.storage_engine` set explicitly rather than defaulted.
-- [ ] Encryption at rest verified for the chosen backend — `storage_encrypted` on RDS, bucket
-      default encryption, or an encrypted volume for `memfile`.
+- [ ] Encryption at rest verified for the chosen backend, for example, `storage_encrypted` on RDS, bucket
+      default encryption, or for `memfile` an encrypted volume and, preferably,
+      `state.encryption.enabled`.
+- [ ] If `memfile` state encryption is enabled: the key held outside the engine host, backed
+      up, and its loss understood to mean the loss of the state.
+- [ ] A key change understood as configure-then-re-encrypt, with the old key dropped from
+      `state.encryption.previous_keys` only once a pass has moved the state onto the new one.
 - [ ] `state.postgres_ssl_mode` set to `require` or `verify-full`.
 - [ ] Retention windows set deliberately, knowing changesets and events hold plaintext
       secrets.
 - [ ] No untrusted local workloads on the engine host.
-- [ ] Backups of `memfile` state directories encrypted independently.
+- [ ] Backups of `memfile` state directories encrypted independently, or covered by the
+      engine's own encryption with the key stored apart from them.

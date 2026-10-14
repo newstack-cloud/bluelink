@@ -11,6 +11,7 @@ The deploy engine also bundles a limited set of state persistence implementation
 
 - [Installing](#installing)
 - [Configuration](#configuration)
+- [Maintenance Commands](#maintenance-commands)
 - [API Documentation](#api-documentation)
 - [Additional documentation](#additional-documentation)
 
@@ -568,6 +569,12 @@ If opting for the in-memory storage with file system persistence engine,
 it would be a good idea to backup the state files to a remote location
 to avoid losing all state in the event of a failure or destruction of the host machine.
 
+State includes resolved secrets, so a `memfile` deployment should either encrypt the state
+itself with `state.encryption.enabled`, documented below, or hold the state directory and its
+backups on encrypted storage. The `postgres` and `objectstore` engines rely on encryption at
+rest in the database or bucket they persist to. See
+[secure deployment](docs/SECURE_DEPLOYMENT.md) for the whole picture.
+
 **default value:** `memfile`
 
 #### Recently Queued Events Threshold
@@ -632,6 +639,243 @@ that causes the file to exceed this size, an error will occur and the event
 will not be persisted.
 
 **default value:** `10485760` (10MB)
+
+#### `memfile` Storage Engine State Encryption Enabled
+
+`BLUELINK_DEPLOY_ENGINE_STATE_ENCRYPTION_ENABLED`
+
+_Config field:_ `state.encryption.enabled`
+
+_**optional**_
+
+Whether the deploy engine encrypts state before writing it to disk when using the in-memory
+storage with file system (memfile) persistence engine. State holds resolved secrets, such as a
+connection string in a resource spec or a token in a change set, so encrypting it means the
+host's disk, and any backup taken from it, no longer carries readable credentials.
+
+Only supported for the `memfile` storage engine. The `postgres` and `objectstore` engines rely
+on encryption at rest in the database or bucket they persist to, and the deploy engine will
+refuse to start if this is enabled for either.
+
+The key is for the life of the state it protects, and losing it loses the state. Changing it is
+a two-step operation: list the old key under `state.encryption.previous_keys` so existing state
+stays readable, then run the [`reencrypt-state`](#reencrypt-state) command to move the state
+onto the new key, after which the old key can be dropped from the configuration.
+
+Enabling this over a directory of existing plaintext state will fail at startup rather than
+read it. Encrypt what is already there with the
+[`reencrypt-state`](#reencrypt-state) command, with the deploy engine stopped.
+
+**default value:** `false`
+
+#### `memfile` Storage Engine State Encryption Key Provider
+
+`BLUELINK_DEPLOY_ENGINE_STATE_ENCRYPTION_PROVIDER`
+
+_Config field:_ `state.encryption.provider`
+
+_**optional**_
+
+Selects where the key that protects the state comes from.
+
+Valid values are `passphrase`, `localkey`, `awskms`, `gcpkms` and `azurekeyvault`.
+
+`passphrase` derives a key from a passphrase with Argon2id, the salt being generated once and
+persisted alongside the state. `localkey` reads a raw 32-byte key from a file. The remaining
+three wrap each object's data key with a key held by a cloud key management service, which
+never releases the key itself. These are the stronger choice where one is available, the key
+being held by a service with its own access control and audit trail rather than by the engine's
+host, at the cost of a wrap call per object written.
+
+**default value:** `passphrase`
+
+#### `memfile` Storage Engine State Encryption Previous Keys
+
+_Config field:_ `state.encryption.previous_keys`
+
+_**optional**_
+
+Keys that are no longer used to encrypt state, but are still needed to decrypt state written
+before the current key was configured. Each entry takes the same fields as the current key, so
+a deployment can move between provider types as well as between keys of one type.
+
+This is what makes changing the key survivable. Without the old key listed here, state written
+under it cannot be read, and the deploy engine refuses to start rather than write over it.
+
+Keep an old key here only until the state has been moved onto the current key with the
+[`reencrypt-state`](#reencrypt-state) command. Until that pass has run, the old key is still
+the only thing protecting most of the state, so retiring it achieves nothing on its own.
+
+There is no environment variable equivalent, a list of keys can only be given in a
+configuration file:
+
+```json
+{
+  "state": {
+    "encryption": {
+      "enabled": true,
+      "provider": "awskms",
+      "awskms": { "key_id": "alias/bluelink-state" },
+      "previous_keys": [
+        { "provider": "passphrase", "passphrase_file": "/run/secrets/old-state-passphrase" }
+      ]
+    }
+  }
+}
+```
+
+#### `memfile` Storage Engine State Encryption Passphrase / Passphrase File
+
+`BLUELINK_DEPLOY_ENGINE_STATE_ENCRYPTION_PASSPHRASE`
+`BLUELINK_DEPLOY_ENGINE_STATE_ENCRYPTION_PASSPHRASE_FILE`
+
+_Config fields:_ `state.encryption.passphrase`, `state.encryption.passphrase_file`
+
+_**one of these is required, if the passphrase key provider is used**_
+
+The passphrase a `passphrase` key provider derives its key from, either directly or as the path
+to a file holding it. The file is preferred where a deployment mounts secrets as files, since
+the value then stays out of the process environment, and takes precedence when both are set.
+Trailing whitespace in the file is ignored.
+
+#### `memfile` Storage Engine State Encryption Local Key File
+
+`BLUELINK_DEPLOY_ENGINE_STATE_ENCRYPTION_LOCAL_KEY_FILE`
+
+_Config field:_ `state.encryption.local_key_file`
+
+_**required, if the localkey key provider is used**_
+
+The path to a file holding a raw 32-byte key, 32 random bytes from a key management tool or
+`head -c 32 /dev/urandom`.
+
+The file must not be readable by users other than its owner, mode `0600`, and the deploy engine
+will refuse to start otherwise.
+
+#### `memfile` Storage Engine State Encryption AWS KMS Key ID
+
+`BLUELINK_DEPLOY_ENGINE_STATE_ENCRYPTION_AWSKMS_KEY_ID`
+
+_Config field:_ `state.encryption.awskms.key_id`
+
+_**required, if the awskms key provider is used**_
+
+Identifies the AWS KMS key, as a key ID, ARN, alias name or alias ARN. The identity the deploy
+engine runs as needs `kms:GenerateDataKey` and `kms:Decrypt` on the key.
+
+An alias is the better choice where a deployment expects to move to a new key: the configured
+value is recorded in the state the deploy engine writes, and KMS resolves an alias at the time
+of each call.
+
+#### `memfile` Storage Engine State Encryption AWS KMS Region
+
+`BLUELINK_DEPLOY_ENGINE_STATE_ENCRYPTION_AWSKMS_REGION`
+
+_Config field:_ `state.encryption.awskms.region`
+
+_**optional**_
+
+The AWS region the KMS key lives in. When empty, the region resolved by the default credential
+chain is used.
+
+#### `memfile` Storage Engine State Encryption AWS KMS Endpoint
+
+`BLUELINK_DEPLOY_ENGINE_STATE_ENCRYPTION_AWSKMS_ENDPOINT`
+
+_Config field:_ `state.encryption.awskms.endpoint`
+
+_**optional**_
+
+Overrides the KMS endpoint, for a VPC endpoint or a local stand-in such as LocalStack. When
+empty, the default endpoint for the region is used.
+
+#### `memfile` Storage Engine State Encryption AWS KMS Access Key ID / Secret Access Key
+
+`BLUELINK_DEPLOY_ENGINE_STATE_ENCRYPTION_AWSKMS_ACCESS_KEY_ID`
+`BLUELINK_DEPLOY_ENGINE_STATE_ENCRYPTION_AWSKMS_SECRET_ACCESS_KEY`
+
+_Config fields:_ `state.encryption.awskms.access_key_id`, `state.encryption.awskms.secret_access_key`
+
+_**optional**_
+
+Static credentials used in place of the default AWS SDK credential chain. Both must be set
+together. Leaving them empty is usually right, the default credential chain picks up an
+instance role, a container role or a profile without the deploy engine holding long-lived keys.
+
+#### `memfile` Storage Engine State Encryption Google Cloud KMS Key Name
+
+`BLUELINK_DEPLOY_ENGINE_STATE_ENCRYPTION_GCPKMS_KEY_NAME`
+
+_Config field:_ `state.encryption.gcpkms.key_name`
+
+_**required, if the gcpkms key provider is used**_
+
+The key's resource name, in the form
+`projects/{project}/locations/{location}/keyRings/{ring}/cryptoKeys/{key}`. The identity the
+deploy engine runs as needs `cloudkms.cryptoKeyVersions.useToEncrypt` and `useToDecrypt` on the
+key.
+
+Naming the key rather than one of its versions lets Cloud KMS rotate versions underneath
+without state sealed under an earlier version becoming unreadable.
+
+#### `memfile` Storage Engine State Encryption Google Cloud KMS Credentials File
+
+`BLUELINK_DEPLOY_ENGINE_STATE_ENCRYPTION_GCPKMS_CREDENTIALS_FILE`
+
+_Config field:_ `state.encryption.gcpkms.credentials_file`
+
+_**optional**_
+
+The path to a service account key file, and only that: a file holding another kind of
+credential configuration is refused rather than loaded, since loading an unexpected credential
+type from a file is itself a risk.
+
+When empty, Application Default Credentials are used, which is usually right and is the route
+for workload identity federation as well: an attached service account or a federated identity
+avoids the deploy engine holding a long-lived key at all.
+
+#### `memfile` Storage Engine State Encryption Azure Key Vault URL / Key Name
+
+`BLUELINK_DEPLOY_ENGINE_STATE_ENCRYPTION_AZUREKEYVAULT_VAULT_URL`
+`BLUELINK_DEPLOY_ENGINE_STATE_ENCRYPTION_AZUREKEYVAULT_KEY_NAME`
+
+_Config fields:_ `state.encryption.azurekeyvault.vault_url`, `state.encryption.azurekeyvault.key_name`
+
+_**required, if the azurekeyvault key provider is used**_
+
+The vault's URL, `https://{vault}.vault.azure.net/` for a standard vault, and the name of the
+key within it. The identity the deploy engine runs as needs the `wrapKey` and `unwrapKey`
+permissions on the key. Credentials come from the default Azure credential chain, a managed
+identity or the standard Azure environment variables.
+
+#### `memfile` Storage Engine State Encryption Azure Key Vault Key Version
+
+`BLUELINK_DEPLOY_ENGINE_STATE_ENCRYPTION_AZUREKEYVAULT_KEY_VERSION`
+
+_Config field:_ `state.encryption.azurekeyvault.key_version`
+
+_**optional**_
+
+Pins the key version used for wrapping, and is worth setting.
+
+A wrapped key does not name the version that produced it, so the version has to come from
+somewhere. When pinned, it is recorded in the state the deploy engine writes and used again to
+unwrap, so state sealed before a rotation stays readable. When empty, the vault's current
+version is used for both, and rotating the key leaves everything sealed under the previous
+version unreadable.
+
+#### `memfile` Storage Engine State Encryption Azure Key Vault Algorithm
+
+`BLUELINK_DEPLOY_ENGINE_STATE_ENCRYPTION_AZUREKEYVAULT_ALGORITHM`
+
+_Config field:_ `state.encryption.azurekeyvault.algorithm`
+
+_**optional**_
+
+Overrides the algorithm used to wrap data keys. Suits the RSA keys a standard vault holds by
+default. A Managed HSM deployment wrapping with a symmetric key needs `A256KW`.
+
+**default value:** `RSA-OAEP-256`
 
 #### `postgres` Storage Engine User
 
@@ -1011,6 +1255,43 @@ it will delete all reconciliation results that are older than this period.
 
 **default value:** `604800` (7 days)
 
+## Maintenance Commands
+
+Running the deploy engine with no arguments serves the API. Passing a command
+runs that command instead and exits.
+
+### `reencrypt-state`
+
+```bash
+bluelink-deploy-engine reencrypt-state [--dry-run] [--decrypt] [--backup-dir=DIR] [--no-backup] [--force]
+```
+
+Re-seals every object in a `memfile` state directory under the key in the deploy engine's
+configuration. It reads the same configuration the server does, so what it does follows from
+that configuration rather than from flags:
+
+| Configuration                                                              | What the command does                           |
+| -------------------------------------------------------------------------- | ----------------------------------------------- |
+| `state.encryption.enabled` set, state currently plaintext                   | Encrypts the existing state for the first time   |
+| `state.encryption` naming a new key, the old one under `previous_keys`      | Moves the state onto the new key                 |
+| `state.encryption` naming the key the state is sealed with, with `--decrypt` | Writes the state back as plaintext               |
+
+**Run it with the deploy engine stopped.** The deploy engine holds state in memory and persists
+it on write, so it would write its own copy back over the pass. The command refuses to start if
+something is listening on the configured address, which `--force` overrides.
+
+Each object is dealt with independently and objects already sealed under the target key are
+recognised and left alone, so an interrupted pass can simply be run again. What the command
+cannot do is make the pass atomic: objects are rewritten in place, so a failure part-way through
+leaves a directory holding a mix of keys, readable only by a configuration that still lists
+both. For that reason the state directory is copied before anything is rewritten, to
+`DIR` when `--backup-dir` is given and alongside the state directory otherwise.
+`--no-backup` skips the copy, and `--dry-run` reports what would change while writing nothing
+at all.
+
+The encryption salt is never encrypted or replaced, since the current key may have been derived
+from it.
+
 ## API Documentation
 
 The API documentation for the v1 of the Deploy Engine HTTP API is available at the following URL:
@@ -1019,4 +1300,6 @@ https://bluelink.dev/deploy-engine/docs/http-api-reference/v1/deploy-engine-api
 
 ## Additional documentation
 
+- [Architecture](docs/ARCHITECTURE.md)
+- [Secure deployment](docs/SECURE_DEPLOYMENT.md)
 - [Contributing](docs/CONTRIBUTING.md)

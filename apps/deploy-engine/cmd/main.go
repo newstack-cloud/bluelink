@@ -20,6 +20,31 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 {
+		os.Exit(runCommand(os.Args[1], os.Args[2:]))
+	}
+
+	serveAPI()
+}
+
+// The engine serves when given no arguments, which is how it has always been started, and
+// runs a maintenance command when given one.
+func runCommand(command string, args []string) int {
+	if command == reencryptStateCommand {
+		return runReencryptState(args)
+	}
+
+	fmt.Fprintf(
+		os.Stderr,
+		"unknown command %q, the only command is %q; run with no arguments to serve the API\n",
+		command,
+		reencryptStateCommand,
+	)
+
+	return 1
+}
+
+func serveAPI() {
 	config, err := core.LoadConfig()
 	if err != nil {
 		log.Fatalf("error loading config: %s", err)

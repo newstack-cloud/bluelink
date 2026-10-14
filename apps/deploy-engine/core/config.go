@@ -298,12 +298,177 @@ type StateConfig struct {
 	// See: https://pkg.go.dev/time#ParseDuration
 	// Defaults to "1h30m".
 	PostgresPoolMaxConnLifetime string `mapstructure:"postgres_pool_max_conn_lifetime"`
+	// Encryption provides configuration for encrypting persisted state at
+	// rest. Only used when StorageEngine == "memfile", the postgres and
+	// objectstore engines are encrypted by the database or bucket they
+	// persist to.
+	Encryption StateEncryptionConfig `mapstructure:"encryption"`
 	// ObjectStore provides configuration for the object-store storage
 	// engine. Used when StorageEngine == "objectstore" to select and
 	// configure a cloud object storage backend (S3, GCS or Azure Blob
 	// Storage) that multiple deploy-engine instances and CI/CD pipelines
 	// can share safely via per-entity ETag / generation CAS.
 	ObjectStore ObjectStoreConfig `mapstructure:"objectstore"`
+}
+
+// StateEncryptionConfig provides configuration for encrypting the state the
+// memfile storage engine persists to disk.
+//
+// State holds resolved secrets, a database password in a resource spec or a
+// token in a changeset, and the memfile engine writes them to files on the
+// host. Encrypting them means the host's disk, and any backup taken from it,
+// no longer carries readable credentials.
+//
+// A key is for the life of the state it protects. Losing it loses the state,
+// and changing it makes everything already written unreadable, so the key
+// belongs wherever the deployment keeps its other long-lived secrets.
+type StateEncryptionConfig struct {
+	// Enabled determines whether state is encrypted before being written.
+	//
+	// Defaults to false. Enabling it over a directory of plaintext state fails at startup
+	// rather than reading it: run the "reencrypt-state" command, with the engine stopped, to
+	// encrypt what is already there.
+	Enabled bool `mapstructure:"enabled"`
+	// StateEncryptionKeyConfig holds the key state is encrypted with, inlined so that its
+	// fields sit directly under "state.encryption".
+	StateEncryptionKeyConfig `mapstructure:",squash"`
+	// PreviousKeys holds keys that are no longer used to encrypt, but are still needed to
+	// decrypt state written before the current key was configured.
+	//
+	// This is what makes changing the key survivable. Without the old key listed here, state
+	// written under it cannot be read, and the engine refuses to start rather than overwrite
+	// it. Each entry takes the same fields as the current key, so a deployment can move
+	// between provider types as well as between keys of one type.
+	//
+	// Keep an old key here only until the state has been re-encrypted with the
+	// "reencrypt-state" command, after which it can be removed and the key itself retired.
+	// A key listed here is still protecting most of the state until that pass has run.
+	//
+	// Configuration file only: a list of keys has no environment variable equivalent.
+	PreviousKeys []StateEncryptionKeyConfig `mapstructure:"previous_keys"`
+}
+
+// StateEncryptionKeyConfig identifies one key that state is, or was, encrypted with.
+//
+// Used for the key in use and for each key kept only to read older state, so both take the
+// same shape.
+type StateEncryptionKeyConfig struct {
+	// Provider selects where the key that protects the state comes from.
+	// Valid values are "passphrase", "localkey", "awskms", "gcpkms" and
+	// "azurekeyvault".
+	//
+	// "passphrase" derives a key from Passphrase or PassphraseFile with
+	// Argon2id, the salt being generated once and persisted alongside the
+	// state. "localkey" reads a raw 32-byte key from LocalKeyFile, which is
+	// 32 random bytes from a key management tool or "head -c 32
+	// /dev/urandom".
+	//
+	// Defaults to "passphrase".
+	Provider string `mapstructure:"provider"`
+	// Passphrase holds the passphrase a "passphrase" provider derives its key
+	// from, for deployments that supply secrets by environment variable.
+	//
+	// PassphraseFile takes precedence when both are set.
+	Passphrase string `mapstructure:"passphrase"`
+	// PassphraseFile holds the path to a file containing the passphrase,
+	// trailing whitespace being stripped. Preferred over Passphrase where a
+	// deployment mounts secrets as files, since the value then stays out of
+	// the process environment.
+	PassphraseFile string `mapstructure:"passphrase_file"`
+	// LocalKeyFile holds the path to a file containing a raw 32-byte key for
+	// the "localkey" provider.
+	//
+	// The file must not be readable by users other than its owner, mode 0600,
+	// and the engine refuses to start otherwise.
+	LocalKeyFile string `mapstructure:"local_key_file"`
+	// AWSKMS configures the "awskms" provider.
+	AWSKMS StateEncryptionAWSKMSConfig `mapstructure:"awskms"`
+	// GCPKMS configures the "gcpkms" provider.
+	GCPKMS StateEncryptionGCPKMSConfig `mapstructure:"gcpkms"`
+	// AzureKeyVault configures the "azurekeyvault" provider.
+	AzureKeyVault StateEncryptionAzureKeyVaultConfig `mapstructure:"azurekeyvault"`
+}
+
+// StateEncryptionAWSKMSConfig configures state encryption against AWS KMS,
+// where the key never leaves KMS and each object's data key is wrapped by a
+// KMS call.
+//
+// Needs kms:GenerateDataKey and kms:Decrypt on the key, and the key's policy
+// has to grant them to the identity the engine runs as.
+type StateEncryptionAWSKMSConfig struct {
+	// KeyID identifies the KMS key, as a key id, ARN, alias name or alias
+	// ARN. Required for the "awskms" provider.
+	//
+	// An alias is the better choice where a deployment expects to move to a
+	// new key: it is recorded in the state the engine writes, and KMS
+	// resolves it at the time of each call.
+	KeyID string `mapstructure:"key_id"`
+	// Region holds the AWS region the key lives in. Empty falls back to the
+	// region the default credential chain resolves.
+	Region string `mapstructure:"region"`
+	// Endpoint overrides the KMS endpoint, for a VPC endpoint or a local
+	// stand-in. Empty means the default for the region.
+	Endpoint string `mapstructure:"endpoint"`
+	// AccessKeyID and SecretAccessKey supply static credentials. Both must be
+	// set to take effect, and leaving them empty is usually right: the
+	// default credential chain picks up an instance role, a container role or
+	// a profile without the engine holding long-lived keys.
+	AccessKeyID     string `mapstructure:"access_key_id"`
+	SecretAccessKey string `mapstructure:"secret_access_key"`
+}
+
+// StateEncryptionGCPKMSConfig configures state encryption against Google
+// Cloud KMS, where the key never leaves KMS and each object's data key is
+// wrapped by a KMS call.
+//
+// Needs cloudkms.cryptoKeyVersions.useToEncrypt and useToDecrypt on the key.
+type StateEncryptionGCPKMSConfig struct {
+	// KeyName holds the key's resource name, in the form
+	// "projects/{project}/locations/{location}/keyRings/{ring}/cryptoKeys/{key}".
+	// Required for the "gcpkms" provider.
+	//
+	// Naming the key rather than one of its versions lets Cloud KMS rotate
+	// versions underneath without state sealed under an earlier one becoming
+	// unreadable.
+	KeyName string `mapstructure:"key_name"`
+	// CredentialsFile holds the path to a service account key file, and only
+	// that: a file holding another kind of credential configuration is
+	// refused rather than loaded, since loading an unexpected credential type
+	// from a file is itself a risk.
+	//
+	// Empty uses Application Default Credentials, which is usually right, and
+	// is the route for workload identity federation as well: an attached
+	// service account or a federated identity avoids the engine holding a
+	// long-lived key at all.
+	CredentialsFile string `mapstructure:"credentials_file"`
+}
+
+// StateEncryptionAzureKeyVaultConfig configures state encryption against
+// Azure Key Vault or Managed HSM, where the key never leaves the vault and
+// each object's data key is wrapped by a vault call.
+//
+// Needs the wrapKey and unwrapKey permissions on the key, granted to the
+// identity the engine runs as. Credentials come from the default Azure
+// credential chain, a managed identity or the standard environment variables.
+type StateEncryptionAzureKeyVaultConfig struct {
+	// VaultURL holds the vault's URL, "https://{vault}.vault.azure.net/" for
+	// a standard vault. Required for the "azurekeyvault" provider.
+	VaultURL string `mapstructure:"vault_url"`
+	// KeyName names the key within the vault. Required for the
+	// "azurekeyvault" provider.
+	KeyName string `mapstructure:"key_name"`
+	// KeyVersion pins the key version used for wrapping.
+	//
+	// Worth setting. A wrapped key does not name the version that produced
+	// it, so the version is recorded in the state the engine writes and used
+	// again to unwrap. Left empty, the vault's current version is used for
+	// both, and rotating the key leaves everything sealed under the previous
+	// version unreadable.
+	KeyVersion string `mapstructure:"key_version"`
+	// Algorithm overrides the wrapping algorithm. Empty means "RSA-OAEP-256",
+	// which suits the RSA keys a standard vault holds. A Managed HSM
+	// deployment wrapping with a symmetric key needs "A256KW".
+	Algorithm string `mapstructure:"algorithm"`
 }
 
 // ObjectStoreConfig provides configuration for the object-store state
@@ -646,6 +811,22 @@ func bindEnvVars(viperInstance *viper.Viper) {
 	viperInstance.BindEnv("state.postgres_ssl_mode")
 	viperInstance.BindEnv("state.postgres_pool_max_conns")
 	viperInstance.BindEnv("state.postgres_pool_max_conn_lifetime")
+	viperInstance.BindEnv("state.encryption.enabled")
+	viperInstance.BindEnv("state.encryption.provider")
+	viperInstance.BindEnv("state.encryption.passphrase")
+	viperInstance.BindEnv("state.encryption.passphrase_file")
+	viperInstance.BindEnv("state.encryption.local_key_file")
+	viperInstance.BindEnv("state.encryption.awskms.key_id")
+	viperInstance.BindEnv("state.encryption.awskms.region")
+	viperInstance.BindEnv("state.encryption.awskms.endpoint")
+	viperInstance.BindEnv("state.encryption.awskms.access_key_id")
+	viperInstance.BindEnv("state.encryption.awskms.secret_access_key")
+	viperInstance.BindEnv("state.encryption.gcpkms.key_name")
+	viperInstance.BindEnv("state.encryption.gcpkms.credentials_file")
+	viperInstance.BindEnv("state.encryption.azurekeyvault.vault_url")
+	viperInstance.BindEnv("state.encryption.azurekeyvault.key_name")
+	viperInstance.BindEnv("state.encryption.azurekeyvault.key_version")
+	viperInstance.BindEnv("state.encryption.azurekeyvault.algorithm")
 	viperInstance.BindEnv("state.objectstore.provider")
 	viperInstance.BindEnv("state.objectstore.prefix")
 	viperInstance.BindEnv("state.objectstore.s3.bucket")
@@ -720,6 +901,8 @@ func setDefaults(viperInstance *viper.Viper) {
 	viperInstance.SetDefault("state.postgres_ssl_mode", "disable")
 	viperInstance.SetDefault("state.postgres_pool_max_conns", 100)
 	viperInstance.SetDefault("state.postgres_pool_max_conn_lifetime", "1h30m")
+	viperInstance.SetDefault("state.encryption.enabled", false)
+	viperInstance.SetDefault("state.encryption.provider", "passphrase")
 	viperInstance.SetDefault("state.objectstore.prefix", "bluelink-state/")
 
 	viperInstance.SetDefault("resolvers.https_client_timeout", 30)

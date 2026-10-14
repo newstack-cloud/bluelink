@@ -15,6 +15,7 @@ import (
 	gcsstore "github.com/newstack-cloud/bluelink/libs/blueprint-state/objectstore/stores/gcs"
 	s3store "github.com/newstack-cloud/bluelink/libs/blueprint-state/objectstore/stores/s3"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/postgres"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/statestore"
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/spf13/afero"
@@ -31,12 +32,12 @@ const (
 )
 
 type stateServices struct {
-	container              state.Container
-	events                 manage.Events
-	validation             manage.Validation
-	changesets             manage.Changesets
-	reconciliationResults  manage.ReconciliationResults
-	cleanupOperations      manage.CleanupOperations
+	container             state.Container
+	events                manage.Events
+	validation            manage.Validation
+	changesets            manage.Changesets
+	reconciliationResults manage.ReconciliationResults
+	cleanupOperations     manage.CleanupOperations
 }
 
 func loadStateServices(
@@ -47,9 +48,20 @@ func loadStateServices(
 ) (*stateServices, func(), error) {
 	if stateConfig.StorageEngine == memfileStorageEngine {
 		return loadMemfileStateServices(
+			ctx,
 			stateConfig,
 			fileSystem,
 			logger,
+		)
+	}
+
+	if stateConfig.Encryption.Enabled {
+		return nil, nil, fmt.Errorf(
+			"state encryption is only supported for the %q storage engine, "+
+				"the %q engine relies on encryption at rest in the database or bucket "+
+				"it persists to",
+			memfileStorageEngine,
+			stateConfig.StorageEngine,
 		)
 	}
 
@@ -78,6 +90,7 @@ func loadStateServices(
 }
 
 func loadMemfileStateServices(
+	ctx context.Context,
 	stateConfig *core.StateConfig,
 	fileSystem afero.Fs,
 	logger bpcore.Logger,
@@ -93,9 +106,14 @@ func loadMemfileStateServices(
 		)
 	}
 
-	stateContainer, err := memfile.LoadStateContainer(
+	storage, err := memfileStorage(ctx, stateConfig, fileSystem, logger)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	stateContainer, err := memfile.LoadStateContainerWithStorage(
 		stateConfig.MemFileStateDir,
-		fileSystem,
+		storage,
 		logger,
 		memfile.WithMaxGuideFileSize(
 			stateConfig.MemFileMaxGuideFileSize,
@@ -128,6 +146,54 @@ func loadMemfileStateServices(
 		reconciliationResults: reconciliationResults,
 		cleanupOperations:     cleanupOperations,
 	}, memfileStubClose, nil
+}
+
+// Returns the storage the memfile container persists through, encrypted when
+// the deployment has configured a key.
+//
+// The salt is read through the undecorated storage, since it is an input to
+// deriving the key that would decrypt it, and before the container is loaded,
+// since loading reads the whole store.
+func memfileStorage(
+	ctx context.Context,
+	stateConfig *core.StateConfig,
+	fileSystem afero.Fs,
+	logger bpcore.Logger,
+) (statestore.Storage, error) {
+	storage := memfile.NewFSStorage(fileSystem)
+
+	if !stateConfig.Encryption.Enabled {
+		logger.Warn(
+			"state is being persisted unencrypted, resolved secrets in resource specs, " +
+				"changesets and events will be readable on disk and in any backup taken " +
+				"from it; set state.encryption.enabled to encrypt them, or ensure the " +
+				"host's volume and backups are encrypted",
+		)
+
+		return storage, nil
+	}
+
+	salt, err := statestore.LoadOrCreateSalt(
+		ctx,
+		storage,
+		statestore.NewKeyBuilder(stateConfig.MemFileStateDir),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	keyProvider, err := createStateKeyProvider(ctx, &stateConfig.Encryption, salt)
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Info(
+		"state encryption is enabled",
+		bpcore.StringLogField("keyProvider", stateConfig.Encryption.Provider),
+		bpcore.StringLogField("keyID", keyProvider.ID()),
+	)
+
+	return statestore.NewEncryptedStorage(storage, keyProvider), nil
 }
 
 func memfileStubClose() {
