@@ -55,6 +55,59 @@ func (s *MemFileStateContainerResourceDriftTestSuite) Test_retrieves_resource_dr
 	s.Require().NoError(err)
 }
 
+// Sensitivity is carried on each drift field change so that a consumer displaying or serving
+// a drift record can tell which values to protect. It travels through the same copy the
+// store makes of everything it hands out, where a field that is not copied is silently lost
+// rather than reported.
+func (s *MemFileStateContainerResourceDriftTestSuite) Test_saves_and_retrieves_sensitivity_on_a_drift_field_change() {
+	resources := s.container.Resources()
+	driftTimestamp := 1733145728
+	driftState := state.ResourceDriftState{
+		ResourceID:   existingResourceID,
+		ResourceName: "ordersTable_0",
+		SpecData: &core.MappingNode{
+			Fields: map[string]*core.MappingNode{
+				"connectionString": core.MappingNodeFromString("postgres://user:external@host/db"),
+			},
+		},
+		Difference: &state.ResourceDriftChanges{
+			ModifiedFields: []*state.ResourceDriftFieldChange{
+				{
+					FieldPath:    "spec.connectionString",
+					StateValue:   core.MappingNodeFromString("postgres://user:persisted@host/db"),
+					DriftedValue: core.MappingNodeFromString("postgres://user:external@host/db"),
+					Sensitive:    true,
+				},
+				{
+					FieldPath:    "spec.region",
+					StateValue:   core.MappingNodeFromString("eu-west-1"),
+					DriftedValue: core.MappingNodeFromString("eu-central-1"),
+				},
+			},
+		},
+		Timestamp: &driftTimestamp,
+	}
+
+	err := resources.SaveDrift(context.Background(), driftState)
+	s.Require().NoError(err)
+
+	saved, err := resources.GetDrift(context.Background(), existingResourceID)
+	s.Require().NoError(err)
+	s.Require().NotNil(saved.Difference)
+	s.Require().Len(saved.Difference.ModifiedFields, 2)
+
+	sensitivityByPath := map[string]bool{}
+	for _, fieldChange := range saved.Difference.ModifiedFields {
+		sensitivityByPath[fieldChange.FieldPath] = fieldChange.Sensitive
+	}
+
+	s.Assert().True(
+		sensitivityByPath["spec.connectionString"],
+		"sensitivity was lost between saving the drift record and reading it back",
+	)
+	s.Assert().False(sensitivityByPath["spec.region"])
+}
+
 func (s *MemFileStateContainerResourceDriftTestSuite) Test_reports_resource_not_found_for_drift_retrieval() {
 	resources := s.container.Resources()
 

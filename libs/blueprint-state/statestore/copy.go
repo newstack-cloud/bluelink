@@ -249,6 +249,7 @@ func copyResourceDriftFieldChanges(
 			FieldPath:    v.FieldPath,
 			StateValue:   v.StateValue,
 			DriftedValue: v.DriftedValue,
+			Sensitive:    v.Sensitive,
 		}
 	}
 	return out
