@@ -896,6 +896,7 @@ func convertResourceDriftChangesToProviderChanges(
 			FieldPath: change.FieldPath,
 			PrevValue: change.StateValue,
 			NewValue:  change.DriftedValue,
+			Sensitive: change.Sensitive,
 		})
 	}
 
@@ -903,6 +904,7 @@ func convertResourceDriftChangesToProviderChanges(
 		result.NewFields = append(result.NewFields, provider.FieldChange{
 			FieldPath: change.FieldPath,
 			NewValue:  change.DriftedValue,
+			Sensitive: change.Sensitive,
 		})
 	}
 

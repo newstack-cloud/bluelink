@@ -1248,6 +1248,12 @@ func (s *ContainerReconciliationTestSuite) Test_check_reconciliation_populates_e
 							FieldPath:    "value",
 							StateValue:   &core.MappingNode{Scalar: &core.ScalarValue{StringValue: &persistedValue}},
 							DriftedValue: &core.MappingNode{Scalar: &core.ScalarValue{StringValue: &externalValue}},
+							// Marked sensitive so the assertion below shows the flag
+							// surviving the conversion from a drift record into
+							// reconciliation changes. This response is the one that carries
+							// external state back to an operator, so losing the flag here
+							// means losing it on the surface that most needs it.
+							Sensitive: true,
 						},
 					},
 				},
@@ -1298,6 +1304,10 @@ func (s *ContainerReconciliationTestSuite) Test_check_reconciliation_populates_e
 	s.Equal("value", resource.Changes.ModifiedFields[0].FieldPath)
 	s.Equal(persistedValue, *resource.Changes.ModifiedFields[0].PrevValue.Scalar.StringValue)
 	s.Equal(externalValue, *resource.Changes.ModifiedFields[0].NewValue.Scalar.StringValue)
+	s.True(
+		resource.Changes.ModifiedFields[0].Sensitive,
+		"sensitivity was lost converting a drift record into reconciliation changes",
+	)
 }
 
 func (s *ContainerReconciliationTestSuite) Test_check_reconciliation_assigns_persisted_state_from_resource() {

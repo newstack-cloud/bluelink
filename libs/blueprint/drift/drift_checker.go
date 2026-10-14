@@ -624,7 +624,15 @@ func filterChanges(
 	// Walk the schema, for each non-computed field, check if there are any changes
 	// in the modified, new or removed fields, if so, and IgnoreDrift is true, then
 	// omit the change from the final change set
-	filterSchemaChanges(specDefinition.Schema, changes, filteredChanges, "$", 0, resourceLogger)
+	filterSchemaChanges(
+		specDefinition.Schema,
+		changes,
+		filteredChanges,
+		"$",
+		0,
+		/* inheritedSensitive */ false,
+		resourceLogger,
+	)
 
 	return filteredChanges
 }
@@ -653,12 +661,20 @@ func withoutSpecFields(
 	return filteredRemovedFields
 }
 
+// inheritedSensitive carries down what the ancestors of this schema declared.
+//
+// Sensitivity is declared on the field a plugin author thinks of as secret, which for a map
+// or object of secrets is the container rather than each of its entries, so the leaves
+// holding the actual values are the ones that come out unmarked without this. Change staging
+// inherits it the same way (changes.fieldChangeContext.parentSensitive), and the two have to
+// agree as the we need consistency in marking fields as sensitive in change staging and drift checks.
 func filterSchemaChanges(
 	schema *provider.ResourceDefinitionsSchema,
 	source *provider.Changes,
 	destination *provider.Changes,
 	schemaPath string,
 	depth int,
+	inheritedSensitive bool,
 	resourceLogger core.Logger,
 ) {
 
@@ -669,10 +685,15 @@ func filterSchemaChanges(
 		return
 	}
 
+	// Computed fields are deliberately not exempt, a value a provider computed from a secret
+	// is still a secret.
+	sensitive := inheritedSensitive || schema.Sensitive
+
 	filteredModifiedFields := filterFieldChanges(
 		schema,
 		source.ModifiedFields,
 		schemaPath,
+		sensitive,
 		resourceLogger,
 	)
 	destination.ModifiedFields = append(destination.ModifiedFields, filteredModifiedFields...)
@@ -681,6 +702,7 @@ func filterSchemaChanges(
 		schema,
 		source.NewFields,
 		schemaPath,
+		sensitive,
 		resourceLogger,
 	)
 	destination.NewFields = append(destination.NewFields, filteredNewFields...)
@@ -702,6 +724,7 @@ func filterSchemaChanges(
 				destination,
 				attrPath,
 				depth+1,
+				sensitive,
 				resourceLogger,
 			)
 		}
@@ -716,6 +739,7 @@ func filterSchemaChanges(
 			destination,
 			arrayPath,
 			depth+1,
+			sensitive,
 			resourceLogger,
 		)
 	}
@@ -724,11 +748,12 @@ func filterSchemaChanges(
 		// ".*" in the path matches any key in the map.
 		mapPath := fmt.Sprintf("%s.*", schemaPath)
 		filterSchemaChanges(
-			schema.Items,
+			schema.MapValues,
 			source,
 			destination,
 			mapPath,
 			depth+1,
+			sensitive,
 			resourceLogger,
 		)
 	}
@@ -744,6 +769,7 @@ func filterSchemaChanges(
 				// schema for the same field.
 				schemaPath,
 				depth+1,
+				sensitive,
 				resourceLogger,
 			)
 		}
@@ -754,6 +780,7 @@ func filterFieldChanges(
 	schema *provider.ResourceDefinitionsSchema,
 	sourceFieldChanges []provider.FieldChange,
 	schemaPath string,
+	sensitive bool,
 	logger core.Logger,
 ) []provider.FieldChange {
 	filteredChanges := []provider.FieldChange{}
@@ -773,7 +800,7 @@ func filterFieldChanges(
 						PrevValue:    fieldChange.PrevValue,
 						NewValue:     fieldChange.NewValue,
 						MustRecreate: fieldChange.MustRecreate,
-						Sensitive:    schema.Sensitive,
+						Sensitive:    sensitive,
 					},
 				)
 			} else if pathsEqual && schema.IgnoreDrift {
@@ -853,6 +880,7 @@ func toResourceDriftFieldChanges(
 				FieldPath:    fieldChange.FieldPath,
 				StateValue:   fieldChange.PrevValue,
 				DriftedValue: fieldChange.NewValue,
+				Sensitive:    fieldChange.Sensitive,
 			}
 		},
 	)

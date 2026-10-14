@@ -515,6 +515,12 @@ type ResourceDriftFieldChange struct {
 	// DriftedValue holds the value of the field in the drifted state
 	// in the upstream provider.
 	DriftedValue *core.MappingNode `json:"driftedValue"`
+	// Sensitive indicates whether the field holds a sensitive value, so that a consumer
+	// displaying or serving a drift record can treat the two values accordingly.
+	//
+	// Carries the same meaning as provider.FieldChange.Sensitive, including that a field
+	// inside a container declared sensitive is sensitive.
+	Sensitive bool `json:"sensitive,omitempty"`
 }
 
 // LinkDriftState holds information about how a link has drifted

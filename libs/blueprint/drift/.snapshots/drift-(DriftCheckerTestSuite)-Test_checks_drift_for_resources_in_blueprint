@@ -326,7 +326,8 @@
             StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
-          })
+          }),
+          Sensitive: (bool) false
         }),
         (*state.ResourceDriftFieldChange)({
           FieldPath: (string) (len=27) "spec.itemConfig.primaryPort",
@@ -361,7 +362,8 @@
             StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
-          })
+          }),
+          Sensitive: (bool) true
         }),
         (*state.ResourceDriftFieldChange)({
           FieldPath: (string) (len=21) "spec.itemConfig.score",
@@ -396,7 +398,8 @@
             StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
-          })
+          }),
+          Sensitive: (bool) false
         }),
         (*state.ResourceDriftFieldChange)({
           FieldPath: (string) (len=18) "spec.vendorTags[0]",
@@ -431,7 +434,8 @@
             StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
-          })
+          }),
+          Sensitive: (bool) false
         }),
         (*state.ResourceDriftFieldChange)({
           FieldPath: (string) (len=18) "spec.vendorTags[1]",
@@ -466,7 +470,8 @@
             StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
-          })
+          }),
+          Sensitive: (bool) false
         }),
         (*state.ResourceDriftFieldChange)({
           FieldPath: (string) (len=18) "spec.vendorTags[2]",
@@ -501,7 +506,8 @@
             StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
-          })
+          }),
+          Sensitive: (bool) false
         })
       },
       NewFields: ([]*state.ResourceDriftFieldChange) {
@@ -598,7 +604,8 @@
             StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
-          })
+          }),
+          Sensitive: (bool) false
         }),
         (*state.ResourceDriftFieldChange)({
           FieldPath: (string) (len=14) "spec.tableName",
@@ -633,7 +640,8 @@
             StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
-          })
+          }),
+          Sensitive: (bool) false
         })
       },
       NewFields: ([]*state.ResourceDriftFieldChange) {
@@ -726,7 +734,8 @@
             StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
-          })
+          }),
+          Sensitive: (bool) false
         })
       },
       NewFields: ([]*state.ResourceDriftFieldChange) {
