@@ -162,6 +162,12 @@ func (k KeyBuilder) EncryptionSalt() string {
 	return k.join("encryption_salt.json")
 }
 
+// Prefix returns the storage-level root every key is built under, for a caller that walks or
+// lists the whole store rather than addressing one object.
+func (k KeyBuilder) Prefix() string {
+	return k.prefix
+}
+
 // Prepends the prefix to the given parts. The leading "/" of an
 // absolute prefix is preserved so memfile state directories like
 // "/var/lib/bluelink/state" survive intact.

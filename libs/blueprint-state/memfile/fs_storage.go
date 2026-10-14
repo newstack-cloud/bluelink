@@ -19,7 +19,12 @@ type fsStorage struct {
 	fs afero.Fs
 }
 
-func newFSStorage(fs afero.Fs) *fsStorage {
+// NewFSStorage returns the Storage that backs a memfile state container, keys
+// being paths on the given filesystem.
+//
+// Exported so a caller can wrap it with storage decorators such as
+// statestore.NewEncryptedStorage used to encrypt state at rest.
+func NewFSStorage(fs afero.Fs) statestore.Storage {
 	return &fsStorage{
 		fs: fs,
 	}

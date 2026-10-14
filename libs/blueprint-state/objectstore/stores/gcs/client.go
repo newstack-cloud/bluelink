@@ -21,7 +21,7 @@ type ClientOptions struct {
 	// not expect credentials.
 	WithoutAuthentication bool
 	// Extra lets callers append provider-specific option.ClientOption
-	// values (e.g. option.WithCredentialsFile, option.WithHTTPClient) for
+	// values (e.g. option.WithAuthCredentialsFile, option.WithHTTPClient) for
 	// cases the struct fields do not cover.
 	Extra []option.ClientOption
 }

@@ -95,7 +95,28 @@ func LoadStateContainer(
 	logger core.Logger,
 	opts ...Option,
 ) (*StateContainer, error) {
-	storage := newFSStorage(fs)
+	return LoadStateContainerWithStorage(
+		stateDir,
+		NewFSStorage(fs),
+		logger,
+		opts...,
+	)
+}
+
+// LoadStateContainerWithStorage loads a state container over a Storage the
+// caller supplies, rather than one built directly over a filesystem.
+//
+// For callers that need to decorate what memfile persists through,
+// statestore.NewEncryptedStorage over a NewFSStorage being the case this
+// exists for. Anything that has to be read or written outside the decorator,
+// an encryption salt for instance, must be handled before the container is
+// loaded, since loading reads the whole store.
+func LoadStateContainerWithStorage(
+	stateDir string,
+	storage statestore.Storage,
+	logger core.Logger,
+	opts ...Option,
+) (*StateContainer, error) {
 	storeState := statestore.NewState()
 	cfg := memfileStatestoreConfig()
 
