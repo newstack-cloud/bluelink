@@ -76,6 +76,8 @@ func Setup(
 			clock,
 		),
 	}
+	warnAboutPluginServiceTransport(pluginServiceListener, logger)
+
 	pluginExectorEnvVars := getPluginExecutorEnvVars(
 		pluginServiceListener,
 	)
@@ -510,6 +512,27 @@ func parseDefaultRetryPolicy(
 	}
 
 	return retryPolicy
+}
+
+// Warns that the plugin service's transport gives no separation between local users.
+//
+// A caller supplying its own unix-socket listener, which the tests and an embedding host can
+// do, is not warned.
+func warnAboutPluginServiceTransport(
+	pluginServiceListener net.Listener,
+	logger bpcore.Logger,
+) {
+	if pluginServiceListener != nil {
+		if _, isTCP := pluginServiceListener.Addr().(*net.TCPAddr); !isTCP {
+			return
+		}
+	}
+
+	logger.Warn(
+		"the plugin service is listening on loopback TCP, which any local process can " +
+			"connect to regardless of the user it runs as, so a host shared with untrusted " +
+			"local workloads exposes the channel carrying provider credentials",
+	)
 }
 
 func getPluginExecutorEnvVars(

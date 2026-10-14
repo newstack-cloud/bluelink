@@ -24,7 +24,7 @@ require (
 	github.com/newstack-cloud/bluelink/libs/blueprint-resolvers v0.1.4
 	github.com/newstack-cloud/bluelink/libs/blueprint-state v0.10.0
 	github.com/newstack-cloud/bluelink/libs/common v0.5.0
-	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.16.0
+	github.com/newstack-cloud/bluelink/libs/plugin-framework v0.17.0
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/spf13/afero v1.15.0
 	github.com/spf13/viper v1.21.0

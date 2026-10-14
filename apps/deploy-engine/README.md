@@ -949,6 +949,13 @@ when using the postgres storage engine.
 
 This can be set to `disable`, `require`, `verify-ca` or `verify-full`.
 
+State and the credentials used to reach it cross this connection, so the deploy engine warns at
+startup when the mode is `disable` or `prefer` and the host is not the local machine. `prefer`
+is included because it falls back to an unencrypted connection, silently, when the server will
+not negotiate TLS. Note that `verify-full` needs a root certificate, for which there is no
+configuration key yet, so it is usable only where the certificate is already trusted at the OS
+level.
+
 **default value:** `disable`
 
 #### `postgres` Storage Engine Pool Max Connections

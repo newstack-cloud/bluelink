@@ -212,7 +212,10 @@ since objects already under the new key are recognised and left alone.
 
 - Put the state directory on an **encrypted volume** (LUKS/dm-crypt, EBS encryption,
   FileVault). The engine cannot verify this and does not claim to.
-- Restrict the directory to the engine's user.
+- The engine creates the state directory `0700` and writes state files `0600`, and tightens
+  the directory if an earlier version left it open, so the state is private to the user the
+  engine runs as. Files written by an earlier version keep their modes, which the directory
+  makes moot: reaching them means traversing it.
 - Encrypt backups separately with tools such as `restic` or `age`. A backup of an encrypted
   state directory is only readable with the key, which is one more reason the key has to
   outlive the host.
@@ -235,6 +238,12 @@ authenticates the server. Note that `verify-full` needs a root certificate, for 
 is no configuration key yet, so it is only usable where the certificate is already trusted
 at the OS level.
 
+The engine warns at startup when the mode is `disable` or `prefer` and the host is not the
+local machine. `prefer` is included because it falls back to an unencrypted connection,
+silently, when the server will not negotiate TLS. A local host is not warned about: an
+unencrypted connection to a database on the same machine is how local development and CI
+normally run.
+
 ## 5. Plugin transport
 
 Provider and transformer plugins run **on the same host** as the engine and communicate over
@@ -246,7 +255,9 @@ service port, register a plugin, and observe a channel carrying provider credent
 is a least-privilege concern (CC6.1 / A.5.15) rather than a data-in-transit one.
 
 Treat the engine host as a trust boundary: do not run untrusted local workloads alongside
-the engine, and restrict who can obtain a shell on it.
+the engine, and restrict who can obtain a shell on it. The engine warns about this transport
+at startup, since it is a property of the deployment rather than something an operator
+chooses.
 
 Relevant keys: `plugins_v1.plugin_path`, `plugins_v1.log_file_root_dir`.
 

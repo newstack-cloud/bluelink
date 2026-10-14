@@ -3,6 +3,8 @@ package enginev1
 import (
 	"context"
 	"fmt"
+	"runtime"
+	"strings"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -19,6 +21,15 @@ import (
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/spf13/afero"
+)
+
+// State holds resolved secrets whether or not encryption is enabled, so the directory it lives
+// in is private to its owner.
+const stateDirMode = 0o700
+
+const (
+	postgresSSLModeDisable = "disable"
+	postgresSSLModePrefer  = "prefer"
 )
 
 const (
@@ -201,14 +212,23 @@ func memfileStubClose() {
 	// as it does not require any special cleanup.
 }
 
+// Creates the state directory private to the user the engine runs as.
 func prepareMemfileStateDir(
 	stateDirPath string,
 	fileSystem afero.Fs,
 ) error {
-	return fileSystem.MkdirAll(
-		stateDirPath,
-		0755,
-	)
+	if err := fileSystem.MkdirAll(stateDirPath, stateDirMode); err != nil {
+		return err
+	}
+
+	// Mode bits are not the access control on Windows, where the directory's ACL governs
+	// access, so failing to apply them there is not a reason to refuse to start.
+	if err := fileSystem.Chmod(stateDirPath, stateDirMode); err != nil &&
+		runtime.GOOS != "windows" {
+		return err
+	}
+
+	return nil
 }
 
 func loadPostgresStateServices(
@@ -216,6 +236,8 @@ func loadPostgresStateServices(
 	stateConfig *core.StateConfig,
 	logger bpcore.Logger,
 ) (*stateServices, func(), error) {
+	warnAboutUnprotectedPostgresConnection(stateConfig, logger)
+
 	pool, err := createPostgresConnPool(ctx, stateConfig)
 	if err != nil {
 		return nil, nil, fmt.Errorf(
@@ -257,6 +279,44 @@ func loadPostgresStateServices(
 		reconciliationResults: reconciliationResults,
 		cleanupOperations:     cleanupOperations,
 	}, closePool, nil
+}
+
+// Warns when state and the credentials to reach it cross a network without TLS.
+//
+// Only raised for a host that is not the local machine as an unencrypted connection to a local
+// database is how local development and CI normally run, and warning about it on every start
+// would be noise rather than a signal.
+//
+// "prefer" is included because it is not a guarantee. It falls back to an unencrypted
+// connection when the server will not negotiate TLS, and does so silently, so it protects a
+// deployment only as far as its database happens to be configured.
+func warnAboutUnprotectedPostgresConnection(
+	stateConfig *core.StateConfig,
+	logger bpcore.Logger,
+) {
+	unprotected := stateConfig.PostgresSSLMode == postgresSSLModeDisable ||
+		stateConfig.PostgresSSLMode == postgresSSLModePrefer
+	if !unprotected || isLocalPostgresHost(stateConfig.PostgresHost) {
+		return
+	}
+
+	logger.Warn(
+		"state is being persisted to a postgres host over a connection that may not be "+
+			"encrypted, so credentials and resolved secrets in state can be read in transit; "+
+			"set state.postgres_ssl_mode to require, or verify-full where the deployment has "+
+			"to verify the server it is talking to",
+		bpcore.StringLogField("sslMode", stateConfig.PostgresSSLMode),
+		bpcore.StringLogField("host", stateConfig.PostgresHost),
+	)
+}
+
+// A path rather than a hostname is a unix socket directory, which does not leave the machine.
+func isLocalPostgresHost(host string) bool {
+	if host == "" || strings.HasPrefix(host, "/") {
+		return true
+	}
+
+	return host == "localhost" || host == "127.0.0.1" || host == "::1"
 }
 
 func createPostgresConnPool(
