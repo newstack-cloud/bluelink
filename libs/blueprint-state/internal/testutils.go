@@ -526,14 +526,21 @@ const (
 func SaveAllExportsInput() map[string]*state.ExportState {
 	return map[string]*state.ExportState{
 		"environment": {
-			Value: core.MappingNodeFromString("production"),
-			Type:  schema.ExportTypeString,
-			Field: envVarsField,
+			Value:       core.MappingNodeFromString("production"),
+			Type:        schema.ExportTypeString,
+			Description: "The environment the blueprint deploys to.",
+			Field:       envVarsField,
 		},
 		"region": {
 			Value: core.MappingNodeFromString("us-west-1"),
 			Type:  schema.ExportTypeString,
 			Field: "variables.region",
+		},
+		"dbPassword": {
+			Value:     core.MappingNodeFromString("super-secret-password"),
+			Type:      schema.ExportTypeString,
+			Field:     "variables.dbPassword",
+			Sensitive: true,
 		},
 		"exampleId": {
 			Value: core.MappingNodeFromString("exampleId"),
@@ -547,9 +554,11 @@ func SaveAllExportsInput() map[string]*state.ExportState {
 // behaviour to save a single export.
 func SaveSingleExportInput() state.ExportState {
 	return state.ExportState{
-		Value: core.MappingNodeFromString("exampleId"),
-		Type:  schema.ExportTypeString,
-		Field: "spec.id",
+		Value:       core.MappingNodeFromString("exampleId"),
+		Type:        schema.ExportTypeString,
+		Description: "The ID of the example resource.",
+		Field:       "spec.id",
+		Sensitive:   true,
 	}
 }
 
