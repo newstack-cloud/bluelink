@@ -532,3 +532,39 @@ func (m *testPluginManager) Close() {
 func TestPrepareSuite(t *testing.T) {
 	suite.Run(t, new(PreparerSuite))
 }
+
+// A float field authored as a whole number reaches the engine as an integer,
+// because JSON carries no decimal point for one. The preparer normalises ahead of
+// validation so the plugin is not told its own documented value is the wrong type.
+func (s *PreparerSuite) Test_normalises_a_whole_number_for_a_float_field() {
+	preparedConfig, diagnostics, err := s.preparer.Prepare(
+		context.Background(),
+		&types.BlueprintOperationConfig{
+			Providers: map[string]map[string]*core.ScalarValue{
+				"test-provider": {
+					"intField":    core.ScalarFromInt(22),
+					"floatField":  core.ScalarFromInt(16),
+					"boolField":   core.ScalarFromBool(true),
+					"stringField": core.ScalarFromString("test"),
+					"aws.config.regionKMSKeys.us-east-1.other.placeholder": core.ScalarFromString("test"),
+				},
+			},
+			Transformers: map[string]map[string]*core.ScalarValue{
+				"test-transformer": {
+					"intTransformerField": core.ScalarFromInt(22),
+				},
+			},
+		},
+		/* validate */ true,
+	)
+	s.Require().NoError(err)
+	s.Assert().Empty(diagnostics, "a whole number must satisfy a float field")
+	s.Assert().True(
+		core.IsScalarFloat(preparedConfig.Providers["test-provider"]["floatField"]),
+		"the plugin should receive the type its definition declares",
+	)
+	s.Assert().Equal(
+		float64(16),
+		core.FloatValueFromScalar(preparedConfig.Providers["test-provider"]["floatField"]),
+	)
+}

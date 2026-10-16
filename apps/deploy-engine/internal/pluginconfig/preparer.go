@@ -142,6 +142,15 @@ func (p *preparerImpl) validateAndPreparePluginConfig(
 		return nil, nil, err
 	}
 
+	// Ahead of validation, so a value whose scalar type was decided by its JSON
+	// spelling is seen as the type its field declares. A whole number cannot be
+	// told from a float once it has been through JSON, so a float field given 1.0
+	// arrives as an integer.
+	config, err = core.NormaliseConfigValues(config, configDef)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	if validate {
 		diagnostics, err = core.ValidateConfigDefinition(
 			pluginName,
