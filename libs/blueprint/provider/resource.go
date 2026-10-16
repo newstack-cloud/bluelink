@@ -136,6 +136,13 @@ type ResolvedResource struct {
 	// consumer that cannot should mark the whole array, since over-marking costs a reader
 	// something while mis-marking hides the wrong value and shows the secret.
 	SensitiveSpecPaths []string `json:"sensitiveSpecPaths,omitempty"`
+	// SensitiveMetadataPaths holds the metadata field paths a secret reached while the
+	// resource's substitutions were resolved, rooted at "metadata".
+	//
+	// Separate from SensitiveSpecPaths because a resource's spec and metadata are walked
+	// separately, and metadata has no schema to declare sensitivity in, so resolution is
+	// the only source for it.
+	SensitiveMetadataPaths []string `json:"sensitiveMetadataPaths,omitempty"`
 }
 
 // ResolvedResourceMetadata provides a resolved version of the metadata

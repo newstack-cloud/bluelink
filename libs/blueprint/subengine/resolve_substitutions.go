@@ -331,12 +331,13 @@ func (r *defaultSubstitutionResolver) ResolveInResource(
 
 	if resolvedResource != nil {
 		resolvedResource.SensitiveSpecPaths = sensitivity.specPropertiesOf(elementName)
+		resolvedResource.SensitiveMetadataPaths = sensitivity.metadataPropertiesOf(elementName)
 	}
 
 	return &ResolveInResourceResult{
 		ResolvedResource: resolvedResource,
 		ResolveOnDeploy:  resolveOnDeploy,
-		SensitivePaths:   sensitivity.pathsExcludingSpecOf(elementName),
+		SensitivePaths:   sensitivity.pathsCarriedByResultFor(elementName),
 	}, nil
 }
 
@@ -2565,6 +2566,18 @@ func (r *defaultSubstitutionResolver) resolveResourceMetadataProperty(
 	resource, hasResource := r.resourceCache.Get(resourceName)
 	if !hasResource {
 		return nil, errResourceNotResolved(resolveCtx.currentElementName, prop.ResourceName)
+	}
+
+	// Mirrors the spec path's read of the resolved resource. Metadata has no schema, so
+	// what resolution recorded is the only thing a reference to it can be marked from.
+	if bpcore.IsPathCoveredBy(
+		renderReferencePath("", prop.Path),
+		resource.SensitiveMetadataPaths,
+	) {
+		resolveCtx.sensitivity.record(
+			resolveCtx.currentElementName,
+			resolveCtx.currentElementProperty,
+		)
 	}
 
 	resolved, err := getResourceMetadataPropertyValue(resource, prop, resolveCtx)

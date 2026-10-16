@@ -58,22 +58,25 @@ func (s *sensitivityRecord) propertiesOf(elementName string) []string {
 }
 
 // Returns every recorded property as a full element property path, in a stable order, less
-// the spec properties of the named element.
+// the spec and metadata properties of the named element.
 //
-// Only the given element's spec paths are left out: they travel on the resolved resource itself,
-// so repeating them here would be two answers to keep in step. Everything else it recorded,
-// its description, condition and metadata among them, belongs in this list, as does anything
-// recorded against the values and data sources resolved on the way.
-func (s *sensitivityRecord) pathsExcludingSpecOf(elementName string) []string {
-	excluded := bpcore.ElementPropertyPath(elementName, "spec")
+// Those two travel on the resolved resource itself, so repeating them here would be two
+// answers to keep in step. Everything else it recorded, the element's description and
+// condition among them, belongs in this list, as does anything recorded against the values
+// and data sources resolved on the way.
+func (s *sensitivityRecord) pathsCarriedByResultFor(elementName string) []string {
+	specRoot := bpcore.ElementPropertyPath(elementName, "spec")
+	metadataRoot := bpcore.ElementPropertyPath(elementName, "metadata")
 
 	return slices.DeleteFunc(s.allPaths(), func(path string) bool {
-		return bpcore.IsPathAtOrBelow(excluded, path)
+		return bpcore.IsPathAtOrBelow(specRoot, path) ||
+			bpcore.IsPathAtOrBelow(metadataRoot, path)
 	})
 }
 
-// Every recorded path. Unlike pathsExcludingSpecOf there is nothing to split out, because
-// the elements this serves, includes and single substitutions, have no spec.
+// Every recorded path. Unlike pathsCarriedByResultFor there is nothing to split out,
+// because the elements this serves, includes and single substitutions, return no resolved
+// resource to carry any of it.
 func (s *sensitivityRecord) allPaths() []string {
 	var paths []string
 	for element, recorded := range s.properties {
@@ -89,6 +92,10 @@ func (s *sensitivityRecord) allPaths() []string {
 // Keeps the "spec" prefix as that is the form that field changes use.
 func (s *sensitivityRecord) specPropertiesOf(elementName string) []string {
 	return s.propertiesUnderRootOf(elementName, "spec")
+}
+
+func (s *sensitivityRecord) metadataPropertiesOf(elementName string) []string {
+	return s.propertiesUnderRootOf(elementName, "metadata")
 }
 
 // Properties under the given root, with the prefix kept. Separates an element's body from

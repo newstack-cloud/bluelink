@@ -279,14 +279,15 @@ func (s *SubstitutionSensitivityTestSuite) Test_a_secret_value_marks_every_field
 	)
 }
 
-// A secret reaching the resource outside its spec is reported on the result, since only spec
-// paths travel on the resolved resource. Dropping it from both was the first version's bug.
-func (s *SubstitutionSensitivityTestSuite) Test_a_secret_outside_the_spec_is_reported_on_the_result() {
+// Metadata travels on the resolved resource beside the spec, so that change staging can
+// consult it without being handed the resolve result as well. Dropping a path from both
+// was the first version's bug.
+func (s *SubstitutionSensitivityTestSuite) Test_a_secret_in_metadata_travels_on_the_resolved_resource() {
 	result := s.resolveOrdersTable()
 
 	s.Assert().Contains(
-		result.SensitivePaths,
-		"resources.ordersTable.metadata.custom.auditKey",
+		result.ResolvedResource.SensitiveMetadataPaths,
+		"metadata.custom.auditKey",
 	)
 	s.Assert().NotContains(
 		result.ResolvedResource.SensitiveSpecPaths,
@@ -294,7 +295,15 @@ func (s *SubstitutionSensitivityTestSuite) Test_a_secret_outside_the_spec_is_rep
 	)
 }
 
-// Spec paths travel on the resolved resource alone, so the result must not repeat them.
+// Metadata paths travel on the resolved resource alone, so the result must not repeat them.
+func (s *SubstitutionSensitivityTestSuite) Test_the_result_does_not_repeat_the_resources_metadata_paths() {
+	result := s.resolveOrdersTable()
+
+	for _, path := range result.SensitivePaths {
+		s.Assert().NotContains(path, "ordersTable.metadata.", "%s is reported twice", path)
+	}
+}
+
 func (s *SubstitutionSensitivityTestSuite) Test_the_result_does_not_repeat_the_resources_spec_paths() {
 	result := s.resolveOrdersTable()
 
@@ -401,6 +410,20 @@ func (s *SubstitutionSensitivityTestSuite) Test_an_array_reference_matches_on_th
 	// See __testdata/sub-resolver/resolve-in-resource-sensitivity-blueprint.yml
 	s.Assert().Contains(result.ResolvedResource.SensitiveSpecPaths, "spec.replicaSecret")
 	s.Assert().NotContains(result.ResolvedResource.SensitiveSpecPaths, "spec.replicaPlain")
+}
+
+// Metadata is recorded on the resolved resource the same way the spec is, so a reference
+// into another resource's metadata is markable in the same way. Only became possible once
+// metadata paths travelled on the resource.
+func (s *SubstitutionSensitivityTestSuite) Test_referencing_an_interpolated_secret_in_another_resources_metadata_marks_the_field() {
+	result := s.resolveOrdersTable()
+
+	s.Assert().Contains(result.ResolvedResource.SensitiveSpecPaths, "spec.interpolatedAuditKey")
+	s.Assert().NotContains(
+		result.ResolvedResource.SensitiveSpecPaths,
+		"spec.interpolatedPlainKey",
+		"a sibling metadata field holding nothing secret was marked",
+	)
 }
 
 // Values are memoised, so only the first read resolves one. A value that declares nothing

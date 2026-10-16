@@ -80,6 +80,10 @@ resources:
   # reference to it can only be marked from what resolution recorded.
   interpolatedTable:
     type: aws/dynamodb/table
+    metadata:
+      custom:
+        auditKey: "audit-${variables.dbPassword}"
+        plainKey: "nothing-secret"
     spec:
       tableName: "orders-${variables.dbPassword}"
       region: "eu-west-2"
@@ -127,6 +131,10 @@ resources:
       interpolatedTableName: "${resources.interpolatedTable.spec.tableName}"
       interpolatedTableRegion: "${resources.interpolatedTable.spec.region}"
       interpolatedTableNameSuffix: "${resources.interpolatedTable.spec.tableNameSuffix}"
+      # Metadata has no schema, so these can only be marked from what resolution recorded
+      # against the referenced resource.
+      interpolatedAuditKey: "${resources.interpolatedTable.metadata.custom.auditKey}"
+      interpolatedPlainKey: "${resources.interpolatedTable.metadata.custom.plainKey}"
       replicaSecret: "${resources.interpolatedTable.spec.replicaRegions[0]}"
       replicaPlain: "${resources.interpolatedTable.spec.replicaRegions[1]}"
       # Reads the secret field of a value declaring nothing, twice, so the second read is

@@ -77,6 +77,7 @@ func collectMappingNodeChanges(
 			PrevValue:    nil,
 			NewValue:     newValue,
 			MustRecreate: false,
+			Sensitive:    carriesRecordedSensitiveValue(fieldChangeCtx),
 		})
 		return
 	}
@@ -87,6 +88,7 @@ func collectMappingNodeChanges(
 			PrevValue:    currentValue,
 			NewValue:     newValue,
 			MustRecreate: false,
+			Sensitive:    carriesRecordedSensitiveValue(fieldChangeCtx),
 		})
 	}
 }
@@ -104,11 +106,7 @@ func collectMappingNodeMapChanges(
 			changes,
 			newValue,
 			currentValue,
-			&fieldChangeContext{
-				fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
-				currentPath:             substitutions.RenderFieldPath(fieldChangeCtx.currentPath, fieldName),
-				depth:                   fieldChangeCtx.depth + 1,
-			},
+			mappingNodeChildContext(fieldChangeCtx, substitutions.RenderFieldPath(fieldChangeCtx.currentPath, fieldName)),
 		)
 	}
 
@@ -119,13 +117,31 @@ func collectMappingNodeMapChanges(
 				changes,
 				nil,
 				currentFields[fieldName],
-				&fieldChangeContext{
-					fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
-					currentPath:             substitutions.RenderFieldPath(fieldChangeCtx.currentPath, fieldName),
-					depth:                   fieldChangeCtx.depth + 1,
-				},
+				mappingNodeChildContext(fieldChangeCtx, substitutions.RenderFieldPath(fieldChangeCtx.currentPath, fieldName)),
 			)
 		}
+	}
+}
+
+// Reports whether the whole value at this path holds a secret.
+func carriesRecordedSensitiveValue(fieldChangeCtx *fieldChangeContext) bool {
+	return bpcore.IsPathCoveredBy(
+		fieldChangeCtx.currentPath,
+		fieldChangeCtx.recordedSensitivePaths,
+	)
+}
+
+// The mapping node walk has no schema, so it cannot use childContext: that derives
+// MustRecreate and sensitivity from one, and would panic on nil.
+func mappingNodeChildContext(
+	parent *fieldChangeContext,
+	currentPath string,
+) *fieldChangeContext {
+	return &fieldChangeContext{
+		fieldsToResolveOnDeploy: parent.fieldsToResolveOnDeploy,
+		recordedSensitivePaths:  parent.recordedSensitivePaths,
+		currentPath:             currentPath,
+		depth:                   parent.depth + 1,
 	}
 }
 
@@ -144,11 +160,7 @@ func collectMappingNodeArrayChanges(
 			changes,
 			newValue,
 			currentValue,
-			&fieldChangeContext{
-				fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
-				currentPath:             renderFieldArrayPath(fieldChangeCtx.currentPath, i),
-				depth:                   fieldChangeCtx.depth + 1,
-			},
+			mappingNodeChildContext(fieldChangeCtx, renderFieldArrayPath(fieldChangeCtx.currentPath, i)),
 		)
 	}
 
@@ -158,11 +170,7 @@ func collectMappingNodeArrayChanges(
 				changes,
 				nil,
 				getArrayItem(currentItems, i),
-				&fieldChangeContext{
-					fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
-					currentPath:             renderFieldArrayPath(fieldChangeCtx.currentPath, i),
-					depth:                   fieldChangeCtx.depth + 1,
-				},
+				mappingNodeChildContext(fieldChangeCtx, renderFieldArrayPath(fieldChangeCtx.currentPath, i)),
 			)
 		}
 	}
@@ -192,6 +200,7 @@ func collectMappingNodeScalarChanges(
 			PrevValue:    currentScalar,
 			NewValue:     newScalar,
 			MustRecreate: false,
+			Sensitive:    hasRecordedSensitivePath(fieldChangeCtx),
 		})
 	}
 
@@ -202,6 +211,7 @@ func collectMappingNodeScalarChanges(
 			PrevValue:    nil,
 			NewValue:     newScalar,
 			MustRecreate: false,
+			Sensitive:    hasRecordedSensitivePath(fieldChangeCtx),
 		})
 	}
 }

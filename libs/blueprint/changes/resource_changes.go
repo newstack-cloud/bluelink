@@ -106,6 +106,7 @@ func (s *defaultResourceChangeGenerator) GenerateChanges(
 		currentResourceMetadata,
 		&fieldChangeContext{
 			fieldsToResolveOnDeploy: fieldsToResolveOnDeploy,
+			recordedSensitivePaths:  resourceInfo.ResourceWithResolvedSubs.SensitiveMetadataPaths,
 			currentPath:             "metadata",
 			depth:                   0,
 		},
@@ -486,11 +487,12 @@ func collectMetadataFieldChanges(
 	currentResourceMetadata *state.ResourceMetadataState,
 	fieldChangeCtx *fieldChangeContext,
 ) {
+	displayNamePath := "metadata.displayName"
 	newDisplayName := extractDisplayNameFromResolved(newResourceMetadata)
 	currentDisplayName := extractDisplayNameFromState(currentResourceMetadata)
 	if currentDisplayName != "" && newDisplayName != currentDisplayName {
 		changes.ModifiedFields = append(changes.ModifiedFields, provider.FieldChange{
-			FieldPath: "metadata.displayName",
+			FieldPath: displayNamePath,
 			PrevValue: &bpcore.MappingNode{
 				Scalar: &bpcore.ScalarValue{StringValue: &currentDisplayName},
 			},
@@ -498,15 +500,17 @@ func collectMetadataFieldChanges(
 				Scalar: &bpcore.ScalarValue{StringValue: &newDisplayName},
 			},
 			MustRecreate: false,
+			Sensitive:    isPathRecordedSensitive(fieldChangeCtx.recordedSensitivePaths, displayNamePath),
 		})
 	} else if newDisplayName != currentDisplayName {
 		changes.NewFields = append(changes.NewFields, provider.FieldChange{
-			FieldPath: "metadata.displayName",
+			FieldPath: displayNamePath,
 			PrevValue: nil,
 			NewValue: &bpcore.MappingNode{
 				Scalar: &bpcore.ScalarValue{StringValue: &newDisplayName},
 			},
 			MustRecreate: false,
+			Sensitive:    isPathRecordedSensitive(fieldChangeCtx.recordedSensitivePaths, displayNamePath),
 		})
 	}
 
@@ -528,11 +532,9 @@ func collectMetadataFieldChanges(
 		changes,
 		extractCustomFromResolved(newResourceMetadata),
 		extractCustomFromState(currentResourceMetadata),
-		// Does not carry any recorded paths as those are the resource's spec paths, and a secret
-		// reaching metadata is recorded on the resolve result rather than on the resolved
-		// resource, so there is nothing here to consult.
 		&fieldChangeContext{
 			fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
+			recordedSensitivePaths:  fieldChangeCtx.recordedSensitivePaths,
 			currentPath:             "metadata.custom",
 			depth:                   0,
 		},
@@ -567,6 +569,7 @@ func collectMetadataLabelChanges(
 				PrevValue:    &bpcore.MappingNode{Scalar: &bpcore.ScalarValue{StringValue: &currentValue}},
 				NewValue:     &bpcore.MappingNode{Scalar: &bpcore.ScalarValue{StringValue: &newValue}},
 				MustRecreate: false,
+				Sensitive:    isPathRecordedSensitive(fieldChangeCtx.recordedSensitivePaths, currentPath),
 			})
 		}
 
@@ -576,6 +579,7 @@ func collectMetadataLabelChanges(
 				PrevValue:    nil,
 				NewValue:     &bpcore.MappingNode{Scalar: &bpcore.ScalarValue{StringValue: &newValue}},
 				MustRecreate: false,
+				Sensitive:    isPathRecordedSensitive(fieldChangeCtx.recordedSensitivePaths, currentPath),
 			})
 		}
 	}
@@ -595,6 +599,9 @@ func collectMetadataLabelChanges(
 	}
 }
 
+// Resolution records an annotation map as "metadata.annotations" rather than naming the
+// entry, so a secret in one annotation marks them all. Over-marking is the safe direction
+// and this follows resolution: it will narrow on its own when recording does.
 func collectMetadataAnnotationChanges(
 	changes *provider.Changes,
 	newAnnotationsMap *bpcore.MappingNode,
@@ -624,6 +631,7 @@ func collectMetadataAnnotationChanges(
 				PrevValue:    currentValue,
 				NewValue:     newValue,
 				MustRecreate: false,
+				Sensitive:    isPathRecordedSensitive(fieldChangeCtx.recordedSensitivePaths, currentPath),
 			})
 		}
 
@@ -633,6 +641,7 @@ func collectMetadataAnnotationChanges(
 				PrevValue:    nil,
 				NewValue:     newValue,
 				MustRecreate: false,
+				Sensitive:    isPathRecordedSensitive(fieldChangeCtx.recordedSensitivePaths, currentPath),
 			})
 		}
 	}
@@ -662,7 +671,8 @@ type fieldChangeContext struct {
 	// its entries. Without inheriting it, the leaves carrying the actual values
 	// are the ones that come out unmarked.
 	parentSensitive bool
-	// Spec paths a secret reached while the resource's substitutions were resolved.
+	// Field paths a secret reached while the resource's substitutions were resolved, rooted
+	// at "spec" for the spec walk and at "metadata" for the metadata one.
 	//
 	// Separate from the schema's own declarations, a secret interpolated into a field no
 	// schema declares as sensitive is visible only at resolution, and without these the
@@ -1160,12 +1170,16 @@ func childContext(
 }
 
 func hasRecordedSensitivePath(fieldChangeCtx *fieldChangeContext) bool {
-	return slices.ContainsFunc(
+	return isPathRecordedSensitive(
 		fieldChangeCtx.recordedSensitivePaths,
-		func(recorded string) bool {
-			return bpcore.IsPathAtOrBelow(recorded, fieldChangeCtx.currentPath)
-		},
+		fieldChangeCtx.currentPath,
 	)
+}
+
+func isPathRecordedSensitive(recordedSensitivePaths []string, path string) bool {
+	return slices.ContainsFunc(recordedSensitivePaths, func(recorded string) bool {
+		return bpcore.IsPathAtOrBelow(recorded, path)
+	})
 }
 
 // Unlike MustRecreate, a computed field is not exempt as a value the provider

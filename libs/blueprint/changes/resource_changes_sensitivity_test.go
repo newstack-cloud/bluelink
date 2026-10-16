@@ -91,6 +91,153 @@ func (s *ResourceChangeSensitivityTestSuite) Test_marks_a_new_field_a_secret_rea
 	s.Assert().True(region.Sensitive)
 }
 
+func (s *ResourceChangeSensitivityTestSuite) Test_marks_metadata_a_secret_reached() {
+	modified := s.metadataModifiedFields([]string{"metadata.custom.auditKey"})
+
+	s.Assert().True(modified["metadata.custom.auditKey"].Sensitive)
+	s.Assert().False(
+		modified["metadata.custom.region"].Sensitive,
+		"a sibling of the field holding the secret was marked",
+	)
+	s.Assert().False(modified["metadata.displayName"].Sensitive)
+}
+
+func (s *ResourceChangeSensitivityTestSuite) Test_marks_a_display_name_a_secret_reached() {
+	modified := s.metadataModifiedFields([]string{"metadata.displayName"})
+
+	s.Assert().True(modified["metadata.displayName"].Sensitive)
+	s.Assert().False(modified["metadata.custom.auditKey"].Sensitive)
+}
+
+func (s *ResourceChangeSensitivityTestSuite) Test_a_recorded_annotation_map_marks_its_entries() {
+	modified := s.metadataModifiedFields([]string{"metadata.annotations"})
+
+	s.Assert().True(modified[`metadata.annotations["example.v1"]`].Sensitive)
+}
+
+// Keyed by path, with every asserted path required to be present, a missing entry reads as
+// "not sensitive" and would pass regardless of what the code does.
+func (s *ResourceChangeSensitivityTestSuite) requireFields(
+	fieldChanges []provider.FieldChange,
+	paths ...string,
+) map[string]provider.FieldChange {
+	byPath := map[string]provider.FieldChange{}
+	for _, fieldChange := range fieldChanges {
+		byPath[fieldChange.FieldPath] = fieldChange
+	}
+
+	for _, path := range paths {
+		_, found := byPath[path]
+		s.Require().True(found, "%s is not among the field changes", path)
+	}
+
+	return byPath
+}
+
+func (s *ResourceChangeSensitivityTestSuite) metadataChanges(
+	sensitiveMetadataPaths []string,
+) *provider.Changes {
+	resourceChanges, err := s.generator.GenerateChanges(
+		context.Background(),
+		metadataResourceInfo(sensitiveMetadataPaths),
+		&internal.DynamoDBTableResource{},
+		[]string{},
+		nil,
+	)
+	s.Require().NoError(err)
+
+	return resourceChanges
+}
+
+func (s *ResourceChangeSensitivityTestSuite) Test_marks_new_metadata_a_secret_reached() {
+	newFields := s.requireFields(
+		s.metadataChanges([]string{"metadata.custom.addedKey"}).NewFields,
+		"metadata.custom.addedKey",
+	)
+
+	s.Assert().True(newFields["metadata.custom.addedKey"].Sensitive)
+}
+
+func (s *ResourceChangeSensitivityTestSuite) Test_marks_a_retyped_metadata_field_a_secret_reached() {
+	modified := s.requireFields(
+		s.metadataChanges([]string{"metadata.custom.retypedKey"}).ModifiedFields,
+		"metadata.custom.retypedKey",
+	)
+
+	s.Assert().True(modified["metadata.custom.retypedKey"].Sensitive)
+}
+
+// A shallow change carries its whole subtree, so a secret recorded inside it is inside what
+// the change prints. The reported path is the container, which no recorded descendant path
+// matches on the at-or-above test the descending walks use.
+func (s *ResourceChangeSensitivityTestSuite) Test_marks_a_shallow_change_holding_a_secret_below_it() {
+	modified := s.requireFields(
+		s.metadataChanges([]string{"metadata.custom.retypedKey.nested"}).ModifiedFields,
+		"metadata.custom.retypedKey",
+	)
+
+	s.Assert().True(modified["metadata.custom.retypedKey"].Sensitive)
+	s.Assert().False(
+		modified["metadata.custom.auditKey"].Sensitive,
+		"an unrelated field was marked",
+	)
+}
+
+func (s *ResourceChangeSensitivityTestSuite) metadataModifiedFields(
+	sensitiveMetadataPaths []string,
+) map[string]provider.FieldChange {
+	return s.requireFields(
+		s.metadataChanges(sensitiveMetadataPaths).ModifiedFields,
+		"metadata.displayName",
+		"metadata.custom.auditKey",
+		"metadata.custom.region",
+		`metadata.annotations["example.v1"]`,
+	)
+}
+
+func metadataResourceInfo(sensitiveMetadataPaths []string) *provider.ResourceInfo {
+	resourceInfo := sensitivityResourceInfo(nil)
+	resourceInfo.ResourceWithResolvedSubs.SensitiveMetadataPaths = sensitiveMetadataPaths
+	resourceInfo.ResourceWithResolvedSubs.Metadata = &provider.ResolvedResourceMetadata{
+		DisplayName: core.MappingNodeFromString("Orders Table"),
+		Annotations: &core.MappingNode{
+			Fields: map[string]*core.MappingNode{
+				"example.v1": core.MappingNodeFromString("new-annotation"),
+			},
+		},
+		Custom: &core.MappingNode{
+			Fields: map[string]*core.MappingNode{
+				"auditKey": core.MappingNodeFromString("audit-super-secret"),
+				"region":   core.MappingNodeFromString("eu-west-2"),
+				// Absent from the current state, so this reaches the new-field branch.
+				"addedKey": core.MappingNodeFromString("added-super-secret"),
+				// A scalar in state and an object now, so the walk falls through to the
+				// shallow comparison it makes when the two types disagree.
+				"retypedKey": {
+					Fields: map[string]*core.MappingNode{
+						"nested": core.MappingNodeFromString("retyped-super-secret"),
+					},
+				},
+			},
+		},
+	}
+	resourceInfo.CurrentResourceState.Metadata = &state.ResourceMetadataState{
+		DisplayName: "Previous Table",
+		Annotations: map[string]*core.MappingNode{
+			"example.v1": core.MappingNodeFromString("previous-annotation"),
+		},
+		Custom: &core.MappingNode{
+			Fields: map[string]*core.MappingNode{
+				"auditKey":   core.MappingNodeFromString("previous-audit"),
+				"region":     core.MappingNodeFromString("eu-west-1"),
+				"retypedKey": core.MappingNodeFromString("previously-a-scalar"),
+			},
+		},
+	}
+
+	return resourceInfo
+}
+
 func (s *ResourceChangeSensitivityTestSuite) generateSortedArrayChanges(
 	sensitiveSpecPaths []string,
 ) *provider.Changes {

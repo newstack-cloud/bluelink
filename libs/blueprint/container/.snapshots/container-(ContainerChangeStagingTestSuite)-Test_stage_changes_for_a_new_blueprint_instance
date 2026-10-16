@@ -154,7 +154,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          SensitiveSpecPaths: ([]string) <nil>
+          SensitiveSpecPaths: ([]string) <nil>,
+          SensitiveMetadataPaths: ([]string) <nil>
         })
       },
       MustRecreate: (bool) false,
@@ -464,7 +465,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          SensitiveSpecPaths: ([]string) <nil>
+          SensitiveSpecPaths: ([]string) <nil>,
+          SensitiveMetadataPaths: ([]string) <nil>
         })
       },
       MustRecreate: (bool) false,
@@ -945,7 +947,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          SensitiveSpecPaths: ([]string) <nil>
+          SensitiveSpecPaths: ([]string) <nil>,
+          SensitiveMetadataPaths: ([]string) <nil>
         })
       },
       MustRecreate: (bool) false,
@@ -1551,7 +1554,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          SensitiveSpecPaths: ([]string) <nil>
+          SensitiveSpecPaths: ([]string) <nil>,
+          SensitiveMetadataPaths: ([]string) <nil>
         })
       },
       MustRecreate: (bool) false,
@@ -1932,7 +1936,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          SensitiveSpecPaths: ([]string) <nil>
+          SensitiveSpecPaths: ([]string) <nil>,
+          SensitiveMetadataPaths: ([]string) <nil>
         })
       },
       MustRecreate: (bool) false,
@@ -2143,7 +2148,8 @@
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
           }),
-          SensitiveSpecPaths: ([]string) <nil>
+          SensitiveSpecPaths: ([]string) <nil>,
+          SensitiveMetadataPaths: ([]string) <nil>
         })
       },
       MustRecreate: (bool) false,
@@ -2809,7 +2815,8 @@
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
               }),
-              SensitiveSpecPaths: ([]string) <nil>
+              SensitiveSpecPaths: ([]string) <nil>,
+              SensitiveMetadataPaths: ([]string) <nil>
             })
           },
           MustRecreate: (bool) false,
