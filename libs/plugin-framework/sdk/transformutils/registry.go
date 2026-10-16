@@ -149,20 +149,41 @@ func TypedRewriter[T any, PR ResolvedPtr[T]](
 // PropertyMap as a single source of truth.
 //
 // Use this as the typical declarative path for AbstractResourceDefinition.Rewriters
-// when the rewriting is fully described by a PropertyMap. For compound primaries
-// or multi-rewriter contributions, use TypedRewriter with a hand-written factory
-// instead — capability matrix entries for those cases must be supplied via the
-// Registry overlay.
+// when the rewriting is fully described by a PropertyMap and the concrete name is
+// the only per-primary input. When it is not, use TypedRewriterWithCapabilities.
 func RewriterFromPropertyMap[T any, PR ResolvedPtr[T]](
 	pm *PropertyMap,
 	concreteName func(r PR) string,
 ) RewriterRegistration {
+	return TypedRewriterWithCapabilities(pm, func(r PR) []ResourcePropertyRewriter {
+		return []ResourcePropertyRewriter{
+			pm.Rewriter(r.ResourceName(), concreteName(r)),
+		}
+	})
+}
+
+// TypedRewriterWithCapabilities registers a hand-written rewriter factory while
+// deriving the capability matrix from a PropertyMap.
+//
+// Use it where the rewriting cannot be expressed by a PropertyMap alone: a
+// primary that resolves its references to authored literals because it emits no
+// concrete resource to point at, a compound primary, or one contributing several
+// rewriters.
+//
+// The PropertyMap is read only for capabilities here, never for rewriting. The
+// abstract paths a reference may target are a property of the resource type
+// rather than of one instance, so they still come from the map even when the
+// rewriting does not.
+//
+// This is what TypedRewriter cannot do. Capability entries cannot be populated
+// from outside this package, so a factory registered through TypedRewriter
+// silently loses pre-emit reference validation for its type.
+func TypedRewriterWithCapabilities[T any, PR ResolvedPtr[T]](
+	pm *PropertyMap,
+	fn func(r PR) []ResourcePropertyRewriter,
+) RewriterRegistration {
 	return func(registry *TransformerRegistry, target Target) {
-		RegisterRewriter(registry, target, func(r PR) []ResourcePropertyRewriter {
-			return []ResourcePropertyRewriter{
-				pm.Rewriter(r.ResourceName(), concreteName(r)),
-			}
-		})
+		RegisterRewriter(registry, target, fn)
 		registry.registerCapabilities(
 			target,
 			reflect.TypeFor[PR](),
@@ -261,11 +282,11 @@ func (r *TransformerRegistry) HasAggregators() bool {
 }
 
 // registerCapabilities writes a capability-matrix entry for the (target,
-// resolvedType) pair. Currently called only from RewriterFromPropertyMap
-// (which has T statically); there is no public RegisterCapabilities helper
-// because the auto-derive path is the only intended population route.
-// Authors with non-PropertyMap rewriting populate via the Registry overlay
-// using their own pre-built TransformerRegistry.
+// resolvedType) pair. Called from the RewriterFromPropertyMap family, which has
+// T statically. There is no public helper because deriving from the PropertyMap
+// is the only intended population route, and no route exists from outside this
+// package: a hand-written TypedRewriter factory therefore registers no
+// capabilities for its type.
 func (r *TransformerRegistry) registerCapabilities(
 	target Target,
 	resolvedType reflect.Type,
