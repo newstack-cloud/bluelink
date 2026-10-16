@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -91,6 +92,7 @@ func (s *defaultResourceChangeGenerator) GenerateChanges(
 			fieldsToResolveOnDeploy: fieldsToResolveOnDeploy,
 			parentMustRecreate:      false,
 			parentSensitive:         false,
+			recordedSensitivePaths:  resourceInfo.ResourceWithResolvedSubs.SensitiveSpecPaths,
 			currentPath:             "spec",
 			depth:                   0,
 		},
@@ -287,7 +289,7 @@ func collectScalarFieldChanges(
 			PrevValue:    scalarInCurrentState,
 			NewValue:     scalarInNewSpec,
 			MustRecreate: fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
-			Sensitive:    fieldChangeSensitive(fieldChangeCtx.parentSensitive, schema),
+			Sensitive:    fieldChangeSensitive(fieldChangeCtx, schema),
 		})
 		return
 	}
@@ -309,7 +311,7 @@ func collectScalarFieldChanges(
 			PrevValue:    nil,
 			NewValue:     scalarInNewSpec,
 			MustRecreate: fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
-			Sensitive:    fieldChangeSensitive(fieldChangeCtx.parentSensitive, schema),
+			Sensitive:    fieldChangeSensitive(fieldChangeCtx, schema),
 		})
 		return
 	}
@@ -333,7 +335,13 @@ func collectArrayFieldChanges(
 	// This is useful for arrays like tags where the logical identity is a key field
 	// but the order may vary between the blueprint spec and external state.
 	if schema.SortArrayByField != "" || schema.IgnoreItemOrder {
-		newSpecItems = SortArrayItemsForComparison(newSpecItems, schema)
+		sortedNewSpecItems := SortArrayItemsForComparison(newSpecItems, schema)
+		fieldChangeCtx = contextWithSortedArrayPaths(
+			fieldChangeCtx,
+			newSpecItems,
+			sortedNewSpecItems,
+		)
+		newSpecItems = sortedNewSpecItems
 		currentStateItems = SortArrayItemsForComparison(currentStateItems, schema)
 	}
 
@@ -344,13 +352,7 @@ func collectArrayFieldChanges(
 			schema.Items,
 			newValue,
 			currentValue,
-			&fieldChangeContext{
-				fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
-				parentMustRecreate:      fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
-				parentSensitive:         fieldChangeSensitive(fieldChangeCtx.parentSensitive, schema),
-				currentPath:             renderFieldArrayPath(fieldChangeCtx.currentPath, i),
-				depth:                   fieldChangeCtx.depth + 1,
-			},
+			childContext(fieldChangeCtx, schema, renderFieldArrayPath(fieldChangeCtx.currentPath, i)),
 		)
 	}
 
@@ -361,13 +363,7 @@ func collectArrayFieldChanges(
 				schema.Items,
 				nil,
 				getArrayItem(currentStateItems, i),
-				&fieldChangeContext{
-					fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
-					parentMustRecreate:      fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
-					parentSensitive:         fieldChangeSensitive(fieldChangeCtx.parentSensitive, schema),
-					currentPath:             renderFieldArrayPath(fieldChangeCtx.currentPath, i),
-					depth:                   fieldChangeCtx.depth + 1,
-				},
+				childContext(fieldChangeCtx, schema, renderFieldArrayPath(fieldChangeCtx.currentPath, i)),
 			)
 		}
 	}
@@ -386,13 +382,7 @@ func collectObjectFieldChanges(
 			fieldSchema,
 			getField(objectInNewSpec, fieldName),
 			getField(objectInCurrentState, fieldName),
-			&fieldChangeContext{
-				fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
-				parentMustRecreate:      fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
-				parentSensitive:         fieldChangeSensitive(fieldChangeCtx.parentSensitive, schema),
-				currentPath:             substitutions.RenderFieldPath(fieldChangeCtx.currentPath, fieldName),
-				depth:                   fieldChangeCtx.depth + 1,
-			},
+			childContext(fieldChangeCtx, schema, substitutions.RenderFieldPath(fieldChangeCtx.currentPath, fieldName)),
 		)
 	}
 }
@@ -412,13 +402,7 @@ func collectMapFieldChanges(
 			schema.MapValues,
 			newValue,
 			currentValue,
-			&fieldChangeContext{
-				fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
-				parentMustRecreate:      fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
-				parentSensitive:         fieldChangeSensitive(fieldChangeCtx.parentSensitive, schema),
-				currentPath:             substitutions.RenderFieldPath(fieldChangeCtx.currentPath, fieldName),
-				depth:                   fieldChangeCtx.depth + 1,
-			},
+			childContext(fieldChangeCtx, schema, substitutions.RenderFieldPath(fieldChangeCtx.currentPath, fieldName)),
 		)
 	}
 
@@ -431,13 +415,7 @@ func collectMapFieldChanges(
 				schema.MapValues,
 				nil,
 				currentValue,
-				&fieldChangeContext{
-					fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
-					parentMustRecreate:      fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
-					parentSensitive:         fieldChangeSensitive(fieldChangeCtx.parentSensitive, schema),
-					currentPath:             substitutions.RenderFieldPath(fieldChangeCtx.currentPath, fieldName),
-					depth:                   fieldChangeCtx.depth + 1,
-				},
+				childContext(fieldChangeCtx, schema, substitutions.RenderFieldPath(fieldChangeCtx.currentPath, fieldName)),
 			)
 		}
 	}
@@ -459,7 +437,10 @@ func collectUnionFieldChanges(
 			PrevValue:    unionValueInCurrentState,
 			NewValue:     unionValueInNewSpec,
 			MustRecreate: fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
-			Sensitive:    fieldChangeCtx.parentSensitive || unionHasSensitiveVariant(schema),
+			// unionHasSensitiveVariant also covers the union schema's own declaration,
+			// so this adds only the variants to what fieldChangeSensitive already knows.
+			Sensitive: fieldChangeSensitive(fieldChangeCtx, schema) ||
+				unionHasSensitiveVariant(schema),
 		})
 		return
 	}
@@ -472,10 +453,11 @@ func collectUnionFieldChanges(
 		unionValueInCurrentState,
 		&fieldChangeContext{
 			fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
+			recordedSensitivePaths:  fieldChangeCtx.recordedSensitivePaths,
 			// Ensure that if the field with the union type changes requires a resource to be recreated,
 			// this information is passed down to all child values.
 			parentMustRecreate: fieldChangeMustRecreateResource(fieldChangeCtx.parentMustRecreate, schema),
-			parentSensitive:    fieldChangeSensitive(fieldChangeCtx.parentSensitive, schema),
+			parentSensitive:    fieldChangeSensitive(fieldChangeCtx, schema),
 			currentPath:        fieldChangeCtx.currentPath,
 			depth:              fieldChangeCtx.depth,
 		},
@@ -546,6 +528,9 @@ func collectMetadataFieldChanges(
 		changes,
 		extractCustomFromResolved(newResourceMetadata),
 		extractCustomFromState(currentResourceMetadata),
+		// Does not carry any recorded paths as those are the resource's spec paths, and a secret
+		// reaching metadata is recorded on the resolve result rather than on the resolved
+		// resource, so there is nothing here to consult.
 		&fieldChangeContext{
 			fieldsToResolveOnDeploy: fieldChangeCtx.fieldsToResolveOnDeploy,
 			currentPath:             "metadata.custom",
@@ -670,15 +655,21 @@ func collectMetadataAnnotationChanges(
 type fieldChangeContext struct {
 	fieldsToResolveOnDeploy []string
 	parentMustRecreate      bool
-	// Whether an ancestor of the field was declared sensitive.
+	// Whether an ancestor of the field is sensitive, from the schema or a recorded path.
 	//
 	// Sensitivity is declared on the field a plugin author thinks of as secret,
 	// which for a map or object of secrets is the container rather than each of
 	// its entries. Without inheriting it, the leaves carrying the actual values
 	// are the ones that come out unmarked.
 	parentSensitive bool
-	currentPath     string
-	depth           int
+	// Spec paths a secret reached while the resource's substitutions were resolved.
+	//
+	// Separate from the schema's own declarations, a secret interpolated into a field no
+	// schema declares as sensitive is visible only at resolution, and without these the
+	// change set reports it as plain while the deployment that follows marks it.
+	recordedSensitivePaths []string
+	currentPath            string
+	depth                  int
 }
 
 func getField(node *bpcore.MappingNode, fieldName string) *bpcore.MappingNode {
@@ -1069,10 +1060,123 @@ func fieldChangeMustRecreateResource(parentMustRecreate bool, schema *provider.R
 	return (parentMustRecreate || schema.MustRecreate) && !schema.Computed
 }
 
+// Matches downwards only. A field is sensitive from a path recorded on itself or on one of
+// its containers; a secret in one entry of a map says nothing about its siblings, and
+// marking the container would redact all of them.
+// Moves recorded sensitivity paths with the items they name.
+//
+// Recorded indices are positions in the resolved spec, and sorting moves items away from
+// them, so a path left alone would mark whichever item now sits at the index it named. That
+// is a mark on the wrong item as it hides a value that is not secret and shows one that is.
+// Sorting reuses the same nodes, so each item's new position is recoverable.
+func contextWithSortedArrayPaths(
+	fieldChangeCtx *fieldChangeContext,
+	items []*bpcore.MappingNode,
+	sortedItems []*bpcore.MappingNode,
+) *fieldChangeContext {
+	if len(fieldChangeCtx.recordedSensitivePaths) == 0 {
+		return fieldChangeCtx
+	}
+
+	sortedPositions := sortedItemPositions(items, sortedItems)
+	moved := make([]string, 0, len(fieldChangeCtx.recordedSensitivePaths))
+	for _, recorded := range fieldChangeCtx.recordedSensitivePaths {
+		moved = append(
+			moved,
+			pathWithSortedIndex(recorded, fieldChangeCtx.currentPath, sortedPositions),
+		)
+	}
+
+	movedCtx := *fieldChangeCtx
+	movedCtx.recordedSensitivePaths = moved
+
+	return &movedCtx
+}
+
+// Where each item ended up, by position in the original slice.
+//
+// Matched by node identity, since sorting reorders the same pointers. Equal values appearing
+// twice are interchangeable, so taking positions in order is enough.
+func sortedItemPositions(
+	items []*bpcore.MappingNode,
+	sortedItems []*bpcore.MappingNode,
+) []int {
+	positions := make([]int, len(items))
+	taken := make([]bool, len(sortedItems))
+	for i, item := range items {
+		positions[i] = i
+		for j, sortedItem := range sortedItems {
+			if !taken[j] && sortedItem == item {
+				positions[i] = j
+				taken[j] = true
+				break
+			}
+		}
+	}
+
+	return positions
+}
+
+// Rewrites the index of a path addressing an item of the array at arrayPath, leaving
+// anything below that index in place. Paths naming another array are returned unchanged.
+func pathWithSortedIndex(path string, arrayPath string, sortedPositions []int) string {
+	if !strings.HasPrefix(path, arrayPath+"[") {
+		return path
+	}
+
+	indexPart := path[len(arrayPath)+1:]
+	before, after, ok := strings.Cut(indexPart, "]")
+	if !ok {
+		return path
+	}
+
+	index, err := strconv.Atoi(before)
+	if err != nil || index < 0 || index >= len(sortedPositions) {
+		return path
+	}
+
+	return fmt.Sprintf(
+		"%s[%d]%s",
+		arrayPath,
+		sortedPositions[index],
+		after,
+	)
+}
+
+// Derives the context for a field one level down.
+func childContext(
+	parent *fieldChangeContext,
+	schema *provider.ResourceDefinitionsSchema,
+	currentPath string,
+) *fieldChangeContext {
+	return &fieldChangeContext{
+		fieldsToResolveOnDeploy: parent.fieldsToResolveOnDeploy,
+		recordedSensitivePaths:  parent.recordedSensitivePaths,
+		parentMustRecreate:      fieldChangeMustRecreateResource(parent.parentMustRecreate, schema),
+		parentSensitive:         fieldChangeSensitive(parent, schema),
+		currentPath:             currentPath,
+		depth:                   parent.depth + 1,
+	}
+}
+
+func hasRecordedSensitivePath(fieldChangeCtx *fieldChangeContext) bool {
+	return slices.ContainsFunc(
+		fieldChangeCtx.recordedSensitivePaths,
+		func(recorded string) bool {
+			return bpcore.IsPathAtOrBelow(recorded, fieldChangeCtx.currentPath)
+		},
+	)
+}
+
 // Unlike MustRecreate, a computed field is not exempt as a value the provider
 // computed from a secret is still a secret.
-func fieldChangeSensitive(parentSensitive bool, schema *provider.ResourceDefinitionsSchema) bool {
-	return parentSensitive || schema.Sensitive
+func fieldChangeSensitive(
+	fieldChangeCtx *fieldChangeContext,
+	schema *provider.ResourceDefinitionsSchema,
+) bool {
+	return fieldChangeCtx.parentSensitive ||
+		schema.Sensitive ||
+		hasRecordedSensitivePath(fieldChangeCtx)
 }
 
 func getObjectSchemas(

@@ -2008,9 +2008,9 @@ func recordSecretValueUse(
 	}
 
 	declaredSecret := bpcore.BoolValueFromScalar(resolved.Secret)
-	readsRecordedSecret := isPathCoveredBy(
-		resolved.SensitivePaths,
+	readsRecordedSecret := bpcore.IsPathCoveredBy(
 		renderReferencePath("value", reference.Path),
+		resolved.SensitivePaths,
 	)
 	if !declaredSecret && !readsRecordedSecret {
 		return
@@ -2425,7 +2425,7 @@ func (r *defaultSubstitutionResolver) resolveResourceSpecProperty(
 	// a field the schema declares nothing about still marks the field reading it. The
 	// schema's own declarations are read separately, when the property definition is looked
 	// up, and cover a resource that was never resolved here.
-	if isPathCoveredBy(resource.SensitiveSpecPaths, renderReferencePath("", prop.Path)) {
+	if bpcore.IsPathCoveredBy(renderReferencePath("", prop.Path), resource.SensitiveSpecPaths) {
 		resolveCtx.sensitivity.record(
 			resolveCtx.currentElementName,
 			resolveCtx.currentElementProperty,

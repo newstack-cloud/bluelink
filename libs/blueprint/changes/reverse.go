@@ -392,10 +392,15 @@ func buildNewChildFromStateWithDepth(childState *state.InstanceState, depth int)
 }
 
 // buildFieldChangeFromExportState creates a FieldChange from an export state.
+//
+// Carries the stored sensitivity where a removed export is restored from state with its value,
+// so a rollback change set would otherwise print in the clear a secret the forward change
+// set redacted.
 func buildFieldChangeFromExportState(export *state.ExportState) provider.FieldChange {
 	return provider.FieldChange{
 		FieldPath: export.Field,
 		NewValue:  export.Value,
+		Sensitive: export.Sensitive,
 	}
 }
 

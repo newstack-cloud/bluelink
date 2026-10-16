@@ -84,10 +84,73 @@ func (s *ContainerDeployExportSensitivityTestSuite) Test_a_redeploy_keeps_the_ma
 	s.Assert().False(second["functionId"].Sensitive)
 }
 
+func (s *ContainerDeployExportSensitivityTestSuite) Test_staged_export_changes_carry_the_same_marks() {
+	staged := s.stageExportChanges()
+
+	s.Assert().True(staged["dbPassword"].Sensitive)
+	s.Assert().True(staged["adminToken"].Sensitive)
+	s.Assert().True(staged["functionHandler"].Sensitive)
+	s.Assert().True(staged["connectionPassword"].Sensitive)
+	s.Assert().False(staged["environment"].Sensitive)
+	s.Assert().False(staged["connectionHost"].Sensitive)
+}
+
+func (s *ContainerDeployExportSensitivityTestSuite) stageExportChanges() map[string]provider.FieldChange {
+	stagingContainer, params := s.loadExportSensitivityBlueprint(memstate.NewMemoryStateContainer())
+
+	staged, err := stageChangesForTest(context.Background(), stagingContainer, params)
+	s.Require().NoError(err)
+	// functionId exports a computed field, which cannot be known until deploy time, so it
+	// defers rather than appearing in the change set.
+	s.Require().Len(staged.NewExports, 6)
+
+	return staged.NewExports
+}
+
 func (s *ContainerDeployExportSensitivityTestSuite) deployInto(
 	stateContainer state.Container,
 	instanceID string,
 ) (map[string]*state.ExportState, string) {
+	// Staging and deploying are separate requests to the engine and so separate containers,
+	// each with its own resolver caches. Sharing one here would leave the value cache warm
+	// for the export resolution and hide what a cold one records.
+	stagingContainer, params := s.loadExportSensitivityBlueprint(stateContainer)
+	deployChanges, err := stageChangesForTest(context.Background(), stagingContainer, params)
+	s.Require().NoError(err)
+
+	blueprintContainer, _ := s.loadExportSensitivityBlueprint(stateContainer)
+
+	channels := CreateDeployChannels()
+	err = blueprintContainer.Deploy(
+		context.Background(),
+		deployInputFor(instanceID, deployChanges),
+		channels,
+		params,
+	)
+	s.Require().NoError(err)
+
+	finishedMessage, err := drainDeployChannels(channels)
+	s.Require().NoError(err)
+	s.Require().NotNil(finishedMessage)
+	s.Require().Contains(
+		[]core.InstanceStatus{core.InstanceStatusDeployed, core.InstanceStatusUpdated},
+		finishedMessage.Status,
+		fmt.Sprintf("deployment failed: %v", finishedMessage.FailureReasons),
+	)
+
+	savedExports, err := stateContainer.Exports().GetAll(
+		context.Background(),
+		finishedMessage.InstanceID,
+	)
+	s.Require().NoError(err)
+	s.Require().Len(savedExports, 7)
+
+	return savedExports, finishedMessage.InstanceID
+}
+
+func (s *ContainerDeployExportSensitivityTestSuite) loadExportSensitivityBlueprint(
+	stateContainer state.Container,
+) (BlueprintContainer, core.BlueprintParams) {
 	providers := map[string]provider.Provider{
 		"aws": &internal.ProviderMock{
 			NamespaceValue: "aws",
@@ -126,45 +189,14 @@ func (s *ContainerDeployExportSensitivityTestSuite) deployInto(
 		},
 	)
 
-	// Staging and deploying are separate requests to the engine and so separate containers,
-	// each with its own resolver caches. Sharing one here would leave the value cache warm
-	// for the export resolution and hide what a cold one records.
-	blueprintPath := "__testdata/container/deploy/blueprint-export-sensitivity.yml"
-	stagingContainer, err := loader.Load(context.Background(), blueprintPath, params)
-	s.Require().NoError(err)
-
-	deployChanges, err := stageChangesForTest(context.Background(), stagingContainer, params)
-	s.Require().NoError(err)
-
-	blueprintContainer, err := loader.Load(context.Background(), blueprintPath, params)
-	s.Require().NoError(err)
-
-	channels := CreateDeployChannels()
-	err = blueprintContainer.Deploy(
+	blueprintContainer, err := loader.Load(
 		context.Background(),
-		deployInputFor(instanceID, deployChanges),
-		channels,
+		"__testdata/container/deploy/blueprint-export-sensitivity.yml",
 		params,
 	)
 	s.Require().NoError(err)
 
-	finishedMessage, err := drainDeployChannels(channels)
-	s.Require().NoError(err)
-	s.Require().NotNil(finishedMessage)
-	s.Require().Contains(
-		[]core.InstanceStatus{core.InstanceStatusDeployed, core.InstanceStatusUpdated},
-		finishedMessage.Status,
-		fmt.Sprintf("deployment failed: %v", finishedMessage.FailureReasons),
-	)
-
-	savedExports, err := stateContainer.Exports().GetAll(
-		context.Background(),
-		finishedMessage.InstanceID,
-	)
-	s.Require().NoError(err)
-	s.Require().Len(savedExports, 7)
-
-	return savedExports, finishedMessage.InstanceID
+	return blueprintContainer, params
 }
 
 func deployInputFor(instanceID string, deployChanges *changes.BlueprintChanges) *DeployInput {

@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"maps"
+	"slices"
 	"strings"
 )
 
@@ -424,6 +425,35 @@ func ExportElementID(dataSourceName string) string {
 // to treat the spec root itself as inside the spec checks for it separately.
 func IsSpecFieldPath(path string) bool {
 	return strings.HasPrefix(path, "spec.") || strings.HasPrefix(path, "spec[")
+}
+
+// IsPathCoveredBy reports whether a reference to path reads a value one of the given
+// paths covers.
+//
+// Coverage runs both ways. A reference to an ancestor of one of the paths reads a container
+// holding it, and a reference to a descendant reads part of a value already covered, so a
+// mark on a container reaches the leaves below it.
+func IsPathCoveredBy(path string, paths []string) bool {
+	return slices.ContainsFunc(paths, func(covered string) bool {
+		return IsPathAtOrBelow(covered, path) || IsPathBelow(path, covered)
+	})
+}
+
+// IsPathAtOrBelow reports whether path is ancestor itself or a descendant of it.
+//
+// The one-directional half of IsPathCoveredBy, for a caller that inherits from an ancestor
+// but not from a descendant.
+func IsPathAtOrBelow(ancestor string, path string) bool {
+	return path == ancestor || IsPathBelow(ancestor, path)
+}
+
+// IsPathBelow reports whether path is a descendant of ancestor.
+//
+// Compared against the separators rather than the bare prefix,
+// so "spec.token" is not read as covering "spec.tokenExpiry".
+func IsPathBelow(ancestor string, path string) bool {
+	return strings.HasPrefix(path, ancestor+".") ||
+		strings.HasPrefix(path, ancestor+"[")
 }
 
 // ElementPropertyPath generates a property path for a given element ID and property name.

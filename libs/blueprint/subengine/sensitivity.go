@@ -2,7 +2,6 @@ package subengine
 
 import (
 	"slices"
-	"strings"
 
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
@@ -69,7 +68,7 @@ func (s *sensitivityRecord) pathsExcludingSpecOf(elementName string) []string {
 	excluded := bpcore.ElementPropertyPath(elementName, "spec")
 
 	return slices.DeleteFunc(s.allPaths(), func(path string) bool {
-		return path == excluded || isPathBelow(excluded, path)
+		return bpcore.IsPathAtOrBelow(excluded, path)
 	})
 }
 
@@ -97,30 +96,10 @@ func (s *sensitivityRecord) specPropertiesOf(elementName string) []string {
 func (s *sensitivityRecord) propertiesUnderRootOf(elementName string, root string) []string {
 	var rooted []string
 	for _, property := range s.propertiesOf(elementName) {
-		if property == root || isPathBelow(root, property) {
+		if bpcore.IsPathAtOrBelow(root, property) {
 			rooted = append(rooted, property)
 		}
 	}
 
 	return rooted
-}
-
-// Reports whether a reference to path reads a value one of the recorded paths covers.
-//
-// Coverage runs both ways. A reference to an ancestor of a recorded path reads a container
-// holding the secret, and a reference to a descendant reads part of a value already marked,
-// so a plugin declaring a container sensitive still covers the leaves below it.
-func isPathCoveredBy(sensitivePaths []string, path string) bool {
-	return slices.ContainsFunc(sensitivePaths, func(sensitive string) bool {
-		return sensitive == path ||
-			isPathBelow(sensitive, path) ||
-			isPathBelow(path, sensitive)
-	})
-}
-
-// Compared against the separators rather than the bare prefix, so "spec.token" is not read
-// as covering "spec.tokenExpiry".
-func isPathBelow(ancestor string, path string) bool {
-	return strings.HasPrefix(path, ancestor+".") ||
-		strings.HasPrefix(path, ancestor+"[")
 }

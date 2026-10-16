@@ -259,9 +259,10 @@ func (s *ReverseChangesetTestSuite) Test_removed_exports_become_new() {
 				Type:  schema.ExportTypeString,
 			},
 			"oldExport2": {
-				Field: "resources.myResource.spec.field2",
-				Value: core.MappingNodeFromInt(42),
-				Type:  schema.ExportTypeInteger,
+				Field:     "resources.myResource.spec.field2",
+				Value:     core.MappingNodeFromInt(42),
+				Type:      schema.ExportTypeInteger,
+				Sensitive: true,
 			},
 		},
 	}
@@ -277,6 +278,35 @@ func (s *ReverseChangesetTestSuite) Test_removed_exports_become_new() {
 	s.Equal("value1", core.StringValue(reversed.NewExports["oldExport1"].NewValue))
 	s.Equal("resources.myResource.spec.field2", reversed.NewExports["oldExport2"].FieldPath)
 	s.Equal(42, core.IntValue(reversed.NewExports["oldExport2"].NewValue))
+}
+
+// A removed export is restored from state with its value, so a rollback change set shows
+// that value to whoever is reviewing it.
+func (s *ReverseChangesetTestSuite) Test_a_restored_export_keeps_its_sensitivity() {
+	original := &BlueprintChanges{
+		RemovedExports: []string{"oldExport1", "oldExport2"},
+	}
+	previousState := &state.InstanceState{
+		Exports: map[string]*state.ExportState{
+			"oldExport1": {
+				Field: "resources.myResource.spec.field1",
+				Value: core.MappingNodeFromString("value1"),
+				Type:  schema.ExportTypeString,
+			},
+			"oldExport2": {
+				Field:     "resources.myResource.spec.field2",
+				Value:     core.MappingNodeFromString("super-secret"),
+				Type:      schema.ExportTypeString,
+				Sensitive: true,
+			},
+		},
+	}
+
+	reversed, err := ReverseChangeset(original, previousState)
+
+	s.Require().NoError(err)
+	s.Assert().True(reversed.NewExports["oldExport2"].Sensitive)
+	s.Assert().False(reversed.NewExports["oldExport1"].Sensitive)
 }
 
 func (s *ReverseChangesetTestSuite) Test_reverses_export_changes() {

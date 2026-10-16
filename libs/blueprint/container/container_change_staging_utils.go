@@ -26,6 +26,7 @@ func collectExportChanges(
 			resolvedExport.Resolved,
 			exportValue,
 			resolvedExport.ResolveOnDeploy,
+			isExportSensitive(exportName, resolvedExport),
 		)
 	}
 }
@@ -58,6 +59,7 @@ func collectExportFieldChanges(
 	newExportValue *core.MappingNode,
 	currentStateValue *core.MappingNode,
 	fieldsToResolveOnDeploy []string,
+	sensitive bool,
 ) {
 	if len(fieldsToResolveOnDeploy) > 0 {
 		// If any nested values of the export field value can not be known until deploy time,
@@ -86,6 +88,7 @@ func collectExportFieldChanges(
 			FieldPath: sourceFieldPath,
 			PrevValue: nil,
 			NewValue:  newExportValue,
+			Sensitive: sensitive,
 		}
 		return
 	}
@@ -95,6 +98,7 @@ func collectExportFieldChanges(
 			FieldPath: sourceFieldPath,
 			PrevValue: currentStateValue,
 			NewValue:  newExportValue,
+			Sensitive: sensitive,
 		}
 	} else {
 		changes.UnchangedExports = append(

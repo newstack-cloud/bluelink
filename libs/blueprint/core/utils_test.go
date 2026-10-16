@@ -409,6 +409,43 @@ func (s *UtilsTestSuite) Test_mapping_node_items() {
 	)
 }
 
+func (s *UtilsTestSuite) Test_path_coverage_runs_in_both_directions() {
+	s.Assert().True(IsPathCoveredBy("spec.token", []string{"spec.token"}))
+	s.Assert().True(
+		IsPathCoveredBy("spec.creds.token", []string{"spec.creds"}),
+		"a path below a covered container was not covered",
+	)
+	s.Assert().True(
+		IsPathCoveredBy("spec.creds", []string{"spec.creds.token"}),
+		"a container holding a covered path was not covered",
+	)
+	s.Assert().False(IsPathCoveredBy("spec.other", []string{"spec.creds"}))
+	s.Assert().False(IsPathCoveredBy("spec.token", nil))
+}
+
+func (s *UtilsTestSuite) Test_at_or_below_does_not_run_upwards() {
+	s.Assert().True(IsPathAtOrBelow("spec.creds", "spec.creds"))
+	s.Assert().True(IsPathAtOrBelow("spec.creds", "spec.creds.token"))
+	s.Assert().False(
+		IsPathAtOrBelow("spec.creds.token", "spec.creds"),
+		"a container was treated as covered by a path below it",
+	)
+}
+
+// Names extend each other all the time, so the separators are what make these path tests
+// rather than string prefix tests.
+func (s *UtilsTestSuite) Test_path_matching_stops_at_a_separator() {
+	s.Assert().False(IsPathBelow("spec.token", "spec.tokenExpiry"))
+	s.Assert().False(IsPathAtOrBelow("spec.token", "spec.tokenExpiry"))
+	s.Assert().False(IsPathCoveredBy("spec.tokenExpiry", []string{"spec.token"}))
+
+	s.Assert().True(IsPathBelow("spec.token", "spec.token.value"))
+	s.Assert().True(
+		IsPathBelow("spec.tokens", "spec.tokens[0]"),
+		"an array index was not read as a descendant",
+	)
+}
+
 func TestUtilsTestSuite(t *testing.T) {
 	suite.Run(t, new(UtilsTestSuite))
 }
