@@ -153,7 +153,8 @@
             StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
-          })
+          }),
+          SensitiveSpecPaths: ([]string) <nil>
         })
       },
       MustRecreate: (bool) false,
@@ -462,7 +463,8 @@
             StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
-          })
+          }),
+          SensitiveSpecPaths: ([]string) <nil>
         })
       },
       MustRecreate: (bool) false,
@@ -941,7 +943,8 @@
             StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
-          })
+          }),
+          SensitiveSpecPaths: ([]string) <nil>
         })
       },
       MustRecreate: (bool) false,
@@ -1545,7 +1548,8 @@
             StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
-          })
+          }),
+          SensitiveSpecPaths: ([]string) <nil>
         })
       },
       MustRecreate: (bool) false,
@@ -1924,7 +1928,8 @@
             StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
-          })
+          }),
+          SensitiveSpecPaths: ([]string) <nil>
         })
       },
       MustRecreate: (bool) false,
@@ -2134,7 +2139,8 @@
             StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
             SourceMeta: (*source.Meta)(<nil>),
             FieldsSourceMeta: (map[string]*source.Meta) <nil>
-          })
+          }),
+          SensitiveSpecPaths: ([]string) <nil>
         })
       },
       MustRecreate: (bool) false,
@@ -2799,7 +2805,8 @@
                 StringWithSubstitutions: (*substitutions.StringOrSubstitutions)(<nil>),
                 SourceMeta: (*source.Meta)(<nil>),
                 FieldsSourceMeta: (map[string]*source.Meta) <nil>
-              })
+              }),
+              SensitiveSpecPaths: ([]string) <nil>
             })
           },
           MustRecreate: (bool) false,

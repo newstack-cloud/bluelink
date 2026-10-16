@@ -124,6 +124,18 @@ type ResolvedResource struct {
 	Condition    *ResolvedResourceCondition  `json:"condition,omitempty"`
 	LinkSelector *schema.LinkSelector        `json:"linkSelector,omitempty"`
 	Spec         *core.MappingNode           `json:"spec"`
+	// SensitiveSpecPaths holds the spec field paths a secret reached while the resource's
+	// substitutions were resolved, in the form field changes and state mappings use
+	// ("spec.connectionString"). A field a plugin declared sensitive is visible in the
+	// schema; a field a secret was interpolated into is visible only at resolution. A secret
+	// reaching one entry marks that entry, not its parent.
+	//
+	// Array indices are positions in the resolved spec. A consumer that reorders an array,
+	// as change staging does for a schema setting SortArrayByField or IgnoreItemOrder, has
+	// to carry these marks through its own reordering: only it knows the permutation. A
+	// consumer that cannot should mark the whole array, since over-marking costs a reader
+	// something while mis-marking hides the wrong value and shows the secret.
+	SensitiveSpecPaths []string `json:"sensitiveSpecPaths,omitempty"`
 }
 
 // ResolvedResourceMetadata provides a resolved version of the metadata

@@ -28,6 +28,9 @@ type resolveContext struct {
 	// This is set to true when the `currentElementProperty` ends with ".annotations".
 	isAnnotation      bool
 	partiallyResolved any
+	// Shared with every context derived from this one, so that a secret resolved several
+	// levels down is recorded against the resolution that asked for it.
+	sensitivity *sensitivityRecord
 }
 
 func resolveContextFromParent(
@@ -44,6 +47,7 @@ func resolveContextFromParent(
 		resolveFor:             parentCtx.resolveFor,
 		partiallyResolved:      parentCtx.partiallyResolved,
 		isAnnotation:           strings.HasSuffix(currentElementProperty, ".annotations"),
+		sensitivity:            parentCtx.sensitivity,
 	}
 }
 
@@ -60,6 +64,7 @@ func resolveContextForCurrentElement(
 		resolveFor:             parentCtx.resolveFor,
 		partiallyResolved:      parentCtx.partiallyResolved,
 		isAnnotation:           false,
+		sensitivity:            parentCtx.sensitivity,
 	}
 }
 

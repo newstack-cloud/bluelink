@@ -1,0 +1,42 @@
+version: 2025-11-02
+variables:
+  dbPassword:
+    type: string
+    description: "The password for the orders database."
+    secret: true
+  environment:
+    type: string
+    description: "The environment the resources are deployed to."
+
+values:
+  adminToken:
+    type: string
+    secret: true
+    value: "token-${variables.environment}"
+
+resources:
+  ordersTable:
+    type: aws/dynamodb/table
+    metadata:
+      displayName: "Orders table for ${variables.environment}"
+      custom:
+        # Outside the spec, so it travels on the result rather than the resource.
+        auditKey: "audit-${variables.dbPassword}"
+    spec:
+      tableName: "${variables.environment}-ordersTable"
+      # Neither field is declared sensitive in the resource type's schema; one holds a
+      # secret and one does not.
+      connectionString: "postgres://user:${variables.dbPassword}@host/orders"
+      # Both reference the same secret value, which resolution memoises after the first.
+      primaryToken: "${values.adminToken}"
+      secondaryToken: "${values.adminToken}"
+      # A secret reaching a field through a function call.
+      trimmedToken: "${trim(variables.dbPassword)}"
+      replicaRegions:
+        - "eu-west-2"
+        - "key-${variables.dbPassword}"
+      # The first item resolves to none and is dropped from the resolved array, so the
+      # secret below it lands at index 0 rather than the index it occupies here.
+      backupRegions:
+        - ${coalesce(none, none)}
+        - "backup-${variables.dbPassword}"

@@ -172,7 +172,7 @@ func applyLinkProjection(
 // rooting those as though "spec" had been trimmed produces a malformed path rather than an
 // error, so the two forms are distinguished here.
 func ResourceSpecPath(fieldPath string) string {
-	if strings.HasPrefix(fieldPath, "spec.") || strings.HasPrefix(fieldPath, "spec[") {
+	if core.IsSpecFieldPath(fieldPath) {
 		return core.ReplaceSpecWithRoot(fieldPath)
 	}
 

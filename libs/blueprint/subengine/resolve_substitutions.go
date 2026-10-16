@@ -100,6 +100,11 @@ type ResolveResourceTargetInfo struct {
 type ResolveInResourceResult struct {
 	ResolvedResource *provider.ResolvedResource
 	ResolveOnDeploy  []string
+	// SensitivePaths holds the property paths a secret reached that are not the resource's
+	// own spec. This includes its description, condition and metadata, and the values and data sources
+	// resolved on the way. The spec's own paths are on the resolved resource, so that they
+	// travel with it.
+	SensitivePaths []string
 }
 
 // ResolveDataSourceTargetInfo contains information about the target of a substitution
@@ -279,6 +284,7 @@ func (r *defaultSubstitutionResolver) ResolveResourceEach(
 			currentElementName:     elementName,
 			currentElementProperty: "each",
 			disallowedElementTypes: []string{"resources", "children"},
+			sensitivity:            newSensitivityRecord(),
 		},
 	)
 	if err != nil {
@@ -304,20 +310,27 @@ func (r *defaultSubstitutionResolver) ResolveInResource(
 	resolveOnDeploy := []string{}
 
 	elementName := bpcore.ResourceElementID(resourceName)
+	sensitivity := newSensitivityRecord()
 	resolvedResource, err := r.resolveInResource(ctx, resource, &resolveContext{
 		rootElementName:    elementName,
 		currentElementName: elementName,
 		resolveFor:         resolveTargetInfo.ResolveFor,
 		partiallyResolved:  resolveTargetInfo.PartiallyResolved,
+		sensitivity:        sensitivity,
 	})
 	finalErr := handleResolveError(err, &resolveOnDeploy)
 	if finalErr != nil {
 		return nil, finalErr
 	}
 
+	if resolvedResource != nil {
+		resolvedResource.SensitiveSpecPaths = sensitivity.specPropertiesOf(elementName)
+	}
+
 	return &ResolveInResourceResult{
 		ResolvedResource: resolvedResource,
 		ResolveOnDeploy:  resolveOnDeploy,
+		SensitivePaths:   sensitivity.pathsExcludingSpecOf(elementName),
 	}, nil
 }
 
@@ -669,6 +682,7 @@ func (r *defaultSubstitutionResolver) ResolveInDataSource(
 		currentElementName: elementName,
 		resolveFor:         resolveTargetInfo.ResolveFor,
 		partiallyResolved:  resolveTargetInfo.PartiallyResolved,
+		sensitivity:        newSensitivityRecord(),
 	})
 	finalErr := handleResolveError(err, &resolveOnDeploy)
 	if finalErr != nil {
@@ -1000,6 +1014,7 @@ func (r *defaultSubstitutionResolver) ResolveInMappingNode(
 			currentElementName: currentElementName,
 			resolveFor:         resolveTargetInfo.ResolveFor,
 			partiallyResolved:  resolveTargetInfo.PartiallyResolved,
+			sensitivity:        newSensitivityRecord(),
 		},
 		/* depth */ 0,
 	)
@@ -1113,7 +1128,15 @@ func (r *defaultSubstitutionResolver) resolveInMappingNodeSlice(
 
 	for i, item := range items {
 		partiallyResolvedItem := getItem(partiallyResolvedItems, i)
-		propertyPath := fmt.Sprintf("%s[%d]", resolveCtx.currentElementProperty, i)
+		// The index an item will hold in the resolved array, which is how many items have
+		// survived so far rather than how far through the source we are. Items resolving to
+		// `none` are dropped below, and a path built from the source index would address a
+		// different item than the one it describes for everything after the first drop.
+		propertyPath := fmt.Sprintf(
+			"%s[%d]",
+			resolveCtx.currentElementProperty,
+			len(resolvedItems),
+		)
 		resolvedItem, err := r.resolveInMappingNode(
 			ctx,
 			item,
@@ -1205,6 +1228,7 @@ func (r *defaultSubstitutionResolver) ResolveInValue(
 		currentElementName: elementName,
 		resolveFor:         resolveTargetInfo.ResolveFor,
 		partiallyResolved:  resolveTargetInfo.PartiallyResolved,
+		sensitivity:        newSensitivityRecord(),
 	})
 	if err != nil {
 		finalErr := handleResolveError(err, &resolveOnDeploy)
@@ -1284,6 +1308,7 @@ func (r *defaultSubstitutionResolver) ResolveInInclude(
 		currentElementName: elementName,
 		resolveFor:         resolveTargetInfo.ResolveFor,
 		partiallyResolved:  resolveTargetInfo.PartiallyResolved,
+		sensitivity:        newSensitivityRecord(),
 	})
 	if err != nil {
 		finalErr := handleResolveError(err, &resolveOnDeploy)
@@ -1387,6 +1412,7 @@ func (r *defaultSubstitutionResolver) ResolveInExport(
 		currentElementName: elementName,
 		resolveFor:         resolveTargetInfo.ResolveFor,
 		partiallyResolved:  resolveTargetInfo.PartiallyResolved,
+		sensitivity:        newSensitivityRecord(),
 	})
 	if err != nil {
 		finalErr := handleResolveError(err, &resolveOnDeploy)
@@ -1618,6 +1644,7 @@ func (r *defaultSubstitutionResolver) ResolveSubstitution(
 			currentElementProperty: inElementProperty,
 			resolveFor:             resolveTargetInfo.ResolveFor,
 			partiallyResolved:      resolveTargetInfo.PartiallyResolved,
+			sensitivity:            newSensitivityRecord(),
 		},
 	)
 	if err != nil {
@@ -1688,7 +1715,7 @@ func (r *defaultSubstitutionResolver) resolveSubstitutionValue(
 	}
 
 	if substitutionValue.Variable != nil {
-		return r.resolveVariable(resolveCtx.currentElementName, substitutionValue.Variable)
+		return r.resolveVariable(substitutionValue.Variable, resolveCtx)
 	}
 
 	if substitutionValue.ValueReference != nil {
@@ -1822,15 +1849,23 @@ func (r *defaultSubstitutionResolver) resolveScalar(
 }
 
 func (r *defaultSubstitutionResolver) resolveVariable(
-	elementName string,
 	variable *substitutions.SubstitutionVariable,
+	resolveCtx *resolveContext,
 ) (*bpcore.MappingNode, error) {
+	// Read the declaration even when the value came from parameters: a variable supplied at
+	// deploy time is still declared secret.
+	specVar := getVariable(variable.VariableName, r.spec.Schema())
+	if specVar != nil && bpcore.BoolValueFromScalar(specVar.Secret) {
+		resolveCtx.sensitivity.record(
+			resolveCtx.currentElementName,
+			resolveCtx.currentElementProperty,
+		)
+	}
 
 	varValue := r.params.BlueprintVariable(variable.VariableName)
 	if varValue == nil {
-		specVar := getVariable(variable.VariableName, r.spec.Schema())
 		if specVar == nil {
-			return nil, errMissingVariable(elementName, variable.VariableName)
+			return nil, errMissingVariable(resolveCtx.currentElementName, variable.VariableName)
 		}
 
 		if specVar.Default != nil {
@@ -1852,6 +1887,7 @@ func (r *defaultSubstitutionResolver) resolveValue(
 ) (*bpcore.MappingNode, error) {
 	cached, hasValue := r.valueCache.Get(value.ValueName)
 	if hasValue {
+		recordSecretValueUse(cached, resolveCtx)
 		return cached.Value, nil
 	}
 
@@ -1860,6 +1896,7 @@ func (r *defaultSubstitutionResolver) resolveValue(
 		return nil, err
 	}
 
+	recordSecretValueUse(computed.ResolvedValue, resolveCtx)
 	r.valueCache.Set(value.ValueName, computed.ResolvedValue)
 
 	if len(computed.ResolveOnDeploy) > 0 {
@@ -1879,6 +1916,22 @@ func (r *defaultSubstitutionResolver) resolveValue(
 	}
 
 	return computed.ResolvedValue.Value, nil
+}
+
+// Records a value declared secret against the property referencing it.
+//
+// Recorded at the reference rather than inside the value, so that the second resource to
+// reference the same value is marked too. Resolution memoises values, so only the first
+// reference resolves one.
+func recordSecretValueUse(resolved *ResolvedValue, resolveCtx *resolveContext) {
+	if resolved == nil || !bpcore.BoolValueFromScalar(resolved.Secret) {
+		return
+	}
+
+	resolveCtx.sensitivity.record(
+		resolveCtx.currentElementName,
+		resolveCtx.currentElementProperty,
+	)
 }
 
 func (r *defaultSubstitutionResolver) computeValue(

@@ -417,6 +417,15 @@ func ExportElementID(dataSourceName string) string {
 	return fmt.Sprintf("exports.%s", dataSourceName)
 }
 
+// IsSpecFieldPath reports whether a field path addresses something inside a resource's spec,
+// as opposed to its metadata or another part of the resource.
+//
+// The bare "spec" is not a field within the spec and so is not matched; a caller that needs
+// to treat the spec root itself as inside the spec checks for it separately.
+func IsSpecFieldPath(path string) bool {
+	return strings.HasPrefix(path, "spec.") || strings.HasPrefix(path, "spec[")
+}
+
 // ElementPropertyPath generates a property path for a given element ID and property name.
 func ElementPropertyPath(elementID string, propertyName string) string {
 	if strings.HasPrefix(propertyName, "[") {

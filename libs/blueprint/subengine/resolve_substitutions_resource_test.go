@@ -24,6 +24,7 @@ const (
 	resolveInResourceTemplateFixtureName            = "resolve-in-resource-2"
 	resolveInResourceComputedWhenOmittedFixtureName = "resolve-in-resource-computed-when-omitted"
 	resolveInResourceComputedFromStateFixtureName   = "resolve-in-resource-computed-from-state"
+	resolveInResourceSensitivityFixtureName         = "resolve-in-resource-sensitivity"
 	testInstanceID                                  = "cb826a32-1052-4fde-aa6e-d449b9f50066"
 	testChildInstanceID                             = "05253564-cd77-4b92-81bc-e75f9478ec4d"
 )
@@ -35,6 +36,7 @@ func (s *SubstitutionResourceResolverTestSuite) SetupSuite() {
 		resolveInResourceTemplateFixtureName:            "__testdata/sub-resolver/resolve-in-resource-2-blueprint.yml",
 		resolveInResourceComputedWhenOmittedFixtureName: "__testdata/sub-resolver/resolve-in-resource-computed-when-omitted-blueprint.yml",
 		resolveInResourceComputedFromStateFixtureName:   "__testdata/sub-resolver/resolve-in-resource-computed-from-state-blueprint.yml",
+		resolveInResourceSensitivityFixtureName:         "__testdata/sub-resolver/resolve-in-resource-sensitivity-blueprint.yml",
 	}, &s.Suite)
 }
 

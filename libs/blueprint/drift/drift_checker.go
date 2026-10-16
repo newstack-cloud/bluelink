@@ -849,8 +849,7 @@ func filterRemovedFields(
 }
 
 func isFieldInSpec(fieldPath string) bool {
-	return strings.HasPrefix(fieldPath, "spec.") ||
-		strings.HasPrefix(fieldPath, "spec[")
+	return core.IsSpecFieldPath(fieldPath)
 }
 
 func hasChanges(
