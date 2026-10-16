@@ -1221,6 +1221,8 @@ func copyExport(
 		Type:        exportState.Type,
 		Description: exportState.Description,
 		Field:       exportState.Field,
+		Sensitive:   exportState.Sensitive,
+
 	}
 }
 

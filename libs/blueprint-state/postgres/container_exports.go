@@ -204,5 +204,6 @@ func isEmptyExport(export state.ExportState) bool {
 	return export.Value == nil &&
 		export.Field == "" &&
 		export.Type == "" &&
-		export.Description == ""
+		export.Description == "" &&
+		!export.Sensitive
 }

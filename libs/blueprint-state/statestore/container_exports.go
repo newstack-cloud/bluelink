@@ -176,8 +176,11 @@ func copyExport(export *state.ExportState) *state.ExportState {
 		return nil
 	}
 	return &state.ExportState{
-		Value: export.Value,
-		Type:  export.Type,
-		Field: export.Field,
+		Value:       export.Value,
+		Type:        export.Type,
+		Description: export.Description,
+		Field:       export.Field,
+		Sensitive:   export.Sensitive,
+
 	}
 }
