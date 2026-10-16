@@ -1,26 +1,28 @@
 #!/bin/bash
 
+repo_root="$(git rev-parse --show-toplevel)"
+
 project_changes() {
   directory=$1
-  git diff HEAD --name-only | grep "^$directory/.*"
+  git diff HEAD --name-only | grep -q "^$directory/"
 }
 
 lint_project() {
   project=$1
-  if project_changes $project > /dev/null 2>&1; then
-    project_dir="$(git rev-parse --show-toplevel)/$project"
-    cd $project_dir
-    # Every application is expected to contain a specialised shell script for linting,
-    # Each project may have its own set of files/packages to be excluded amongst other customisations.
-    if ! scripts/lint.sh; then
-      echo -e "\033[1m\033[31mFailed linting, please fix the reported issues\033[0m\n"
-      exit 1
-    else
-      echo -e "\033[1m\033[32mLinting passed, good job!\033[0m\n"
-    fi
-  else
+  if ! project_changes "$project"; then
     echo -e "\033[1m\033[34mNo changes made to source code subject to linting in $project \033[0m\n"
+    return
   fi
+
+  # In a subshell so the working directory does not leak into the next project.
+  # Every application is expected to contain a specialised shell script for linting,
+  # Each project may have its own set of files/packages to be excluded amongst other customisations.
+  if ! (cd "$repo_root/$project" && scripts/lint.sh); then
+    echo -e "\033[1m\033[31mFailed linting, please fix the reported issues\033[0m\n"
+    exit 1
+  fi
+
+  echo -e "\033[1m\033[32mLinting passed, good job!\033[0m\n"
 }
 
 lint_project libs/blueprint
