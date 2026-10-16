@@ -56,6 +56,59 @@ type ConfigFieldDefinition struct {
 	) []*Diagnostic `json:"-"`
 }
 
+// NormaliseConfigValues returns a copy of the given configuration with each value
+// converted to the scalar type its field definition declares, where that
+// conversion is lossless. Values with no declaration, and those already of the
+// declared type, are copied through unchanged.
+//
+// Call this before ValidateConfigDefinition. A whole number cannot be told from a
+// float once it has been through JSON (ScalarValue.UnmarshalJSON picks the type
+// from whether the literal text carries a "."), so a float field given 1.0
+// upstream arrives as an integer. Widening the type check instead would let that
+// integer through to AllowedValues comparison, which is type-strict, and to the
+// SDK float validators, which require a float: the value would pass the type
+// check and then be rejected for not being a float. Converting here keeps one
+// notion of a field's type.
+//
+// Dynamic field names are handled, so a per-resource key is normalised from the
+// declaration its name matches.
+func NormaliseConfigValues(
+	config map[string]*ScalarValue,
+	configDefinition *ConfigDefinition,
+) (map[string]*ScalarValue, error) {
+	normalised := map[string]*ScalarValue{}
+	maps.Copy(normalised, config)
+
+	for fieldDefName, fieldDef := range configDefinition.Fields {
+		configValues, _, err := getConfigValues(fieldDefName, config)
+		if err != nil {
+			return nil, err
+		}
+
+		for configName, configValue := range configValues {
+			if converted, ok := convertScalarTo(configValue, fieldDef.Type); ok {
+				normalised[configName] = converted
+			}
+		}
+	}
+
+	return normalised, nil
+}
+
+// Only integer to float is lossless and unambiguous. Float to integer would
+// discard a fraction, and anything involving a string or a bool would be a
+// reinterpretation rather than a conversion.
+func convertScalarTo(value *ScalarValue, fieldType ScalarType) (*ScalarValue, bool) {
+	if fieldType != ScalarTypeFloat || !IsScalarInt(value) {
+		return nil, false
+	}
+
+	converted := ScalarFromFloat(float64(IntValueFromScalar(value)))
+	converted.SourceMeta = value.SourceMeta
+
+	return converted, true
+}
+
 // PopulateDefaultConfigValues populates the default values
 // for the given configuration based on the provided config definition.
 // This is used to ensure that the default values are set
@@ -306,7 +359,11 @@ func getConfigValues(
 		return configValues, false, nil
 	}
 
-	patternString := CreatePatternForDynamicFieldName(fieldDefName, -1)
+	// Anchored to match the entire config key, as the link annotation equivalent
+	// in libs/blueprint/validation already does. Unanchored, a declaration for
+	// "aws.vpc.<vpc>.cidrBlock" also matched "aws.vpc.appVpc.cidrBlocks", so a
+	// mistyped key was accepted and then silently ignored by the plugin.
+	patternString := "^" + CreatePatternForDynamicFieldName(fieldDefName, -1) + "$"
 	pattern, err := regexp.Compile(patternString)
 	if err != nil {
 		return nil, false, err
