@@ -17,5 +17,6 @@
   }),
   Type: (schema.ExportType) (len=6) "string",
   Description: (string) "",
-  Field: (string) (len=21) "variables.environment"
+  Field: (string) (len=21) "variables.environment",
+  Sensitive: (bool) false
 }
