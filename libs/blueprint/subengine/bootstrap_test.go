@@ -33,6 +33,20 @@ func newTestAWSProvider() provider.Provider {
 	}
 }
 
+// Holds the resource type that declares sensitivity on containers rather than on the leaves
+// holding the values.
+func newTestExampleProvider() provider.Provider {
+	return &internal.ProviderMock{
+		NamespaceValue: "example",
+		Resources: map[string]provider.Resource{
+			"example/sensitiveContainer": &internal.ExampleSensitiveContainerResource{},
+		},
+		Links:               map[string]provider.Link{},
+		CustomVariableTypes: map[string]provider.CustomVariableType{},
+		DataSources:         map[string]provider.DataSource{},
+	}
+}
+
 type SubResolverTestContainer struct {
 	specFixtureFiles               map[string]string
 	specFixtureSchemas             map[string]*schema.Blueprint
@@ -69,7 +83,8 @@ func (s *SubResolverTestContainer) populateSpecFixtureSchemas(
 func (s *SubResolverTestContainer) populateDependencies() {
 	s.stateContainer = memstate.NewMemoryStateContainer()
 	providers := map[string]provider.Provider{
-		"aws": newTestAWSProvider(),
+		"aws":     newTestAWSProvider(),
+		"example": newTestExampleProvider(),
 		"core": providerhelpers.NewCoreProvider(
 			s.stateContainer.Links(),
 			core.BlueprintInstanceIDFromContext,

@@ -6,6 +6,8 @@ import (
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/internal"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -30,6 +32,32 @@ func (s *SubstitutionSensitivityTestSuite) SetupTest() {
 func (s *SubstitutionSensitivityTestSuite) resolveOrdersTable() *ResolveInResourceResult {
 	blueprint := s.specFixtureSchemas[resolveInResourceSensitivityFixtureName]
 	spec := internal.NewBlueprintSpecMock(blueprint)
+
+	// The referenced resource has to be resolved before anything referring to it, which the
+	// container guarantees by dependency order; here it is primed directly.
+	s.resourceCache.Set("parameterTree", &provider.ResolvedResource{
+		Type: &schema.ResourceTypeWrapper{Value: "example/sensitiveContainer"},
+		Spec: &core.MappingNode{
+			Fields: map[string]*core.MappingNode{
+				"name": core.MappingNodeFromString("orders-parameters"),
+				"secureValues": {
+					Fields: map[string]*core.MappingNode{
+						"dbPassword": core.MappingNodeFromString("super-secret-password"),
+					},
+				},
+				"credentials": {
+					Fields: map[string]*core.MappingNode{
+						"username": core.MappingNodeFromString("orders-service"),
+						"nested": {
+							Fields: map[string]*core.MappingNode{
+								"token": core.MappingNodeFromString("nested-token"),
+							},
+						},
+					},
+				},
+			},
+		},
+	})
 
 	subResolver := NewDefaultSubstitutionResolver(
 		&Registries{
@@ -112,6 +140,60 @@ func (s *SubstitutionSensitivityTestSuite) Test_an_index_counts_the_items_that_s
 		"the mark points at an index the resolved array does not hold",
 	)
 	s.Assert().NotContains(result.ResolvedResource.SensitiveSpecPaths, "spec.backupRegions[1]")
+}
+
+func (s *SubstitutionSensitivityTestSuite) Test_referencing_a_sensitive_field_marks_the_referencing_field() {
+	result := s.resolveOrdersTable()
+
+	s.Assert().Contains(result.ResolvedResource.SensitiveSpecPaths, "spec.referencedPassword")
+	s.Assert().Contains(result.ResolvedResource.SensitiveSpecPaths, "spec.referencedUsername")
+	s.Assert().Contains(
+		result.ResolvedResource.SensitiveSpecPaths,
+		"spec.referencedNestedToken",
+		"sensitivity was kept only from the nearest ancestor rather than accumulated",
+	)
+	s.Assert().NotContains(
+		result.ResolvedResource.SensitiveSpecPaths,
+		"spec.referencedName",
+		"a reference to a field declaring nothing was marked",
+	)
+}
+
+func (s *SubstitutionSensitivityTestSuite) Test_referencing_a_sensitive_data_source_export_marks_the_field() {
+	result := s.resolveOrdersTable()
+
+	s.Assert().Contains(result.ResolvedResource.SensitiveSpecPaths, "spec.vpcPrivateKey")
+	s.Assert().NotContains(
+		result.ResolvedResource.SensitiveSpecPaths,
+		"spec.vpcId",
+		"an export the plugin declares nothing about was marked",
+	)
+}
+
+func (s *SubstitutionSensitivityTestSuite) Test_an_aliased_export_of_a_sensitive_field_marks_the_field() {
+	result := s.resolveOrdersTable()
+
+	s.Assert().Contains(result.ResolvedResource.SensitiveSpecPaths, "spec.aliasedKey")
+}
+
+func (s *SubstitutionSensitivityTestSuite) Test_an_export_named_after_a_sensitive_field_marks_the_field() {
+	result := s.resolveOrdersTable()
+
+	s.Assert().Contains(
+		result.ResolvedResource.SensitiveSpecPaths,
+		"spec.secretArn",
+		"the declaration was read through the alias rather than the field a read serves",
+	)
+}
+
+func (s *SubstitutionSensitivityTestSuite) Test_a_deferred_data_source_still_marks_the_field_reading_it() {
+	result := s.resolveOrdersTable()
+
+	s.Assert().Contains(
+		result.ResolvedResource.SensitiveSpecPaths,
+		"spec.deferredKey",
+		"a data source deferred to deployment left its reader unmarked at change staging",
+	)
 }
 
 // A value declared secret is a declared source in the same way a secret variable is, and

@@ -59,7 +59,7 @@ func specPropertyPath(fields ...string) *substitutions.SubstitutionResourcePrope
 }
 
 func TestGetResourceSpecPropertyDefinitionReportsComputedForAMapKey(t *testing.T) {
-	schema, computedOnPath, err := getResourceSpecPropertyDefinition(
+	definition, err := getResourceSpecPropertyDefinition(
 		computedMapSpecDefinition(),
 		specPropertyPath("idsByName", "anyKeyTheAuthorChose"),
 		"exampleResourceType",
@@ -67,10 +67,10 @@ func TestGetResourceSpecPropertyDefinitionReportsComputedForAMapKey(t *testing.T
 	)
 
 	require.NoError(t, err)
-	require.Equal(t, provider.ResourceDefinitionsSchemaTypeString, schema.Type)
+	require.Equal(t, provider.ResourceDefinitionsSchemaTypeString, definition.Schema.Type)
 	require.True(
 		t,
-		computedOnPath,
+		definition.ComputedOnPath,
 		"a key of a computed map is not known until the resource is deployed",
 	)
 }
@@ -78,7 +78,7 @@ func TestGetResourceSpecPropertyDefinitionReportsComputedForAMapKey(t *testing.T
 // The field itself has always reported computed; this is the case that already worked and
 // must keep working.
 func TestGetResourceSpecPropertyDefinitionReportsComputedForTheMapItself(t *testing.T) {
-	_, computedOnPath, err := getResourceSpecPropertyDefinition(
+	definition, err := getResourceSpecPropertyDefinition(
 		computedMapSpecDefinition(),
 		specPropertyPath("idsByName"),
 		"exampleResourceType",
@@ -86,7 +86,7 @@ func TestGetResourceSpecPropertyDefinitionReportsComputedForTheMapItself(t *test
 	)
 
 	require.NoError(t, err)
-	require.True(t, computedOnPath)
+	require.True(t, definition.ComputedOnPath)
 }
 
 // Arrays share the same shape of schema for their items, so an index into a computed
@@ -96,7 +96,7 @@ func TestGetResourceSpecPropertyDefinitionReportsComputedForAnArrayIndex(t *test
 	property := specPropertyPath("computedIds")
 	property.Path = append(property.Path, &substitutions.SubstitutionPathItem{ArrayIndex: &index})
 
-	_, computedOnPath, err := getResourceSpecPropertyDefinition(
+	definition, err := getResourceSpecPropertyDefinition(
 		computedMapSpecDefinition(),
 		property,
 		"exampleResourceType",
@@ -106,7 +106,7 @@ func TestGetResourceSpecPropertyDefinitionReportsComputedForAnArrayIndex(t *test
 	require.NoError(t, err)
 	require.True(
 		t,
-		computedOnPath,
+		definition.ComputedOnPath,
 		"an entry of a computed array is not known until the resource is deployed",
 	)
 }
@@ -114,7 +114,7 @@ func TestGetResourceSpecPropertyDefinitionReportsComputedForAnArrayIndex(t *test
 // A field the author supplies is resolvable at change staging and must not be deferred,
 // or every reference would wait for a deploy that has nothing to resolve.
 func TestGetResourceSpecPropertyDefinitionDoesNotReportComputedForAuthoredFields(t *testing.T) {
-	_, computedOnPath, err := getResourceSpecPropertyDefinition(
+	definition, err := getResourceSpecPropertyDefinition(
 		computedMapSpecDefinition(),
 		specPropertyPath("name"),
 		"exampleResourceType",
@@ -122,5 +122,5 @@ func TestGetResourceSpecPropertyDefinitionDoesNotReportComputedForAuthoredFields
 	)
 
 	require.NoError(t, err)
-	require.False(t, computedOnPath)
+	require.False(t, definition.ComputedOnPath)
 }

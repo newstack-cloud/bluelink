@@ -1481,6 +1481,17 @@ func (r *ExampleSensitiveContainerResource) GetSpecDefinition(
 							"username": {
 								Type: provider.ResourceDefinitionsSchemaTypeString,
 							},
+							"nested": {
+								Type: provider.ResourceDefinitionsSchemaTypeObject,
+								Attributes: map[string]*provider.ResourceDefinitionsSchema{
+									// Two levels below the field declaring sensitivity, so a
+									// walk keeping only the nearest ancestor's flag reports
+									// it as not sensitive.
+									"token": {
+										Type: provider.ResourceDefinitionsSchemaTypeString,
+									},
+								},
+							},
 						},
 						Sensitive: true,
 					},

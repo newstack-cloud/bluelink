@@ -14,7 +14,60 @@ values:
     secret: true
     value: "token-${variables.environment}"
 
+datasources:
+  network:
+    type: aws/vpc
+    filter:
+      field: tags
+      operator: "not contains"
+      search: "retired"
+    exports:
+      vpcId:
+        type: string
+      # Declared sensitive by the data source's spec schema, not here.
+      privateKey:
+        type: string
+      # Reads a sensitive field under another name, so the declaration has to be found
+      # through the alias.
+      aliasedPrivateKey:
+        type: string
+        aliasFor: privateKey
+      # Named after a field the plugin returns that is sensitive, while declaring an alias
+      # to one that is not. A read takes the field matching the name, so this serves the
+      # secret; following the alias instead would report it as safe.
+      secretArn:
+        type: string
+        aliasFor: vpcId
+
+  # Its filter reads a computed field, so its own substitutions can only resolve at deploy
+  # time and resolution returns it alongside that deferral.
+  deferredNetwork:
+    type: aws/vpc
+    filter:
+      field: tags
+      operator: "not contains"
+      search: "${auditTable.spec.id}"
+    exports:
+      privateKey:
+        type: string
+
 resources:
+  auditTable:
+    type: aws/dynamodb/table
+    spec:
+      region: "eu-west-2"
+
+  parameterTree:
+    type: example/sensitiveContainer
+    spec:
+      name: "orders-parameters"
+      secureValues:
+        dbPassword: "${variables.dbPassword}"
+      credentials:
+        username: "orders-service"
+        nested:
+          token: "nested-token"
+
   ordersTable:
     type: aws/dynamodb/table
     metadata:
@@ -30,6 +83,19 @@ resources:
       # Both reference the same secret value, which resolution memoises after the first.
       primaryToken: "${values.adminToken}"
       secondaryToken: "${values.adminToken}"
+      # References into another resource. All but the last address fields inside containers
+      # that resource declares sensitive; the last a field it declares nothing about.
+      referencedPassword: "${resources.parameterTree.spec.secureValues.dbPassword}"
+      referencedUsername: "${resources.parameterTree.spec.credentials.username}"
+      # Two levels below the field declaring sensitivity.
+      referencedNestedToken: "${resources.parameterTree.spec.credentials.nested.token}"
+      referencedName: "${resources.parameterTree.spec.name}"
+      # A data source export the plugin declares sensitive, and one it does not.
+      vpcPrivateKey: "${datasources.network.privateKey}"
+      vpcId: "${datasources.network.vpcId}"
+      aliasedKey: "${datasources.network.aliasedPrivateKey}"
+      secretArn: "${datasources.network.secretArn}"
+      deferredKey: "${datasources.deferredNetwork.privateKey}"
       # A secret reaching a field through a function call.
       trimmedToken: "${trim(variables.dbPassword)}"
       replicaRegions:

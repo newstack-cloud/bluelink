@@ -78,14 +78,33 @@
         })
       }
     }),
-    Exports: (map[string]*provider.ResolvedDataSourceFieldExport) (len=2) {
+    Exports: (map[string]*provider.ResolvedDataSourceFieldExport) (len=4) {
+      (string) (len=10) "privateKey": (*provider.ResolvedDataSourceFieldExport)({
+        Type: (*schema.DataSourceFieldTypeWrapper)({
+          Value: (schema.DataSourceFieldType) (len=6) "string",
+          SourceMeta: (*source.Meta)(<nil>)
+        }),
+        AliasFor: (*core.ScalarValue)(<nil>),
+        Description: (*core.MappingNode)(<nil>),
+        Sensitive: (bool) true
+      }),
+      (string) (len=9) "secretArn": (*provider.ResolvedDataSourceFieldExport)({
+        Type: (*schema.DataSourceFieldTypeWrapper)({
+          Value: (schema.DataSourceFieldType) (len=6) "string",
+          SourceMeta: (*source.Meta)(<nil>)
+        }),
+        AliasFor: (*core.ScalarValue)(<nil>),
+        Description: (*core.MappingNode)(<nil>),
+        Sensitive: (bool) true
+      }),
       (string) (len=9) "subnetIds": (*provider.ResolvedDataSourceFieldExport)({
         Type: (*schema.DataSourceFieldTypeWrapper)({
           Value: (schema.DataSourceFieldType) (len=5) "array",
           SourceMeta: (*source.Meta)(<nil>)
         }),
         AliasFor: (*core.ScalarValue)(<nil>),
-        Description: (*core.MappingNode)(<nil>)
+        Description: (*core.MappingNode)(<nil>),
+        Sensitive: (bool) false
       }),
       (string) (len=5) "vpcId": (*provider.ResolvedDataSourceFieldExport)({
         Type: (*schema.DataSourceFieldTypeWrapper)({
@@ -93,7 +112,8 @@
           SourceMeta: (*source.Meta)(<nil>)
         }),
         AliasFor: (*core.ScalarValue)(<nil>),
-        Description: (*core.MappingNode)(<nil>)
+        Description: (*core.MappingNode)(<nil>),
+        Sensitive: (bool) false
       })
     },
     Description: (*core.MappingNode)({

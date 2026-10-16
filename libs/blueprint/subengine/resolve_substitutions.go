@@ -921,6 +921,14 @@ func (r *defaultSubstitutionResolver) resolveInDataSourceExports(
 		)
 	}
 
+	// The spec declares which fields hold secrets, and an explicitly declared export does
+	// not repeat the declaration, so the spec is consulted once here rather than for every
+	// substitution that reads an export.
+	specFields, err := r.dataSourceSpecFields(ctx, dataSourceType)
+	if err != nil {
+		return nil, err
+	}
+
 	for exportName, export := range exports.Values {
 
 		resolvedDescription, err := r.resolveSubstitutions(
@@ -940,6 +948,7 @@ func (r *defaultSubstitutionResolver) resolveInDataSourceExports(
 			Type:        export.Type,
 			AliasFor:    export.AliasFor,
 			Description: resolvedDescription,
+			Sensitive:   exportFieldSensitive(specFields, exportName, export.AliasFor),
 		}
 	}
 
@@ -952,10 +961,15 @@ func (r *defaultSubstitutionResolver) resolveInDataSourceExports(
 	return resolvedExports, nil
 }
 
-func (r *defaultSubstitutionResolver) resolveDataSourceExportsFromSpec(
+// The spec schema for each field a data source can export.
+//
+// An absent or empty definition is returned as no fields rather than an error. Validation
+// requires one for every data source, so a blueprint reaching here without one has already
+// failed, and the caller that needs it to be present says so itself.
+func (r *defaultSubstitutionResolver) dataSourceSpecFields(
 	ctx context.Context,
 	dataSourceType string,
-) (map[string]*provider.ResolvedDataSourceFieldExport, error) {
+) (map[string]*provider.DataSourceSpecSchema, error) {
 	specDefOutput, err := r.dataSourceRegistry.GetSpecDefinition(
 		ctx,
 		dataSourceType,
@@ -974,9 +988,54 @@ func (r *defaultSubstitutionResolver) resolveDataSourceExportsFromSpec(
 		)
 	}
 
-	if specDefOutput == nil ||
-		specDefOutput.SpecDefinition == nil ||
-		len(specDefOutput.SpecDefinition.Fields) == 0 {
+	if specDefOutput == nil || specDefOutput.SpecDefinition == nil {
+		return nil, nil
+	}
+
+	return specDefOutput.SpecDefinition.Fields, nil
+}
+
+// An export inherits the declaration of the data source field it reads.
+//
+// Which field that is follows the precedence a read uses, not the one validation uses, a read
+// takes the field matching the export's own name and consults aliasFor only when there is no
+// such field (getDataSourceFieldByPropOrAlias). Validation checks the aliased field instead,
+// so an export whose name happens to match a field the plugin returns reads one field and
+// validates another. Following the read is what keeps the flag describing the value that is
+// actually served.
+//
+// Presence in the spec stands in for presence in the fetched data, which is the only signal
+// available before the fetch. A plugin returning a field it does not declare is outside what
+// this can see.
+func exportFieldSensitive(
+	specFields map[string]*provider.DataSourceSpecSchema,
+	exportName string,
+	aliasFor *bpcore.ScalarValue,
+) bool {
+	if field, found := specFields[exportName]; found {
+		return field.Sensitive
+	}
+
+	if aliasOf := bpcore.StringValueFromScalar(aliasFor); aliasOf != "" {
+		field, found := specFields[aliasOf]
+
+		return found && field.Sensitive
+	}
+
+	return false
+}
+
+func (r *defaultSubstitutionResolver) resolveDataSourceExportsFromSpec(
+	ctx context.Context,
+	dataSourceType string,
+) (map[string]*provider.ResolvedDataSourceFieldExport, error) {
+	specFields, err := r.dataSourceSpecFields(ctx, dataSourceType)
+	if err != nil {
+		return nil, err
+	}
+
+	// Exporting every field requires knowing what they are, unlike an explicit export list.
+	if len(specFields) == 0 {
 		return nil, fmt.Errorf(
 			"data source spec definition for %s is either not set or has no fields",
 			dataSourceType,
@@ -984,13 +1043,14 @@ func (r *defaultSubstitutionResolver) resolveDataSourceExportsFromSpec(
 	}
 
 	resolvedExports := map[string]*provider.ResolvedDataSourceFieldExport{}
-	for exportName, exportSchema := range specDefOutput.SpecDefinition.Fields {
+	for exportName, exportSchema := range specFields {
 		resolvedExports[exportName] = &provider.ResolvedDataSourceFieldExport{
 			// There is one-to-one mapping between the data source export schema
 			// field type and the data source field export type.
 			Type: &schema.DataSourceFieldTypeWrapper{
 				Value: schema.DataSourceFieldType(exportSchema.Type),
 			},
+			Sensitive: exportSchema.Sensitive,
 		}
 	}
 
@@ -2030,6 +2090,21 @@ func (r *defaultSubstitutionResolver) resolveDataSourceProperty(
 	resolveCtx *resolveContext,
 ) (*bpcore.MappingNode, error) {
 	resolvedDataSource, err := r.resolveDataSource(ctx, dataSourceProperty, resolveCtx)
+
+	// Recorded from the export's declaration on the resolved data source, so a cache hit
+	// below still marks the field referencing it.
+	//
+	// Recorded before the error is handled, because a data source whose own substitutions
+	// must wait for deployment is returned alongside that error, and the field referencing
+	// its export holds a secret either way. Handling the error first would mark the field at
+	// deploy time and not at change staging, where the resource path marks it in both.
+	if dataSourceExportSensitive(resolvedDataSource, dataSourceProperty.FieldName) {
+		resolveCtx.sensitivity.record(
+			resolveCtx.currentElementName,
+			resolveCtx.currentElementProperty,
+		)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -2064,6 +2139,19 @@ func (r *defaultSubstitutionResolver) resolveDataSourceProperty(
 		dataOutput.Data,
 		dataSourceProperty,
 	)
+}
+
+func dataSourceExportSensitive(
+	resolvedDataSource *provider.ResolvedDataSource,
+	fieldName string,
+) bool {
+	if resolvedDataSource == nil {
+		return false
+	}
+
+	export, found := resolvedDataSource.Exports[fieldName]
+
+	return found && export != nil && export.Sensitive
 }
 
 func extractDataSourceProperty(
@@ -2179,25 +2267,30 @@ func (r *defaultSubstitutionResolver) resolveResourceProperty(
 	return nil, errInvalidResourcePropertyPath(resolveCtx.currentElementName, resourceProperty)
 }
 
-func (r *defaultSubstitutionResolver) resolveResourceSpecProperty(
+// The schema of the field a reference addresses, from the referenced resource type's spec
+// definition, along with what the fields above it declared.
+//
+// Sensitivity is recorded here rather than by the caller, because this is where it becomes
+// known and because it holds whether or not the value can be resolved.
+// A reference to a computed field defers to deployment,
+// and the field referencing it is sensitive either way.
+func (r *defaultSubstitutionResolver) referencedSpecPropertyDefinition(
 	ctx context.Context,
 	prop *substitutions.SubstitutionResourceProperty,
 	resolveCtx *resolveContext,
-) (*bpcore.MappingNode, error) {
-
+) (*specPropertyDefinition, error) {
 	blueprintResource := r.spec.ResourceSchema(prop.ResourceName)
 	if blueprintResource == nil {
 		return nil, errReferencedResourceMissing(resolveCtx.currentElementName, prop.ResourceName)
 	}
 
 	resourceType := string(blueprintResource.Type.Value)
-	providerNamespace := provider.ExtractProviderFromItemType(resourceType)
 	output, err := r.resourceRegistry.GetSpecDefinition(
 		ctx,
 		resourceType,
 		&provider.ResourceGetSpecDefinitionInput{
 			ProviderContext: provider.NewProviderContextFromParams(
-				providerNamespace,
+				provider.ExtractProviderFromItemType(resourceType),
 				r.params,
 			),
 		},
@@ -2214,7 +2307,7 @@ func (r *defaultSubstitutionResolver) resolveResourceSpecProperty(
 		)
 	}
 
-	definition, computedOnPath, err := getResourceSpecPropertyDefinition(
+	propertyDefinition, err := getResourceSpecPropertyDefinition(
 		output.SpecDefinition,
 		prop,
 		resourceType,
@@ -2224,7 +2317,30 @@ func (r *defaultSubstitutionResolver) resolveResourceSpecProperty(
 		return nil, err
 	}
 
-	if computedOnPath && resolveCtx.resolveFor == ResolveForChangeStaging {
+	if propertyDefinition.SensitiveOnPath {
+		resolveCtx.sensitivity.record(
+			resolveCtx.currentElementName,
+			resolveCtx.currentElementProperty,
+		)
+	}
+
+	return propertyDefinition, nil
+}
+
+func (r *defaultSubstitutionResolver) resolveResourceSpecProperty(
+	ctx context.Context,
+	prop *substitutions.SubstitutionResourceProperty,
+	resolveCtx *resolveContext,
+) (*bpcore.MappingNode, error) {
+
+	propertyDefinition, err := r.referencedSpecPropertyDefinition(ctx, prop, resolveCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	definition := propertyDefinition.Schema
+
+	if propertyDefinition.ComputedOnPath && resolveCtx.resolveFor == ResolveForChangeStaging {
 		// For update change staging, the current value of the computed field is
 		// resolved from the existing instance state (best-effort) so that change
 		// staging compares concrete values instead of reporting phantom

@@ -209,12 +209,23 @@ func handleCollectResolveError(err error, resolveOnDeployErrs *[]*resolveOnDeplo
 	return err
 }
 
+// What a walk down a referenced resource's spec schema found: the schema at the path, and
+// two flags the field either declares itself or inherits from the fields above it.
+type specPropertyDefinition struct {
+	Schema *provider.ResourceDefinitionsSchema
+	// Set when the field or anything above it is computed by the provider.
+	ComputedOnPath bool
+	// Set when the field or anything above it is declared sensitive, so a field referencing
+	// it holds a secret.
+	SensitiveOnPath bool
+}
+
 func getResourceSpecPropertyDefinition(
 	specDefinition *provider.ResourceSpecDefinition,
 	property *substitutions.SubstitutionResourceProperty,
 	resourceType string,
 	resolveCtx *resolveContext,
-) (*provider.ResourceDefinitionsSchema, bool, error) {
+) (*specPropertyDefinition, error) {
 	finalProperty, err := getFinalResourceSpecProperty(
 		property,
 		specDefinition,
@@ -222,11 +233,15 @@ func getResourceSpecPropertyDefinition(
 		resolveCtx,
 	)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	current := specDefinition.Schema
 	pathExists := true
+	// A plugin declares sensitivity on the field it thinks of as secret, which for a map or
+	// object of secrets is the container, so a reference into one reads a secret even though
+	// the entry schema carries no flag of its own.
+	sensitiveOnPath := false
 	// A computed field's contents are equally unknown until it is deployed, so crossing
 	// one on the way down makes everything below it computed too. The schema for a map's
 	// values or an array's items is shared by every entry and carries no Computed flag of
@@ -237,6 +252,7 @@ func getResourceSpecPropertyDefinition(
 	for pathExists && current != nil && i < len(finalProperty.Path) {
 		pathItem := finalProperty.Path[i]
 		computedOnPath = computedOnPath || current.Computed
+		sensitiveOnPath = sensitiveOnPath || current.Sensitive
 		if pathItem.FieldName != "" &&
 			current.Type == provider.ResourceDefinitionsSchemaTypeObject &&
 			current.Attributes != nil {
@@ -257,14 +273,18 @@ func getResourceSpecPropertyDefinition(
 	}
 
 	if !pathExists || current == nil {
-		return nil, false, errInvalidResourceSpecProperty(
+		return nil, errInvalidResourceSpecProperty(
 			resolveCtx.currentElementName,
 			finalProperty,
 			resourceType,
 		)
 	}
 
-	return current, computedOnPath || current.Computed, nil
+	return &specPropertyDefinition{
+		Schema:          current,
+		ComputedOnPath:  computedOnPath || current.Computed,
+		SensitiveOnPath: sensitiveOnPath || current.Sensitive,
+	}, nil
 }
 
 func getFinalResourceSpecProperty(

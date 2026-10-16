@@ -148,6 +148,9 @@ type ResolvedDataSourceFieldExport struct {
 	Type        *schema.DataSourceFieldTypeWrapper `json:"type"`
 	AliasFor    *core.ScalarValue                  `json:"aliasFor,omitempty"`
 	Description *core.MappingNode                  `json:"description,omitempty"`
+	// Sensitive carries the declaration from the data source field's spec schema, so a
+	// substitution reading the export does not need to fetch the spec definition again.
+	Sensitive bool `json:"sensitive,omitempty"`
 }
 
 // DataSourceFetchInput provides the input required to fetch

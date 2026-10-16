@@ -28,6 +28,14 @@ func (d *VPCDataSource) GetSpecDefinition(
 						Type: provider.DataSourceSpecTypeString,
 					},
 				},
+				"privateKey": {
+					Type:      provider.DataSourceSpecTypeString,
+					Sensitive: true,
+				},
+				"secretArn": {
+					Type:      provider.DataSourceSpecTypeString,
+					Sensitive: true,
+				},
 			},
 		},
 	}, nil
@@ -40,11 +48,23 @@ func (d *VPCDataSource) Fetch(
 	vpc := "vpc-12345678"
 	subnet1 := "subnet-12345678"
 	subnet2 := "subnet-87654321"
+	privateKey := "vpc-private-key"
+	secretArn := "arn:aws:secretsmanager:eu-west-2:123456789012:secret:vpc"
 	return &provider.DataSourceFetchOutput{
 		Data: map[string]*core.MappingNode{
 			"vpcId": {
 				Scalar: &core.ScalarValue{
 					StringValue: &vpc,
+				},
+			},
+			"privateKey": {
+				Scalar: &core.ScalarValue{
+					StringValue: &privateKey,
+				},
+			},
+			"secretArn": {
+				Scalar: &core.ScalarValue{
+					StringValue: &secretArn,
 				},
 			},
 			"subnetIds": {
