@@ -1,0 +1,59 @@
+version: 2025-11-02
+variables:
+  dbPassword:
+    type: string
+    secret: true
+
+  environment:
+    type: string
+
+values:
+  adminToken:
+    type: string
+    secret: true
+    value: "token-${variables.environment}"
+
+  # One field holds a secret and one does not. Both are recorded against this value while it
+  # resolves, so an export reading only the plain field must not be marked from its sibling.
+  connection:
+    type: object
+    value:
+      host: "db.${variables.environment}.example.com"
+      password: "${variables.dbPassword}"
+
+resources:
+  ordersFunction:
+    type: aws/lambda2/function
+    spec:
+      # Nothing in the schema says this is sensitive, the secret reaches it by interpolation.
+      handler: "src/orders-${variables.dbPassword}.handler"
+
+exports:
+  environment:
+    type: string
+    field: variables.environment
+    description: "The environment the blueprint deploys to."
+
+  dbPassword:
+    type: string
+    field: variables.dbPassword
+
+  adminToken:
+    type: string
+    field: values.adminToken
+
+  connectionHost:
+    type: string
+    field: values.connection.host
+
+  connectionPassword:
+    type: string
+    field: values.connection.password
+
+  functionHandler:
+    type: string
+    field: resources.ordersFunction.spec.handler
+
+  functionId:
+    type: string
+    field: resources.ordersFunction.spec.id

@@ -1324,7 +1324,8 @@
       RemovedFields: ([]string) (len=1) {
         (string) (len=49) "metadata.annotations[\"aws.dynamodb.legacy.flag1\"]"
       },
-      UnchangedFields: ([]string) {
+      UnchangedFields: ([]string) (len=1) {
+        (string) (len=20) "spec.tableNameSuffix"
       },
       LinkOwnedFields: (map[string]string) <nil>,
       UnappliedLinkFields: ([]provider.UnappliedLinkField) <nil>,
@@ -2193,7 +2194,8 @@
       RemovedFields: ([]string) (len=1) {
         (string) (len=49) "metadata.annotations[\"aws.dynamodb.legacy.flag1\"]"
       },
-      UnchangedFields: ([]string) {
+      UnchangedFields: ([]string) (len=1) {
+        (string) (len=20) "spec.tableNameSuffix"
       },
       LinkOwnedFields: (map[string]string) <nil>,
       UnappliedLinkFields: ([]provider.UnappliedLinkField) <nil>,

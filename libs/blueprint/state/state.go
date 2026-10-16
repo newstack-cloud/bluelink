@@ -678,6 +678,12 @@ type ExportState struct {
 	// Field holds the path of a field in a blueprint element
 	// that should be exported.
 	Field string `json:"field"`
+	// Sensitive is true when the exported value holds a secret, either because the field it
+	// exports is declared sensitive or because a secret was interpolated into it.
+	//
+	// The value is still served as-is, since exports exist to be consumed; the flag only
+	// tells a client to redact it when showing it to a person.
+	Sensitive bool `json:"sensitive,omitempty"`
 }
 
 // InstanceStatusInfo holds information about the status of a blueprint instance

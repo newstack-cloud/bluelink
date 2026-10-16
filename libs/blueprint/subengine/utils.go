@@ -325,6 +325,22 @@ func getFinalResourceName(property *substitutions.SubstitutionResourceProperty) 
 	)
 }
 
+// Renders a reference's path in the same form resolution records properties in, dot
+// notation for identifier-style names and bracket notation otherwise, so a reference can be
+// matched against what was recorded.
+func renderReferencePath(root string, pathItems []*substitutions.SubstitutionPathItem) string {
+	path := root
+	for _, pathItem := range pathItems {
+		if pathItem.ArrayIndex != nil {
+			path = fmt.Sprintf("%s[%d]", path, *pathItem.ArrayIndex)
+		} else {
+			path = substitutions.RenderFieldPath(path, pathItem.FieldName)
+		}
+	}
+
+	return path
+}
+
 func getResourceSpecPropertyValue(
 	resolvedResource *provider.ResolvedResource,
 	property *substitutions.SubstitutionResourceProperty,

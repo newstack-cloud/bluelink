@@ -176,5 +176,6 @@
     })
   }),
   ResolveOnDeploy: ([]string) {
-  }
+  },
+  SensitivePaths: ([]string) <nil>
 })

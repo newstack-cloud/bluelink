@@ -109,6 +109,20 @@ func (r *DynamoDBTableResource) GetSpecDefinition(
 						Type:                provider.ResourceDefinitionsSchemaTypeString,
 						ComputedWhenOmitted: true,
 					},
+					// Exists so sensitivity path matching has a field whose name extends
+					// another's. A prefix test that does not stop at a separator would read
+					// a mark on "tableName" as covering this too.
+					"tableNameSuffix": {
+						Type: provider.ResourceDefinitionsSchemaTypeString,
+					},
+					// Exists so a reference into an array can be matched against a recorded
+					// index, which counts the items that survived resolution.
+					"replicaRegions": {
+						Type: provider.ResourceDefinitionsSchemaTypeArray,
+						Items: &provider.ResourceDefinitionsSchema{
+							Type: provider.ResourceDefinitionsSchemaTypeString,
+						},
+					},
 					"region": {
 						Type: provider.ResourceDefinitionsSchemaTypeString,
 					},

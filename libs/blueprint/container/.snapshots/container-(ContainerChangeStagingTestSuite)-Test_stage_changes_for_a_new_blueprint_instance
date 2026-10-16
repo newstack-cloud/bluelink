@@ -584,7 +584,8 @@
       },
       RemovedFields: ([]string) {
       },
-      UnchangedFields: ([]string) {
+      UnchangedFields: ([]string) (len=1) {
+        (string) (len=20) "spec.tableNameSuffix"
       },
       LinkOwnedFields: (map[string]string) <nil>,
       UnappliedLinkFields: ([]provider.UnappliedLinkField) <nil>,
@@ -1206,7 +1207,8 @@
       },
       RemovedFields: ([]string) {
       },
-      UnchangedFields: ([]string) {
+      UnchangedFields: ([]string) (len=1) {
+        (string) (len=20) "spec.tableNameSuffix"
       },
       LinkOwnedFields: (map[string]string) <nil>,
       UnappliedLinkFields: ([]provider.UnappliedLinkField) <nil>,
@@ -1811,7 +1813,8 @@
       },
       RemovedFields: ([]string) {
       },
-      UnchangedFields: ([]string) {
+      UnchangedFields: ([]string) (len=1) {
+        (string) (len=20) "spec.tableNameSuffix"
       },
       LinkOwnedFields: (map[string]string) <nil>,
       UnappliedLinkFields: ([]provider.UnappliedLinkField) <nil>,

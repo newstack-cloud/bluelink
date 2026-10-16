@@ -2,6 +2,7 @@ package subengine
 
 import (
 	"slices"
+	"strings"
 
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
@@ -65,13 +66,19 @@ func (s *sensitivityRecord) propertiesOf(elementName string) []string {
 // its description, condition and metadata among them, belongs in this list, as does anything
 // recorded against the values and data sources resolved on the way.
 func (s *sensitivityRecord) pathsExcludingSpecOf(elementName string) []string {
+	excluded := bpcore.ElementPropertyPath(elementName, "spec")
+
+	return slices.DeleteFunc(s.allPaths(), func(path string) bool {
+		return path == excluded || isPathBelow(excluded, path)
+	})
+}
+
+// Every recorded path. Unlike pathsExcludingSpecOf there is nothing to split out, because
+// the elements this serves, includes and single substitutions, have no spec.
+func (s *sensitivityRecord) allPaths() []string {
 	var paths []string
 	for element, recorded := range s.properties {
 		for property := range recorded {
-			if element == elementName && isSpecProperty(property) {
-				continue
-			}
-
 			paths = append(paths, bpcore.ElementPropertyPath(element, property))
 		}
 	}
@@ -82,18 +89,38 @@ func (s *sensitivityRecord) pathsExcludingSpecOf(elementName string) []string {
 
 // Keeps the "spec" prefix as that is the form that field changes use.
 func (s *sensitivityRecord) specPropertiesOf(elementName string) []string {
-	var specProperties []string
+	return s.propertiesUnderRootOf(elementName, "spec")
+}
+
+// Properties under the given root, with the prefix kept. Separates an element's body from
+// the fields beside it, its description among them.
+func (s *sensitivityRecord) propertiesUnderRootOf(elementName string, root string) []string {
+	var rooted []string
 	for _, property := range s.propertiesOf(elementName) {
-		if isSpecProperty(property) {
-			specProperties = append(specProperties, property)
+		if property == root || isPathBelow(root, property) {
+			rooted = append(rooted, property)
 		}
 	}
 
-	return specProperties
+	return rooted
 }
 
-// The spec root counts as part of the spec here, unlike core.IsSpecFieldPath, because a
-// substitution resolved directly at "spec" is recorded against that property.
-func isSpecProperty(property string) bool {
-	return property == "spec" || bpcore.IsSpecFieldPath(property)
+// Reports whether a reference to path reads a value one of the recorded paths covers.
+//
+// Coverage runs both ways. A reference to an ancestor of a recorded path reads a container
+// holding the secret, and a reference to a descendant reads part of a value already marked,
+// so a plugin declaring a container sensitive still covers the leaves below it.
+func isPathCoveredBy(sensitivePaths []string, path string) bool {
+	return slices.ContainsFunc(sensitivePaths, func(sensitive string) bool {
+		return sensitive == path ||
+			isPathBelow(sensitive, path) ||
+			isPathBelow(path, sensitive)
+	})
+}
+
+// Compared against the separators rather than the bare prefix, so "spec.token" is not read
+// as covering "spec.tokenExpiry".
+func isPathBelow(ancestor string, path string) bool {
+	return strings.HasPrefix(path, ancestor+".") ||
+		strings.HasPrefix(path, ancestor+"[")
 }

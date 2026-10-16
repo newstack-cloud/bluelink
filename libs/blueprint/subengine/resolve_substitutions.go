@@ -161,6 +161,9 @@ type ResolveIncludeTargetInfo struct {
 type ResolveInIncludeResult struct {
 	ResolvedInclude *ResolvedInclude
 	ResolveOnDeploy []string
+	// SensitivePaths holds the property paths a secret reached, including the variables
+	// passed down to the child blueprint, and the values and data sources resolved on the way.
+	SensitivePaths []string
 }
 
 // ResolveExportTargetInfo contains information about the target of a substitution
@@ -189,6 +192,9 @@ type ResolveTargetInfo struct {
 type ResolveResult struct {
 	Resolved        *bpcore.MappingNode
 	ResolveOnDeploy []string
+	// SensitivePaths holds the property paths a secret reached, which for a single
+	// substitution is the property it was resolved into along with anything resolved on the way.
+	SensitivePaths []string
 }
 
 // ExportFieldInfo contains information about an exported field from a child blueprint
@@ -1363,12 +1369,13 @@ func (r *defaultSubstitutionResolver) ResolveInInclude(
 	resolveOnDeploy := []string{}
 
 	elementName := bpcore.ChildElementID(includeName)
+	sensitivity := newSensitivityRecord()
 	resolvedInclude, err := r.resolveInInclude(ctx, include, &resolveContext{
 		rootElementName:    elementName,
 		currentElementName: elementName,
 		resolveFor:         resolveTargetInfo.ResolveFor,
 		partiallyResolved:  resolveTargetInfo.PartiallyResolved,
-		sensitivity:        newSensitivityRecord(),
+		sensitivity:        sensitivity,
 	})
 	if err != nil {
 		finalErr := handleResolveError(err, &resolveOnDeploy)
@@ -1380,6 +1387,7 @@ func (r *defaultSubstitutionResolver) ResolveInInclude(
 	return &ResolveInIncludeResult{
 		ResolvedInclude: resolvedInclude,
 		ResolveOnDeploy: resolveOnDeploy,
+		SensitivePaths:  sensitivity.allPaths(),
 	}, nil
 }
 
@@ -1458,6 +1466,10 @@ func (r *defaultSubstitutionResolver) resolveInInclude(
 	return resolvedInclude, nil
 }
 
+// Records nothing back to the caller. An export's only substitutable field is its
+// description, and a secret in prose is an authoring mistake validation warns about where
+// the author declared the secret. The exported value is resolved separately, through
+// ResolveSubstitution, which is where its marking comes from.
 func (r *defaultSubstitutionResolver) ResolveInExport(
 	ctx context.Context,
 	exportName string,
@@ -1693,6 +1705,7 @@ func (r *defaultSubstitutionResolver) ResolveSubstitution(
 		r.params,
 		value.SourceMeta,
 	)
+	sensitivity := newSensitivityRecord()
 	mappingNode, err := r.resolveSubstitution(
 		ctx,
 		value,
@@ -1704,7 +1717,7 @@ func (r *defaultSubstitutionResolver) ResolveSubstitution(
 			currentElementProperty: inElementProperty,
 			resolveFor:             resolveTargetInfo.ResolveFor,
 			partiallyResolved:      resolveTargetInfo.PartiallyResolved,
-			sensitivity:            newSensitivityRecord(),
+			sensitivity:            sensitivity,
 		},
 	)
 	if err != nil {
@@ -1717,6 +1730,7 @@ func (r *defaultSubstitutionResolver) ResolveSubstitution(
 	return &ResolveResult{
 		Resolved:        mappingNode,
 		ResolveOnDeploy: resolveOnDeploy,
+		SensitivePaths:  sensitivity.allPaths(),
 	}, nil
 }
 
@@ -1947,7 +1961,7 @@ func (r *defaultSubstitutionResolver) resolveValue(
 ) (*bpcore.MappingNode, error) {
 	cached, hasValue := r.valueCache.Get(value.ValueName)
 	if hasValue {
-		recordSecretValueUse(cached, resolveCtx)
+		recordSecretValueUse(cached, value, resolveCtx)
 		return cached.Value, nil
 	}
 
@@ -1956,7 +1970,7 @@ func (r *defaultSubstitutionResolver) resolveValue(
 		return nil, err
 	}
 
-	recordSecretValueUse(computed.ResolvedValue, resolveCtx)
+	recordSecretValueUse(computed.ResolvedValue, value, resolveCtx)
 	r.valueCache.Set(value.ValueName, computed.ResolvedValue)
 
 	if len(computed.ResolveOnDeploy) > 0 {
@@ -1978,13 +1992,27 @@ func (r *defaultSubstitutionResolver) resolveValue(
 	return computed.ResolvedValue.Value, nil
 }
 
-// Records a value declared secret against the property referencing it.
+// Records a secret read from a value against the property referencing it.
 //
 // Recorded at the reference rather than inside the value, so that the second resource to
 // reference the same value is marked too. Resolution memoises values, so only the first
-// reference resolves one.
-func recordSecretValueUse(resolved *ResolvedValue, resolveCtx *resolveContext) {
-	if resolved == nil || !bpcore.BoolValueFromScalar(resolved.Secret) {
+// reference resolves one. A value is a secret by its own declaration, covering all of it,
+// or at the paths its resolution recorded, covering only the part a reference reads.
+func recordSecretValueUse(
+	resolved *ResolvedValue,
+	reference *substitutions.SubstitutionValueReference,
+	resolveCtx *resolveContext,
+) {
+	if resolved == nil {
+		return
+	}
+
+	declaredSecret := bpcore.BoolValueFromScalar(resolved.Secret)
+	readsRecordedSecret := isPathCoveredBy(
+		resolved.SensitivePaths,
+		renderReferencePath("value", reference.Path),
+	)
+	if !declaredSecret && !readsRecordedSecret {
 		return
 	}
 
@@ -2017,6 +2045,15 @@ func (r *defaultSubstitutionResolver) computeValue(
 		if finalErr != nil {
 			return nil, finalErr
 		}
+	}
+
+	if resolvedValue != nil {
+		// Only the body. A secret reaching the value's description does not make the value
+		// a secret, in the same way it does not for an export.
+		resolvedValue.SensitivePaths = resolveCtx.sensitivity.propertiesUnderRootOf(
+			elementID,
+			"value",
+		)
 	}
 
 	return &ResolveInValueResult{
@@ -2349,6 +2386,9 @@ func (r *defaultSubstitutionResolver) resolveResourceSpecProperty(
 		// The property is still marked to be resolved on deploy, deploy-time
 		// resolution against fresh state remains authoritative as the computed
 		// field of the referenced resource can change during deployment.
+		// Returns above the recorded-path check below, which costs nothing. A provider
+		// computes this field, so a blueprint cannot have interpolated a secret into it,
+		// and anything the schema declares was read with the property definition.
 		stateValue := r.resolveComputedPropertyFromExistingState(ctx, prop, definition, resolveCtx)
 		return stateValue, errMustResolveOnDeploy(
 			resolveCtx.currentElementName,
@@ -2378,6 +2418,17 @@ func (r *defaultSubstitutionResolver) resolveResourceSpecProperty(
 			definition,
 			errResourceNotResolved(resolveCtx.currentElementName, prop.ResourceName),
 			resolveCtx,
+		)
+	}
+
+	// Read from the resolved resource rather than its schema, so a secret interpolated into
+	// a field the schema declares nothing about still marks the field reading it. The
+	// schema's own declarations are read separately, when the property definition is looked
+	// up, and cover a resource that was never resolved here.
+	if isPathCoveredBy(resource.SensitiveSpecPaths, renderReferencePath("", prop.Path)) {
+		resolveCtx.sensitivity.record(
+			resolveCtx.currentElementName,
+			resolveCtx.currentElementProperty,
 		)
 	}
 

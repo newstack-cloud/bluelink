@@ -14,6 +14,14 @@ values:
     secret: true
     value: "token-${variables.environment}"
 
+  # Declares nothing itself. One field holds a secret and one does not, and resolving either
+  # resolves the whole value, so both are recorded against it.
+  connection:
+    type: object
+    value:
+      host: "db-${variables.environment}.example.com"
+      password: "${variables.dbPassword}"
+
 datasources:
   network:
     type: aws/vpc
@@ -68,6 +76,24 @@ resources:
         nested:
           token: "nested-token"
 
+  # Its spec holds a secret only by interpolation, so nothing in the schema says so and a
+  # reference to it can only be marked from what resolution recorded.
+  interpolatedTable:
+    type: aws/dynamodb/table
+    spec:
+      tableName: "orders-${variables.dbPassword}"
+      region: "eu-west-2"
+      # Its name has the secret-holding field's name as a prefix. A prefix test that does
+      # not stop at a separator would read "spec.tableName" as covering this.
+      tableNameSuffix: "plain-suffix"
+      # The first item resolves to none and is dropped, so the secret lands at resolved
+      # index 0 and the plain region at 1. A reference built from source indices would
+      # read these the other way round.
+      replicaRegions:
+        - ${coalesce(none, none)}
+        - "replica-${variables.dbPassword}"
+        - "eu-west-1"
+
   ordersTable:
     type: aws/dynamodb/table
     metadata:
@@ -96,6 +122,18 @@ resources:
       aliasedKey: "${datasources.network.aliasedPrivateKey}"
       secretArn: "${datasources.network.secretArn}"
       deferredKey: "${datasources.deferredNetwork.privateKey}"
+      # Reads a field of another resource that holds an interpolated secret, and a field of
+      # the same resource that does not.
+      interpolatedTableName: "${resources.interpolatedTable.spec.tableName}"
+      interpolatedTableRegion: "${resources.interpolatedTable.spec.region}"
+      interpolatedTableNameSuffix: "${resources.interpolatedTable.spec.tableNameSuffix}"
+      replicaSecret: "${resources.interpolatedTable.spec.replicaRegions[0]}"
+      replicaPlain: "${resources.interpolatedTable.spec.replicaRegions[1]}"
+      # Reads the secret field of a value declaring nothing, twice, so the second read is
+      # served from the value cache.
+      connectionPassword: "${values.connection.password}"
+      connectionPasswordAgain: "${values.connection.password}"
+      connectionHost: "${values.connection.host}"
       # A secret reaching a field through a function call.
       trimmedToken: "${trim(variables.dbPassword)}"
       replicaRegions:
@@ -106,3 +144,35 @@ resources:
       backupRegions:
         - ${coalesce(none, none)}
         - "backup-${variables.dbPassword}"
+
+include:
+  coreInfra:
+    path: core-infra.yaml
+    description: "Core infrastructure for ${variables.environment}."
+    variables:
+      region: "eu-west-2"
+      # The include's own variable declares nothing, so the mark has to come from the source.
+      dbPassword: "${variables.dbPassword}"
+      parameterPassword: "${resources.parameterTree.spec.secureValues.dbPassword}"
+    metadata:
+      sourceType: aws/s3
+      # Outside the variables, and still a secret reaching the include.
+      auditKey: "audit-${values.adminToken}"
+
+exports:
+  environment:
+    type: string
+    field: variables.environment
+    description: "The environment the blueprint deploys to."
+
+  dbPassword:
+    type: string
+    field: variables.dbPassword
+
+  parameterPassword:
+    type: string
+    field: resources.parameterTree.spec.secureValues.dbPassword
+
+  connectionHost:
+    type: string
+    field: values.connection.host

@@ -476,6 +476,7 @@ func (c *defaultBlueprintContainer) saveExports(
 			Value:       resolveValueResult.Resolved,
 			Description: core.StringValue(resolveResult.ResolvedExport.Description),
 			Field:       field,
+			Sensitive:   isExportSensitive(exportName, resolveValueResult),
 		}
 	}
 
@@ -492,6 +493,16 @@ func (c *defaultBlueprintContainer) saveExports(
 	}
 
 	return nil
+}
+
+// Matches the export's own field path rather than testing the result for any mark at all.
+// The record is shared with everything resolved on the way, so a secret in a sibling field
+// of the value being read would otherwise mark an export whose value carries none.
+func isExportSensitive(exportName string, resolveValueResult *subengine.ResolveResult) bool {
+	return slices.Contains(
+		resolveValueResult.SensitivePaths,
+		core.ElementPropertyPath(core.ExportElementID(exportName), "field"),
+	)
 }
 
 func (c *defaultBlueprintContainer) saveMetadata(

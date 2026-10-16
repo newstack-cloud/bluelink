@@ -116,6 +116,8 @@ func validateDescription(
 		return diagnostics, nil
 	}
 
+	checkDescriptionForSecrets(usedIn, description, valCtx, &diagnostics)
+
 	errs := []error{}
 
 	for _, stringOrSub := range description.Values {

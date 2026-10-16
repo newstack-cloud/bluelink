@@ -12,6 +12,14 @@ type ResolvedValue struct {
 	Value       *core.MappingNode        `json:"value"`
 	Description *core.MappingNode        `json:"description,omitempty"`
 	Secret      *core.ScalarValue        `json:"secret"`
+	// SensitivePaths holds the paths within this value that a secret reached, rooted at
+	// "value", so "value.password" for a field of an object value.
+	//
+	// Carried on the value because resolution memoises values. A value that declares nothing
+	// but interpolates a secret would otherwise mark only the field whose reference resolved
+	// it, with every later reference served from the cache and will allow for leaking secrets
+	// used in fields that won't be marked.
+	SensitivePaths []string `json:"sensitivePaths,omitempty"`
 }
 
 // ResolvedInclude provides a version of a child blueprint

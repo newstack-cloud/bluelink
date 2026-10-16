@@ -147,7 +147,8 @@
       SourceMeta: (*source.Meta)(<nil>),
       FieldsSourceMeta: (map[string]*source.Meta) <nil>
     }),
-    Secret: (*core.ScalarValue)(<nil>)
+    Secret: (*core.ScalarValue)(<nil>),
+    SensitivePaths: ([]string) <nil>
   }),
   ResolveOnDeploy: ([]string) {
   }
