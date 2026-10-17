@@ -1,5 +1,14 @@
 version: 2025-11-02
 variables:
+  secretRegionsJSON:
+    type: string
+    description: "A JSON-encoded list of regions."
+    secret: true
+
+  plainRegionsJSON:
+    type: string
+    description: "A JSON-encoded list of regions."
+
   dbPassword:
     type: string
     description: "The password for the orders database."
@@ -13,6 +22,11 @@ values:
     type: string
     secret: true
     value: "token-${variables.environment}"
+
+  secretRegionList:
+    type: array
+    secret: true
+    value: "${jsondecode(variables.plainRegionsJSON)}"
 
   # Declares nothing itself. One field holds a secret and one does not, and resolving either
   # resolves the whole value, so both are recorded against it.
@@ -102,6 +116,29 @@ resources:
         - ${coalesce(none, none)}
         - "replica-${variables.dbPassword}"
         - "eu-west-1"
+
+  # Expands over a list derived from a secret, so every item is secret-derived and any
+  # field reading one holds a secret.
+  secretTemplate:
+    type: aws/dynamodb/table
+    each: "${jsondecode(variables.secretRegionsJSON)}"
+    spec:
+      region: "${elem.region}"
+      tableName: "orders-${elem.name}"
+
+  # Fed by a value declared secret rather than by a secret variable directly, so the mark
+  # has to be recorded against "each" and not against the value's own element.
+  valueFedTemplate:
+    type: aws/dynamodb/table
+    each: "${values.secretRegionList}"
+    spec:
+      region: "${elem.region}"
+
+  plainTemplate:
+    type: aws/dynamodb/table
+    each: "${jsondecode(variables.plainRegionsJSON)}"
+    spec:
+      region: "${elem.region}"
 
   ordersTable:
     type: aws/dynamodb/table

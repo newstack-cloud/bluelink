@@ -298,12 +298,14 @@ func (s *SubstitutionResourceResolverTestSuite) Test_resolves_substitutions_in_r
 	)
 
 	ordersTable1Name := "production-Orders-1"
-	s.resourceTemplateInputElemCache.Set("ordersTable", []*core.MappingNode{
-		{
-			Fields: map[string]*core.MappingNode{
-				"name": {
-					Scalar: &core.ScalarValue{
-						StringValue: &ordersTable1Name,
+	s.resourceTemplateInputElemCache.Set("ordersTable", &ResolvedResourceTemplateInput{
+		Items: []*core.MappingNode{
+			{
+				Fields: map[string]*core.MappingNode{
+					"name": {
+						Scalar: &core.ScalarValue{
+							StringValue: &ordersTable1Name,
+						},
 					},
 				},
 			},

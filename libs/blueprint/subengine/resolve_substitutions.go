@@ -32,13 +32,15 @@ type SubstitutionResolver interface {
 	) (*ResolveInResourceResult, error)
 	// ResolveResourceEach resolves the substitution in the `each` property of a resource
 	// that is expected to resolve to a list of items that will be mapped to a planned and
-	// eventually deployed resource.
+	// eventually deployed resource. The result also reports whether a secret reached the
+	// `each` expression, which callers must cache with the items so that `${elem...}`
+	// references in the expanded resources can be marked.
 	ResolveResourceEach(
 		ctx context.Context,
 		resourceName string,
 		resource *schema.Resource,
 		resolveFor ResolveForStage,
-	) ([]*bpcore.MappingNode, error)
+	) (*ResolvedResourceTemplateInput, error)
 	// ResolveInDataSource resolves substitutions in a data source.
 	ResolveInDataSource(
 		ctx context.Context,
@@ -120,6 +122,23 @@ type ResolveDataSourceTargetInfo struct {
 type ResolveInDataSourceResult struct {
 	ResolvedDataSource *provider.ResolvedDataSource
 	ResolveOnDeploy    []string
+}
+
+// ResolvedResourceTemplateInput holds the items a resource template expands over, along
+// with whether a secret reached the `each` expression that produced them.
+type ResolvedResourceTemplateInput struct {
+	// Items holds one item per resource the template expands into, in the order the `each`
+	// expression yielded them.
+	Items []*bpcore.MappingNode
+	// Sensitive is true when a secret reached the `each` expression, and applies to the
+	// whole list. A single expression can mix sources, as `${list(variables.plain,
+	// variables.secret)}` does, so this marks more items than the secret reached: the
+	// record keys on element property paths and has no notion of an item, so there is
+	// nothing finer to record against. Marking too much is the safe direction for a secret.
+	//
+	// Cached with the items because the expanded resources resolve separately, and an
+	// `${elem...}` reference in one of them has nothing else to consult.
+	Sensitive bool
 }
 
 // ResolveMappingNodeTargetInfo contains information about the target of a substitution
@@ -233,7 +252,7 @@ type defaultSubstitutionResolver struct {
 	dataSourceResolveResultCache   *bpcore.Cache[*ResolveInDataSourceResult]
 	dataSourceDataCache            *bpcore.Cache[map[string]*bpcore.MappingNode]
 	resourceCache                  *bpcore.Cache[*provider.ResolvedResource]
-	resourceTemplateInputElemCache *bpcore.Cache[[]*bpcore.MappingNode]
+	resourceTemplateInputElemCache *bpcore.Cache[*ResolvedResourceTemplateInput]
 	childExportFieldCache          *bpcore.Cache[*ChildExportFieldInfo]
 	resourceStateCache             *bpcore.Cache[*state.ResourceState]
 }
@@ -255,8 +274,9 @@ func NewDefaultSubstitutionResolver(
 	// so that a resolved resource is available when needed.
 	resourceCache *bpcore.Cache[*provider.ResolvedResource],
 	// The cache is used to retrieve "elem" and "i" references for resources
-	// expanded from a resource template.
-	resourceTemplateInputElemCache *bpcore.Cache[[]*bpcore.MappingNode],
+	// expanded from a resource template, along with whether the items those
+	// references read came from a secret.
+	resourceTemplateInputElemCache *bpcore.Cache[*ResolvedResourceTemplateInput],
 	// A cache holding child export fields that is used to resolve references
 	// to child blueprint exports.
 	childExportFieldCache *bpcore.Cache[*ChildExportFieldInfo],
@@ -285,8 +305,9 @@ func (r *defaultSubstitutionResolver) ResolveResourceEach(
 	resourceName string,
 	resource *schema.Resource,
 	resolveFor ResolveForStage,
-) ([]*bpcore.MappingNode, error) {
+) (*ResolvedResourceTemplateInput, error) {
 	elementName := bpcore.ResourceElementID(resourceName)
+	sensitivity := newSensitivityRecord()
 	eachResolved, err := r.resolveSubstitutions(
 		ctx,
 		resource.Each,
@@ -296,7 +317,7 @@ func (r *defaultSubstitutionResolver) ResolveResourceEach(
 			currentElementName:     elementName,
 			currentElementProperty: "each",
 			disallowedElementTypes: []string{"resources", "children"},
-			sensitivity:            newSensitivityRecord(),
+			sensitivity:            sensitivity,
 		},
 	)
 	if err != nil {
@@ -310,7 +331,13 @@ func (r *defaultSubstitutionResolver) ResolveResourceEach(
 		return nil, errResourceEachNotArray(elementName, resourceName, eachResolved)
 	}
 
-	return eachResolved.Items, nil
+	return &ResolvedResourceTemplateInput{
+		Items: eachResolved.Items,
+		Sensitive: slices.Contains(
+			sensitivity.propertiesOf(elementName),
+			"each",
+		),
+	}, nil
 }
 
 func (r *defaultSubstitutionResolver) ResolveInResource(
@@ -2081,7 +2108,7 @@ func (r *defaultSubstitutionResolver) resolveElemReference(
 		return nil, errResourceNotTemplate(resolveCtx.currentElementName, resourceName)
 	}
 
-	items, hasItems := r.resourceTemplateInputElemCache.Get(
+	templateInput, hasItems := r.resourceTemplateInputElemCache.Get(
 		resourceNameParts.templateName,
 	)
 	if !hasItems {
@@ -2091,6 +2118,16 @@ func (r *defaultSubstitutionResolver) resolveElemReference(
 		)
 	}
 
+	// Recorded here rather than while the template's own `each` resolved: each expanded
+	// resource resolves separately, with its own record.
+	if templateInput.Sensitive {
+		resolveCtx.sensitivity.record(
+			resolveCtx.currentElementName,
+			resolveCtx.currentElementProperty,
+		)
+	}
+
+	items := templateInput.Items
 	if len(items) <= resourceNameParts.index {
 		// If the resource name ends with _\d+ and the index is out of bounds, then
 		// it is likely a resource that just happens to end with a number and can not

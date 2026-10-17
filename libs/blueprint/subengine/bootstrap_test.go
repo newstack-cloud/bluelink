@@ -55,7 +55,7 @@ type SubResolverTestContainer struct {
 	dataSourceRegistry             provider.DataSourceRegistry
 	stateContainer                 state.Container
 	resourceCache                  *core.Cache[*provider.ResolvedResource]
-	resourceTemplateInputElemCache *core.Cache[[]*core.MappingNode]
+	resourceTemplateInputElemCache *core.Cache[*ResolvedResourceTemplateInput]
 	childExportFieldCache          *core.Cache[*ChildExportFieldInfo]
 }
 
@@ -107,7 +107,7 @@ func (s *SubResolverTestContainer) populateDependencies() {
 		core.NewNopLogger(),
 	)
 	s.resourceCache = core.NewCache[*provider.ResolvedResource]()
-	s.resourceTemplateInputElemCache = core.NewCache[[]*core.MappingNode]()
+	s.resourceTemplateInputElemCache = core.NewCache[*ResolvedResourceTemplateInput]()
 	s.childExportFieldCache = core.NewCache[*ChildExportFieldInfo]()
 }
 

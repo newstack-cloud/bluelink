@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -62,7 +63,7 @@ func ExpandResourceTemplates(
 	blueprint *schema.Blueprint,
 	substitutionResolver subengine.SubstitutionResolver,
 	linkChains []*links.ChainLinkNode,
-	cache *core.Cache[[]*core.MappingNode],
+	cache *core.Cache[*subengine.ResolvedResourceTemplateInput],
 ) (*ExpandedResourceTemplateResult, error) {
 	if blueprint.Resources == nil {
 		return &ExpandedResourceTemplateResult{ExpandedBlueprint: blueprint}, nil
@@ -86,7 +87,7 @@ func ExpandResourceTemplates(
 
 	for resourceName, resource := range blueprint.Resources.Values {
 		if !substitutions.IsNilStringSubs(resource.Each) {
-			items, err := substitutionResolver.ResolveResourceEach(
+			templateInput, err := substitutionResolver.ResolveResourceEach(
 				ctx,
 				resourceName,
 				resource,
@@ -99,7 +100,7 @@ func ExpandResourceTemplates(
 				return nil, err
 			}
 			// Cache to be used to resolve each resource derived from a template later.
-			cache.Set(resourceName, items)
+			cache.Set(resourceName, templateInput)
 		} else {
 			expandedBlueprint.Resources.Values[resourceName] = resource
 		}
@@ -110,12 +111,12 @@ func ExpandResourceTemplates(
 	// the lengths of the resolved items for templates where there are links between them.
 	for resourceName, resource := range blueprint.Resources.Values {
 		if !substitutions.IsNilStringSubs(resource.Each) {
-			items, _ := cache.Get(resourceName)
+			templateInput, _ := cache.Get(resourceName)
 			err := expandResourcesFromTemplate(
 				&resourceTemplateInfo{
 					resourceTemplateName: resourceName,
 					resourceTemplate:     resource,
-					items:                items,
+					items:                templateInput.Items,
 				},
 				expandedBlueprint,
 				resourceTemplateMap,
@@ -145,7 +146,7 @@ func expandResourcesFromTemplate(
 	expandedBlueprint *schema.Blueprint,
 	resourceTemplateMap map[string][]string,
 	linkChains []*links.ChainLinkNode,
-	cache *core.Cache[[]*core.MappingNode],
+	cache *core.Cache[*subengine.ResolvedResourceTemplateInput],
 ) error {
 	linkNode := findLinkNode(linkChains, templateInfo.resourceTemplateName, map[string]bool{})
 
@@ -278,15 +279,15 @@ type resourceTemplateLabelInfo struct {
 func collectLabelsToApply(
 	linkNode *links.ChainLinkNode,
 	resourceTemplateName string,
-	cache *core.Cache[[]*core.MappingNode],
+	cache *core.Cache[*subengine.ResolvedResourceTemplateInput],
 	items []*core.MappingNode,
 ) (*resourceTemplateLabelInfo, error) {
 	collectedLabels := map[string]string{}
 	labelsToBeMadeUnique := map[string]string{}
 	for _, linkedFrom := range linkNode.LinkedFrom {
 		if !substitutions.IsNilStringSubs(linkedFrom.Resource.Each) {
-			linkedFromItems, _ := cache.Get(linkedFrom.ResourceName)
-			if len(items) != len(linkedFromItems) {
+			linkedFromItems, hasItems := cache.Get(linkedFrom.ResourceName)
+			if !hasItems || len(items) != len(linkedFromItems.Items) {
 				return nil, errResourceTemplateLinkLengthMismatch(
 					linkedFrom.ResourceName,
 					resourceTemplateName,
@@ -296,17 +297,13 @@ func collectLabelsToApply(
 				// items are of the same length, labels are collected to be made unique with an index suffix
 				// for each resource derived from the template.
 				matchingLabels := findMatchingSelectors(linkedFrom, linkNode)
-				for label, value := range matchingLabels {
-					labelsToBeMadeUnique[label] = value
-				}
+				maps.Copy(labelsToBeMadeUnique, matchingLabels)
 			}
 		} else {
 			// When a regular resource links to a resource template,
 			// the matching labels from the resource template are applied to the resource.
 			matchingLabels := findMatchingSelectors(linkedFrom, linkNode)
-			for label, value := range matchingLabels {
-				collectedLabels[label] = value
-			}
+			maps.Copy(collectedLabels, matchingLabels)
 		}
 	}
 
@@ -324,15 +321,15 @@ type resourceTemplateLinkSelectorInfo struct {
 func collectLinkSelectorsToApply(
 	linkNode *links.ChainLinkNode,
 	resourceTemplateName string,
-	cache *core.Cache[[]*core.MappingNode],
+	cache *core.Cache[*subengine.ResolvedResourceTemplateInput],
 	items []*core.MappingNode,
 ) (*resourceTemplateLinkSelectorInfo, error) {
 	collectedLinkSelectors := map[string]string{}
 	linkSelectorsToBeMadeUnique := map[string]string{}
 	for _, linksTo := range linkNode.LinksTo {
 		if !substitutions.IsNilStringSubs(linksTo.Resource.Each) {
-			linksToItems, _ := cache.Get(linksTo.ResourceName)
-			if len(items) != len(linksToItems) {
+			linksToItems, hasItems := cache.Get(linksTo.ResourceName)
+			if !hasItems || len(items) != len(linksToItems.Items) {
 				return nil, errResourceTemplateLinkLengthMismatch(
 					resourceTemplateName,
 					linksTo.ResourceName,
@@ -342,17 +339,13 @@ func collectLinkSelectorsToApply(
 				// items are of the same length, link selectors are collected to be made unique with an index suffix
 				// for each resource derived from the template.
 				matchingLinkSelectors := findMatchingSelectors(linkNode, linksTo)
-				for label, value := range matchingLinkSelectors {
-					linkSelectorsToBeMadeUnique[label] = value
-				}
+				maps.Copy(linkSelectorsToBeMadeUnique, matchingLinkSelectors)
 			}
 		} else {
 			// When a resource template links to a regular resource,
 			// the matching link selectors from the resource template are applied to the resource.
 			matchingLinkSelectors := findMatchingSelectors(linkNode, linksTo)
-			for label, value := range matchingLinkSelectors {
-				collectedLinkSelectors[label] = value
-			}
+			maps.Copy(collectedLinkSelectors, matchingLinkSelectors)
 		}
 	}
 

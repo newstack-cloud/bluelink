@@ -30,7 +30,7 @@ type ExpandResourceTemplatesTestSuite struct {
 	dataSourceRegistry             provider.DataSourceRegistry
 	providers                      map[string]provider.Provider
 	resourceCache                  *core.Cache[*provider.ResolvedResource]
-	resourceTemplateInputElemCache *core.Cache[[]*core.MappingNode]
+	resourceTemplateInputElemCache *core.Cache[*subengine.ResolvedResourceTemplateInput]
 	childExportFieldCache          *core.Cache[*subengine.ChildExportFieldInfo]
 	suite.Suite
 }
@@ -40,6 +40,7 @@ const (
 	expandedManyToOneLinkFixtureName  = "expanded-many-to-one-link"
 	expandedManyToManyLinkFixtureName = "expanded-many-to-many-link"
 	expandedFailureFixtureName        = "expanded-failure"
+	expandedSensitiveFixtureName      = "expanded-sensitive"
 )
 
 func (s *ExpandResourceTemplatesTestSuite) SetupSuite() {
@@ -48,6 +49,7 @@ func (s *ExpandResourceTemplatesTestSuite) SetupSuite() {
 		expandedManyToOneLinkFixtureName:  "__testdata/template-expansion/expanded-2-blueprint.yml",
 		expandedManyToManyLinkFixtureName: "__testdata/template-expansion/expanded-3-blueprint.yml",
 		expandedFailureFixtureName:        "__testdata/template-expansion/expanded-fail-blueprint.yml",
+		expandedSensitiveFixtureName:      "__testdata/template-expansion/expanded-sensitive-blueprint.yml",
 	}
 	s.specFixtureContainers = make(map[string]BlueprintContainer)
 
@@ -110,7 +112,7 @@ func (s *ExpandResourceTemplatesTestSuite) SetupTest() {
 		core.NewNopLogger(),
 	)
 	s.resourceCache = core.NewCache[*provider.ResolvedResource]()
-	s.resourceTemplateInputElemCache = core.NewCache[[]*core.MappingNode]()
+	s.resourceTemplateInputElemCache = core.NewCache[*subengine.ResolvedResourceTemplateInput]()
 	s.childExportFieldCache = core.NewCache[*subengine.ChildExportFieldInfo]()
 }
 
@@ -147,6 +149,45 @@ func (s *ExpandResourceTemplatesTestSuite) Test_expands_resource_template_with_o
 
 	err = testhelpers.Snapshot(result)
 	s.Require().NoError(err)
+}
+
+func (s *ExpandResourceTemplatesTestSuite) Test_caches_that_a_template_expands_over_a_secret_derived_list() {
+	container := s.specFixtureContainers[expandedSensitiveFixtureName]
+	params := expandResourceTemplatesTestParams()
+	subResolver := subengine.NewDefaultSubstitutionResolver(
+		&subengine.Registries{
+			FuncRegistry:       s.funcRegistry,
+			ResourceRegistry:   s.resourceRegistry,
+			DataSourceRegistry: s.dataSourceRegistry,
+		},
+		s.stateContainer,
+		s.resourceCache,
+		s.resourceTemplateInputElemCache,
+		s.childExportFieldCache,
+		container.BlueprintSpec(),
+		params,
+	)
+
+	ctx := context.TODO()
+	linkChains, err := container.SpecLinkInfo().Links(ctx)
+	s.Require().NoError(err)
+
+	_, err = ExpandResourceTemplates(
+		ctx,
+		container.BlueprintSpec().Schema(),
+		subResolver,
+		linkChains,
+		s.resourceTemplateInputElemCache,
+	)
+	s.Require().NoError(err)
+
+	templateInput, hasInput := s.resourceTemplateInputElemCache.Get("ordersTable")
+	s.Require().True(hasInput, "expansion did not cache the template's items")
+	s.Assert().True(
+		templateInput.Sensitive,
+		"the items were cached without the secret they were derived from",
+	)
+	s.Assert().NotEmpty(templateInput.Items)
 }
 
 func (s *ExpandResourceTemplatesTestSuite) Test_expands_resource_template_with_many_to_one_link_relationship() {

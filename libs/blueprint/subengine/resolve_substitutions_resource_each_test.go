@@ -82,7 +82,11 @@ func (s *SubstitutionResourceEachResolverTestSuite) Test_resolves_substitutions_
 				},
 			},
 		},
-		result,
+		result.Items,
+	)
+	s.Assert().False(
+		result.Sensitive,
+		"an each list assembled from plain variables was marked",
 	)
 }
 

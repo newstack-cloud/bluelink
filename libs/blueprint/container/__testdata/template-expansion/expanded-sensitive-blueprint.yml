@@ -1,0 +1,24 @@
+version: 2025-11-02
+variables:
+  tablesConfig:
+    type: string
+    secret: true
+
+values:
+  tablesConfig:
+    type: array
+    value: "${jsondecode(variables.tablesConfig)}"
+
+resources:
+  # Expands over a list decoded from a secret variable, so the items the expanded resources
+  # read are derived from a secret and expansion has to cache that alongside them.
+  ordersTable:
+    type: aws/dynamodb/table
+    each: "${values.tablesConfig}"
+    spec:
+      tableName: "${elem.name}"
+
+  plainTable:
+    type: aws/dynamodb/table
+    spec:
+      tableName: "plain-orders"

@@ -39,7 +39,7 @@ type BlueprintPrepareResult struct {
 func NewDefaultBlueprintPreparer(
 	providers map[string]provider.Provider,
 	substitutionResolver subengine.SubstitutionResolver,
-	resourceTemplateInputElemCache *core.Cache[[]*core.MappingNode],
+	resourceTemplateInputElemCache *core.Cache[*subengine.ResolvedResourceTemplateInput],
 	resourceRegistry resourcehelpers.Registry,
 	resourceCache *core.Cache[*provider.ResolvedResource],
 	childBlueprintLoaderFactory ChildBlueprintLoaderFactory,
@@ -57,7 +57,7 @@ func NewDefaultBlueprintPreparer(
 type defaultBlueprintPreparer struct {
 	providers                      map[string]provider.Provider
 	substitutionResolver           subengine.SubstitutionResolver
-	resourceTemplateInputElemCache *core.Cache[[]*core.MappingNode]
+	resourceTemplateInputElemCache *core.Cache[*subengine.ResolvedResourceTemplateInput]
 	resourceRegistry               resourcehelpers.Registry
 	resourceCache                  *core.Cache[*provider.ResolvedResource]
 	createChildBlueprintLoader     ChildBlueprintLoaderFactory

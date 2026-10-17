@@ -803,7 +803,7 @@ func (l *defaultLoader) buildFullBlueprintContainerDependencies(
 	params bpcore.BlueprintParams,
 ) *BlueprintContainerDependencies {
 	resourceCache := bpcore.NewCache[*provider.ResolvedResource]()
-	resourceTemplateInputElemCache := bpcore.NewCache[[]*bpcore.MappingNode]()
+	resourceTemplateInputElemCache := bpcore.NewCache[*subengine.ResolvedResourceTemplateInput]()
 	childExportFieldCache := bpcore.NewCache[*subengine.ChildExportFieldInfo]()
 	resourceRegistry := l.resourceRegistry.WithParams(params)
 	substitutionResolver := subengine.NewDefaultSubstitutionResolver(

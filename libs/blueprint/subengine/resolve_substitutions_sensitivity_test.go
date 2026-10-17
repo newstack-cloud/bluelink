@@ -19,6 +19,9 @@ import (
 // at all, which is the trap worth designing the fixtures around.
 type SubstitutionSensitivityTestSuite struct {
 	SubResolverTestContainer
+	// Whether the last template input resolved by resolveTemplateInstance was sensitive,
+	// so that a producer regression reads differently from a consumer one.
+	templateInputSensitive bool
 	suite.Suite
 }
 
@@ -551,17 +554,81 @@ func (s *SubstitutionSensitivityTestSuite) resolveBlueprintMetadata() *ResolveIn
 	return result
 }
 
+// A resource template expands over whatever `each` resolves to, and the expanded resources
+// are resolved separately, after the items are cached. This resolves `each` for real and
+// feeds the result through the cache the way template expansion does, so the test crosses
+// the same boundary the engine does rather than asserting on each half alone.
+func (s *SubstitutionSensitivityTestSuite) resolveTemplateInstance(
+	templateName string,
+) *ResolveInResourceResult {
+	blueprint := s.blueprint()
+	templateResource := blueprint.Resources.Values[templateName]
+	s.Require().NotNil(templateResource)
+
+	templateInput, err := s.newResolver().ResolveResourceEach(
+		context.TODO(),
+		templateName,
+		templateResource,
+		ResolveForChangeStaging,
+	)
+	s.Require().NoError(err)
+	s.templateInputSensitive = templateInput.Sensitive
+	s.resourceTemplateInputElemCache.Set(templateName, templateInput)
+
+	result, err := s.newResolver().ResolveInResource(
+		context.TODO(),
+		core.ExpandedResourceName(templateName, 0),
+		convertToTemplateResourceInstance(templateResource),
+		&ResolveResourceTargetInfo{
+			ResolveFor: ResolveForChangeStaging,
+		},
+	)
+	s.Require().NoError(err)
+	s.Require().NotNil(result.ResolvedResource)
+
+	return result
+}
+
+// `each` is a single expression yielding an array, so there is no per-item recording, a
+// secret reaching it makes every item secret-derived.
+func (s *SubstitutionSensitivityTestSuite) Test_a_secret_each_list_marks_every_field_reading_an_item() {
+	result := s.resolveTemplateInstance("secretTemplate")
+
+	s.Require().True(s.templateInputSensitive, "the each list itself was not marked")
+	s.Assert().Contains(result.ResolvedResource.SensitiveSpecPaths, "spec.region")
+	s.Assert().Contains(result.ResolvedResource.SensitiveSpecPaths, "spec.tableName")
+}
+
+// The record is keyed by element, and a value resolves under its own element name, so a
+// secret arriving through a value has to be recorded against "each" by the reference rather
+// than against the value.
+func (s *SubstitutionSensitivityTestSuite) Test_an_each_list_from_a_secret_value_marks_its_readers() {
+	result := s.resolveTemplateInstance("valueFedTemplate")
+
+	s.Assert().Contains(result.ResolvedResource.SensitiveSpecPaths, "spec.region")
+}
+
+func (s *SubstitutionSensitivityTestSuite) Test_a_plain_each_list_marks_nothing() {
+	result := s.resolveTemplateInstance("plainTemplate")
+
+	s.Assert().Empty(result.ResolvedResource.SensitiveSpecPaths)
+}
+
 func sensitivityTestParams() core.BlueprintParams {
 	environment := "production"
 	dbPassword := "super-secret-password"
+	secretRegionsJSON := `[{"region":"eu-west-2","name":"orders"}]`
+	plainRegionsJSON := `[{"region":"eu-west-1"}]`
 
 	return core.NewDefaultParams(
 		map[string]map[string]*core.ScalarValue{},
 		map[string]map[string]*core.ScalarValue{},
 		map[string]*core.ScalarValue{},
 		map[string]*core.ScalarValue{
-			"environment": {StringValue: &environment},
-			"dbPassword":  {StringValue: &dbPassword},
+			"environment":       {StringValue: &environment},
+			"dbPassword":        {StringValue: &dbPassword},
+			"secretRegionsJSON": {StringValue: &secretRegionsJSON},
+			"plainRegionsJSON":  {StringValue: &plainRegionsJSON},
 		},
 	)
 }
