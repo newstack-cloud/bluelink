@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.9.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.8.3...deploy-engine/v0.9.0) (2026-10-17)
+
+
+### Features
+
+* **deploy-engine:** add index for reporting fields holding sensitive values ([2d77722](https://github.com/newstack-cloud/bluelink/commit/2d77722da423c77b70ebbeee6df6d9f3c5c73bca))
+* **deploy-engine:** add support for encrypting state for memfile backend ([dbbbaed](https://github.com/newstack-cloud/bluelink/commit/dbbbaed1c00e8d8943b68050ced2a9c15b85251d))
+* **deploy-engine:** add support for unix sockets on windows ([f81af01](https://github.com/newstack-cloud/bluelink/commit/f81af0106d14973a16ab92b17f4d2ed53dd5a041))
+* **deploy-engine:** tighten fs permissions for the memfile storage backend ([27f5342](https://github.com/newstack-cloud/bluelink/commit/27f5342f3780ba764bbfa73a3f7f83f4d8e31902))
+
+
+### Bug Fixes
+
+* **deploy-engine:** improve security posture of api key checks ([e6ba9ba](https://github.com/newstack-cloud/bluelink/commit/e6ba9ba75c37cc940f6034dfe1c00891449018dd))
+
 ## [0.8.3](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.8.2...deploy-engine/v0.8.3) (2026-09-17)
 
 
