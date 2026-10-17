@@ -1335,7 +1335,8 @@
       ComputedFields: ([]string) (len=1) {
         (string) (len=7) "spec.id"
       },
-      FieldChangesKnownOnDeploy: ([]string) {
+      FieldChangesKnownOnDeploy: ([]string) (len=1) {
+        (string) (len=40) "metadata.annotations[\"aws.dynamodb.vpc\"]"
       },
       ConditionKnownOnDeploy: (bool) false,
       NewOutboundLinks: (map[string]provider.LinkChanges) <nil>,
@@ -2206,7 +2207,8 @@
       ComputedFields: ([]string) (len=1) {
         (string) (len=7) "spec.id"
       },
-      FieldChangesKnownOnDeploy: ([]string) {
+      FieldChangesKnownOnDeploy: ([]string) (len=1) {
+        (string) (len=40) "metadata.annotations[\"aws.dynamodb.vpc\"]"
       },
       ConditionKnownOnDeploy: (bool) false,
       NewOutboundLinks: (map[string]provider.LinkChanges) <nil>,
@@ -3984,8 +3986,10 @@
     RemovedFields: ([]string) {
     }
   },
-  ResolveOnDeploy: ([]string) (len=2) {
+  ResolveOnDeploy: ([]string) (len=4) {
     (string) (len=92) "link(saveOrderFunction::ordersTable_0).saveOrderFunction[\"iam.policyStatements\"][0].resource",
-    (string) (len=92) "link(saveOrderFunction::ordersTable_1).saveOrderFunction[\"iam.policyStatements\"][0].resource"
+    (string) (len=92) "link(saveOrderFunction::ordersTable_1).saveOrderFunction[\"iam.policyStatements\"][0].resource",
+    (string) (len=64) "resources.ordersTable_0.metadata.annotations[\"aws.dynamodb.vpc\"]",
+    (string) (len=64) "resources.ordersTable_1.metadata.annotations[\"aws.dynamodb.vpc\"]"
   }
 })

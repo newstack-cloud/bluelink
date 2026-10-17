@@ -280,6 +280,60 @@ func (s *SubstitutionSensitivityTestSuite) Test_a_secret_value_marks_every_field
 	)
 }
 
+func (s *SubstitutionSensitivityTestSuite) Test_referencing_a_secret_annotation_marks_the_field() {
+	result := s.resolveOrdersTable()
+
+	s.Assert().Contains(result.ResolvedResource.SensitiveSpecPaths, "spec.referencedAnnotation")
+	s.Assert().NotContains(
+		result.ResolvedResource.SensitiveSpecPaths,
+		"spec.referencedPlainAnnotation",
+		"a reference to a sibling annotation holding nothing secret was marked",
+	)
+}
+
+func (s *SubstitutionSensitivityTestSuite) Test_a_secret_annotation_marks_that_entry_alone() {
+	result := s.resolveOrdersTable()
+
+	s.Assert().Contains(
+		result.ResolvedResource.SensitiveMetadataPaths,
+		`metadata.annotations["audit.key"]`,
+	)
+	s.Assert().NotContains(
+		result.ResolvedResource.SensitiveMetadataPaths,
+		"metadata.annotations",
+		"the whole annotation map was marked rather than the entry holding the secret",
+	)
+	s.Assert().NotContains(
+		result.ResolvedResource.SensitiveMetadataPaths,
+		`metadata.annotations["audit.enabled"]`,
+	)
+}
+
+// Matching is an exact string comparison against the path change staging renders, which
+// does not escape. Rendering the key with %q would escape it and silently stop matching.
+func (s *SubstitutionSensitivityTestSuite) Test_an_annotation_key_is_quoted_without_escaping() {
+	result := s.resolveOrdersTable()
+
+	s.Assert().Contains(
+		result.ResolvedResource.SensitiveMetadataPaths,
+		`metadata.annotations["audit"quoted"]`,
+	)
+}
+
+// Annotation values parse as scalars when they can, unlike every other string. The flag
+// that does that used to be derived from the property path ending in ".annotations", so
+// giving each entry a keyed path would have silently turned it off.
+func (s *SubstitutionSensitivityTestSuite) Test_a_keyed_annotation_path_keeps_its_scalar_parsing() {
+	result := s.resolveOrdersTable()
+
+	annotations := result.ResolvedResource.Metadata.Annotations
+	s.Require().NotNil(annotations)
+	s.Assert().True(
+		core.BoolValue(annotations.Fields["audit.enabled"]),
+		"the annotation resolved as a string rather than a boolean",
+	)
+}
+
 // Metadata travels on the resolved resource beside the spec, so that change staging can
 // consult it without being handed the resolve result as well. Dropping a path from both
 // was the first version's bug.

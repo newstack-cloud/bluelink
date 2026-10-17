@@ -81,6 +81,11 @@ resources:
   interpolatedTable:
     type: aws/dynamodb/table
     metadata:
+      annotations:
+        # An identifier-like key, which the generic reference renderer would spell with a
+        # dot while recording always brackets.
+        auditKey: "audit-${variables.dbPassword}"
+        plainKey: "nothing-secret"
       custom:
         auditKey: "audit-${variables.dbPassword}"
         plainKey: "nothing-secret"
@@ -102,6 +107,14 @@ resources:
     type: aws/dynamodb/table
     metadata:
       displayName: "Orders table for ${variables.environment}"
+      annotations:
+        # One annotation holds a secret and one does not. Each entry carries its own keyed
+        # path, so the secret is recorded against that entry rather than the whole map.
+        "audit.key": "audit-${variables.dbPassword}"
+        "audit.enabled": true
+        # Holds a character %q would escape. The change generator does not escape, so an
+        # escaped recording would not match the path it renders.
+        'audit"quoted': "quoted-${variables.dbPassword}"
       custom:
         # Outside the spec, so it travels on the result rather than the resource.
         auditKey: "audit-${variables.dbPassword}"
@@ -134,6 +147,8 @@ resources:
       # Metadata has no schema, so these can only be marked from what resolution recorded
       # against the referenced resource.
       interpolatedAuditKey: "${resources.interpolatedTable.metadata.custom.auditKey}"
+      referencedAnnotation: "${resources.interpolatedTable.metadata.annotations.auditKey}"
+      referencedPlainAnnotation: "${resources.interpolatedTable.metadata.annotations.plainKey}"
       interpolatedPlainKey: "${resources.interpolatedTable.metadata.custom.plainKey}"
       replicaSecret: "${resources.interpolatedTable.spec.replicaRegions[0]}"
       replicaPlain: "${resources.interpolatedTable.spec.replicaRegions[1]}"

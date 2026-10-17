@@ -25,7 +25,9 @@ type resolveContext struct {
 	resolveFor             ResolveForStage
 	// For annotations, StringOrSubstitution structs are resolved in a way that resolves to a
 	// scalar if `StringValue` can be resolved to a scalar value other than a string.
-	// This is set to true when the `currentElementProperty` ends with ".annotations".
+	//
+	// Carried on the context rather than derived from the property path, so an entry can be
+	// given its own keyed path without losing the scalar handling.
 	isAnnotation      bool
 	partiallyResolved any
 	// Shared with every context derived from this one, so that a secret resolved several
@@ -46,9 +48,28 @@ func resolveContextFromParent(
 		disallowedElementTypes: parentCtx.disallowedElementTypes,
 		resolveFor:             parentCtx.resolveFor,
 		partiallyResolved:      parentCtx.partiallyResolved,
-		isAnnotation:           strings.HasSuffix(currentElementProperty, ".annotations"),
+		isAnnotation:           parentCtx.isAnnotation,
 		sensitivity:            parentCtx.sensitivity,
 	}
+}
+
+func resolveContextForAnnotations(parentCtx *resolveContext) *resolveContext {
+	annotationsCtx := resolveContextFromParent("metadata.annotations", parentCtx)
+	annotationsCtx.isAnnotation = true
+
+	return annotationsCtx
+}
+
+// Gives the entry its own path, so a secret in one entry is recorded against that entry
+// rather than against the whole map.
+//
+// Rendered by the shared keyed-path renderer, which is also what the change generator
+// uses, so the two cannot drift apart.
+func resolveContextForMapEntry(key string, parentCtx *resolveContext) *resolveContext {
+	return resolveContextFromParent(
+		substitutions.RenderKeyedFieldPath(parentCtx.currentElementProperty, key),
+		parentCtx,
+	)
 }
 
 func resolveContextForCurrentElement(
@@ -180,8 +201,10 @@ func handleResolveError(err error, resolveOnDeploy *[]string) error {
 				return err.propertyPath
 			})...,
 		)
-		*resolveOnDeploy = slices.Compact(*resolveOnDeploy)
+		// Sorted before compacting: Compact only collapses adjacent duplicates, so the
+		// other way round it left the same path in the list more than once.
 		slices.Sort(*resolveOnDeploy)
+		*resolveOnDeploy = slices.Compact(*resolveOnDeploy)
 		return nil
 	}
 
@@ -340,6 +363,23 @@ func renderMappingNodeFieldPath(currentPath string, fieldName string) string {
 	}
 
 	return fmt.Sprintf("[%q]", fieldName)
+}
+
+// Renders a reference into a resource's metadata in the form that metadata is recorded in.
+//
+// Annotation keys are always bracketed, by resolution and the change generator alike, while
+// the generic renderer uses dot notation for an identifier-like name. A reference reaching
+// an annotation has to follow the annotations, or an ordinary key such as "auditKey"
+// renders as "metadata.annotations.auditKey" and matches nothing.
+func renderMetadataReferencePath(pathItems []*substitutions.SubstitutionPathItem) string {
+	if len(pathItems) == 3 && pathItems[1].FieldName == "annotations" {
+		return substitutions.RenderKeyedFieldPath(
+			"metadata.annotations",
+			pathItems[2].FieldName,
+		)
+	}
+
+	return renderReferencePath("", pathItems)
 }
 
 // Renders a reference's path in the same form resolution records properties in, dot

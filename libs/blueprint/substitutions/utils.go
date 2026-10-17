@@ -119,6 +119,17 @@ func RenderFieldPath(currentPath, fieldName string) string {
 	return fmt.Sprintf("%s[\"%s\"]", currentPath, fieldName)
 }
 
+// RenderKeyedFieldPath renders a map entry's path with its key always bracketed and
+// quoted, unlike RenderFieldPath which uses dot notation for an identifier-like name.
+//
+// Annotations and labels are rendered this way by resolution and by the change generator
+// alike. Matching between the two is an exact string comparison, so they have to agree byte
+// for byte: the key is quoted without escaping, and a key holding a quote renders as it is
+// written.
+func RenderKeyedFieldPath(currentPath string, key string) string {
+	return fmt.Sprintf("%s[\"%s\"]", currentPath, key)
+}
+
 // IsNilStringSubs checks if the given StringOrSubstitutions is nil or has
 // a nil slice of values.
 func IsNilStringSubs(stringOrSubstitutions *StringOrSubstitutions) bool {

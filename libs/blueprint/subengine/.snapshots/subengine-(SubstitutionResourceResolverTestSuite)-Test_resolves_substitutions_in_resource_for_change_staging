@@ -391,8 +391,8 @@
   }),
   ResolveOnDeploy: ([]string) (len=5) {
     (string) (len=33) "datasources.network.filter.search",
-    (string) (len=42) "resources.ordersTable.metadata.annotations",
-    (string) (len=42) "resources.ordersTable.metadata.annotations",
+    (string) (len=62) "resources.ordersTable.metadata.annotations[\"aws.dynamodb.vpc\"]",
+    (string) (len=68) "resources.ordersTable.metadata.annotations[\"custom.coreInfraRegion\"]",
     (string) (len=33) "resources.ordersTable.spec.region",
     (string) (len=36) "values.prefixedCoreInfraRegion.value"
   },

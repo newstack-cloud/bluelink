@@ -204,8 +204,7 @@
     SourceMeta: (*source.Meta)(<nil>),
     FieldsSourceMeta: (map[string]*source.Meta) <nil>
   }),
-  ResolveOnDeploy: ([]string) (len=7) {
-    (string) (len=33) "datasources.network.filter.search",
+  ResolveOnDeploy: ([]string) (len=6) {
     (string) (len=33) "datasources.network.filter.search",
     (string) (len=42) "metadata.networkingSummary.coreInfraRegion",
     (string) (len=37) "metadata.networkingSummary.mainSubnet",

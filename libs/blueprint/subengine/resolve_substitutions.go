@@ -650,7 +650,7 @@ func (r *defaultSubstitutionResolver) resolveInResourceMetadataAnnotations(
 	resolvedAnnotations, err := r.resolveInStringOrSubsMap(
 		ctx,
 		annotationsToResolve,
-		resolveContextFromParent("metadata.annotations", resolveCtx),
+		resolveContextForAnnotations(resolveCtx),
 	)
 	if err != nil {
 		// When some annotations can not be resolved at the current stage,
@@ -797,7 +797,7 @@ func (r *defaultSubstitutionResolver) resolveInDataSourceMetadata(
 	resolvedAnnotations, err := r.resolveInStringOrSubsMap(
 		ctx,
 		dataSourceMetadata.Annotations,
-		resolveContextFromParent("metadata.annotations", resolveCtx),
+		resolveContextForAnnotations(resolveCtx),
 	)
 	finalErr = handleCollectResolveError(err, &resolveOnDeployErrs)
 	if finalErr != nil {
@@ -1557,7 +1557,7 @@ func (r *defaultSubstitutionResolver) resolveInStringOrSubsMap(
 		resolvedValue, err := r.resolveSubstitutions(
 			ctx,
 			value,
-			resolveCtx,
+			resolveContextForMapEntry(key, resolveCtx),
 		)
 		if err != nil {
 			finalErr := handleCollectResolveError(err, &resolveOnDeployErrs)
@@ -2579,7 +2579,7 @@ func (r *defaultSubstitutionResolver) resolveResourceMetadataProperty(
 	// Mirrors the spec path's read of the resolved resource. Metadata has no schema, so
 	// what resolution recorded is the only thing a reference to it can be marked from.
 	if bpcore.IsPathCoveredBy(
-		renderReferencePath("", prop.Path),
+		renderMetadataReferencePath(prop.Path),
 		resource.SensitiveMetadataPaths,
 	) {
 		resolveCtx.sensitivity.record(

@@ -599,9 +599,6 @@ func collectMetadataLabelChanges(
 	}
 }
 
-// Resolution records an annotation map as "metadata.annotations" rather than naming the
-// entry, so a secret in one annotation marks them all. Over-marking is the safe direction
-// and this follows resolution: it will narrow on its own when recording does.
 func collectMetadataAnnotationChanges(
 	changes *provider.Changes,
 	newAnnotationsMap *bpcore.MappingNode,
@@ -1252,9 +1249,9 @@ func renderFieldArrayPath(currentPath string, index int) string {
 }
 
 func renderMetadataLabelFieldPath(labelKey string) string {
-	return fmt.Sprintf("metadata.labels[\"%s\"]", labelKey)
+	return substitutions.RenderKeyedFieldPath("metadata.labels", labelKey)
 }
 
 func renderMetadataAnnotationFieldPath(annotationKey string) string {
-	return fmt.Sprintf("metadata.annotations[\"%s\"]", annotationKey)
+	return substitutions.RenderKeyedFieldPath("metadata.annotations", annotationKey)
 }

@@ -109,7 +109,17 @@ func (s *ResourceChangeSensitivityTestSuite) Test_marks_a_display_name_a_secret_
 	s.Assert().False(modified["metadata.custom.auditKey"].Sensitive)
 }
 
-func (s *ResourceChangeSensitivityTestSuite) Test_a_recorded_annotation_map_marks_its_entries() {
+func (s *ResourceChangeSensitivityTestSuite) Test_a_secret_annotation_marks_that_entry_alone() {
+	modified := s.metadataModifiedFields([]string{`metadata.annotations["example.v1"]`})
+
+	s.Assert().True(modified[`metadata.annotations["example.v1"]`].Sensitive)
+	s.Assert().False(
+		modified[`metadata.annotations["example.v2"]`].Sensitive,
+		"a sibling annotation was marked",
+	)
+}
+
+func (s *ResourceChangeSensitivityTestSuite) Test_a_recorded_annotation_map_still_covers_its_entries() {
 	modified := s.metadataModifiedFields([]string{"metadata.annotations"})
 
 	s.Assert().True(modified[`metadata.annotations["example.v1"]`].Sensitive)
@@ -173,6 +183,7 @@ func (s *ResourceChangeSensitivityTestSuite) metadataModifiedFields(
 		"metadata.custom.auditKey",
 		"metadata.custom.region",
 		`metadata.annotations["example.v1"]`,
+		`metadata.annotations["example.v2"]`,
 	)
 }
 
@@ -184,6 +195,7 @@ func metadataResourceInfo(sensitiveMetadataPaths []string) *provider.ResourceInf
 		Annotations: &core.MappingNode{
 			Fields: map[string]*core.MappingNode{
 				"example.v1": core.MappingNodeFromString("new-annotation"),
+				"example.v2": core.MappingNodeFromString("new-sibling"),
 			},
 		},
 		Custom: &core.MappingNode{
@@ -206,6 +218,7 @@ func metadataResourceInfo(sensitiveMetadataPaths []string) *provider.ResourceInf
 		DisplayName: "Previous Table",
 		Annotations: map[string]*core.MappingNode{
 			"example.v1": core.MappingNodeFromString("previous-annotation"),
+			"example.v2": core.MappingNodeFromString("previous-sibling"),
 		},
 		Custom: &core.MappingNode{
 			Fields: map[string]*core.MappingNode{

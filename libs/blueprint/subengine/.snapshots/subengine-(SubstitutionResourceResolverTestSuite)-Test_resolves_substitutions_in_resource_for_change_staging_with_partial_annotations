@@ -341,7 +341,7 @@
     SensitiveMetadataPaths: ([]string) <nil>
   }),
   ResolveOnDeploy: ([]string) (len=2) {
-    (string) (len=42) "resources.ordersTable.metadata.annotations",
+    (string) (len=65) "resources.ordersTable.metadata.annotations[\"aws.dynamodb.region\"]",
     (string) (len=33) "resources.ordersTable.spec.region"
   },
   SensitivePaths: ([]string) <nil>
