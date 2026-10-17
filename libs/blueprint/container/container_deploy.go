@@ -2963,6 +2963,9 @@ func (c *defaultBlueprintContainer) buildLinkState(
 			if linkDeployResult.ResourceDataMappings != nil {
 				linkState.ResourceDataMappings = linkDeployResult.ResourceDataMappings
 			}
+			if len(linkDeployResult.SensitiveLinkDataPaths) > 0 {
+				linkState.SensitiveDataPaths = linkDeployResult.SensitiveLinkDataPaths
+			}
 			if len(linkDeployResult.ContributionRecords) > 0 {
 				linkState.ContributionRecords = linkDeployResult.ContributionRecords
 			}

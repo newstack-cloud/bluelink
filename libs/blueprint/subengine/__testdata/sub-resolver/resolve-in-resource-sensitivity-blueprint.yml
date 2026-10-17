@@ -140,6 +140,14 @@ resources:
     spec:
       region: "${elem.region}"
 
+  # Reads nothing but a child blueprint's exports, so the deploy-time route can be resolved
+  # without priming state for anything else.
+  childReader:
+    type: aws/dynamodb/table
+    spec:
+      tableName: "${children.coreInfra.dbPassword}"
+      region: "${children.coreInfra.region}"
+
   ordersTable:
     type: aws/dynamodb/table
     metadata:
@@ -194,6 +202,10 @@ resources:
       connectionPassword: "${values.connection.password}"
       connectionPasswordAgain: "${values.connection.password}"
       connectionHost: "${values.connection.host}"
+      # Read from a child blueprint's exports. The child resolves against its own record,
+      # so the only thing the parent has to go on is what the child reported.
+      childSecret: "${children.coreInfra.dbPassword}"
+      childPlain: "${children.coreInfra.region}"
       # A secret reaching a field through a function call.
       trimmedToken: "${trim(variables.dbPassword)}"
       replicaRegions:

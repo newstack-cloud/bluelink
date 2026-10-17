@@ -28,6 +28,9 @@ type ContributedLinkData struct {
 	Data                 map[string]*core.MappingNode
 	ResourceDataMappings map[string]string
 	ContributionRecords  map[string]state.ContributionRecord
+	// SensitiveDataPaths holds the entries of Data that came from a contribution the link
+	// marked sensitive.
+	SensitiveDataPaths []string
 }
 
 // ContributionsToLinkData records a link's contributions in the form its state holds.
@@ -61,12 +64,15 @@ func ContributionsToLinkData(
 	for index, contribution := range ordered {
 		items = append(items, contribution.Value)
 
+		dataPath := fmt.Sprintf("%s[%d]", linkContributionsDataField, index)
+		if contribution.Sensitive {
+			contributed.SensitiveDataPaths = append(
+				contributed.SensitiveDataPaths, dataPath,
+			)
+		}
+
 		mappingKey := contributionMappingKey(contribution)
-		contributed.ResourceDataMappings[mappingKey] = fmt.Sprintf(
-			"%s[%d]",
-			linkContributionsDataField,
-			index,
-		)
+		contributed.ResourceDataMappings[mappingKey] = dataPath
 		contributed.ContributionRecords[mappingKey] = state.ContributionRecord{
 			Action:          int(contribution.Action),
 			RetainOnRemoval: contribution.RetainOnRemoval,

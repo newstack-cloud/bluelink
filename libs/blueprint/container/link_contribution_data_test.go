@@ -14,6 +14,51 @@ type LinkContributionDataTestSuite struct {
 	suite.Suite
 }
 
+// A link marking a contribution sensitive has to end up marking the resource field that
+// contribution feeds, which runs through the recorded link data path, the persisted link
+// state and the projection back onto the resource. Exercised as one chain, since each half
+// agreeing with itself is what let earlier path-form mismatches through.
+func (s *LinkContributionDataTestSuite) Test_a_sensitive_contribution_marks_the_field_it_feeds() {
+	contributed := ContributionsToLinkData([]*provider.ResourceContribution{
+		{
+			ResourceName: "ordersFunction",
+			FieldPath:    "spec.environment.DB_PASSWORD",
+			Value:        core.MappingNodeFromString("super-secret-password"),
+			Action:       provider.ContributionActionSet,
+			Sensitive:    true,
+		},
+		{
+			ResourceName: "ordersFunction",
+			FieldPath:    "spec.environment.TABLE_NAME",
+			Value:        core.MappingNodeFromString("orders-table"),
+			Action:       provider.ContributionActionSet,
+		},
+	})
+
+	stored := state.LinkState{
+		Name:                 "ordersFunction::ordersTable",
+		Data:                 contributed.Data,
+		ResourceDataMappings: contributed.ResourceDataMappings,
+		ContributionRecords:  contributed.ContributionRecords,
+		SensitiveDataPaths:   contributed.SensitiveDataPaths,
+	}
+
+	projected, err := specmerge.ApplyLinkProjections(
+		&core.MappingNode{Fields: map[string]*core.MappingNode{}},
+		"ordersFunction",
+		[]state.LinkState{stored},
+	)
+	s.Require().NoError(err)
+	s.Require().Empty(projected.Unresolved)
+
+	s.Assert().Contains(projected.SensitivePaths, "spec.environment.DB_PASSWORD")
+	s.Assert().NotContains(
+		projected.SensitivePaths,
+		"spec.environment.TABLE_NAME",
+		"a contribution the link did not mark produced a marked field",
+	)
+}
+
 // What the framework records has to be enough to rebuild the contribution in a later
 // deployment that does not run the link, which is the whole reason it is recorded.
 func (s *LinkContributionDataTestSuite) Test_records_a_contribution_so_it_can_be_read_back() {

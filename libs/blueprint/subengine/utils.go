@@ -725,17 +725,12 @@ func getPartiallyResolvedIncludeMetadata(
 func getChildExport(
 	exportName string,
 	childState *state.InstanceState,
-) *bpcore.MappingNode {
+) *state.ExportState {
 	if childState.Exports == nil {
 		return nil
 	}
 
-	export, hasExport := childState.Exports[exportName]
-	if hasExport {
-		return export.Value
-	}
-
-	return nil
+	return childState.Exports[exportName]
 }
 
 func getValueFromStringMap(

@@ -211,6 +211,12 @@ type LinkUpdateLinkedResourcesInput struct {
 // blueprint-declared resources in a link relationship.
 type LinkUpdateLinkedResourcesOutput struct {
 	LinkData *core.MappingNode
+	// SensitiveLinkDataPaths holds the paths within LinkData that hold secrets, so that a
+	// resource field a projection feeds from one of them is marked.
+	//
+	// For a link that produces contributions rather than writing link data itself, the
+	// equivalent is ResourceContribution.Sensitive.
+	SensitiveLinkDataPaths []string
 	// ResourceDataMappings provides mappings of resource spec fields
 	// to the link data fields created when updating the resources in a link
 	// relationship.
@@ -265,6 +271,9 @@ type LinkProduceResourceContributionsOutput struct {
 	// because a contribution needed their identity.
 	IntermediaryResourceStates []*state.LinkIntermediaryResourceState
 	LinkData                   *core.MappingNode
+	// SensitiveLinkDataPaths holds the paths within LinkData that hold secrets, so that a
+	// resource field a projection feeds from one of them is marked.
+	SensitiveLinkDataPaths []string
 }
 
 // ResourceContribution is one link's contribution to one field of one resource.
@@ -282,6 +291,9 @@ type ResourceContribution struct {
 	// Action determines whether the value replaces what is at the field path or is added
 	// to the end of the list there.
 	Action ContributionAction
+	// Sensitive marks the contributed value as a secret, so that the resource field it
+	// feeds is marked wherever that field is reported.
+	Sensitive bool
 	// RetainOnRemoval keeps the contribution on the resource after the link that made it
 	// is removed.
 	//
@@ -322,6 +334,12 @@ const (
 // a resource in a link relationship.
 type LinkUpdateResourceOutput struct {
 	LinkData *core.MappingNode
+	// SensitiveLinkDataPaths holds the paths within LinkData that hold secrets, so that a
+	// resource field a projection feeds from one of them is marked.
+	//
+	// For a link that produces contributions rather than writing link data itself, the
+	// equivalent is ResourceContribution.Sensitive.
+	SensitiveLinkDataPaths []string
 	// ResourceDataMappings provides mappings of resource spec fields
 	// to the link data fields created when updating one of the two
 	// resources in a link relationship.
@@ -376,6 +394,12 @@ type LinkUpdateIntermediaryResourcesInput struct {
 type LinkUpdateIntermediaryResourcesOutput struct {
 	IntermediaryResourceStates []*state.LinkIntermediaryResourceState
 	LinkData                   *core.MappingNode
+	// SensitiveLinkDataPaths holds the paths within LinkData that hold secrets, so that a
+	// resource field a projection feeds from one of them is marked.
+	//
+	// For a link that produces contributions rather than writing link data itself,
+	// the equivalent is ResourceContribution.Sensitive.
+	SensitiveLinkDataPaths []string
 	// ResourceDataMappings provides mappings of resource spec fields
 	// to the link data fields created when updating intermediary resources
 	// in a link relationship.

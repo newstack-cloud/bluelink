@@ -228,6 +228,10 @@ type ChildExportFieldInfo struct {
 	Value           *bpcore.MappingNode
 	Removed         bool
 	ResolveOnDeploy bool
+	// Sensitive carries the child's own answer for the export, so that a parent field
+	// reading it is marked. A child resolves against its own record, so this is the only
+	// thing the parent has to go on.
+	Sensitive bool
 }
 
 // ResolveForStage is an enum that indicates the stage at which a substitution
@@ -2653,6 +2657,7 @@ func (r *defaultSubstitutionResolver) resolveChildReference(
 	if hasChildExportInfo &&
 		!childExportInfo.Removed &&
 		!childExportInfo.ResolveOnDeploy {
+		r.recordChildExportUse(childExportInfo.Sensitive, resolveCtx)
 		return getChildExportProperty(childExportInfo.Value, childReference, resolveCtx)
 	}
 
@@ -2687,7 +2692,26 @@ func (r *defaultSubstitutionResolver) resolveChildReference(
 		)
 	}
 
-	return getChildExportProperty(exportState, childReference, resolveCtx)
+	r.recordChildExportUse(exportState.Sensitive, resolveCtx)
+
+	return getChildExportProperty(exportState.Value, childReference, resolveCtx)
+}
+
+// A child resolves against its own record, so the answer the child reached is all the parent
+// has. It arrives on the export change while staging and on the persisted export at deploy
+// time, and both routes land here.
+func (r *defaultSubstitutionResolver) recordChildExportUse(
+	sensitive bool,
+	resolveCtx *resolveContext,
+) {
+	if !sensitive {
+		return
+	}
+
+	resolveCtx.sensitivity.record(
+		resolveCtx.currentElementName,
+		resolveCtx.currentElementProperty,
+	)
 }
 
 func (r *defaultSubstitutionResolver) resolveFunctionCall(

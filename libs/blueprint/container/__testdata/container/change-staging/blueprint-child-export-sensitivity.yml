@@ -1,0 +1,20 @@
+version: 2025-11-02
+variables:
+  region:
+    type: string
+
+resources:
+  # Reads both of the child's exports. The child resolves against its own record, so the
+  # only thing marking these fields is the answer the child reported for each export.
+  parentTable:
+    type: aws/dynamodb/table
+    spec:
+      tableName: "${children.coreInfra.dbPassword}"
+      region: "${children.coreInfra.region}"
+
+include:
+  coreInfra:
+    path: ${cwd()}/__testdata/container/change-staging/blueprint-child-export-sensitivity-child.yml
+    description: core infrastructure for the parent
+    variables:
+      region: ${variables.region}

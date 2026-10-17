@@ -779,6 +779,12 @@ type LinkState struct {
 	//
 	// {resourceName} represents the logical name of the resource in single blueprint instance.
 	ResourceDataMappings map[string]string `json:"resourceDataMappings,omitempty"`
+	// SensitiveDataPaths holds the paths within Data that hold secrets.
+	//
+	// Persisted because contributions are projected into a resource's spec long after the
+	// link ran, by deployment and by drift checking, and neither the resource's schema nor
+	// the blueprint says anything about a value a link assembled.
+	SensitiveDataPaths []string `json:"sensitiveDataPaths,omitempty"`
 	// ContributionRecords holds how each contribution this link makes is to be combined
 	// with what is already at the field it targets, and whether it outlives the link.
 	//

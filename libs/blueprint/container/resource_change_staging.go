@@ -183,8 +183,14 @@ func (s *defaultResourceChangeStager) composeLinkContributions(
 
 		unapplied = appendUnappliedLinkFields(unapplied, desired.Unresolved)
 
+		// The link's marks join what resolution recorded for the same resource, so every
+		// consumer of the resolved resource's sensitive paths picks them up unchanged.
 		composedResource := *resourceInfo.ResourceWithResolvedSubs
 		composedResource.Spec = desired.Spec
+		composedResource.SensitiveSpecPaths = mergeSensitiveSpecPaths(
+			composedResource.SensitiveSpecPaths,
+			desired.SensitivePaths,
+		)
 		resourceInfo.ResourceWithResolvedSubs = &composedResource
 	}
 
@@ -192,6 +198,19 @@ func (s *defaultResourceChangeStager) composeLinkContributions(
 		linkOwnedFields: specmerge.LinkOwnedFields(resourceName, linksWithMappings),
 		unappliedFields: unapplied,
 	}, nil
+}
+
+// Sorted and deduplicated, so a path named by both resolution and a link is held once and
+// the order does not depend on which produced it.
+func mergeSensitiveSpecPaths(resolved []string, fromLinks []string) []string {
+	if len(fromLinks) == 0 {
+		return resolved
+	}
+
+	merged := append(slices.Clone(resolved), fromLinks...)
+	slices.Sort(merged)
+
+	return slices.Compact(merged)
 }
 
 // What composing a resource's link contributions produced, for the change set to carry.

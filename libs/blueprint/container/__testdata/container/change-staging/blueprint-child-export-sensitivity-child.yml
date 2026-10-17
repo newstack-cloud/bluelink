@@ -1,0 +1,26 @@
+version: 2025-11-02
+variables:
+  region:
+    type: string
+
+values:
+  dbPassword:
+    type: string
+    secret: true
+    value: "secret-for-${variables.region}"
+
+resources:
+  childTable:
+    type: aws/dynamodb/table
+    spec:
+      tableName: "child-orders"
+      region: "${variables.region}"
+
+exports:
+  dbPassword:
+    type: string
+    field: values.dbPassword
+
+  region:
+    type: string
+    field: variables.region

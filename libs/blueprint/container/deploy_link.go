@@ -46,6 +46,9 @@ type LinkDeployResult struct {
 	// ContributionRecords holds how each contribution is applied and whether it outlives
 	// the link, keyed the same way as ResourceDataMappings.
 	ContributionRecords map[string]state.ContributionRecord
+	// SensitiveLinkDataPaths holds the paths within LinkData that hold secrets, gathered
+	// from every output the link produced and from the contributions it declared.
+	SensitiveLinkDataPaths []string
 }
 
 // NewDefaultLinkDeployer creates a new instance of the default implementation
@@ -975,7 +978,55 @@ func createLinkDeployResult(
 		),
 		Contributions:       contributions,
 		ContributionRecords: contributed.ContributionRecords,
+		SensitiveLinkDataPaths: mergeSensitiveLinkDataPaths(
+			getLinkedResourcesOutputSensitivePaths(linkedResourcesOutput),
+			getIntermediaryResourcesOutputSensitivePaths(intermediaryResourcesOutput),
+			getProducedContributionsSensitivePaths(contributionsOutput),
+			contributed.SensitiveDataPaths,
+		),
 	}
+}
+
+// Sorted and deduplicated, so the persisted set does not depend on the order the outputs
+// were gathered in and a path named by two of them is held once.
+func mergeSensitiveLinkDataPaths(pathSets ...[]string) []string {
+	var merged []string
+	for _, paths := range pathSets {
+		merged = append(merged, paths...)
+	}
+	slices.Sort(merged)
+
+	return slices.Compact(merged)
+}
+
+func getLinkedResourcesOutputSensitivePaths(
+	output *provider.LinkUpdateLinkedResourcesOutput,
+) []string {
+	if output == nil {
+		return nil
+	}
+
+	return output.SensitiveLinkDataPaths
+}
+
+func getIntermediaryResourcesOutputSensitivePaths(
+	output *provider.LinkUpdateIntermediaryResourcesOutput,
+) []string {
+	if output == nil {
+		return nil
+	}
+
+	return output.SensitiveLinkDataPaths
+}
+
+func getProducedContributionsSensitivePaths(
+	output *provider.LinkProduceResourceContributionsOutput,
+) []string {
+	if output == nil {
+		return nil
+	}
+
+	return output.SensitiveLinkDataPaths
 }
 
 func getProducedContributions(

@@ -10,6 +10,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/source"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/substitutions"
 	"github.com/stretchr/testify/suite"
 )
@@ -587,6 +588,88 @@ func (s *SubstitutionSensitivityTestSuite) resolveTemplateInstance(
 	s.Require().NotNil(result.ResolvedResource)
 
 	return result
+}
+
+// A child blueprint resolves against its own record, so what reaches the parent is the
+// child's answer: on the export change while staging, and on the persisted export at deploy
+// time. Seeded here the way child change staging seeds it, from a FieldChange.
+func (s *SubstitutionSensitivityTestSuite) cacheChildExports() {
+	for exportName, fieldChange := range map[string]provider.FieldChange{
+		"dbPassword": {
+			FieldPath: "variables.dbPassword",
+			NewValue:  core.MappingNodeFromString("child-super-secret"),
+			Sensitive: true,
+		},
+		"region": {
+			FieldPath: "variables.region",
+			NewValue:  core.MappingNodeFromString("eu-west-2"),
+		},
+	} {
+		s.childExportFieldCache.Set(
+			substitutions.RenderFieldPath("coreInfra", exportName),
+			&ChildExportFieldInfo{
+				Value:     fieldChange.NewValue,
+				Sensitive: fieldChange.Sensitive,
+			},
+		)
+	}
+}
+
+// The deploy-time route reads the child's persisted export rather than the staged change,
+// so it has its own source for the same answer and needs its own cover.
+func (s *SubstitutionSensitivityTestSuite) Test_reading_a_childs_secret_export_from_state_marks_the_field() {
+	instanceID := "sensitivity-parent-instance"
+	err := s.stateContainer.Instances().Save(
+		context.TODO(),
+		state.InstanceState{
+			InstanceID: instanceID,
+			ChildBlueprints: map[string]*state.InstanceState{
+				"coreInfra": {
+					InstanceID: "sensitivity-child-instance",
+					Exports: map[string]*state.ExportState{
+						"dbPassword": {
+							Value:     core.MappingNodeFromString("child-super-secret"),
+							Type:      schema.ExportTypeString,
+							Field:     "variables.dbPassword",
+							Sensitive: true,
+						},
+						"region": {
+							Value: core.MappingNodeFromString("eu-west-2"),
+							Type:  schema.ExportTypeString,
+							Field: "variables.region",
+						},
+					},
+				},
+			},
+		},
+	)
+	s.Require().NoError(err)
+
+	result, err := s.newResolver().ResolveInResource(
+		context.WithValue(context.TODO(), core.BlueprintInstanceIDKey, instanceID),
+		"childReader",
+		s.blueprint().Resources.Values["childReader"],
+		&ResolveResourceTargetInfo{
+			ResolveFor: ResolveForDeployment,
+		},
+	)
+	s.Require().NoError(err)
+	s.Require().NotNil(result.ResolvedResource)
+
+	s.Assert().Contains(result.ResolvedResource.SensitiveSpecPaths, "spec.tableName")
+	s.Assert().NotContains(result.ResolvedResource.SensitiveSpecPaths, "spec.region")
+}
+
+func (s *SubstitutionSensitivityTestSuite) Test_reading_a_childs_secret_export_marks_the_field() {
+	s.cacheChildExports()
+	result := s.resolveOrdersTable()
+
+	s.Assert().Contains(result.ResolvedResource.SensitiveSpecPaths, "spec.childSecret")
+	s.Assert().NotContains(
+		result.ResolvedResource.SensitiveSpecPaths,
+		"spec.childPlain",
+		"a field reading a child export the child reported as plain was marked",
+	)
 }
 
 // `each` is a single expression yielding an array, so there is no per-item recording, a

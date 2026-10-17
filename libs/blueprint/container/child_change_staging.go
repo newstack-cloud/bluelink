@@ -204,6 +204,7 @@ func (d *defaultChildChangeStager) cacheChildExportField(
 			Value:           fieldChange.NewValue,
 			Removed:         false,
 			ResolveOnDeploy: willResolveOnDeploy,
+			Sensitive:       fieldChange.Sensitive,
 		},
 	)
 }

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -1184,6 +1185,7 @@ func copyLink(linkState *state.LinkState) state.LinkState {
 		),
 		Data:                       linkState.Data,
 		ResourceDataMappings:       resourceDataMappings,
+		SensitiveDataPaths:         slices.Clone(linkState.SensitiveDataPaths),
 		ContributionRecords:        linkState.ContributionRecords,
 		FailureReasons:             linkState.FailureReasons,
 		Drifted:                    linkState.Drifted,

@@ -35,6 +35,13 @@ type UnresolvedProjection struct {
 type LinkProjectionResult struct {
 	Spec       *core.MappingNode
 	Unresolved []UnresolvedProjection
+	// SensitivePaths holds the resource spec field paths a link fed from a part of its data
+	// it marked sensitive, rooted the same way the composed spec is.
+	//
+	// A link assembles its values inside itself, so neither the resource's schema nor the
+	// blueprint says anything about them. The mapping that says where a value came from is
+	// the only thing that can say where its sensitivity came from.
+	SensitivePaths []string
 }
 
 // ApplyLinkProjections composes the contributions links have made to a resource into a
@@ -95,10 +102,11 @@ func orderedProjectionsFor(
 			}
 
 			projections = append(projections, linkProjection{
-				linkName:     link.Name,
-				linkData:     link.Data,
-				fieldPath:    fieldPath,
-				linkDataPath: linkDataPath,
+				linkName:           link.Name,
+				linkData:           link.Data,
+				sensitiveDataPaths: link.SensitiveDataPaths,
+				fieldPath:          fieldPath,
+				linkDataPath:       linkDataPath,
 			})
 		}
 	}
@@ -116,10 +124,11 @@ func orderedProjectionsFor(
 
 // A single contribution a link makes to a resource.
 type linkProjection struct {
-	linkName     string
-	linkData     map[string]*core.MappingNode
-	fieldPath    string
-	linkDataPath string
+	linkName           string
+	linkData           map[string]*core.MappingNode
+	sensitiveDataPaths []string
+	fieldPath          string
+	linkDataPath       string
 }
 
 func applyLinkProjection(
@@ -139,6 +148,13 @@ func applyLinkProjection(
 			Reason:            "the link's data holds no value at this path",
 		})
 		return nil
+	}
+
+	if core.IsPathCoveredBy(projection.linkDataPath, projection.sensitiveDataPaths) {
+		result.SensitivePaths = append(
+			result.SensitivePaths,
+			SensitiveSpecPath(projection.fieldPath),
+		)
 	}
 
 	err := core.InjectPathValueReplaceFields(
@@ -162,6 +178,21 @@ func applyLinkProjection(
 	}
 
 	return nil
+}
+
+// SensitiveSpecPath renders a mapping's resource field path in the form
+// ResolvedResource.SensitiveSpecPaths uses, so that a link's marks can join what resolution
+// recorded for the same resource.
+//
+// Deliberately not ResourceSpecPath, which roots a path for reading and writing a mapping
+// node and produces a form nothing matching spec paths would recognise. Providers write a
+// mapping's field path with or without the "spec" root, and only one of those forms matches.
+func SensitiveSpecPath(fieldPath string) string {
+	if fieldPath == "spec" || core.IsSpecFieldPath(fieldPath) {
+		return fieldPath
+	}
+
+	return core.ElementPropertyPath("spec", fieldPath)
 }
 
 // ResourceSpecPath roots a mapping's resource field path so that it can be applied to, or
