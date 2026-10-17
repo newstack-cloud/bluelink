@@ -2,6 +2,7 @@ package subengine
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -444,6 +445,56 @@ func (s *SubstitutionSensitivityTestSuite) Test_reading_a_plain_field_of_a_value
 	result := s.resolveOrdersTable()
 
 	s.Assert().NotContains(result.ResolvedResource.SensitiveSpecPaths, "spec.connectionHost")
+}
+
+// Blueprint-wide metadata resolves under the element name "metadata" with no resolved
+// resource to carry its marks, so the result is the only thing that can report them.
+func (s *SubstitutionSensitivityTestSuite) Test_a_secret_in_blueprint_metadata_is_reported_on_the_result() {
+	result := s.resolveBlueprintMetadata()
+
+	s.Assert().Contains(result.SensitivePaths, "metadata.auditKey")
+	s.Assert().NotContains(result.SensitivePaths, "metadata.build")
+}
+
+func (s *SubstitutionSensitivityTestSuite) Test_a_quoted_metadata_key_is_recorded_in_the_form_changes_use() {
+	result := s.resolveBlueprintMetadata()
+
+	s.Assert().Contains(result.SensitivePaths, `metadata["audit.key"]`)
+	s.Assert().NotContains(
+		result.SensitivePaths,
+		"metadata.audit.key",
+		"the recorded path collides with the nested metadata.audit.key, which holds nothing secret",
+	)
+}
+
+func (s *SubstitutionSensitivityTestSuite) Test_a_nested_metadata_key_is_recorded_under_its_parent() {
+	result := s.resolveBlueprintMetadata()
+
+	s.Assert().Contains(result.SensitivePaths, "metadata.nested.inner")
+}
+
+// The record is shared with everything resolved on the way, and a caller matching against
+// this element's fields has no use for another element's paths.
+func (s *SubstitutionSensitivityTestSuite) Test_blueprint_metadata_paths_exclude_other_elements() {
+	for _, path := range s.resolveBlueprintMetadata().SensitivePaths {
+		s.Assert().True(
+			strings.HasPrefix(path, "metadata"),
+			"%s belongs to another element",
+			path,
+		)
+	}
+}
+
+func (s *SubstitutionSensitivityTestSuite) resolveBlueprintMetadata() *ResolveInMappingNodeResult {
+	result, err := s.newResolver().ResolveInMappingNode(
+		context.TODO(),
+		"metadata",
+		s.blueprint().Metadata,
+		&ResolveMappingNodeTargetInfo{ResolveFor: ResolveForChangeStaging},
+	)
+	s.Require().NoError(err)
+
+	return result
 }
 
 func sensitivityTestParams() core.BlueprintParams {

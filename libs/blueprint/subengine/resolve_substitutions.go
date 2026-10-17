@@ -95,8 +95,9 @@ type ResolveResourceTargetInfo struct {
 	PartiallyResolved *provider.ResolvedResource
 }
 
-// ResolveInResourceResult contains a resolved resource
-// and a list of full property paths that must be resolved during deployment.
+// ResolveInResourceResult contains a resolved resource, a list of full property paths that
+// must be resolved during deployment and the property paths a secret reached while
+// resolving that the resolved resource does not already carry.
 type ResolveInResourceResult struct {
 	ResolvedResource *provider.ResolvedResource
 	ResolveOnDeploy  []string
@@ -128,11 +129,15 @@ type ResolveMappingNodeTargetInfo struct {
 	PartiallyResolved *bpcore.MappingNode
 }
 
-// ResolveInMappingNodeResult contains a resolved mapping node
-// and a list of full property paths that must be resolved during deployment.
+// ResolveInMappingNodeResult contains a resolved mapping node, a list of full property
+// paths that must be resolved during deployment and the property paths a secret reached
+// while resolving.
 type ResolveInMappingNodeResult struct {
 	ResolvedMappingNode *bpcore.MappingNode
 	ResolveOnDeploy     []string
+	// SensitivePaths holds the property paths a secret reached, rooted at the element the
+	// node was resolved for, so "metadata.auditKey" for blueprint-wide metadata.
+	SensitivePaths []string
 }
 
 // ResolveValueTargetInfo contains information about the target of a substitution
@@ -156,8 +161,9 @@ type ResolveIncludeTargetInfo struct {
 	PartiallyResolved *ResolvedInclude
 }
 
-// ResolveInIncludeResult contains a resolved include
-// and a list of full property paths that must be resolved during deployment.
+// ResolveInIncludeResult contains a resolved include, a list of full property paths that
+// must be resolved during deployment and the property paths a secret reached while
+// resolving.
 type ResolveInIncludeResult struct {
 	ResolvedInclude *ResolvedInclude
 	ResolveOnDeploy []string
@@ -1072,6 +1078,7 @@ func (r *defaultSubstitutionResolver) ResolveInMappingNode(
 ) (*ResolveInMappingNodeResult, error) {
 	resolveOnDeploy := []string{}
 
+	sensitivity := newSensitivityRecord()
 	resolved, err := r.resolveInMappingNode(
 		ctx,
 		mappingNode,
@@ -1081,7 +1088,7 @@ func (r *defaultSubstitutionResolver) ResolveInMappingNode(
 			currentElementName: currentElementName,
 			resolveFor:         resolveTargetInfo.ResolveFor,
 			partiallyResolved:  resolveTargetInfo.PartiallyResolved,
-			sensitivity:        newSensitivityRecord(),
+			sensitivity:        sensitivity,
 		},
 		/* depth */ 0,
 	)
@@ -1093,6 +1100,7 @@ func (r *defaultSubstitutionResolver) ResolveInMappingNode(
 	return &ResolveInMappingNodeResult{
 		ResolvedMappingNode: resolved,
 		ResolveOnDeploy:     resolveOnDeploy,
+		SensitivePaths:      sensitivity.pathsRootedAt(currentElementName),
 	}, nil
 }
 
@@ -1251,7 +1259,7 @@ func (r *defaultSubstitutionResolver) resolveInMappingNodeFields(
 		// (e.g. spec["role"] vs spec.role) would drop the field from
 		// FieldChangesKnownOnDeploy, so a dependant referencing a computed value
 		// would deploy with a null value.
-		propertyPath := substitutions.RenderFieldPath(resolveCtx.currentElementProperty, fieldName)
+		propertyPath := renderMappingNodeFieldPath(resolveCtx.currentElementProperty, fieldName)
 		resolvedField, err := r.resolveInMappingNode(
 			ctx,
 			field,

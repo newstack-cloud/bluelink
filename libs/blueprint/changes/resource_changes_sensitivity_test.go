@@ -115,25 +115,6 @@ func (s *ResourceChangeSensitivityTestSuite) Test_a_recorded_annotation_map_mark
 	s.Assert().True(modified[`metadata.annotations["example.v1"]`].Sensitive)
 }
 
-// Keyed by path, with every asserted path required to be present, a missing entry reads as
-// "not sensitive" and would pass regardless of what the code does.
-func (s *ResourceChangeSensitivityTestSuite) requireFields(
-	fieldChanges []provider.FieldChange,
-	paths ...string,
-) map[string]provider.FieldChange {
-	byPath := map[string]provider.FieldChange{}
-	for _, fieldChange := range fieldChanges {
-		byPath[fieldChange.FieldPath] = fieldChange
-	}
-
-	for _, path := range paths {
-		_, found := byPath[path]
-		s.Require().True(found, "%s is not among the field changes", path)
-	}
-
-	return byPath
-}
-
 func (s *ResourceChangeSensitivityTestSuite) metadataChanges(
 	sensitiveMetadataPaths []string,
 ) *provider.Changes {
@@ -150,7 +131,7 @@ func (s *ResourceChangeSensitivityTestSuite) metadataChanges(
 }
 
 func (s *ResourceChangeSensitivityTestSuite) Test_marks_new_metadata_a_secret_reached() {
-	newFields := s.requireFields(
+	newFields := fieldChangesByPath(&s.Suite,
 		s.metadataChanges([]string{"metadata.custom.addedKey"}).NewFields,
 		"metadata.custom.addedKey",
 	)
@@ -159,7 +140,7 @@ func (s *ResourceChangeSensitivityTestSuite) Test_marks_new_metadata_a_secret_re
 }
 
 func (s *ResourceChangeSensitivityTestSuite) Test_marks_a_retyped_metadata_field_a_secret_reached() {
-	modified := s.requireFields(
+	modified := fieldChangesByPath(&s.Suite,
 		s.metadataChanges([]string{"metadata.custom.retypedKey"}).ModifiedFields,
 		"metadata.custom.retypedKey",
 	)
@@ -171,7 +152,7 @@ func (s *ResourceChangeSensitivityTestSuite) Test_marks_a_retyped_metadata_field
 // the change prints. The reported path is the container, which no recorded descendant path
 // matches on the at-or-above test the descending walks use.
 func (s *ResourceChangeSensitivityTestSuite) Test_marks_a_shallow_change_holding_a_secret_below_it() {
-	modified := s.requireFields(
+	modified := fieldChangesByPath(&s.Suite,
 		s.metadataChanges([]string{"metadata.custom.retypedKey.nested"}).ModifiedFields,
 		"metadata.custom.retypedKey",
 	)
@@ -186,7 +167,7 @@ func (s *ResourceChangeSensitivityTestSuite) Test_marks_a_shallow_change_holding
 func (s *ResourceChangeSensitivityTestSuite) metadataModifiedFields(
 	sensitiveMetadataPaths []string,
 ) map[string]provider.FieldChange {
-	return s.requireFields(
+	return fieldChangesByPath(&s.Suite,
 		s.metadataChanges(sensitiveMetadataPaths).ModifiedFields,
 		"metadata.displayName",
 		"metadata.custom.auditKey",

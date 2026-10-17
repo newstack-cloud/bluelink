@@ -219,5 +219,6 @@
     FieldsSourceMeta: (map[string]*source.Meta) <nil>
   }),
   ResolveOnDeploy: ([]string) {
-  }
+  },
+  SensitivePaths: ([]string) <nil>
 })

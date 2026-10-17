@@ -94,6 +94,18 @@ func (s *sensitivityRecord) specPropertiesOf(elementName string) []string {
 	return s.propertiesUnderRootOf(elementName, "spec")
 }
 
+// Only the named element's own paths, as full element property paths. A record is shared
+// with the values and data sources resolved on the way, and a caller matching against one
+// element's fields has no use for theirs.
+func (s *sensitivityRecord) pathsRootedAt(elementName string) []string {
+	var paths []string
+	for _, property := range s.propertiesOf(elementName) {
+		paths = append(paths, bpcore.ElementPropertyPath(elementName, property))
+	}
+
+	return paths
+}
+
 func (s *sensitivityRecord) metadataPropertiesOf(elementName string) []string {
 	return s.propertiesUnderRootOf(elementName, "metadata")
 }

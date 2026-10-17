@@ -8,6 +8,9 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/subengine"
 )
 
+// CollectMetadataChanges collects the changes between the resolved blueprint-wide metadata
+// and the metadata currently in state, populating collectIn. Fields a secret reached during
+// resolution, reported in resolveResult.SensitivePaths, are marked sensitive.
 func CollectMetadataChanges(
 	collectIn *MetadataChanges,
 	resolveResult *subengine.ResolveInMappingNodeResult,
@@ -38,6 +41,7 @@ func CollectMetadataChanges(
 		},
 		&fieldChangeContext{
 			fieldsToResolveOnDeploy: resolveResult.ResolveOnDeploy,
+			recordedSensitivePaths:  resolveResult.SensitivePaths,
 			currentPath:             "metadata",
 			depth:                   0,
 		},

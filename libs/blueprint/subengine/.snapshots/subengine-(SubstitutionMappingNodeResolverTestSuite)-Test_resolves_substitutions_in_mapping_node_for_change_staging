@@ -212,5 +212,6 @@
     (string) (len=45) "metadata.networkingSummary.suffixedRegions[1]",
     (string) (len=30) "metadata.networkingSummary.vpc",
     (string) (len=22) "metadata.ordersTableId"
-  }
+  },
+  SensitivePaths: ([]string) <nil>
 })

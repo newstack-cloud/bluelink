@@ -184,3 +184,19 @@ exports:
   connectionHost:
     type: string
     field: values.connection.host
+
+# Blueprint-wide metadata, resolved as a bare mapping node rather than as part of a
+# resource, so its marks come back on the result.
+metadata:
+  build: esbuild
+  auditKey: "audit-${variables.dbPassword}"
+  # Needs bracket quoting, which the root of a bare mapping node does not get for free.
+  "audit.key": "dotted-${variables.dbPassword}"
+  # A sibling whose change path is what the dotted key renders to unquoted, so an unquoted
+  # recording would mark this public value instead.
+  audit:
+    key: "totally-public"
+  nested:
+    inner: "inner-${variables.dbPassword}"
+  # Reads a value, so resolving it records against that value's element too.
+  fromValue: "${values.connection.host}"

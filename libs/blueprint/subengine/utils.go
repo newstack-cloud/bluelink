@@ -325,6 +325,23 @@ func getFinalResourceName(property *substitutions.SubstitutionResourceProperty) 
 	)
 }
 
+// RenderFieldPath leaves a name unquoted when there is no prefix to join it to, so the
+// first level of a bare mapping node comes out as "audit.key" where the change generator,
+// which starts its walk from a root name, renders ["audit.key"]. A key needing quotes would
+// then go unmarked, and worse, could match an unrelated nested field of the same spelling.
+// Quoting at the root as well keeps the two renderings in step.
+func renderMappingNodeFieldPath(currentPath string, fieldName string) string {
+	if currentPath != "" {
+		return substitutions.RenderFieldPath(currentPath, fieldName)
+	}
+
+	if substitutions.NamePattern.MatchString(fieldName) {
+		return fieldName
+	}
+
+	return fmt.Sprintf("[%q]", fieldName)
+}
+
 // Renders a reference's path in the same form resolution records properties in, dot
 // notation for identifier-style names and bracket notation otherwise, so a reference can be
 // matched against what was recorded.
