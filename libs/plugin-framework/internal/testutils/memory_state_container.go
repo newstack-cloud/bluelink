@@ -1157,6 +1157,7 @@ func copyLink(linkState *state.LinkState) state.LinkState {
 		),
 		Data:                       linkState.Data,
 		ResourceDataMappings:       linkState.ResourceDataMappings,
+		SensitiveDataPaths:         linkState.SensitiveDataPaths,
 		ContributionRecords:        linkState.ContributionRecords,
 		FailureReasons:             linkState.FailureReasons,
 		Drifted:                    linkState.Drifted,
@@ -1222,7 +1223,6 @@ func copyExport(
 		Description: exportState.Description,
 		Field:       exportState.Field,
 		Sensitive:   exportState.Sensitive,
-
 	}
 }
 
