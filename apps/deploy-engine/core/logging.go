@@ -14,7 +14,11 @@ import (
 // provided configuration.
 // A purely JSON format is used in production,
 // while a more human-readable format is used in development.
-func CreateLogger(config *Config) (core.Logger, error) {
+//
+// The value of any log field whose key a plugin declared as a secret is masked. The matcher
+// is consulted when an entry is written rather than when the logger is built, since plugin
+// config definitions are read after this point.
+func CreateLogger(config *Config, secretFields SecretFieldMatcher) (core.Logger, error) {
 	zapLevel, err := zapcore.ParseLevel(config.LogLevel)
 	if err != nil {
 		return nil, err
@@ -30,7 +34,7 @@ func CreateLogger(config *Config) (core.Logger, error) {
 	stdoutSyncer := zapcore.Lock(os.Stdout)
 	encoder := createZapEncoder(zapConf)
 	zapCore := zapcore.NewCore(encoder, stdoutSyncer, zapLevel)
-	zapLogger := zap.New(zapCore)
+	zapLogger := zap.New(&redactingCore{Core: zapCore, matcher: secretFields})
 
 	return core.NewLoggerFromZap(zapLogger), nil
 }

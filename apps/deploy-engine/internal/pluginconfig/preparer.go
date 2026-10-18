@@ -34,24 +34,35 @@ type Preparer interface {
 	) (*types.BlueprintOperationConfig, []*core.Diagnostic, error)
 }
 
+// Records the config keys a plugin declares as secret, so that a log entry carrying one of
+// them under its own key is masked.
+type secretKeyRecorder interface {
+	Register(fieldName string)
+}
+
 type preparerImpl struct {
-	providers     map[string]DefinitionProvider
-	transformers  map[string]DefinitionProvider
-	pluginManager pluginservicev1.Manager
+	providers        map[string]DefinitionProvider
+	transformers     map[string]DefinitionProvider
+	pluginManager    pluginservicev1.Manager
+	secretConfigKeys secretKeyRecorder
 }
 
 // NewDefaultPreparer creates a new default implementation of a service
 // that validates and populates defaults for plugin-specific configuration using the
 // plugin-provided config definition schemas.
+// The preparer is where every plugin's config definition is read, so it is also where the
+// keys a plugin declares as secret become known.
 func NewDefaultPreparer(
 	providers map[string]DefinitionProvider,
 	transformers map[string]DefinitionProvider,
 	pluginManager pluginservicev1.Manager,
+	secretConfigKeys secretKeyRecorder,
 ) Preparer {
 	return &preparerImpl{
-		providers:     providers,
-		transformers:  transformers,
-		pluginManager: pluginManager,
+		providers:        providers,
+		transformers:     transformers,
+		pluginManager:    pluginManager,
+		secretConfigKeys: secretConfigKeys,
 	}
 }
 
@@ -141,6 +152,8 @@ func (p *preparerImpl) validateAndPreparePluginConfig(
 	if err != nil {
 		return nil, nil, err
 	}
+
+	p.recordSecretConfigKeys(configDef)
 
 	if validate {
 		diagnostics, err = core.ValidateConfigDefinition(
@@ -234,6 +247,18 @@ func (p *preparerImpl) getPluginInstance(pluginID string) *pluginservicev1.Plugi
 	}
 
 	return providerInstance
+}
+
+func (p *preparerImpl) recordSecretConfigKeys(configDef *core.ConfigDefinition) {
+	if p.secretConfigKeys == nil || configDef == nil {
+		return
+	}
+
+	for fieldName, fieldDef := range configDef.Fields {
+		if fieldDef != nil && fieldDef.Secret {
+			p.secretConfigKeys.Register(fieldName)
+		}
+	}
 }
 
 func (p *preparerImpl) getPluginDefinitionProvider(

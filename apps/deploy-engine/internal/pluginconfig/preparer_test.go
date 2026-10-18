@@ -11,15 +11,18 @@ import (
 )
 
 type PreparerSuite struct {
-	preparer Preparer
+	preparer         Preparer
+	secretConfigKeys *SecretKeyRegistry
 	suite.Suite
 }
 
 func (s *PreparerSuite) SetupTest() {
+	s.secretConfigKeys = NewSecretKeyRegistry()
 	s.preparer = NewDefaultPreparer(
 		testProviders(),
 		testTransformers(),
 		createTestPluginManager(),
+		s.secretConfigKeys,
 	)
 }
 
@@ -383,6 +386,18 @@ func (p *testProvider) ConfigDefinition(ctx context.Context) (*core.ConfigDefini
 				Description: "AWS region KMS keys",
 				Required:    true,
 			},
+			"secretField": {
+				Type:        core.ScalarTypeString,
+				Label:       "Secret Field",
+				Description: "A secret field",
+				Secret:      true,
+			},
+			"aws.config.secretKeys.<region>": {
+				Type:        core.ScalarTypeString,
+				Label:       "AWS Secret Keys",
+				Description: "A secret field whose name is a template",
+				Secret:      true,
+			},
 			"intFieldWithDefault": {
 				Type:         core.ScalarTypeInteger,
 				Label:        "Int Field with Default",
@@ -531,4 +546,30 @@ func (m *testPluginManager) Close() {
 
 func TestPrepareSuite(t *testing.T) {
 	suite.Run(t, new(PreparerSuite))
+}
+
+// The preparer is the only place every plugin's config definition is read, so it is where
+// the keys a plugin declares as secret become known to the logger.
+func (s *PreparerSuite) Test_records_the_config_keys_a_plugin_declares_as_secret() {
+	_, _, err := s.preparer.Prepare(
+		context.Background(),
+		&types.BlueprintOperationConfig{
+			Providers: map[string]map[string]*core.ScalarValue{
+				"test-provider": {},
+			},
+		},
+		/* validate */ false,
+	)
+	s.Require().NoError(err)
+
+	s.Assert().True(s.secretConfigKeys.IsSecret("secretField"))
+	s.Assert().True(
+		s.secretConfigKeys.IsSecret("aws.config.secretKeys.eu-west-2"),
+		"a key matching a secret field name template was not recorded",
+	)
+	s.Assert().False(s.secretConfigKeys.IsSecret("stringField"))
+	s.Assert().False(
+		s.secretConfigKeys.IsSecret("aws.config.regionKMSKeys.eu-west-2.other.key"),
+		"a key matching a template that is not secret was recorded",
+	)
 }

@@ -47,7 +47,11 @@ func Setup(
 	config *core.Config,
 	pluginServiceListener net.Listener,
 ) (io.WriteCloser, func(), error) {
-	logger, err := core.CreateLogger(config)
+	// Created before the logger and filled later, as plugin config definitions are read,
+	// the logger consults it when it writes an entry, not when it is built.
+	secretConfigKeys := pluginconfig.NewSecretKeyRegistry()
+
+	logger, err := core.CreateLogger(config, secretConfigKeys)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -141,6 +145,7 @@ func Setup(
 			transformerConfigProvidersByPluginName(pluginHostService.Manager()),
 		),
 		pluginHostService.Manager(),
+		secretConfigKeys,
 	)
 
 	validateLoaderFactory := func(extraOpts ...container.LoaderOption) container.Loader {
