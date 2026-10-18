@@ -2,6 +2,7 @@ package core
 
 import (
 	"maps"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -338,6 +339,47 @@ func (s *PluginConfigTestSuite) Test_skips_custom_validation_for_empty_optional_
 	s.Assert().Empty(diagnostics)
 }
 
+// Diagnostics are returned to the caller and logged, so a config value that reaches one has
+// left the engine.
+func (s *PluginConfigTestSuite) Test_withholds_a_secret_config_value_from_a_diagnostic() {
+	diagnostics, err := ValidateConfigDefinition(
+		"aws",
+		"provider",
+		map[string]*ScalarValue{
+			"intField":    ScalarFromInt(10),
+			"floatField":  ScalarFromFloat(1.0),
+			"boolField":   ScalarFromBool(true),
+			"stringField": ScalarFromString("a value"),
+			"aws.config.regionKMSKeys.eu-west-2.other.key": ScalarFromString("key"),
+			"secretField": ScalarFromString("super-secret-password"),
+		},
+		testConfigDefinition,
+	)
+	s.Require().NoError(err)
+
+	rejection := s.diagnosticMentioning(diagnostics, "secretField")
+	s.Require().NotNil(rejection, "the secret field's value was not rejected")
+	s.Assert().NotContains(
+		rejection.Message,
+		"super-secret-password",
+		"the secret config value was reported in the diagnostic",
+	)
+	s.Assert().Contains(rejection.Message, RedactedPlaceholder)
+}
+
+func (s *PluginConfigTestSuite) diagnosticMentioning(
+	diagnostics []*Diagnostic,
+	fieldName string,
+) *Diagnostic {
+	for _, diagnostic := range diagnostics {
+		if strings.Contains(diagnostic.Message, fieldName) {
+			return diagnostic
+		}
+	}
+
+	return nil
+}
+
 func TestPluginConfigTestSuite(t *testing.T) {
 	suite.Run(t, new(PluginConfigTestSuite))
 }
@@ -388,6 +430,15 @@ var testConfigDefinition = &ConfigDefinition{
 			Label:       "String Field",
 			Description: "A string field",
 			Required:    true,
+		},
+		"secretField": {
+			Type:        ScalarTypeString,
+			Label:       "Secret Field",
+			Description: "A secret field with a closed set of values",
+			Secret:      true,
+			AllowedValues: []*ScalarValue{
+				ScalarFromString("allowed-secret"),
+			},
 		},
 		"aws.config.regionKMSKeys.<region>.other.<placeholder>": {
 			Type:        ScalarTypeString,

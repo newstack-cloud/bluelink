@@ -25,6 +25,12 @@ type ConfigDefinition struct {
 	AllowAdditionalFields bool                              `json:"allowAdditionalFields"`
 }
 
+// RedactedPlaceholder stands in for a value that has been withheld.
+//
+// This is stable and greppable by design, it appears in diagnostics and logs, so it has to be
+// recognisable as a deliberate redaction.
+const RedactedPlaceholder = "***"
+
 // ConfigFieldDefinition represents a field in a configuration definition
 // for a provider or transformer plugin.
 type ConfigFieldDefinition struct {
@@ -153,7 +159,7 @@ func ValidateConfigDefinition(
 				pluginName,
 				pluginType,
 				configValues,
-				fieldDef.AllowedValues,
+				fieldDef,
 				&diagnostics,
 			)
 		}
@@ -230,6 +236,22 @@ func checkConfigValueTypes(
 	}
 }
 
+// Keeps a value declared secret out of a diagnostic.
+//
+// Diagnostics are returned to the caller and logged, so a value that reaches one has left
+// the engine. The field's name and the fact that it was rejected are what makes the
+// diagnostic useful, and neither needs the value itself.
+func reportableConfigValue(
+	configValue *ScalarValue,
+	fieldDefinition *ConfigFieldDefinition,
+) string {
+	if fieldDefinition.Secret {
+		return RedactedPlaceholder
+	}
+
+	return configValue.ToString()
+}
+
 func matchesPluginConfigType(
 	configValue *ScalarValue,
 	fieldType ScalarType,
@@ -244,12 +266,12 @@ func checkAllowedConfigValues(
 	pluginName string,
 	pluginType string,
 	configValues map[string]*ScalarValue,
-	allowedValues []*ScalarValue,
+	fieldDefinition *ConfigFieldDefinition,
 	diagnostics *[]*Diagnostic,
 ) {
 	for configName, configValue := range configValues {
 		if !slices.ContainsFunc(
-			allowedValues,
+			fieldDefinition.AllowedValues,
 			func(allowedValue *ScalarValue) bool {
 				return configValue.Equal(allowedValue)
 			},
@@ -261,7 +283,7 @@ func checkAllowedConfigValues(
 					pluginName,
 					pluginType,
 					configName,
-					configValue.ToString(),
+					reportableConfigValue(configValue, fieldDefinition),
 				),
 				Range: generalDiagnosticRange(),
 			})
