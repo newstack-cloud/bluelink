@@ -70,12 +70,12 @@ func (s *ControllerTestSuite) setupReconciliationTest(
 		ChangesetStore: testutils.NewMockChangesetStore(
 			map[string]*manage.Changeset{},
 		),
-		Instances:        stateContainer.Instances(),
-		Exports:          stateContainer.Exports(),
-		IDGenerator:      core.NewUUIDGenerator(),
-		EventIDGenerator: utils.NewUUIDv7Generator(),
-		ValidationLoader: blueprintLoader,
-		DeploymentLoader: blueprintLoader,
+		Instances:         stateContainer.Instances(),
+		Exports:           stateContainer.Exports(),
+		IDGenerator:       core.NewUUIDGenerator(),
+		EventIDGenerator:  utils.NewUUIDv7Generator(),
+		ValidationLoader:  blueprintLoader,
+		DeploymentLoader:  blueprintLoader,
 		BlueprintResolver: &testutils.MockBlueprintResolver{},
 		ParamsProvider: params.NewDefaultProvider(
 			map[string]*core.ScalarValue{},

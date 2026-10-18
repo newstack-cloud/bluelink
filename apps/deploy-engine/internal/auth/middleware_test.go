@@ -15,7 +15,7 @@ type MiddlewareSuite struct {
 
 func (s *MiddlewareSuite) Test_calls_next_handler_for_request_that_passes_auth_check() {
 	middleware, err := NewMiddleware(
-		checkerFunc(testChecker1),
+		testChecker1,
 		[]*mux.Route{},
 	)
 	s.Require().NoError(err)
@@ -39,7 +39,7 @@ func (s *MiddlewareSuite) Test_calls_next_handler_for_request_that_passes_auth_c
 
 func (s *MiddlewareSuite) Test_returns_401_unauthorised_response_for_failed_auth_check() {
 	middleware, err := NewMiddleware(
-		checkerFunc(testChecker1),
+		testChecker1,
 		[]*mux.Route{},
 	)
 	s.Require().NoError(err)
@@ -73,7 +73,7 @@ func (s *MiddlewareSuite) Test_calls_next_handler_for_route_in_exclude_list() {
 	).Methods("GET")
 
 	middleware, err := NewMiddleware(
-		checkerFunc(testChecker1),
+		testChecker1,
 		[]*mux.Route{
 			healthRoute,
 		},

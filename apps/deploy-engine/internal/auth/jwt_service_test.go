@@ -66,7 +66,7 @@ func (s *JWTServiceSuite) Test_verifies_valid_jwt_from_oauth2_provider() {
 	headers := make(http.Header)
 	headers.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
-	err = service.Check(
+	_, err = service.Check(
 		context.Background(),
 		headers,
 	)
@@ -97,7 +97,7 @@ func (s *JWTServiceSuite) Test_verifies_valid_jwt_from_oidc_provider() {
 	headers := make(http.Header)
 	headers.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
-	err = service.Check(
+	_, err = service.Check(
 		context.Background(),
 		headers,
 	)
@@ -128,7 +128,7 @@ func (s *JWTServiceSuite) Test_fails_for_invalid_token() {
 	headers := make(http.Header)
 	headers.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
-	err = service.Check(
+	_, err = service.Check(
 		context.Background(),
 		headers,
 	)
@@ -152,7 +152,7 @@ func (s *JWTServiceSuite) Test_fails_for_missing_bearer_token_header() {
 	headers := make(http.Header)
 	// Missing the Authorization header
 
-	err = service.Check(
+	_, err = service.Check(
 		context.Background(),
 		headers,
 	)
@@ -187,7 +187,7 @@ func (s *JWTServiceSuite) Test_fails_for_missing_bearer_prefix_in_authorization_
 	// Missing the "Bearer " prefix.
 	headers.Set("Authorization", token)
 
-	err = service.Check(
+	_, err = service.Check(
 		context.Background(),
 		headers,
 	)

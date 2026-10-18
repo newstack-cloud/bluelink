@@ -23,7 +23,7 @@ func (s *APIKeyServiceSuite) Test_check_verifies_a_valid_api_key() {
 	headers := make(http.Header)
 	headers.Set(BluelinkAPIKeyHeaderName, "valid-key-2")
 
-	err := service.Check(context.Background(), headers)
+	_, err := service.Check(context.Background(), headers)
 	s.NoError(err)
 }
 
@@ -36,7 +36,7 @@ func (s *APIKeyServiceSuite) Test_check_fails_for_invalid_api_key() {
 
 	headers := make(http.Header)
 	headers.Set(BluelinkAPIKeyHeaderName, "invalid-key")
-	err := service.Check(context.Background(), headers)
+	_, err := service.Check(context.Background(), headers)
 	s.Error(err)
 	authErr, ok := err.(*Error)
 	s.True(ok)
@@ -51,7 +51,7 @@ func (s *APIKeyServiceSuite) Test_check_fails_for_missing_api_key() {
 	)
 
 	headers := make(http.Header)
-	err := service.Check(context.Background(), headers)
+	_, err := service.Check(context.Background(), headers)
 	s.Error(err)
 	authErr, ok := err.(*Error)
 	s.True(ok)
@@ -64,7 +64,7 @@ func (s *APIKeyServiceSuite) Test_check_fails_when_no_api_keys_are_configured() 
 	headers := make(http.Header)
 	headers.Set(BluelinkAPIKeyHeaderName, "any-key")
 
-	err := service.Check(context.Background(), headers)
+	_, err := service.Check(context.Background(), headers)
 	s.Require().Error(err)
 	authErr, ok := err.(*Error)
 	s.Require().True(ok)

@@ -36,11 +36,15 @@ func (m *Middleware) Middleware(next http.Handler) http.Handler {
 		exclude := m.shouldBeExcluded(r)
 
 		if !exclude {
-			err := m.checker.Check(r.Context(), r.Header)
+			principal, err := m.checker.Check(r.Context(), r.Header)
 			writtenErrResponse := handleError(err, w)
 			if writtenErrResponse {
 				return
 			}
+
+			// Carried on the request from here, since the credential it was established
+			// from is not available to anything downstream.
+			r = r.WithContext(ContextWithPrincipal(r.Context(), principal))
 		}
 
 		next.ServeHTTP(w, r)

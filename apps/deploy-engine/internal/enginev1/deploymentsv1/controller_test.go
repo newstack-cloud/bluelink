@@ -73,12 +73,12 @@ func (s *ControllerTestSuite) SetupTest() {
 		CleanupOperationsStore: testutils.NewMockCleanupOperationsStore(
 			map[string]*manage.CleanupOperation{},
 		),
-		Instances:        s.instances,
-		Exports:         stateContainer.Exports(),
-		IDGenerator:     core.NewUUIDGenerator(),
-		EventIDGenerator: utils.NewUUIDv7Generator(),
-		ValidationLoader: blueprintLoader,
-		DeploymentLoader: blueprintLoader,
+		Instances:         s.instances,
+		Exports:           stateContainer.Exports(),
+		IDGenerator:       core.NewUUIDGenerator(),
+		EventIDGenerator:  utils.NewUUIDv7Generator(),
+		ValidationLoader:  blueprintLoader,
+		DeploymentLoader:  blueprintLoader,
 		BlueprintResolver: &testutils.MockBlueprintResolver{},
 		ParamsProvider: params.NewDefaultProvider(
 			map[string]*core.ScalarValue{},

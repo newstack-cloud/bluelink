@@ -21,16 +21,21 @@ func NewMultiAuthChecker(checkers ...Checker) Checker {
 	}
 }
 
-func (m *multiAuthChecker) Check(ctx context.Context, headers http.Header) error {
+func (m *multiAuthChecker) Check(
+	ctx context.Context,
+	headers http.Header,
+) (*Principal, error) {
 	var lastErr error
 	for _, checker := range m.checkers {
-		err := checker.Check(ctx, headers)
+		principal, err := checker.Check(ctx, headers)
 		if err == nil {
-			return nil
+			// The principal of whichever method succeeded, so a record says how the
+			// caller authenticated and not merely that it did.
+			return principal, nil
 		}
 
 		lastErr = err
 	}
 
-	return lastErr
+	return nil, lastErr
 }

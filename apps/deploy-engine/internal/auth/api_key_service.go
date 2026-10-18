@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
@@ -40,21 +41,38 @@ func NewAPIKeyService(config *core.AuthConfig) Checker {
 // Check verifies if the provided API key is valid.
 // It returns an error if the key is invalid,
 // or nil if it is valid.
-func (s *apiKeyService) Check(ctx context.Context, headers http.Header) error {
+func (s *apiKeyService) Check(
+	ctx context.Context,
+	headers http.Header,
+) (*Principal, error) {
 	apiKey := headers.Get(BluelinkAPIKeyHeaderName)
 	if apiKey == "" {
-		return &Error{
+		return nil, &Error{
 			ChildErr: errors.New("missing API key"),
 		}
 	}
 
 	if !s.matchesConfiguredKey(apiKey) {
-		return &Error{
+		return nil, &Error{
 			ChildErr: errors.New("invalid API key"),
 		}
 	}
 
-	return nil
+	return &Principal{
+		Method:  MethodAPIKey,
+		Subject: apiKeyFingerprint(apiKey),
+	}, nil
+}
+
+// A prefix of the key's digest, long enough to tell configured keys apart in a record.
+//
+// Safe only to the extent the key has entropy. The digest is unsalted and fast, so a record
+// holding one can be used to test guesses offline; truncating it changes nothing about that,
+// since 64 bits is far more than enough to confirm a correct guess. The engine warns at
+// startup about keys short enough for this to matter, which is the most it can check.
+func apiKeyFingerprint(apiKey string) string {
+	digest := sha256.Sum256([]byte(apiKey))
+	return fmt.Sprintf("sha256:%x", digest[:8])
 }
 
 // Compared in constant time, so that the time taken to reject a key does not reveal how much

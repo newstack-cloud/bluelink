@@ -9,10 +9,10 @@ import (
 
 func Test_shouldTriggerAutoRollback(t *testing.T) {
 	tests := []struct {
-		name               string
-		status             core.InstanceStatus
-		expectedTrigger    bool
-		expectedType       AutoRollbackType
+		name            string
+		status          core.InstanceStatus
+		expectedTrigger bool
+		expectedType    AutoRollbackType
 	}{
 		{
 			name:            "triggers destroy rollback on DeployFailed",

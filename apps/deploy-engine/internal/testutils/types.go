@@ -16,9 +16,9 @@ type ChangeStagingEvent struct {
 
 // DriftDetectedEventData represents the data from a drift detected event.
 type DriftDetectedEventData struct {
-	Message              string                                `json:"message"`
+	Message              string                               `json:"message"`
 	ReconciliationResult *container.ReconciliationCheckResult `json:"reconciliationResult"`
-	Timestamp            int64                                 `json:"timestamp"`
+	Timestamp            int64                                `json:"timestamp"`
 }
 
 type DeployEventWrapper struct {

@@ -245,6 +245,7 @@ func Setup(
 		&config.Auth,
 		clock,
 		/* excludedRoutes */ []*mux.Route{healthHandler},
+		logger,
 	)
 	if err != nil {
 		return nil, nil, err

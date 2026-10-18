@@ -12,8 +12,12 @@ type Checker interface {
 	// Check carries out an authentication check
 	// using the provided request headers.
 	// It returns an error of the `auth.Error` type
-	// if the check fails, or nil if it succeeds.
+	// if the check fails, or the principal the request
+	// authenticated as if it succeeds.
 	// Other error types should be considered
 	// as internal server errors.
-	Check(ctx context.Context, headers http.Header) error
+	//
+	// The principal is the only record of who acted as the credential it was
+	// established from is discarded once the check has passed.
+	Check(ctx context.Context, headers http.Header) (*Principal, error)
 }

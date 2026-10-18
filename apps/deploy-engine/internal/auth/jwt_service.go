@@ -51,16 +51,16 @@ func LoadJWTService(config *core.AuthConfig) (Checker, error) {
 // Check verifies a JWT token in the provided request headers.
 // It returns an error if the token is invalid,
 // or nil if it is valid.
-func (v *jwtService) Check(ctx context.Context, headers http.Header) error {
+func (v *jwtService) Check(ctx context.Context, headers http.Header) (*Principal, error) {
 	token := headers.Get("Authorization")
 	if strings.TrimSpace(token) == "" {
-		return &Error{
+		return nil, &Error{
 			ChildErr: errors.New("missing Authorization header"),
 		}
 	}
 
 	if !strings.HasPrefix(token, "Bearer ") {
-		return &Error{
+		return nil, &Error{
 			ChildErr: errors.New("invalid Authorization header format"),
 		}
 	}
@@ -68,16 +68,31 @@ func (v *jwtService) Check(ctx context.Context, headers http.Header) error {
 	// Strip the "Bearer " prefix
 	finalToken := token[7:]
 
-	_, err := v.validator.ValidateToken(ctx, finalToken)
+	validated, err := v.validator.ValidateToken(ctx, finalToken)
 	if err != nil {
 		// Any error returned from the go-jwt-middleware
 		// should be considered an authentication error.
-		return &Error{
+		return nil, &Error{
 			ChildErr: err,
 		}
 	}
 
-	return nil
+	return jwtPrincipal(validated), nil
+}
+
+// The subject the issuer asserted, taken from the validated claims rather than from the
+// token, so that nothing unverified reaches a record.
+func jwtPrincipal(validated any) *Principal {
+	principal := &Principal{Method: MethodOIDC}
+
+	claims, ok := validated.(*validator.ValidatedClaims)
+	if !ok {
+		return principal
+	}
+
+	principal.Subject = claims.RegisteredClaims.Subject
+
+	return principal
 }
 
 func setupJWKSProvider(config *core.AuthConfig) (JWKSProvider, error) {

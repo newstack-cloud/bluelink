@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/newstack-cloud/bluelink/libs/common/core"
 	"github.com/newstack-cloud/bluelink/libs/common/sigv1"
@@ -35,14 +36,44 @@ func NewSigV1Service(
 // are expected to be in the provided request headers.
 // This method will return an error if verification fails,
 // or nil if it succeeds.
-func (s *sigV1Service) Check(ctx context.Context, headers http.Header) error {
+func (s *sigV1Service) Check(
+	ctx context.Context,
+	headers http.Header,
+) (*Principal, error) {
 	err := sigv1.VerifySignature(
 		s.keyPairs,
 		headers,
 		s.clock,
 		s.options,
 	)
-	return handleVerifySigV1Error(err)
+	if authErr := handleVerifySigV1Error(err); authErr != nil {
+		return nil, authErr
+	}
+
+	return &Principal{
+		Method:  MethodSigV1,
+		Subject: signatureKeyID(headers.Get(sigv1.SignatureHeaderName)),
+	}, nil
+}
+
+// The key ID the verified signature names.
+//
+// Read from the header here because VerifySignature reports only whether the signature
+// held, so the one thing identifying the caller is not returned. Reading it rather than
+// re-deriving it is safe at this point as verification has already matched the ID against a
+// configured key pair, so the header is well formed and the ID is one the engine knows.
+//
+// Having VerifySignature return the key ID would remove this, and belongs with the next
+// release of libs/common rather than here.
+func signatureKeyID(signatureHeader string) string {
+	for part := range strings.SplitSeq(signatureHeader, ",") {
+		name, value, found := strings.Cut(strings.TrimSpace(part), "=")
+		if found && name == "keyId" {
+			return strings.Trim(value, `"`)
+		}
+	}
+
+	return ""
 }
 
 func handleVerifySigV1Error(err error) error {

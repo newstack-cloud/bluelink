@@ -37,13 +37,13 @@ import (
 // adapter work end-to-end through the HTTP API.
 type ServerV1WithObjectstoreStorageEngineTestSuite struct {
 	suite.Suite
-	server    *httptest.Server
-	client    *http.Client
-	cleanup   func()
-	s3Client  *s3sdk.Client
-	s3Bucket  string
-	s3Region  string
-	s3EndPt   string
+	server   *httptest.Server
+	client   *http.Client
+	cleanup  func()
+	s3Client *s3sdk.Client
+	s3Bucket string
+	s3Region string
+	s3EndPt  string
 }
 
 func (s *ServerV1WithObjectstoreStorageEngineTestSuite) SetupSuite() {

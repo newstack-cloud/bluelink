@@ -43,7 +43,7 @@ func (s *SigV1ServiceSuite) Test_check_verifies_a_valid_signature() {
 		/* options */ nil,
 	)
 
-	err = service.Check(
+	_, err = service.Check(
 		context.Background(),
 		headers,
 	)
@@ -81,7 +81,7 @@ func (s *SigV1ServiceSuite) Test_check_fails_for_invalid_signature_returning_exp
 		/* options */ nil,
 	)
 
-	err = service.Check(
+	_, err = service.Check(
 		context.Background(),
 		headers,
 	)
