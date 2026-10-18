@@ -37,10 +37,17 @@ type ConfigFieldDefinition struct {
 	Type        ScalarType `json:"type"`
 	Label       string     `json:"label"`
 	Description string     `json:"description"`
-	// Set to true if the config field should be a secret,
-	// An application such as the deploy engine
-	// will ensure that the value of this field
-	// does not appear in logs.
+	// Set to true if the config field holds a secret.
+	//
+	// An application such as the deploy engine withholds the value from anything it
+	// produces about the field itself, for example, a validation diagnostic naming the field reports
+	// RedactedPlaceholder rather than the value, and a log entry carrying the field under
+	// its own key is masked.
+	//
+	// It cannot withhold a value a plugin has already placed inside free text. An error
+	// message or diagnostic a plugin composes is the plugin's own, and only the plugin
+	// knows which part of it came from a secret, so a plugin must keep the value out of
+	// text it writes.
 	Secret bool `json:"secret"`
 	// If the name of this field represents a config value template
 	// (e.g. "aws.config.regionKMSKeys.<region>"),
