@@ -99,6 +99,29 @@ func convertLogFieldToZap(field LogField) zap.Field {
 		}
 		return zap.Errors(field.Key, errors)
 	default:
-		return zap.Any(field.Key, field.Interface)
+		// Withheld rather than serialised. A field whose type this does not handle is one
+		// nothing here knows the shape of, and zap.Any would write whatever it holds, which
+		// for a type added without a case above could be a resource spec or link data. The
+		// placeholder keeps the field visible so the omission is noticed.
+		return zap.String(field.Key, RedactedPlaceholder)
+	}
+}
+
+// LogFieldTypes lists every log field type the adapter handles explicitly.
+//
+// Exported so that adding a type without handling it fails a test rather than silently
+// falling through to the placeholder above.
+func LogFieldTypes() []LogFieldType {
+	return []LogFieldType{
+		StringLogFieldType,
+		IntegerLogFieldType,
+		FloatLogFieldType,
+		BoolLogFieldType,
+		ErrorLogFieldType,
+		StringsLogFieldType,
+		IntegersLogFieldType,
+		FloatsLogFieldType,
+		BoolsLogFieldType,
+		ErrorsLogFieldType,
 	}
 }

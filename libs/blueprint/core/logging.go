@@ -182,6 +182,9 @@ const (
 	BoolsLogFieldType
 	// ErrorsLogFieldType represents a log field with an array of error values.
 	ErrorsLogFieldType
+	// logFieldTypeCount is one past the last log field type, so that a type added above it
+	// is caught by the test that every type is handled when serialised.
+	logFieldTypeCount
 )
 
 // NopLogger is an implementation of the core.Logger interface
