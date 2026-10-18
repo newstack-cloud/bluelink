@@ -859,6 +859,7 @@ func copyLinkDeployResult(result *LinkDeployResult) *LinkDeployResult {
 		IntermediaryResourceStates: copyLinkIntermediaryResourceStates(result.IntermediaryResourceStates),
 		Contributions:              slices.Clone(result.Contributions),
 		ContributionRecords:        contributionRecords,
+		SensitiveLinkDataPaths:     slices.Clone(result.SensitiveLinkDataPaths),
 	}
 }
 
