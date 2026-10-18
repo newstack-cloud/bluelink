@@ -490,8 +490,9 @@ func toPBUpdateLinkedResourcesResponse(
 	return &providerserverv1.UpdateLinkedResourcesResponse{
 		Response: &providerserverv1.UpdateLinkedResourcesResponse_CompleteResponse{
 			CompleteResponse: &providerserverv1.UpdateLinkResourceCompleteResponse{
-				LinkData:             linkData,
-				ResourceDataMappings: output.ResourceDataMappings,
+				LinkData:               linkData,
+				ResourceDataMappings:   output.ResourceDataMappings,
+				SensitiveLinkDataPaths: output.SensitiveLinkDataPaths,
 			},
 		},
 	}, nil
@@ -539,6 +540,7 @@ func toPBUpdateLinkIntermediaryResourcesResponse(
 				IntermediaryResourceStates: intermediaryResourceStates,
 				LinkData:                   linkData,
 				ResourceDataMappings:       output.ResourceDataMappings,
+				SensitiveLinkDataPaths:     output.SensitiveLinkDataPaths,
 			},
 		},
 	}, nil
@@ -1439,6 +1441,7 @@ func toPBProduceResourceContributionsResponse(
 				Contributions:              contributions,
 				IntermediaryResourceStates: intermediaryResourceStates,
 				LinkData:                   linkData,
+				SensitiveLinkDataPaths:     output.SensitiveLinkDataPaths,
 			},
 		},
 	}, nil
@@ -1467,6 +1470,7 @@ func toPBResourceContributions(
 			Value:           value,
 			Action:          providerserverv1.ContributionAction(contribution.Action),
 			RetainOnRemoval: contribution.RetainOnRemoval,
+			Sensitive:       contribution.Sensitive,
 		})
 	}
 

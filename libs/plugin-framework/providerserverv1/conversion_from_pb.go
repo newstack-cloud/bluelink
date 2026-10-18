@@ -32,6 +32,7 @@ func fromPBLinkIntermediaryResourcesCompleteResponse(
 		IntermediaryResourceStates: intermediaryResourceStates,
 		LinkData:                   linkData,
 		ResourceDataMappings:       response.ResourceDataMappings,
+		SensitiveLinkDataPaths:     response.SensitiveLinkDataPaths,
 	}, nil
 }
 
@@ -435,5 +436,6 @@ func fromPBResourceContribution(
 		Value:           value,
 		Action:          provider.ContributionAction(pbContribution.Action),
 		RetainOnRemoval: pbContribution.RetainOnRemoval,
+		Sensitive:       pbContribution.Sensitive,
 	}, nil
 }

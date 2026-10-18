@@ -650,6 +650,9 @@ message ProduceResourceContributionsCompleteResponse {
     repeated ResourceContribution contributions = 1;
     repeated LinkIntermediaryResourceState intermediary_resource_states = 2;
     schema.MappingNode link_data = 3;
+    // The paths within link_data that hold secrets, so that a resource field a projection
+    // feeds from one of them is marked.
+    repeated string sensitive_link_data_paths = 4;
 }
 
 // ResourceContribution is one link's contribution to one field of one resource.
@@ -665,6 +668,12 @@ message ResourceContribution {
     // Contributions are desired state, so leaving this unset retracts the value along
     // with the link.
     bool retain_on_removal = 5;
+    // Marks the contributed value as a secret, so that the resource field it feeds is
+    // marked wherever that field is reported.
+    //
+    // A link is the one thing that knows: the value is assembled inside the link, and
+    // neither the target resource's schema nor the blueprint says anything about it.
+    bool sensitive = 6;
 }
 
 // ContributionAction determines how a contribution is combined with what is already at
@@ -694,6 +703,9 @@ message UpdateLinkedResourcesResponse {
 message UpdateLinkResourceCompleteResponse {
     schema.MappingNode link_data = 1;
     map<string, string> resource_data_mappings = 2;
+    // The paths within link_data that hold secrets, so that a resource field a projection
+    // feeds from one of them is marked.
+    repeated string sensitive_link_data_paths = 3;
 }
 
 // UpdateLinkIntermediaryResourcesRequest provides the input data needed
@@ -728,6 +740,9 @@ message UpdateLinkIntermediaryResourcesCompleteResponse {
     repeated LinkIntermediaryResourceState intermediary_resource_states = 1;
     schema.MappingNode link_data = 2;
     map<string, string> resource_data_mappings = 3;
+    // The paths within link_data that hold secrets, so that a resource field a projection
+    // feeds from one of them is marked.
+    repeated string sensitive_link_data_paths = 4;
 }
 
 // LinkPriorityResourceResponse is the response

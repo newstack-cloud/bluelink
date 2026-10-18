@@ -144,8 +144,9 @@ func (l *linkProviderClientWrapper) updateLinkedResources(
 		}
 
 		return &provider.LinkUpdateLinkedResourcesOutput{
-			LinkData:             linkData,
-			ResourceDataMappings: result.CompleteResponse.ResourceDataMappings,
+			LinkData:               linkData,
+			ResourceDataMappings:   result.CompleteResponse.ResourceDataMappings,
+			SensitiveLinkDataPaths: result.CompleteResponse.SensitiveLinkDataPaths,
 		}, nil
 	case *UpdateLinkedResourcesResponse_ErrorResponse:
 		return nil, errorsv1.CreateErrorFromResponse(
@@ -869,6 +870,7 @@ func fromPBProduceResourceContributionsResponse(
 		Contributions:              contributions,
 		IntermediaryResourceStates: intermediaryStates,
 		LinkData:                   linkData,
+		SensitiveLinkDataPaths:     completeResponse.SensitiveLinkDataPaths,
 	}, nil
 }
 

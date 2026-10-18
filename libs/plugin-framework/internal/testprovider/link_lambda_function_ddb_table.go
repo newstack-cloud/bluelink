@@ -105,7 +105,8 @@ func linkLambdaFunctionDDBTableProduceResourceContributions(
 }
 
 // Contributes to a resource that is neither of the link's endpoints, and mixes the two
-// actions and both retention behaviours, so the round trip covers each of them.
+// actions, both retention behaviours and both sensitivity settings, so the round trip
+// covers each of them.
 func LinkLambdaDynamoDBContributionsOutput() *provider.LinkProduceResourceContributionsOutput {
 	return &provider.LinkProduceResourceContributionsOutput{
 		Contributions: []*provider.ResourceContribution{
@@ -121,6 +122,7 @@ func LinkLambdaDynamoDBContributionsOutput() *provider.LinkProduceResourceContri
 				Value:           core.MappingNodeFromString("dynamodb:PutItem"),
 				Action:          provider.ContributionActionAppend,
 				RetainOnRemoval: true,
+				Sensitive:       true,
 			},
 		},
 		LinkData: core.MappingNodeFields(
@@ -193,6 +195,9 @@ func LinkLambdaDynamoDBUpdateLinkedResourcesOutput(linkID string) *provider.Link
 		},
 		ResourceDataMappings: map[string]string{
 			"saveOrderFunction::spec.environment.variables.TABLE_NAME_ordersTable": "saveOrderFunction.environmentVariables.TABLE_NAME_ordersTable",
+		},
+		SensitiveLinkDataPaths: []string{
+			"saveOrderFunction.environmentVariables.TABLE_NAME_ordersTable",
 		},
 	}
 }
