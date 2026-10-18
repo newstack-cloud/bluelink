@@ -169,6 +169,25 @@ func (s *MemFileStateContainerEventsTestSuite) Test_fails_to_save_event_that_pus
 		statestore.ErrorReasonCodeMaxEventPartitionSizeExceeded,
 		memfileErr.ReasonCode,
 	)
+
+	// Nothing may be left in memory by a save that did not persist, or the event is
+	// readable while absent from disk and gone again after a restart.
+	_, err = events.Get(context.Background(), fixture.Event.ID)
+	s.Require().Error(err)
+	notFoundErr := &manage.EventNotFound{}
+	s.Assert().ErrorAs(err, &notFoundErr)
+
+	// The partition must not have been left holding the rejected event either, or a
+	// later save into the same partition would be rejected for its size.
+	smallerFixture := s.saveEventFixtures[1]
+	s.Require().Equal(
+		fixture.Event.ChannelID,
+		smallerFixture.Event.ChannelID,
+		"both fixtures have to share a partition for this to test anything",
+	)
+	s.Assert().NoError(
+		events.Save(context.Background(), smallerFixture.Event),
+	)
 }
 
 func (s *MemFileStateContainerEventsTestSuite) Test_stream_events() {

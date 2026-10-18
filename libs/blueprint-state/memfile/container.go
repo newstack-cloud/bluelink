@@ -28,6 +28,7 @@ type StateContainer struct {
 	validationContainer            *statestore.ValidationsContainer
 	reconciliationResultsContainer *statestore.ReconciliationResultsContainer
 	cleanupOperationsContainer     *statestore.CleanupOperationsContainer
+	auditContainer                 *statestore.AuditContainer
 	storePersister                 *statestore.Persister
 }
 
@@ -152,6 +153,7 @@ func LoadStateContainerWithStorage(
 		validationContainer:            statestore.NewValidationsContainer(storeState, storePersister, logger),
 		reconciliationResultsContainer: statestore.NewReconciliationResultsContainer(storeState, storePersister, logger),
 		cleanupOperationsContainer:     statestore.NewCleanupOperationsContainer(storeState, storePersister, logger),
+		auditContainer:                 statestore.NewAuditContainer(storeState, storePersister, logger),
 	}
 
 	for _, opt := range opts {
@@ -204,6 +206,10 @@ func (c *StateContainer) CleanupOperations() manage.CleanupOperations {
 	return c.cleanupOperationsContainer
 }
 
+func (c *StateContainer) Audit() manage.Audit {
+	return c.auditContainer
+}
+
 // The statestore.Config used by memfile:
 // ModeEager so state is bulk-loaded from disk at construction; every entity
 // category keeps the chunked, globally-scoped layout memfile has used
@@ -234,5 +240,6 @@ func memfileStatestoreConfig() statestore.Config {
 		Validations:           chunkedGlobal,
 		ReconciliationResults: chunkedGlobal,
 		CleanupOperations:     perEntityGlobal,
+		AuditRecords:          chunkedGlobal,
 	}
 }

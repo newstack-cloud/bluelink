@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
+
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 )
 
 // catSpec bundles the per-category state and key builders that the generic
@@ -242,4 +245,83 @@ func removeFromChunk[T any](
 	}
 
 	return writeIndex(ctx, storage, spec.indexKey, spec.index)
+}
+
+// Removes the per-entity records under prefix whose creation time is at or before
+// threshold, returning the IDs it removed.
+//
+// Enumerated through Storage.List rather than read from chunk files, because a
+// per-entity category has no chunk files.
+func cleanupPerEntity[T manage.Entity](
+	ctx context.Context,
+	storage Storage,
+	prefix string,
+	threshold int64,
+) ([]string, error) {
+	keys, err := storage.List(ctx, prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	removed := []string{}
+	for _, key := range keys {
+		var entity T
+		if err := readChunk(ctx, storage, key, &entity); err != nil {
+			return removed, err
+		}
+		// Left nil by a key that went away between the listing and the read.
+		if reflect.ValueOf(entity).IsNil() || entity.GetCreated() > threshold {
+			continue
+		}
+
+		if err := deleteIgnoreNotFound(ctx, storage, key); err != nil {
+			return removed, err
+		}
+		removed = append(removed, entity.GetID())
+	}
+
+	return removed, nil
+}
+
+// Removes the chunked records older than threshold and re-persists the rest,
+// returning the IDs it removed.
+func cleanupChunked[T manage.Entity](
+	ctx context.Context,
+	storage Storage,
+	maxGuideFileSize int64,
+	spec catSpec,
+	threshold int64,
+) ([]string, error) {
+	removed := []string{}
+	kept, err := loadAndFilterChunked(
+		ctx, storage, *spec.lastChunkPtr, spec.chunkKey,
+		func(entity T) bool {
+			if entity.GetCreated() > threshold {
+				return true
+			}
+			removed = append(removed, entity.GetID())
+			return false
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := resetChunkedCategory(
+		ctx, storage, *spec.lastChunkPtr, spec.chunkKey, spec.indexKey,
+	); err != nil {
+		return nil, err
+	}
+	clear(spec.index)
+	*spec.lastChunkPtr = 0
+
+	for _, entity := range kept {
+		if err := createInChunk(
+			ctx, storage, maxGuideFileSize, spec, entity, entity.GetID(),
+		); err != nil {
+			return nil, err
+		}
+	}
+
+	return removed, nil
 }

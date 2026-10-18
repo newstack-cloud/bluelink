@@ -66,3 +66,26 @@ func (b BlueprintValidationNotFound) Error() string {
 func BlueprintValidationNotFoundError(id string) error {
 	return &BlueprintValidationNotFound{ID: id}
 }
+
+// AuditRecordNotFound is an error type
+// that indicates an audit record with
+// the specified ID was not found.
+type AuditRecordNotFound struct {
+	ID string
+}
+
+func (a AuditRecordNotFound) Error() string {
+	return fmt.Sprintf("audit record with ID %s not found", a.ID)
+}
+
+// AuditRecordNotFoundError creates a new AuditRecordNotFound
+// error with the specified ID.
+// An error can be checked against this type using:
+//
+//	var auditRecordNotFoundErr *manage.AuditRecordNotFound
+//	if errors.As(err, &auditRecordNotFoundErr) {
+//		// Handle the error
+//	}
+func AuditRecordNotFoundError(id string) error {
+	return &AuditRecordNotFound{ID: id}
+}

@@ -186,6 +186,25 @@ func (s *State) LookupValidation(ctx context.Context, id string) (*manage.Bluepr
 	return v, true, nil
 }
 
+// LookupAuditRecord returns an audit record by ID.
+func (s *State) LookupAuditRecord(ctx context.Context, id string) (*manage.AuditRecord, bool, error) {
+	s.mu.RLock()
+	if r, ok := s.auditRecords[id]; ok {
+		s.mu.RUnlock()
+		return r, true, nil
+	}
+	s.mu.RUnlock()
+
+	r, ok, err := s.loader.LoadAuditRecord(ctx, id)
+	if err != nil || !ok {
+		return nil, ok, err
+	}
+	s.mu.Lock()
+	s.auditRecords[id] = r
+	s.mu.Unlock()
+	return r, true, nil
+}
+
 // LookupReconciliation returns a reconciliation result by ID.
 func (s *State) LookupReconciliation(ctx context.Context, id string) (*manage.ReconciliationResult, bool, error) {
 	s.mu.RLock()

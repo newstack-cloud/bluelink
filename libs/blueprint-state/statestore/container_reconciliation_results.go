@@ -158,15 +158,17 @@ func (c *ReconciliationResultsContainer) Cleanup(
 	c.state.Lock()
 	defer c.state.Unlock()
 
-	originalCount := len(c.state.reconciliations)
-	newLookup, err := c.persister.CleanupReconciliationResults(ctx, thresholdDate)
+	removedIDs, err := c.persister.CleanupReconciliationResults(ctx, thresholdDate)
 	if err != nil {
 		return 0, err
 	}
-	c.state.reconciliations = newLookup
-	c.changesetIndex = buildReconciliationChangesetIndex(newLookup)
-	c.instanceIndex = buildReconciliationInstanceIndex(newLookup)
-	return int64(originalCount - len(newLookup)), nil
+	for _, id := range removedIDs {
+		delete(c.state.reconciliations, id)
+	}
+	c.changesetIndex = buildReconciliationChangesetIndex(c.state.reconciliations)
+	c.instanceIndex = buildReconciliationInstanceIndex(c.state.reconciliations)
+
+	return int64(len(removedIDs)), nil
 }
 
 // addToChangesetIndex must be called with the state

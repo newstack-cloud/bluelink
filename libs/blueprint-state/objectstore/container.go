@@ -30,6 +30,7 @@ type StateContainer struct {
 	validationContainer            *statestore.ValidationsContainer
 	reconciliationResultsContainer *statestore.ReconciliationResultsContainer
 	cleanupOperationsContainer     *statestore.CleanupOperationsContainer
+	auditContainer                 *auditContainer
 	storePersister                 *statestore.Persister
 }
 
@@ -116,6 +117,11 @@ func LoadStateContainer(
 		validationContainer:            statestore.NewValidationsContainer(storeState, storePersister, logger),
 		reconciliationResultsContainer: statestore.NewReconciliationResultsContainer(storeState, storePersister, logger),
 		cleanupOperationsContainer:     statestore.NewCleanupOperationsContainer(storeState, storePersister, logger),
+		auditContainer: &auditContainer{
+			AuditContainer: statestore.NewAuditContainer(storeState, storePersister, logger),
+			svc:            svc,
+			keys:           keys,
+		},
 	}
 
 	for _, opt := range opts {
@@ -141,21 +147,27 @@ func (c *StateContainer) CleanupOperations() manage.CleanupOperations {
 	return c.cleanupOperationsContainer
 }
 
-// Instances, drift, changesets, validations, reconciliation results and
-// cleanup operations all sit on LayoutPerEntity so every record has its
-// own object key — cross-run writes to unrelated entities are then
-// collision-free and the lazy EntityLoader resolves any single record
-// with one GET. Events stay chunked-per-channel because their partition
-// key already provides isolation and their on-wire shape is a partition
-// file. Resources and Links inherit Instances' layout — they are
-// persisted inline with the parent instance record.
+func (c *StateContainer) Audit() manage.Audit {
+	return c.auditContainer
+}
+
+// Every category sits on LayoutPerEntity so that each record has its own object key.
+// Cross-run writes to unrelated entities are then collision-free and the lazy
+// EntityLoader resolves any single record with one GET. Resources and Links inherit
+// Instances' layout, since they are persisted inline with the parent instance record.
+//
+// Events are per-entity for a stronger reason than the rest. A chunked channel is one
+// object rewritten whole on every save, and an engine that has not read the channel
+// rewrites it with only its own event, so two engines sharing a bucket destroy each
+// other's events. Their keys carry the channel and a zero-padded timestamp, so a channel
+// is read, resumed and cleaned up from a listing alone.
 func getConfig() statestore.Config {
 	perEntityGlobal := statestore.CategoryConfig{
 		Layout: statestore.LayoutPerEntity,
 		Scope:  statestore.ScopeGlobal,
 	}
-	chunkedPerChannel := statestore.CategoryConfig{
-		Layout: statestore.LayoutChunked,
+	perEntityPerChannel := statestore.CategoryConfig{
+		Layout: statestore.LayoutPerEntity,
 		Scope:  statestore.ScopePerChannel,
 	}
 	return statestore.Config{
@@ -166,11 +178,12 @@ func getConfig() statestore.Config {
 		Links:                 perEntityGlobal,
 		ResourceDrift:         perEntityGlobal,
 		LinkDrift:             perEntityGlobal,
-		Events:                chunkedPerChannel,
+		Events:                perEntityPerChannel,
 		Changesets:            perEntityGlobal,
 		Validations:           perEntityGlobal,
 		ReconciliationResults: perEntityGlobal,
 		CleanupOperations:     perEntityGlobal,
+		AuditRecords:          perEntityGlobal,
 	}
 }
 

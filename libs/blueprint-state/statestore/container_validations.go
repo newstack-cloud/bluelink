@@ -66,13 +66,15 @@ func (c *ValidationsContainer) Cleanup(
 	c.state.Lock()
 	defer c.state.Unlock()
 
-	originalCount := len(c.state.validations)
-	newLookup, err := c.persister.CleanupValidations(ctx, thresholdDate)
+	removedIDs, err := c.persister.CleanupValidations(ctx, thresholdDate)
 	if err != nil {
 		return 0, err
 	}
-	c.state.validations = newLookup
-	return int64(originalCount - len(newLookup)), nil
+	for _, id := range removedIDs {
+		delete(c.state.validations, id)
+	}
+
+	return int64(len(removedIDs)), nil
 }
 
 func copyBlueprintValidation(v *manage.BlueprintValidation) manage.BlueprintValidation {

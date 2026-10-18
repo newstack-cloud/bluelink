@@ -71,6 +71,16 @@ func (c *EventsContainer) Get(ctx context.Context, id string) (manage.Event, err
 		return manage.Event{}, err
 	}
 
+	// Under LayoutPerEntity the in-memory lookup holds only what this engine instance has
+	// written, and a key says which event it is but not which channel, so an event
+	// another engine instance wrote costs a listing to find.
+	if !ok && c.persister.EventsLayout() == LayoutPerEntity {
+		e, ok, err = c.persister.FindEventObject(ctx, id)
+		if err != nil {
+			return manage.Event{}, err
+		}
+	}
+
 	if !ok {
 		return manage.Event{}, manage.EventNotFoundError(id)
 	}
@@ -126,18 +136,60 @@ func (c *EventsContainer) save(
 	eventLogger core.Logger,
 ) error {
 	eventCopy := copyEvent(event)
-	c.state.events[event.ID] = &eventCopy
 
 	partitionName := partitionNameForChannel(event.ChannelType, event.ChannelID)
-	partition, hasPartition := c.state.partitionEvents[partitionName]
-	if !hasPartition {
-		partition = []*manage.Event{}
+
+	if c.persister.EventsLayout() == LayoutPerEntity {
+		eventLogger.Debug("persisting event object")
+		if err := c.persister.CreateEventObject(ctx, event); err != nil {
+			return err
+		}
+
+		// Appended for the listeners this engine is serving. The cache does not have to
+		// be complete here, because every read of a channel goes to storage under this
+		// layout.
+		c.state.events[event.ID] = &eventCopy
+		partition := c.state.partitionEvents[partitionName]
+		insertEventIntoPartition(&partition, &eventCopy)
+		c.state.partitionEvents[partitionName] = partition
+
+		return nil
 	}
+
+	// Built on a copy so that nothing is committed to memory until it is persisted.
+	partition := slices.Clone(c.state.partitionEvents[partitionName])
 	insertedIndex := insertEventIntoPartition(&partition, &eventCopy)
-	c.state.partitionEvents[partitionName] = partition
 
 	eventLogger.Debug("persisting event partition update/creation")
-	return c.persister.SaveEventPartition(ctx, partitionName, partition, event, insertedIndex)
+	if err := c.persister.SaveEventPartition(
+		ctx, partitionName, partition, event, insertedIndex,
+	); err != nil {
+		return err
+	}
+
+	c.state.events[event.ID] = &eventCopy
+	c.state.partitionEvents[partitionName] = partition
+
+	return nil
+}
+
+// The channel's stored events, oldest first.
+//
+// Under LayoutPerEntity the in-memory partition holds only what this engine instance has written,
+// so the record comes from storage and a channel another engine instance has been writing to
+// comes back whole. Under LayoutChunked the in-memory partition is the record.
+func (c *EventsContainer) channelEvents(
+	ctx context.Context,
+	partitionName string,
+) ([]*manage.Event, error) {
+	if c.persister.EventsLayout() == LayoutPerEntity {
+		return c.persister.EventsInChannel(ctx, partitionName)
+	}
+
+	c.state.RLock()
+	defer c.state.RUnlock()
+
+	return c.state.partitionEvents[partitionName], nil
 }
 
 func (c *EventsContainer) Stream(
@@ -146,12 +198,17 @@ func (c *EventsContainer) Stream(
 	streamTo chan manage.Event,
 	errChan chan error,
 ) (chan struct{}, error) {
+	partitionName := partitionNameForChannel(params.ChannelType, params.ChannelID)
+	// Read before the lock is taken, since under LayoutPerEntity this reads storage.
+	partition, err := c.channelEvents(ctx, partitionName)
+	if err != nil {
+		return nil, err
+	}
+
 	c.state.RLock()
 	defer c.state.RUnlock()
 
 	endChan := make(chan struct{})
-	partitionName := partitionNameForChannel(params.ChannelType, params.ChannelID)
-	partition := c.state.partitionEvents[partitionName]
 
 	eventsToStream, err := c.collectInitialEventsToStream(partition, params)
 	if err != nil {
@@ -248,11 +305,10 @@ func (c *EventsContainer) collectInitialEventsToStream(
 		return c.extractRecentlyQueuedEvents(partition), nil
 	}
 
-	indexLocation := c.persister.GetEventIndexEntry(params.StartingEventID)
-	if indexLocation == nil {
+	startingEventIndex, found := c.startingEventIndex(params.StartingEventID, partition)
+	if !found {
 		return c.extractRecentlyQueuedEvents(partition), nil
 	}
-	startingEventIndex := indexLocation.IndexInPartition
 	if startingEventIndex < 0 || startingEventIndex >= len(partition) {
 		return nil, errMalformedState(
 			"malformed event index entry, location in partition is out of bounds",
@@ -263,6 +319,31 @@ func (c *EventsContainer) collectInitialEventsToStream(
 		return []*manage.Event{}, nil
 	}
 	return partition[exclusiveStartIndex:], nil
+}
+
+// Where the event to resume from sits in the channel.
+//
+// There is no chunk index under LayoutPerEntity, so the position is found in the channel
+// itself. The index is kept for the chunked layout, where it is the O(1) answer and the
+// channel can be long.
+func (c *EventsContainer) startingEventIndex(
+	startingEventID string,
+	partition []*manage.Event,
+) (int, bool) {
+	if c.persister.EventsLayout() == LayoutPerEntity {
+		index := slices.IndexFunc(partition, func(event *manage.Event) bool {
+			return event.ID == startingEventID
+		})
+
+		return index, index >= 0
+	}
+
+	indexLocation := c.persister.GetEventIndexEntry(startingEventID)
+	if indexLocation == nil {
+		return 0, false
+	}
+
+	return indexLocation.IndexInPartition, true
 }
 
 func (c *EventsContainer) extractRecentlyQueuedEvents(partition []*manage.Event) []*manage.Event {
@@ -279,10 +360,17 @@ func (c *EventsContainer) GetLastEventID(
 	ctx context.Context,
 	channelType, channelID string,
 ) (string, error) {
+	partitionName := partitionNameForChannel(channelType, channelID)
+
+	// Answered from the key listing under LayoutPerEntity, which doesn't need to load events
+	// and works across engine instances.
+	if c.persister.EventsLayout() == LayoutPerEntity {
+		return c.persister.LastEventIDInChannel(ctx, partitionName)
+	}
+
 	c.state.RLock()
 	defer c.state.RUnlock()
 
-	partitionName := partitionNameForChannel(channelType, channelID)
 	partition := c.state.partitionEvents[partitionName]
 	if len(partition) == 0 {
 		return "", nil
@@ -294,6 +382,10 @@ func (c *EventsContainer) Cleanup(
 	ctx context.Context,
 	thresholdDate time.Time,
 ) (int64, error) {
+	if c.persister.EventsLayout() == LayoutPerEntity {
+		return c.cleanupEventObjects(ctx, thresholdDate)
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -324,6 +416,39 @@ func (c *EventsContainer) Cleanup(
 	)
 
 	return int64(len(removedEvents)), err
+}
+
+// The timestamp is in each key, so which objects are past their retention period comes
+// from the listing and no event is read.
+func (c *EventsContainer) cleanupEventObjects(
+	ctx context.Context,
+	thresholdDate time.Time,
+) (int64, error) {
+	removedIDs, err := c.persister.CleanupEventObjects(ctx, thresholdDate)
+	if err != nil {
+		return 0, err
+	}
+
+	c.state.Lock()
+	defer c.state.Unlock()
+
+	removed := make(map[string]struct{}, len(removedIDs))
+	for _, eventID := range removedIDs {
+		delete(c.state.events, eventID)
+		removed[eventID] = struct{}{}
+	}
+
+	for partitionName, partition := range c.state.partitionEvents {
+		c.state.partitionEvents[partitionName] = slices.DeleteFunc(
+			partition,
+			func(event *manage.Event) bool {
+				_, wasRemoved := removed[event.ID]
+				return wasRemoved
+			},
+		)
+	}
+
+	return int64(len(removedIDs)), nil
 }
 
 func eventsToEntities(partition []*manage.Event) []manage.Entity {

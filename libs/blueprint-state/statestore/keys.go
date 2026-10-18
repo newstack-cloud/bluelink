@@ -112,6 +112,55 @@ func (k KeyBuilder) ValidationIndex() string {
 	return k.join("blueprint_validation_index.json")
 }
 
+// AuditRecord returns the per-entity storage key for an audit record.
+func (k KeyBuilder) AuditRecord(recordID string) string {
+	return k.join("audit_records", recordID+".json")
+}
+
+// AuditRecordsPrefix returns the storage key prefix every per-entity
+// audit-record key sits under, for backends that enumerate the trail.
+func (k KeyBuilder) AuditRecordsPrefix() string {
+	return k.categoryPrefix("audit_records")
+}
+
+// ValidationsPrefix returns the storage key prefix every per-entity
+// blueprint-validation key sits under.
+func (k KeyBuilder) ValidationsPrefix() string {
+	return k.categoryPrefix("validations")
+}
+
+// ChangesetsPrefix returns the storage key prefix every per-entity
+// changeset key sits under.
+func (k KeyBuilder) ChangesetsPrefix() string {
+	return k.categoryPrefix("changesets")
+}
+
+// ReconciliationResultsPrefix returns the storage key prefix every per-entity
+// reconciliation-result key sits under.
+func (k KeyBuilder) ReconciliationResultsPrefix() string {
+	return k.categoryPrefix("reconciliation_results")
+}
+
+// The directory each category's per-entity keys sit in, so a prefix cannot drift from
+// the keys it is meant to enumerate.
+//
+// The trailing separator is formatted in rather than joined on, because path.Join strips
+// one and it is what makes this a prefix rather than an object key.
+func (k KeyBuilder) categoryPrefix(category string) string {
+	return fmt.Sprintf("%s/", k.join(category))
+}
+
+// AuditRecordChunk returns the chunked storage key for an audit-record
+// chunk file at the given chunk number.
+func (k KeyBuilder) AuditRecordChunk(chunkNumber int) string {
+	return k.join(fmt.Sprintf("audit_records_c%d.json", chunkNumber))
+}
+
+// AuditRecordIndex returns the storage key for the audit-record chunk-index file.
+func (k KeyBuilder) AuditRecordIndex() string {
+	return k.join("audit_record_index.json")
+}
+
 // ReconciliationResult returns the per-entity storage key for a reconciliation result.
 func (k KeyBuilder) ReconciliationResult(resultID string) string {
 	return k.join("reconciliation_results", resultID+".json")
@@ -134,6 +183,28 @@ func (k KeyBuilder) ReconciliationResultIndex() string {
 // fully identifies the file.
 func (k KeyBuilder) EventPartition(partitionName string) string {
 	return k.join(fmt.Sprintf("events__%s.json", partitionName))
+}
+
+// EventObject returns the per-entity storage key for a single event, under the
+// prefix for its channel.
+//
+// The timestamp is zero-padded so that keys sort lexicographically in the order events
+// were produced. A channel can then be read, resumed and cleaned up from a listing
+// alone, without opening a single event, and no two writers share a file to overwrite.
+func (k KeyBuilder) EventObject(partitionName string, timestamp int64, eventID string) string {
+	return k.join("events", partitionName, fmt.Sprintf("%011d-%s.json", timestamp, eventID))
+}
+
+// EventChannelPrefix returns the storage key prefix every per-entity event key for one
+// channel sits under.
+func (k KeyBuilder) EventChannelPrefix(partitionName string) string {
+	return fmt.Sprintf("%s/", k.join("events", partitionName))
+}
+
+// EventsPrefix returns the storage key prefix every per-entity event key sits under,
+// across all channels.
+func (k KeyBuilder) EventsPrefix() string {
+	return k.categoryPrefix("events")
 }
 
 // EventIndex returns the storage key for the global event index, which

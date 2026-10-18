@@ -62,4 +62,5 @@ type Config struct {
 	Validations           CategoryConfig
 	ReconciliationResults CategoryConfig
 	CleanupOperations     CategoryConfig
+	AuditRecords          CategoryConfig
 }

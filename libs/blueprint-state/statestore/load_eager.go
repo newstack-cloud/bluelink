@@ -72,6 +72,7 @@ var (
 	eventPartitionFilePattern        = regexp.MustCompile(`^events__(.*?)\.json$`)
 	changesetsFilePattern            = regexp.MustCompile(`^changesets_c(\d+)\.json$`)
 	blueprintValidationsFilePattern  = regexp.MustCompile(`^blueprint_validations_c(\d+)\.json$`)
+	auditRecordsFilePattern          = regexp.MustCompile(`^audit_records_c(\d+)\.json$`)
 	reconciliationResultsFilePattern = regexp.MustCompile(`^reconciliation_results_c(\d+)\.json$`)
 )
 
@@ -107,6 +108,10 @@ func loadKey(
 		return loadValidationChunk(ctx, st, storage, key)
 	case filename == "blueprint_validation_index.json":
 		return loadIndex(ctx, storage, key, &st.validationIndex)
+	case auditRecordsFilePattern.MatchString(filename):
+		return loadAuditRecordChunk(ctx, st, storage, key)
+	case filename == "audit_record_index.json":
+		return loadIndex(ctx, storage, key, &st.auditRecordIndex)
 	case reconciliationResultsFilePattern.MatchString(filename):
 		return loadReconciliationChunk(ctx, st, storage, key)
 	case filename == "reconciliation_result_index.json":
@@ -266,6 +271,17 @@ func loadValidationChunk(ctx context.Context, st *State, storage Storage, key st
 	}
 	for _, v := range entries {
 		st.validations[v.ID] = v
+	}
+	return nil
+}
+
+func loadAuditRecordChunk(ctx context.Context, st *State, storage Storage, key string) error {
+	var entries []*manage.AuditRecord
+	if err := readJSON(ctx, storage, key, &entries); err != nil {
+		return err
+	}
+	for _, r := range entries {
+		st.auditRecords[r.ID] = r
 	}
 	return nil
 }

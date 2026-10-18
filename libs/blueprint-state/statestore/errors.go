@@ -58,6 +58,12 @@ const (
 	// and a NameRecordReserver is installed (objectstore with conditional
 	// writes). Single-process backends like memfile never produce this.
 	ErrorReasonCodeInstanceNameTaken ErrorReasonCode = "instance_name_taken"
+
+	// ErrorReasonCodeAuditQueryUnsupported indicates the audit trail was
+	// queried while the audit-record category is configured with a layout that
+	// cannot be enumerated, so no answer can be given that is known to be
+	// complete.
+	ErrorReasonCodeAuditQueryUnsupported ErrorReasonCode = "audit_query_unsupported"
 )
 
 func errMalformedStateFile(message string) error {
@@ -80,6 +86,16 @@ func errMaxEventPartitionSizeExceeded(partition string, maxBytes int64) error {
 		Err: fmt.Errorf(
 			"maximum event partition size (%d bytes) exceeded for %q",
 			maxBytes, partition,
+		),
+	}
+}
+
+func errAuditQueryUnsupported(layout Layout) error {
+	return &Error{
+		ReasonCode: ErrorReasonCodeAuditQueryUnsupported,
+		Err: fmt.Errorf(
+			"the audit trail cannot be queried under layout %d, which cannot be enumerated",
+			layout,
 		),
 	}
 }

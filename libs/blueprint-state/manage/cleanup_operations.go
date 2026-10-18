@@ -13,6 +13,7 @@ const (
 	CleanupTypeChangesets            CleanupType = "changesets"
 	CleanupTypeReconciliationResults CleanupType = "reconciliation_results"
 	CleanupTypeValidations           CleanupType = "validations"
+	CleanupTypeAuditRecords          CleanupType = "audit_records"
 )
 
 // CleanupOperationStatus represents the status of a cleanup operation.

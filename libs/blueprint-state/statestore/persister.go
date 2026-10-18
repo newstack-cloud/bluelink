@@ -1,9 +1,14 @@
 package statestore
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
+	"path"
+	"slices"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,6 +34,7 @@ type Persister struct {
 	lastLinkDriftChunk      int
 	lastChangesetChunk      int
 	lastValidationChunk     int
+	lastAuditRecordChunk    int
 	lastReconciliationChunk int
 
 	nameRecordReserver NameRecordReserver
@@ -101,6 +107,7 @@ func NewPersister(
 		lastLinkDriftChunk:      maxChunkNumber(state.linkDriftIndex),
 		lastChangesetChunk:      maxChunkNumber(state.changesetIndex),
 		lastValidationChunk:     maxChunkNumber(state.validationIndex),
+		lastAuditRecordChunk:    maxChunkNumber(state.auditRecordIndex),
 		lastReconciliationChunk: maxChunkNumber(state.reconciliationIndex),
 	}
 
@@ -153,6 +160,15 @@ func (p *Persister) validationSpec() catSpec {
 		lastChunkPtr: &p.lastValidationChunk,
 		chunkKey:     p.keys.ValidationChunk,
 		indexKey:     p.keys.ValidationIndex(),
+	}
+}
+
+func (p *Persister) auditRecordSpec() catSpec {
+	return catSpec{
+		index:        p.state.auditRecordIndex,
+		lastChunkPtr: &p.lastAuditRecordChunk,
+		chunkKey:     p.keys.AuditRecordChunk,
+		indexKey:     p.keys.AuditRecordIndex(),
 	}
 }
 
@@ -555,7 +571,16 @@ func (p *Persister) SaveEventPartition(
 		IndexInPartition: indexInPartition,
 	}
 
-	return writeIndex(ctx, p.storage, p.keys.EventIndex(), p.state.eventIndex)
+	if err := writeIndex(ctx, p.storage, p.keys.EventIndex(), p.state.eventIndex); err != nil {
+		// Rolled back, since the caller abandons the save on this error and does not
+		// commit the event to the in-memory partition. An index entry left pointing
+		// into a partition that does not hold the event resolves a stream's starting
+		// position against the wrong offset.
+		delete(p.state.eventIndex, eventToSave.ID)
+		return err
+	}
+
+	return nil
 }
 
 // UpdateEventPartitionsForRemovals persists the post-cleanup state of event
@@ -617,34 +642,191 @@ func toPartitionFileBaseName(partitionName string) string {
 func (p *Persister) CleanupChangesets(
 	ctx context.Context,
 	thresholdDate time.Time,
-) (map[string]*manage.Changeset, error) {
+) ([]string, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	threshold := thresholdDate.Unix()
-	spec := p.changesetSpec()
-	kept, err := loadAndFilterChunked(
+	return cleanupCategory[*manage.Changeset](
+		ctx, p, p.config.Changesets, p.changesetSpec(),
+		p.keys.ChangesetsPrefix(), thresholdDate, "changesets",
+	)
+}
+
+// CreateAuditRecord persists a newly-emitted audit record. There is no update
+// counterpart as an audit trail the acting principal can amend is not an audit trail.
+func (p *Persister) CreateAuditRecord(ctx context.Context, r *manage.AuditRecord) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	switch p.config.AuditRecords.Layout {
+	case LayoutPerEntity:
+		return writeChunk(ctx, p.storage, p.keys.AuditRecord(r.ID), r)
+	case LayoutChunked:
+		spec := p.auditRecordSpec()
+		// Appending unconditionally would put the same ID in the trail twice, since
+		// nothing here updates an existing entry. A record already stored under this ID
+		// stands.
+		if _, recorded := spec.index[r.ID]; recorded {
+			return nil
+		}
+		return createInChunk(
+			ctx, p.storage, p.maxGuideFileSize, spec,
+			r, r.ID,
+		)
+	}
+	return errUnknownLayout("audit records", p.config.AuditRecords.Layout)
+}
+
+// QueryAuditRecords returns the audit records matching query, oldest-first by
+// timestamp and then by ID.
+//
+// Records are read from the chunk files rather than from the in-memory lookup,
+// which under LoadMode ModeLazy holds only the subset of records that have been
+// read back individually. A partial audit trail presented as a complete one is
+// worse than a slower query.
+func (p *Persister) QueryAuditRecords(
+	ctx context.Context,
+	query *manage.AuditRecordQuery,
+) ([]*manage.AuditRecord, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.config.AuditRecords.Layout != LayoutChunked {
+		return nil, errAuditQueryUnsupported(p.config.AuditRecords.Layout)
+	}
+
+	spec := p.auditRecordSpec()
+	matched, err := loadAndFilterChunked(
 		ctx, p.storage, *spec.lastChunkPtr, spec.chunkKey,
-		func(cs *manage.Changeset) bool { return cs.Created > threshold },
+		func(r *manage.AuditRecord) bool { return auditRecordMatches(r, query) },
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := resetChunkedCategory(ctx, p.storage, *spec.lastChunkPtr, spec.chunkKey, spec.indexKey); err != nil {
-		return nil, err
-	}
-	clear(spec.index)
-	*spec.lastChunkPtr = 0
+	slices.SortFunc(matched, compareAuditRecords)
+	return applyAuditQueryLimit(matched, query), nil
+}
 
-	lookup := make(map[string]*manage.Changeset, len(kept))
-	for _, cs := range kept {
-		if err := createInChunk(ctx, p.storage, p.maxGuideFileSize, spec, cs, cs.ID); err != nil {
-			return nil, err
+// NarrowAuditRecords filters, orders and limits records according to query.
+//
+// Backends that enumerate their own records rather than reading them from chunk
+// files apply the query through here, so that no read path drifts from the
+// filtering and ordering manage.Audit documents.
+func NarrowAuditRecords(
+	records []*manage.AuditRecord,
+	query *manage.AuditRecordQuery,
+) []*manage.AuditRecord {
+	matched := make([]*manage.AuditRecord, 0, len(records))
+	for _, record := range records {
+		if auditRecordMatches(record, query) {
+			matched = append(matched, record)
 		}
-		lookup[cs.ID] = cs
 	}
-	return lookup, nil
+	slices.SortFunc(matched, compareAuditRecords)
+	return applyAuditQueryLimit(matched, query)
+}
+
+func applyAuditQueryLimit(
+	records []*manage.AuditRecord,
+	query *manage.AuditRecordQuery,
+) []*manage.AuditRecord {
+	limit := query.Limit
+	if limit <= 0 {
+		limit = manage.DefaultAuditQueryLimit
+	}
+	if len(records) > limit {
+		return records[:limit]
+	}
+	return records
+}
+
+func auditRecordMatches(record *manage.AuditRecord, query *manage.AuditRecordQuery) bool {
+	if query.From != 0 && record.Timestamp < query.From {
+		return false
+	}
+	if !isAfterAuditCursor(record, query) {
+		return false
+	}
+	if query.To != 0 && record.Timestamp >= query.To {
+		return false
+	}
+	if query.Action != "" && record.Action != query.Action {
+		return false
+	}
+	if query.PrincipalSubject != "" &&
+		record.PrincipalSubject != query.PrincipalSubject {
+		return false
+	}
+	return query.Outcome == "" || record.Outcome == query.Outcome
+}
+
+// The cursor is a (timestamp, ID) pair rather than a timestamp, so that a second
+// holding more records than the query limit can still be read past.
+func isAfterAuditCursor(
+	record *manage.AuditRecord,
+	query *manage.AuditRecordQuery,
+) bool {
+	// Keyed on the timestamp alone so that this agrees with the SQL backend, which
+	// cannot distinguish an unset cursor from one at the epoch.
+	if query.AfterTimestamp == 0 {
+		return true
+	}
+	if record.Timestamp != query.AfterTimestamp {
+		return record.Timestamp > query.AfterTimestamp
+	}
+	return record.ID > query.AfterID
+}
+
+// ID breaks the tie for records sharing a timestamp, per the ordering manage.Audit
+// documents.
+func compareAuditRecords(a *manage.AuditRecord, b *manage.AuditRecord) int {
+	if a.Timestamp != b.Timestamp {
+		return cmp.Compare(a.Timestamp, b.Timestamp)
+	}
+	return cmp.Compare(a.ID, b.ID)
+}
+
+// CleanupAuditRecords removes audit records older than thresholdDate and
+// re-persists the remaining entries.
+func (p *Persister) CleanupAuditRecords(
+	ctx context.Context,
+	thresholdDate time.Time,
+) ([]string, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	return cleanupCategory[*manage.AuditRecord](
+		ctx, p, p.config.AuditRecords, p.auditRecordSpec(),
+		p.keys.AuditRecordsPrefix(), thresholdDate, "audit records",
+	)
+}
+
+// Removes the records of one category that have passed their retention period, by
+// whichever route the category's configured layout is actually stored under, and
+// returns the IDs it removed.
+//
+// A free function rather than a method because Go methods cannot take type parameters,
+// and the entity type is what lets one implementation serve every category.
+func cleanupCategory[T manage.Entity](
+	ctx context.Context,
+	p *Persister,
+	category CategoryConfig,
+	spec catSpec,
+	prefix string,
+	thresholdDate time.Time,
+	categoryName string,
+) ([]string, error) {
+	threshold := thresholdDate.Unix()
+
+	switch category.Layout {
+	case LayoutChunked:
+		return cleanupChunked[T](ctx, p.storage, p.maxGuideFileSize, spec, threshold)
+	case LayoutPerEntity:
+		return cleanupPerEntity[T](ctx, p.storage, prefix, threshold)
+	}
+
+	return nil, errUnknownLayout(categoryName, category.Layout)
 }
 
 // CleanupValidations removes blueprint validations older than thresholdDate
@@ -652,34 +834,14 @@ func (p *Persister) CleanupChangesets(
 func (p *Persister) CleanupValidations(
 	ctx context.Context,
 	thresholdDate time.Time,
-) (map[string]*manage.BlueprintValidation, error) {
+) ([]string, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	threshold := thresholdDate.Unix()
-	spec := p.validationSpec()
-	kept, err := loadAndFilterChunked(
-		ctx, p.storage, *spec.lastChunkPtr, spec.chunkKey,
-		func(v *manage.BlueprintValidation) bool { return v.Created > threshold },
+	return cleanupCategory[*manage.BlueprintValidation](
+		ctx, p, p.config.Validations, p.validationSpec(),
+		p.keys.ValidationsPrefix(), thresholdDate, "validations",
 	)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := resetChunkedCategory(ctx, p.storage, *spec.lastChunkPtr, spec.chunkKey, spec.indexKey); err != nil {
-		return nil, err
-	}
-	clear(spec.index)
-	*spec.lastChunkPtr = 0
-
-	lookup := make(map[string]*manage.BlueprintValidation, len(kept))
-	for _, v := range kept {
-		if err := createInChunk(ctx, p.storage, p.maxGuideFileSize, spec, v, v.ID); err != nil {
-			return nil, err
-		}
-		lookup[v.ID] = v
-	}
-	return lookup, nil
 }
 
 // CleanupReconciliationResults removes reconciliation results older than
@@ -687,34 +849,14 @@ func (p *Persister) CleanupValidations(
 func (p *Persister) CleanupReconciliationResults(
 	ctx context.Context,
 	thresholdDate time.Time,
-) (map[string]*manage.ReconciliationResult, error) {
+) ([]string, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	threshold := thresholdDate.Unix()
-	spec := p.reconciliationSpec()
-	kept, err := loadAndFilterChunked(
-		ctx, p.storage, *spec.lastChunkPtr, spec.chunkKey,
-		func(r *manage.ReconciliationResult) bool { return r.Created > threshold },
+	return cleanupCategory[*manage.ReconciliationResult](
+		ctx, p, p.config.ReconciliationResults, p.reconciliationSpec(),
+		p.keys.ReconciliationResultsPrefix(), thresholdDate, "reconciliation results",
 	)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := resetChunkedCategory(ctx, p.storage, *spec.lastChunkPtr, spec.chunkKey, spec.indexKey); err != nil {
-		return nil, err
-	}
-	clear(spec.index)
-	*spec.lastChunkPtr = 0
-
-	lookup := make(map[string]*manage.ReconciliationResult, len(kept))
-	for _, r := range kept {
-		if err := createInChunk(ctx, p.storage, p.maxGuideFileSize, spec, r, r.ID); err != nil {
-			return nil, err
-		}
-		lookup[r.ID] = r
-	}
-	return lookup, nil
 }
 
 // CreateCleanupOperation persists a newly-recorded cleanup operation.
@@ -759,4 +901,188 @@ func deleteIgnoreNotFound(ctx context.Context, storage Storage, key string) erro
 		return err
 	}
 	return nil
+}
+
+// EventsLayout reports how the events category is stored, which is the one thing the
+// events container cannot hide behind this persister, under LayoutPerEntity its
+// in-memory partitions are a cache rather than the record, so reads have to come from
+// storage.
+func (p *Persister) EventsLayout() Layout {
+	return p.config.Events.Layout
+}
+
+// CreateEventObject persists one event as its own object, under its channel's prefix.
+func (p *Persister) CreateEventObject(ctx context.Context, event *manage.Event) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	partitionName := partitionNameForChannel(event.ChannelType, event.ChannelID)
+
+	return writeChunk(
+		ctx,
+		p.storage,
+		p.keys.EventObject(partitionName, event.Timestamp, event.ID),
+		event,
+	)
+}
+
+// EventsInChannel returns every stored event for one channel, oldest first.
+//
+// Read from storage rather than from the in-memory partition, so that a channel another
+// engine instance has been writing to comes back whole.
+func (p *Persister) EventsInChannel(
+	ctx context.Context,
+	partitionName string,
+) ([]*manage.Event, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	keys, err := p.orderedEventKeys(ctx, p.keys.EventChannelPrefix(partitionName))
+	if err != nil {
+		return nil, err
+	}
+
+	events := make([]*manage.Event, 0, len(keys))
+	for _, key := range keys {
+		var event *manage.Event
+		if err := readChunk(ctx, p.storage, key, &event); err != nil {
+			return nil, err
+		}
+
+		// Left nil by a key removed between the listing and the read.
+		if event != nil {
+			events = append(events, event)
+		}
+	}
+
+	return events, nil
+}
+
+// LastEventIDInChannel returns the ID of the most recent stored event for one channel,
+// or an empty string when the channel has none.
+func (p *Persister) LastEventIDInChannel(
+	ctx context.Context,
+	partitionName string,
+) (string, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	keys, err := p.orderedEventKeys(ctx, p.keys.EventChannelPrefix(partitionName))
+	if err != nil || len(keys) == 0 {
+		return "", err
+	}
+
+	return eventIDFromKey(keys[len(keys)-1]), nil
+}
+
+// CleanupEventObjects removes the events older than thresholdDate across every channel,
+// returning the IDs it removed.
+//
+// The timestamp is in the key, so no events are read, the listing says which objects are
+// past their retention period.
+func (p *Persister) CleanupEventObjects(
+	ctx context.Context,
+	thresholdDate time.Time,
+) ([]string, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	keys, err := p.storage.List(ctx, p.keys.EventsPrefix())
+	if err != nil {
+		return nil, err
+	}
+
+	threshold := thresholdDate.Unix()
+	removed := []string{}
+	for _, key := range keys {
+		timestamp, eventID, ok := parseEventKey(key)
+		if !ok || timestamp > threshold {
+			continue
+		}
+
+		if err := deleteIgnoreNotFound(ctx, p.storage, key); err != nil {
+			return removed, err
+		}
+		removed = append(removed, eventID)
+	}
+
+	return removed, nil
+}
+
+// FindEventObject returns the stored event with the given ID, searching across every
+// channel, and whether it was found.
+//
+// A key carries the event's own ID but not which channel it belongs to, so this costs a
+// listing. Nothing in the deploy engine resolves an event by ID alone, a stream is
+// always asked for by channel, so the cost falls on an operator's lookup rather than on
+// anything on the request path.
+func (p *Persister) FindEventObject(
+	ctx context.Context,
+	eventID string,
+) (*manage.Event, bool, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	keys, err := p.storage.List(ctx, p.keys.EventsPrefix())
+	if err != nil {
+		return nil, false, err
+	}
+
+	for _, key := range keys {
+		if eventIDFromKey(key) != eventID {
+			continue
+		}
+
+		var event *manage.Event
+		if err := readChunk(ctx, p.storage, key, &event); err != nil {
+			return nil, false, err
+		}
+
+		return event, event != nil, nil
+	}
+
+	return nil, false, nil
+}
+
+// Keys that do not parse are skipped rather than failing the listing. The prefix is the
+// engine's own, but a listing is not the place to refuse to proceed over one stray
+// object.
+func (p *Persister) orderedEventKeys(ctx context.Context, prefix string) ([]string, error) {
+	keys, err := p.storage.List(ctx, prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	ordered := make([]string, 0, len(keys))
+	for _, key := range keys {
+		if _, _, ok := parseEventKey(key); ok {
+			ordered = append(ordered, key)
+		}
+	}
+	// Storage.List makes no promise about order, and the key's zero-padded timestamp
+	// is what puts events back into the order they were produced in.
+	slices.Sort(ordered)
+
+	return ordered, nil
+}
+
+// Splits "<prefix>/<timestamp>-<id>.json" into its timestamp and ID.
+func parseEventKey(key string) (int64, string, bool) {
+	name := strings.TrimSuffix(path.Base(key), ".json")
+	timestampPart, eventID, found := strings.Cut(name, "-")
+	if !found || eventID == "" {
+		return 0, "", false
+	}
+
+	timestamp, err := strconv.ParseInt(timestampPart, 10, 64)
+	if err != nil {
+		return 0, "", false
+	}
+
+	return timestamp, eventID, true
+}
+
+func eventIDFromKey(key string) string {
+	_, eventID, _ := parseEventKey(key)
+	return eventID
 }

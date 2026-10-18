@@ -63,6 +63,7 @@ type EntityLoader interface {
 	LoadValidation(ctx context.Context, id string) (*manage.BlueprintValidation, bool, error)
 	LoadReconciliation(ctx context.Context, id string) (*manage.ReconciliationResult, bool, error)
 	LoadCleanupOperation(ctx context.Context, id string) (*manage.CleanupOperation, bool, error)
+	LoadAuditRecord(ctx context.Context, id string) (*manage.AuditRecord, bool, error)
 }
 
 // noopLoader is the loader used under ModeEager — it never materialises
@@ -110,5 +111,9 @@ func (noopLoader) LoadReconciliation(context.Context, string) (*manage.Reconcili
 }
 
 func (noopLoader) LoadCleanupOperation(context.Context, string) (*manage.CleanupOperation, bool, error) {
+	return nil, false, nil
+}
+
+func (noopLoader) LoadAuditRecord(context.Context, string) (*manage.AuditRecord, bool, error) {
 	return nil, false, nil
 }

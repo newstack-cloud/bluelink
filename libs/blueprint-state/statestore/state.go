@@ -29,6 +29,7 @@ type State struct {
 	partitionEvents map[string][]*manage.Event
 	changesets      map[string]*manage.Changeset
 	validations     map[string]*manage.BlueprintValidation
+	auditRecords    map[string]*manage.AuditRecord
 	reconciliations map[string]*manage.ReconciliationResult
 	cleanupOps      map[string]*manage.CleanupOperation
 
@@ -40,6 +41,7 @@ type State struct {
 	eventIndex          map[string]*EventIndexLocation
 	changesetIndex      map[string]*IndexLocation
 	validationIndex     map[string]*IndexLocation
+	auditRecordIndex    map[string]*IndexLocation
 	reconciliationIndex map[string]*IndexLocation
 	cleanupOpIndex      map[string]*IndexLocation
 }
@@ -210,6 +212,16 @@ func WithSharedValidations(validations map[string]*manage.BlueprintValidation) S
 	return func(s *State) { s.validations = validations }
 }
 
+// WithSharedAuditRecords replaces State's audit records map.
+func WithSharedAuditRecords(records map[string]*manage.AuditRecord) StateOption {
+	return func(s *State) { s.auditRecords = records }
+}
+
+// WithSharedAuditRecordIndex replaces State's audit-record chunk-index map.
+func WithSharedAuditRecordIndex(index map[string]*IndexLocation) StateOption {
+	return func(s *State) { s.auditRecordIndex = index }
+}
+
 // WithSharedValidationIndex replaces State's validation chunk-index map.
 func WithSharedValidationIndex(index map[string]*IndexLocation) StateOption {
 	return func(s *State) { s.validationIndex = index }
@@ -262,6 +274,7 @@ func NewState(opts ...StateOption) *State {
 		partitionEvents:     map[string][]*manage.Event{},
 		changesets:          map[string]*manage.Changeset{},
 		validations:         map[string]*manage.BlueprintValidation{},
+		auditRecords:        map[string]*manage.AuditRecord{},
 		reconciliations:     map[string]*manage.ReconciliationResult{},
 		cleanupOps:          map[string]*manage.CleanupOperation{},
 		instanceIndex:       map[string]*IndexLocation{},
@@ -272,6 +285,7 @@ func NewState(opts ...StateOption) *State {
 		eventIndex:          map[string]*EventIndexLocation{},
 		changesetIndex:      map[string]*IndexLocation{},
 		validationIndex:     map[string]*IndexLocation{},
+		auditRecordIndex:    map[string]*IndexLocation{},
 		reconciliationIndex: map[string]*IndexLocation{},
 		cleanupOpIndex:      map[string]*IndexLocation{},
 	}

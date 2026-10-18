@@ -120,6 +120,19 @@ func (l *ServiceLoader) LoadValidation(
 	return &v, true, nil
 }
 
+func (l *ServiceLoader) LoadAuditRecord(
+	ctx context.Context,
+	id string,
+) (*manage.AuditRecord, bool, error) {
+	var r manage.AuditRecord
+	found, err := readEntity(ctx, l.svc, l.keys.AuditRecord(id), &r)
+	if err != nil || !found {
+		return nil, found, err
+	}
+
+	return &r, true, nil
+}
+
 func (l *ServiceLoader) LoadReconciliation(
 	ctx context.Context,
 	id string,
