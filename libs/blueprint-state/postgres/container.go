@@ -17,17 +17,17 @@ import (
 // along with methods to manage persistence for
 // blueprint validation requests, events and change sets.
 type StateContainer struct {
-	instancesContainer              *instancesContainerImpl
-	resourcesContainer              *resourcesContainerImpl
-	linksContainer                  *linksContainerImpl
-	childrenContainer               *childrenContainerImpl
-	metadataContainer               *metadataContainerImpl
-	exportContainer                 *exportContainerImpl
-	validationContainer             *validationContainerImpl
-	changesetsContainer             *changesetsContainerImpl
-	eventsContainer                 *eventsContainerImpl
-	reconciliationResultsContainer  *reconciliationResultsContainerImpl
-	cleanupOperationsContainer      *cleanupOperationsContainerImpl
+	instancesContainer             *instancesContainerImpl
+	resourcesContainer             *resourcesContainerImpl
+	linksContainer                 *linksContainerImpl
+	childrenContainer              *childrenContainerImpl
+	metadataContainer              *metadataContainerImpl
+	exportContainer                *exportContainerImpl
+	validationContainer            *validationContainerImpl
+	changesetsContainer            *changesetsContainerImpl
+	eventsContainer                *eventsContainerImpl
+	reconciliationResultsContainer *reconciliationResultsContainerImpl
+	cleanupOperationsContainer     *cleanupOperationsContainerImpl
 }
 
 // Option is a type for options that can be passed to LoadStateContainer

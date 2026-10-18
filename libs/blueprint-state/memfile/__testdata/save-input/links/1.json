@@ -38,5 +38,8 @@
       "action": 1,
       "retainOnRemoval": true
     }
-  }
+  },
+  "sensitiveDataPaths": [
+    "saveOrderFunction.environmentVariables.TABLE_REGION_ordersTable_0"
+  ]
 }

@@ -181,6 +181,5 @@ func copyExport(export *state.ExportState) *state.ExportState {
 		Description: export.Description,
 		Field:       export.Field,
 		Sensitive:   export.Sensitive,
-
 	}
 }

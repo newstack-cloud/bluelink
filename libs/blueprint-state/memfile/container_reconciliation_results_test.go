@@ -19,14 +19,13 @@ const (
 	nonExistentReconciliationResultID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 	existingChangesetIDForResult      = "08dc456e-cafc-4199-b074-5f04cd4904f2"
 	existingInstanceIDForResult       = "46324ee7-b515-4988-98b0-d5445746a997"
-	changesetWithMultipleResults      = "2888c908-32e2-4555-af36-319455172c64"
 )
 
 type MemFileStateContainerReconciliationResultsSuite struct {
-	container                          *StateContainer
-	stateDir                           string
-	fs                                 afero.Fs
-	saveReconciliationResultFixtures   map[int]internal.SaveReconciliationResultFixture
+	container                        *StateContainer
+	stateDir                         string
+	fs                               afero.Fs
+	saveReconciliationResultFixtures map[int]internal.SaveReconciliationResultFixture
 	suite.Suite
 }
 

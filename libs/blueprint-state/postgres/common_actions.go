@@ -40,8 +40,8 @@ func upsertResources(
 			"lastDriftDetectedTimestamp": ptrToNullableTimestamp(
 				resource.LastDriftDetectedTimestamp,
 			),
-			"durations":     resource.Durations,
-			"removalPolicy": toNullableText(resource.RemovalPolicy),
+			"durations":                resource.Durations,
+			"removalPolicy":            toNullableText(resource.RemovalPolicy),
 			"linkContributionFailures": resource.LinkContributionFailures,
 		}
 		batch.Queue(
