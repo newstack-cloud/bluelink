@@ -2,11 +2,13 @@ package cleanup_test
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/cleanup"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/testutils"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -118,8 +120,29 @@ func (s *SchedulerSuite) start(
 	now time.Time,
 	tasks []cleanup.Task,
 ) func() {
+	return startScheduler(operations, now, tasks)
+}
+
+func (s *SchedulerSuite) runnerFor(
+	operations manage.CleanupOperations,
+	now time.Time,
+) *cleanup.Runner {
+	return runnerFor(operations, now)
+}
+
+func (s *SchedulerSuite) eventually(condition func() bool, message string) {
+	s.Require().Eventually(condition, time.Second, time.Millisecond, message)
+}
+
+// An interval of a millisecond, so a test does not wait out a realistic one. The first
+// pass still waits a full interval, which is what the scheduler does.
+func startScheduler(
+	operations manage.CleanupOperations,
+	now time.Time,
+	tasks []cleanup.Task,
+) func() {
 	scheduler := cleanup.NewScheduler(
-		s.runnerFor(operations, now),
+		runnerFor(operations, now),
 		tasks,
 		time.Millisecond,
 		&testutils.MockClock{StaticTime: now},
@@ -129,10 +152,7 @@ func (s *SchedulerSuite) start(
 	return scheduler.Start()
 }
 
-func (s *SchedulerSuite) runnerFor(
-	operations manage.CleanupOperations,
-	now time.Time,
-) *cleanup.Runner {
+func runnerFor(operations manage.CleanupOperations, now time.Time) *cleanup.Runner {
 	return cleanup.NewRunner(
 		operations,
 		core.NewUUIDGenerator(),
@@ -141,10 +161,167 @@ func (s *SchedulerSuite) runnerFor(
 	)
 }
 
-func (s *SchedulerSuite) eventually(condition func() bool, message string) {
-	s.Require().Eventually(condition, time.Second, time.Millisecond, message)
+func noOperations() manage.CleanupOperations {
+	return testutils.NewMockCleanupOperationsStore(map[string]*manage.CleanupOperation{})
 }
 
 func TestSchedulerSuite(t *testing.T) {
 	suite.Run(t, new(SchedulerSuite))
+}
+
+// A pass that spent its time on a single category should show that, not only how long
+// the whole of it took, and the entries it wrote have to lead to the trace of it.
+type SchedulerTracingSuite struct {
+	suite.Suite
+
+	recorder *telemetry.Recorder
+}
+
+func (s *SchedulerTracingSuite) SetupTest() {
+	s.recorder = telemetry.NewRecorder()
+	telemetry.SetTracer(s.recorder)
+}
+
+func (s *SchedulerTracingSuite) TearDownTest() {
+	telemetry.SetTracer(nil)
+}
+
+func (s *SchedulerTracingSuite) Test_records_a_span_for_each_category_within_the_pass() {
+	events := &recordingRemover{}
+	validations := &recordingRemover{}
+
+	stop := s.start([]cleanup.Task{
+		{Type: manage.CleanupTypeEvents, Remove: events.Remove},
+		{Type: manage.CleanupTypeValidations, Remove: validations.Remove},
+	})
+	defer stop()
+
+	s.eventually(
+		func() bool { return events.Calls() >= 1 && validations.Calls() >= 1 },
+		"both categories should have been cleaned up",
+	)
+
+	pass, found := s.firstSpan("cleanup.pass")
+	s.Require().True(found, "recorded %v", s.recorder.Names())
+
+	for _, cleanupType := range []manage.CleanupType{
+		manage.CleanupTypeEvents,
+		manage.CleanupTypeValidations,
+	} {
+		task := s.taskSpanFor(cleanupType)
+		s.Require().NotNil(task, "no span for %q in %v", cleanupType, s.recorder.Names())
+		s.Assert().Equal(
+			pass.SpanID,
+			task.ParentID,
+			"a task span belongs to the pass that ran it",
+		)
+		s.Assert().True(task.Ended)
+	}
+}
+
+func (s *SchedulerTracingSuite) Test_records_what_a_cleanup_removed() {
+	events := &recordingRemover{count: 4}
+
+	stop := s.start([]cleanup.Task{
+		{Type: manage.CleanupTypeEvents, Remove: events.Remove},
+	})
+	defer stop()
+
+	s.eventually(func() bool {
+		task := s.taskSpanFor(manage.CleanupTypeEvents)
+		if task == nil {
+			return false
+		}
+		removed, found := task.Attr("itemsDeleted")
+
+		return found && removed == int64(4)
+	}, "the span should carry what was removed")
+}
+
+// A category another instance cleaned up is skipped, and a span saying so is the only
+// account of why a pass did nothing.
+func (s *SchedulerTracingSuite) Test_records_why_a_category_was_skipped() {
+	operations := testutils.NewMockCleanupOperationsStore(
+		map[string]*manage.CleanupOperation{
+			"recent-operation": {
+				ID:          "recent-operation",
+				CleanupType: manage.CleanupTypeEvents,
+				Status:      manage.CleanupOperationStatusCompleted,
+				StartedAt:   testTime.Unix(),
+			},
+		},
+	)
+	events := &recordingRemover{}
+
+	stop := startScheduler(operations, testTime, []cleanup.Task{
+		{Type: manage.CleanupTypeEvents, Remove: events.Remove},
+	})
+	defer stop()
+
+	s.eventually(func() bool {
+		task := s.taskSpanFor(manage.CleanupTypeEvents)
+		if task == nil {
+			return false
+		}
+		outcome, found := task.Attr("outcome")
+
+		return found && outcome == "skippedCleanedUpRecently"
+	}, "the span should say why the category was skipped")
+
+	s.Assert().Zero(events.Calls(), "a category cleaned up recently should be left alone")
+}
+
+func (s *SchedulerTracingSuite) Test_marks_a_cleanup_that_failed_as_failed() {
+	stop := s.start([]cleanup.Task{{
+		Type: manage.CleanupTypeEvents,
+		Remove: func(context.Context, time.Time) (int64, error) {
+			return 0, errors.New("the state backend refused the delete")
+		},
+	}})
+	defer stop()
+
+	s.eventually(func() bool {
+		task := s.taskSpanFor(manage.CleanupTypeEvents)
+
+		return task != nil && task.Err != nil
+	}, "the span should be marked as failed")
+}
+
+func (s *SchedulerTracingSuite) start(tasks []cleanup.Task) func() {
+	return startScheduler(noOperations(), testTime, tasks)
+}
+
+func (s *SchedulerTracingSuite) eventually(condition func() bool, message string) {
+	s.Require().Eventually(condition, time.Second, time.Millisecond, message)
+}
+
+// The scheduler keeps running, so there is a span per pass rather than one in total.
+func (s *SchedulerTracingSuite) firstSpan(name string) (*telemetry.RecordedSpan, bool) {
+	for _, span := range s.recorder.Spans() {
+		if span.Name == name {
+			return span, true
+		}
+	}
+
+	return nil, false
+}
+
+func (s *SchedulerTracingSuite) taskSpanFor(
+	cleanupType manage.CleanupType,
+) *telemetry.RecordedSpan {
+	for _, span := range s.recorder.Spans() {
+		if span.Name != "cleanup.task" {
+			continue
+		}
+		if recorded, found := span.Attr("cleanupType"); found &&
+			recorded == string(cleanupType) {
+			return span
+		}
+	}
+
+	return nil
+}
+
+func TestSchedulerTracingSuite(t *testing.T) {
+	suite.Run(t, new(SchedulerTracingSuite))
 }

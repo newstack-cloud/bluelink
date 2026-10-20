@@ -154,7 +154,7 @@ func createAWSKMSKeyProvider(
 		)
 	}
 
-	awsOpts := []func(*awsconfig.LoadOptions) error{}
+	awsOpts := tracedAWSOptions()
 	if kmsConfig.Region != "" {
 		awsOpts = append(awsOpts, awsconfig.WithRegion(kmsConfig.Region))
 	}

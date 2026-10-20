@@ -94,6 +94,9 @@ type Config struct {
 	// Audit provides configuration for the audit trail of actions taken
 	// through the deploy engine's API.
 	Audit AuditConfig `mapstructure:"audit"`
+	// Tracing provides configuration for exporting distributed traces
+	// of the work the deploy engine carries out.
+	Tracing TracingConfig `mapstructure:"tracing"`
 	// PluginsV1 provides configuration for the v1 plugin system
 	// implemented by the deploy engine.
 	PluginsV1 PluginsV1Config `mapstructure:"plugins_v1"`
@@ -638,10 +641,6 @@ type AuthConfig struct {
 	APIKeys []string `mapstructure:"bluelink_api_keys"`
 }
 
-// MaintenanceConfig provides configuration for the maintenance
-// of short-lived resources in the deploy engine.
-// This is used for things like the retention periods for
-// blueprint validations and change sets.
 // ShutdownConfig provides configuration for graceful shutdown behaviour when
 // the deploy engine receives a termination signal.
 type ShutdownConfig struct {
@@ -664,9 +663,9 @@ type ShutdownConfig struct {
 
 // AuditConfig configures the trail of actions taken through the API.
 //
-// Records go to two destinations: the process output, as one JSON object per line for
-// whatever log collector already reads it, and state, where the engine's own endpoints
-// query them and the retention period under MaintenanceConfig applies.
+// Records are written to state, where the engine's own endpoints query them and the
+// retention period under MaintenanceConfig applies. Stdout below adds the process
+// output as a second destination.
 type AuditConfig struct {
 	// Whether a trail of actions is recorded at all.
 	//
@@ -684,6 +683,60 @@ type AuditConfig struct {
 	// so that the engine cannot rewrite its own history, or where state is disposable
 	// and the process output is the durable copy.
 	Stdout bool `mapstructure:"stdout"`
+}
+
+// TracingConfig configures the distributed traces the deploy engine exports.
+//
+// Traces are exported over OTLP to a collector, rather than to a particular backend,
+// so that which backend they end up in is the collector's configuration and not the
+// engine's.
+type TracingConfig struct {
+	// Whether traces are exported at all.
+	//
+	// Defaults to false. Tracing needs a collector to export to, so an engine that
+	// exported by default would spend every span on a connection that is not there.
+	// When off, the engine traces through an implementation that does nothing.
+	Enabled bool `mapstructure:"enabled"`
+	// The OTLP gRPC endpoint of the collector to export traces to.
+	//
+	// Defaults to "http://localhost:4317", which is the collector running alongside
+	// the engine, as a sidecar container or an agent on the same host.
+	//
+	// Also read from OTEL_EXPORTER_OTLP_ENDPOINT, so that a host already configured
+	// for OpenTelemetry needs nothing specific to the engine. Only OTLP over gRPC is
+	// supported, so an endpoint serving OTLP over HTTP will not work.
+	OTLPEndpoint string `mapstructure:"otlp_endpoint"`
+	// The name the engine is given in the traces it produces, which is how a backend
+	// tells its spans from those of everything else reporting to the same collector.
+	//
+	// Defaults to "bluelink-deploy-engine". Worth setting where several engines report
+	// to one collector and which of them a trace came from matters.
+	//
+	// Also read from OTEL_SERVICE_NAME.
+	ServiceName string `mapstructure:"service_name"`
+	// The proportion of traces to export, between 0 and 1, where a trace started
+	// elsewhere is exported if and only if the caller that started it sampled it.
+	//
+	// Defaults to 0.1, exporting a tenth of the traces the engine starts itself. A
+	// managed deployment serving many tenants handles enough traffic for exporting all
+	// of it to be a cost rather than a rounding error, and a default that only suits a
+	// single-tenant engine is the wrong way round: raising the rate is a deliberate act,
+	// paying for every trace by default is not.
+	//
+	// A caller that sampled its own trace is honoured whatever this is set to, so a
+	// client investigating one operation can force a trace for it by sampling upstream.
+	SamplingRate float64 `mapstructure:"sampling_rate"`
+	// The platform the engine runs on, where it has a tracing identifier format of its
+	// own that the engine has to produce for a trace to be readable there.
+	//
+	// Set this to "aws" where traces reach AWS X-Ray, which only accepts trace IDs in
+	// a shape it recognises and propagates traces in a header of its own. This also
+	// adds the X-Ray form of the trace ID to each log entry, so that a log entry can
+	// be taken to the trace it was written under.
+	//
+	// Defaults to "", for a collector exporting to a backend that reads W3C trace
+	// context, which is every other backend.
+	Platform string `mapstructure:"platform"`
 }
 
 // MaintenanceConfig configures how long each category of state is kept.
@@ -928,12 +981,34 @@ func bindEnvVars(viperInstance *viper.Viper) {
 	viperInstance.BindEnv("maintenance.blueprint_validation_retention_period")
 	viperInstance.BindEnv("maintenance.changeset_retention_period")
 	viperInstance.BindEnv("maintenance.events_retention_period")
-	viperInstance.BindEnv("audit.enabled")
-	viperInstance.BindEnv("audit.stdout")
 	viperInstance.BindEnv("maintenance.reconciliation_results_retention_period")
 	viperInstance.BindEnv("maintenance.audit_record_retention_period")
 	viperInstance.BindEnv("maintenance.scheduled_cleanup.enabled")
 	viperInstance.BindEnv("maintenance.scheduled_cleanup.interval")
+
+	viperInstance.BindEnv("audit.enabled")
+	viperInstance.BindEnv("audit.stdout")
+
+	viperInstance.BindEnv("shutdown.drain_timeout")
+
+	viperInstance.BindEnv("tracing.enabled")
+	viperInstance.BindEnv("tracing.sampling_rate")
+	viperInstance.BindEnv("tracing.platform")
+	// OpenTelemetry's own variable names are accepted as a fallback, so that a host
+	// already set up to export telemetry does not have to repeat itself for the engine.
+	// The engine's own name is read first, since the more specific of the two is the one
+	// an operator sets to override what the host already says. Only OTLP over gRPC is
+	// supported, so a collector endpoint meant for OTLP over HTTP will not work.
+	viperInstance.BindEnv(
+		"tracing.otlp_endpoint",
+		"BLUELINK_DEPLOY_ENGINE_TRACING_OTLP_ENDPOINT",
+		"OTEL_EXPORTER_OTLP_ENDPOINT",
+	)
+	viperInstance.BindEnv(
+		"tracing.service_name",
+		"BLUELINK_DEPLOY_ENGINE_TRACING_SERVICE_NAME",
+		"OTEL_SERVICE_NAME",
+	)
 }
 
 const (
@@ -995,12 +1070,18 @@ func setDefaults(viperInstance *viper.Viper) {
 	viperInstance.SetDefault("maintenance.blueprint_validation_retention_period", 7*oneDaySeconds)
 	viperInstance.SetDefault("maintenance.changeset_retention_period", 7*oneDaySeconds)
 	viperInstance.SetDefault("maintenance.events_retention_period", 7*oneDaySeconds)
-	viperInstance.SetDefault("audit.enabled", true)
-	viperInstance.SetDefault("audit.stdout", false)
 	viperInstance.SetDefault("maintenance.reconciliation_results_retention_period", 7*oneDaySeconds)
 	viperInstance.SetDefault("maintenance.audit_record_retention_period", 90*oneDaySeconds)
 	viperInstance.SetDefault("maintenance.scheduled_cleanup.enabled", false)
 	viperInstance.SetDefault("maintenance.scheduled_cleanup.interval", oneDaySeconds)
+
+	viperInstance.SetDefault("audit.enabled", true)
+	viperInstance.SetDefault("audit.stdout", false)
+
+	viperInstance.SetDefault("tracing.enabled", false)
+	viperInstance.SetDefault("tracing.otlp_endpoint", "http://localhost:4317")
+	viperInstance.SetDefault("tracing.service_name", "bluelink-deploy-engine")
+	viperInstance.SetDefault("tracing.sampling_rate", 0.1)
 
 	viperInstance.SetDefault("shutdown.drain_timeout", 3*oneMinuteSeconds)
 }

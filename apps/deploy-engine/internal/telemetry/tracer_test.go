@@ -113,6 +113,11 @@ func (s *TracerSuite) Test_nested_work_becomes_a_child_span() {
 	child, found := recorder.Span("cleanup.run")
 	s.Require().True(found)
 	s.Assert().Equal(parent.SpanID, child.ParentID)
+	s.Assert().Equal(
+		parent.TraceID,
+		child.TraceID,
+		"work started within other work belongs to the same trace",
+	)
 }
 
 // A span is ended even when the work panics, or the span is never exported and the

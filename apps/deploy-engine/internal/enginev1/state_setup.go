@@ -403,7 +403,7 @@ func buildS3ObjectstoreService(
 		return nil, fmt.Errorf("objectstore s3 bucket is required")
 	}
 
-	awsOpts := []func(*awsconfig.LoadOptions) error{}
+	awsOpts := tracedAWSOptions()
 	if cfg.Region != "" {
 		awsOpts = append(awsOpts, awsconfig.WithRegion(cfg.Region))
 	}

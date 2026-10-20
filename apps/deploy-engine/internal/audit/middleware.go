@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/auth"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httpmw"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/tracing"
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
 )
@@ -108,6 +109,14 @@ func (m *Middleware) record(r *http.Request, status int, requestID string) {
 		SourceIP:   sourceIPFor(r),
 		UserAgent:  r.UserAgent(),
 		RequestID:  requestID,
+	}
+
+	// The trace the action was carried out under, so that an audited action leads to the
+	// trace of the work it did. Absent where tracing is off, or where the trace is one no
+	// backend recorded.
+	if spanCtx := tracing.SpanContextFromContext(r.Context()); spanCtx.Recorded() {
+		record.TraceID = spanCtx.TraceID
+		record.SpanID = spanCtx.SpanID
 	}
 
 	if principal, found := auth.PrincipalFromContext(r.Context()); found {

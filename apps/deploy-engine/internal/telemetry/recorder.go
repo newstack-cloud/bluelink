@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sync"
 )
 
@@ -11,10 +12,9 @@ import (
 // A third implementation of the seam rather than a mock of the OpenTelemetry one, so a
 // test can state what work should have been traced without standing up an exporter.
 type Recorder struct {
-	mu       sync.Mutex
-	spans    []*RecordedSpan
-	nextID   int
-	parentOf map[*RecordedSpan]string
+	mu     sync.Mutex
+	spans  []*RecordedSpan
+	nextID int
 }
 
 // RecordedSpan is one span a Recorder was asked for.
@@ -35,6 +35,14 @@ func (s *RecordedSpan) Attr(key string) (any, bool) {
 	return value, found
 }
 
+// Taken under the recorder's lock, by the readers below.
+func (s *RecordedSpan) snapshot() *RecordedSpan {
+	copied := *s
+	copied.Attrs = maps.Clone(s.Attrs)
+
+	return &copied
+}
+
 type recordedSpanHandle struct {
 	recorder *Recorder
 	span     *RecordedSpan
@@ -42,9 +50,14 @@ type recordedSpanHandle struct {
 
 type recorderParentKey struct{}
 
+type recordedParent struct {
+	traceID string
+	spanID  string
+}
+
 // NewRecorder creates a Recorder. Install it with SetTracer.
 func NewRecorder() *Recorder {
-	return &Recorder{parentOf: map[*RecordedSpan]string{}}
+	return &Recorder{}
 }
 
 func (r *Recorder) Start(
@@ -64,28 +77,42 @@ func (r *Recorder) Start(
 		SpanID:  fmt.Sprintf("span-%d", r.nextID),
 		Attrs:   map[string]any{},
 	}
-	if parent, ok := ctx.Value(recorderParentKey{}).(string); ok {
-		span.ParentID = parent
+	// A span started within another belongs to the same trace, so that a test can state
+	// that a unit of work and what it did were traced together rather than only that one
+	// names the other as its parent.
+	if parent, ok := ctx.Value(recorderParentKey{}).(recordedParent); ok {
+		span.TraceID = parent.traceID
+		span.ParentID = parent.spanID
 	}
 	for _, attr := range attrs {
 		span.Attrs[attr.Key] = attr.Value
 	}
 	r.spans = append(r.spans, span)
 
-	return context.WithValue(ctx, recorderParentKey{}, span.SpanID),
-		&recordedSpanHandle{recorder: r, span: span}
+	return context.WithValue(ctx, recorderParentKey{}, recordedParent{
+		traceID: span.TraceID,
+		spanID:  span.SpanID,
+	}), &recordedSpanHandle{recorder: r, span: span}
 }
 
 // Spans returns the spans recorded so far, in the order they were started.
+//
+// Takes snapshots rather than the spans themselves as traced work
+// often keeps writing to its span on another goroutine after this has returned.
 func (r *Recorder) Spans() []*RecordedSpan {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	return append([]*RecordedSpan(nil), r.spans...)
+	snapshots := make([]*RecordedSpan, len(r.spans))
+	for i, span := range r.spans {
+		snapshots[i] = span.snapshot()
+	}
+
+	return snapshots
 }
 
-// Span returns the single span recorded under the given name, and whether exactly one
-// was.
+// Span returns a snapshot of the single span recorded under the given name, and whether
+// exactly one was.
 func (r *Recorder) Span(name string) (*RecordedSpan, bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -101,7 +128,11 @@ func (r *Recorder) Span(name string) (*RecordedSpan, bool) {
 		found = span
 	}
 
-	return found, found != nil
+	if found == nil {
+		return nil, false
+	}
+
+	return found.snapshot(), true
 }
 
 // Names returns the names of the spans recorded so far, in order.

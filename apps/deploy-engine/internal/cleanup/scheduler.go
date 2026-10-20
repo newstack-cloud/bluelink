@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
 )
@@ -81,7 +83,12 @@ func (s *Scheduler) run(ctx context.Context) {
 	}
 }
 
+// One span for the pass with a span per task inside it, so that a pass which spent its
+// time on a single category shows that rather than only how long the whole of it took.
 func (s *Scheduler) runPass(ctx context.Context) {
+	ctx, span := telemetry.CurrentTracer().Start(ctx, cleanupPassSpanName)
+	defer span.End()
+
 	for _, task := range s.tasks {
 		if ctx.Err() != nil {
 			return
@@ -92,7 +99,14 @@ func (s *Scheduler) runPass(ctx context.Context) {
 }
 
 func (s *Scheduler) runTask(ctx context.Context, task Task) {
-	logger := s.logger.WithFields(core.StringLogField("cleanupType", string(task.Type)))
+	ctx, span := telemetry.CurrentTracer().Start(
+		ctx,
+		cleanupTaskSpanName,
+		telemetry.StringAttr("cleanupType", string(task.Type)),
+	)
+	defer span.End()
+
+	logger := s.logger.WithFields(taskLogFields(task, span)...)
 
 	// Every instance sharing a state backend runs its own scheduler, so without this,
 	// they would each clean up the same records on their own interval. The work is
@@ -100,6 +114,7 @@ func (s *Scheduler) runTask(ctx context.Context, task Task) {
 	// than harmful.
 	recent, err := s.runner.CompletedWithin(ctx, task.Type, s.interval)
 	if err != nil {
+		span.RecordError(err)
 		logger.Error(
 			"failed to check when this category was last cleaned up, skipping this pass",
 			core.ErrorLogField("error", err),
@@ -107,6 +122,7 @@ func (s *Scheduler) runTask(ctx context.Context, task Task) {
 		return
 	}
 	if recent {
+		span.SetAttributes(telemetry.StringAttr("outcome", "skippedCleanedUpRecently"))
 		logger.Debug("category was cleaned up recently, skipping this pass")
 		return
 	}
@@ -116,14 +132,36 @@ func (s *Scheduler) runTask(ctx context.Context, task Task) {
 		// Something else is already cleaning this category, which is the outcome this
 		// pass wanted rather than a problem with it.
 		if errors.Is(err, ErrCleanupInProgress) {
+			span.SetAttributes(telemetry.StringAttr("outcome", "skippedAlreadyInProgress"))
 			logger.Debug("a cleanup for this category is already in progress, skipping this pass")
 			return
 		}
+		span.RecordError(err)
 		logger.Error(
 			"failed to start a scheduled cleanup",
 			core.ErrorLogField("error", err),
 		)
 		return
+	}
+
+	recordCleanupOutcome(span, logger, operation)
+}
+
+func recordCleanupOutcome(
+	span telemetry.Span,
+	logger core.Logger,
+	operation *manage.CleanupOperation,
+) {
+	span.SetAttributes(
+		telemetry.StringAttr("status", string(operation.Status)),
+		telemetry.IntAttr("itemsDeleted", operation.ItemsDeleted),
+	)
+
+	// A failed removal is reported through the operation rather than as an error from
+	// the run, so the span has to be marked failed from the status or a backend
+	// filtering failed spans will miss it.
+	if operation.Status == manage.CleanupOperationStatusFailed {
+		span.RecordError(cleanupFailedError(operation))
 	}
 
 	logger.Info(
@@ -132,3 +170,38 @@ func (s *Scheduler) runTask(ctx context.Context, task Task) {
 		core.IntegerLogField("itemsDeleted", operation.ItemsDeleted),
 	)
 }
+
+func cleanupFailedError(operation *manage.CleanupOperation) error {
+	if operation.ErrorMessage == "" {
+		return errors.New("the cleanup failed without saying why")
+	}
+
+	return errors.New(operation.ErrorMessage)
+}
+
+// The span's identity goes onto the logger so that the entries a pass writes lead to
+// the trace of it. Omitted where no backend has the span, see
+// telemetry.SpanContext.Recorded.
+func taskLogFields(task Task, span telemetry.Span) []core.LogField {
+	fields := []core.LogField{
+		core.StringLogField("cleanupType", string(task.Type)),
+	}
+
+	spanCtx := span.Context()
+	if spanCtx.Recorded() {
+		fields = append(
+			fields,
+			core.StringLogField(telemetry.TraceIDField, spanCtx.TraceID),
+			core.StringLogField(telemetry.SpanIDField, spanCtx.SpanID),
+		)
+	}
+
+	return fields
+}
+
+// Named for the work rather than the category, with the category an attribute, so that
+// a backend groups every pass over every category together.
+const (
+	cleanupPassSpanName = "cleanup.pass"
+	cleanupTaskSpanName = "cleanup.task"
+)

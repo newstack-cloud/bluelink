@@ -1232,6 +1232,181 @@ silent either way.
 
 **default value:** `false`
 
+### Tracing
+
+Configuration for the distributed traces the deploy engine exports.
+
+Traces are exported over OTLP to an [OpenTelemetry
+collector](https://opentelemetry.io/docs/collector/) rather than to a
+particular backend, so which backend they end up in is the collector's
+configuration and not the deploy engine's.
+
+A trace covers handling a request, the cloud service calls the deploy engine
+makes to object storage and key management within it, and each pass of the
+scheduled state cleanup. Where a trace is being exported, the identity of the
+span a request's log entries were written under is added to those entries, so
+an entry leads to the trace it belongs to and back.
+
+Resource operations carried out by provider and transformer plugins are not yet
+traced. Plugins run out of process and the deploy engine does not currently
+propagate a trace to them, so the time a deployment spends in them appears as a
+gap in its trace. Child blueprints fetched from object storage are not traced
+either, since each resolver builds its own client with no way to pass
+instrumentation through.
+
+An audit record carries the trace and span identifiers of the trace its action
+was carried out under, where tracing was on and the trace was sampled, so an
+audited action leads to the trace of the work it did. See
+[Audit](#audit).
+
+#### Tracing Enabled
+
+`BLUELINK_DEPLOY_ENGINE_TRACING_ENABLED`
+
+_Config field:_ `tracing.enabled`
+
+_**optional**_
+
+Whether traces are exported at all.
+
+Off by default, because tracing needs a collector to export to and a deploy
+engine that exported by default would spend every span on a connection that is
+not there. When off, no request instrumentation is registered and the deploy
+engine traces through an implementation that does nothing.
+
+**default value:** `false`
+
+#### Tracing OTLP Endpoint
+
+`BLUELINK_DEPLOY_ENGINE_TRACING_OTLP_ENDPOINT` or
+`OTEL_EXPORTER_OTLP_ENDPOINT`
+
+_Config field:_ `tracing.otlp_endpoint`
+
+_**optional**_
+
+The OTLP gRPC endpoint of the collector to export traces to, including the
+scheme, as in `http://collector:4317`.
+
+OpenTelemetry's own variable name is accepted as a fallback, so a host already
+set up to export telemetry needs nothing specific to the deploy engine. The
+deploy engine's own variable is read first, so it can override what the host
+already says.
+
+Only OTLP over gRPC is supported. A collector endpoint serving OTLP over HTTP,
+conventionally port 4318, will not work, and
+`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` and `OTEL_EXPORTER_OTLP_PROTOCOL` are not
+read.
+
+The scheme and host are checked at startup, because the exporter keeps its own
+default endpoint when given a URL it cannot parse. Without that check a value
+such as `collector:4317`, with no scheme, would have the deploy engine report
+success at startup and export nothing. A host that does not resolve cannot be
+caught this way, since the connection is made lazily and nothing dials it at
+startup.
+
+**The scheme decides whether the connection is encrypted.** `http://` exports
+over plaintext gRPC and `https://` over TLS, which is OpenTelemetry's own
+convention rather than anything specific to the deploy engine. The default is
+plaintext to a collector on the same host, which is the usual arrangement, as a
+sidecar container or an agent on the loopback interface. A collector reached
+across a network needs `https://`, otherwise the span names, attributes and
+trace identifiers described above cross that network in the clear. Nothing
+stops the deploy engine exporting in plaintext to a remote address, so this is
+the operator's call to make.
+
+**Credentials for a remote collector come from the environment,** not from
+`tracing.*`. The exporter reads OpenTelemetry's own variables and applies them
+before the deploy engine's options, so the endpoint comes from the
+configuration above while the credential comes from
+`OTEL_EXPORTER_OTLP_HEADERS`, which is where an API key or bearer token goes.
+`OTEL_EXPORTER_OTLP_CERTIFICATE` supplies a CA for a private certificate
+authority, and `OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE` with
+`OTEL_EXPORTER_OTLP_CLIENT_KEY` supplies a client certificate for a collector
+requiring mTLS. There is deliberately no `tracing.headers` equivalent, a
+collector credential belongs in the environment rather than in a configuration
+file as is a concern of the OpenTelemetry library and not the engine.
+
+**default value:** `http://localhost:4317`
+
+#### Tracing Service Name
+
+`BLUELINK_DEPLOY_ENGINE_TRACING_SERVICE_NAME` or `OTEL_SERVICE_NAME`
+
+_Config field:_ `tracing.service_name`
+
+_**optional**_
+
+The name the deploy engine is given in the traces it produces, which is how a
+backend tells its spans from those of everything else reporting to the same
+destination.
+
+Worth setting where several deploy engines report to one destination.
+
+**default value:** `bluelink-deploy-engine`
+
+#### Tracing Sampling Rate
+
+`BLUELINK_DEPLOY_ENGINE_TRACING_SAMPLING_RATE`
+
+_Config field:_ `tracing.sampling_rate`
+
+_**optional**_
+
+The proportion of traces to export, between 0 and 1.
+
+A trace that arrived from a caller is exported if and only if the caller that
+started it sampled it, so the decision is made once per trace and every
+component it passes through agrees. This rate applies only to the traces the
+deploy engine starts itself, which means a rate of 0 still exports a trace a
+caller sampled, and a rate of 1 does not override a caller that declined one.
+
+A tenth of traces by default. A managed deployment serving many tenants handles
+enough traffic for exporting all of it to be a real cost, and raising the rate
+should be the deliberate act rather than paying for every trace by default.
+
+Set it to `1` where every operation matters more than the volume, which is the
+usual case for a single-tenant or self-hosted deploy engine. Note that the rate
+is applied per trace rather than per span, so a lower rate drops whole
+operations rather than thinning the spans within one; an exported trace is
+always complete.
+
+Because a caller's decision is honoured, a client that needs a trace for one
+particular operation can force it by sampling that trace upstream, whatever
+this is set to.
+
+**default value:** `0.1`
+
+#### Tracing Platform
+
+`BLUELINK_DEPLOY_ENGINE_TRACING_PLATFORM`
+
+_Config field:_ `tracing.platform`
+
+_**optional**_
+
+The platform the deploy engine runs on, where it has a tracing identifier
+format of its own that the engine has to produce for a trace to be readable
+there.
+
+Set this to `aws` where traces reach AWS X-Ray. X-Ray only accepts trace IDs in
+a shape it recognises, which carries the time the trace started, so a trace the
+deploy engine starts has to be given one rather than the random identifier that
+is otherwise generated. In this mode the engine also reads and writes the
+`X-Amzn-Trace-Id` header alongside W3C trace context, so a trace does not break
+at an AWS load balancer in front of it, and adds the X-Ray form of the trace ID
+to each log entry as `xrayTraceId`, which is the only form the X-Ray console
+will find a trace by.
+
+W3C trace context is read and written on every platform, including this one, and
+takes precedence where a request carries both headers, since such a request came
+from a caller that started a W3C trace and then passed through AWS.
+
+Leave it unset for a collector exporting to a backend that reads W3C trace
+context, which is every other backend. The only supported value is `aws`.
+
+**default value:** `""`
+
 ### Resolvers
 
 Configuration for child blueprint resolvers used by the deploy engine.

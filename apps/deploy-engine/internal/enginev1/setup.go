@@ -2,50 +2,23 @@ package enginev1
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"io"
 	"net"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/audit"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/cleanup"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/auditv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/deploymentsv1"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/eventsv1"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/validationv1"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httpmw"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/params"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginconfig"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginhostv1"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginmeta"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/tagging"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
-	"github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/azure"
-	resolverfs "github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/fs"
-	"github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/gcs"
-	resolverhttps "github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/https"
-	resolverrouter "github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/router"
-	"github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/s3"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/providerhelpers"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/transform"
-	"github.com/newstack-cloud/bluelink/libs/plugin-framework/plugin"
-	"github.com/newstack-cloud/bluelink/libs/plugin-framework/pluginservicev1"
-	pluginutils "github.com/newstack-cloud/bluelink/libs/plugin-framework/utils"
 	"github.com/spf13/afero"
 )
 
+// Setup wires up the v1 API on the given router and returns the callback that shuts
+// everything it started back down.
+//
+// The order below is the order things depend on each other in; where a step depends on
+// its position rather than only on having run, that is noted.
 func Setup(
 	router *mux.Router,
 	config *core.Config,
@@ -60,8 +33,27 @@ func Setup(
 		return nil, nil, err
 	}
 
+	clock := &bpcore.SystemClock{}
 	fileSystem := afero.NewOsFs()
 	idGenerator := bpcore.NewUUIDGenerator()
+
+	// Before the state services, which reach object storage and key management through
+	// SDK clients that are traced, so that the spans their startup produces are
+	// exported rather than falling to the implementation that does nothing.
+	stopTracing, err := setupTracing(context.Background(), config, clock, logger)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Stopped here as well as in the shutdown callback, since a later step failing
+	// returns before the caller is given that callback, and the exporter holds a
+	// goroutine and a connection until something stops it.
+	startupSucceeded := false
+	defer func() {
+		if !startupSucceeded {
+			stopTracing()
+		}
+	}()
 
 	stateServices, closeStateService, err := loadStateServices(
 		context.Background(),
@@ -73,275 +65,68 @@ func Setup(
 		return nil, nil, err
 	}
 
-	clock := &bpcore.SystemClock{}
-	fileSourceRegistry := provider.NewFileSourceRegistry()
-	initialProviders := map[string]provider.Provider{
-		"core": providerhelpers.NewCoreProvider(
-			stateServices.container.Links(),
-			bpcore.BlueprintInstanceIDFromContext,
-			os.Getwd,
-			fileSourceRegistry,
-			clock,
-		),
-	}
-	warnAboutPluginServiceTransport(pluginServiceListener, logger)
-
-	pluginExectorEnvVars := getPluginExecutorEnvVars(
-		pluginServiceListener,
-	)
-	pluginExecutor := plugin.NewOSCmdExecutor(
-		config.PluginsV1.LogFileRootDir,
-		pluginExectorEnvVars,
-	)
-	pluginHostService, err := pluginhostv1.LoadDefaultService(
-		&pluginhostv1.LoadDependencies{
-			Executor:         pluginExecutor,
-			InstanceFactory:  plugin.CreatePluginInstance,
-			PluginHostConfig: config,
-			StateContainer:   stateServices.container,
-		},
-		pluginhostv1.WithServiceLogger(logger),
-		pluginhostv1.WithServiceFS(fileSystem),
-		pluginhostv1.WithIDGenerator(idGenerator),
-		pluginhostv1.WithInitialProviders(initialProviders),
-		pluginhostv1.WithPluginServiceListener(pluginServiceListener),
-	)
+	pluginHostService, pluginMaps, err := startPluginHost(&pluginHostParams{
+		config:                config,
+		stateContainer:        stateServices.container,
+		pluginServiceListener: pluginServiceListener,
+		fileSystem:            fileSystem,
+		idGenerator:           idGenerator,
+		clock:                 clock,
+		logger:                logger,
+	})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	pluginMaps, err := pluginHostService.LoadPlugins(
-		context.Background(),
-	)
+	dependencies := buildDependencies(&dependencyParams{
+		config:           config,
+		state:            stateServices,
+		plugins:          pluginMaps,
+		pluginManager:    pluginHostService.Manager(),
+		secretConfigKeys: secretConfigKeys,
+		fileSystem:       fileSystem,
+		idGenerator:      idGenerator,
+		clock:            clock,
+		logger:           logger,
+	})
+
+	handlers := setupHandlers(router, dependencies, config)
+
+	closeAuditSink, err := setupMiddleware(&middlewareParams{
+		router:          router,
+		config:          config,
+		auditStore:      stateServices.audit,
+		unauthenticated: handlers.unauthenticated,
+		clock:           clock,
+		logger:          logger,
+	})
 	if err != nil {
 		return nil, nil, err
 	}
-
-	fsResolver := resolverfs.NewResolver(fileSystem)
-	s3Resolver := s3.NewResolver(config.Resolvers.S3Endpoint, config.Resolvers.S3UsePathStyle)
-	gcsResolver := gcs.NewResolver(config.Resolvers.GCSEndpoint)
-	httpClient := httputils.NewHTTPClient(config.Resolvers.HTTPSClientTimeout)
-	httpsResolver := resolverhttps.NewResolver(
-		httpClient,
-	)
-	// Azure blob storage clients will be created on the fly
-	// using default credentials and sourcing the storage account
-	// name from include metadata, blueprint params or
-	// environment variables.
-	azureObjectResolver := azure.NewResolver( /* clientFactory */ nil)
-	childResolver := resolverrouter.NewResolver(
-		fsResolver,
-		resolverrouter.WithRoute(resolve.S3SourceType, s3Resolver),
-		resolverrouter.WithRoute(resolve.AzureBlobStorageSourceType, azureObjectResolver),
-		resolverrouter.WithRoute(resolve.GoogleCloudStorageSourceType, gcsResolver),
-		resolverrouter.WithRoute(resolve.HTTPSSourceType, httpsResolver),
-	)
-
-	// Provider and transformer config in a blueprint operation is keyed by the
-	// simplified plugin name (namespace), e.g. "aws" or "celerity". The
-	// transformers in pluginMaps are keyed by transform name (the string used in
-	// a blueprint's `transform` section, e.g. "celerity-2025-08-01") for the
-	// blueprint loader, so we build a plugin-name-keyed view for config
-	// preparation rather than conflating the two keyings.
-	pluginConfigPreparer := pluginconfig.NewDefaultPreparer(
-		pluginconfig.ToConfigDefinitionProviders(pluginMaps.Providers),
-		pluginconfig.ToConfigDefinitionProviders(
-			transformerConfigProvidersByPluginName(pluginHostService.Manager()),
-		),
-		pluginHostService.Manager(),
-		secretConfigKeys,
-	)
-
-	validateLoaderFactory := func(extraOpts ...container.LoaderOption) container.Loader {
-		baseOpts := []container.LoaderOption{
-			container.WithLoaderTransformSpec(false),
-			container.WithLoaderValidateAfterTransform(false),
-			container.WithLoaderValidateRuntimeValues(false),
-			container.WithLoaderLogger(logger),
-		}
-		return container.NewDefaultLoader(
-			pluginMaps.Providers,
-			pluginMaps.Transformers,
-			/* stateContainer */ nil,
-			/* childResolver */ nil,
-			append(baseOpts, extraOpts...)...,
-		)
-	}
-	validateLoader := validateLoaderFactory()
-
-	defaultRetryPolicy := parseDefaultRetryPolicy(
-		config.Blueprints.DefaultRetryPolicy,
-		logger.Named("init"),
-	)
-
-	deployLoader := container.NewDefaultLoader(
-		pluginMaps.Providers,
-		pluginMaps.Transformers,
-		stateServices.container,
-		childResolver,
-		container.WithLoaderTransformSpec(true),
-		// Sometimes users of the deploy engine will want to debug issues
-		// caused by a transformer plugin that may be producing invalid output.
-		container.WithLoaderValidateAfterTransform(config.Blueprints.ValidateAfterTransform),
-		container.WithLoaderValidateRuntimeValues(true),
-		container.WithLoaderIDGenerator(idGenerator),
-		container.WithLoaderDefaultRetryPolicy(defaultRetryPolicy),
-		container.WithLoaderResourceStabilityPollingConfig(
-			createResourceStabilityPollingConfig(config),
-		),
-		container.WithLoaderLogger(logger),
-	)
-
-	paramsProvider := params.NewDefaultProvider(
-		params.DefaultContextVars(config),
-	)
-
-	taggingConfigProvider := tagging.NewConfigProvider(config.Version)
-	providerMetadataLookup := pluginmeta.NewLookup(pluginHostService.Manager())
-
-	cleanupRunner := cleanup.NewRunner(
-		stateServices.cleanupOperations,
-		idGenerator,
-		clock,
-		logger,
-	)
-
-	dependencies := &typesv1.Dependencies{
-		EventStore:                 stateServices.events,
-		ValidationStore:            stateServices.validation,
-		ChangesetStore:             stateServices.changesets,
-		ReconciliationResultsStore: stateServices.reconciliationResults,
-		CleanupOperationsStore:     stateServices.cleanupOperations,
-		AuditStore:                 stateServices.audit,
-		CleanupRunner:              cleanupRunner,
-		Instances:                  stateServices.container.Instances(),
-		Exports:                    stateServices.container.Exports(),
-		IDGenerator:                idGenerator,
-		EventIDGenerator:           utils.NewUUIDv7Generator(),
-		ValidationLoader:           validateLoader,
-		ValidationLoaderFactory:    validateLoaderFactory,
-		DeploymentLoader:           deployLoader,
-		BlueprintResolver:          childResolver,
-		ParamsProvider:             paramsProvider,
-		PluginConfigPreparer:       pluginConfigPreparer,
-		TaggingConfigProvider:      taggingConfigProvider,
-		ProviderMetadataLookup:     providerMetadataLookup,
-		Clock:                      clock,
-		Logger:                     logger,
-	}
-
-	healthHandler := setupHealthHandler(
-		router,
-	)
-
-	helpersv1.SetupRequestBodyValidator()
-
-	setupValidationHandlers(
-		router,
-		dependencies,
-		config,
-	)
-
-	deploymentCtrl := setupDeploymentHandlers(
-		router,
-		dependencies,
-		config,
-	)
-
-	setupEventManagementHandlers(
-		router,
-		dependencies,
-		config,
-	)
-
-	setupAuditHandlers(
-		router,
-		dependencies,
-		config,
-	)
-
-	authMiddleware, err := setupAuth(
-		&config.Auth,
-		clock,
-		/* excludedRoutes */ []*mux.Route{healthHandler},
-		logger,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	auditSink, closeAuditSink, err := setupAuditSink(&config.Audit, stateServices.audit, logger)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	sourceIPMiddleware, err := setupSourceIPMiddleware(config, logger)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Source IP first, so that everything after it attributes a request to the same
-	// address rather than each deriving its own answer.
-	router.Use(sourceIPMiddleware.Middleware)
-
-	// Then the request's correlation ID and logger, before authentication, so that a
-	// request refused for failing to authenticate is still logged with where it came
-	// from. Such a request changed nothing, so it has no audit record, and this is the
-	// only account of it.
-	router.Use(
-		httpmw.NewRequestContextMiddleware(logger).Middleware,
-	)
-
-	// Audit after authentication, so that a record names the principal the request
-	// authenticated as. A request that failed to authenticate changed nothing and has no
-	// principal, so it belongs in the operational logs rather than the trail of actions
-	// taken.
-	router.Use(authMiddleware.Middleware)
-	router.Use(
-		audit.NewMiddleware(auditSink, clock, logger).Middleware,
-	)
 
 	// Shares the runner the cleanup endpoints use, so a scheduled pass and a requested
 	// one cannot run over the same category at once.
 	stopScheduledCleanup := setupScheduledCleanup(
 		config,
-		cleanupRunner,
+		dependencies.CleanupRunner,
 		stateServices,
 		clock,
 		logger,
 	)
 
-	return nil, createServerCleanupFunc(
-		drainInFlightDeploymentsFunc(deploymentCtrl, config.GetShutdownDrainTimeout()),
-		// Before the state service closes, since an in-flight pass is still writing to it.
-		stopScheduledCleanup,
-		closeStateService,
-		pluginHostService.Close,
-		// After the drain, so that a record is written for every action still in flight
-		// when the shutdown began.
-		closeAuditSink,
-	), nil
-}
+	startupSucceeded = true
 
-// Returns the installed transformer
-// plugins keyed by their simplified plugin name (namespace), e.g. the plugin
-// "newstack-cloud/celerity" is keyed as "celerity". This matches how
-// transformer config is keyed in a blueprint operation config, and is distinct
-// from the transform-name keying (e.g. "celerity-2025-08-01") used by the
-// blueprint loader.
-func transformerConfigProvidersByPluginName(
-	manager pluginservicev1.Manager,
-) map[string]transform.SpecTransformer {
-	transformers := map[string]transform.SpecTransformer{}
-	instances := manager.GetPlugins(pluginservicev1.PluginType_PLUGIN_TYPE_TRANSFORMER)
-	for _, instance := range instances {
-		transformer, ok := instance.Client.(transform.SpecTransformer)
-		if !ok {
-			continue
-		}
-		transformers[pluginutils.ExtractPluginNamespace(instance.Info.ID)] = transformer
-	}
-	return transformers
+	return nil, createServerCleanupFunc(&serverShutdown{
+		drainDeployments: drainInFlightDeploymentsFunc(
+			handlers.deployments,
+			config.GetShutdownDrainTimeout(),
+		),
+		stopScheduledCleanup: stopScheduledCleanup,
+		closeState:           closeStateService,
+		closePluginHost:      pluginHostService.Close,
+		closeAuditSink:       closeAuditSink,
+		stopTracing:          stopTracing,
+	}), nil
 }
 
 func drainInFlightDeploymentsFunc(
@@ -355,309 +140,39 @@ func drainInFlightDeploymentsFunc(
 	}
 }
 
-func createServerCleanupFunc(
-	cleanupFuncs ...func(),
-) func() {
+// What has to be stopped when the engine shuts down.
+type serverShutdown struct {
+	drainDeployments     func()
+	stopScheduledCleanup func()
+	closeState           func()
+	closePluginHost      func()
+	closeAuditSink       func()
+	stopTracing          func()
+}
+
+// Stops what Setup started, in the order the dependencies between them require.
+func createServerCleanupFunc(shutdown *serverShutdown) func() {
+	ordered := []func(){
+		// In-flight operations first, so that each is given the chance to persist a
+		// terminal status while what it writes to is still open.
+		shutdown.drainDeployments,
+		// Before the state service closes, since an in-flight pass is still writing to it.
+		shutdown.stopScheduledCleanup,
+		shutdown.closeState,
+		shutdown.closePluginHost,
+		// After the drain, so that a record is written for every action still in flight
+		// when the shutdown began.
+		shutdown.closeAuditSink,
+		// Last, so that the spans describing everything above are handed over rather
+		// than discarded with the provider.
+		shutdown.stopTracing,
+	}
+
 	return func() {
-		for _, cleanupFunc := range cleanupFuncs {
-			if cleanupFunc != nil {
-				cleanupFunc()
+		for _, stop := range ordered {
+			if stop != nil {
+				stop()
 			}
 		}
 	}
-}
-
-func setupHealthHandler(
-	router *mux.Router,
-) *mux.Route {
-	return router.HandleFunc("/health", HealthHandler).Methods("GET")
-}
-
-func setupValidationHandlers(
-	router *mux.Router,
-	dependencies *typesv1.Dependencies,
-	config *core.Config,
-) {
-	retentionPeriod := time.Duration(
-		config.Maintenance.BlueprintValidationRetentionPeriod,
-	) * time.Second
-
-	validationCtrl := validationv1.NewController(
-		retentionPeriod,
-		dependencies,
-	)
-
-	router.HandleFunc(
-		"/validations",
-		validationCtrl.CreateBlueprintValidationHandler,
-	).Methods("POST")
-
-	router.HandleFunc(
-		"/validations/{id}",
-		validationCtrl.GetBlueprintValidationHandler,
-	).Methods("GET")
-
-	router.HandleFunc(
-		"/validations/{id}/stream",
-		validationCtrl.StreamEventsHandler,
-	).Methods("GET")
-
-	router.HandleFunc(
-		"/validations/cleanup",
-		validationCtrl.CleanupBlueprintValidationsHandler,
-	).Methods("POST")
-
-	router.HandleFunc(
-		"/validations/cleanup/{id}",
-		validationCtrl.GetCleanupStatusHandler,
-	).Methods("GET")
-}
-
-func setupDeploymentHandlers(
-	router *mux.Router,
-	dependencies *typesv1.Dependencies,
-	config *core.Config,
-) *deploymentsv1.Controller {
-	changesetRetentionPeriod := time.Duration(
-		config.Maintenance.ChangesetRetentionPeriod,
-	) * time.Second
-
-	reconciliationResultsRetentionPeriod := time.Duration(
-		config.Maintenance.ReconciliationResultsRetentionPeriod,
-	) * time.Second
-
-	deployTimeout := time.Duration(
-		config.Blueprints.DeploymentTimeout,
-	) * time.Second
-
-	drainTimeout := config.GetDrainTimeout()
-
-	deploymentCtrl := deploymentsv1.NewController(
-		changesetRetentionPeriod,
-		reconciliationResultsRetentionPeriod,
-		deployTimeout,
-		drainTimeout,
-		dependencies,
-	)
-
-	router.HandleFunc(
-		"/deployments/changes",
-		deploymentCtrl.CreateChangesetHandler,
-	).Methods("POST")
-
-	router.HandleFunc(
-		"/deployments/changes/{id}/stream",
-		deploymentCtrl.StreamChangesetEventsHandler,
-	).Methods("GET")
-
-	router.HandleFunc(
-		"/deployments/changes/{id}",
-		deploymentCtrl.GetChangesetHandler,
-	).Methods("GET")
-
-	router.HandleFunc(
-		"/deployments/changes/cleanup",
-		deploymentCtrl.CleanupChangesetsHandler,
-	).Methods("POST")
-
-	router.HandleFunc(
-		"/deployments/changes/cleanup/{id}",
-		deploymentCtrl.GetChangesetsCleanupStatusHandler,
-	).Methods("GET")
-
-	router.HandleFunc(
-		"/deployments/reconciliation-results/cleanup",
-		deploymentCtrl.CleanupReconciliationResultsHandler,
-	).Methods("POST")
-
-	router.HandleFunc(
-		"/deployments/reconciliation-results/cleanup/{id}",
-		deploymentCtrl.GetReconciliationResultsCleanupStatusHandler,
-	).Methods("GET")
-
-	router.HandleFunc(
-		"/deployments/instances",
-		deploymentCtrl.ListBlueprintInstancesHandler,
-	).Methods("GET")
-
-	router.HandleFunc(
-		"/deployments/instances",
-		deploymentCtrl.CreateBlueprintInstanceHandler,
-	).Methods("POST")
-
-	router.HandleFunc(
-		"/deployments/instances/{id}/stream",
-		deploymentCtrl.StreamDeploymentEventsHandler,
-	).Methods("GET")
-
-	router.HandleFunc(
-		"/deployments/instances/{id}",
-		deploymentCtrl.GetBlueprintInstanceHandler,
-	).Methods("GET")
-
-	router.HandleFunc(
-		"/deployments/instances/{id}",
-		deploymentCtrl.UpdateBlueprintInstanceHandler,
-	).Methods("PATCH")
-
-	router.HandleFunc(
-		"/deployments/instances/{id}/exports",
-		deploymentCtrl.GetBlueprintInstanceExportsHandler,
-	).Methods("GET")
-
-	router.HandleFunc(
-		"/deployments/instances/{id}/destroy",
-		deploymentCtrl.DestroyBlueprintInstanceHandler,
-	).Methods("POST")
-
-	router.HandleFunc(
-		"/deployments/instances/{id}/reconciliation/check",
-		deploymentCtrl.CheckReconciliationHandler,
-	).Methods("POST")
-
-	router.HandleFunc(
-		"/deployments/instances/{id}/reconciliation/apply",
-		deploymentCtrl.ApplyReconciliationHandler,
-	).Methods("POST")
-
-	return deploymentCtrl
-}
-
-func setupAuditHandlers(
-	router *mux.Router,
-	dependencies *typesv1.Dependencies,
-	config *core.Config,
-) {
-	retentionPeriod := time.Duration(
-		config.Maintenance.AuditRecordRetentionPeriod,
-	) * time.Second
-
-	auditCtrl := auditv1.NewController(
-		retentionPeriod,
-		dependencies,
-	)
-
-	// Registered before the parameterised record route so that "cleanup" is not
-	// taken for a record ID.
-	router.HandleFunc(
-		"/audit/records/cleanup",
-		auditCtrl.CleanupAuditRecordsHandler,
-	).Methods("POST")
-
-	router.HandleFunc(
-		"/audit/records/cleanup/{id}",
-		auditCtrl.GetCleanupStatusHandler,
-	).Methods("GET")
-
-	router.HandleFunc(
-		"/audit/records",
-		auditCtrl.QueryAuditRecordsHandler,
-	).Methods("GET")
-
-	router.HandleFunc(
-		"/audit/records/{id}",
-		auditCtrl.GetAuditRecordHandler,
-	).Methods("GET")
-}
-
-func setupEventManagementHandlers(
-	router *mux.Router,
-	dependencies *typesv1.Dependencies,
-	config *core.Config,
-) {
-	retentionPeriod := time.Duration(
-		config.Maintenance.EventsRetentionPeriod,
-	) * time.Second
-
-	eventsCtrl := eventsv1.NewController(
-		retentionPeriod,
-		dependencies,
-	)
-
-	router.HandleFunc(
-		"/events/cleanup",
-		eventsCtrl.CleanupEventsHandler,
-	).Methods("POST")
-
-	router.HandleFunc(
-		"/events/cleanup/{id}",
-		eventsCtrl.GetCleanupStatusHandler,
-	).Methods("GET")
-}
-
-func createResourceStabilityPollingConfig(
-	config *core.Config,
-) *container.ResourceStabilityPollingConfig {
-	return &container.ResourceStabilityPollingConfig{
-		PollingInterval: time.Duration(
-			config.Blueprints.ResourceStabilisationPollingIntervalMS,
-		) * time.Millisecond,
-		PollingTimeout: time.Duration(
-			config.PluginsV1.ResourceStabilisationPollingTimeoutMS,
-		) * time.Millisecond,
-	}
-}
-
-func parseDefaultRetryPolicy(
-	serialised string,
-	logger bpcore.Logger,
-) *provider.RetryPolicy {
-	if strings.TrimSpace(serialised) == "" {
-		return provider.DefaultRetryPolicy
-	}
-
-	retryPolicy := &provider.RetryPolicy{}
-	err := json.Unmarshal([]byte(serialised), retryPolicy)
-	if err != nil {
-		logger.Warn(
-			"failed to parse default retry policy from config, "+
-				"using default policy from the provider package",
-			bpcore.ErrorLogField("error", err),
-		)
-		return provider.DefaultRetryPolicy
-	}
-
-	return retryPolicy
-}
-
-// Warns that the plugin service's transport gives no separation between local users.
-//
-// A caller supplying its own unix-socket listener, which the tests and an embedding host can
-// do, is not warned.
-func warnAboutPluginServiceTransport(
-	pluginServiceListener net.Listener,
-	logger bpcore.Logger,
-) {
-	if pluginServiceListener != nil {
-		if _, isTCP := pluginServiceListener.Addr().(*net.TCPAddr); !isTCP {
-			return
-		}
-	}
-
-	logger.Warn(
-		"the plugin service is listening on loopback TCP, which any local process can " +
-			"connect to regardless of the user it runs as, so a host shared with untrusted " +
-			"local workloads exposes the channel carrying provider credentials",
-	)
-}
-
-func getPluginExecutorEnvVars(
-	pluginServiceListener net.Listener,
-) map[string]string {
-	envVars := map[string]string{}
-
-	// Ensure that when a custom listener is provided for the plugin service,
-	// that the port is set in the environment variables for each plugin
-	// that is launched.
-	// As long as plugins use the `pluginservicev1.NewEnvServiceClient` function
-	// to create a client to interact with the plugin service, they will
-	// use the custom port.
-	if pluginServiceListener != nil {
-		tcpAddr, isTCPAddr := pluginServiceListener.Addr().(*net.TCPAddr)
-		if isTCPAddr {
-			envVars["BLUELINK_BUILD_ENGINE_PLUGIN_SERVICE_PORT"] = fmt.Sprintf("%d", tcpAddr.Port)
-		}
-	}
-
-	return envVars
 }

@@ -1,6 +1,6 @@
 # Secure Deployment Reference
 
-**Last updated: 2026-10-12**
+**Last updated: 2026-10-20**
 
 This document is for Bluelink maintainers to provide guidance for securely deploying the engine in a production environment.
 
@@ -278,6 +278,112 @@ persisted changeset, and stream resume serves persisted events. Their retention 
 therefore confidentiality controls, not just housekeeping. Shortening them reduces exposure;
 lengthening them for audit convenience increases it.
 
+## 7. Telemetry
+
+Tracing is off by default. With `tracing.enabled: false` no request instrumentation is
+registered and nothing leaves the process, so a deployment that has not asked for traces
+has nothing to review here.
+
+| Key                     | Default                  | Notes                                                                       |
+| ----------------------- | ------------------------ | --------------------------------------------------------------------------- |
+| `tracing.enabled`       | `false`                  | Secure default. Nothing is exported and no instrumentation is registered.    |
+| `tracing.otlp_endpoint` | `http://localhost:4317`  | OTLP over gRPC. The scheme decides encryption, see below.                    |
+| `tracing.service_name`  | `bluelink-deploy-engine` | Names the engine in the spans it produces.                                   |
+| `tracing.sampling_rate` | `0.1`                    | Applies to traces the engine starts. A caller's decision is honoured as-is.  |
+| `tracing.platform`      | `""`                     | `aws` adds X-Ray trace identifiers and propagation.                          |
+| `tracing.plugin_calls`  | not implemented          | Reserved for plugin RPC spans, see `docs/design/plugin-trace-propagation.md`. |
+
+### The collector connection is plaintext unless you ask for TLS
+
+`http://` exports over plaintext gRPC and `https://` over TLS. This is OpenTelemetry's
+convention rather than an engine-specific choice, and the engine does not warn about it.
+
+The default endpoint is a collector on the same host, as a sidecar container or an agent on
+loopback, where plaintext is the usual arrangement and the one to prefer. **A collector
+reached across a network needs `https://`,** or everything listed below crosses that
+network in the clear. Nothing in the engine prevents plaintext export to a remote address.
+
+### Authenticating to a remote collector
+
+`tracing.*` carries no credential of its own. A remote collector or a vendor OTLP endpoint
+almost always wants one, and the exporter reads it from the environment instead, using
+OpenTelemetry's own variable names:
+
+| Variable                                                          | Purpose                                       |
+| ----------------------------------------------------------------- | --------------------------------------------- |
+| `OTEL_EXPORTER_OTLP_HEADERS`                                      | Arbitrary headers, which is where an API key or bearer token goes. |
+| `OTEL_EXPORTER_OTLP_CERTIFICATE`                                  | CA pool for verifying the collector's certificate, for a private CA. |
+| `OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE` and `..._CLIENT_KEY`      | Client certificate and key, for a collector requiring mTLS.          |
+
+These are applied by the exporter before the engine's own options, so the endpoint and the
+scheme come from `tracing.otlp_endpoint` while the credentials come from the environment.
+There is no `tracing.headers` equivalent, deliberately: duplicating a standard mechanism
+would add a second place to look, and a collector credential sitting in the engine's
+configuration file is worse than one in its environment.
+
+**Treat an `OTEL_EXPORTER_OTLP_HEADERS` value as credential material,** on the same footing
+as the engine's API keys. It is a bearer credential for your telemetry backend, and the
+engine's environment is already in scope for that treatment under section 2.
+
+Note that the engine passes its environment to the plugins it launches, so a plugin
+exporting its own traces inherits the same collector credentials without separate
+configuration.
+
+### What leaves the process
+
+Verified against the instrumentation rather than inferred:
+
+- **Route templates, not paths.** Request spans are named for the matched route template
+  (`/deployments/instances/{id}`) because the instrumentation reads gorilla/mux's path
+  template. The concrete path, and therefore instance IDs and blueprint names, is not
+  recorded. The query string is not recorded either.
+- **Caller addresses and user agents.** Request spans carry `client.address`,
+  `network.peer.address`, `network.peer.port` and `user_agent.original`. These are the same
+  values the audit trail records, and the same caveats apply, treat them as personal data
+  where your jurisdiction does.
+- **Request method, scheme, status, and the server address and port.**
+- **Trace and span identifiers**, which are random values carrying no information of their
+  own.
+- **The engine's service name and version.**
+- **Cleanup activity.** A scheduled cleanup pass produces a span per category, carrying
+  the category name and the number of records removed.
+- **AWS API calls the engine makes.** For object storage and key management: the service,
+  the operation, and the AWS request ID. Not the bucket, key, or object contents.
+- **Outbound propagation headers.** W3C `traceparent` on calls the engine makes, and
+  `X-Amzn-Trace-Id` alongside it when `tracing.platform` is `aws`.
+
+### What does not leave the process
+
+No blueprint content, no resource specifications, no state values, no changeset field
+values, no event payloads and no credentials. The engine records no span attribute derived
+from a blueprint or from persisted state. Provider error text is not attached to spans
+either, though a provider error does mark a span failed with its message where the engine
+records one.
+
+### The audit trail and traces cross-reference each other
+
+An audit record carries `traceId` and `spanId` for the trace the action was carried out
+under, where tracing was on and the trace was sampled. This is what lets an audited action
+lead to the trace of the work it did, and the reverse. Both are empty on records written
+while tracing was off, which is the ordinary case, and empty on a trace a sampler declined
+rather than carrying identifiers that resolve to nothing.
+
+### Recommendations
+
+- Run the collector on the engine host, or in the same pod, and keep the endpoint on
+  loopback. That keeps trace data off the network without configuring TLS or credentials
+  for it at all, and is the arrangement to prefer.
+- For any collector not on the engine host: `https://`, plus a credential through
+  `OTEL_EXPORTER_OTLP_HEADERS` or mTLS through the client certificate variables. A remote
+  collector accepting unauthenticated OTLP is a trace-injection target as well as a
+  confidentiality problem.
+- Treat the collector and whatever it forwards to as holding caller IP addresses, and give
+  them a retention policy to match. The engine's own retention settings do not reach them.
+- Consider `tracing.sampling_rate` against how much of the trail you need. The default
+  exports a tenth, so most operations have no trace; a single-tenant deployment that wants
+  one for every operation sets it to `1`. Whatever it is set to, a caller that sampled its
+  own trace is honoured, so a specific operation can be traced on demand from the client.
+
 ## Current limitations
 
 The engine does not provide these today. None should be described as a control of a
@@ -287,11 +393,16 @@ deployment:
   those is whatever the database or bucket provides. Only `memfile` can encrypt its own state.
 - **A re-encryption pass needs the engine stopped**, and cannot be made atomic. There is no
   online rotation and no schedule: rotating a key is an operator-run command.
-- **No redaction of secret values.** Resolved secrets appear in API responses, event streams
-  and logs wherever they appear in a resource spec, changeset or drift record. The
-  sensitivity flags in a blueprint and in provider schemas are recorded but not acted on.
-- **No caller attribution or audit log.** Credentials are authenticated and then discarded,
-  so "who deployed what, when" cannot be answered from the engine.
+- **No redaction of resolved secret values.** Resolved secrets appear in API responses,
+  event streams and persisted state wherever they appear in a resource spec, changeset or
+  drift record. The sensitivity flags in a blueprint and in provider schemas are recorded
+  but not acted on. Logs are a narrower case: nothing in the engine logs state values, and
+  plugin configuration values for keys a plugin declared secret are redacted as an entry is
+  written.
+- **The audit trail records actions, not reads.** "Who deployed what, when" is answerable
+  from the trail, but a request that only read something is deliberately not recorded, and
+  neither is a cleanup the engine ran on its own schedule rather than on request. A request
+  that failed to authenticate has no principal and so appears only in the operational logs.
 - **No authentication on the plugin channel**, and it runs over loopback TCP rather than a
   unix socket.
 - **No SigV1 replay protection.** A captured signed request can be replayed within a fixed
@@ -329,3 +440,6 @@ engine removes them.
 - [ ] No untrusted local workloads on the engine host.
 - [ ] Backups of `memfile` state directories encrypted independently, or covered by the
       engine's own encryption with the key stored apart from them.
+- [ ] If tracing is enabled: the collector on the engine host with a loopback endpoint, or
+      `https://` for a remote one, and the collector's own storage understood to hold
+      caller IP addresses.
