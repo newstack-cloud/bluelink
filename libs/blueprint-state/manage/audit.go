@@ -121,6 +121,13 @@ type AuditRecord struct {
 	// RequestID correlates the record with the request, taken from the caller's header
 	// where one was supplied so that a trail can be followed across components.
 	RequestID string `json:"requestId,omitempty"`
+	// TraceID identifies the distributed trace the action was carried out under, so that
+	// an audited action leads to the trace of the work it did. Empty where tracing is
+	// off, or where the trace was not one a backend recorded.
+	TraceID string `json:"traceId,omitempty"`
+	// SpanID identifies the span within that trace, which is the unit of work the
+	// action corresponds to.
+	SpanID string `json:"spanId,omitempty"`
 }
 
 // GetID returns the ID of the audit record.

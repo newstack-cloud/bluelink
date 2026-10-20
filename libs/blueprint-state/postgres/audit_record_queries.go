@@ -17,7 +17,9 @@ func auditRecordJSONFields() string {
 			'onBehalfOf', a.on_behalf_of,
 			'sourceIp', a.source_ip,
 			'userAgent', a.user_agent,
-			'requestId', a.request_id
+			'requestId', a.request_id,
+			'traceId', a.trace_id,
+			'spanId', a.span_id
 		)`
 }
 
@@ -72,7 +74,9 @@ func saveAuditRecordQuery() string {
 		on_behalf_of,
 		source_ip,
 		user_agent,
-		request_id
+		request_id,
+		trace_id,
+		span_id
 	) VALUES (
 		@id,
 		@timestamp,
@@ -88,7 +92,9 @@ func saveAuditRecordQuery() string {
 		@onBehalfOf,
 		@sourceIp,
 		@userAgent,
-		@requestId
+		@requestId,
+		@traceId,
+		@spanId
 	)
 	ON CONFLICT (id) DO NOTHING`
 }

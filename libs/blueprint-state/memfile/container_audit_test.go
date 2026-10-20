@@ -303,6 +303,8 @@ func (s *MemFileStateContainerAuditSuite) auditRecord(
 		PrincipalSubject: principalSubject,
 		SourceIP:         "10.0.0.1",
 		RequestID:        fmt.Sprintf("request-for-%s", id),
+		TraceID:          fmt.Sprintf("trace-for-%s", id),
+		SpanID:           fmt.Sprintf("span-for-%s", id),
 	}
 }
 

@@ -52,6 +52,48 @@ func (s *PostgresAuditTestSuite) Test_saves_and_retrieves_an_audit_record() {
 	s.Assert().Equal(saved, retrieved)
 }
 
+// An audited action has to lead to the trace of the work it did, which means the trace
+// identifiers survive a round trip through the columns that hold them.
+func (s *PostgresAuditTestSuite) Test_saves_and_retrieves_the_trace_an_action_ran_under() {
+	auditStore := s.container.Audit()
+	saved := s.auditRecord(
+		"9c0e4a92-3b4a-4a4e-8f6f-5c4d2b1a0091",
+		1000,
+		"instance.deploy",
+		"user-a",
+		manage.OutcomeSuccess,
+	)
+	s.Require().NoError(auditStore.Save(context.Background(), saved))
+
+	retrieved, err := auditStore.Get(context.Background(), saved.ID)
+	s.Require().NoError(err)
+
+	s.Assert().Equal(saved.TraceID, retrieved.TraceID)
+	s.Assert().Equal(saved.SpanID, retrieved.SpanID)
+}
+
+// Tracing is off by default, so most records carry no trace, and an empty identifier
+// must come back empty rather than as a string that looks like one.
+func (s *PostgresAuditTestSuite) Test_saves_a_record_with_no_trace() {
+	auditStore := s.container.Audit()
+	saved := s.auditRecord(
+		"9c0e4a92-3b4a-4a4e-8f6f-5c4d2b1a0092",
+		1000,
+		"instance.deploy",
+		"user-a",
+		manage.OutcomeSuccess,
+	)
+	saved.TraceID = ""
+	saved.SpanID = ""
+	s.Require().NoError(auditStore.Save(context.Background(), saved))
+
+	retrieved, err := auditStore.Get(context.Background(), saved.ID)
+	s.Require().NoError(err)
+
+	s.Assert().Empty(retrieved.TraceID)
+	s.Assert().Empty(retrieved.SpanID)
+}
+
 func (s *PostgresAuditTestSuite) Test_fails_to_retrieve_a_non_existent_audit_record() {
 	_, err := s.container.Audit().Get(
 		context.Background(),
@@ -286,6 +328,8 @@ func (s *PostgresAuditTestSuite) auditRecord(
 		SourceIP:         "10.0.0.1",
 		UserAgent:        "bluelink-cli/1.0",
 		RequestID:        fmt.Sprintf("request-for-%s", id),
+		TraceID:          fmt.Sprintf("trace-for-%s", id),
+		SpanID:           fmt.Sprintf("span-for-%s", id),
 	}
 }
 

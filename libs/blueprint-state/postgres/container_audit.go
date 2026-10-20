@@ -117,6 +117,8 @@ func buildAuditRecordArgs(record *manage.AuditRecord) *pgx.NamedArgs {
 		"sourceIp":         emptyToNil(record.SourceIP),
 		"userAgent":        emptyToNil(record.UserAgent),
 		"requestId":        emptyToNil(record.RequestID),
+		"traceId":          emptyToNil(record.TraceID),
+		"spanId":           emptyToNil(record.SpanID),
 	}
 }
 
