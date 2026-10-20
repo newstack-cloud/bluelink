@@ -660,7 +660,7 @@ func (p *Persister) CreateAuditRecord(ctx context.Context, r *manage.AuditRecord
 
 	switch p.config.AuditRecords.Layout {
 	case LayoutPerEntity:
-		return writeChunk(ctx, p.storage, p.keys.AuditRecord(r.ID), r)
+		return writeChunk(ctx, p.storage, p.keys.AuditRecordObject(r.Timestamp, r.ID), r)
 	case LayoutChunked:
 		spec := p.auditRecordSpec()
 		// Appending unconditionally would put the same ID in the trail twice, since
@@ -698,7 +698,7 @@ func (p *Persister) QueryAuditRecords(
 	spec := p.auditRecordSpec()
 	matched, err := loadAndFilterChunked(
 		ctx, p.storage, *spec.lastChunkPtr, spec.chunkKey,
-		func(r *manage.AuditRecord) bool { return auditRecordMatches(r, query) },
+		func(r *manage.AuditRecord) bool { return AuditRecordMatches(r, query) },
 	)
 	if err != nil {
 		return nil, err
@@ -719,7 +719,7 @@ func NarrowAuditRecords(
 ) []*manage.AuditRecord {
 	matched := make([]*manage.AuditRecord, 0, len(records))
 	for _, record := range records {
-		if auditRecordMatches(record, query) {
+		if AuditRecordMatches(record, query) {
 			matched = append(matched, record)
 		}
 	}
@@ -731,33 +731,52 @@ func applyAuditQueryLimit(
 	records []*manage.AuditRecord,
 	query *manage.AuditRecordQuery,
 ) []*manage.AuditRecord {
-	limit := query.Limit
-	if limit <= 0 {
-		limit = manage.DefaultAuditQueryLimit
-	}
+	limit := AuditQueryLimit(query)
 	if len(records) > limit {
 		return records[:limit]
 	}
 	return records
 }
 
-func auditRecordMatches(record *manage.AuditRecord, query *manage.AuditRecordQuery) bool {
+// AuditQueryLimit is how many records the query asks for, resolved.
+//
+// Exported alongside AuditRecordMatches so that a backend reading records one at a time
+// knows when it has enough and can stop, rather than reading the full trail and discarding
+// most of it.
+func AuditQueryLimit(query *manage.AuditRecordQuery) int {
+	if query.Limit <= 0 {
+		return manage.DefaultAuditQueryLimit
+	}
+
+	return query.Limit
+}
+
+// AuditRecordMatches reports whether one record satisfies the query.
+//
+// Exported for a backend that holds one object per record and reads them one at a time,
+// so that what counts as a match is decided here rather than in each backend.
+func AuditRecordMatches(record *manage.AuditRecord, query *manage.AuditRecordQuery) bool {
 	if query.From != 0 && record.Timestamp < query.From {
 		return false
 	}
+
 	if !isAfterAuditCursor(record, query) {
 		return false
 	}
+
 	if query.To != 0 && record.Timestamp >= query.To {
 		return false
 	}
+
 	if query.Action != "" && record.Action != query.Action {
 		return false
 	}
+
 	if query.PrincipalSubject != "" &&
 		record.PrincipalSubject != query.PrincipalSubject {
 		return false
 	}
+
 	return query.Outcome == "" || record.Outcome == query.Outcome
 }
 
@@ -796,10 +815,57 @@ func (p *Persister) CleanupAuditRecords(
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
+	if p.config.AuditRecords.Layout == LayoutPerEntity {
+		return cleanupAuditRecordObjects(
+			ctx, p.storage, p.keys.AuditRecordsPrefix(), thresholdDate.Unix(),
+		)
+	}
+
 	return cleanupCategory[*manage.AuditRecord](
 		ctx, p, p.config.AuditRecords, p.auditRecordSpec(),
 		p.keys.AuditRecordsPrefix(), thresholdDate, "audit records",
 	)
+}
+
+// Removes the records that have passed their retention period, deciding which from the
+// key rather than from the record.
+//
+// A trail is one object per record under the per-entity layout, which is the only caller of this.
+// Without this, the generic per-entity cleanup
+// would read every record in the trail to find the ones to delete. The key carries the
+// timestamp, so a pass deletes without reading any of them.
+//
+// A key that is not a record key stops the pass rather than being skipped.
+// Deleting around an object this code cannot identify, or leaving it to accumulate unnoticed, are
+// both worse than saying so.
+func cleanupAuditRecordObjects(
+	ctx context.Context,
+	storage Storage,
+	prefix string,
+	threshold int64,
+) ([]string, error) {
+	keys, err := storage.List(ctx, prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	removed := []string{}
+	for _, key := range keys {
+		timestamp, recordID, ok := ParseTimestampedKey(key)
+		if !ok {
+			return removed, NotAnAuditRecordKeyError(key)
+		}
+		if timestamp > threshold {
+			continue
+		}
+
+		if err := deleteIgnoreNotFound(ctx, storage, key); err != nil {
+			return removed, err
+		}
+		removed = append(removed, recordID)
+	}
+
+	return removed, nil
 }
 
 // Removes the records of one category that have passed their retention period, by
@@ -972,7 +1038,7 @@ func (p *Persister) LastEventIDInChannel(
 		return "", err
 	}
 
-	return eventIDFromKey(keys[len(keys)-1]), nil
+	return entityIDFromKey(keys[len(keys)-1]), nil
 }
 
 // CleanupEventObjects removes the events older than thresholdDate across every channel,
@@ -995,7 +1061,7 @@ func (p *Persister) CleanupEventObjects(
 	threshold := thresholdDate.Unix()
 	removed := []string{}
 	for _, key := range keys {
-		timestamp, eventID, ok := parseEventKey(key)
+		timestamp, eventID, ok := ParseTimestampedKey(key)
 		if !ok || timestamp > threshold {
 			continue
 		}
@@ -1029,7 +1095,7 @@ func (p *Persister) FindEventObject(
 	}
 
 	for _, key := range keys {
-		if eventIDFromKey(key) != eventID {
+		if entityIDFromKey(key) != eventID {
 			continue
 		}
 
@@ -1055,7 +1121,7 @@ func (p *Persister) orderedEventKeys(ctx context.Context, prefix string) ([]stri
 
 	ordered := make([]string, 0, len(keys))
 	for _, key := range keys {
-		if _, _, ok := parseEventKey(key); ok {
+		if _, _, ok := ParseTimestampedKey(key); ok {
 			ordered = append(ordered, key)
 		}
 	}
@@ -1066,11 +1132,26 @@ func (p *Persister) orderedEventKeys(ctx context.Context, prefix string) ([]stri
 	return ordered, nil
 }
 
-// Splits "<prefix>/<timestamp>-<id>.json" into its timestamp and ID.
-func parseEventKey(key string) (int64, string, bool) {
+// LoadMode reports how State was populated, which is what decides whether what it holds
+// for a category is the whole of it or a subset materialised on demand.
+func (p *Persister) LoadMode() LoadMode {
+	return p.config.Mode
+}
+
+// ParseTimestampedKey reads back a key written as
+// "<zero-padded timestamp>-<entity id>.json", returning the timestamp, the entity ID and
+// whether the key is one of that shape at all.
+//
+// The timestamp part has to be exactly the padded width. An identifier is commonly a
+// UUID, whose first hyphen-separated segment is eight hex characters and is all digits
+// often enough to be parsed as a number, so without the length check a key written
+// before the timestamp was part of it would be misread as a timestamped one. Reporting
+// false for such a key is what lets a caller recognise it and fall back to reading the
+// entity for its timestamp.
+func ParseTimestampedKey(key string) (int64, string, bool) {
 	name := strings.TrimSuffix(path.Base(key), ".json")
-	timestampPart, eventID, found := strings.Cut(name, "-")
-	if !found || eventID == "" {
+	timestampPart, entityID, found := strings.Cut(name, "-")
+	if !found || entityID == "" || len(timestampPart) != timestampKeyDigits {
 		return 0, "", false
 	}
 
@@ -1079,10 +1160,10 @@ func parseEventKey(key string) (int64, string, bool) {
 		return 0, "", false
 	}
 
-	return timestamp, eventID, true
+	return timestamp, entityID, true
 }
 
-func eventIDFromKey(key string) string {
-	_, eventID, _ := parseEventKey(key)
-	return eventID
+func entityIDFromKey(key string) string {
+	_, entityID, _ := ParseTimestampedKey(key)
+	return entityID
 }

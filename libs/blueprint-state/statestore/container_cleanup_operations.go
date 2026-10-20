@@ -57,7 +57,7 @@ func (c *CleanupOperationsContainer) GetLatestByType(
 		if op.CleanupType != cleanupType {
 			continue
 		}
-		if latest == nil || op.StartedAt > latest.StartedAt {
+		if latest == nil || startedLater(op, latest) {
 			latest = op
 		}
 	}
@@ -95,6 +95,20 @@ func (c *CleanupOperationsContainer) Update(
 	return c.persister.UpdateCleanupOperation(ctx, operation)
 }
 
+// Newest first, with the ID breaking a tie.
+//
+// StartedAt has second granularity, so two operations for one category can share one,
+// and the operations are held in a map. Without a total ordering, which of them counts as
+// the latest and which the rolling window evicts would both depend on map iteration
+// order, and a scheduled pass reads the latest to decide whether to skip.
+func startedLater(first *manage.CleanupOperation, second *manage.CleanupOperation) bool {
+	if first.StartedAt != second.StartedAt {
+		return first.StartedAt > second.StartedAt
+	}
+
+	return first.ID > second.ID
+}
+
 // enforceRollingWindow caps on-disk + in-memory history for a given cleanup
 // type at MaxCleanupOperationsPerType, evicting the oldest by StartedAt.
 // Persisted evictions flow through the persister so disk and memory stay
@@ -115,7 +129,7 @@ func (c *CleanupOperationsContainer) enforceRollingWindow(
 	}
 
 	sort.Slice(typeOps, func(i, j int) bool {
-		return typeOps[i].StartedAt > typeOps[j].StartedAt
+		return startedLater(typeOps[i], typeOps[j])
 	})
 
 	for i := MaxCleanupOperationsPerType; i < len(typeOps); i++ {

@@ -32,7 +32,10 @@ func cleanupOperationLatestByTypeQuery() string {
 		) As cleanup_operation_json
 	FROM cleanup_operations c
 	WHERE cleanup_type = @cleanupType
-	ORDER BY started_at DESC
+	-- The ID breaks a tie, since started_at has second granularity and two operations
+	-- for one category can share a second. Without it the row returned among ties is
+	-- arbitrary, and a scheduled pass reads this to decide whether to skip.
+	ORDER BY started_at DESC, id DESC
 	LIMIT 1`
 }
 
@@ -76,7 +79,9 @@ func deleteOldCleanupOperationsQuery() string {
 	WHERE id IN (
 		SELECT id FROM cleanup_operations
 		WHERE cleanup_type = @cleanupType
-		ORDER BY started_at DESC
+		-- Ordered the same way as the latest lookup, so which operations fall outside the
+		-- window is determined rather than left to the sort among equal started_at values.
+		ORDER BY started_at DESC, id DESC
 		OFFSET @keepCount
 	)`
 }

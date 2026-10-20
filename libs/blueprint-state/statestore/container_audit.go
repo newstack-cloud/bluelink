@@ -69,21 +69,59 @@ func (c *AuditContainer) Save(
 	return nil
 }
 
+// Query reads the trail, from memory where memory holds the whole of it.
+//
+// Under ModeEager the trail was read into State at startup and every write since has gone
+// through Save, so re-reading it from storage would be work for an answer already held in memory.
+// Under any other mode State holds whatever has been materialised on demand, and
+// answering from that would present part of a trail as the whole of it, which an audit trail must
+// not do.
+//
+// Reading from memory also means a record another process wrote since startup is not
+// seen. That is already true of every other category a ModeEager container serves, and
+// that mode is for a state directory with a single writer.
 func (c *AuditContainer) Query(
 	ctx context.Context,
 	query *manage.AuditRecordQuery,
 ) ([]*manage.AuditRecord, error) {
+	if c.persister.LoadMode() == ModeEager {
+		return c.queryHeldRecords(query), nil
+	}
+
 	matched, err := c.persister.QueryAuditRecords(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 
-	records := make([]*manage.AuditRecord, len(matched))
-	for i, record := range matched {
-		copied := copyAuditRecord(record)
-		records[i] = &copied
+	return copyAuditRecords(matched), nil
+}
+
+func (c *AuditContainer) queryHeldRecords(
+	query *manage.AuditRecordQuery,
+) []*manage.AuditRecord {
+	c.state.RLock()
+	defer c.state.RUnlock()
+
+	held := make([]*manage.AuditRecord, 0, len(c.state.auditRecords))
+	for _, record := range c.state.auditRecords {
+		held = append(held, record)
 	}
-	return records, nil
+
+	// Narrowed rather than filtered here, so that what counts as a match, the order and
+	// the limit are the same wherever the records came from.
+	return copyAuditRecords(NarrowAuditRecords(held, query))
+}
+
+// Copied while the caller still holds the read lock, since the records are the ones State
+// is holding rather than copies of them.
+func copyAuditRecords(records []*manage.AuditRecord) []*manage.AuditRecord {
+	copied := make([]*manage.AuditRecord, len(records))
+	for i, record := range records {
+		recordCopy := copyAuditRecord(record)
+		copied[i] = &recordCopy
+	}
+
+	return copied
 }
 
 func (c *AuditContainer) Cleanup(

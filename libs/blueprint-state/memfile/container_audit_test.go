@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -318,4 +319,88 @@ func recordIDs(records []*manage.AuditRecord) []string {
 
 func TestMemFileStateContainerAuditSuite(t *testing.T) {
 	suite.Run(t, new(MemFileStateContainerAuditSuite))
+}
+
+// The whole trail is in memory under ModeEager, so a query is answered from there rather
+// than by reading the chunk files back. Proven by making the files unreadable after the
+// container has loaded, a query that still answers correctly from memory cannot have read malformed
+// files on disk.
+func (s *MemFileStateContainerAuditSuite) Test_queries_without_reading_the_chunk_files() {
+	auditStore := s.container.Audit()
+	for i := range 12 {
+		s.Require().NoError(auditStore.Save(context.Background(), s.auditRecord(
+			fmt.Sprintf("record-%02d", i),
+			int64(1000+i),
+			"instance.create",
+			"user-a",
+			manage.OutcomeSuccess,
+		)))
+	}
+
+	s.corruptAuditChunkFiles()
+
+	records, err := auditStore.Query(context.Background(), &manage.AuditRecordQuery{
+		From: 1004,
+		To:   1008,
+	})
+	s.Require().NoError(err)
+
+	s.Require().Len(records, 4)
+	s.Assert().Equal("record-04", records[0].ID)
+	s.Assert().Equal("record-07", records[3].ID)
+}
+
+// A cursor page is answered from memory too, since that is the read an extraction makes
+// repeatedly.
+func (s *MemFileStateContainerAuditSuite) Test_pages_without_reading_the_chunk_files() {
+	auditStore := s.container.Audit()
+	for i := range 12 {
+		s.Require().NoError(auditStore.Save(context.Background(), s.auditRecord(
+			fmt.Sprintf("record-%02d", i),
+			int64(1000+i),
+			"instance.create",
+			"user-a",
+			manage.OutcomeSuccess,
+		)))
+	}
+
+	first, err := auditStore.Query(context.Background(), &manage.AuditRecordQuery{Limit: 5})
+	s.Require().NoError(err)
+	s.Require().Len(first, 5)
+
+	s.corruptAuditChunkFiles()
+
+	last := first[len(first)-1]
+	second, err := auditStore.Query(context.Background(), &manage.AuditRecordQuery{
+		AfterTimestamp: last.Timestamp,
+		AfterID:        last.ID,
+		Limit:          5,
+	})
+	s.Require().NoError(err)
+
+	s.Require().Len(second, 5)
+	s.Assert().Equal("record-05", second[0].ID)
+}
+
+// Overwrites every audit chunk file with something that is not a record, so that any read
+// of one fails rather than quietly returning nothing.
+func (s *MemFileStateContainerAuditSuite) corruptAuditChunkFiles() {
+	entries, err := afero.ReadDir(s.fs, s.stateDir)
+	s.Require().NoError(err)
+
+	corrupted := 0
+	for _, entry := range entries {
+		if !strings.HasPrefix(entry.Name(), "audit_records_c") {
+			continue
+		}
+		s.Require().NoError(afero.WriteFile(
+			s.fs,
+			path.Join(s.stateDir, entry.Name()),
+			[]byte("not an audit record chunk"),
+			0644,
+		))
+		corrupted++
+	}
+
+	s.Require().Positive(corrupted, "there should be chunk files to make unreadable")
 }

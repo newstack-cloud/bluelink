@@ -116,3 +116,18 @@ func ErrInstanceNameTaken(name string) error {
 		Err:        fmt.Errorf("instance name %q already taken", name),
 	}
 }
+
+// NotAnAuditRecordKeyError reports an object under the audit trail's prefix that is not
+// a record key.
+//
+// Every key the engine writes there leads with the record's timestamp, so one that does
+// not is a foreign object or a bug. The trail cannot be read or pruned past it without
+// risking answering with part of a trail as though it were the whole of it, or deleting
+// around something unidentified.
+func NotAnAuditRecordKeyError(key string) error {
+	return fmt.Errorf(
+		"%q is under the audit record prefix but is not an audit record key, "+
+			"which should lead with the record's timestamp",
+		key,
+	)
+}

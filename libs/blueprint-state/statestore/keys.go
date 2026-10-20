@@ -113,8 +113,58 @@ func (k KeyBuilder) ValidationIndex() string {
 }
 
 // AuditRecord returns the per-entity storage key for an audit record.
-func (k KeyBuilder) AuditRecord(recordID string) string {
-	return k.join("audit_records", recordID+".json")
+// Keys that lead with a timestamp pad it to this width, so that lexicographic order is
+// the order entities were written in and a reader parsing one back has a fixed width to
+// recognise. Eleven digits carries a unix second well past any date the software will see.
+const timestampKeyDigits = 11
+
+// The shared shape of a key that leads with a timestamp, so the width above and the
+// format that produces it cannot drift apart.
+func timestampedKeyName(timestamp int64, entityID string) string {
+	return fmt.Sprintf("%0*d-%s.json", timestampKeyDigits, timestamp, entityID)
+}
+
+// SharedTimestampKeyPrefix returns the leading characters every timestamped key between
+// low and high has in common, for narrowing a listing to the slice of a category a time
+// range can touch.
+//
+// The timestamp is zero padded to a fixed width, so decimal order is lexicographic order
+// and any timestamp between two of that width shares their leading digits. That is what
+// makes the result safe to list under where it cannot exclude a key inside the range. It is a
+// narrowing rather than a filter, so a caller still applies the exact bounds per key.
+//
+// Empty where there is nothing to narrow by, which includes a range spanning a change in
+// the leading digit and a timestamp too wide for the padding to order.
+func SharedTimestampKeyPrefix(low int64, high int64) string {
+	if low < 0 || high < low {
+		return ""
+	}
+
+	lowKey := fmt.Sprintf("%0*d", timestampKeyDigits, low)
+	highKey := fmt.Sprintf("%0*d", timestampKeyDigits, high)
+	if len(lowKey) != len(highKey) {
+		return ""
+	}
+
+	for i := range len(lowKey) {
+		if lowKey[i] != highKey[i] {
+			return lowKey[:i]
+		}
+	}
+
+	return lowKey
+}
+
+// AuditRecordObject returns the per-entity storage key for a single audit record, under
+// the prefix AuditRecordsPrefix returns.
+//
+// The timestamp leads the key, zero padded, so that lexicographic order is the order the
+// records were written in and a reader can answer a query's time bounds, or a cleanup its
+// threshold, from the key alone. A trail is read and pruned by time far more often than
+// by ID, and a backend holding one object per record would otherwise have to read every
+// object to answer either.
+func (k KeyBuilder) AuditRecordObject(timestamp int64, recordID string) string {
+	return k.join("audit_records", timestampedKeyName(timestamp, recordID))
 }
 
 // AuditRecordsPrefix returns the storage key prefix every per-entity
@@ -192,7 +242,7 @@ func (k KeyBuilder) EventPartition(partitionName string) string {
 // were produced. A channel can then be read, resumed and cleaned up from a listing
 // alone, without opening a single event, and no two writers share a file to overwrite.
 func (k KeyBuilder) EventObject(partitionName string, timestamp int64, eventID string) string {
-	return k.join("events", partitionName, fmt.Sprintf("%011d-%s.json", timestamp, eventID))
+	return k.join("events", partitionName, timestampedKeyName(timestamp, eventID))
 }
 
 // EventChannelPrefix returns the storage key prefix every per-entity event key for one

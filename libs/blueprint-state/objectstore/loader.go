@@ -120,17 +120,39 @@ func (l *ServiceLoader) LoadValidation(
 	return &v, true, nil
 }
 
+// LoadAuditRecord reads one record by ID.
+//
+// The key leads with the record's timestamp, which a caller holding only an ID does not
+// have, so the key is found by listing the trail's prefix rather than constructed. That
+// is a listing of keys and a single read, not a read of the trail.
 func (l *ServiceLoader) LoadAuditRecord(
 	ctx context.Context,
 	id string,
 ) (*manage.AuditRecord, bool, error) {
-	var r manage.AuditRecord
-	found, err := readEntity(ctx, l.svc, l.keys.AuditRecord(id), &r)
-	if err != nil || !found {
-		return nil, found, err
+	objects, err := l.svc.List(ctx, l.keys.AuditRecordsPrefix())
+	if err != nil {
+		return nil, false, err
 	}
 
-	return &r, true, nil
+	for _, object := range objects {
+		_, recordID, ok := statestore.ParseTimestampedKey(object.Key)
+		if !ok {
+			return nil, false, statestore.NotAnAuditRecordKeyError(object.Key)
+		}
+		if recordID != id {
+			continue
+		}
+
+		var r manage.AuditRecord
+		found, err := readEntity(ctx, l.svc, object.Key, &r)
+		if err != nil || !found {
+			return nil, found, err
+		}
+
+		return &r, true, nil
+	}
+
+	return nil, false, nil
 }
 
 func (l *ServiceLoader) LoadReconciliation(
