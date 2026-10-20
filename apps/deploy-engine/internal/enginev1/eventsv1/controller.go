@@ -1,37 +1,28 @@
 package eventsv1
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/cleanup"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httpmw"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
-	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
-)
-
-const (
-	// An internal timeout used for the cleanup process
-	// that cleans up old events.
-	// 10 minutes is a reasonable time to wait for the cleanup process
-	// to complete for instances of the deploy engine with a lot of use.
-	eventsCleanupTimeout = 10 * time.Minute
 )
 
 // Controller handles HTTP requests
 // for managing events.
 type Controller struct {
 	eventsRetentionPeriod  time.Duration
+	cleanupRunner          *cleanup.Runner
 	eventStore             manage.Events
 	cleanupOperationsStore manage.CleanupOperations
-	idGenerator            core.IDGenerator
-	clock                  commoncore.Clock
 	logger                 core.Logger
 }
 
@@ -43,10 +34,9 @@ func NewController(
 ) *Controller {
 	return &Controller{
 		eventsRetentionPeriod:  eventsRetentionPeriod,
+		cleanupRunner:          deps.CleanupRunner,
 		eventStore:             deps.EventStore,
 		cleanupOperationsStore: deps.CleanupOperationsStore,
-		idGenerator:            deps.IDGenerator,
-		clock:                  deps.Clock,
 		logger:                 deps.Logger,
 	}
 }
@@ -59,82 +49,13 @@ func (c *Controller) CleanupEventsHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	operationID, err := c.idGenerator.GenerateID()
-	if err != nil {
-		c.logger.Debug(
-			"failed to generate cleanup operation ID",
-			core.ErrorLogField("error", err),
-		)
-		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
-		return
-	}
-
-	cleanupBefore := c.clock.Now().Add(-c.eventsRetentionPeriod)
-
-	operation := &manage.CleanupOperation{
-		ID:            operationID,
-		CleanupType:   manage.CleanupTypeEvents,
-		Status:        manage.CleanupOperationStatusRunning,
-		StartedAt:     c.clock.Now().Unix(),
-		ThresholdDate: cleanupBefore.Unix(),
-	}
-
-	if err := c.cleanupOperationsStore.Save(r.Context(), operation); err != nil {
-		c.logger.Debug(
-			"failed to save cleanup operation",
-			core.ErrorLogField("error", err),
-		)
-		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
-		return
-	}
-
-	// Copy the operation for the response to avoid data race between
-	// json.Marshal and the goroutine modifying the original.
-	responseCopy := *operation
-
-	go c.cleanupEvents(operation)
-
-	httputils.HTTPJSONResponse(
+	helpersv1.StartCleanup(
 		w,
-		http.StatusAccepted,
-		&helpersv1.AsyncOperationResponse[*manage.CleanupOperation]{
-			Data: &responseCopy,
-		},
+		r,
+		c.cleanupRunner,
+		cleanup.EventsTask(c.eventStore, c.eventsRetentionPeriod),
+		c.requestLogger(r),
 	)
-}
-
-func (c *Controller) cleanupEvents(operation *manage.CleanupOperation) {
-	logger := c.logger.Named("eventsCleanup")
-
-	ctxWithTimeout, cancel := context.WithTimeout(
-		context.Background(),
-		eventsCleanupTimeout,
-	)
-	defer cancel()
-
-	thresholdDate := time.Unix(operation.ThresholdDate, 0)
-	itemsDeleted, err := c.eventStore.Cleanup(ctxWithTimeout, thresholdDate)
-
-	operation.EndedAt = c.clock.Now().Unix()
-	operation.ItemsDeleted = itemsDeleted
-
-	if err != nil {
-		logger.Error(
-			"failed to clean up old events",
-			core.ErrorLogField("error", err),
-		)
-		operation.Status = manage.CleanupOperationStatusFailed
-		operation.ErrorMessage = err.Error()
-	} else {
-		operation.Status = manage.CleanupOperationStatusCompleted
-	}
-
-	if updateErr := c.cleanupOperationsStore.Update(ctxWithTimeout, operation); updateErr != nil {
-		logger.Error(
-			"failed to update cleanup operation",
-			core.ErrorLogField("error", updateErr),
-		)
-	}
 }
 
 // GetCleanupStatusHandler is the handler for the
@@ -158,7 +79,7 @@ func (c *Controller) GetCleanupStatusHandler(
 			)
 			return
 		}
-		c.logger.Debug(
+		c.requestLogger(r).Debug(
 			"failed to get cleanup operation",
 			core.ErrorLogField("error", err),
 		)
@@ -167,4 +88,13 @@ func (c *Controller) GetCleanupStatusHandler(
 	}
 
 	httputils.HTTPJSONResponse(w, http.StatusOK, operation)
+}
+
+// The logger for the request being answered, carrying its correlation ID, source
+// address and who it was authenticated for.
+//
+// Falls back to the process logger when the request-context middleware has not run, so
+// that a handler never has to decide whether logging is worth attempting.
+func (c *Controller) requestLogger(r *http.Request) core.Logger {
+	return httpmw.LoggerFromContext(r.Context(), c.logger)
 }

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/cleanup"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/params"
@@ -63,6 +64,10 @@ func (s *ControllerTestSuite) SetupTest() {
 		map[string]*manage.ReconciliationResult{},
 	).(*testutils.MockReconciliationResultsStore)
 	s.instances = stateContainer.Instances()
+	cleanupOperationsStore := testutils.NewMockCleanupOperationsStore(
+		map[string]*manage.CleanupOperation{},
+	)
+
 	dependencies := &typesv1.Dependencies{
 		EventStore: s.eventStore,
 		ValidationStore: testutils.NewMockBlueprintValidationStore(
@@ -70,8 +75,12 @@ func (s *ControllerTestSuite) SetupTest() {
 		),
 		ChangesetStore:             s.changesetStore,
 		ReconciliationResultsStore: s.reconciliationResultsStore,
-		CleanupOperationsStore: testutils.NewMockCleanupOperationsStore(
-			map[string]*manage.CleanupOperation{},
+		CleanupOperationsStore:     cleanupOperationsStore,
+		CleanupRunner: cleanup.NewRunner(
+			cleanupOperationsStore,
+			core.NewUUIDGenerator(),
+			&testutils.MockClock{StaticTime: testTime},
+			core.NewNopLogger(),
 		),
 		Instances:         s.instances,
 		Exports:           stateContainer.Exports(),

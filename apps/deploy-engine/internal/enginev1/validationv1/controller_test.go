@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/cleanup"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/params"
@@ -49,14 +50,22 @@ func (s *ControllerTestSuite) SetupTest() {
 	s.validationStore = testutils.NewMockBlueprintValidationStore(
 		map[string]*manage.BlueprintValidation{},
 	)
+	cleanupOperationsStore := testutils.NewMockCleanupOperationsStore(
+		map[string]*manage.CleanupOperation{},
+	)
+
 	dependencies := &typesv1.Dependencies{
 		EventStore:      s.eventStore,
 		ValidationStore: s.validationStore,
 		ChangesetStore: testutils.NewMockChangesetStore(
 			map[string]*manage.Changeset{},
 		),
-		CleanupOperationsStore: testutils.NewMockCleanupOperationsStore(
-			map[string]*manage.CleanupOperation{},
+		CleanupOperationsStore: cleanupOperationsStore,
+		CleanupRunner: cleanup.NewRunner(
+			cleanupOperationsStore,
+			core.NewUUIDGenerator(),
+			&testutils.MockClock{StaticTime: testTime},
+			core.NewNopLogger(),
 		),
 		Instances:         stateContainer.Instances(),
 		Exports:           stateContainer.Exports(),

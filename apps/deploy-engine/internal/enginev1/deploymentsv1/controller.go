@@ -2,10 +2,13 @@ package deploymentsv1
 
 import (
 	"context"
+	"net/http"
 	"sync"
 	"time"
 
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/cleanup"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httpmw"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/params"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginconfig"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginmeta"
@@ -26,16 +29,6 @@ const (
 	// Examples of this could include fetching data sources that are referenced
 	// by blueprint resources.
 	changeStagingTimeout = 30 * time.Minute
-	// An internal timeout used for the cleanup process
-	// that cleans up old change sets.
-	// 10 minutes is a reasonable time to wait for the cleanup process
-	// to complete for instances of the deploy engine with a lot of use.
-	changesetCleanupTimeout = 10 * time.Minute
-	// An internal timeout used for the cleanup process
-	// that cleans up old reconciliation results.
-	// 10 minutes is a reasonable time to wait for the cleanup process
-	// to complete for instances of the deploy engine with a lot of use.
-	reconciliationResultsCleanupTimeout = 10 * time.Minute
 )
 
 const (
@@ -73,6 +66,7 @@ type Controller struct {
 	instances                            state.InstancesContainer
 	exports                              state.ExportsContainer
 	changesetStore                       manage.Changesets
+	cleanupRunner                        *cleanup.Runner
 	reconciliationResultsStore           manage.ReconciliationResults
 	cleanupOperationsStore               manage.CleanupOperations
 	idGenerator                          core.IDGenerator
@@ -110,6 +104,7 @@ func NewController(
 		instances:                            deps.Instances,
 		exports:                              deps.Exports,
 		changesetStore:                       deps.ChangesetStore,
+		cleanupRunner:                        deps.CleanupRunner,
 		reconciliationResultsStore:           deps.ReconciliationResultsStore,
 		cleanupOperationsStore:               deps.CleanupOperationsStore,
 		idGenerator:                          deps.IDGenerator,
@@ -179,4 +174,13 @@ func (c *Controller) snapshotInFlightOps() []*inFlightOp {
 		ops = append(ops, op)
 	}
 	return ops
+}
+
+// The logger for the request being answered, carrying its correlation ID, source
+// address and who it was authenticated for.
+//
+// Falls back to the process logger when the request-context middleware has not run, so
+// that a handler never has to decide whether logging is worth attempting.
+func (c *Controller) requestLogger(r *http.Request) core.Logger {
+	return httpmw.LoggerFromContext(r.Context(), c.logger)
 }

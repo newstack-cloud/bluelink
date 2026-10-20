@@ -12,11 +12,15 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/audit"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/cleanup"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/auditv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/deploymentsv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/eventsv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/validationv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httpmw"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/params"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginconfig"
@@ -195,12 +199,21 @@ func Setup(
 	taggingConfigProvider := tagging.NewConfigProvider(config.Version)
 	providerMetadataLookup := pluginmeta.NewLookup(pluginHostService.Manager())
 
+	cleanupRunner := cleanup.NewRunner(
+		stateServices.cleanupOperations,
+		idGenerator,
+		clock,
+		logger,
+	)
+
 	dependencies := &typesv1.Dependencies{
 		EventStore:                 stateServices.events,
 		ValidationStore:            stateServices.validation,
 		ChangesetStore:             stateServices.changesets,
 		ReconciliationResultsStore: stateServices.reconciliationResults,
 		CleanupOperationsStore:     stateServices.cleanupOperations,
+		AuditStore:                 stateServices.audit,
+		CleanupRunner:              cleanupRunner,
 		Instances:                  stateServices.container.Instances(),
 		Exports:                    stateServices.container.Exports(),
 		IDGenerator:                idGenerator,
@@ -241,6 +254,12 @@ func Setup(
 		config,
 	)
 
+	setupAuditHandlers(
+		router,
+		dependencies,
+		config,
+	)
+
 	authMiddleware, err := setupAuth(
 		&config.Auth,
 		clock,
@@ -251,12 +270,56 @@ func Setup(
 		return nil, nil, err
 	}
 
+	auditSink, closeAuditSink, err := setupAuditSink(&config.Audit, stateServices.audit, logger)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sourceIPMiddleware, err := setupSourceIPMiddleware(config, logger)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Source IP first, so that everything after it attributes a request to the same
+	// address rather than each deriving its own answer.
+	router.Use(sourceIPMiddleware.Middleware)
+
+	// Then the request's correlation ID and logger, before authentication, so that a
+	// request refused for failing to authenticate is still logged with where it came
+	// from. Such a request changed nothing, so it has no audit record, and this is the
+	// only account of it.
+	router.Use(
+		httpmw.NewRequestContextMiddleware(logger).Middleware,
+	)
+
+	// Audit after authentication, so that a record names the principal the request
+	// authenticated as. A request that failed to authenticate changed nothing and has no
+	// principal, so it belongs in the operational logs rather than the trail of actions
+	// taken.
 	router.Use(authMiddleware.Middleware)
+	router.Use(
+		audit.NewMiddleware(auditSink, clock, logger).Middleware,
+	)
+
+	// Shares the runner the cleanup endpoints use, so a scheduled pass and a requested
+	// one cannot run over the same category at once.
+	stopScheduledCleanup := setupScheduledCleanup(
+		config,
+		cleanupRunner,
+		stateServices,
+		clock,
+		logger,
+	)
 
 	return nil, createServerCleanupFunc(
 		drainInFlightDeploymentsFunc(deploymentCtrl, config.GetShutdownDrainTimeout()),
+		// Before the state service closes, since an in-flight pass is still writing to it.
+		stopScheduledCleanup,
 		closeStateService,
 		pluginHostService.Close,
+		// After the drain, so that a record is written for every action still in flight
+		// when the shutdown began.
+		closeAuditSink,
 	), nil
 }
 
@@ -296,9 +359,9 @@ func createServerCleanupFunc(
 	cleanupFuncs ...func(),
 ) func() {
 	return func() {
-		for _, cleanup := range cleanupFuncs {
-			if cleanup != nil {
-				cleanup()
+		for _, cleanupFunc := range cleanupFuncs {
+			if cleanupFunc != nil {
+				cleanupFunc()
 			}
 		}
 	}
@@ -458,6 +521,43 @@ func setupDeploymentHandlers(
 	).Methods("POST")
 
 	return deploymentCtrl
+}
+
+func setupAuditHandlers(
+	router *mux.Router,
+	dependencies *typesv1.Dependencies,
+	config *core.Config,
+) {
+	retentionPeriod := time.Duration(
+		config.Maintenance.AuditRecordRetentionPeriod,
+	) * time.Second
+
+	auditCtrl := auditv1.NewController(
+		retentionPeriod,
+		dependencies,
+	)
+
+	// Registered before the parameterised record route so that "cleanup" is not
+	// taken for a record ID.
+	router.HandleFunc(
+		"/audit/records/cleanup",
+		auditCtrl.CleanupAuditRecordsHandler,
+	).Methods("POST")
+
+	router.HandleFunc(
+		"/audit/records/cleanup/{id}",
+		auditCtrl.GetCleanupStatusHandler,
+	).Methods("GET")
+
+	router.HandleFunc(
+		"/audit/records",
+		auditCtrl.QueryAuditRecordsHandler,
+	).Methods("GET")
+
+	router.HandleFunc(
+		"/audit/records/{id}",
+		auditCtrl.GetAuditRecordHandler,
+	).Methods("GET")
 }
 
 func setupEventManagementHandlers(

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -17,6 +18,7 @@ func (s *MiddlewareSuite) Test_calls_next_handler_for_request_that_passes_auth_c
 	middleware, err := NewMiddleware(
 		testChecker1,
 		[]*mux.Route{},
+		core.NewNopLogger(),
 	)
 	s.Require().NoError(err)
 
@@ -41,6 +43,7 @@ func (s *MiddlewareSuite) Test_returns_401_unauthorised_response_for_failed_auth
 	middleware, err := NewMiddleware(
 		testChecker1,
 		[]*mux.Route{},
+		core.NewNopLogger(),
 	)
 	s.Require().NoError(err)
 
@@ -77,6 +80,7 @@ func (s *MiddlewareSuite) Test_calls_next_handler_for_route_in_exclude_list() {
 		[]*mux.Route{
 			healthRoute,
 		},
+		core.NewNopLogger(),
 	)
 	s.Require().NoError(err)
 

@@ -49,6 +49,7 @@ func setupAuth(
 			authCheckers...,
 		),
 		excludedRoutes,
+		logger,
 	)
 	if err != nil {
 		return nil, err

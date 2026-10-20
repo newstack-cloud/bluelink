@@ -63,6 +63,17 @@ type Config struct {
 	// of the deploy engine that are intended to be accessible
 	// over a private network or the public internet.
 	LoopbackOnly bool `mapstructure:"loopback_only"`
+	// IPExtractionSource determines how the source IP of a request is derived, which
+	// is what actions are attributed to in the audit trail.
+	//
+	// Set this to what sits in front of the engine. "aws-alb" reads the address from
+	// the X-Forwarded-For header an AWS application load balancer writes.
+	//
+	// Defaults to "direct", which takes the address the connection came from and
+	// ignores any forwarded header. An engine reached directly is the case where a
+	// forwarded header is purely the caller's own claim, so trusting one by default
+	// would let a caller choose the address recorded against its actions.
+	IPExtractionSource string `mapstructure:"ip_extraction_source"`
 	// Environment determines whether the deploy engine is running
 	// in a production or development environment.
 	// This is used to determine things like the formatting of logs,
@@ -80,6 +91,9 @@ type Config struct {
 	// Auth provides configuration for the way authentication
 	// should be handled by the deploy engine.
 	Auth AuthConfig `mapstructure:"auth"`
+	// Audit provides configuration for the audit trail of actions taken
+	// through the deploy engine's API.
+	Audit AuditConfig `mapstructure:"audit"`
 	// PluginsV1 provides configuration for the v1 plugin system
 	// implemented by the deploy engine.
 	PluginsV1 PluginsV1Config `mapstructure:"plugins_v1"`
@@ -648,6 +662,34 @@ type ShutdownConfig struct {
 	DrainTimeout int `mapstructure:"drain_timeout"`
 }
 
+// AuditConfig configures the trail of actions taken through the API.
+//
+// Records go to two destinations: the process output, as one JSON object per line for
+// whatever log collector already reads it, and state, where the engine's own endpoints
+// query them and the retention period under MaintenanceConfig applies.
+type AuditConfig struct {
+	// Whether a trail of actions is recorded at all.
+	//
+	// Defaults to true. An engine that quietly records nothing looks the same as one that
+	// records everything, so turning it off is something an operator states.
+	Enabled bool `mapstructure:"enabled"`
+	// Whether records are also written to the process output, as one JSON object per
+	// line, alongside being written to state.
+	//
+	// Defaults to false. State is where the trail is queryable from, and the process
+	// output is where the engine's own logs go, under a schema these records do not
+	// share.
+	//
+	// Worth turning on where the trail has to live outside the engine's own storage backend,
+	// so that the engine cannot rewrite its own history, or where state is disposable
+	// and the process output is the durable copy.
+	Stdout bool `mapstructure:"stdout"`
+}
+
+// MaintenanceConfig configures how long each category of state is kept.
+//
+// A retention period is only applied when a cleanup runs over its category, which is
+// either a request to a cleanup endpoint or a pass of ScheduledCleanup below.
 type MaintenanceConfig struct {
 	// The retention period in seconds for blueprint validations.
 	// Whenever the clean up process runs,
@@ -677,6 +719,40 @@ type MaintenanceConfig struct {
 	//
 	// Defaults to 604,800 seconds (7 days).
 	ReconciliationResultsRetentionPeriod int `mapstructure:"reconciliation_results_retention_period"`
+	// The retention period in seconds for audit records.
+	// Whenever the clean up process runs,
+	// it will delete all audit records that are older
+	// than this retention period.
+	//
+	// Defaults to 7,776,000 seconds (90 days), far longer than the other
+	// categories: an audit trail is of interest precisely when something is
+	// being looked into after the fact.
+	AuditRecordRetentionPeriod int `mapstructure:"audit_record_retention_period"`
+	// Configuration for the cleanup the engine carries out itself on an interval.
+	ScheduledCleanup ScheduledCleanupConfig `mapstructure:"scheduled_cleanup"`
+}
+
+// ScheduledCleanupConfig configures the cleanup the engine runs on an interval,
+// rather than on request.
+//
+// Without it the retention periods above describe something nobody does: they are read
+// only to work out a threshold inside a cleanup request, so a deployment that never
+// sends one keeps every record for ever.
+type ScheduledCleanupConfig struct {
+	// Whether the engine cleans up on an interval of its own.
+	//
+	// Defaults to false. Enabling it has the engine delete state that has passed its
+	// retention period, which is something an operator opts into rather than inherits
+	// from an upgrade. A deployment that treats its state as disposable, a CI run
+	// against a restored backup among them, has nothing to gain from it.
+	Enabled bool `mapstructure:"enabled"`
+	// How often, in seconds, the engine cleans up each category.
+	//
+	// Also the window within which a category already cleaned up is left alone, so
+	// that instances sharing a state backend do not all clean up at once.
+	//
+	// Defaults to 86,400 seconds (24 hours).
+	Interval int `mapstructure:"interval"`
 }
 
 // LoadConfig loads the deploy engine configuration
@@ -771,6 +847,7 @@ func bindEnvVars(viperInstance *viper.Viper) {
 	viperInstance.BindEnv("use_unix_socket")
 	viperInstance.BindEnv("unix_socket_path")
 	viperInstance.BindEnv("loopback_only")
+	viperInstance.BindEnv("ip_extraction_source")
 	viperInstance.BindEnv("environment")
 	viperInstance.BindEnv("log_level")
 
@@ -851,7 +928,12 @@ func bindEnvVars(viperInstance *viper.Viper) {
 	viperInstance.BindEnv("maintenance.blueprint_validation_retention_period")
 	viperInstance.BindEnv("maintenance.changeset_retention_period")
 	viperInstance.BindEnv("maintenance.events_retention_period")
+	viperInstance.BindEnv("audit.enabled")
+	viperInstance.BindEnv("audit.stdout")
 	viperInstance.BindEnv("maintenance.reconciliation_results_retention_period")
+	viperInstance.BindEnv("maintenance.audit_record_retention_period")
+	viperInstance.BindEnv("maintenance.scheduled_cleanup.enabled")
+	viperInstance.BindEnv("maintenance.scheduled_cleanup.interval")
 }
 
 const (
@@ -872,6 +954,9 @@ func setDefaults(viperInstance *viper.Viper) {
 	viperInstance.SetDefault("use_unix_socket", false)
 	viperInstance.SetDefault("unix_socket_path", getOSDefaultUnixSocketPath())
 	viperInstance.SetDefault("loopback_only", true)
+	// The literal rather than httpmw.DirectExtractionSource, to keep config free of a
+	// dependency on the middleware that consumes it (preventing an import cycle).
+	viperInstance.SetDefault("ip_extraction_source", "direct")
 	viperInstance.SetDefault("environment", "production")
 	viperInstance.SetDefault("log_level", "info")
 
@@ -910,7 +995,12 @@ func setDefaults(viperInstance *viper.Viper) {
 	viperInstance.SetDefault("maintenance.blueprint_validation_retention_period", 7*oneDaySeconds)
 	viperInstance.SetDefault("maintenance.changeset_retention_period", 7*oneDaySeconds)
 	viperInstance.SetDefault("maintenance.events_retention_period", 7*oneDaySeconds)
+	viperInstance.SetDefault("audit.enabled", true)
+	viperInstance.SetDefault("audit.stdout", false)
 	viperInstance.SetDefault("maintenance.reconciliation_results_retention_period", 7*oneDaySeconds)
+	viperInstance.SetDefault("maintenance.audit_record_retention_period", 90*oneDaySeconds)
+	viperInstance.SetDefault("maintenance.scheduled_cleanup.enabled", false)
+	viperInstance.SetDefault("maintenance.scheduled_cleanup.interval", oneDaySeconds)
 
 	viperInstance.SetDefault("shutdown.drain_timeout", 3*oneMinuteSeconds)
 }

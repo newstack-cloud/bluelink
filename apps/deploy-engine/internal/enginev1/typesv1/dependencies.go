@@ -1,6 +1,7 @@
 package typesv1
 
 import (
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/cleanup"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/params"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginconfig"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginmeta"
@@ -22,6 +23,8 @@ type Dependencies struct {
 	ChangesetStore             manage.Changesets
 	ReconciliationResultsStore manage.ReconciliationResults
 	CleanupOperationsStore     manage.CleanupOperations
+	AuditStore                 manage.Audit
+	CleanupRunner              *cleanup.Runner
 	Instances                  state.InstancesContainer
 	Exports                    state.ExportsContainer
 	IDGenerator                core.IDGenerator

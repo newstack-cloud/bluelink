@@ -37,7 +37,7 @@ func (c *Controller) CheckReconciliationHandler(
 	instanceID := params["id"]
 
 	payload := &CheckReconciliationRequestPayload{}
-	responseWritten := httputils.DecodeRequestBody(w, r, payload, c.logger)
+	responseWritten := httputils.DecodeRequestBody(w, r, payload, c.requestLogger(r))
 	if responseWritten {
 		return
 	}
@@ -56,7 +56,7 @@ func (c *Controller) CheckReconciliationHandler(
 		payload.Config,
 		/* validate */ true,
 		c.pluginConfigPreparer,
-		c.logger,
+		c.requestLogger(r),
 	)
 	if responseWritten {
 		return
@@ -67,7 +67,7 @@ func (c *Controller) CheckReconciliationHandler(
 		w,
 		&payload.BlueprintDocumentInfo,
 		c.blueprintResolver,
-		c.logger,
+		c.requestLogger(r),
 	)
 	if responseWritten {
 		return
@@ -84,7 +84,7 @@ func (c *Controller) CheckReconciliationHandler(
 			)
 			return
 		}
-		c.logger.Debug(
+		c.requestLogger(r).Debug(
 			"failed to resolve instance",
 			core.ErrorLogField("error", err),
 		)
@@ -109,7 +109,7 @@ func (c *Controller) CheckReconciliationHandler(
 		blueprintParams,
 	)
 	if err != nil {
-		c.logger.Debug(
+		c.requestLogger(r).Debug(
 			"failed to perform reconciliation check",
 			core.ErrorLogField("error", err),
 		)
@@ -139,7 +139,7 @@ func (c *Controller) ApplyReconciliationHandler(
 	instanceID := params["id"]
 
 	payload := &ApplyReconciliationRequestPayload{}
-	responseWritten := httputils.DecodeRequestBody(w, r, payload, c.logger)
+	responseWritten := httputils.DecodeRequestBody(w, r, payload, c.requestLogger(r))
 	if responseWritten {
 		return
 	}
@@ -158,7 +158,7 @@ func (c *Controller) ApplyReconciliationHandler(
 		payload.Config,
 		/* validate */ true,
 		c.pluginConfigPreparer,
-		c.logger,
+		c.requestLogger(r),
 	)
 	if responseWritten {
 		return
@@ -169,7 +169,7 @@ func (c *Controller) ApplyReconciliationHandler(
 		w,
 		&payload.BlueprintDocumentInfo,
 		c.blueprintResolver,
-		c.logger,
+		c.requestLogger(r),
 	)
 	if responseWritten {
 		return
@@ -186,7 +186,7 @@ func (c *Controller) ApplyReconciliationHandler(
 			)
 			return
 		}
-		c.logger.Debug(
+		c.requestLogger(r).Debug(
 			"failed to resolve instance",
 			core.ErrorLogField("error", err),
 		)
@@ -211,7 +211,7 @@ func (c *Controller) ApplyReconciliationHandler(
 		blueprintParams,
 	)
 	if err != nil {
-		c.logger.Debug(
+		c.requestLogger(r).Debug(
 			"failed to apply reconciliation",
 			core.ErrorLogField("error", err),
 		)

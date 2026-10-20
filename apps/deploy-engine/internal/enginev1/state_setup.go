@@ -49,6 +49,7 @@ type stateServices struct {
 	changesets            manage.Changesets
 	reconciliationResults manage.ReconciliationResults
 	cleanupOperations     manage.CleanupOperations
+	audit                 manage.Audit
 }
 
 func loadStateServices(
@@ -156,6 +157,7 @@ func loadMemfileStateServices(
 		changesets:            changesets,
 		reconciliationResults: reconciliationResults,
 		cleanupOperations:     cleanupOperations,
+		audit:                 stateContainer.Audit(),
 	}, memfileStubClose, nil
 }
 
@@ -278,6 +280,7 @@ func loadPostgresStateServices(
 		changesets:            changesets,
 		reconciliationResults: reconciliationResults,
 		cleanupOperations:     cleanupOperations,
+		audit:                 stateContainer.Audit(),
 	}, closePool, nil
 }
 
@@ -362,6 +365,7 @@ func loadObjectstoreStateServices(
 		changesets:            stateContainer.Changesets(),
 		reconciliationResults: stateContainer.ReconciliationResults(),
 		cleanupOperations:     stateContainer.CleanupOperations(),
+		audit:                 stateContainer.Audit(),
 	}, objectstoreStubClose, nil
 }
 

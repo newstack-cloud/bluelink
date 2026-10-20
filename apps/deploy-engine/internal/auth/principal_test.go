@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
+	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -54,7 +55,7 @@ func (s *PrincipalSuite) Test_api_key_fingerprints_differ_between_keys() {
 // The middleware is the only place the principal can be attached, since the credential is
 // not available to anything downstream of it.
 func (s *PrincipalSuite) Test_the_middleware_carries_the_principal_on_the_request() {
-	middleware, err := NewMiddleware(testChecker1, []*mux.Route{})
+	middleware, err := NewMiddleware(testChecker1, []*mux.Route{}, bpcore.NewNopLogger())
 	s.Require().NoError(err)
 
 	request := httptest.NewRequest("GET", "/test", nil)

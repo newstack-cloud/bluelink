@@ -5,20 +5,27 @@ import (
 	"regexp"
 
 	"github.com/gorilla/mux"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httpmw"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
 
 type Middleware struct {
 	checker              Checker
 	excludeRoutes        []*mux.Route
 	excludeRoutePatterns []*regexp.Regexp
+	logger               core.Logger
 }
 
 // NewMiddleware creates a new middleware carries out
 // authentication checks using the provided Checker
 // that uses HTTP headers as the source of authentication data.
-func NewMiddleware(checker Checker, excludeRoutes []*mux.Route) (*Middleware, error) {
+func NewMiddleware(
+	checker Checker,
+	excludeRoutes []*mux.Route,
+	logger core.Logger,
+) (*Middleware, error) {
 	excludeRoutePatterns, err := routeToRegexpPatterns(excludeRoutes)
 	if err != nil {
 		return nil, err
@@ -28,6 +35,7 @@ func NewMiddleware(checker Checker, excludeRoutes []*mux.Route) (*Middleware, er
 		checker:              checker,
 		excludeRoutes:        excludeRoutes,
 		excludeRoutePatterns: excludeRoutePatterns,
+		logger:               logger,
 	}, nil
 }
 
@@ -37,6 +45,15 @@ func (m *Middleware) Middleware(next http.Handler) http.Handler {
 
 		if !exclude {
 			principal, err := m.checker.Check(r.Context(), r.Header)
+			if err != nil {
+				// The only record of a request that got no further. It changed nothing,
+				// so it has no place in the audit trail, but where repeated refusals are
+				// coming from is exactly what an operator needs.
+				httpmw.LoggerFromContext(r.Context(), m.logger).Warn(
+					"refused a request that failed to authenticate",
+					core.ErrorLogField("error", err),
+				)
+			}
 			writtenErrResponse := handleError(err, w)
 			if writtenErrResponse {
 				return
@@ -44,11 +61,38 @@ func (m *Middleware) Middleware(next http.Handler) http.Handler {
 
 			// Carried on the request from here, since the credential it was established
 			// from is not available to anything downstream.
-			r = r.WithContext(ContextWithPrincipal(r.Context(), principal))
+			ctx := ContextWithPrincipal(r.Context(), principal)
+			// Added to the request-scoped logger as well, so that every line logged
+			// while handling the request says who it was handled for.
+			r = r.WithContext(httpmw.WithLoggerFields(ctx, principalLogFields(principal)...))
 		}
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+// How a principal appears in logs.
+//
+// userId is the end user where a fronting service asserted one and the authenticated
+// principal otherwise, since that is the field an operator filters on when asking what
+// somebody did. The principal is kept alongside it rather than replaced, so a line still
+// says which credential acted.
+func principalLogFields(principal *Principal) []core.LogField {
+	if principal == nil {
+		return nil
+	}
+
+	userID := principal.OnBehalfOf
+	if userID == "" {
+		userID = principal.Subject
+	}
+
+	return []core.LogField{
+		core.StringLogField("userId", userID),
+		core.StringLogField("principalMethod", principal.Method),
+		core.StringLogField("principalSubject", principal.Subject),
+		core.StringLogField("onBehalfOf", principal.OnBehalfOf),
+	}
 }
 
 func (m *Middleware) shouldBeExcluded(r *http.Request) bool {

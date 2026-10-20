@@ -55,7 +55,7 @@ func (c *Controller) ListBlueprintInstancesHandler(
 
 	result, err := c.instances.List(r.Context(), params)
 	if err != nil {
-		c.logger.Error(
+		c.requestLogger(r).Error(
 			"failed to list blueprint instances",
 			core.ErrorLogField("error", err),
 		)
@@ -99,7 +99,7 @@ func (c *Controller) UpdateBlueprintInstanceHandler(
 
 	instance, err := resolveInstance(r.Context(), instanceIDOrName, c.instances)
 	if err != nil {
-		c.handleGetInstanceError(w, err, instanceIDOrName)
+		c.handleGetInstanceError(w, err, instanceIDOrName, c.requestLogger(r))
 		return
 	}
 
@@ -119,7 +119,7 @@ func (c *Controller) StreamDeploymentEventsHandler(w http.ResponseWriter, r *htt
 
 	instanceID, err := resolveInstanceID(r.Context(), instanceIDOrName, c.instances)
 	if err != nil {
-		c.handleGetInstanceError(w, err, instanceIDOrName)
+		c.handleGetInstanceError(w, err, instanceIDOrName, c.requestLogger(r))
 		return
 	}
 
@@ -131,7 +131,7 @@ func (c *Controller) StreamDeploymentEventsHandler(w http.ResponseWriter, r *htt
 			ChannelID:   instanceID,
 		},
 		c.eventStore,
-		c.logger.Named("deploymentStream").WithFields(
+		c.requestLogger(r).Named("deploymentStream").WithFields(
 			core.StringLogField("instanceId", instanceID),
 			core.StringLogField("eventChannelType", helpersv1.ChannelTypeDeployment),
 		),
@@ -150,7 +150,7 @@ func (c *Controller) GetBlueprintInstanceHandler(
 
 	instance, err := resolveInstance(r.Context(), instanceIDOrName, c.instances)
 	if err != nil {
-		c.handleGetInstanceError(w, err, instanceIDOrName)
+		c.handleGetInstanceError(w, err, instanceIDOrName, c.requestLogger(r))
 		return
 	}
 
@@ -174,7 +174,7 @@ func (c *Controller) GetBlueprintInstanceExportsHandler(
 
 	instanceID, err := resolveInstanceID(r.Context(), instanceIDOrName, c.instances)
 	if err != nil {
-		c.handleGetInstanceError(w, err, instanceIDOrName)
+		c.handleGetInstanceError(w, err, instanceIDOrName, c.requestLogger(r))
 		return
 	}
 
@@ -183,7 +183,7 @@ func (c *Controller) GetBlueprintInstanceExportsHandler(
 		instanceID,
 	)
 	if err != nil {
-		c.handleGetInstanceError(w, err, instanceID)
+		c.handleGetInstanceError(w, err, instanceID, c.requestLogger(r))
 		return
 	}
 
@@ -210,12 +210,12 @@ func (c *Controller) DestroyBlueprintInstanceHandler(
 
 	instance, err := resolveInstance(r.Context(), instanceIDOrName, c.instances)
 	if err != nil {
-		c.handleGetInstanceError(w, err, instanceIDOrName)
+		c.handleGetInstanceError(w, err, instanceIDOrName, c.requestLogger(r))
 		return
 	}
 
 	payload := &BlueprintInstanceDestroyRequestPayload{}
-	responseWritten := httputils.DecodeRequestBody(w, r, payload, c.logger)
+	responseWritten := httputils.DecodeRequestBody(w, r, payload, c.requestLogger(r))
 	if responseWritten {
 		return
 	}
@@ -232,7 +232,7 @@ func (c *Controller) DestroyBlueprintInstanceHandler(
 		payload.Config,
 		/* validate */ true,
 		c.pluginConfigPreparer,
-		c.logger,
+		c.requestLogger(r),
 	)
 	if responseWritten {
 		return
@@ -244,6 +244,7 @@ func (c *Controller) DestroyBlueprintInstanceHandler(
 			w,
 			err,
 			payload.ChangeSetID,
+			c.requestLogger(r),
 		)
 		return
 	}
@@ -286,7 +287,7 @@ func (c *Controller) DestroyBlueprintInstanceHandler(
 		instance.InstanceID,
 	)
 	if err != nil {
-		c.logger.Debug(
+		c.requestLogger(r).Debug(
 			"failed to get last event ID for deployment channel",
 			core.ErrorLogField("error", err),
 		)
@@ -298,6 +299,8 @@ func (c *Controller) DestroyBlueprintInstanceHandler(
 		return
 	}
 
+	// The destroy outlives the request that asked for it, so the request's logger is
+	// carried into it rather than read from a context that is cancelled by then.
 	go c.startDestroy(
 		changeset,
 		instance.InstanceID,
@@ -305,6 +308,7 @@ func (c *Controller) DestroyBlueprintInstanceHandler(
 		payload.Force,
 		params,
 		taggingConfig,
+		c.requestLogger(r),
 	)
 
 	// The instance status will be updated by the deployment process
@@ -328,7 +332,7 @@ func (c *Controller) handleDeployRequest(
 	existingInstance *state.InstanceState,
 ) {
 	payload := &BlueprintInstanceRequestPayload{}
-	responseWritten := httputils.DecodeRequestBody(w, r, payload, c.logger)
+	responseWritten := httputils.DecodeRequestBody(w, r, payload, c.requestLogger(r))
 	if responseWritten {
 		return
 	}
@@ -347,7 +351,7 @@ func (c *Controller) handleDeployRequest(
 		payload.Config,
 		/* validate */ true,
 		c.pluginConfigPreparer,
-		c.logger,
+		c.requestLogger(r),
 	)
 	if responseWritten {
 		return
@@ -358,7 +362,7 @@ func (c *Controller) handleDeployRequest(
 		w,
 		&payload.BlueprintDocumentInfo,
 		c.blueprintResolver,
-		c.logger,
+		c.requestLogger(r),
 	)
 	if responseWritten {
 		return
@@ -370,6 +374,7 @@ func (c *Controller) handleDeployRequest(
 			w,
 			err,
 			payload.ChangeSetID,
+			c.requestLogger(r),
 		)
 		return
 	}
@@ -407,21 +412,22 @@ func (c *Controller) handleDeployRequest(
 	// Create tagging config from the request payload, applying defaults as needed.
 	taggingConfig := c.createTaggingConfig(payload.Config)
 
-	instanceID, err := c.startDeployment(
-		blueprintInfo,
-		changeset,
-		getInstanceID(existingInstance),
-		payload.InstanceName,
-		payload.AsRollback,
-		payload.AutoRollback,
-		payload.Force,
-		existingInstance,
-		helpersv1.GetFormat(payload.BlueprintFile),
-		params,
-		taggingConfig,
-	)
+	instanceID, err := c.startDeployment(&deploymentRequest{
+		BlueprintInfo:         blueprintInfo,
+		Changeset:             changeset,
+		DeployInstanceID:      getInstanceID(existingInstance),
+		InstanceName:          payload.InstanceName,
+		ForRollback:           payload.AsRollback,
+		AutoRollback:          payload.AutoRollback,
+		Force:                 payload.Force,
+		PreviousInstanceState: existingInstance,
+		Format:                helpersv1.GetFormat(payload.BlueprintFile),
+		Params:                params,
+		TaggingConfig:         taggingConfig,
+		Logger:                c.requestLogger(r),
+	})
 	if err != nil {
-		handleDeployErrorForResponse(w, err, c.logger)
+		handleDeployErrorForResponse(w, err, c.requestLogger(r))
 		return
 	}
 
@@ -429,7 +435,7 @@ func (c *Controller) handleDeployRequest(
 	if existingInstance == nil {
 		newInstance, err := c.instances.Get(r.Context(), instanceID)
 		if err != nil {
-			c.logger.Error(
+			c.requestLogger(r).Error(
 				"Failed to get newly created instance",
 				core.ErrorLogField("error", err),
 				core.StringLogField("instanceId", instanceID),
@@ -452,7 +458,7 @@ func (c *Controller) handleDeployRequest(
 		instanceID,
 	)
 	if err != nil {
-		c.logger.Debug(
+		c.requestLogger(r).Debug(
 			"failed to get last event ID for deployment channel",
 			core.ErrorLogField("error", err),
 		)
@@ -478,6 +484,7 @@ func (c *Controller) handleGetChangesetErrorForResponse(
 	w http.ResponseWriter,
 	err error,
 	changesetID string,
+	logger core.Logger,
 ) {
 	changesetNotFoundErr := &manage.ChangesetNotFound{}
 	if errors.As(err, &changesetNotFoundErr) {
@@ -489,7 +496,7 @@ func (c *Controller) handleGetChangesetErrorForResponse(
 		return
 	}
 
-	c.logger.Error(
+	logger.Error(
 		"Failed to get changeset",
 		core.ErrorLogField("error", err),
 		core.StringLogField("changesetId", changesetID),
@@ -505,6 +512,7 @@ func (c *Controller) handleGetInstanceError(
 	w http.ResponseWriter,
 	err error,
 	instanceID string,
+	logger core.Logger,
 ) {
 	if state.IsInstanceNotFound(err) {
 		httputils.HTTPError(
@@ -515,7 +523,7 @@ func (c *Controller) handleGetInstanceError(
 		return
 	}
 
-	c.logger.Debug(
+	logger.Debug(
 		"failed to get blueprint instance",
 		core.ErrorLogField("error", err),
 		core.StringLogField("instanceId", instanceID),
@@ -527,19 +535,30 @@ func (c *Controller) handleGetInstanceError(
 	)
 }
 
-func (c *Controller) startDeployment(
-	blueprintInfo *includes.ChildBlueprintInfo,
-	changeset *manage.Changeset,
-	deployInstanceID string,
-	instanceName string,
-	forRollback bool,
-	autoRollback bool,
-	force bool,
-	previousInstanceState *state.InstanceState,
-	format schema.SpecFormat,
-	params core.BlueprintParams,
-	taggingConfig *provider.TaggingConfig,
-) (string, error) {
+// deploymentRequest is what one deployment needs to be started.
+//
+// Grouped rather than passed positionally: there are too many of them for a readable
+// call, and several are booleans that an extra argument could be silently transposed
+// with.
+type deploymentRequest struct {
+	BlueprintInfo         *includes.ChildBlueprintInfo
+	Changeset             *manage.Changeset
+	DeployInstanceID      string
+	InstanceName          string
+	ForRollback           bool
+	AutoRollback          bool
+	Force                 bool
+	PreviousInstanceState *state.InstanceState
+	Format                schema.SpecFormat
+	Params                core.BlueprintParams
+	TaggingConfig         *provider.TaggingConfig
+	// Logger carries the request that asked for the deployment. The deployment
+	// outlives that request, which is why it is carried rather than read from a
+	// context that has been cancelled by then.
+	Logger core.Logger
+}
+
+func (c *Controller) startDeployment(request *deploymentRequest) (string, error) {
 	ctxWithTimeout, cancel := context.WithTimeout(
 		context.Background(),
 		c.deploymentTimeout,
@@ -547,9 +566,9 @@ func (c *Controller) startDeployment(
 
 	blueprintContainer, err := c.blueprintLoader.LoadString(
 		ctxWithTimeout,
-		helpersv1.GetBlueprintSource(blueprintInfo),
-		format,
-		params,
+		helpersv1.GetBlueprintSource(request.BlueprintInfo),
+		request.Format,
+		request.Params,
 	)
 	if err != nil {
 		cancel()
@@ -563,30 +582,31 @@ func (c *Controller) startDeployment(
 	err = blueprintContainer.Deploy(
 		ctxWithTimeout,
 		&container.DeployInput{
-			InstanceID:             deployInstanceID,
-			InstanceName:           instanceName,
-			Changes:                changeset.Changes,
-			Rollback:               forRollback,
-			Force:                  force,
-			TaggingConfig:          taggingConfig,
+			InstanceID:             request.DeployInstanceID,
+			InstanceName:           request.InstanceName,
+			Changes:                request.Changeset.Changes,
+			Rollback:               request.ForRollback,
+			Force:                  request.Force,
+			TaggingConfig:          request.TaggingConfig,
 			ProviderMetadataLookup: pluginmeta.ToLookupFunc(c.providerMetadataLookup),
 			DrainTimeout:           c.drainTimeout,
 		},
 		channels,
-		params,
+		request.Params,
 	)
 	if err != nil {
 		cancel()
 		return "", err
 	}
 
-	finalInstanceID := deployInstanceID
+	finalInstanceID := request.DeployInstanceID
 	if finalInstanceID == "" {
 		// Capture the instance ID from the "preparing" event
 		// for a new deployment.
 		finalInstanceID, err = c.captureInstanceIDFromEvent(
 			ctxWithTimeout,
 			channels,
+			request.Logger,
 		)
 		if err != nil {
 			cancel()
@@ -600,10 +620,10 @@ func (c *Controller) startDeployment(
 		finalInstanceID,
 		"deploying blueprint instance",
 		channels,
-		changeset,
-		autoRollback,
-		previousInstanceState,
-		c.logger.Named("deployment").WithFields(
+		request.Changeset,
+		request.AutoRollback,
+		request.PreviousInstanceState,
+		request.Logger.Named("deployment").WithFields(
 			core.StringLogField("instanceId", finalInstanceID),
 		),
 	)
@@ -614,6 +634,7 @@ func (c *Controller) startDeployment(
 func (c *Controller) captureInstanceIDFromEvent(
 	ctx context.Context,
 	channels *container.DeployChannels,
+	logger core.Logger,
 ) (string, error) {
 	var instanceID string
 	var preparingMessage *container.DeploymentUpdateMessage
@@ -637,7 +658,7 @@ func (c *Controller) captureInstanceIDFromEvent(
 		/* endOfStream */ false,
 		instanceID,
 		"deploying blueprint instance",
-		c.logger,
+		logger,
 	)
 
 	return instanceID, nil
@@ -650,6 +671,7 @@ func (c *Controller) startDestroy(
 	force bool,
 	params core.BlueprintParams,
 	taggingConfig *provider.TaggingConfig,
+	logger core.Logger,
 ) {
 	ctxWithTimeout, cancel := context.WithTimeout(
 		context.Background(),
@@ -672,7 +694,7 @@ func (c *Controller) startDestroy(
 			destroyInstanceID,
 			err,
 			"destroying blueprint instance",
-			c.logger,
+			logger,
 		)
 		return
 	}
@@ -702,7 +724,7 @@ func (c *Controller) startDestroy(
 		changeset,
 		false, // autoRollback is not applicable for destroy operations
 		nil,   // no previous state needed for destroy operations
-		c.logger.Named("destroy").WithFields(
+		logger.Named("destroy").WithFields(
 			core.StringLogField("instanceId", destroyInstanceID),
 		),
 	)
@@ -1206,7 +1228,7 @@ func (c *Controller) handleDeploymentErrorAsEvent(
 	// make sure that the specific errors are included in the event data.
 	errDiagnostics := utils.DiagnosticsFromBlueprintValidationError(
 		deploymentError,
-		c.logger,
+		logger,
 		/* fallbackToGeneralDiagnostic */ true,
 	)
 

@@ -169,6 +169,47 @@ This needs to be intentionally set to `false` to allow access over a wider priva
 
 **default value:** `true`
 
+#### IP Extraction Source
+
+`BLUELINK_DEPLOY_ENGINE_IP_EXTRACTION_SOURCE`
+
+_Config field:_ `ip_extraction_source`
+
+_**optional**_
+
+How the source IP of a request is determined. This is the address that actions
+are attributed to in the audit trail, so it should be set to match what sits in
+front of the deploy engine.
+
+Supported values:
+
+| Value | Where the address is read from |
+| --- | --- |
+| `direct` | The address the connection came from. Every header is ignored. |
+| `aws-alb` | The entry an AWS application load balancer appended to `X-Forwarded-For`. A port is included when `routing.http.xff_client_port.enabled` is set on the load balancer, and is stripped. |
+| `gcp-lb` | The client entry a Google Cloud external HTTP(S) load balancer appended to `X-Forwarded-For`. That balancer appends the client address followed by its own, so the client is the second entry from the right. |
+| `azure-app-gateway` | The entry an Azure Application Gateway appended to `X-Forwarded-For`, which carries a port. |
+| `azure-front-door` | The `X-Azure-ClientIP` header, which Azure Front Door sets. |
+| `cloudflare` | The `CF-Connecting-IP` header, which Cloudflare sets. |
+
+The default is `direct` because a deploy engine reached directly is the case
+where a forwarded header is purely the caller's own claim. Trusting one by
+default would let any caller choose the address recorded against its actions.
+Only set this to match a proxy that is actually in the request path, since that
+is what makes its header trustworthy.
+
+For the values that read `X-Forwarded-For`, the entry is counted from the right
+rather than the left. A caller can always send a header of its own, and these
+proxies append after whatever it sent, so the right-hand end is the part the
+caller cannot reach. A request carrying fewer entries than the configured proxy
+appends did not come through that proxy, and is recorded with no source IP.
+
+A value that is not an address is recorded as no source IP rather than as
+itself. Starting the engine with a value that is not in the table above fails
+rather than silently recording no address at all.
+
+**default value:** `direct`
+
 #### Environment
 
 `BLUELINK_DEPLOY_ENGINE_ENVIRONMENT`
@@ -1138,6 +1179,59 @@ _**required, if azureblob objectstore provider is used**_
 
 The blob container name that holds state objects.
 
+### Audit
+
+Configuration for the trail of actions taken through the deploy engine.
+
+Every request that can change something is recorded with who made it, what it
+was made against, and whether it worked. Requests that only read are not
+recorded, since a record of every read would bury the actions.
+
+#### Audit Enabled
+
+`BLUELINK_DEPLOY_ENGINE_AUDIT_ENABLED`
+
+_Config field:_ `audit.enabled`
+
+_**optional**_
+
+Whether a trail of actions is recorded at all.
+
+A deploy engine recording nothing looks the same from the outside as one
+recording everything, so turning this off is something to state deliberately.
+A warning is logged at startup when it is off.
+
+**default value:** `true`
+
+#### Audit Records To Process Output
+
+`BLUELINK_DEPLOY_ENGINE_AUDIT_STDOUT`
+
+_Config field:_ `audit.stdout`
+
+_**optional**_
+
+Whether audit records are also written to the process output, as one JSON
+object per line, alongside being written to state.
+
+Records always go to state, which is what makes the trail queryable through
+the `/audit/records` endpoints and extractable from the state backend
+directly.
+
+This is off by default because the process output is where the deploy engine's
+own logs go, under a schema these records do not share. A log query or
+dashboard that selects the engine's lines by level would pass over every audit
+record in the stream. The records are written as raw JSON lines rather than
+through the logger, deliberately, so that no log level can discard them.
+
+Turn it on where the trail has to live outside the deploy engine's own
+storage backend, so that the engine cannot rewrite its own history, or where state is
+disposable and the process output is the durable copy. A record that fails to
+persist is reported with the request that produced it, so losing one is not
+silent either way.
+
+**default value:** `false`
+
 ### Resolvers
 
 Configuration for child blueprint resolvers used by the deploy engine.
@@ -1261,6 +1355,69 @@ When the clean up process runs for reconciliation results,
 it will delete all reconciliation results that are older than this period.
 
 **default value:** `604800` (7 days)
+
+#### Audit Record Retention Period
+
+`BLUELINK_DEPLOY_ENGINE_MAINTENANCE_AUDIT_RECORD_RETENTION_PERIOD`
+
+_Config field:_ `maintenance.audit_record_retention_period`
+
+_**optional**_
+
+The retention period in seconds for audit records.
+This is used to determine how long to keep the trail of actions taken through
+the deploy engine before deleting them.
+When the clean up process runs for audit records,
+it will delete all audit records that are older than this period.
+
+The default is considerably longer than the other categories. The rest are
+working data that is only of interest while an operation is recent; an audit
+trail is of interest precisely when something is being looked into after the
+fact. Deployments with a compliance requirement to retain a trail for a fixed
+period should set this to match it.
+
+**default value:** `7776000` (90 days)
+
+#### Scheduled Cleanup Enabled
+
+`BLUELINK_DEPLOY_ENGINE_MAINTENANCE_SCHEDULED_CLEANUP_ENABLED`
+
+_Config field:_ `maintenance.scheduled_cleanup.enabled`
+
+_**optional**_
+
+Whether the deploy engine applies the retention periods above itself, on an
+interval, rather than only when the cleanup endpoints are called.
+
+The retention periods are otherwise used only to work out a threshold inside a
+cleanup request, so a deployment that never sends one keeps every record for
+ever. Enabling this has the engine delete state that has passed its retention
+period without being asked each time.
+
+Left off by default, because deleting state is something to opt into rather
+than inherit on deployment of the engine. A deployment that treats its state as disposable,
+such as a CI run working against a restored backup or object storage, is not a long running process that can effectively make use of cleanup on an interval.
+
+A scheduled run and a request to a cleanup endpoint will not run over the same
+category at the same time within one deploy engine, whichever asks second is
+refused, and a cleanup endpoint answers `409 Conflict`. Across several deploy
+engines sharing a state backend this is best effort, since the only evidence
+another engine is mid-run is the cleanup operation it recorded.
+
+**default value:** `false`
+
+#### Scheduled Cleanup Interval
+
+`BLUELINK_DEPLOY_ENGINE_MAINTENANCE_SCHEDULED_CLEANUP_INTERVAL`
+
+_Config field:_ `maintenance.scheduled_cleanup.interval`
+
+_**optional**_
+
+How often, in seconds, the deploy engine cleans up each category when
+`maintenance.scheduled_cleanup.enabled` is `true`.
+
+**default value:** `86400` (24 hours)
 
 ## Maintenance Commands
 

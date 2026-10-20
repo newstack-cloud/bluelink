@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/cleanup"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/inputvalidation"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
@@ -33,7 +33,7 @@ func (c *Controller) CreateChangesetHandler(
 	r *http.Request,
 ) {
 	payload := &CreateChangesetRequestPayload{}
-	responseWritten := httputils.DecodeRequestBody(w, r, payload, c.logger)
+	responseWritten := httputils.DecodeRequestBody(w, r, payload, c.requestLogger(r))
 	if responseWritten {
 		return
 	}
@@ -52,7 +52,7 @@ func (c *Controller) CreateChangesetHandler(
 		payload.Config,
 		/* validate */ true,
 		c.pluginConfigPreparer,
-		c.logger,
+		c.requestLogger(r),
 	)
 	if responseWritten {
 		return
@@ -63,7 +63,7 @@ func (c *Controller) CreateChangesetHandler(
 		w,
 		&payload.BlueprintDocumentInfo,
 		c.blueprintResolver,
-		c.logger,
+		c.requestLogger(r),
 	)
 	if responseWritten {
 		return
@@ -71,7 +71,7 @@ func (c *Controller) CreateChangesetHandler(
 
 	changesetID, err := c.idGenerator.GenerateID()
 	if err != nil {
-		c.logger.Debug(
+		c.requestLogger(r).Debug(
 			"failed to generate a new change set ID",
 			core.ErrorLogField("error", err),
 		)
@@ -99,7 +99,7 @@ func (c *Controller) CreateChangesetHandler(
 			)
 			return
 		}
-		c.logger.Debug(
+		c.requestLogger(r).Debug(
 			"failed to derive instance ID",
 			core.ErrorLogField("error", err),
 		)
@@ -135,7 +135,7 @@ func (c *Controller) CreateChangesetHandler(
 		changesetID,
 	)
 	if err != nil {
-		c.logger.Debug(
+		c.requestLogger(r).Debug(
 			"failed to get last event ID for changeset channel",
 			core.ErrorLogField("error", err),
 		)
@@ -154,7 +154,7 @@ func (c *Controller) CreateChangesetHandler(
 		params,
 		taggingConfig,
 		payload.SkipDriftCheck,
-		c.logger.Named("changeStagingProcess").WithFields(
+		c.requestLogger(r).Named("changeStagingProcess").WithFields(
 			core.StringLogField("changesetId", changesetID),
 			core.StringLogField("blueprintLocation", blueprintLocation),
 		),
@@ -184,7 +184,7 @@ func (c *Controller) StreamChangesetEventsHandler(w http.ResponseWriter, r *http
 			ChannelID:   changesetID,
 		},
 		c.eventStore,
-		c.logger.Named("changeStagingStream").WithFields(
+		c.requestLogger(r).Named("changeStagingStream").WithFields(
 			core.StringLogField("changesetId", changesetID),
 			core.StringLogField("eventChannelType", helpersv1.ChannelTypeChangeset),
 		),
@@ -215,7 +215,7 @@ func (c *Controller) GetChangesetHandler(
 			return
 		}
 
-		c.logger.Debug(
+		c.requestLogger(r).Debug(
 			"failed to get change set",
 			core.ErrorLogField("error", err),
 		)
@@ -242,82 +242,13 @@ func (c *Controller) CleanupChangesetsHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	operationID, err := c.idGenerator.GenerateID()
-	if err != nil {
-		c.logger.Debug(
-			"failed to generate cleanup operation ID",
-			core.ErrorLogField("error", err),
-		)
-		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
-		return
-	}
-
-	cleanupBefore := c.clock.Now().Add(-c.changesetRetentionPeriod)
-
-	operation := &manage.CleanupOperation{
-		ID:            operationID,
-		CleanupType:   manage.CleanupTypeChangesets,
-		Status:        manage.CleanupOperationStatusRunning,
-		StartedAt:     c.clock.Now().Unix(),
-		ThresholdDate: cleanupBefore.Unix(),
-	}
-
-	if err := c.cleanupOperationsStore.Save(r.Context(), operation); err != nil {
-		c.logger.Debug(
-			"failed to save cleanup operation",
-			core.ErrorLogField("error", err),
-		)
-		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
-		return
-	}
-
-	// Copy the operation for the response to avoid data race between
-	// json.Marshal and the goroutine modifying the original.
-	responseCopy := *operation
-
-	go c.cleanupChangesets(operation)
-
-	httputils.HTTPJSONResponse(
+	helpersv1.StartCleanup(
 		w,
-		http.StatusAccepted,
-		&helpersv1.AsyncOperationResponse[*manage.CleanupOperation]{
-			Data: &responseCopy,
-		},
+		r,
+		c.cleanupRunner,
+		cleanup.ChangesetsTask(c.changesetStore, c.changesetRetentionPeriod),
+		c.requestLogger(r),
 	)
-}
-
-func (c *Controller) cleanupChangesets(operation *manage.CleanupOperation) {
-	logger := c.logger.Named("changesetCleanup")
-
-	ctxWithTimeout, cancel := context.WithTimeout(
-		context.Background(),
-		changesetCleanupTimeout,
-	)
-	defer cancel()
-
-	thresholdDate := time.Unix(operation.ThresholdDate, 0)
-	itemsDeleted, err := c.changesetStore.Cleanup(ctxWithTimeout, thresholdDate)
-
-	operation.EndedAt = c.clock.Now().Unix()
-	operation.ItemsDeleted = itemsDeleted
-
-	if err != nil {
-		logger.Error(
-			"failed to clean up old change sets",
-			core.ErrorLogField("error", err),
-		)
-		operation.Status = manage.CleanupOperationStatusFailed
-		operation.ErrorMessage = err.Error()
-	} else {
-		operation.Status = manage.CleanupOperationStatusCompleted
-	}
-
-	if updateErr := c.cleanupOperationsStore.Update(ctxWithTimeout, operation); updateErr != nil {
-		logger.Error(
-			"failed to update cleanup operation",
-			core.ErrorLogField("error", updateErr),
-		)
-	}
 }
 
 // GetChangesetsCleanupStatusHandler is the handler for the
@@ -341,7 +272,7 @@ func (c *Controller) GetChangesetsCleanupStatusHandler(
 			)
 			return
 		}
-		c.logger.Debug(
+		c.requestLogger(r).Debug(
 			"failed to get cleanup operation",
 			core.ErrorLogField("error", err),
 		)
@@ -360,82 +291,13 @@ func (c *Controller) CleanupReconciliationResultsHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	operationID, err := c.idGenerator.GenerateID()
-	if err != nil {
-		c.logger.Debug(
-			"failed to generate cleanup operation ID",
-			core.ErrorLogField("error", err),
-		)
-		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
-		return
-	}
-
-	cleanupBefore := c.clock.Now().Add(-c.reconciliationResultsRetentionPeriod)
-
-	operation := &manage.CleanupOperation{
-		ID:            operationID,
-		CleanupType:   manage.CleanupTypeReconciliationResults,
-		Status:        manage.CleanupOperationStatusRunning,
-		StartedAt:     c.clock.Now().Unix(),
-		ThresholdDate: cleanupBefore.Unix(),
-	}
-
-	if err := c.cleanupOperationsStore.Save(r.Context(), operation); err != nil {
-		c.logger.Debug(
-			"failed to save cleanup operation",
-			core.ErrorLogField("error", err),
-		)
-		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
-		return
-	}
-
-	// Copy the operation for the response to avoid data race between
-	// json.Marshal and the goroutine modifying the original.
-	responseCopy := *operation
-
-	go c.cleanupReconciliationResults(operation)
-
-	httputils.HTTPJSONResponse(
+	helpersv1.StartCleanup(
 		w,
-		http.StatusAccepted,
-		&helpersv1.AsyncOperationResponse[*manage.CleanupOperation]{
-			Data: &responseCopy,
-		},
+		r,
+		c.cleanupRunner,
+		cleanup.ReconciliationResultsTask(c.reconciliationResultsStore, c.reconciliationResultsRetentionPeriod),
+		c.requestLogger(r),
 	)
-}
-
-func (c *Controller) cleanupReconciliationResults(operation *manage.CleanupOperation) {
-	logger := c.logger.Named("reconciliationResultsCleanup")
-
-	ctxWithTimeout, cancel := context.WithTimeout(
-		context.Background(),
-		reconciliationResultsCleanupTimeout,
-	)
-	defer cancel()
-
-	thresholdDate := time.Unix(operation.ThresholdDate, 0)
-	itemsDeleted, err := c.reconciliationResultsStore.Cleanup(ctxWithTimeout, thresholdDate)
-
-	operation.EndedAt = c.clock.Now().Unix()
-	operation.ItemsDeleted = itemsDeleted
-
-	if err != nil {
-		logger.Error(
-			"failed to clean up old reconciliation results",
-			core.ErrorLogField("error", err),
-		)
-		operation.Status = manage.CleanupOperationStatusFailed
-		operation.ErrorMessage = err.Error()
-	} else {
-		operation.Status = manage.CleanupOperationStatusCompleted
-	}
-
-	if updateErr := c.cleanupOperationsStore.Update(ctxWithTimeout, operation); updateErr != nil {
-		logger.Error(
-			"failed to update cleanup operation",
-			core.ErrorLogField("error", updateErr),
-		)
-	}
 }
 
 // GetReconciliationResultsCleanupStatusHandler is the handler for the
@@ -459,7 +321,7 @@ func (c *Controller) GetReconciliationResultsCleanupStatusHandler(
 			)
 			return
 		}
-		c.logger.Debug(
+		c.requestLogger(r).Debug(
 			"failed to get cleanup operation",
 			core.ErrorLogField("error", err),
 		)
@@ -696,7 +558,7 @@ func (c *Controller) handleChangesetErrorAsEvent(
 	// make sure that the specific errors are included in the event data.
 	errDiagnostics := utils.DiagnosticsFromBlueprintValidationError(
 		changeStagingError,
-		c.logger,
+		logger,
 		/* fallbackToGeneralDiagnostic */ true,
 	)
 
