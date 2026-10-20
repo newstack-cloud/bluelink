@@ -124,6 +124,16 @@ func timestampedKeyName(timestamp int64, entityID string) string {
 	return fmt.Sprintf("%0*d-%s.json", timestampKeyDigits, timestamp, entityID)
 }
 
+// PaddedTimestampKeyPart returns the timestamp portion of a timestamped key, padded to
+// the width those keys use.
+//
+// On its own it sorts before every key for that timestamp, since a string sorts before
+// any string it prefixes, which is what makes it usable as an exclusive start key for an
+// inclusive lower bound.
+func PaddedTimestampKeyPart(timestamp int64) string {
+	return fmt.Sprintf("%0*d", timestampKeyDigits, timestamp)
+}
+
 // SharedTimestampKeyPrefix returns the leading characters every timestamped key between
 // low and high has in common, for narrowing a listing to the slice of a category a time
 // range can touch.

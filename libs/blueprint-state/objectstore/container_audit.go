@@ -75,7 +75,7 @@ func (c *auditContainer) candidateKeys(
 	ctx context.Context,
 	query *manage.AuditRecordQuery,
 ) ([]string, error) {
-	objects, err := c.svc.List(ctx, c.queryPrefix(query))
+	objects, err := c.listCandidates(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -92,6 +92,32 @@ func (c *auditContainer) candidateKeys(
 	}
 
 	return keys, nil
+}
+
+// Lists the part of the trail a query could match, as narrowly as the store allows.
+//
+// A lower bound is the common case and the one a prefix cannot express.
+// This is because paging forward from a cursor, or reading everything since a checkpoint,
+// has no upper bound to share digits with.
+// A store that can begin a listing at a key answers it exactly.
+// One that cannot lists the prefix, which is what it did before.
+func (c *auditContainer) listCandidates(
+	ctx context.Context,
+	query *manage.AuditRecordQuery,
+) ([]*ObjectInfo, error) {
+	prefix := c.queryPrefix(query)
+
+	lister, canStart := c.svc.(ListerFrom)
+	low := max(query.From, query.AfterTimestamp)
+	if !canStart || low <= 0 {
+		return c.svc.List(ctx, prefix)
+	}
+
+	return lister.ListFrom(
+		ctx,
+		prefix,
+		c.keys.AuditRecordsPrefix()+statestore.PaddedTimestampKeyPart(low),
+	)
 }
 
 // Narrows the listing to the slice of the trail the query's bounds can touch.

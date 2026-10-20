@@ -106,11 +106,38 @@ func (s *Service) Head(ctx context.Context, key string) (*objectstore.ObjectInfo
 }
 
 func (s *Service) List(ctx context.Context, prefix string) ([]*objectstore.ObjectInfo, error) {
+	return s.list(ctx, prefix, "")
+}
+
+// Stated so that losing the method is a failure here rather than a silent fall back to
+// listing every key under the prefix.
+var _ objectstore.ListerFrom = (*Service)(nil)
+
+// ListFrom implements objectstore.ListerFrom through ListObjectsV2's StartAfter, whose
+// semantics are the interface's: the listing begins at the first key after it.
+func (s *Service) ListFrom(
+	ctx context.Context,
+	prefix string,
+	startAfter string,
+) ([]*objectstore.ObjectInfo, error) {
+	return s.list(ctx, prefix, startAfter)
+}
+
+func (s *Service) list(
+	ctx context.Context,
+	prefix string,
+	startAfter string,
+) ([]*objectstore.ObjectInfo, error) {
 	var infos []*objectstore.ObjectInfo
-	paginator := s3sdk.NewListObjectsV2Paginator(s.client, &s3sdk.ListObjectsV2Input{
+	input := &s3sdk.ListObjectsV2Input{
 		Bucket: aws.String(s.bucket),
 		Prefix: aws.String(prefix),
-	})
+	}
+	if startAfter != "" {
+		input.StartAfter = aws.String(startAfter)
+	}
+
+	paginator := s3sdk.NewListObjectsV2Paginator(s.client, input)
 	for paginator.HasMorePages() {
 		page, err := paginator.NextPage(ctx)
 		if err != nil {

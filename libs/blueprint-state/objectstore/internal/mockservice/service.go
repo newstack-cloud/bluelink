@@ -41,6 +41,8 @@ type Hooks struct {
 	BeforeDelete func(ctx context.Context, key string) error
 	BeforeHead   func(ctx context.Context, key string) error
 	BeforeList   func(ctx context.Context, prefix string) error
+	// BeforeListFrom also lets a test see the key a narrowed listing started from.
+	BeforeListFrom func(ctx context.Context, prefix string, startAfter string) error
 }
 
 // New returns an empty in-memory Service.
@@ -172,6 +174,37 @@ func (s *Service) List(ctx context.Context, prefix string) ([]*objectstore.Objec
 
 	return out, nil
 }
+
+// ListFrom implements objectstore.ListerFrom, so that tests exercise the narrowed path
+// the S3 and GCS stores take rather than only the fallback.
+func (s *Service) ListFrom(
+	ctx context.Context,
+	prefix string,
+	startAfter string,
+) ([]*objectstore.ObjectInfo, error) {
+	if hook := s.hooks.BeforeListFrom; hook != nil {
+		if err := hook(ctx, prefix, startAfter); err != nil {
+			return nil, err
+		}
+	}
+
+	all, err := s.List(ctx, prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	from := make([]*objectstore.ObjectInfo, 0, len(all))
+	for _, object := range all {
+		if object.Key > startAfter {
+			from = append(from, object)
+		}
+	}
+
+	return from, nil
+}
+
+// Stated so the mock keeps answering for the stores it stands in for.
+var _ objectstore.ListerFrom = (*Service)(nil)
 
 func (s *Service) nextETagLocked() string {
 	s.etagSeq++

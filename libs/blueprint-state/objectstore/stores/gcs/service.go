@@ -92,8 +92,35 @@ func (s *Service) Head(ctx context.Context, key string) (*objectstore.ObjectInfo
 }
 
 func (s *Service) List(ctx context.Context, prefix string) ([]*objectstore.ObjectInfo, error) {
+	return s.list(ctx, prefix, "")
+}
+
+// Stated so that losing the method is a failure here rather than a silent fall back to
+// listing every key under the prefix.
+var _ objectstore.ListerFrom = (*Service)(nil)
+
+// ListFrom implements objectstore.ListerFrom through Query.StartOffset.
+//
+// StartOffset is inclusive where the interface is exclusive, so a key equal to
+// startAfter is dropped rather than relying on a sentinel just above it.
+func (s *Service) ListFrom(
+	ctx context.Context,
+	prefix string,
+	startAfter string,
+) ([]*objectstore.ObjectInfo, error) {
+	return s.list(ctx, prefix, startAfter)
+}
+
+func (s *Service) list(
+	ctx context.Context,
+	prefix string,
+	startAfter string,
+) ([]*objectstore.ObjectInfo, error) {
 	var infos []*objectstore.ObjectInfo
-	it := s.client.Bucket(s.bucket).Objects(ctx, &storage.Query{Prefix: prefix})
+	it := s.client.Bucket(s.bucket).Objects(ctx, &storage.Query{
+		Prefix:      prefix,
+		StartOffset: startAfter,
+	})
 	for {
 		attrs, err := it.Next()
 		if errors.Is(err, iterator.Done) {
@@ -101,6 +128,9 @@ func (s *Service) List(ctx context.Context, prefix string) ([]*objectstore.Objec
 		}
 		if err != nil {
 			return nil, mapErr(err, "list "+prefix)
+		}
+		if attrs.Name == startAfter {
+			continue
 		}
 		infos = append(infos, &objectstore.ObjectInfo{
 			Key:  attrs.Name,

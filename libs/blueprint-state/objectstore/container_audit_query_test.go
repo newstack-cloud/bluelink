@@ -204,6 +204,39 @@ func (s *ObjectstoreAuditQuerySuite) Test_cleanup_refuses_a_key_it_cannot_parse(
 	s.Assert().Contains(err.Error(), "not an audit record key")
 }
 
+// A lower bound has no upper bound to share digits with, so a prefix cannot narrow it.
+// A store that can begin a listing at a key answers it exactly, which is the read an
+// extraction paging forward from a checkpoint makes over and over.
+func (s *ObjectstoreAuditQuerySuite) Test_lists_from_the_cursor_rather_than_the_whole_trail() {
+	s.saveTrail(60)
+	starts := s.captureStarts()
+
+	records, err := s.newContainer().Audit().Query(context.Background(), &manage.AuditRecordQuery{
+		AfterTimestamp: 1052,
+		AfterID:        "record-0052",
+		Limit:          10,
+	})
+	s.Require().NoError(err)
+
+	s.Require().Len(records, 7)
+	s.Assert().Equal("record-0053", records[0].ID)
+	s.Require().Len(starts.seen(), 1)
+	s.Assert().Equal(testPrefix+"audit_records/00000001052", starts.seen()[0])
+}
+
+// An unbounded read has nothing to start from, so it lists the prefix as before.
+func (s *ObjectstoreAuditQuerySuite) Test_lists_the_prefix_when_there_is_no_lower_bound() {
+	s.saveTrail(20)
+	starts := s.captureStarts()
+
+	_, err := s.newContainer().Audit().Query(context.Background(), &manage.AuditRecordQuery{
+		To: 1010,
+	})
+	s.Require().NoError(err)
+
+	s.Assert().Empty(starts.seen(), "no lower bound means no start key")
+}
+
 func (s *ObjectstoreAuditQuerySuite) saveTrail(count int) {
 	auditStore := s.newContainer().Audit()
 	for i := range count {
@@ -219,6 +252,35 @@ func (s *ObjectstoreAuditQuerySuite) saveTrail(count int) {
 			PrincipalSubject: "user-a",
 		}))
 	}
+}
+
+type startRecorder struct {
+	mu    sync.Mutex
+	calls []string
+}
+
+func (r *startRecorder) seen() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return append([]string(nil), r.calls...)
+}
+
+// Records the keys narrowed listings were asked to start from, so a test can assert that
+// a lower-bounded read asked the store for only the part of the trail it needed.
+func (s *ObjectstoreAuditQuerySuite) captureStarts() *startRecorder {
+	recorder := &startRecorder{}
+	s.svc.SetHooks(mockservice.Hooks{
+		BeforeListFrom: func(_ context.Context, _ string, startAfter string) error {
+			recorder.mu.Lock()
+			defer recorder.mu.Unlock()
+			recorder.calls = append(recorder.calls, startAfter)
+
+			return nil
+		},
+	})
+
+	return recorder
 }
 
 type prefixRecorder struct {
