@@ -26,6 +26,8 @@ func (s *SetupStateEncryptionTestSuite) setup(
 
 	config.State.StorageEngine = memfileStorageEngine
 	config.State.MemFileStateDir = s.T().TempDir()
+	// An empty plugin root so discovery does not depend on what is installed on the host.
+	config.PluginsV1.PluginPath = s.T().TempDir()
 	configure(&config.State)
 
 	// Port 0 so the plugin service listener does not collide with another

@@ -32,6 +32,8 @@ func (s *SetupStatePermissionsTestSuite) setup(stateDir string) {
 
 	config.State.StorageEngine = memfileStorageEngine
 	config.State.MemFileStateDir = stateDir
+	// An empty plugin root so discovery does not depend on what is installed on the host.
+	config.PluginsV1.PluginPath = s.T().TempDir()
 
 	// Port 0 so the plugin service listener does not collide with another test or a running
 	// engine.
