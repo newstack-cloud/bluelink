@@ -15,7 +15,7 @@ This document provides an overview of all projects in the Bluelink monorepo.
 |---------|------|-------------|
 | [Blueprint](../libs/blueprint) | `libs/blueprint` | Core framework for blueprint deployments, implementing the [Blueprint Specification](https://www.bluelink.dev/docs/bluelink/blueprints/specification/) |
 | [Blueprint Resolvers](../libs/blueprint-resolvers) | `libs/blueprint-resolvers` | Collection of `ChildResolver` implementations for sourcing child blueprints (File system, S3, GCS, Azure Blob, HTTPS) |
-| [Blueprint State](../libs/blueprint-state) | `libs/blueprint-state` | State container implementations for blueprint entity management (Postgres, in-memory with file persistence) |
+| [Blueprint State](../libs/blueprint-state) | `libs/blueprint-state` | State container implementations for blueprint entity management (Postgres, in-memory with file persistence, object storage) |
 | [Common](../libs/common) | `libs/common` | Shared utility packages used across Bluelink projects |
 | [Deploy Engine Client](../libs/deploy-engine-client) | `libs/deploy-engine-client` | Go client library for the Deploy Engine API |
 | [Plugin Framework](../libs/plugin-framework) | `libs/plugin-framework` | gRPC-based plugin system for provider and transformer plugins, including a Go SDK |
@@ -25,6 +25,6 @@ This document provides an overview of all projects in the Bluelink monorepo.
 | Project | Path | Description |
 |---------|------|-------------|
 | [Bluelink Manager](../tools/bluelink-manager) | `tools/bluelink-manager` | Cross-platform CLI for installing, updating, and managing Bluelink components |
-| [Blueprint Language Server](../tools/blueprint-ls) | `tools/blueprint-ls` | LSP-compatible language server for `.(bp|blueprint)|(blueprint.(yaml\|yml\|jsonc))` files |
+| [Blueprint Language Server](../tools/blueprint-ls) | `tools/blueprint-ls` | LSP-compatible language server for `.(bp\|blueprint)\|(blueprint.(yaml\|yml\|jsonc))` files |
 | [Plugin Docgen](../tools/plugin-docgen) | `tools/plugin-docgen` | Generates JSON documentation from plugins for the Bluelink Registry |
 | [Windows Installer](../tools/windows-installer) | `tools/windows-installer` | WiX-based MSI installer for Windows |
