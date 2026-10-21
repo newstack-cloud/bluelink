@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/tracing"
 	"github.com/newstack-cloud/bluelink/libs/common/telemetry"
+	"github.com/newstack-cloud/bluelink/libs/telemetry-otel/tracing"
 	"github.com/stretchr/testify/suite"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"

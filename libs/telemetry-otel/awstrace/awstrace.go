@@ -1,4 +1,4 @@
-package tracing
+package awstrace
 
 import (
 	"context"
@@ -8,17 +8,16 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/common/telemetry"
 )
 
-// InstrumentAWSSDK traces every call an AWS SDK client makes.
+// Instrument traces every call an AWS SDK client makes.
 //
 // Pass it to awsconfig.WithAPIOptions when loading a configuration, and every client
-// built from that configuration is traced. The engine reaches S3 and KMS through the
-// SDK, and a deployment waiting on one of them is indistinguishable from one waiting on
-// the engine itself without this.
+// built from that configuration is traced. Without it, work waiting on a call to S3 or
+// KMS is indistinguishable from work waiting on the caller's own code.
 //
 // The tracer is resolved per call, so a client built before a provider is installed is
 // still traced once one is, and a client built where tracing is off costs a call that
 // returns immediately.
-func InstrumentAWSSDK(stack *middleware.Stack) error {
+func Instrument(stack *middleware.Stack) error {
 	// The initialize step, so the span covers the retries of a call rather than
 	// producing one span per attempt, and added last within it so that the step which
 	// records which service and operation this is has already run.
@@ -43,7 +42,7 @@ func (m awsSDKTracing) HandleInitialize(
 		ctx,
 		service+"."+operation,
 		// The names a backend expects of a span describing a call to a remote service,
-		// so that it is presented as one rather than as a span the engine named.
+		// so that it is presented as a remote call rather than as work of this process.
 		telemetry.StringAttr("rpc.system", "aws-api"),
 		telemetry.StringAttr("rpc.service", service),
 		telemetry.StringAttr("rpc.method", operation),

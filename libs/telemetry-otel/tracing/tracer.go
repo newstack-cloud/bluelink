@@ -1,8 +1,8 @@
-// Package tracing exports distributed traces of the work the deploy engine carries out.
+// Package tracing exports distributed traces over OpenTelemetry.
 //
 // This is the OpenTelemetry implementation of the telemetry package's seam. Spans are
-// started through the seam rather than here, so the engine's code reads the same
-// whether or not traces are being exported and the decision is confined to startup.
+// started through the seam rather than here, so a caller's code reads the same whether
+// or not traces are being exported and the decision is confined to startup.
 //
 // [Setup] builds a tracer provider from what an operator configured and installs it
 // behind the seam. Where tracing is off nothing is built and the seam's own
@@ -19,30 +19,31 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-// Names this instrumentation in the spans it produces, which is how a backend tells
-// the engine's own spans from those of a library it traces through.
-const scope = "github.com/newstack-cloud/bluelink/apps/deploy-engine"
+// Names this instrumentation in the spans it produces, which is what a backend groups
+// them by.
+const scope = "github.com/newstack-cloud/bluelink/libs/telemetry-otel"
 
 // TraceKindAttr marks the root of a trace with the kind of work it covers.
 //
 // This is one of the two things the sampler classifies on, so that the two kinds of
-// trace the engine starts can be sampled at rates of their own. It marks the detached
-// work the engine starts for itself; a request that changes something is recognised by
+// trace a process starts can be sampled at rates of their own. It marks the detached
+// work a process starts for itself; a request that changes something is recognised by
 // its method instead, since it has no opportunity to mark itself. An attribute rather
 // than the span name, so that renaming a span cannot quietly change how it is sampled.
 // It stays on the span afterwards, which also lets a backend filter by it.
 const TraceKindAttr = "bluelink.trace.kind"
 
-// TraceKindOperation marks the root of a trace covering one operation, meaning work the
-// engine carries on with after answering the request that asked for it: a deployment, a
-// destroy, a rollback, change staging, a blueprint validation or a state cleanup pass.
+// TraceKindOperation marks the root of a trace covering one operation, meaning work a
+// process carries on with after answering the request that asked for it. In the deploy
+// engine that is a deployment, a destroy, a rollback, change staging, a blueprint
+// validation or a state cleanup pass.
 const TraceKindOperation = "operation"
 
 // NewTracer returns a telemetry.Tracer starting spans on whatever tracer provider
 // OpenTelemetry has been given.
 //
-// Exported for a test, and for a host embedding the engine that builds a provider of
-// its own. [Setup] installs one for an ordinary deployment.
+// Exported for a test, and for a host that builds a provider of its own. [Setup]
+// installs one for an ordinary deployment.
 func NewTracer() telemetry.Tracer {
 	return tracer{}
 }

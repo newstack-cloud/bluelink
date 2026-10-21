@@ -26,17 +26,17 @@ const PlatformAWS = "aws"
 // Settings is the tracing configuration, resolved.
 //
 // Resolved from configuration by the caller rather than read from the environment
-// here, so that tracing is configured the same way as everything else the engine does.
+// here, so that tracing is configured the same way as everything else the process does.
 type Settings struct {
 	// OTLPEndpoint is the collector to export to.
 	OTLPEndpoint string
-	// ServiceName and ServiceVersion name the engine in the traces it produces.
+	// ServiceName and ServiceVersion name the process in the traces it produces.
 	ServiceName    string
 	ServiceVersion string
-	// SamplingRate is the proportion of traces the engine starts that are exported,
+	// SamplingRate is the proportion of traces the process starts that are exported,
 	// between 0 and 1.
 	SamplingRate float64
-	// OperationSamplingRate is the proportion of the traces the engine starts for work
+	// OperationSamplingRate is the proportion of the traces the process starts for work
 	// it carries on with after answering the request that asked for it, between 0 and 1.
 	//
 	// Separate from SamplingRate because the two are not alike. One status poll is
@@ -53,10 +53,14 @@ func (s Settings) IsAWS() bool {
 	return s.Platform == PlatformAWS
 }
 
-// Validate reports what about these settings the engine cannot act on.
+// Validate reports what about these settings cannot be acted on.
 //
-// Called whether or not tracing is on, so that settings the engine would refuse are
+// Worth calling whether or not tracing is on, so that settings that would be refused are
 // refused when they are written rather than when they are first switched on.
+//
+// The messages name the setting rather than a configuration key, since a caller supplies
+// these from wherever it reads configuration: the deploy engine from its tracing.*
+// section, a plugin from the environment the engine launched it with.
 func (s Settings) Validate() error {
 	if err := validateEndpoint(s.OTLPEndpoint); err != nil {
 		return err
@@ -64,7 +68,7 @@ func (s Settings) Validate() error {
 
 	if s.Platform != "" && !s.IsAWS() {
 		return fmt.Errorf(
-			"%q is not a supported tracing.platform, expected %q or an empty value",
+			"%q is not a supported tracing platform, expected %q or an empty value",
 			s.Platform,
 			PlatformAWS,
 		)
@@ -72,14 +76,14 @@ func (s Settings) Validate() error {
 
 	if s.SamplingRate < 0 || s.SamplingRate > 1 {
 		return fmt.Errorf(
-			"tracing.sampling_rate must be between 0 and 1, got %g",
+			"the sampling rate must be between 0 and 1, got %g",
 			s.SamplingRate,
 		)
 	}
 
 	if s.OperationSamplingRate < 0 || s.OperationSamplingRate > 1 {
 		return fmt.Errorf(
-			"tracing.operation_sampling_rate must be between 0 and 1, got %g",
+			"the operation sampling rate must be between 0 and 1, got %g",
 			s.OperationSamplingRate,
 		)
 	}
@@ -90,25 +94,25 @@ func (s Settings) Validate() error {
 // Checked here because the exporter does not check it for us.
 // When given a URL it cannot parse, it keeps its own default
 // and exports there instead, so a typo would have the
-// engine export to localhost rather than report anything.
+// process export to localhost rather than report anything.
 //
 // A scheme and a host are what that amounts to. A host that does not resolve still
 // cannot be caught, since the gRPC exporter connects lazily and nothing here dials it.
 func validateEndpoint(endpoint string) error {
 	parsed, err := url.Parse(endpoint)
 	if err != nil {
-		return fmt.Errorf("tracing.otlp_endpoint %q is not a URL: %w", endpoint, err)
+		return fmt.Errorf("the OTLP endpoint %q is not a URL: %w", endpoint, err)
 	}
 
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return fmt.Errorf(
-			"tracing.otlp_endpoint %q must begin with http:// or https://",
+			"the OTLP endpoint %q must begin with http:// or https://",
 			endpoint,
 		)
 	}
 
 	if parsed.Host == "" {
-		return fmt.Errorf("tracing.otlp_endpoint %q names no host", endpoint)
+		return fmt.Errorf("the OTLP endpoint %q names no host", endpoint)
 	}
 
 	return nil
@@ -171,14 +175,14 @@ func providerFor(
 	}
 	if settings.IsAWS() {
 		// X-Ray will not accept a trace ID it does not recognise the shape of, so a
-		// trace the engine starts has to be given one.
+		// trace started here has to be given one.
 		options = append(options, sdktrace.WithIDGenerator(NewXRayIDGenerator(clock)))
 	}
 
 	return sdktrace.NewTracerProvider(options...), nil
 }
 
-// Names the engine in every span it produces.
+// Names the process in every span it produces.
 //
 // Schemaless, because merging two resources that carry different schema versions is a
 // conflict and the SDK's default resource moves to whatever version it was built
@@ -189,7 +193,7 @@ func describeService(settings Settings) (*resource.Resource, error) {
 		semconv.ServiceVersion(settings.ServiceVersion),
 	))
 	if err != nil {
-		return nil, fmt.Errorf("failed to describe the deploy engine in its traces: %w", err)
+		return nil, fmt.Errorf("failed to describe this service in its traces: %w", err)
 	}
 
 	return described, nil
@@ -198,7 +202,7 @@ func describeService(settings Settings) (*resource.Resource, error) {
 // Chooses the sampler, which decides how much is exported.
 //
 // Parent-based, so that the decision is made once per trace by whoever started it and
-// every engine the trace passes through agrees. Without it, a sampled request would
+// every process the trace passes through agrees. Without it, a sampled request would
 // produce a trace with holes in it where a span was dropped on its own.
 func samplerFor(settings Settings) sdktrace.Sampler {
 	return rootKindSampler{
@@ -219,7 +223,7 @@ func ratioSampler(rate float64) sdktrace.Sampler {
 	return sdktrace.ParentBased(sdktrace.TraceIDRatioBased(rate))
 }
 
-// Samples the two kinds of trace the engine starts at rates of their own.
+// Samples the two kinds of trace a process starts at rates of their own.
 //
 // A provider has one sampler, so telling the two apart has to happen inside it. Only a
 // root span needs classifying, every span within an operation has a valid local parent,
@@ -255,20 +259,8 @@ func (s rootKindSampler) Description() string {
 
 // Whether a span belongs to an operation rather than to request traffic.
 //
-// Two things make it one. The engine marks a root it starts for detached work, and a
-// request that changes something is one in its own right: every one of the engine's
-// mutating routes either starts an operation or, in the case of a drift check,
-// is one carried out while the caller waits. The reads, the polls, the lists and the
-// event streams are the volume the request rate is for.
-//
-// Classified on the method rather than on a list of routes, so that an endpoint added
-// later is classified without anyone needing to remember to add it, and so that renaming a
-// route cannot change how it is sampled. Anything other than a read counts, so a method
-// this does not know is traced rather than quietly sampled.
-//
-// Only a root can be classified wrongly here and it does not matter if it is, a child
-// span of an outgoing request carries a method of its own, but both delegates are
-// ParentBased, so a child inherits the decision taken at its root either way.
+// An operation is typically a long-running task the continues beyond a response
+// for a request, or a long-running task that the caller waits for.
 func samplesAsOperation(attrs []attribute.KeyValue) bool {
 	for _, attr := range attrs {
 		switch attr.Key {
@@ -294,8 +286,8 @@ func isReadMethod(method string) bool {
 
 // Chooses how a trace arriving from upstream is read and how one leaving is written.
 //
-// W3C always, since that is what a caller of the engine's API propagates, and X-Ray's
-// own header alongside it on AWS, where the platform in front of the engine propagates
+// W3C always, since that is what a caller of an HTTP API propagates, and X-Ray's own
+// header alongside it on AWS, where the platform in front of the process propagates
 // in that format and a trace would otherwise break at the boundary. W3C baggage travels
 // with both.
 //

@@ -15,7 +15,7 @@ import (
 
 // XRayTraceIDHeader is the header AWS propagates a trace in.
 //
-// An AWS load balancer in front of the engine writes this, so a request arrives with
+// An AWS load balancer in front of the service writes this, so a request arrives with
 // the trace the platform has already started for it.
 const XRayTraceIDHeader = "X-Amzn-Trace-Id"
 
@@ -25,7 +25,7 @@ const XRayTraceIDHeader = "X-Amzn-Trace-Id"
 // same trace, and X-Ray is the only one of them the X-Ray console will find.
 const XRayTraceIDField = "xrayTraceId"
 
-// The fields of an X-Ray trace header, of which the engine reads these three and
+// The fields of an X-Ray trace header, of which this reads these three and
 // ignores the rest. AWS adds others, Self among them, that describe the hop rather
 // than the trace.
 const (
@@ -69,7 +69,7 @@ func ToXRayTraceID(otelTraceID string) string {
 // XRayIDGenerator generates trace IDs in the shape X-Ray accepts.
 //
 // X-Ray rejects a trace whose ID does not begin with the time it started, so a trace
-// the engine starts itself has to be given one rather than the random identifier
+// a process starts itself has to be given one rather than the random identifier
 // OpenTelemetry would otherwise generate. Install it on the tracer provider.
 //
 // The randomness comes from math/rand/v2, which is seeded for us and safe to call from
@@ -120,7 +120,7 @@ func newSpanID() oteltrace.SpanID {
 // in this format, and a caller that speaks W3C is every other caller.
 type XRayPropagator struct{}
 
-// Inject writes the span's trace into the carrier for whatever the engine calls next.
+// Inject writes the span's trace into the carrier for whatever is called next.
 func (XRayPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	spanCtx := oteltrace.SpanContextFromContext(ctx)
 	if !spanCtx.TraceID().IsValid() || !spanCtx.SpanID().IsValid() {
@@ -165,7 +165,7 @@ func (XRayPropagator) Fields() []string {
 }
 
 // Both the trace and the span within it have to be readable for the header to be a
-// trace the engine can join. AWS omits the parent at the first hop, and OpenTelemetry
+// trace this process can join. AWS omits the parent at the first hop, and OpenTelemetry
 // has nowhere to put a trace whose parent span is unknown, it generates a new trace ID
 // for one, so such a request starts a trace of its own rather than carrying an ID the
 // exported spans would not agree with.

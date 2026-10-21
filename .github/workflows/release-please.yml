@@ -54,6 +54,7 @@ jobs:
             ["common"]="libs/common"
             ["deploy-engine-client"]="libs/deploy-engine-client"
             ["plugin-framework"]="libs/plugin-framework"
+            ["telemetry-otel"]="libs/telemetry-otel"
             ["blueprint-ls"]="tools/blueprint-ls"
             ["plugin-docgen"]="tools/plugin-docgen"
             ["bluelink-manager"]="tools/bluelink-manager"

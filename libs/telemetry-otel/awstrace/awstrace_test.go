@@ -1,4 +1,4 @@
-package tracing_test
+package awstrace_test
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/smithy-go/middleware"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/tracing"
 	"github.com/newstack-cloud/bluelink/libs/common/telemetry"
+	"github.com/newstack-cloud/bluelink/libs/telemetry-otel/awstrace"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -102,7 +102,7 @@ func (s *AWSSDKSuite) listBuckets(
 		),
 		awsconfig.WithHTTPClient(stubHTTPClient{respond: respond}),
 		awsconfig.WithAPIOptions([]func(*middleware.Stack) error{
-			tracing.InstrumentAWSSDK,
+			awstrace.Instrument,
 		}),
 	)
 	s.Require().NoError(err)

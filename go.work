@@ -9,6 +9,7 @@ use (
 	./libs/common
 	./libs/deploy-engine-client
 	./libs/plugin-framework
+	./libs/telemetry-otel
 	./tools/bluelink-manager
 	./tools/blueprint-ls
 	./tools/plugin-docgen

@@ -3,17 +3,12 @@ package tracing_test
 import (
 	"context"
 	"net/http"
-	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/gorilla/mux"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/testutils"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/tracing"
 	"github.com/newstack-cloud/bluelink/libs/common/telemetry"
+	"github.com/newstack-cloud/bluelink/libs/telemetry-otel/tracing"
 	"github.com/stretchr/testify/suite"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
@@ -59,7 +54,7 @@ func (s *SettingsSuite) Test_refuses_an_endpoint_the_exporter_would_quietly_repl
 		err := settings.Validate()
 
 		s.Require().Error(err, "%q should be refused", endpoint)
-		s.Assert().Contains(err.Error(), "tracing.otlp_endpoint")
+		s.Assert().Contains(err.Error(), "OTLP endpoint")
 	}
 }
 
@@ -72,7 +67,7 @@ func (s *SettingsSuite) Test_refuses_a_platform_it_has_nothing_to_do_differently
 	err := settings.Validate()
 
 	s.Require().Error(err)
-	s.Assert().Contains(err.Error(), "tracing.platform")
+	s.Assert().Contains(err.Error(), "tracing platform")
 	s.Assert().Contains(err.Error(), "gcp")
 }
 
@@ -86,7 +81,7 @@ func (s *SettingsSuite) Test_refuses_a_sampling_rate_that_is_not_a_proportion() 
 		err := settings.Validate()
 
 		s.Require().Error(err, "%g should be refused", rate)
-		s.Assert().Contains(err.Error(), "tracing.sampling_rate")
+		s.Assert().Contains(err.Error(), "the sampling rate")
 	}
 }
 
@@ -97,7 +92,7 @@ func (s *SettingsSuite) Test_refuses_an_operation_sampling_rate_that_is_not_a_pr
 	err := settings.Validate()
 
 	s.Require().Error(err)
-	s.Assert().Contains(err.Error(), "tracing.operation_sampling_rate")
+	s.Assert().Contains(err.Error(), "the operation sampling rate")
 }
 
 func (s *SettingsSuite) Test_reports_whether_identifiers_have_to_suit_xray() {
@@ -187,57 +182,6 @@ func (s *SettingsSuite) Test_declines_an_operation_where_only_requests_are_sampl
 
 	s.Assert().False(s.operationIsRecorded(), "an operation should be declined at its own rate")
 	s.Assert().True(s.requestIsRecorded(), "a request should still be exported")
-}
-
-// Driven through the real router instrumentation rather than by passing the attributes
-// by hand, because the rule depends on otelmux and this package naming the method
-// attribute identically. They agree today and a release that
-// moved either would otherwise leave every mutating request silently sampled.
-func (s *SettingsSuite) Test_samples_a_mutating_request_at_the_operation_rate() {
-	settings := s.valid()
-	settings.SamplingRate = 0
-	settings.OperationSamplingRate = 1
-
-	s.install(settings)
-
-	s.Assert().True(
-		s.routeIsRecorded("POST", "/deployments/instances"),
-		"a request that starts an operation should be traced at the operation rate",
-	)
-}
-
-// The polls and the lists are the volume the request rate is for, so they follow it even
-// where operations are traced in full.
-func (s *SettingsSuite) Test_samples_a_read_request_at_the_request_rate() {
-	settings := s.valid()
-	settings.SamplingRate = 0
-	settings.OperationSamplingRate = 1
-
-	s.install(settings)
-
-	s.Assert().False(
-		s.routeIsRecorded("GET", "/deployments/instances/{id}"),
-		"a read should follow the request rate, not the operation rate",
-	)
-}
-
-// Whether the span otelmux starts for a request to the given route is one a backend
-// will have. The handler reads it from its own context, which is where anything the
-// engine traces during the request would find it.
-func (s *SettingsSuite) routeIsRecorded(method string, route string) bool {
-	recorded := false
-	router := mux.NewRouter()
-	router.Use(otelmux.Middleware("bluelink-deploy-engine"))
-	router.HandleFunc(route, func(_ http.ResponseWriter, r *http.Request) {
-		recorded = tracing.SpanContextFromContext(r.Context()).Recorded()
-	}).Methods(method)
-
-	router.ServeHTTP(
-		httptest.NewRecorder(),
-		httptest.NewRequest(method, strings.NewReplacer("{id}", "instance-1").Replace(route), nil),
-	)
-
-	return recorded
 }
 
 func (s *SettingsSuite) operationIsRecorded() bool {
@@ -354,7 +298,7 @@ func (s *SettingsSuite) install(settings tracing.Settings) propagation.TextMapPr
 	shutdown, err := tracing.Setup(
 		context.Background(),
 		settings,
-		&testutils.MockClock{StaticTime: time.Now()},
+		staticClock{at: time.Now()},
 	)
 	s.Require().NoError(err)
 	s.T().Cleanup(func() {

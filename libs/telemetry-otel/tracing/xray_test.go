@@ -8,8 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/testutils"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/tracing"
+	"github.com/newstack-cloud/bluelink/libs/telemetry-otel/tracing"
 	"github.com/stretchr/testify/suite"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -180,7 +179,7 @@ func (s *XRaySuite) Test_generates_a_trace_id_beginning_with_the_time_it_started
 	started := time.Date(2026, 10, 20, 9, 30, 0, 0, time.UTC)
 
 	traceID, spanID := tracing.NewXRayIDGenerator(
-		&testutils.MockClock{StaticTime: started},
+		staticClock{at: started},
 	).NewIDs(context.Background())
 
 	s.Require().True(traceID.IsValid())
@@ -193,7 +192,7 @@ func (s *XRaySuite) Test_generates_a_trace_id_beginning_with_the_time_it_started
 }
 
 func (s *XRaySuite) Test_generates_a_distinct_id_each_time() {
-	generator := tracing.NewXRayIDGenerator(&testutils.MockClock{StaticTime: time.Now()})
+	generator := tracing.NewXRayIDGenerator(staticClock{at: time.Now()})
 
 	seen := map[string]bool{}
 	for range 100 {
@@ -215,7 +214,7 @@ func (s *XRaySuite) Test_generates_a_distinct_id_each_time() {
 // mutable state being reintroduced.
 func (s *XRaySuite) Test_generates_ids_concurrently() {
 	generator := tracing.NewXRayIDGenerator(
-		&testutils.MockClock{StaticTime: time.Now()},
+		staticClock{at: time.Now()},
 	)
 
 	const goroutines, perGoroutine = 8, 50

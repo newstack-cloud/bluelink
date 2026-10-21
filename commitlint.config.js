@@ -34,6 +34,7 @@ module.exports = {
         "deploy-engine-client",
         "plugin-framework",
         "common",
+        "telemetry-otel",
         "cli",
         "bluelink-manager",
         "win-installer"

@@ -43,6 +43,10 @@
       "component": "deploy-engine-client",
       "package-name": "deploy-engine-client"
     },
+    "libs/telemetry-otel": {
+      "component": "telemetry-otel",
+      "package-name": "telemetry-otel"
+    },
     "libs/plugin-framework": {
       "component": "plugin-framework",
       "package-name": "plugin-framework"

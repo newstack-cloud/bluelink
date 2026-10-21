@@ -41,6 +41,8 @@ This list will evolve as more applications and libraries are added to Bluelink.
 - `deploy-engine` - This commit scope should be used for a commit that represents work that pertains to the deploy engine application.
 - `deploy-engine-client` - This commit scope should be used for a commit that represents work that pertains to the deploy engine client library that is used to communicate with the deploy engine.
 - `common` - This commit scope should be used for a commit that represents work that pertains to the common Go library.
+- `plugin-framework` - This commit scope should be used for a commit that represents work that pertains to the plugin framework library that plugins for the deploy engine are built with.
+- `telemetry-otel` - This commit scope should be used for a commit that represents work that pertains to the OpenTelemetry library that exports traces for the deploy engine, the official provider plugins and anything else that traces through the common library's telemetry seam.
 - `cli` - This commit scope should be used for a commit that represents work that pertains to the CLI for the test/build/package/deploy tooling.
 - `bluelink-manager` - This commit scope should be used for a commit that represents work that pertains to the bluelink manager tool that is used to install and manage Bluelink on Unix systems.
 - `win-installer` - This commit scope should be used for a commit that represents work that pertains to the Windows installer for Bluelink.
