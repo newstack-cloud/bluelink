@@ -14,6 +14,7 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/inputvalidation"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
 	internalutils "github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/utils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
@@ -154,6 +155,7 @@ func (c *Controller) CreateChangesetHandler(
 		params,
 		taggingConfig,
 		payload.SkipDriftCheck,
+		telemetry.LinkFrom(r.Context()),
 		c.requestLogger(r).Named("changeStagingProcess").WithFields(
 			core.StringLogField("changesetId", changesetID),
 			core.StringLogField("blueprintLocation", blueprintLocation),
@@ -339,13 +341,20 @@ func (c *Controller) startChangeStaging(
 	params core.BlueprintParams,
 	taggingConfig *provider.TaggingConfig,
 	skipDriftCheck bool,
+	linkedTo telemetry.SpanContext,
 	logger core.Logger,
 ) {
-	ctxWithTimeout, cancel := context.WithTimeout(
-		context.Background(),
+	ctxWithTimeout, cancel := operationContext(
+		linkedTo,
+		changeStagingSpanName,
 		changeStagingTimeout,
+		telemetry.StringAttr("changesetId", changeset.ID),
+		telemetry.StringAttr("blueprintFormat", string(format)),
+		telemetry.BoolAttr("skipDriftCheck", skipDriftCheck),
+		telemetry.StringAttr("trigger", triggerRequest),
 	)
 	defer cancel()
+	defer telemetry.CurrentTracer().SpanFromContext(ctxWithTimeout).End()
 
 	earlyExitBefore := c.saveChangeset(
 		ctxWithTimeout,
@@ -554,6 +563,10 @@ func (c *Controller) handleChangesetErrorAsEvent(
 	changeStagingError error,
 	logger core.Logger,
 ) {
+	// Every error change staging reports as an event comes through here, so the span is
+	// told once rather than at each call site.
+	telemetry.CurrentTracer().SpanFromContext(ctx).RecordError(changeStagingError)
+
 	// In the case that the error is a validation error when loading the blueprint,
 	// make sure that the specific errors are included in the event data.
 	errDiagnostics := utils.DiagnosticsFromBlueprintValidationError(

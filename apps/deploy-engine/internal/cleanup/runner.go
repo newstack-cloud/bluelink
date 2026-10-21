@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
@@ -133,13 +134,30 @@ func NewRunner(
 // by a request outlives the request that asked for it. That context belongs to the
 // runner, so Shutdown can cut the run short and wait for it.
 func (r *Runner) Start(ctx context.Context, task Task) (*manage.CleanupOperation, error) {
-	operation, err := r.begin(ctx, task)
+	operation, err := r.recordOperation(ctx, task)
 	if err != nil {
 		return nil, err
 	}
 
 	started := *operation
-	go r.execute(r.detachedCtx, operation, task)
+
+	// A cleanup a request started is a trace of its own, naming the request that asked
+	// for it. The run's context comes from the runner rather than the request, so we retain
+	// the link span from the request context.
+	runCtx, span := telemetry.CurrentTracer().StartRoot(
+		r.detachedCtx,
+		cleanupRunSpanName,
+		telemetry.LinkFrom(ctx),
+		telemetry.StringAttr("cleanupType", string(task.Type)),
+	)
+
+	// The run's own count is released when the work ends, before the span is finished,
+	// so without a count of its own the span can be lost to shutdown.
+	r.runs.Go(func() {
+		defer span.End()
+		r.carryOutTask(runCtx, operation, task)
+		recordCleanupSpanOutcome(span, operation)
+	})
 
 	return &started, nil
 }
@@ -150,22 +168,28 @@ func (r *Runner) Start(ctx context.Context, task Task) (*manage.CleanupOperation
 // The task is bounded by both the runner's timeout and the given context, so a
 // caller that is shutting down can cut a run short.
 func (r *Runner) Run(ctx context.Context, task Task) (*manage.CleanupOperation, error) {
-	operation, err := r.begin(ctx, task)
+	operation, err := r.recordOperation(ctx, task)
 	if err != nil {
 		return nil, err
 	}
 
-	r.execute(ctx, operation, task)
+	r.carryOutTask(ctx, operation, task)
 
 	return operation, nil
 }
 
-func (r *Runner) begin(ctx context.Context, task Task) (*manage.CleanupOperation, error) {
+// Takes the category and records the run that is about to happen, so that Start and Run
+// both have an operation to report before any state is removed. The removal itself is
+// carryOutTask.
+func (r *Runner) recordOperation(
+	ctx context.Context,
+	task Task,
+) (*manage.CleanupOperation, error) {
 	if err := r.claim(ctx, task.Type); err != nil {
 		return nil, err
 	}
 
-	operation, err := r.record(ctx, task)
+	operation, err := r.saveOperation(ctx, task)
 	if err != nil {
 		r.release(task.Type)
 		return nil, err
@@ -207,7 +231,8 @@ func (r *Runner) claim(ctx context.Context, cleanupType manage.CleanupType) erro
 }
 
 // Paired with the claim rather than with the work, so the count also covers a claim
-// that never became a run because recording it failed.
+// that never became a run because recording it failed. A run started through Start is
+// counted once more on top of this, see there for why.
 func (r *Runner) release(cleanupType manage.CleanupType) {
 	defer r.runs.Done()
 
@@ -250,7 +275,7 @@ func (r *Runner) Shutdown(ctx context.Context) {
 	}
 }
 
-func (r *Runner) record(ctx context.Context, task Task) (*manage.CleanupOperation, error) {
+func (r *Runner) saveOperation(ctx context.Context, task Task) (*manage.CleanupOperation, error) {
 	operationID, err := r.idGenerator.GenerateID()
 	if err != nil {
 		return nil, err
@@ -272,7 +297,7 @@ func (r *Runner) record(ctx context.Context, task Task) (*manage.CleanupOperatio
 	return operation, nil
 }
 
-func (r *Runner) execute(
+func (r *Runner) carryOutTask(
 	ctx context.Context,
 	operation *manage.CleanupOperation,
 	task Task,

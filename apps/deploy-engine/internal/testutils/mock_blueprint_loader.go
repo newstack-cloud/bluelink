@@ -24,6 +24,9 @@ type MockBlueprintLoader struct {
 	changeStagingEventSequence []ChangeStagingEvent
 	deployError                error
 	changeStagingError         error
+	// loadError is returned by Load and LoadString instead of a container, for a test
+	// about what the caller does when a blueprint cannot be loaded at all.
+	loadError error
 	// DestroyTracker tracks calls to the Destroy method for testing auto-rollback.
 	DestroyTracker *DestroyTracker
 	// DeployTracker tracks calls to the Deploy method for testing update rollback.
@@ -191,6 +194,14 @@ func (t *ReconciliationTracker) GetApplyCalls() []*container.ApplyReconciliation
 
 type MockBlueprintLoaderOption func(*MockBlueprintLoader)
 
+// WithMockBlueprintLoaderLoadError makes Load and LoadString fail, which is how an
+// operation fails before any of its work has begun.
+func WithMockBlueprintLoaderLoadError(err error) MockBlueprintLoaderOption {
+	return func(loader *MockBlueprintLoader) {
+		loader.loadError = err
+	}
+}
+
 func WithMockBlueprintLoaderDeployError(err error) MockBlueprintLoaderOption {
 	return func(loader *MockBlueprintLoader) {
 		loader.deployError = err
@@ -294,6 +305,10 @@ func (m *MockBlueprintLoader) Load(
 	blueprintSpecFile string,
 	params core.BlueprintParams,
 ) (container.BlueprintContainer, error) {
+	if m.loadError != nil {
+		return nil, m.loadError
+	}
+
 	return &MockBlueprintContainer{
 		stubDiagnostics:             m.stubDiagnostics,
 		clock:                       m.clock,
@@ -330,6 +345,10 @@ func (m *MockBlueprintLoader) LoadString(
 	inputFormat schema.SpecFormat,
 	params core.BlueprintParams,
 ) (container.BlueprintContainer, error) {
+	if m.loadError != nil {
+		return nil, m.loadError
+	}
+
 	return &MockBlueprintContainer{
 		stubDiagnostics:             m.stubDiagnostics,
 		clock:                       m.clock,

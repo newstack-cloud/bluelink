@@ -86,7 +86,12 @@ func (s *Scheduler) run(ctx context.Context) {
 // One span for the pass with a span per task inside it, so that a pass which spent its
 // time on a single category shows that rather than only how long the whole of it took.
 func (s *Scheduler) runPass(ctx context.Context) {
-	ctx, span := telemetry.CurrentTracer().Start(ctx, cleanupPassSpanName)
+	ctx, span := telemetry.CurrentTracer().StartRoot(
+		ctx,
+		cleanupPassSpanName,
+		// Nothing asked for a scheduled pass, so there is nothing to link it to.
+		telemetry.SpanContext{},
+	)
 	defer span.End()
 
 	for _, task := range s.tasks {
@@ -152,6 +157,18 @@ func recordCleanupOutcome(
 	logger core.Logger,
 	operation *manage.CleanupOperation,
 ) {
+	recordCleanupSpanOutcome(span, operation)
+
+	logger.Info(
+		"scheduled cleanup finished",
+		core.StringLogField("status", string(operation.Status)),
+		core.IntegerLogField("itemsDeleted", operation.ItemsDeleted),
+	)
+}
+
+// Shared with the runs the cleanup endpoints start, which record the same outcome but
+// must not log it as a scheduled one.
+func recordCleanupSpanOutcome(span telemetry.Span, operation *manage.CleanupOperation) {
 	span.SetAttributes(
 		telemetry.StringAttr("status", string(operation.Status)),
 		telemetry.IntAttr("itemsDeleted", operation.ItemsDeleted),
@@ -163,12 +180,6 @@ func recordCleanupOutcome(
 	if operation.Status == manage.CleanupOperationStatusFailed {
 		span.RecordError(cleanupFailedError(operation))
 	}
-
-	logger.Info(
-		"scheduled cleanup finished",
-		core.StringLogField("status", string(operation.Status)),
-		core.IntegerLogField("itemsDeleted", operation.ItemsDeleted),
-	)
 }
 
 func cleanupFailedError(operation *manage.CleanupOperation) error {
@@ -204,4 +215,5 @@ func taskLogFields(task Task, span telemetry.Span) []core.LogField {
 const (
 	cleanupPassSpanName = "cleanup.pass"
 	cleanupTaskSpanName = "cleanup.task"
+	cleanupRunSpanName  = "cleanup.run"
 )

@@ -112,6 +112,10 @@ func linkOf(spanCtx telemetry.SpanContext) (oteltrace.Link, bool) {
 	}, true
 }
 
+func (tracer) SpanFromContext(ctx context.Context) telemetry.Span {
+	return span{inner: oteltrace.SpanFromContext(ctx)}
+}
+
 type span struct {
 	inner oteltrace.Span
 }

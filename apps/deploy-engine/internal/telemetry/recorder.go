@@ -26,9 +26,12 @@ type RecordedSpan struct {
 	// LinkedTo is the span named as having asked for this work, for a span started
 	// through StartRoot. Empty for every other span.
 	LinkedTo SpanContext
-	Attrs    map[string]any
-	Err      error
-	Ended    bool
+	// Root records that the span was started through StartRoot,
+	// to allow for checking that a span deliberately began its own trace.
+	Root  bool
+	Attrs map[string]any
+	Err   error
+	Ended bool
 }
 
 // Attr returns the value recorded under key, and whether it was recorded at all.
@@ -53,11 +56,6 @@ type recordedSpanHandle struct {
 
 type recorderParentKey struct{}
 
-type recordedParent struct {
-	traceID string
-	spanID  string
-}
-
 // NewRecorder creates a Recorder. Install it with SetTracer.
 func NewRecorder() *Recorder {
 	return &Recorder{}
@@ -68,7 +66,7 @@ func (r *Recorder) Start(
 	name string,
 	attrs ...Attr,
 ) (context.Context, Span) {
-	return r.start(ctx, name, true, SpanContext{}, attrs)
+	return r.start(ctx, name, false, SpanContext{}, attrs)
 }
 
 // StartRoot records the span as belonging to a trace of its own, so a test can state
@@ -80,13 +78,13 @@ func (r *Recorder) StartRoot(
 	linkedTo SpanContext,
 	attrs ...Attr,
 ) (context.Context, Span) {
-	return r.start(ctx, name, false, linkedTo, attrs)
+	return r.start(ctx, name, true, linkedTo, attrs)
 }
 
 func (r *Recorder) start(
 	ctx context.Context,
 	name string,
-	inheritParent bool,
+	root bool,
 	linkedTo SpanContext,
 	attrs []Attr,
 ) (context.Context, Span) {
@@ -101,25 +99,35 @@ func (r *Recorder) start(
 		TraceID:  fmt.Sprintf("trace-%d", r.nextID),
 		SpanID:   fmt.Sprintf("span-%d", r.nextID),
 		LinkedTo: linkedTo,
+		Root:     root,
 		Attrs:    map[string]any{},
 	}
 	// A span started within another belongs to the same trace, so that a test can state
 	// that a unit of work and what it did were traced together rather than only that one
 	// names the other as its parent.
-	parent, hasParent := ctx.Value(recorderParentKey{}).(recordedParent)
-	if hasParent && inheritParent {
-		span.TraceID = parent.traceID
-		span.ParentID = parent.spanID
+	parent, hasParent := ctx.Value(recorderParentKey{}).(*recordedSpanHandle)
+	if hasParent && !root {
+		span.TraceID = parent.span.TraceID
+		span.ParentID = parent.span.SpanID
 	}
 	for _, attr := range attrs {
 		span.Attrs[attr.Key] = attr.Value
 	}
 	r.spans = append(r.spans, span)
 
-	return context.WithValue(ctx, recorderParentKey{}, recordedParent{
-		traceID: span.TraceID,
-		spanID:  span.SpanID,
-	}), &recordedSpanHandle{recorder: r, span: span}
+	handle := &recordedSpanHandle{recorder: r, span: span}
+
+	return context.WithValue(ctx, recorderParentKey{}, handle), handle
+}
+
+// SpanFromContext returns the span the context is carrying, so a test can exercise work
+// that ends its span somewhere other than where it started it.
+func (r *Recorder) SpanFromContext(ctx context.Context) Span {
+	if handle, ok := ctx.Value(recorderParentKey{}).(*recordedSpanHandle); ok {
+		return handle
+	}
+
+	return noopTracer{}.SpanFromContext(ctx)
 }
 
 // Spans returns the spans recorded so far, in the order they were started.

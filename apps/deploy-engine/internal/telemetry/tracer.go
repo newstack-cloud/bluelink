@@ -36,6 +36,13 @@ type Tracer interface {
 		linkedTo SpanContext,
 		attrs ...Attr,
 	) (context.Context, Span)
+	// SpanFromContext returns the span ctx is carrying, or one that does nothing where
+	// it carries none.
+	//
+	// This is for work whose span outlives the function that started it. A deployment
+	// is started on one goroutine and reaches its terminal status on another, which is
+	// where the outcome is known and so where the span has to be ended.
+	SpanFromContext(ctx context.Context) Span
 }
 
 // Span is one unit of work in progress.
@@ -131,6 +138,16 @@ func CurrentTracer() Tracer {
 	return noopTracer{}
 }
 
+// LinkFrom returns the identity of the span that ctx is carrying, for work that will be
+// traced as a root of its own to name as having asked for it.
+//
+// This will return an empty value where ctx carries no span,
+// which is the case for work started on an interval with no external
+// client that has made a request.
+func LinkFrom(ctx context.Context) SpanContext {
+	return CurrentTracer().SpanFromContext(ctx).Context()
+}
+
 // Traced runs fn inside a span, recording an error it returns against the span.
 //
 // The span is handed to fn as well as the context, so that detail only known once the
@@ -189,6 +206,8 @@ func (noopTracer) StartRoot(
 ) (context.Context, Span) {
 	return ctx, noopSpan{}
 }
+
+func (noopTracer) SpanFromContext(_ context.Context) Span { return noopSpan{} }
 
 type noopSpan struct{}
 

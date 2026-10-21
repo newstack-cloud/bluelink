@@ -19,6 +19,7 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/params"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginconfig"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
@@ -201,6 +202,7 @@ func (c *Controller) CreateBlueprintValidationHandler(
 		helpersv1.GetFormat(payload.BlueprintFile),
 		params,
 		loader,
+		telemetry.LinkFrom(r.Context()),
 		c.requestLogger(r).Named("validationProcess").WithFields(
 			core.StringLogField("blueprintValidationId", blueprintValidationID),
 			core.StringLogField("blueprintLocation", blueprintLocation),
@@ -378,12 +380,20 @@ func (c *Controller) startValidationStream(
 	format schema.SpecFormat,
 	params core.BlueprintParams,
 	loader container.Loader,
+	linkedTo telemetry.SpanContext,
 	logger core.Logger,
 ) {
-	ctxWithTimeout, cancel := context.WithTimeout(
+	// A validation outlives the request that asked for it, so it gets a trace of its own.
+	operationCtx, operation := telemetry.CurrentTracer().StartRoot(
 		context.Background(),
-		validateTimeout,
+		validationSpanName,
+		linkedTo,
+		telemetry.StringAttr("blueprintValidationId", blueprintValidation.ID),
+		telemetry.StringAttr("blueprintFormat", string(format)),
 	)
+	defer operation.End()
+
+	ctxWithTimeout, cancel := context.WithTimeout(operationCtx, validateTimeout)
 	defer cancel()
 
 	earlyExitBefore := c.saveBlueprintValidation(
@@ -410,6 +420,14 @@ func (c *Controller) startValidationStream(
 		validationResult,
 		err,
 	)
+	// The outcome is settled here, from the error or from the diagnostics, so this is
+	// where the span is told how it ended.
+	operation.SetAttributes(
+		telemetry.StringAttr("validationStatus", string(validationStatus)),
+	)
+	if validationStatus == manage.BlueprintValidationStatusFailed {
+		operation.RecordError(validationFailedError(err))
+	}
 	earlyExitAfter := c.saveBlueprintValidation(
 		ctxWithTimeout,
 		blueprintValidation,

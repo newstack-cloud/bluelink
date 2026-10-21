@@ -16,6 +16,7 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginmeta"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/types"
 	internalutils "github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/utils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
@@ -308,6 +309,7 @@ func (c *Controller) DestroyBlueprintInstanceHandler(
 		payload.Force,
 		params,
 		taggingConfig,
+		telemetry.LinkFrom(r.Context()),
 		c.requestLogger(r),
 	)
 
@@ -425,6 +427,7 @@ func (c *Controller) handleDeployRequest(
 		Params:                params,
 		TaggingConfig:         taggingConfig,
 		Logger:                c.requestLogger(r),
+		TraceLink:             telemetry.LinkFrom(r.Context()),
 	})
 	if err != nil {
 		handleDeployErrorForResponse(w, err, c.requestLogger(r))
@@ -556,12 +559,20 @@ type deploymentRequest struct {
 	// outlives that request, which is why it is carried rather than read from a
 	// context that has been cancelled by then.
 	Logger core.Logger
+	// TraceLink identifies the request's span, for the deployment's own trace to name
+	// as having asked for it. Carried for the same reason the logger is.
+	TraceLink telemetry.SpanContext
 }
 
 func (c *Controller) startDeployment(request *deploymentRequest) (string, error) {
-	ctxWithTimeout, cancel := context.WithTimeout(
-		context.Background(),
+	ctxWithTimeout, cancel := operationContext(
+		request.TraceLink,
+		deploySpanName,
 		c.deploymentTimeout,
+		telemetry.StringAttr("instanceName", request.InstanceName),
+		telemetry.StringAttr("blueprintFormat", string(request.Format)),
+		telemetry.BoolAttr("rollback", request.ForRollback),
+		telemetry.StringAttr("trigger", triggerRequest),
 	)
 
 	blueprintContainer, err := c.blueprintLoader.LoadString(
@@ -571,7 +582,7 @@ func (c *Controller) startDeployment(request *deploymentRequest) (string, error)
 		request.Params,
 	)
 	if err != nil {
-		cancel()
+		failOperation(ctxWithTimeout, cancel, err)
 		// As we don't have an ID for the blueprint instance at this stage,
 		// we don't have a channel that we can associate events with.
 		// For this reason, we'll return an error instead of writing to an event channel.
@@ -595,7 +606,7 @@ func (c *Controller) startDeployment(request *deploymentRequest) (string, error)
 		request.Params,
 	)
 	if err != nil {
-		cancel()
+		failOperation(ctxWithTimeout, cancel, err)
 		return "", err
 	}
 
@@ -609,10 +620,14 @@ func (c *Controller) startDeployment(request *deploymentRequest) (string, error)
 			request.Logger,
 		)
 		if err != nil {
-			cancel()
+			failOperation(ctxWithTimeout, cancel, err)
 			return "", err
 		}
 	}
+
+	telemetry.CurrentTracer().SpanFromContext(ctxWithTimeout).SetAttributes(
+		telemetry.StringAttr("instanceId", finalInstanceID),
+	)
 
 	go c.listenForDeploymentUpdates(
 		ctxWithTimeout,
@@ -671,11 +686,16 @@ func (c *Controller) startDestroy(
 	force bool,
 	params core.BlueprintParams,
 	taggingConfig *provider.TaggingConfig,
+	linkedTo telemetry.SpanContext,
 	logger core.Logger,
 ) {
-	ctxWithTimeout, cancel := context.WithTimeout(
-		context.Background(),
+	ctxWithTimeout, cancel := operationContext(
+		linkedTo,
+		destroySpanName,
 		c.deploymentTimeout,
+		telemetry.StringAttr("instanceId", destroyInstanceID),
+		telemetry.BoolAttr("rollback", forRollback),
+		telemetry.StringAttr("trigger", triggerRequest),
 	)
 
 	blueprintContainer, err := c.blueprintLoader.LoadString(
@@ -688,7 +708,7 @@ func (c *Controller) startDestroy(
 		params,
 	)
 	if err != nil {
-		cancel()
+		failOperation(ctxWithTimeout, cancel, err)
 		c.handleDeploymentErrorAsEvent(
 			ctxWithTimeout,
 			destroyInstanceID,
@@ -786,6 +806,13 @@ func (c *Controller) listenForDeploymentUpdatesWithParams(
 	// has persisted the *_FAILED status before this goroutine exits.
 	finishMsg := (*container.DeploymentFinishedMessage)(nil)
 	var err error
+
+	// Ended here rather than where the operation was started, this being the point at
+	// which how it ended is known.
+	defer func() {
+		endOperationSpan(ctx, finishMsg, err)
+	}()
+
 	for err == nil && finishMsg == nil {
 		select {
 		case msg := <-channels.ResourceUpdateChan:
@@ -1015,7 +1042,13 @@ func (c *Controller) executeNewDeploymentRollback(
 		Changes: removalChanges,
 	}
 
-	c.startDestroyRollback(rollbackChangeset, instanceID, skippedItems, logger)
+	c.startDestroyRollback(
+		rollbackChangeset,
+		instanceID,
+		skippedItems,
+		telemetry.LinkFrom(ctx),
+		logger,
+	)
 }
 
 // startDestroyRollback initiates a destroy operation for rollback with skipped items tracking.
@@ -1023,11 +1056,17 @@ func (c *Controller) startDestroyRollback(
 	changeset *manage.Changeset,
 	instanceID string,
 	skippedItems []changes.SkippedRollbackItem,
+	linkedTo telemetry.SpanContext,
 	logger core.Logger,
 ) {
-	ctxWithTimeout, cancel := context.WithTimeout(
-		context.Background(),
+	ctxWithTimeout, cancel := operationContext(
+		linkedTo,
+		destroySpanName,
 		c.deploymentTimeout,
+		append(
+			rollbackAttrs(),
+			telemetry.StringAttr("instanceId", instanceID),
+		)...,
 	)
 
 	params := blueprint.CreateEmptyBlueprintParams()
@@ -1038,7 +1077,7 @@ func (c *Controller) startDestroyRollback(
 		params,
 	)
 	if err != nil {
-		cancel()
+		failOperation(ctxWithTimeout, cancel, err)
 		c.handleDeploymentErrorAsEvent(
 			ctxWithTimeout,
 			instanceID,
@@ -1152,9 +1191,14 @@ func (c *Controller) executeUpdateRollback(
 		}
 	}
 
-	ctxWithTimeout, cancel := context.WithTimeout(
-		context.Background(),
+	ctxWithTimeout, cancel := operationContext(
+		telemetry.LinkFrom(ctx),
+		deploySpanName,
 		c.deploymentTimeout,
+		append(
+			rollbackAttrs(),
+			telemetry.StringAttr("instanceId", instanceID),
+		)...,
 	)
 
 	// Load the blueprint from the original changeset location
@@ -1164,7 +1208,7 @@ func (c *Controller) executeUpdateRollback(
 		blueprint.CreateEmptyBlueprintParams(),
 	)
 	if err != nil {
-		cancel()
+		failOperation(ctxWithTimeout, cancel, err)
 		logger.Error(
 			"failed to load blueprint for update rollback",
 			core.ErrorLogField("error", err),
@@ -1191,7 +1235,7 @@ func (c *Controller) executeUpdateRollback(
 		blueprint.CreateEmptyBlueprintParams(),
 	)
 	if err != nil {
-		cancel()
+		failOperation(ctxWithTimeout, cancel, err)
 		logger.Error(
 			"failed to start update rollback deployment",
 			core.ErrorLogField("error", err),

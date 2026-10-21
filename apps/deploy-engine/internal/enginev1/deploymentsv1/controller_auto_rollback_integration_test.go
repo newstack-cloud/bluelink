@@ -15,6 +15,7 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/params"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/testutils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
@@ -727,4 +728,83 @@ func collectEventsUntilEnd(eventChan chan *sse.Event, timeout time.Duration) []*
 			return collected
 		}
 	}
+}
+
+// An auto-rollback of a failed create removes what the create made, so it is traced as
+// the destroy it carries out, with the rollback and what triggered it as attributes
+// rather than under a name of its own. It links to the create it is undoing rather than
+// hanging off it, the create having a trace of its own that ends on its own terms.
+func (s *ControllerTestSuite) Test_auto_rollback_of_a_create_is_traced_as_a_linked_destroy() {
+	recorder := telemetry.NewRecorder()
+	telemetry.SetTracer(recorder)
+	s.T().Cleanup(func() { telemetry.SetTracer(nil) })
+
+	ctrl := s.createAutoRollbackTestController(
+		core.InstanceStatusDeployFailed,
+		testutils.NewDestroyTracker(),
+	)
+	s.Require().NoError(s.saveTestChangeset())
+
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/deployments/instances",
+		ctrl.CreateBlueprintInstanceHandler,
+	).Methods("POST")
+
+	reqBytes, err := json.Marshal(&BlueprintInstanceRequestPayload{
+		BlueprintDocumentInfo: resolve.BlueprintDocumentInfo{
+			FileSourceScheme: "file",
+			Directory:        "/test/dir",
+			BlueprintFile:    "test.blueprint.yaml",
+		},
+		ChangeSetID:  testChangesetID,
+		AutoRollback: true,
+	})
+	s.Require().NoError(err)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(
+		"POST",
+		"/deployments/instances",
+		bytes.NewReader(reqBytes),
+	))
+	result := w.Result()
+	defer result.Body.Close()
+	s.Require().Equal(http.StatusAccepted, result.StatusCode)
+
+	var rollback *telemetry.RecordedSpan
+	s.Require().Eventually(
+		func() bool {
+			recorded, found := recorder.Span(destroySpanName)
+			if !found {
+				return false
+			}
+			rollback = recorded
+
+			return true
+		},
+		5*time.Second,
+		5*time.Millisecond,
+		"the rollback should be traced as a destroy, recorded %v",
+		recorder.Names(),
+	)
+
+	isRollback, _ := rollback.Attr("rollback")
+	s.Assert().Equal(true, isRollback, "it is a rollback")
+	trigger, _ := rollback.Attr("trigger")
+	s.Assert().Equal(triggerAutoRollback, trigger, "the engine started it, not a client")
+
+	deploy, found := recorder.Span(deploySpanName)
+	s.Require().True(found, "recorded %v", recorder.Names())
+	s.Assert().True(rollback.Root, "the rollback begins a trace of its own")
+	s.Assert().Equal(
+		telemetry.SpanContext{TraceID: deploy.TraceID, SpanID: deploy.SpanID},
+		rollback.LinkedTo,
+		"it names the create it is undoing",
+	)
+	s.Assert().NotEqual(
+		deploy.TraceID,
+		rollback.TraceID,
+		"it does not continue the create's trace",
+	)
 }

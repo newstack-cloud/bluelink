@@ -203,6 +203,10 @@ func (s *SchedulerTracingSuite) Test_records_a_span_for_each_category_within_the
 
 	pass, found := s.firstSpan("cleanup.pass")
 	s.Require().True(found, "recorded %v", s.recorder.Names())
+	// A scheduled pass is an operation rather than request traffic, so it begins a trace
+	// of its own.
+	s.Assert().True(pass.Root, "a scheduled pass begins a trace of its own")
+	s.Assert().Empty(pass.LinkedTo.TraceID, "nothing asked for a scheduled pass")
 
 	for _, cleanupType := range []manage.CleanupType{
 		manage.CleanupTypeEvents,

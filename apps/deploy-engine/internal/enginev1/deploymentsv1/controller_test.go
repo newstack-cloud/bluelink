@@ -30,6 +30,7 @@ var (
 type ControllerTestSuite struct {
 	suite.Suite
 	ctrl                       *Controller
+	ctrlLoadErrors             *Controller
 	ctrlFailingIDGenerators    *Controller
 	ctrlStreamErrors           *Controller
 	eventStore                 manage.Events
@@ -139,6 +140,25 @@ func (s *ControllerTestSuite) SetupTest() {
 		/* deploymentTimeout */ 10*time.Second,
 		/* drainTimeout */ 100*time.Millisecond,
 		depsWithStreamErrors,
+	)
+
+	depsWithLoadErrors := testutils.CopyDependencies(dependencies)
+	depsWithLoadErrors.DeploymentLoader = testutils.NewMockBlueprintLoader(
+		[]*core.Diagnostic{},
+		clock,
+		stateContainer.Instances(),
+		deployEventSequence( /* instanceID */ ""),
+		changeStagingEventSequence(),
+		testutils.WithMockBlueprintLoaderLoadError(
+			errors.New("blueprint could not be loaded"),
+		),
+	)
+	s.ctrlLoadErrors = NewController(
+		/* changesetRetentionPeriod */ 10*time.Second,
+		/* reconciliationResultsRetentionPeriod */ 10*time.Second,
+		/* deploymentTimeout */ 10*time.Second,
+		/* drainTimeout */ 100*time.Millisecond,
+		depsWithLoadErrors,
 	)
 
 	s.client = &http.Client{

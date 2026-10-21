@@ -8,11 +8,13 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/types"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
@@ -459,5 +461,136 @@ func (s *ControllerTestSuite) Test_destroy_blueprint_instance_handler_fails_for_
 	s.Assert().Equal(
 		"DEPLOY_CHANGESET",
 		responseError["code"],
+	)
+}
+
+// A destroy carries on after the request that asked for it has been answered, so it is
+// traced as the root of a trace of its own, naming that request rather than hanging off
+// a span that ended long before it.
+func (s *ControllerTestSuite) Test_destroy_blueprint_instance_is_traced_as_an_operation() {
+	recorder := telemetry.NewRecorder()
+	telemetry.SetTracer(recorder)
+	s.T().Cleanup(func() { telemetry.SetTracer(nil) })
+
+	_, err := s.saveTestBlueprintInstance()
+	s.Require().NoError(err)
+	s.Require().NoError(s.saveDestroyChangeset())
+
+	router := mux.NewRouter()
+	// Stands in for the request instrumentation, which puts a span on the request's
+	// context for the operation to name as having asked for it.
+	var requestSpan telemetry.SpanContext
+	router.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx, span := telemetry.CurrentTracer().Start(r.Context(), "request")
+			defer span.End()
+			requestSpan = span.Context()
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	})
+	router.HandleFunc(
+		"/deployments/instances/{id}/destroy",
+		s.ctrl.DestroyBlueprintInstanceHandler,
+	).Methods("POST")
+
+	reqBytes, err := json.Marshal(&BlueprintInstanceDestroyRequestPayload{
+		ChangeSetID: testDestroyChangesetID,
+	})
+	s.Require().NoError(err)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(
+		"POST",
+		fmt.Sprintf("/deployments/instances/%s/destroy", testInstanceID),
+		bytes.NewReader(reqBytes),
+	))
+	result := w.Result()
+	defer result.Body.Close()
+	s.Require().Equal(http.StatusAccepted, result.StatusCode)
+
+	// The destroy runs on a goroutine of its own, so the span appears after the
+	// response rather than before it.
+	var destroy *telemetry.RecordedSpan
+	s.Require().Eventually(
+		func() bool {
+			recorded, found := recorder.Span(destroySpanName)
+			if !found {
+				return false
+			}
+			destroy = recorded
+
+			return true
+		},
+		5*time.Second,
+		5*time.Millisecond,
+		"a destroy should record its own span, recorded %v",
+		recorder.Names(),
+	)
+
+	s.Assert().True(destroy.Root, "a destroy begins a trace of its own")
+	s.Assert().Empty(destroy.ParentID, "it does not hang off the request")
+	s.Assert().Equal(
+		requestSpan,
+		destroy.LinkedTo,
+		"it names the request that asked for it",
+	)
+
+	instanceID, _ := destroy.Attr("instanceId")
+	s.Assert().Equal(testInstanceID, instanceID)
+}
+
+// An operation that fails before its work begins never reaches the goroutine that ends
+// its span, so it has to be ended where it failed. An unended span is one the backend
+// is never given, and these are the failures that need to be surfaced for diagnosis.
+func (s *ControllerTestSuite) Test_destroy_that_cannot_load_its_blueprint_still_ends_its_span() {
+	recorder := telemetry.NewRecorder()
+	telemetry.SetTracer(recorder)
+	s.T().Cleanup(func() { telemetry.SetTracer(nil) })
+
+	_, err := s.saveTestBlueprintInstance()
+	s.Require().NoError(err)
+	s.Require().NoError(s.saveDestroyChangeset())
+
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/deployments/instances/{id}/destroy",
+		s.ctrlLoadErrors.DestroyBlueprintInstanceHandler,
+	).Methods("POST")
+
+	reqBytes, err := json.Marshal(&BlueprintInstanceDestroyRequestPayload{
+		ChangeSetID: testDestroyChangesetID,
+	})
+	s.Require().NoError(err)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(
+		"POST",
+		fmt.Sprintf("/deployments/instances/%s/destroy", testInstanceID),
+		bytes.NewReader(reqBytes),
+	))
+	result := w.Result()
+	defer result.Body.Close()
+	s.Require().Equal(http.StatusAccepted, result.StatusCode)
+
+	var destroy *telemetry.RecordedSpan
+	s.Require().Eventually(
+		func() bool {
+			recorded, found := recorder.Span(destroySpanName)
+			if !found || !recorded.Ended {
+				return false
+			}
+			destroy = recorded
+
+			return true
+		},
+		5*time.Second,
+		5*time.Millisecond,
+		"a destroy that failed to load should still end its span, recorded %v",
+		recorder.Names(),
+	)
+
+	s.Assert().Error(
+		destroy.Err,
+		"the failure that stopped the operation should be on its span",
 	)
 }
