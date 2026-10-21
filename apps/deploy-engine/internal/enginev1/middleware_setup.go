@@ -5,7 +5,6 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/audit"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httpmw"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/tracing"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
@@ -83,7 +82,7 @@ func setupMiddleware(params *middlewareParams) (func(), error) {
 	// and the logger exist. Registered the other way round, it adds nothing.
 	if tracingEnabled {
 		params.router.Use(
-			tracing.NewLogCorrelationMiddleware(
+			httpmw.NewLogCorrelationMiddleware(
 				traceSettings(&params.config.Tracing, params.config.Version).IsAWS(),
 			).Middleware,
 		)

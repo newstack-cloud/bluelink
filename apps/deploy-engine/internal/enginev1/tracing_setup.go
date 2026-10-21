@@ -8,9 +8,10 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/tracing"
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
+	"github.com/newstack-cloud/bluelink/libs/telemetry-otel/awstrace"
+	"github.com/newstack-cloud/bluelink/libs/telemetry-otel/tracing"
 )
 
 // How long a shutdown waits for the spans still held to reach the collector. Short,
@@ -27,7 +28,7 @@ const traceShutdownTimeout = 5 * time.Second
 func tracedAWSOptions() []func(*awsconfig.LoadOptions) error {
 	return []func(*awsconfig.LoadOptions) error{
 		awsconfig.WithAPIOptions([]func(*middleware.Stack) error{
-			tracing.InstrumentAWSSDK,
+			awstrace.Instrument,
 		}),
 	}
 }
@@ -45,7 +46,9 @@ func setupTracing(
 ) (func(), error) {
 	settings := traceSettings(&config.Tracing, config.Version)
 	if err := settings.Validate(); err != nil {
-		return nil, err
+		// Named here rather than in the library, which is shared with plugins that take
+		// the same settings from the environment and have no tracing.* section to edit.
+		return nil, fmt.Errorf("invalid tracing configuration: %w", err)
 	}
 
 	if !config.Tracing.Enabled {

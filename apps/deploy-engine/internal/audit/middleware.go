@@ -10,9 +10,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/auth"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httpmw"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/tracing"
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
+	"github.com/newstack-cloud/bluelink/libs/telemetry-otel/tracing"
 )
 
 // The action each mutating route is recorded as.

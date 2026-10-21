@@ -200,10 +200,12 @@ github.com/newstack-cloud/bluelink/libs/blueprint-resolvers v0.1.4 h1:t2WLJ3o8pX
 github.com/newstack-cloud/bluelink/libs/blueprint-resolvers v0.1.4/go.mod h1:Cu+ZIH/s1WJyGXA5uIMmLTKkqhl7pBuYr78EJCzUc5A=
 github.com/newstack-cloud/bluelink/libs/blueprint-state v0.10.0 h1:qVNLjqndHt8GfnPZUJJDxOwzM1OLf6HR2gJOCSh8ouQ=
 github.com/newstack-cloud/bluelink/libs/blueprint-state v0.10.0/go.mod h1:ycEw3Ha/XAoVpJRVXS3aP1KCQevUQv67TfBA1ILgXhg=
-github.com/newstack-cloud/bluelink/libs/common v0.5.0 h1:ocACnAAi4JHF8miALfSIzMXGmmbku7+xUgTDS5CnNxs=
-github.com/newstack-cloud/bluelink/libs/common v0.5.0/go.mod h1:a8xXIgLy0loEE/62oaiGyGxFH7z63xUefLnzZZRk8Gs=
+github.com/newstack-cloud/bluelink/libs/common v0.6.0 h1:sITqsLAkYUbNmwuVuJ1/M8uzloZ4k56OcVPfgiwx0G4=
+github.com/newstack-cloud/bluelink/libs/common v0.6.0/go.mod h1:a8xXIgLy0loEE/62oaiGyGxFH7z63xUefLnzZZRk8Gs=
 github.com/newstack-cloud/bluelink/libs/plugin-framework v0.17.0 h1:7hmR2ICu9UyJ+9rWud6MHouIHTwK2OajggznPgHtG1o=
 github.com/newstack-cloud/bluelink/libs/plugin-framework v0.17.0/go.mod h1:ryajQyODOWIlmEMqfdnI/5txtEUdbuRT+l73Ejh1Syc=
+github.com/newstack-cloud/bluelink/libs/telemetry-otel v0.2.0 h1:+cWGGhUFBiy3tk/EZ8m8wzL9WNfePpIexW+uu2kXtMk=
+github.com/newstack-cloud/bluelink/libs/telemetry-otel v0.2.0/go.mod h1:RkhNzfplNMXhoigricpJE6sTAgBesuASl/J8fSq/cOI=
 github.com/pelletier/go-toml/v2 v2.2.4 h1:mye9XuhQ6gvn5h28+VilKrrPoQVanw5PMw/TB0t5Ec4=
 github.com/pelletier/go-toml/v2 v2.2.4/go.mod h1:2gIqNv+qfxSVS7cM2xJQKtLSTLUE9V8t9Stt+h56mCY=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c h1:+mdjkGKdHQG3305AYmdv1U2eRNDiU2ErMBj1gwrq8eQ=
