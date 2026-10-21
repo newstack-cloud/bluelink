@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.17.0...plugin-framework/v0.18.0) (2026-10-21)
+
+
+### Features
+
+* **plugin-framework:** carry sensitive link data path markers over the grpc boundary ([8a4779b](https://github.com/newstack-cloud/bluelink/commit/8a4779b542ee1b05444257f08bfb37f582291f21))
+
 ## [0.17.0](https://github.com/newstack-cloud/bluelink/compare/plugin-framework/v0.16.0...plugin-framework/v0.17.0) (2026-10-13)
 
 
