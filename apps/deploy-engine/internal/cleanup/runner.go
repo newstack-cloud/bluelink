@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
+	"github.com/newstack-cloud/bluelink/libs/common/telemetry"
 )
 
 // DefaultTimeout bounds a single cleanup run.

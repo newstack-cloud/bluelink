@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/cleanup"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/testutils"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/common/telemetry"
 	"github.com/stretchr/testify/suite"
 )
 

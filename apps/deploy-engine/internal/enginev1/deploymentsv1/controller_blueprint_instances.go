@@ -16,7 +16,6 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginmeta"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/types"
 	internalutils "github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/utils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
@@ -28,6 +27,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/provider"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+	"github.com/newstack-cloud/bluelink/libs/common/telemetry"
 )
 
 // CreateBlueprintInstanceHandler is the handler for the POST /deployments/instances

@@ -19,7 +19,6 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/params"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/pluginconfig"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
@@ -27,6 +26,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/includes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
 	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
+	"github.com/newstack-cloud/bluelink/libs/common/telemetry"
 )
 
 const (

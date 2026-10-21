@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httpmw"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/common/telemetry"
 )
 
 // LogCorrelationMiddleware puts the identity of a request's span onto everything

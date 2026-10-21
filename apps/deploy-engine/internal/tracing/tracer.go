@@ -12,7 +12,7 @@ package tracing
 import (
 	"context"
 
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
+	"github.com/newstack-cloud/bluelink/libs/common/telemetry"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"

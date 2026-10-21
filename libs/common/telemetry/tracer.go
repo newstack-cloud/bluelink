@@ -1,9 +1,15 @@
-// Package telemetry is the seam the engine traces through.
+// Package telemetry is the seam Bluelink traces through.
 //
-// Nothing here imports OpenTelemetry. The engine depends on this interface, and an
+// Nothing here imports OpenTelemetry. Callers depend on this interface and an
 // implementation is installed at startup when tracing is configured, so a build that
 // traces nothing carries no tracing machinery and every call site reads the same either
 // way.
+//
+// It lives here rather than in any one of them because the deploy engine, the blueprint
+// library and the plugin framework all have work worth a span, and a trace is only a
+// trace if the spans they start belong to the same one. An implementation is installed
+// once, by whichever process is running, and every library it hosts traces through it
+// without depending on it.
 package telemetry
 
 import (

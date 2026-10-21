@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
+	"github.com/newstack-cloud/bluelink/libs/common/telemetry"
 )
 
 // Span names for the operations this controller carries on with after the request that

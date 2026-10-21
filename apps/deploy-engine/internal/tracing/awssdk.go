@@ -5,7 +5,7 @@ import (
 
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/smithy-go/middleware"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
+	"github.com/newstack-cloud/bluelink/libs/common/telemetry"
 )
 
 // InstrumentAWSSDK traces every call an AWS SDK client makes.

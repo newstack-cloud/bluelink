@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
+	"github.com/newstack-cloud/bluelink/libs/common/telemetry"
 	"github.com/stretchr/testify/suite"
 )
 
