@@ -726,6 +726,23 @@ type TracingConfig struct {
 	// A caller that sampled its own trace is honoured whatever this is set to, so a
 	// client investigating one operation can force a trace for it by sampling upstream.
 	SamplingRate float64 `mapstructure:"sampling_rate"`
+	// The proportion of the traces started for an operation to export, between 0 and 1.
+	//
+	// An operation is work the engine carries on with after answering the request that
+	// asked for it, so it becomes the root of a trace of its own rather than part of
+	// that request's. A deployment, a destroy, either kind of rollback, change staging,
+	// a blueprint validation and a state cleanup pass are all operations. A drift check
+	// is not, being carried out while the request waits for it.
+	//
+	// Defaults to 1, exporting all of them. Read traffic and operations are not alike:
+	// one status poll is interchangeable with the next, so SamplingRate's tenth is a
+	// fair sample of them, whereas an operation is a discrete thing someone asks about
+	// afterwards by name and the one they ask about is the one that failed. A sample of
+	// operations is not a sample of anything useful.
+	//
+	// Worth lowering for an engine running large numbers of small deployments, which
+	// thins them without also thinning the operations an operator reaches for by name.
+	OperationSamplingRate float64 `mapstructure:"operation_sampling_rate"`
 	// The platform the engine runs on, where it has a tracing identifier format of its
 	// own that the engine has to produce for a trace to be readable there.
 	//
@@ -993,6 +1010,7 @@ func bindEnvVars(viperInstance *viper.Viper) {
 
 	viperInstance.BindEnv("tracing.enabled")
 	viperInstance.BindEnv("tracing.sampling_rate")
+	viperInstance.BindEnv("tracing.operation_sampling_rate")
 	viperInstance.BindEnv("tracing.platform")
 	// OpenTelemetry's own variable names are accepted as a fallback, so that a host
 	// already set up to export telemetry does not have to repeat itself for the engine.
@@ -1082,6 +1100,7 @@ func setDefaults(viperInstance *viper.Viper) {
 	viperInstance.SetDefault("tracing.otlp_endpoint", "http://localhost:4317")
 	viperInstance.SetDefault("tracing.service_name", "bluelink-deploy-engine")
 	viperInstance.SetDefault("tracing.sampling_rate", 0.1)
+	viperInstance.SetDefault("tracing.operation_sampling_rate", 1)
 
 	viperInstance.SetDefault("shutdown.drain_timeout", 3*oneMinuteSeconds)
 }

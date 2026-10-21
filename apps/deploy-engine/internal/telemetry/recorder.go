@@ -23,6 +23,9 @@ type RecordedSpan struct {
 	TraceID  string
 	SpanID   string
 	ParentID string
+	// LinkedTo is the span named as having asked for this work, for a span started
+	// through StartRoot. Empty for every other span.
+	LinkedTo SpanContext
 	Attrs    map[string]any
 	Err      error
 	Ended    bool
@@ -65,6 +68,28 @@ func (r *Recorder) Start(
 	name string,
 	attrs ...Attr,
 ) (context.Context, Span) {
+	return r.start(ctx, name, true, SpanContext{}, attrs)
+}
+
+// StartRoot records the span as belonging to a trace of its own, so a test can state
+// that an operation was traced separately from the request that asked for it rather
+// than only that both were traced.
+func (r *Recorder) StartRoot(
+	ctx context.Context,
+	name string,
+	linkedTo SpanContext,
+	attrs ...Attr,
+) (context.Context, Span) {
+	return r.start(ctx, name, false, linkedTo, attrs)
+}
+
+func (r *Recorder) start(
+	ctx context.Context,
+	name string,
+	inheritParent bool,
+	linkedTo SpanContext,
+	attrs []Attr,
+) (context.Context, Span) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -72,15 +97,17 @@ func (r *Recorder) Start(
 	// Counted rather than random, so that a test asserting on a correlated log line has
 	// something it can predict.
 	span := &RecordedSpan{
-		Name:    name,
-		TraceID: fmt.Sprintf("trace-%d", r.nextID),
-		SpanID:  fmt.Sprintf("span-%d", r.nextID),
-		Attrs:   map[string]any{},
+		Name:     name,
+		TraceID:  fmt.Sprintf("trace-%d", r.nextID),
+		SpanID:   fmt.Sprintf("span-%d", r.nextID),
+		LinkedTo: linkedTo,
+		Attrs:    map[string]any{},
 	}
 	// A span started within another belongs to the same trace, so that a test can state
 	// that a unit of work and what it did were traced together rather than only that one
 	// names the other as its parent.
-	if parent, ok := ctx.Value(recorderParentKey{}).(recordedParent); ok {
+	parent, hasParent := ctx.Value(recorderParentKey{}).(recordedParent)
+	if hasParent && inheritParent {
 		span.TraceID = parent.traceID
 		span.ParentID = parent.spanID
 	}

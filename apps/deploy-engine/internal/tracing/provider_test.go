@@ -3,13 +3,17 @@ package tracing_test
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/testutils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/tracing"
 	"github.com/stretchr/testify/suite"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
@@ -86,6 +90,16 @@ func (s *SettingsSuite) Test_refuses_a_sampling_rate_that_is_not_a_proportion() 
 	}
 }
 
+func (s *SettingsSuite) Test_refuses_an_operation_sampling_rate_that_is_not_a_proportion() {
+	settings := s.valid()
+	settings.OperationSamplingRate = 1.5
+
+	err := settings.Validate()
+
+	s.Require().Error(err)
+	s.Assert().Contains(err.Error(), "tracing.operation_sampling_rate")
+}
+
 func (s *SettingsSuite) Test_reports_whether_identifiers_have_to_suit_xray() {
 	s.Assert().True(tracing.Settings{Platform: tracing.PlatformAWS}.IsAWS())
 	s.Assert().False(tracing.Settings{}.IsAWS())
@@ -111,7 +125,7 @@ func (s *SettingsSuite) Test_exports_nothing_it_started_itself_at_a_rate_of_zero
 }
 
 // A rate of 1 is what a single-tenant deployment sets, where every operation matters more
-// than the volume. It is not the engine's default, which core asserts.
+// than the volume. It is not the engine's default for requests, which is a tenth.
 func (s *SettingsSuite) Test_exports_everything_it_started_itself_at_a_rate_of_one() {
 	settings := s.valid()
 	settings.SamplingRate = 1
@@ -148,6 +162,100 @@ func (s *SettingsSuite) Test_declines_a_trace_the_caller_declined() {
 	notSampled := "00-" + w3cTraceID + "-00f067aa0ba902b7-00"
 
 	s.Assert().False(s.spanIsRecorded(s.valid(), notSampled))
+}
+
+// The two rates are independent, which is the whole point of having two, an operation is
+// exported at its own rate even where the engine is sampling none of the requests that
+// ask for one.
+func (s *SettingsSuite) Test_exports_an_operation_where_requests_are_not_sampled() {
+	settings := s.valid()
+	settings.SamplingRate = 0
+	settings.OperationSamplingRate = 1
+
+	s.install(settings)
+
+	s.Assert().True(s.operationIsRecorded(), "an operation should be exported at its own rate")
+	s.Assert().False(s.requestIsRecorded(), "a request should not be")
+}
+
+func (s *SettingsSuite) Test_declines_an_operation_where_only_requests_are_sampled() {
+	settings := s.valid()
+	settings.SamplingRate = 1
+	settings.OperationSamplingRate = 0
+
+	s.install(settings)
+
+	s.Assert().False(s.operationIsRecorded(), "an operation should be declined at its own rate")
+	s.Assert().True(s.requestIsRecorded(), "a request should still be exported")
+}
+
+// Driven through the real router instrumentation rather than by passing the attributes
+// by hand, because the rule depends on otelmux and this package naming the method
+// attribute identically. They agree today and a release that
+// moved either would otherwise leave every mutating request silently sampled.
+func (s *SettingsSuite) Test_samples_a_mutating_request_at_the_operation_rate() {
+	settings := s.valid()
+	settings.SamplingRate = 0
+	settings.OperationSamplingRate = 1
+
+	s.install(settings)
+
+	s.Assert().True(
+		s.routeIsRecorded("POST", "/deployments/instances"),
+		"a request that starts an operation should be traced at the operation rate",
+	)
+}
+
+// The polls and the lists are the volume the request rate is for, so they follow it even
+// where operations are traced in full.
+func (s *SettingsSuite) Test_samples_a_read_request_at_the_request_rate() {
+	settings := s.valid()
+	settings.SamplingRate = 0
+	settings.OperationSamplingRate = 1
+
+	s.install(settings)
+
+	s.Assert().False(
+		s.routeIsRecorded("GET", "/deployments/instances/{id}"),
+		"a read should follow the request rate, not the operation rate",
+	)
+}
+
+// Whether the span otelmux starts for a request to the given route is one a backend
+// will have. The handler reads it from its own context, which is where anything the
+// engine traces during the request would find it.
+func (s *SettingsSuite) routeIsRecorded(method string, route string) bool {
+	recorded := false
+	router := mux.NewRouter()
+	router.Use(otelmux.Middleware("bluelink-deploy-engine"))
+	router.HandleFunc(route, func(_ http.ResponseWriter, r *http.Request) {
+		recorded = tracing.SpanContextFromContext(r.Context()).Recorded()
+	}).Methods(method)
+
+	router.ServeHTTP(
+		httptest.NewRecorder(),
+		httptest.NewRequest(method, strings.NewReplacer("{id}", "instance-1").Replace(route), nil),
+	)
+
+	return recorded
+}
+
+func (s *SettingsSuite) operationIsRecorded() bool {
+	_, span := telemetry.CurrentTracer().StartRoot(
+		context.Background(),
+		"deployment",
+		telemetry.SpanContext{},
+	)
+	defer span.End()
+
+	return span.Context().Recorded()
+}
+
+func (s *SettingsSuite) requestIsRecorded() bool {
+	_, span := telemetry.CurrentTracer().Start(context.Background(), "request")
+	defer span.End()
+
+	return span.Context().Recorded()
 }
 
 // Whether a span started under the given incoming trace, if any, is one a backend will

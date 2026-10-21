@@ -20,6 +20,22 @@ type Tracer interface {
 	// Start begins a span for the named unit of work, returning a context that carries
 	// it so that work nested inside becomes a child.
 	Start(ctx context.Context, name string, attrs ...Attr) (context.Context, Span)
+	// StartRoot begins a span for work that outlives whatever asked for it, as the root
+	// of a trace of its own rather than as a child of any span ctx carries.
+	//
+	// A deployment runs for minutes to hours where the request asking for it lasts
+	// milliseconds. Parenting one on the other would hold the request's span open for
+	// the whole deployment and produce a child outliving its parent by three orders of
+	// magnitude, which reads badly in every backend. So linkedTo names the span that
+	// asked for the work instead, letting a backend lead from the request to the trace
+	// of what it started. The zero value links to nothing, which is what an operation
+	// started by a scheduled or internal path has.
+	StartRoot(
+		ctx context.Context,
+		name string,
+		linkedTo SpanContext,
+		attrs ...Attr,
+	) (context.Context, Span)
 }
 
 // Span is one unit of work in progress.
@@ -162,6 +178,15 @@ func AttrString(value any) string {
 type noopTracer struct{}
 
 func (noopTracer) Start(ctx context.Context, _ string, _ ...Attr) (context.Context, Span) {
+	return ctx, noopSpan{}
+}
+
+func (noopTracer) StartRoot(
+	ctx context.Context,
+	_ string,
+	_ SpanContext,
+	_ ...Attr,
+) (context.Context, Span) {
 	return ctx, noopSpan{}
 }
 

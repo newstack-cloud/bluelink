@@ -169,6 +169,71 @@ func (s *TracerSuite) Test_reports_no_span_where_the_context_carries_none() {
 	)
 }
 
+// A deployment runs for minutes to hours after the request that asked for it has been
+// answered, so it begins a trace of its own rather than becoming a child of a span that
+// ended long before it.
+func (s *TracerSuite) Test_root_work_begins_a_trace_of_its_own() {
+	ctx, request := telemetry.CurrentTracer().Start(context.Background(), "request")
+	asked := request.Context()
+
+	_, operation := telemetry.CurrentTracer().StartRoot(ctx, "deployment", asked)
+	operation.End()
+	request.End()
+
+	recorded := s.spanNamed("deployment")
+	s.Assert().False(recorded.Parent().IsValid(), "a root span should have no parent")
+	s.Assert().NotEqual(
+		asked.TraceID,
+		recorded.SpanContext().TraceID().String(),
+		"a root span should not continue the trace it was started from",
+	)
+}
+
+// The link is what leads from the request to the trace of the work it started, which is
+// the part parenting would otherwise have expressed.
+func (s *TracerSuite) Test_root_work_links_to_what_asked_for_it() {
+	ctx, request := telemetry.CurrentTracer().Start(context.Background(), "request")
+	asked := request.Context()
+
+	_, operation := telemetry.CurrentTracer().StartRoot(ctx, "deployment", asked)
+	operation.End()
+	request.End()
+
+	links := s.spanNamed("deployment").Links()
+	s.Require().Len(links, 1, "a root span should link to the span that asked for it")
+	s.Assert().Equal(asked.TraceID, links[0].SpanContext.TraceID().String())
+	s.Assert().Equal(asked.SpanID, links[0].SpanContext.SpanID().String())
+}
+
+// An operation started by a scheduled or internal path has nothing to link to, and a
+// link to a span no backend holds leads a reader nowhere.
+func (s *TracerSuite) Test_root_work_links_to_nothing_where_nothing_asked_for_it() {
+	_, operation := telemetry.CurrentTracer().StartRoot(
+		context.Background(),
+		"deployment",
+		telemetry.SpanContext{},
+	)
+	operation.End()
+
+	s.Assert().Empty(s.oneSpan().Links())
+}
+
+// The sampler classifies on this attribute, so a root span that did not carry it would
+// be sampled as though it were a request.
+func (s *TracerSuite) Test_root_work_is_marked_as_an_operation() {
+	_, operation := telemetry.CurrentTracer().StartRoot(
+		context.Background(),
+		"deployment",
+		telemetry.SpanContext{},
+	)
+	operation.End()
+
+	s.Assert().Contains(
+		s.oneSpan().Attributes(),
+		attribute.String(tracing.TraceKindAttr, tracing.TraceKindOperation),
+	)
+}
+
 func (s *TracerSuite) trace(record func(telemetry.Span)) {
 	err := telemetry.TracedCall(
 		context.Background(),
@@ -180,6 +245,18 @@ func (s *TracerSuite) trace(record func(telemetry.Span)) {
 		},
 	)
 	s.Require().NoError(err)
+}
+
+func (s *TracerSuite) spanNamed(name string) sdktrace.ReadOnlySpan {
+	for _, ended := range s.recorder.Ended() {
+		if ended.Name() == name {
+			return ended
+		}
+	}
+
+	s.Require().FailNow("no span was recorded under the name " + name)
+
+	return nil
 }
 
 func (s *TracerSuite) oneSpan() sdktrace.ReadOnlySpan {

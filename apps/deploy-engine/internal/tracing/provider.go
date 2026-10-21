@@ -3,17 +3,22 @@ package tracing
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/telemetry"
 	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
+
+// The trace kind as an attribute key, for the sampler to match against.
+var traceKindKey = attribute.Key(TraceKindAttr)
 
 // PlatformAWS is the platform whose tracing has an identifier format of its own.
 const PlatformAWS = "aws"
@@ -31,6 +36,14 @@ type Settings struct {
 	// SamplingRate is the proportion of traces the engine starts that are exported,
 	// between 0 and 1.
 	SamplingRate float64
+	// OperationSamplingRate is the proportion of the traces the engine starts for work
+	// it carries on with after answering the request that asked for it, between 0 and 1.
+	//
+	// Separate from SamplingRate because the two are not alike. One status poll is
+	// interchangeable with the next, so a fraction of them is a fair sample, whereas an
+	// operation is a discrete thing someone asks about afterwards by name, and the one
+	// they ask about is the one that failed.
+	OperationSamplingRate float64
 	// Platform is PlatformAWS where traces reach AWS X-Ray, and empty otherwise.
 	Platform string
 }
@@ -61,6 +74,13 @@ func (s Settings) Validate() error {
 		return fmt.Errorf(
 			"tracing.sampling_rate must be between 0 and 1, got %g",
 			s.SamplingRate,
+		)
+	}
+
+	if s.OperationSamplingRate < 0 || s.OperationSamplingRate > 1 {
+		return fmt.Errorf(
+			"tracing.operation_sampling_rate must be between 0 and 1, got %g",
+			s.OperationSamplingRate,
 		)
 	}
 
@@ -181,15 +201,95 @@ func describeService(settings Settings) (*resource.Resource, error) {
 // every engine the trace passes through agrees. Without it, a sampled request would
 // produce a trace with holes in it where a span was dropped on its own.
 func samplerFor(settings Settings) sdktrace.Sampler {
-	if settings.SamplingRate >= 1 {
+	return rootKindSampler{
+		operations: ratioSampler(settings.OperationSamplingRate),
+		requests:   ratioSampler(settings.SamplingRate),
+	}
+}
+
+func ratioSampler(rate float64) sdktrace.Sampler {
+	if rate >= 1 {
 		return sdktrace.ParentBased(sdktrace.AlwaysSample())
 	}
 
-	if settings.SamplingRate <= 0 {
+	if rate <= 0 {
 		return sdktrace.ParentBased(sdktrace.NeverSample())
 	}
 
-	return sdktrace.ParentBased(sdktrace.TraceIDRatioBased(settings.SamplingRate))
+	return sdktrace.ParentBased(sdktrace.TraceIDRatioBased(rate))
+}
+
+// Samples the two kinds of trace the engine starts at rates of their own.
+//
+// A provider has one sampler, so telling the two apart has to happen inside it. Only a
+// root span needs classifying, every span within an operation has a valid local parent,
+// and each delegate being ParentBased means the decision taken at the root is inherited
+// the whole way down.
+//
+// Each delegate staying ParentBased is also the escape hatch. A request that arrived
+// with a sampled traceparent is honoured whatever either rate says, so a client that
+// needs a trace for one particular deployment can force one by sampling the request
+// that starts it.
+type rootKindSampler struct {
+	operations sdktrace.Sampler
+	requests   sdktrace.Sampler
+}
+
+func (s rootKindSampler) ShouldSample(
+	params sdktrace.SamplingParameters,
+) sdktrace.SamplingResult {
+	if samplesAsOperation(params.Attributes) {
+		return s.operations.ShouldSample(params)
+	}
+
+	return s.requests.ShouldSample(params)
+}
+
+func (s rootKindSampler) Description() string {
+	return fmt.Sprintf(
+		"BluelinkRootKind{operations=%s,requests=%s}",
+		s.operations.Description(),
+		s.requests.Description(),
+	)
+}
+
+// Whether a span belongs to an operation rather than to request traffic.
+//
+// Two things make it one. The engine marks a root it starts for detached work, and a
+// request that changes something is one in its own right: every one of the engine's
+// mutating routes either starts an operation or, in the case of a drift check,
+// is one carried out while the caller waits. The reads, the polls, the lists and the
+// event streams are the volume the request rate is for.
+//
+// Classified on the method rather than on a list of routes, so that an endpoint added
+// later is classified without anyone needing to remember to add it, and so that renaming a
+// route cannot change how it is sampled. Anything other than a read counts, so a method
+// this does not know is traced rather than quietly sampled.
+//
+// Only a root can be classified wrongly here and it does not matter if it is, a child
+// span of an outgoing request carries a method of its own, but both delegates are
+// ParentBased, so a child inherits the decision taken at its root either way.
+func samplesAsOperation(attrs []attribute.KeyValue) bool {
+	for _, attr := range attrs {
+		switch attr.Key {
+		case traceKindKey:
+			if attr.Value.AsString() == TraceKindOperation {
+				return true
+			}
+		case semconv.HTTPRequestMethodKey:
+			if !isReadMethod(attr.Value.AsString()) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func isReadMethod(method string) bool {
+	return method == http.MethodGet ||
+		method == http.MethodHead ||
+		method == http.MethodOptions
 }
 
 // Chooses how a trace arriving from upstream is read and how one leaving is written.

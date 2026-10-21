@@ -67,6 +67,10 @@ func setupTracing(
 		bpcore.StringLogField("otlpEndpoint", settings.OTLPEndpoint),
 		bpcore.StringLogField("serviceName", settings.ServiceName),
 		bpcore.StringLogField("samplingRate", fmt.Sprintf("%g", settings.SamplingRate)),
+		bpcore.StringLogField(
+			"operationSamplingRate",
+			fmt.Sprintf("%g", settings.OperationSamplingRate),
+		),
 	)
 
 	return traceShutdownFunc(shutdown, logger), nil
@@ -74,11 +78,12 @@ func setupTracing(
 
 func traceSettings(config *core.TracingConfig, version string) tracing.Settings {
 	return tracing.Settings{
-		OTLPEndpoint:   config.OTLPEndpoint,
-		ServiceName:    config.ServiceName,
-		ServiceVersion: version,
-		SamplingRate:   config.SamplingRate,
-		Platform:       config.Platform,
+		OTLPEndpoint:          config.OTLPEndpoint,
+		ServiceName:           config.ServiceName,
+		ServiceVersion:        version,
+		SamplingRate:          config.SamplingRate,
+		OperationSamplingRate: config.OperationSamplingRate,
+		Platform:              config.Platform,
 	}
 }
 

@@ -23,6 +23,21 @@ import (
 // the engine's own spans from those of a library it traces through.
 const scope = "github.com/newstack-cloud/bluelink/apps/deploy-engine"
 
+// TraceKindAttr marks the root of a trace with the kind of work it covers.
+//
+// This is one of the two things the sampler classifies on, so that the two kinds of
+// trace the engine starts can be sampled at rates of their own. It marks the detached
+// work the engine starts for itself; a request that changes something is recognised by
+// its method instead, since it has no opportunity to mark itself. An attribute rather
+// than the span name, so that renaming a span cannot quietly change how it is sampled.
+// It stays on the span afterwards, which also lets a backend filter by it.
+const TraceKindAttr = "bluelink.trace.kind"
+
+// TraceKindOperation marks the root of a trace covering one operation, meaning work the
+// engine carries on with after answering the request that asked for it: a deployment, a
+// destroy, a rollback, change staging, a blueprint validation or a state cleanup pass.
+const TraceKindOperation = "operation"
+
 // NewTracer returns a telemetry.Tracer starting spans on whatever tracer provider
 // OpenTelemetry has been given.
 //
@@ -49,6 +64,52 @@ func (tracer) Start(
 	)
 
 	return ctx, span{inner: started}
+}
+
+func (tracer) StartRoot(
+	ctx context.Context,
+	name string,
+	linkedTo telemetry.SpanContext,
+	attrs ...telemetry.Attr,
+) (context.Context, telemetry.Span) {
+	options := []oteltrace.SpanStartOption{
+		oteltrace.WithNewRoot(),
+		oteltrace.WithAttributes(toKeyValues(attrs)...),
+		oteltrace.WithAttributes(attribute.String(TraceKindAttr, TraceKindOperation)),
+	}
+	if link, ok := linkOf(linkedTo); ok {
+		options = append(options, oteltrace.WithLinks(link))
+	}
+
+	ctx, started := otel.Tracer(scope).Start(ctx, name, options...)
+
+	return ctx, span{inner: started}
+}
+
+// Rebuilt from the identifiers rather than taken from a context, since the work is
+// started from a struct a request handler filled in, by which point the request's own
+// context has been cancelled.
+//
+// Marked sampled because the seam only reports the identity of a span that was sampled
+// in the first place. See spanContextOf.
+func linkOf(spanCtx telemetry.SpanContext) (oteltrace.Link, bool) {
+	traceID, err := oteltrace.TraceIDFromHex(spanCtx.TraceID)
+	if err != nil {
+		return oteltrace.Link{}, false
+	}
+
+	spanID, err := oteltrace.SpanIDFromHex(spanCtx.SpanID)
+	if err != nil {
+		return oteltrace.Link{}, false
+	}
+
+	return oteltrace.Link{
+		SpanContext: oteltrace.NewSpanContext(oteltrace.SpanContextConfig{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: oteltrace.FlagsSampled,
+		}),
+	}, true
 }
 
 type span struct {
