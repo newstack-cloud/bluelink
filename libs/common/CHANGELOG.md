@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0](https://github.com/newstack-cloud/bluelink/compare/common/v0.5.0...common/v0.6.0) (2026-10-21)
+
+
+### Features
+
+* **common:** move telemetry helpers to common lib ([a3ea334](https://github.com/newstack-cloud/bluelink/commit/a3ea334b8768121e9b3fea7d3f6c6721a7a73420))
+
 ## [0.5.0](https://github.com/newstack-cloud/bluelink/compare/common/v0.4.0...common/v0.5.0) (2026-10-13)
 
 
