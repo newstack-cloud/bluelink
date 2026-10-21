@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.55.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.54.0...blueprint/v0.55.0) (2026-10-21)
+
+
+### Features
+
+* **blueprint:** add secret type and log field behaviour for redactions ([3d66632](https://github.com/newstack-cloud/bluelink/commit/3d66632387575094e0aed3737a2ca58609c8c985))
+* **blueprint:** add sensitive marker tracking for metadata ([4878f90](https://github.com/newstack-cloud/bluelink/commit/4878f90245ac403bd6e9e597933b87b12efddcb4))
+* **blueprint:** add sensitive markers for blueprint-wide metadata ([87575fe](https://github.com/newstack-cloud/bluelink/commit/87575fe4a97bc4f7daf9b63f1498e3c590a65a88))
+* **blueprint:** add sensitivity marking for includes and exports ([b28f80c](https://github.com/newstack-cloud/bluelink/commit/b28f80cf7dfbab566744fab9343e34c11e8d8b16))
+* **blueprint:** add sensitivity tracking for substitution resolution ([18b9a51](https://github.com/newstack-cloud/bluelink/commit/18b9a513fc28575bfb43b0f91f72939524b58728))
+* **blueprint:** capture sensitive paths in link data contributions and from child exports ([9d45dc9](https://github.com/newstack-cloud/bluelink/commit/9d45dc99ba18e4fc6c79c9a52abfb332d6fe9768))
+* **blueprint:** captures sensitive markers for individual annotations ([873d358](https://github.com/newstack-cloud/bluelink/commit/873d358f3e5dd67321449b9378137960d04c9aa8))
+* **blueprint:** captures sensitive markers for resource templates ([e7bb489](https://github.com/newstack-cloud/bluelink/commit/e7bb489432b28003cbbb8f3793f2b1e25d9cc5fa))
+* **blueprint:** ensure change sets carry sensitive field markers ([0d5691f](https://github.com/newstack-cloud/bluelink/commit/0d5691f32bc3a39ccbb88bfe11ec8d8773700cb2))
+* **blueprint:** mark field paths as sensitive throughout resource and data source resolution ([6fd9a6e](https://github.com/newstack-cloud/bluelink/commit/6fd9a6ed6160ffee33716397cfce7d4786c207f1))
+* **blueprint:** redact sensitive plugin config values from diagnostic message ([225ecbc](https://github.com/newstack-cloud/bluelink/commit/225ecbc84e08524ea512ec6b9c93c841e4daa380))
+
+
+### Bug Fixes
+
+* **blueprint:** ensure sensitive fields are correctly marked ([21a5f97](https://github.com/newstack-cloud/bluelink/commit/21a5f97a33c9a844c7556d3ff881d99d052bb86d))
+* **blueprint:** make sure sensitive link data paths are carried in link deploy results when copied ([5637252](https://github.com/newstack-cloud/bluelink/commit/5637252f78b10c905b9e8faed71cdfe37ec63190))
+
 ## [0.54.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.53.0...blueprint/v0.54.0) (2026-09-16)
 
 
