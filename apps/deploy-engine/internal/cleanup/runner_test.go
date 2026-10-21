@@ -255,6 +255,181 @@ func (s *RunnerSuite) Test_start_returns_the_operation_without_waiting_for_the_w
 	<-finished
 }
 
+// A cleanup started by a request outlives that request, so shutdown has to wait for it
+// rather than closing the state service it is deleting through.
+func (s *RunnerSuite) Test_shutdown_waits_for_a_cleanup_started_by_a_request() {
+	operations := testutils.NewMockCleanupOperationsStore(map[string]*manage.CleanupOperation{})
+	runner := s.runnerFor(operations, testTime)
+
+	release := make(chan struct{})
+	remover := &blockingRemover{release: release}
+	_, err := runner.Start(context.Background(), cleanup.Task{
+		Type:   manage.CleanupTypeEvents,
+		Remove: remover.Remove,
+	})
+	s.Require().NoError(err)
+
+	returned := make(chan struct{})
+	go func() {
+		runner.Shutdown(context.Background())
+		close(returned)
+	}()
+
+	select {
+	case <-returned:
+		s.Require().Fail("shutdown returned while a cleanup was still running")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	close(release)
+	select {
+	case <-returned:
+	case <-time.After(time.Second):
+		s.Require().Fail("shutdown did not return once the cleanup had finished")
+	}
+
+	// Completed rather than cut short, the remover having been released rather than
+	// cancelled.
+	latest, found, err := runner.LatestRun(context.Background(), manage.CleanupTypeEvents)
+	s.Require().NoError(err)
+	s.Require().True(found)
+	s.Assert().Equal(manage.CleanupOperationStatusCompleted, latest.Status)
+}
+
+// The wait has to cover the closing status write and not only the deletion, or
+// shutdown could close the state service while a run was still recording its outcome,
+// leaving the operation reading as running for good.
+func (s *RunnerSuite) Test_shutdown_waits_for_the_closing_status_write() {
+	operations := &testutils.MockCleanupOperationsStore{
+		Operations: map[string]*manage.CleanupOperation{},
+	}
+	updating := make(chan struct{})
+	release := make(chan struct{})
+	operations.BeforeUpdate = func() {
+		close(updating)
+		<-release
+	}
+	runner := s.runnerFor(operations, testTime)
+
+	_, err := runner.Start(context.Background(), cleanup.Task{
+		Type:   manage.CleanupTypeEvents,
+		Remove: (&recordingRemover{}).Remove,
+	})
+	s.Require().NoError(err)
+
+	// The deletion itself is already done by the time the update is reached.
+	<-updating
+
+	returned := make(chan struct{})
+	go func() {
+		runner.Shutdown(context.Background())
+		close(returned)
+	}()
+
+	select {
+	case <-returned:
+		s.Require().Fail("shutdown returned while a run was still recording its outcome")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	close(release)
+	select {
+	case <-returned:
+	case <-time.After(time.Second):
+		s.Require().Fail("shutdown did not return once the outcome had been recorded")
+	}
+}
+
+// Cancelling is what ends the work.
+func (s *RunnerSuite) Test_shutdown_cuts_short_a_cleanup_started_by_a_request() {
+	operations := testutils.NewMockCleanupOperationsStore(map[string]*manage.CleanupOperation{})
+	runner := s.runnerFor(operations, testTime)
+
+	_, err := runner.Start(context.Background(), cleanup.Task{
+		Type: manage.CleanupTypeEvents,
+		Remove: func(ctx context.Context, _ time.Time) (int64, error) {
+			<-ctx.Done()
+			return 0, ctx.Err()
+		},
+	})
+	s.Require().NoError(err)
+
+	returned := make(chan struct{})
+	go func() {
+		runner.Shutdown(context.Background())
+		close(returned)
+	}()
+
+	select {
+	case <-returned:
+	case <-time.After(5 * time.Second):
+		s.Require().Fail("shutdown did not cut the cleanup short")
+	}
+
+	// Failed rather than completed, so the category is left for the next pass to pick
+	// up instead of being reported as cleaned.
+	latest, found, err := runner.LatestRun(context.Background(), manage.CleanupTypeEvents)
+	s.Require().NoError(err)
+	s.Require().True(found)
+	s.Assert().Equal(manage.CleanupOperationStatusFailed, latest.Status)
+}
+
+// A start accepted after Shutdown has returned would run with nobody left to wait
+// for it.
+func (s *RunnerSuite) Test_refuses_a_cleanup_once_shutting_down() {
+	operations := testutils.NewMockCleanupOperationsStore(map[string]*manage.CleanupOperation{})
+	runner := s.runnerFor(operations, testTime)
+
+	runner.Shutdown(context.Background())
+
+	removed := &recordingRemover{}
+	_, startErr := runner.Start(context.Background(), cleanup.Task{
+		Type:   manage.CleanupTypeEvents,
+		Remove: removed.Remove,
+	})
+	s.Require().ErrorIs(startErr, cleanup.ErrShuttingDown)
+
+	_, runErr := runner.Run(context.Background(), cleanup.Task{
+		Type:   manage.CleanupTypeValidations,
+		Remove: removed.Remove,
+	})
+	s.Require().ErrorIs(runErr, cleanup.ErrShuttingDown)
+
+	s.Assert().Equal(0, removed.Calls(), "a refused cleanup must not carry out the task")
+}
+
+// Cancelling a run does not oblige the backend to stop, so the wait needs a deadline of
+// its own or a backend that carries on to the end of the pass would hold up process
+// exit for as long as it takes.
+func (s *RunnerSuite) Test_shutdown_stops_waiting_once_its_deadline_has_passed() {
+	operations := testutils.NewMockCleanupOperationsStore(map[string]*manage.CleanupOperation{})
+	runner := s.runnerFor(operations, testTime)
+
+	// Takes no notice of the context it is given, as the memfile backend does not.
+	release := make(chan struct{})
+	defer close(release)
+	_, err := runner.Start(context.Background(), cleanup.Task{
+		Type:   manage.CleanupTypeEvents,
+		Remove: (&blockingRemover{release: release}).Remove,
+	})
+	s.Require().NoError(err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+
+	returned := make(chan struct{})
+	go func() {
+		runner.Shutdown(ctx)
+		close(returned)
+	}()
+
+	select {
+	case <-returned:
+	case <-time.After(time.Second):
+		s.Require().Fail("shutdown did not give up once its deadline had passed")
+	}
+}
+
 func (s *RunnerSuite) runnerFor(
 	operations manage.CleanupOperations,
 	now time.Time,

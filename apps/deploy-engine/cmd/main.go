@@ -114,9 +114,10 @@ func runServer(srv *http.Server, config *core.Config) error {
 // Drains in-flight HTTP handlers, runs the engine cleanup chain
 // (which includes cancelling in-flight deploy/destroy/rollback goroutines and
 // waiting for the library to persist their terminal status), then removes the
-// unix socket file if one was in use. The drainTimeout bounds the entire
-// shutdown sequence so a wedged goroutine cannot block process exit
-// indefinitely.
+// unix socket file if one was in use. The drainTimeout bounds the handler drain,
+// and each step of the cleanup chain that waits for work still in flight bounds
+// itself by the same configured timeout, so a wedged goroutine cannot block
+// process exit indefinitely.
 func runShutdown(
 	srv *http.Server,
 	cleanup func(),

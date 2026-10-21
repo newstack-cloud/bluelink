@@ -13,7 +13,10 @@ import (
 type MockCleanupOperationsStore struct {
 	Operations map[string]*manage.CleanupOperation
 	SaveError  error
-	mu         sync.Mutex
+	// Called at the start of Update, before the lock is taken, so that a hook which
+	// blocks does not hold the store closed against readers.
+	BeforeUpdate func()
+	mu           sync.Mutex
 }
 
 // NewMockCleanupOperationsStore creates a new mock cleanup operations store.
@@ -100,6 +103,10 @@ func (s *MockCleanupOperationsStore) Update(
 	ctx context.Context,
 	operation *manage.CleanupOperation,
 ) error {
+	if s.BeforeUpdate != nil {
+		s.BeforeUpdate()
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

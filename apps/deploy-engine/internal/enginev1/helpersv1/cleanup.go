@@ -16,7 +16,8 @@ import (
 // Shared by every cleanup endpoint, so that they cannot drift from each other over what
 // a refused or a failed start looks like. A category already being cleaned up, whether
 // by another request or by the scheduler, is answered with a conflict rather than by
-// starting a second run over the same records.
+// starting a second run over the same records. An engine that is shutting down is
+// answered as unavailable.
 func StartCleanup(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -28,6 +29,11 @@ func StartCleanup(
 	if err != nil {
 		if errors.Is(err, cleanup.ErrCleanupInProgress) {
 			httputils.HTTPError(w, http.StatusConflict, err.Error())
+			return
+		}
+
+		if errors.Is(err, cleanup.ErrShuttingDown) {
+			httputils.HTTPError(w, http.StatusServiceUnavailable, err.Error())
 			return
 		}
 

@@ -71,6 +71,19 @@ func (s *StartCleanupSuite) Test_reports_a_failure_to_record_the_operation() {
 	s.Assert().Equal(http.StatusInternalServerError, result.StatusCode)
 }
 
+// Nothing is wrong with the request, so the caller is told to come back.
+func (s *StartCleanupSuite) Test_refuses_a_cleanup_while_shutting_down_as_unavailable() {
+	operations := &testutils.MockCleanupOperationsStore{
+		Operations: map[string]*manage.CleanupOperation{},
+	}
+	runner := s.runnerFor(operations)
+	runner.Shutdown(context.Background())
+
+	result := s.serveWith(runner, s.task())
+	defer result.Body.Close()
+	s.Assert().Equal(http.StatusServiceUnavailable, result.StatusCode)
+}
+
 func (s *StartCleanupSuite) task() cleanup.Task {
 	return cleanup.Task{
 		Type:    manage.CleanupTypeEvents,
@@ -83,13 +96,24 @@ func (s *StartCleanupSuite) serve(
 	operations *testutils.MockCleanupOperationsStore,
 	task cleanup.Task,
 ) *http.Response {
-	runner := cleanup.NewRunner(
+	return s.serveWith(s.runnerFor(operations), task)
+}
+
+func (s *StartCleanupSuite) runnerFor(
+	operations *testutils.MockCleanupOperationsStore,
+) *cleanup.Runner {
+	return cleanup.NewRunner(
 		operations,
 		core.NewUUIDGenerator(),
 		&testutils.MockClock{StaticTime: testTime},
 		core.NewNopLogger(),
 	)
+}
 
+func (s *StartCleanupSuite) serveWith(
+	runner *cleanup.Runner,
+	task cleanup.Task,
+) *http.Response {
 	recorder := httptest.NewRecorder()
 	helpersv1.StartCleanup(
 		recorder,

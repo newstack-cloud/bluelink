@@ -41,6 +41,13 @@ const operationUpdateTimeout = 30 * time.Second
 // with recording one here.
 var ErrCleanupInProgress = errors.New("a cleanup for this category is already in progress")
 
+// ErrShuttingDown reports that the engine is shutting down, so no cleanup was started.
+//
+// Shutdown waits for the runs already under way, which it can only do if no further run
+// begins while it is waiting. Refusing is also the honest answer to the caller, since a
+// run accepted here would be cut short moments later.
+var ErrShuttingDown = errors.New("the engine is shutting down, so no cleanup was started")
+
 // Task describes one category of state to clean up.
 type Task struct {
 	// Type names the category, and is what a cleanup operation is recorded under.
@@ -64,11 +71,22 @@ type Runner struct {
 	clock       commoncore.Clock
 	timeout     time.Duration
 	logger      core.Logger
+	// The context the runs started by Runner.Start are given,
+	// in place of the context of the request that asked for one.
+	// Cancelled by Shutdown.
+	detachedCtx    context.Context
+	cancelDetached context.CancelFunc
+	// Every claimed run, so that Shutdown waits for the work rather than letting the
+	// state service close from under it.
+	runs sync.WaitGroup
 	// Categories this engine is mid-run on. Checking the recorded operations alone
 	// would not keep two of this engine's own runs apart, since reading them is not
 	// atomic with recording one.
 	mu       sync.Mutex
 	inFlight map[manage.CleanupType]struct{}
+	// Guarded by mu as well. Set once Shutdown has begun,
+	// so that no further run joins the set it waits on.
+	shuttingDown bool
 }
 
 // RunnerOption configures a Runner.
@@ -87,13 +105,16 @@ func NewRunner(
 	logger core.Logger,
 	opts ...RunnerOption,
 ) *Runner {
+	detachedCtx, cancelDetached := context.WithCancel(context.Background())
 	runner := &Runner{
-		operations:  operations,
-		idGenerator: idGenerator,
-		clock:       clock,
-		timeout:     DefaultTimeout,
-		logger:      logger,
-		inFlight:    map[manage.CleanupType]struct{}{},
+		operations:     operations,
+		idGenerator:    idGenerator,
+		clock:          clock,
+		timeout:        DefaultTimeout,
+		logger:         logger,
+		detachedCtx:    detachedCtx,
+		cancelDetached: cancelDetached,
+		inFlight:       map[manage.CleanupType]struct{}{},
 	}
 	for _, opt := range opts {
 		opt(runner)
@@ -109,7 +130,8 @@ func NewRunner(
 // serialise it while the run is still updating its own copy.
 //
 // The work is given a context of its own rather than the caller's, a cleanup started
-// by a request outlives the request that asked for it.
+// by a request outlives the request that asked for it. That context belongs to the
+// runner, so Shutdown can cut the run short and wait for it.
 func (r *Runner) Start(ctx context.Context, task Task) (*manage.CleanupOperation, error) {
 	operation, err := r.begin(ctx, task)
 	if err != nil {
@@ -117,7 +139,7 @@ func (r *Runner) Start(ctx context.Context, task Task) (*manage.CleanupOperation
 	}
 
 	started := *operation
-	go r.execute(context.Background(), operation, task)
+	go r.execute(r.detachedCtx, operation, task)
 
 	return &started, nil
 }
@@ -160,6 +182,10 @@ func (r *Runner) claim(ctx context.Context, cleanupType manage.CleanupType) erro
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	if r.shuttingDown {
+		return ErrShuttingDown
+	}
+
 	if _, taken := r.inFlight[cleanupType]; taken {
 		return ErrCleanupInProgress
 	}
@@ -173,14 +199,55 @@ func (r *Runner) claim(ctx context.Context, cleanupType manage.CleanupType) erro
 	}
 
 	r.inFlight[cleanupType] = struct{}{}
+	// Counted under the same lock as the shutdown check, so a run cannot join the set
+	// Shutdown waits on after the wait has begun.
+	r.runs.Add(1)
 
 	return nil
 }
 
+// Paired with the claim rather than with the work, so the count also covers a claim
+// that never became a run because recording it failed.
 func (r *Runner) release(cleanupType manage.CleanupType) {
+	defer r.runs.Done()
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.inFlight, cleanupType)
+}
+
+// Shutdown cuts short the cleanups Start left running and waits for every claimed run
+// to finish, or for ctx to be done, whichever comes first.
+//
+// A cleanup started by a request outlives that request, so without this the state
+// service could close while a run was still deleting through it. A run cut short
+// records itself as failed, which leaves the category for the next pass to pick up
+// rather than reporting it as cleaned.
+func (r *Runner) Shutdown(ctx context.Context) {
+	// Cancelled before the lock is taken, since a claim in progress holds that lock
+	// across a read of the recorded operations, and a run already under way should not
+	// wait on that read to be cut short.
+	r.cancelDetached()
+
+	r.mu.Lock()
+	r.shuttingDown = true
+	r.mu.Unlock()
+
+	finished := make(chan struct{})
+	go func() {
+		r.runs.Wait()
+		close(finished)
+	}()
+
+	select {
+	case <-finished:
+	case <-ctx.Done():
+		r.logger.Warn(
+			"stopped waiting for cleanups still in flight, "+
+				"the operations they recorded may be left reading as running",
+			core.ErrorLogField("error", ctx.Err()),
+		)
+	}
 }
 
 func (r *Runner) record(ctx context.Context, task Task) (*manage.CleanupOperation, error) {

@@ -122,10 +122,14 @@ func Setup(
 			config.GetShutdownDrainTimeout(),
 		),
 		stopScheduledCleanup: stopScheduledCleanup,
-		closeState:           closeStateService,
-		closePluginHost:      pluginHostService.Close,
-		closeAuditSink:       closeAuditSink,
-		stopTracing:          stopTracing,
+		stopRequestedCleanup: stopRequestedCleanupFunc(
+			dependencies.CleanupRunner,
+			config.GetShutdownDrainTimeout(),
+		),
+		closeState:      closeStateService,
+		closePluginHost: pluginHostService.Close,
+		closeAuditSink:  closeAuditSink,
+		stopTracing:     stopTracing,
 	}), nil
 }
 
@@ -144,6 +148,7 @@ func drainInFlightDeploymentsFunc(
 type serverShutdown struct {
 	drainDeployments     func()
 	stopScheduledCleanup func()
+	stopRequestedCleanup func()
 	closeState           func()
 	closePluginHost      func()
 	closeAuditSink       func()
@@ -158,6 +163,9 @@ func createServerCleanupFunc(shutdown *serverShutdown) func() {
 		shutdown.drainDeployments,
 		// Before the state service closes, since an in-flight pass is still writing to it.
 		shutdown.stopScheduledCleanup,
+		// Also before the state service closes. A cleanup a request started runs on
+		// after the response, so nothing above waits for it.
+		shutdown.stopRequestedCleanup,
 		shutdown.closeState,
 		shutdown.closePluginHost,
 		// After the drain, so that a record is written for every action still in flight

@@ -1,6 +1,7 @@
 package enginev1
 
 import (
+	"context"
 	"time"
 
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/core"
@@ -8,6 +9,20 @@ import (
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
 )
+
+// Stops the cleanups started by the cleanup endpoints, bounded by the same timeout as
+// the deployment drain, so that a run against a backend that does not give up on being
+// cancelled cannot hold up process exit.
+func stopRequestedCleanupFunc(
+	runner *cleanup.Runner,
+	drainTimeout time.Duration,
+) func() {
+	return func() {
+		ctx, cancel := context.WithTimeout(context.Background(), drainTimeout)
+		defer cancel()
+		runner.Shutdown(ctx)
+	}
+}
 
 // Starts the cleanup the engine carries out on an interval, and returns a callback
 // to stop the scheduler.
