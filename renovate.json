@@ -42,6 +42,11 @@
       "groupName": "plugin-framework go modules"
     },
     {
+      "matchFileNames": ["libs/telemetry-otel/**"],
+      "semanticCommitScope": "telemetry-otel",
+      "groupName": "telemetry-otel go modules"
+    },
+    {
       "matchFileNames": ["apps/cli/**"],
       "semanticCommitScope": "cli",
       "groupName": "cli go modules"

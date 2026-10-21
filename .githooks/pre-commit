@@ -29,6 +29,7 @@ lint_project libs/blueprint-resolvers
 lint_project libs/common
 lint_project libs/plugin-framework
 lint_project libs/deploy-engine-client
+lint_project libs/telemetry-otel
 
 lint_project tools/blueprint-ls
 lint_project tools/plugin-docgen

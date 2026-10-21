@@ -19,6 +19,7 @@ This document provides an overview of all projects in the Bluelink monorepo.
 | [Common](../libs/common) | `libs/common` | Shared utility packages used across Bluelink projects |
 | [Deploy Engine Client](../libs/deploy-engine-client) | `libs/deploy-engine-client` | Go client library for the Deploy Engine API |
 | [Plugin Framework](../libs/plugin-framework) | `libs/plugin-framework` | gRPC-based plugin system for provider and transformer plugins, including a Go SDK |
+| [Telemetry OTel](../libs/telemetry-otel) | `libs/telemetry-otel` | OpenTelemetry implementation of the tracing seam in `libs/common/telemetry`, with cloud SDK instrumentation helpers |
 
 ## Tools
 

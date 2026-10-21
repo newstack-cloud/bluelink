@@ -36,6 +36,7 @@ Tools and libraries that make up the Bluelink "build-time engine" that handles e
 - [Blueprint Resolvers](./libs/blueprint-resolvers)
 - [Blueprint State](./libs/blueprint-state)
 - [Deploy Engine Client](./libs/deploy-engine-client)
+- [Telemetry OTel](./libs/telemetry-otel)
 
 ## Further documentation
 
