@@ -157,3 +157,18 @@ var ErrVersionConflict = errors.New("state: version conflict: instance was modif
 // this as a signal to fall through to the standard Get + ClaimForDeployment flow on the existing
 // record.
 var ErrInstanceAlreadyExists = errors.New("state: instance already exists")
+
+// ErrInstanceNameImmutable is returned when a save would change the name of an existing blueprint
+// instance. Instance names are fixed at creation because they resolve to the instance ID for the
+// instance's lifetime. Implementations wrap it with the instance ID and both names, so callers
+// should check for it with errors.Is.
+var ErrInstanceNameImmutable = errors.New("state: instance name cannot be changed")
+
+// InstanceNameImmutableError wraps ErrInstanceNameImmutable with the instance whose name a save
+// tried to change.
+func InstanceNameImmutableError(instanceID, currentName, requestedName string) error {
+	return fmt.Errorf(
+		"%w: instance %q is named %q, not %q",
+		ErrInstanceNameImmutable, instanceID, currentName, requestedName,
+	)
+}
