@@ -494,10 +494,6 @@ func (c *instancesContainerImpl) saveFlattenedBatch(
 	instances []state.InstanceState,
 	childRelations []childRelation,
 ) error {
-	if err := checkInstanceNamesUnchanged(ctx, tx, instances); err != nil {
-		return err
-	}
-
 	if err := c.upsertInstancesBatch(ctx, tx, instances); err != nil {
 		return err
 	}
@@ -534,12 +530,25 @@ func (c *instancesContainerImpl) upsertInstancesBatch(
 ) error {
 	query := upsertInstanceQuery()
 	batch := &pgx.Batch{}
+	var renamed *state.InstanceState
 	for i := range instances {
 		args := buildInstanceArgs(&instances[i])
-		batch.Queue(query, args)
+		batch.Queue(query, args).Exec(func(tag pgconn.CommandTag) error {
+			if tag.RowsAffected() == 0 && renamed == nil {
+				renamed = &instances[i]
+			}
+			return nil
+		})
 	}
 
-	return tx.SendBatch(ctx, batch).Close()
+	if err := tx.SendBatch(ctx, batch).Close(); err != nil {
+		return err
+	}
+	if renamed != nil {
+		return instanceNameImmutableError(ctx, tx, renamed)
+	}
+
+	return nil
 }
 
 func collectResourcesAndLinks(
@@ -635,12 +644,7 @@ func (c *instancesContainerImpl) save(
 	tx pgx.Tx,
 	instanceState *state.InstanceState,
 ) error {
-	err := checkInstanceNamesUnchanged(ctx, tx, []state.InstanceState{*instanceState})
-	if err != nil {
-		return err
-	}
-
-	err = c.upsertInstance(ctx, tx, instanceState)
+	err := c.upsertInstance(ctx, tx, instanceState)
 	if err != nil {
 		return err
 	}
@@ -697,7 +701,7 @@ func (c *instancesContainerImpl) upsertInstance(
 	instanceState *state.InstanceState,
 ) error {
 	qInfo := prepareUpsertInstanceQuery(instanceState)
-	_, err := tx.Exec(
+	tag, err := tx.Exec(
 		ctx,
 		qInfo.sql,
 		qInfo.params,
@@ -706,6 +710,9 @@ func (c *instancesContainerImpl) upsertInstance(
 		return err
 	}
 
+	if tag.RowsAffected() == 0 {
+		return instanceNameImmutableError(ctx, tx, instanceState)
+	}
 	return nil
 }
 
@@ -1076,33 +1083,17 @@ func buildUpdateInstanceStatusArgs(
 	return &namedArgs
 }
 
-func checkInstanceNamesUnchanged(ctx context.Context, tx pgx.Tx, instances []state.InstanceState) error {
-	requested := make(map[string]string, len(instances))
-	ids := make([]string, 0, len(instances))
-	for _, instance := range instances {
-		requested[instance.InstanceID] = instance.InstanceName
-		ids = append(ids, instance.InstanceID)
-	}
-
-	rows, err := tx.Query(
+// Called once the upsert has left an existing row unchanged because its name differs, so the
+// row exists and the current name is only read for the error message.
+func instanceNameImmutableError(ctx context.Context, tx pgx.Tx, requested *state.InstanceState) error {
+	var currentName string
+	err := tx.QueryRow(
 		ctx,
-		`SELECT id, "name" FROM blueprint_instances WHERE id = ANY(@ids)`,
-		pgx.NamedArgs{"ids": ids},
-	)
+		`SELECT "name" FROM blueprint_instances WHERE id = @id`,
+		pgx.NamedArgs{"id": requested.InstanceID},
+	).Scan(&currentName)
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var id, currentName string
-		if err := rows.Scan(&id, &currentName); err != nil {
-			return err
-		}
-		if currentName != requested[id] {
-			return state.InstanceNameImmutableError(id, currentName, requested[id])
-		}
-	}
-
-	return rows.Err()
+	return state.InstanceNameImmutableError(requested.InstanceID, currentName, requested.InstanceName)
 }
