@@ -71,6 +71,10 @@ func (c *ExportsContainer) SaveAll(
 	instanceID string,
 	exports map[string]*state.ExportState,
 ) error {
+	if err := c.state.preloadInstances(ctx, instanceID); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -93,6 +97,10 @@ func (c *ExportsContainer) Save(
 	exportName string,
 	export state.ExportState,
 ) error {
+	if err := c.state.preloadInstances(ctx, instanceID); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -117,6 +125,10 @@ func (c *ExportsContainer) RemoveAll(
 	ctx context.Context,
 	instanceID string,
 ) (map[string]*state.ExportState, error) {
+	if err := c.state.preloadInstances(ctx, instanceID); err != nil {
+		return nil, err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -139,6 +151,10 @@ func (c *ExportsContainer) Remove(
 	instanceID string,
 	exportName string,
 ) (state.ExportState, error) {
+	if err := c.state.preloadInstances(ctx, instanceID); err != nil {
+		return state.ExportState{}, err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 

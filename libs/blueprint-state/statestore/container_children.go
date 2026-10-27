@@ -55,6 +55,12 @@ func (c *ChildrenContainer) Attach(
 	childInstanceID string,
 	childName string,
 ) error {
+	if err := c.state.preloadInstances(
+		ctx, parentInstanceID, childInstanceID,
+	); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -85,6 +91,10 @@ func (c *ChildrenContainer) SaveDependencies(
 	childName string,
 	dependencies *state.DependencyInfo,
 ) error {
+	if err := c.state.preloadInstances(ctx, instanceID); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -109,6 +119,10 @@ func (c *ChildrenContainer) Detach(
 	instanceID string,
 	childName string,
 ) error {
+	if err := c.state.preloadInstances(ctx, instanceID); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 

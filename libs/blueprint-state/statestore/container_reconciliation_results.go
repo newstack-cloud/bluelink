@@ -15,8 +15,9 @@ import (
 // against a shared statestore.State and Persister. Maintains in-container
 // secondary indexes (changesetID → []resultID, instanceID → []resultID)
 // sorted by Created desc. Indexes are rebuilt on Cleanup and kept current
-// on Save; they assume eager-mode population for correctness and become
-// best-effort (only covering materialised entries) under ModeLazy.
+// on Save. Under ModeLazy every lookup by changeset or instance first loads
+// the stored results and rebuilds the indexes, so results written by other
+// processes are covered.
 type ReconciliationResultsContainer struct {
 	state          *State
 	persister      *Persister
@@ -61,6 +62,10 @@ func (c *ReconciliationResultsContainer) GetLatestByChangesetID(
 	ctx context.Context,
 	changesetID string,
 ) (*manage.ReconciliationResult, error) {
+	if err := c.refreshIndexes(ctx); err != nil {
+		return nil, err
+	}
+
 	c.state.RLock()
 	defer c.state.RUnlock()
 
@@ -75,6 +80,10 @@ func (c *ReconciliationResultsContainer) GetAllByChangesetID(
 	ctx context.Context,
 	changesetID string,
 ) ([]*manage.ReconciliationResult, error) {
+	if err := c.refreshIndexes(ctx); err != nil {
+		return nil, err
+	}
+
 	c.state.RLock()
 	defer c.state.RUnlock()
 
@@ -97,6 +106,10 @@ func (c *ReconciliationResultsContainer) GetLatestByInstanceID(
 	ctx context.Context,
 	instanceID string,
 ) (*manage.ReconciliationResult, error) {
+	if err := c.refreshIndexes(ctx); err != nil {
+		return nil, err
+	}
+
 	c.state.RLock()
 	defer c.state.RUnlock()
 
@@ -111,6 +124,10 @@ func (c *ReconciliationResultsContainer) GetAllByInstanceID(
 	ctx context.Context,
 	instanceID string,
 ) ([]*manage.ReconciliationResult, error) {
+	if err := c.refreshIndexes(ctx); err != nil {
+		return nil, err
+	}
+
 	c.state.RLock()
 	defer c.state.RUnlock()
 
@@ -191,6 +208,35 @@ func (c *ReconciliationResultsContainer) addToInstanceIndex(result *manage.Recon
 		return c.state.reconciliations[resultIDs[i]].Created > c.state.reconciliations[resultIDs[j]].Created
 	})
 	c.instanceIndex[result.InstanceID] = resultIDs
+}
+
+func (c *ReconciliationResultsContainer) refreshIndexes(ctx context.Context) error {
+	if !c.state.isLazilyListed() {
+		return nil
+	}
+
+	if err := c.state.preloadAllReconciliationResults(ctx); err != nil {
+		return err
+	}
+
+	// Save and Cleanup keep the indexes current, so they only need rebuilding when the
+	// listing loaded results another process wrote, which leaves some cached result
+	// unindexed. Every result appears once in the changeset index.
+	c.state.Lock()
+	defer c.state.Unlock()
+	indexed := 0
+	for _, resultIDs := range c.changesetIndex {
+		indexed += len(resultIDs)
+	}
+
+	if indexed == len(c.state.reconciliations) {
+		return nil
+	}
+
+	c.changesetIndex = buildReconciliationChangesetIndex(c.state.reconciliations)
+	c.instanceIndex = buildReconciliationInstanceIndex(c.state.reconciliations)
+
+	return nil
 }
 
 func buildReconciliationChangesetIndex(results map[string]*manage.ReconciliationResult) map[string][]string {

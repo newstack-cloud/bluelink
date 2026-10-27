@@ -494,34 +494,32 @@ func (c *instancesContainerImpl) saveFlattenedBatch(
 	instances []state.InstanceState,
 	childRelations []childRelation,
 ) error {
-	// Step 1: Batch upsert all instances
+	if err := checkInstanceNamesUnchanged(ctx, tx, instances); err != nil {
+		return err
+	}
+
 	if err := c.upsertInstancesBatch(ctx, tx, instances); err != nil {
 		return err
 	}
 
-	// Step 2: Collect and batch upsert all resources
 	allResources, allLinks := collectResourcesAndLinks(instances)
 
 	if err := upsertResources(ctx, tx, allResources); err != nil {
 		return err
 	}
 
-	// Step 3: Batch upsert instance-resource relations
 	if err := c.upsertResourceRelationsBatch(ctx, tx, instances); err != nil {
 		return err
 	}
 
-	// Step 4: Batch upsert all links
 	if err := upsertLinks(ctx, tx, allLinks); err != nil {
 		return err
 	}
 
-	// Step 5: Batch upsert instance-link relations
 	if err := c.upsertLinkRelationsBatch(ctx, tx, instances); err != nil {
 		return err
 	}
 
-	// Step 6: Batch upsert parent-child relations
 	if len(childRelations) > 0 {
 		return c.upsertChildRelationsBatch(ctx, tx, childRelations)
 	}
@@ -637,7 +635,12 @@ func (c *instancesContainerImpl) save(
 	tx pgx.Tx,
 	instanceState *state.InstanceState,
 ) error {
-	err := c.upsertInstance(ctx, tx, instanceState)
+	err := checkInstanceNamesUnchanged(ctx, tx, []state.InstanceState{*instanceState})
+	if err != nil {
+		return err
+	}
+
+	err = c.upsertInstance(ctx, tx, instanceState)
 	if err != nil {
 		return err
 	}
@@ -1071,4 +1074,35 @@ func buildUpdateInstanceStatusArgs(
 	}
 
 	return &namedArgs
+}
+
+func checkInstanceNamesUnchanged(ctx context.Context, tx pgx.Tx, instances []state.InstanceState) error {
+	requested := make(map[string]string, len(instances))
+	ids := make([]string, 0, len(instances))
+	for _, instance := range instances {
+		requested[instance.InstanceID] = instance.InstanceName
+		ids = append(ids, instance.InstanceID)
+	}
+
+	rows, err := tx.Query(
+		ctx,
+		`SELECT id, "name" FROM blueprint_instances WHERE id = ANY(@ids)`,
+		pgx.NamedArgs{"ids": ids},
+	)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id, currentName string
+		if err := rows.Scan(&id, &currentName); err != nil {
+			return err
+		}
+		if currentName != requested[id] {
+			return state.InstanceNameImmutableError(id, currentName, requested[id])
+		}
+	}
+
+	return rows.Err()
 }

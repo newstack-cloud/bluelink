@@ -3,6 +3,7 @@ package statestore
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/idutils"
@@ -11,16 +12,11 @@ import (
 )
 
 // LinksContainer implements state.LinksContainer against a shared
-// statestore.State and Persister. Maintains a container-local
-// resourceDataMappingIDs cache (instance → resourceName → []linkID) so
-// ListWithResourceDataMappings avoids re-scanning links on every call.
+// statestore.State and Persister.
 type LinksContainer struct {
 	state     *State
 	persister *Persister
-	// resourceDataMappingIDs maps instanceID → resourceName → []linkID.
-	// Built lazily on first use and maintained on Save / Remove.
-	resourceDataMappingIDs map[string]map[string][]string
-	logger                 core.Logger
+	logger    core.Logger
 }
 
 func NewLinksContainer(st *State, persister *Persister, logger core.Logger) *LinksContainer {
@@ -28,10 +24,9 @@ func NewLinksContainer(st *State, persister *Persister, logger core.Logger) *Lin
 		logger = core.NewNopLogger()
 	}
 	return &LinksContainer{
-		state:                  st,
-		persister:              persister,
-		resourceDataMappingIDs: map[string]map[string][]string{},
-		logger:                 logger,
+		state:     st,
+		persister: persister,
+		logger:    logger,
 	}
 }
 
@@ -80,65 +75,50 @@ func (c *LinksContainer) ListWithResourceDataMappings(
 	instanceID string,
 	resourceName string,
 ) ([]state.LinkState, error) {
-	c.state.Lock()
-	defer c.state.Unlock()
-
-	if _, ok := c.state.instances[instanceID]; !ok {
+	inst, ok, err := c.state.LookupInstance(ctx, instanceID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
 		return nil, state.InstanceNotFoundError(instanceID)
 	}
-	mappings := c.deriveInstanceResourceDataMappings(instanceID)
-	linkIDs, ok := mappings[resourceName]
-	if !ok {
-		return []state.LinkState{}, nil
-	}
-	links := make([]state.LinkState, 0, len(linkIDs))
-	for _, linkID := range linkIDs {
-		if link, ok := c.state.links[linkID]; ok {
+
+	// Derived from the instance's own links on each call rather than cached, because the
+	// links can change through other containers (a whole-instance save, a reload).
+	c.state.RLock()
+	defer c.state.RUnlock()
+	links := []state.LinkState{}
+	for _, link := range inst.Links {
+		if mapsResourceData(link, resourceName) {
 			links = append(links, copyLink(link))
 		}
 	}
+	slices.SortFunc(links, func(a, b state.LinkState) int {
+		return strings.Compare(a.LinkID, b.LinkID)
+	})
+
 	return links, nil
 }
 
-func (c *LinksContainer) deriveInstanceResourceDataMappings(instanceID string) map[string][]string {
-	if mappings, ok := c.resourceDataMappingIDs[instanceID]; ok {
-		return mappings
-	}
-
-	return c.buildResourceDataMappings(instanceID)
-}
-
-func (c *LinksContainer) buildResourceDataMappings(instanceID string) map[string][]string {
-	mappings := map[string][]string{}
-	for linkID, link := range c.state.links {
-		if link.InstanceID != instanceID {
-			continue
-		}
-		added := map[string]bool{}
-		for resourceNameFieldPath := range link.ResourceDataMappings {
-			// resourceNameFieldPath is "resourceName::fieldPath".
-			parts := strings.SplitN(resourceNameFieldPath, "::", 2)
-			if len(parts) != 2 {
-				continue
-			}
-			resourceName := parts[0]
-			if added[resourceName] {
-				continue
-			}
-			added[resourceName] = true
-			mappings[resourceName] = append(mappings[resourceName], linkID)
+// Mapping keys take the form "resourceName::fieldPath".
+func mapsResourceData(link *state.LinkState, resourceName string) bool {
+	for resourceNameFieldPath := range link.ResourceDataMappings {
+		mappedResource, _, found := strings.Cut(resourceNameFieldPath, "::")
+		if found && mappedResource == resourceName {
+			return true
 		}
 	}
-
-	c.resourceDataMappingIDs[instanceID] = mappings
-
-	return mappings
+	return false
 }
 
 func (c *LinksContainer) Save(
 	ctx context.Context,
 	linkState state.LinkState,
 ) error {
+	if err := c.state.preloadInstances(ctx, linkState.InstanceID); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -149,9 +129,13 @@ func (c *LinksContainer) Save(
 	if inst.Links == nil {
 		inst.Links = map[string]*state.LinkState{}
 	}
+	added, removed := linkEntityChange(inst.Links[linkState.Name], linkState.LinkID)
+	for _, replacedLinkID := range removed.Links {
+		delete(c.state.links, replacedLinkID)
+	}
+
 	inst.Links[linkState.Name] = &linkState
 	c.state.links[linkState.LinkID] = &linkState
-	c.buildResourceDataMappings(linkState.InstanceID)
 
 	c.logger.Debug(
 		"persisting updated or newly created link",
@@ -159,7 +143,22 @@ func (c *LinksContainer) Save(
 		core.StringLogField("instanceId", linkState.InstanceID),
 		core.StringLogField("linkName", linkState.Name),
 	)
-	return c.persister.UpdateInstance(ctx, inst)
+	return c.persister.UpdateInstanceEntities(ctx, inst, added, removed)
+}
+
+// Links are held by name, so saving one can replace a link with a different ID under the
+// same name.
+func linkEntityChange(previous *state.LinkState, linkID string) (added, removed InstanceEntityIDs) {
+	if previous != nil && previous.LinkID == linkID {
+		return added, removed
+	}
+
+	added.Links = []string{linkID}
+	if previous != nil {
+		removed.Links = []string{previous.LinkID}
+	}
+
+	return added, removed
 }
 
 func (c *LinksContainer) UpdateStatus(
@@ -167,6 +166,10 @@ func (c *LinksContainer) UpdateStatus(
 	linkID string,
 	statusInfo state.LinkStatusInfo,
 ) error {
+	if err := c.state.preloadLink(ctx, linkID); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -206,6 +209,10 @@ func (c *LinksContainer) Remove(
 	ctx context.Context,
 	linkID string,
 ) (state.LinkState, error) {
+	if err := c.state.preloadLink(ctx, linkID); err != nil {
+		return state.LinkState{}, err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -221,13 +228,16 @@ func (c *LinksContainer) Remove(
 	}
 	delete(inst.Links, link.Name)
 	delete(c.state.links, linkID)
-	c.buildResourceDataMappings(link.InstanceID)
 
 	c.logger.Debug(
 		"persisting link removal",
 		core.StringLogField("linkId", linkID),
 	)
-	return *link, c.persister.UpdateInstance(ctx, inst)
+
+	removed := InstanceEntityIDs{Links: []string{linkID}}
+	return *link, c.persister.UpdateInstanceEntities(
+		ctx, inst, InstanceEntityIDs{}, removed,
+	)
 }
 
 func (c *LinksContainer) GetDrift(
@@ -257,6 +267,10 @@ func (c *LinksContainer) SaveDrift(
 	ctx context.Context,
 	driftState state.LinkDriftState,
 ) error {
+	if err := c.state.preloadLinkWithDrift(ctx, driftState.LinkID); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -305,6 +319,10 @@ func (c *LinksContainer) RemoveDrift(
 	ctx context.Context,
 	linkID string,
 ) (state.LinkDriftState, error) {
+	if err := c.state.preloadLinkWithDrift(ctx, linkID); err != nil {
+		return state.LinkDriftState{}, err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 

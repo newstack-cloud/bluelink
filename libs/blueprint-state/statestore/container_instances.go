@@ -98,9 +98,8 @@ func (c *InstancesContainer) LookupIDByName(
 	if !ok {
 		return "", state.InstanceNotFoundError(instanceName)
 	}
-	// Defensive: verify the instance still exists. A stale name-lookup entry
-	// could point at a removed instance under ModeEager if the lookup cache
-	// wasn't kept in sync on a rename (it should be, via SetInstanceInMemory).
+	// A name can resolve to an instance that no longer exists, such as one whose
+	// removal was interrupted, so check that the instance is still there.
 	if _, exists, err := c.state.LookupInstance(ctx, id); err != nil {
 		return "", err
 	} else if !exists {
@@ -111,6 +110,7 @@ func (c *InstancesContainer) LookupIDByName(
 		)
 		return "", state.InstanceNotFoundError(instanceName)
 	}
+
 	return id, nil
 }
 
@@ -118,6 +118,10 @@ func (c *InstancesContainer) List(
 	ctx context.Context,
 	params state.ListInstancesParams,
 ) (state.ListInstancesResult, error) {
+	if err := c.state.preloadAllInstances(ctx); err != nil {
+		return state.ListInstancesResult{}, err
+	}
+
 	c.state.RLock()
 	defer c.state.RUnlock()
 
@@ -134,6 +138,12 @@ func (c *InstancesContainer) Save(
 	ctx context.Context,
 	instanceState state.InstanceState,
 ) error {
+	if err := c.state.preloadInstances(
+		ctx, instanceTreeIDs(&instanceState)...,
+	); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -144,6 +154,14 @@ func (c *InstancesContainer) SaveBatch(
 	ctx context.Context,
 	instances []state.InstanceState,
 ) error {
+	for i := range instances {
+		if err := c.state.preloadInstances(
+			ctx, instanceTreeIDs(&instances[i])...,
+		); err != nil {
+			return err
+		}
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -162,6 +180,12 @@ func (c *InstancesContainer) GetBatch(
 	ctx context.Context,
 	instanceIDsOrNames []string,
 ) ([]state.InstanceState, error) {
+	for _, idOrName := range instanceIDsOrNames {
+		if err := c.preloadByIDOrName(ctx, idOrName); err != nil {
+			return nil, err
+		}
+	}
+
 	c.state.RLock()
 	defer c.state.RUnlock()
 
@@ -179,6 +203,20 @@ func (c *InstancesContainer) GetBatch(
 		return nil, state.NewInstancesNotFoundError(missing)
 	}
 	return result, nil
+}
+
+func (c *InstancesContainer) preloadByIDOrName(ctx context.Context, idOrName string) error {
+	_, found, err := c.state.LookupInstance(ctx, idOrName)
+	if err != nil || found {
+		return err
+	}
+
+	id, found, err := c.state.LookupInstanceIDByName(ctx, idOrName)
+	if err != nil || !found {
+		return err
+	}
+
+	return c.state.preloadInstances(ctx, id)
 }
 
 // findByIDOrName expects the read lock to be held by the caller.
@@ -203,38 +241,61 @@ func (c *InstancesContainer) save(
 		core.StringLogField("instanceId", instanceState.InstanceID),
 	)
 
-	_, alreadyExists := c.state.instances[instanceState.InstanceID]
-	// Take a stable pointer so recursive saves of child blueprints reference
-	// the same in-memory object as the parent's ChildBlueprints map.
-	inst := instanceState
-	c.state.instances[inst.InstanceID] = &inst
-	if inst.InstanceName != "" {
-		c.state.nameLookup[inst.InstanceName] = inst.InstanceID
+	existing, alreadyExists := c.state.instances[instanceState.InstanceID]
+	if alreadyExists && existing.InstanceName != instanceState.InstanceName {
+		return state.InstanceNameImmutableError(
+			instanceState.InstanceID, existing.InstanceName, instanceState.InstanceName,
+		)
 	}
 
-	if alreadyExists {
-		logger.Debug("persisting instance update")
-		return c.persister.UpdateInstance(ctx, &inst)
-	}
-
+	// Children are persisted before the parent that references them, on update as well as
+	// create, so a persisted parent never references a child object that was not written.
 	logger.Debug("saving child blueprints for instance")
-	if err := c.saveChildBlueprints(ctx, &inst); err != nil {
+	inst := instanceState
+	children, err := c.saveChildBlueprints(ctx, &inst)
+	if err != nil {
 		return err
 	}
+	inst.ChildBlueprints = children
+
+	if alreadyExists {
+		previousEntities := entityIDsOf(existing)
+		cached := c.state.cacheInstance(&inst)
+		added, removed := diffEntityIDs(previousEntities, entityIDsOf(cached))
+		logger.Debug("persisting instance update")
+		return c.persister.UpdateInstanceEntities(ctx, cached, added, removed)
+	}
+
+	cached := c.state.cacheInstance(&inst)
+
 	logger.Debug("persisting new instance")
-	return c.persister.CreateInstance(ctx, &inst)
+	return c.persister.CreateInstance(ctx, cached)
 }
 
+// Every instance in a saved tree is saved, and whether each is created or updated, and
+// whether its name may stand, is decided from the cache, so all of them are loaded first.
+func instanceTreeIDs(instance *state.InstanceState) []string {
+	ids := []string{instance.InstanceID}
+	for _, child := range instance.ChildBlueprints {
+		ids = append(ids, instanceTreeIDs(child)...)
+	}
+	return ids
+}
+
+// Returns the parent's children as the cached instances, so the parent's ChildBlueprints map
+// shares pointers with the cache.
 func (c *InstancesContainer) saveChildBlueprints(
 	ctx context.Context,
 	instance *state.InstanceState,
-) error {
-	for _, child := range instance.ChildBlueprints {
+) (map[string]*state.InstanceState, error) {
+	children := make(map[string]*state.InstanceState, len(instance.ChildBlueprints))
+	for childName, child := range instance.ChildBlueprints {
 		if err := c.save(ctx, *child); err != nil {
-			return err
+			return nil, err
 		}
+		children[childName] = c.state.instances[child.InstanceID]
 	}
-	return nil
+	return children, nil
 }
 
 func (c *InstancesContainer) UpdateStatus(
@@ -242,6 +303,10 @@ func (c *InstancesContainer) UpdateStatus(
 	instanceID string,
 	statusInfo state.InstanceStatusInfo,
 ) error {
+	if err := c.state.preloadInstances(ctx, instanceID); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -296,6 +361,14 @@ func (c *InstancesContainer) Remove(
 	ctx context.Context,
 	instanceID string,
 ) (state.InstanceState, error) {
+	_, found, err := c.state.LookupInstance(ctx, instanceID)
+	if err != nil {
+		return state.InstanceState{}, err
+	}
+	if !found {
+		return c.resumeRemoval(ctx, instanceID)
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -316,6 +389,27 @@ func (c *InstancesContainer) Remove(
 		core.StringLogField("instanceId", instanceID),
 	)
 	return *inst, c.persister.RemoveInstance(ctx, inst)
+}
+
+// An instance whose removal was interrupted reads as not found, so removing it again is
+// what finishes the removal.
+func (c *InstancesContainer) resumeRemoval(
+	ctx context.Context,
+	instanceID string,
+) (state.InstanceState, error) {
+	beingRemoved, found, err := c.state.loadInstanceBeingRemoved(ctx, instanceID)
+	if err != nil {
+		return state.InstanceState{}, err
+	}
+	if !found {
+		return state.InstanceState{}, state.InstanceNotFoundError(instanceID)
+	}
+
+	c.logger.Debug(
+		"resuming interrupted removal of blueprint instance",
+		core.StringLogField("instanceId", instanceID),
+	)
+	return *beingRemoved, c.persister.RemoveInstance(ctx, beingRemoved)
 }
 
 func (c *InstancesContainer) cleanupResourceDrift(resourceIDs map[string]string) {

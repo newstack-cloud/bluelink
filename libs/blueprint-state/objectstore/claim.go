@@ -15,7 +15,7 @@ import (
 // object in the Service. On success the instance's version is bumped, its
 // status is set to newStatus, and the in-memory State is refreshed.
 //
-// The CAS bypasses statestore.Storage deliberately — statestore.Storage has
+// The CAS bypasses statestore.Storage deliberately as statestore.Storage has
 // no ETag awareness, and the conditional write is what makes this safe for
 // concurrent executions such as CI/CD runs sharing a bucket storage backend.
 //
@@ -60,7 +60,9 @@ func ClaimForDeployment(
 		return 0, putErr
 	}
 
-	st.SetInstanceInMemory(persisted.ToInstanceState())
+	if _, err := st.CachePersistedInstance(ctx, persisted); err != nil {
+		return 0, err
+	}
 	return persisted.Version, nil
 }
 
@@ -76,10 +78,18 @@ func readPersistedInstance(
 		}
 		return nil, "", err
 	}
+
 	var persisted statestore.PersistedInstanceState
 	if err := json.Unmarshal(data, &persisted); err != nil {
 		return nil, "", err
 	}
+
+	// An instance whose removal has started reads as not found everywhere,
+	// so it cannot be claimed either.
+	if persisted.Removing {
+		return nil, "", state.InstanceNotFoundError(instanceID)
+	}
+
 	return &persisted, etag, nil
 }
 

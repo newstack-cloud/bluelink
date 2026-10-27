@@ -152,6 +152,24 @@ func (s *PostgresStateContainerInstancesTestSuite) Test_updates_existing_instanc
 	internal.AssertInstanceStatesEqual(fixture.InstanceState, &savedState, &s.Suite)
 }
 
+func (s *PostgresStateContainerInstancesTestSuite) Test_rejects_saving_an_existing_instance_under_a_new_name() {
+	ctx := context.Background()
+	instances := s.container.Instances()
+	instanceState, err := instances.Get(ctx, getTestRootInstanceID)
+	s.Require().NoError(err)
+
+	instanceState.InstanceName = "RenamedSeedBlueprintInstance1"
+	err = instances.Save(ctx, instanceState)
+	s.Assert().ErrorIs(err, state.ErrInstanceNameImmutable)
+
+	err = instances.SaveBatch(ctx, []state.InstanceState{instanceState})
+	s.Assert().ErrorIs(err, state.ErrInstanceNameImmutable)
+
+	instanceID, err := instances.LookupIDByName(ctx, getTestRootInstanceName)
+	s.Require().NoError(err)
+	s.Assert().Equal(getTestRootInstanceID, instanceID)
+}
+
 func (s *PostgresStateContainerInstancesTestSuite) Test_updates_blueprint_instance_deployment_status() {
 	instances := s.container.Instances()
 

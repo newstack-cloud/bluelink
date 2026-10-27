@@ -49,6 +49,10 @@ func (c *CleanupOperationsContainer) GetLatestByType(
 	ctx context.Context,
 	cleanupType manage.CleanupType,
 ) (*manage.CleanupOperation, error) {
+	if err := c.state.preloadAllCleanupOperations(ctx); err != nil {
+		return nil, err
+	}
+
 	c.state.RLock()
 	defer c.state.RUnlock()
 
@@ -71,6 +75,12 @@ func (c *CleanupOperationsContainer) Save(
 	ctx context.Context,
 	operation *manage.CleanupOperation,
 ) error {
+	// The rolling window has to see every stored operation of the type, not only those
+	// this process has loaded, or history would grow without bound across processes.
+	if err := c.state.preloadAllCleanupOperations(ctx); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -85,6 +95,10 @@ func (c *CleanupOperationsContainer) Update(
 	ctx context.Context,
 	operation *manage.CleanupOperation,
 ) error {
+	if _, _, err := c.state.LookupCleanupOperation(ctx, operation.ID); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 

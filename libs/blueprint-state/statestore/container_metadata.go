@@ -54,6 +54,10 @@ func (c *MetadataContainer) Save(
 	instanceID string,
 	metadata map[string]*core.MappingNode,
 ) error {
+	if err := c.state.preloadInstances(ctx, instanceID); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -73,6 +77,10 @@ func (c *MetadataContainer) Remove(
 	ctx context.Context,
 	instanceID string,
 ) (map[string]*core.MappingNode, error) {
+	if err := c.state.preloadInstances(ctx, instanceID); err != nil {
+		return nil, err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 

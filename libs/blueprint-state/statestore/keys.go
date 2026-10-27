@@ -37,6 +37,19 @@ func (k KeyBuilder) InstanceByName(name string) string {
 	return k.join("instances_by_name", name+".json")
 }
 
+// ResourceRecord returns the storage key for a resource's ID record, which names the
+// instance whose object holds the resource. Written under Config.WriteEntityRecords so a
+// resource can be found by ID under ModeLazy without enumerating instances.
+func (k KeyBuilder) ResourceRecord(resourceID string) string {
+	return k.join("resources_by_id", resourceID+".json")
+}
+
+// LinkRecord returns the storage key for a link's ID record, which names the instance whose
+// object holds the link. Written under Config.WriteEntityRecords.
+func (k KeyBuilder) LinkRecord(linkID string) string {
+	return k.join("links_by_id", linkID+".json")
+}
+
 // InstanceChunk returns the chunked storage key for the instance chunk file
 // at the given chunk number.
 func (k KeyBuilder) InstanceChunk(chunkNumber int) string {
@@ -193,6 +206,18 @@ func (k KeyBuilder) ValidationsPrefix() string {
 // changeset key sits under.
 func (k KeyBuilder) ChangesetsPrefix() string {
 	return k.categoryPrefix("changesets")
+}
+
+// InstancesPrefix returns the storage key prefix every per-entity instance key sits
+// under. The trailing separator keeps instances_by_name/ out of a listing.
+func (k KeyBuilder) InstancesPrefix() string {
+	return k.categoryPrefix("instances")
+}
+
+// CleanupOperationsPrefix returns the storage key prefix every per-entity
+// cleanup-operation key sits under.
+func (k KeyBuilder) CleanupOperationsPrefix() string {
+	return k.categoryPrefix("cleanup_operations")
 }
 
 // ReconciliationResultsPrefix returns the storage key prefix every per-entity
