@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Resolved once, before any directory change. Git sets GIT_DIR when running hooks in a worktree, and with
+# GIT_DIR set, --show-toplevel reports the current directory rather than the work tree root.
+repo_root="$(git rev-parse --show-toplevel)"
+
 project_changes() {
   directory=$1
   git diff HEAD --name-only | grep "^$directory/.*"
@@ -8,11 +12,10 @@ project_changes() {
 lint_project() {
   project=$1
   if project_changes $project > /dev/null 2>&1; then
-    project_dir="$(git rev-parse --show-toplevel)/$project"
-    cd $project_dir
     # Every application is expected to contain a specialised shell script for linting,
     # Each project may have its own set of files/packages to be excluded amongst other customisations.
-    if ! scripts/lint.sh; then
+    # Run in a subshell so the next project starts from the same directory.
+    if ! (cd "$repo_root/$project" && scripts/lint.sh); then
       echo -e "\033[1m\033[31mFailed linting, please fix the reported issues\033[0m\n"
       exit 1
     else
@@ -29,6 +32,7 @@ lint_project libs/blueprint-resolvers
 lint_project libs/common
 lint_project libs/plugin-framework
 lint_project libs/deploy-engine-client
+lint_project libs/telemetry-otel
 
 lint_project tools/blueprint-ls
 lint_project tools/plugin-docgen
