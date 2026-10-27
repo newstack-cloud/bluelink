@@ -120,8 +120,11 @@ func (s *PostgresStateContainerChildrenTestSuite) Test_attaches_child_blueprint_
 func (s *PostgresStateContainerChildrenTestSuite) Test_reports_parent_instance_not_found_for_attaching() {
 	children := s.container.Children()
 	fixture := s.saveChildBlueprintFixtures[1]
+	// The child must exist for the missing parent to be what is reported.
+	err := s.container.Instances().Save(context.Background(), *fixture.InstanceState)
+	s.Require().NoError(err)
 
-	err := children.Attach(
+	err = children.Attach(
 		context.Background(),
 		nonExistentInstanceID,
 		fixture.InstanceState.InstanceID,

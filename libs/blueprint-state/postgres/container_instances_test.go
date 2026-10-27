@@ -266,6 +266,28 @@ func (s *PostgresStateContainerInstancesTestSuite) Test_reports_instance_not_fou
 	s.Assert().Equal(state.ErrInstanceNotFound, stateErr.Code)
 }
 
+// A destroy removes the instance once its resources and links are gone, so it often has
+// neither left.
+func (s *PostgresStateContainerInstancesTestSuite) Test_removes_a_blueprint_instance_with_no_resources_or_links() {
+	ctx := context.Background()
+	instances := s.container.Instances()
+	instanceID := uuid.NewString()
+	err := instances.Save(ctx, state.InstanceState{
+		InstanceID:   instanceID,
+		InstanceName: "EmptyInstance" + instanceID,
+		Status:       core.InstanceStatusDeployed,
+		Metadata:     map[string]*core.MappingNode{},
+		Exports:      map[string]*state.ExportState{},
+	})
+	s.Require().NoError(err)
+
+	_, err = instances.Remove(ctx, instanceID)
+	s.Require().NoError(err)
+
+	_, err = instances.Get(ctx, instanceID)
+	s.Assert().True(state.IsInstanceNotFound(err), "got %v", err)
+}
+
 func (s *PostgresStateContainerInstancesTestSuite) Test_removes_blueprint_instance() {
 	fixture := s.saveBlueprintFixtures[3]
 

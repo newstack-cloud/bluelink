@@ -930,6 +930,12 @@ func (c *instancesContainerImpl) removeResources(
 	tx pgx.Tx,
 	resources map[string]*state.ResourceState,
 ) error {
+	// Skip an empty ID list that would lead to a query with "IN ()",
+	// which is not valid SQL.
+	if len(resources) == 0 {
+		return nil
+	}
+
 	resourceSlice := commoncore.MapToSlice(resources)
 	resourceIDs := commoncore.Map(
 		resourceSlice,
@@ -955,6 +961,12 @@ func (c *instancesContainerImpl) removeLinks(
 	tx pgx.Tx,
 	links map[string]*state.LinkState,
 ) error {
+	// Skip an empty ID list that would lead to a query with "IN ()",
+	// which is not valid SQL.
+	if len(links) == 0 {
+		return nil
+	}
+
 	linkSlice := commoncore.MapToSlice(links)
 	linkIDs := commoncore.Map(
 		linkSlice,
