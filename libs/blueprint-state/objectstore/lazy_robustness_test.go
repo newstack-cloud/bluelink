@@ -96,6 +96,24 @@ func (s *LazyRobustnessSuite) Test_saving_the_id_of_an_interrupted_removal_finis
 	s.assertRemovalFinished()
 }
 
+// The removal stops after the name record is deleted, so the name is free for a new instance
+// before the old instance's removal is finished.
+func (s *LazyRobustnessSuite) Test_finishing_an_interrupted_removal_keeps_the_name_record_of_its_successor() {
+	s.interruptRemoval()
+	ctx := context.Background()
+
+	renewed := eqInstance("renewed-instance", recordsInstanceName, nil, nil)
+	_, err := s.newContainer().Instances().InitialiseAndClaim(ctx, *renewed, core.InstanceStatusPreparing)
+	s.Require().NoError(err)
+
+	_, err = s.newContainer().Instances().Remove(ctx, recordsInstanceID)
+	s.Require().NoError(err)
+
+	id, err := s.newContainer().Instances().LookupIDByName(ctx, recordsInstanceName)
+	s.Require().NoError(err)
+	s.Assert().Equal("renewed-instance", id)
+}
+
 // A process that died between reserving a name and writing its instance leaves a record
 // naming an instance that does not exist. Once old enough, it is taken over.
 func (s *LazyRobustnessSuite) Test_an_abandoned_name_reservation_is_taken_over() {

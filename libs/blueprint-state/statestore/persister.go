@@ -200,7 +200,7 @@ func (p *Persister) CreateInstance(ctx context.Context, instance *state.Instance
 	if err != nil {
 		// Once the instance object exists the name record belongs to it.
 		if !instanceWritten {
-			_ = p.maybeRemoveNameRecord(ctx, instance.InstanceName)
+			_ = p.maybeRemoveNameRecord(ctx, instance)
 		}
 		p.state.forgetCachedInstances()
 		return err
@@ -238,7 +238,7 @@ func (p *Persister) RemoveInstance(ctx context.Context, instance *state.Instance
 	if err := p.deleteInstanceRecord(ctx, instance); err != nil {
 		return err
 	}
-	return p.maybeRemoveNameRecord(ctx, instance.InstanceName)
+	return p.maybeRemoveNameRecord(ctx, instance)
 }
 
 func (p *Persister) writeInstanceRecord(ctx context.Context, instance *state.InstanceState) error {
@@ -295,11 +295,24 @@ func (p *Persister) reserveNameRecord(ctx context.Context, instance *state.Insta
 	return writeChunk(ctx, p.storage, p.keys.InstanceByName(instance.InstanceName), record)
 }
 
-func (p *Persister) maybeRemoveNameRecord(ctx context.Context, name string) error {
-	if !p.config.WriteNameRecords || name == "" {
+// The record is only deleted while it names this instance. Once the name is free, for
+// example after a removal is interrupted past this step, another instance can take it,
+// and removing this instance again must leave that instance's record alone.
+func (p *Persister) maybeRemoveNameRecord(ctx context.Context, instance *state.InstanceState) error {
+	if !p.config.WriteNameRecords || instance.InstanceName == "" {
 		return nil
 	}
-	return deleteIgnoreNotFound(ctx, p.storage, p.keys.InstanceByName(name))
+
+	key := p.keys.InstanceByName(instance.InstanceName)
+	var record InstanceNameRecord
+	if err := readJSON(ctx, p.storage, key, &record); err != nil {
+		return err
+	}
+	if record.ID != instance.InstanceID {
+		return nil
+	}
+
+	return deleteIgnoreNotFound(ctx, p.storage, key)
 }
 
 func (p *Persister) CreateResourceDrift(ctx context.Context, drift *state.ResourceDriftState) error {

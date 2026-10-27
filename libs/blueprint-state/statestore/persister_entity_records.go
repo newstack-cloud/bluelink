@@ -92,7 +92,7 @@ func (p *Persister) removeInstanceWithRecords(ctx context.Context, instance *sta
 		return err
 	}
 
-	if err := p.maybeRemoveNameRecord(ctx, instance.InstanceName); err != nil {
+	if err := p.maybeRemoveNameRecord(ctx, instance); err != nil {
 		return err
 	}
 
