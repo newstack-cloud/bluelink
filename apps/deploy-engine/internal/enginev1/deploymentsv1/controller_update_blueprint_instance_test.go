@@ -208,6 +208,50 @@ func (s *ControllerTestSuite) Test_update_blueprint_instance_handler_fails_for_i
 	)
 }
 
+func (s *ControllerTestSuite) Test_update_blueprint_instance_handler_rejects_a_new_instance_name() {
+	_, err := s.saveTestBlueprintInstance()
+	s.Require().NoError(err)
+	err = s.saveTestChangeset()
+	s.Require().NoError(err)
+
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/deployments/instances/{id}",
+		s.ctrl.UpdateBlueprintInstanceHandler,
+	).Methods("PATCH")
+
+	reqPayload := &BlueprintInstanceRequestPayload{
+		BlueprintDocumentInfo: resolve.BlueprintDocumentInfo{
+			FileSourceScheme: "file",
+			Directory:        "/test/dir",
+			BlueprintFile:    "test.blueprint.yaml",
+		},
+		ChangeSetID:  testChangesetID,
+		InstanceName: "renamed-test-instance",
+	}
+
+	reqBytes, err := json.Marshal(reqPayload)
+	s.Require().NoError(err)
+
+	path := fmt.Sprintf("/deployments/instances/%s", testInstanceID)
+	req := httptest.NewRequest("PATCH", path, bytes.NewReader(reqBytes))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+	result := w.Result()
+	defer result.Body.Close()
+	respData, err := io.ReadAll(result.Body)
+	s.Require().NoError(err)
+
+	responseError := map[string]any{}
+	err = json.Unmarshal(respData, &responseError)
+	s.Require().NoError(err)
+
+	s.Assert().Equal(http.StatusBadRequest, result.StatusCode)
+	s.Assert().Equal("INSTANCE_NAME_IMMUTABLE", responseError["code"])
+	s.Assert().Equal(testInstanceName, responseError["instanceName"])
+}
+
 func (s *ControllerTestSuite) Test_update_blueprint_instance_handler_returns_404_not_found() {
 	_, err := s.saveTestBlueprintInstance()
 	s.Require().NoError(err)

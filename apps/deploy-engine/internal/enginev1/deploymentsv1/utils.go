@@ -68,6 +68,31 @@ func getInstanceID(
 	return instance.InstanceID
 }
 
+// Reports whether it wrote a response. An update may omit the name, in which case the
+// instance keeps its own.
+func rejectInstanceRename(
+	w http.ResponseWriter,
+	existingInstance *state.InstanceState,
+	requestedName string,
+) (responseWritten bool) {
+	if existingInstance == nil ||
+		requestedName == "" ||
+		requestedName == existingInstance.InstanceName {
+		return false
+	}
+
+	httputils.HTTPErrorWithFields(
+		w,
+		http.StatusBadRequest,
+		"the name of an existing blueprint instance cannot be changed",
+		map[string]any{
+			"code":         "INSTANCE_NAME_IMMUTABLE",
+			"instanceName": existingInstance.InstanceName,
+		},
+	)
+	return true
+}
+
 // resolveInstance resolves an instance from the provided identifier,
 // which can be either an instance ID or an instance name.
 // It first tries to get the instance by ID, and if not found,

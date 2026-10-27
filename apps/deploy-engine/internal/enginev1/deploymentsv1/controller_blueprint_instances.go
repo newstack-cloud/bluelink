@@ -343,6 +343,10 @@ func (c *Controller) handleDeployRequest(
 		return
 	}
 
+	if rejectInstanceRename(w, existingInstance, payload.InstanceName) {
+		return
+	}
+
 	helpersv1.PopulateBlueprintDocInfoDefaults(&payload.BlueprintDocumentInfo)
 
 	finalConfig, _, responseWritten := helpersv1.PrepareAndValidatePluginConfig(
