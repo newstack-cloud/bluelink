@@ -31,8 +31,7 @@ func upsertInstanceQuery() string {
 		@childDependencies,
 		@durations
 	) ON CONFLICT (id) DO UPDATE SET
-		"name" = excluded.name,
-	 	status = excluded.status,
+		status = excluded.status,
 		last_status_update_timestamp = excluded.last_status_update_timestamp,
 		last_deployed_timestamp = excluded.last_deployed_timestamp,
 		last_deploy_attempt_timestamp = excluded.last_deploy_attempt_timestamp,
@@ -40,6 +39,7 @@ func upsertInstanceQuery() string {
 		exports = excluded.exports,
 		child_dependencies = excluded.child_dependencies,
 		durations = excluded.durations
+	WHERE blueprint_instances."name" = excluded."name"
 	`
 }
 

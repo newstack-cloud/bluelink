@@ -7,6 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -168,6 +169,67 @@ func (s *PostgresStateContainerInstancesTestSuite) Test_rejects_saving_an_existi
 	instanceID, err := instances.LookupIDByName(ctx, getTestRootInstanceName)
 	s.Require().NoError(err)
 	s.Assert().Equal(getTestRootInstanceID, instanceID)
+}
+
+// Another engine's save of the same new instance is held open while this save runs, so this
+// save cannot see the row until it waits on it, and only the upsert can tell that the other
+// save created it first.
+func (s *PostgresStateContainerInstancesTestSuite) Test_a_save_racing_another_save_of_a_new_instance_cannot_rename_it() {
+	ctx := context.Background()
+	instanceID := uuid.NewString()
+	firstName := "RacingSaveFirst" + instanceID
+	defer func() {
+		_, err := s.connPool.Exec(ctx, "DELETE FROM blueprint_instances WHERE id = $1", instanceID)
+		s.Require().NoError(err)
+	}()
+
+	otherEngine, err := s.connPool.Begin(ctx)
+	s.Require().NoError(err)
+	defer otherEngine.Rollback(ctx)
+	_, err = otherEngine.Exec(
+		ctx,
+		`INSERT INTO blueprint_instances (id, "name", status, metadata, exports)
+		VALUES ($1, $2, $3, '{}', '{}')`,
+		instanceID, firstName, core.InstanceStatusPreparing,
+	)
+	s.Require().NoError(err)
+
+	saved := make(chan error, 1)
+	go func() {
+		saved <- s.container.Instances().Save(ctx, state.InstanceState{
+			InstanceID:   instanceID,
+			InstanceName: "RacingSaveSecond" + instanceID,
+			Status:       core.InstanceStatusPreparing,
+			Metadata:     map[string]*core.MappingNode{},
+			Exports:      map[string]*state.ExportState{},
+		})
+	}()
+	s.Require().Eventually(
+		func() bool { return s.isWaitingOnInstanceInsert(ctx) },
+		5*time.Second, 10*time.Millisecond,
+		"the save never waited on the other engine's uncommitted instance",
+	)
+	s.Require().NoError(otherEngine.Commit(ctx))
+
+	s.Assert().ErrorIs(<-saved, state.ErrInstanceNameImmutable)
+	instance, err := s.container.Instances().Get(ctx, instanceID)
+	s.Require().NoError(err)
+	s.Assert().Equal(firstName, instance.InstanceName)
+}
+
+func (s *PostgresStateContainerInstancesTestSuite) isWaitingOnInstanceInsert(ctx context.Context) bool {
+	var waiting bool
+	err := s.connPool.QueryRow(
+		ctx,
+		`SELECT EXISTS (
+			SELECT 1 FROM pg_stat_activity
+			WHERE datname = current_database()
+				AND wait_event_type = 'Lock'
+				AND query LIKE '%INSERT INTO blueprint_instances%'
+		)`,
+	).Scan(&waiting)
+	s.Require().NoError(err)
+	return waiting
 }
 
 func (s *PostgresStateContainerInstancesTestSuite) Test_updates_blueprint_instance_deployment_status() {
