@@ -9,32 +9,17 @@ import (
 
 // LookupInstance returns the instance for id. Under ModeEager this is a
 // pure cache read (loader is the noop). Under ModeLazy, a miss triggers
-// loader.LoadInstance, which populates the cache before returning.
+// loader.LoadInstance and caches the instance with its child blueprints,
+// resources and links before returning (see CachePersistedInstance).
+//
+// Must not be called while holding the State lock.
 func (s *State) LookupInstance(ctx context.Context, id string) (*state.InstanceState, bool, error) {
-	s.mu.RLock()
-	if inst, ok := s.instances[id]; ok {
-		s.mu.RUnlock()
-		return inst, true, nil
-	}
-	s.mu.RUnlock()
-
-	inst, ok, err := s.loader.LoadInstance(ctx, id)
-	if err != nil || !ok {
-		return nil, ok, err
-	}
-	s.mu.Lock()
-	s.instances[id] = inst
-	if inst.InstanceName != "" {
-		s.nameLookup[inst.InstanceName] = inst.InstanceID
-	}
-	s.mu.Unlock()
-	return inst, true, nil
+	return s.lookupInstance(ctx, id, map[string]bool{})
 }
 
-// LookupInstanceIDByName resolves a name to an instance ID. Under ModeEager
-// the nameLookup map is populated at load time and kept in sync by
-// SetInstanceInMemory / RemoveInstanceFromMemory. Under ModeLazy a miss hits
-// the loader, which typically reads an `instances_by_name/<name>.json` stub.
+// LookupInstanceIDByName resolves a name to an instance ID from the name cache,
+// which is kept in sync wherever an instance is cached or removed. Under ModeLazy
+// a miss reads the instance's name record through the loader.
 func (s *State) LookupInstanceIDByName(ctx context.Context, name string) (string, bool, error) {
 	s.mu.RLock()
 	if id, ok := s.nameLookup[name]; ok {
@@ -62,13 +47,23 @@ func (s *State) LookupResource(ctx context.Context, id string) (*state.ResourceS
 	}
 	s.mu.RUnlock()
 
-	r, ok, err := s.loader.LoadResource(ctx, id)
+	instanceID, ok, err := s.loader.LoadResourceInstanceID(ctx, id)
 	if err != nil || !ok {
 		return nil, ok, err
 	}
-	s.mu.Lock()
-	s.resources[id] = r
-	s.mu.Unlock()
+	// Loading the instance caches its resources. A record whose instance no longer holds
+	// the resource is left behind by an interrupted write and reads as not found.
+	if _, _, err := s.LookupInstance(ctx, instanceID); err != nil {
+		return nil, false, err
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	r, ok := s.resources[id]
+	if !ok || r.InstanceID != instanceID {
+		return nil, false, nil
+	}
+
 	return r, true, nil
 }
 
@@ -100,13 +95,22 @@ func (s *State) LookupLink(ctx context.Context, id string) (*state.LinkState, bo
 	}
 	s.mu.RUnlock()
 
-	l, ok, err := s.loader.LoadLink(ctx, id)
+	instanceID, ok, err := s.loader.LoadLinkInstanceID(ctx, id)
 	if err != nil || !ok {
 		return nil, ok, err
 	}
-	s.mu.Lock()
-	s.links[id] = l
-	s.mu.Unlock()
+	// As for resources, the record is only a hint and the loaded instance decides.
+	if _, _, err := s.LookupInstance(ctx, instanceID); err != nil {
+		return nil, false, err
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	l, ok := s.links[id]
+	if !ok || l.InstanceID != instanceID {
+		return nil, false, nil
+	}
+
 	return l, true, nil
 }
 

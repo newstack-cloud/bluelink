@@ -1,6 +1,6 @@
 {
   "id": "0b08445b-4549-4a03-931b-bdbcf4b2c985",
-  "name": "BlueprintInstance2",
+  "name": "SeedBlueprintInstance4",
   "status": 2,
   "lastDeployedTimestamp": 1733145428,
   "lastDeployAttemptTimestamp": 1733145428,
@@ -189,7 +189,7 @@
   "childBlueprints": {
     "coreInfra": {
       "id": "e98809b3-7008-46a5-8f2c-6ac06bcf9a93",
-      "name": "BlueprintInstance2-CoreInfra",
+      "name": "SeedBlueprintInstance5",
       "status": 2,
       "lastDeployedTimestamp": 1733145428,
       "lastDeployAttemptTimestamp": 1733145428,

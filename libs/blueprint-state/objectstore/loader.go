@@ -4,17 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/statestore"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
-// ServiceLoader resolves one entity per call from the objectstore Service,
-// materialising it into statestore.State only on cache miss. This is the
-// seam that lets objectstore run under statestore.ModeLazy — processes
-// only touch the working subset of state rather than bulk-loading the
-// entire bucket on startup.
+// ServiceLoader reads entities from the objectstore Service on a State cache miss,
+// and lists categories for whole-category queries. This lets objectstore run under
+// statestore.ModeLazy without bulk-loading the bucket at startup.
 type ServiceLoader struct {
 	svc  Service
 	keys statestore.KeyBuilder
@@ -27,13 +26,13 @@ func NewServiceLoader(svc Service, keys statestore.KeyBuilder) *ServiceLoader {
 func (l *ServiceLoader) LoadInstance(
 	ctx context.Context,
 	id string,
-) (*state.InstanceState, bool, error) {
+) (*statestore.PersistedInstanceState, bool, error) {
 	var persisted statestore.PersistedInstanceState
 	found, err := readEntity(ctx, l.svc, l.keys.Instance(id), &persisted)
 	if err != nil || !found {
 		return nil, found, err
 	}
-	return persisted.ToInstanceState(), true, nil
+	return &persisted, true, nil
 }
 
 func (l *ServiceLoader) LoadInstanceIDByName(
@@ -48,20 +47,66 @@ func (l *ServiceLoader) LoadInstanceIDByName(
 	return record.ID, true, nil
 }
 
-// LoadResource and LoadLink intentionally return (nil, false, nil).
-// Resources and links are persisted inline with the parent instance record,
-// so their in-memory caches are warmed transitively via LoadInstance. A
-// direct resource-or-link-by-ID lookup without a prior instance load won't
-// resolve — callers must load the parent instance first.
-func (l *ServiceLoader) LoadResource(
-	_ context.Context,
-	_ string,
-) (*state.ResourceState, bool, error) {
-	return nil, false, nil
+// LoadResourceInstanceID reads a resource's ID record. Resources are persisted inside
+// their instance's object, so the record only says which instance to load.
+func (l *ServiceLoader) LoadResourceInstanceID(
+	ctx context.Context,
+	resourceID string,
+) (string, bool, error) {
+	return l.loadEntityRecord(ctx, l.keys.ResourceRecord(resourceID))
 }
 
-func (l *ServiceLoader) LoadLink(_ context.Context, _ string) (*state.LinkState, bool, error) {
-	return nil, false, nil
+// LoadLinkInstanceID reads a link's ID record, which says which instance to load.
+func (l *ServiceLoader) LoadLinkInstanceID(
+	ctx context.Context,
+	linkID string,
+) (string, bool, error) {
+	return l.loadEntityRecord(ctx, l.keys.LinkRecord(linkID))
+}
+
+// ListInstanceIDs lists the IDs of every instance object in the bucket.
+func (l *ServiceLoader) ListInstanceIDs(ctx context.Context) ([]string, error) {
+	return l.listEntityIDs(ctx, l.keys.InstancesPrefix())
+}
+
+// ListReconciliationResultIDs lists the IDs of every reconciliation result in the bucket.
+func (l *ServiceLoader) ListReconciliationResultIDs(ctx context.Context) ([]string, error) {
+	return l.listEntityIDs(ctx, l.keys.ReconciliationResultsPrefix())
+}
+
+// ListCleanupOperationIDs lists the IDs of every cleanup operation in the bucket.
+func (l *ServiceLoader) ListCleanupOperationIDs(ctx context.Context) ([]string, error) {
+	return l.listEntityIDs(ctx, l.keys.CleanupOperationsPrefix())
+}
+
+// Keys directly under prefix are "<prefix><id>.json"; anything nested deeper is not an
+// entity of the category.
+func (l *ServiceLoader) listEntityIDs(ctx context.Context, prefix string) ([]string, error) {
+	objects, err := l.svc.List(ctx, prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make([]string, 0, len(objects))
+	for _, object := range objects {
+		name := strings.TrimPrefix(object.Key, prefix)
+		id, isJSON := strings.CutSuffix(name, ".json")
+		if isJSON && id != "" && !strings.Contains(id, "/") {
+			ids = append(ids, id)
+		}
+	}
+
+	return ids, nil
+}
+
+func (l *ServiceLoader) loadEntityRecord(ctx context.Context, key string) (string, bool, error) {
+	var record statestore.EntityRecord
+	found, err := readEntity(ctx, l.svc, key, &record)
+	if err != nil || !found {
+		return "", found, err
+	}
+
+	return record.InstanceID, true, nil
 }
 
 func (l *ServiceLoader) LoadResourceDrift(

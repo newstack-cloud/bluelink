@@ -2,7 +2,6 @@ package objectstore
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
@@ -32,6 +31,7 @@ type StateContainer struct {
 	cleanupOperationsContainer     *statestore.CleanupOperationsContainer
 	auditContainer                 *auditContainer
 	storePersister                 *statestore.Persister
+	clock                          commoncore.Clock
 }
 
 // Option is a type for options that can be passed to LoadStateContainer.
@@ -63,9 +63,11 @@ func WithRecentlyQueuedEventsThreshold(thresholdSeconds int64) Option {
 	}
 }
 
-// WithClock sets the clock used by the events container.
+// WithClock sets the clock used by the events container, and to timestamp instance name
+// reservations and judge whether an old one was abandoned.
 func WithClock(clock commoncore.Clock) Option {
 	return func(c *StateContainer) {
+		c.clock = clock
 		statestore.WithEventsClock(clock)(c.eventsContainer)
 	}
 }
@@ -89,22 +91,30 @@ func LoadStateContainer(
 	)
 	cfg := getConfig()
 
+	// Options are applied after the containers are built,
+	// so the clock is read when used.
+	var container *StateContainer
+	getClock := func() commoncore.Clock {
+		return container.clock
+	}
+
 	storePersister := statestore.NewPersister(
 		storeState,
 		storage,
 		cfg,
 		prefix,
 		statestore.WithLogger(logger),
-		statestore.WithNameRecordReserver(newNameRecordReserver(svc, keys)),
+		statestore.WithNameRecordReserver(newNameRecordReserver(svc, keys, getClock)),
 	)
 
-	container := &StateContainer{
+	container = &StateContainer{
+		clock:          &commoncore.SystemClock{},
 		storePersister: storePersister,
 		instancesContainer: statestore.NewInstancesContainer(
 			storeState,
 			storePersister,
 			objectstoreClaimFunc(svc, keys, storeState),
-			objectstoreInitialiseAndClaimFunc(svc, keys, storeState),
+			objectstoreInitialiseAndClaimFunc(svc, keys, storeState, getClock),
 			logger,
 		),
 		resourcesContainer:             statestore.NewResourcesContainer(storeState, storePersister, logger),
@@ -153,8 +163,9 @@ func (c *StateContainer) Audit() manage.Audit {
 
 // Every category sits on LayoutPerEntity so that each record has its own object key.
 // Cross-run writes to unrelated entities are then collision-free and the lazy
-// EntityLoader resolves any single record with one GET. Resources and Links inherit
-// Instances' layout, since they are persisted inline with the parent instance record.
+// EntityLoader reads any single record with one GET. Resources and links are persisted
+// inside their instance's object, so Resources and Links inherit Instances' layout, and
+// are found by ID through a resources_by_id or links_by_id record naming the instance.
 //
 // Events are per-entity for a stronger reason than the rest. A chunked channel is one
 // object rewritten whole on every save, and an engine that has not read the channel
@@ -173,6 +184,7 @@ func getConfig() statestore.Config {
 	return statestore.Config{
 		Mode:                  statestore.ModeLazy,
 		WriteNameRecords:      true,
+		WriteEntityRecords:    true,
 		Instances:             perEntityGlobal,
 		Resources:             perEntityGlobal,
 		Links:                 perEntityGlobal,
@@ -187,27 +199,22 @@ func getConfig() statestore.Config {
 	}
 }
 
-// Returns a NameRecordReserver that writes the
-// instance name-lookup record with IfNoneMatch: "*" so two concurrent
-// first-deploys choosing the same name for different IDs are serialised
-// at the bucket layer. Maps 412 to state.ErrInstanceAlreadyExists so
-// persister.CreateInstance surfaces the same sentinel the in-process
-// backends already return.
-func newNameRecordReserver(svc Service, keys statestore.KeyBuilder) statestore.NameRecordReserver {
+// Returns a NameRecordReserver backed by reserveName, so persister.CreateInstance
+// surfaces state.ErrInstanceAlreadyExists for a name another live instance holds,
+// the same sentinel the in-process backends return.
+func newNameRecordReserver(
+	svc Service,
+	keys statestore.KeyBuilder,
+	clock func() commoncore.Clock,
+) statestore.NameRecordReserver {
 	return func(ctx context.Context, name, instanceID string) error {
-		record := &statestore.InstanceNameRecord{ID: instanceID, Name: name}
-		data, err := json.Marshal(record)
-		if err != nil {
+		// Runs before every create of a named instance, so it is also where an interrupted
+		// removal of the same ID is finished before the new instance is written.
+		if err := finishRemoval(ctx, svc, keys, instanceID); err != nil {
 			return err
 		}
-		_, err = svc.Put(ctx, keys.InstanceByName(name), data, &PutOptions{IfNoneMatch: "*"})
-		if err != nil {
-			if isPreconditionFailed(err) {
-				return state.ErrInstanceAlreadyExists
-			}
-			return err
-		}
-		return nil
+		_, err := reserveName(ctx, svc, keys, clock(), name, instanceID)
+		return err
 	}
 }
 
@@ -230,12 +237,13 @@ func objectstoreInitialiseAndClaimFunc(
 	svc Service,
 	keys statestore.KeyBuilder,
 	st *statestore.State,
+	clock func() commoncore.Clock,
 ) statestore.InitialiseAndClaimFunc {
 	return func(
 		ctx context.Context,
 		instanceState state.InstanceState,
 		newStatus core.InstanceStatus,
 	) (int64, error) {
-		return InitialiseAndClaim(ctx, svc, keys, st, instanceState, newStatus)
+		return InitialiseAndClaim(ctx, svc, keys, st, clock(), instanceState, newStatus)
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"maps"
 	"regexp"
 	"strings"
 
@@ -142,12 +141,9 @@ func loadInstancePerEntity(
 		return nil
 	}
 
-	st.instances[p.InstanceID] = p.ToInstanceState()
-	maps.Copy(st.resources, p.Resources)
-
-	for _, link := range p.Links {
-		st.links[link.LinkID] = link
-	}
+	inst := p.ToInstanceState()
+	st.instances[p.InstanceID] = inst
+	st.indexInstanceEntities(nil, inst)
 
 	if len(p.ChildBlueprints) > 0 {
 		refs := make([]childInstanceRef, 0, len(p.ChildBlueprints))
@@ -180,12 +176,9 @@ func loadInstanceChunk(
 	}
 
 	for _, p := range persisted {
-		st.instances[p.InstanceID] = p.ToInstanceState()
-		maps.Copy(st.resources, p.Resources)
-
-		for _, link := range p.Links {
-			st.links[link.LinkID] = link
-		}
+		inst := p.ToInstanceState()
+		st.instances[p.InstanceID] = inst
+		st.indexInstanceEntities(nil, inst)
 
 		if len(p.ChildBlueprints) > 0 {
 			refs := buildInstanceChunkRefs(p)

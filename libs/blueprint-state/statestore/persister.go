@@ -184,41 +184,56 @@ func (p *Persister) reconciliationSpec() catSpec {
 // CreateInstance persists a newly-added instance. When Config.WriteNameRecords
 // is true, the name-lookup record is reserved FIRST (via NameRecordReserver if
 // installed, else a plain write) so duplicate-name creates are rejected
-// before any main-record I/O. On main-record failure the name record is
-// best-effort rolled back.
+// before any main-record I/O. If the instance object could not be written, the
+// name record is rolled back on a best-effort basis.
+//
+// The caller must hold the State write lock for state cache updates.
 func (p *Persister) CreateInstance(ctx context.Context, instance *state.InstanceState) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	if err := p.reserveNameRecord(ctx, instance); err != nil {
+		p.state.forgetCachedInstances()
 		return err
 	}
-	if err := p.writeInstanceRecord(ctx, instance); err != nil {
-		_ = p.maybeRemoveNameRecord(ctx, instance.InstanceName)
+	instanceWritten, err := p.createInstanceRecords(ctx, instance)
+	if err != nil {
+		// Once the instance object exists the name record belongs to it.
+		if !instanceWritten {
+			_ = p.maybeRemoveNameRecord(ctx, instance.InstanceName)
+		}
+		p.state.forgetCachedInstances()
 		return err
 	}
 	return nil
 }
 
-// UpdateInstance rewrites an existing instance in place. If the instance's
-// name has changed and Config.WriteNameRecords is true, the stale record is
-// left in place (self-corrected on lookup) and a fresh record is written
-// for the current name.
+// UpdateInstance rewrites an existing instance in place, for a change that adds or removes
+// no resources or links (see UpdateInstanceEntities for one that does). Instance names
+// cannot change, so the name record is left as it is.
+//
+// The caller must hold the State write lock for state cache updates.
 func (p *Persister) UpdateInstance(ctx context.Context, instance *state.InstanceState) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	if err := p.rewriteInstanceRecord(ctx, instance); err != nil {
-		return err
+	err := p.rewriteInstanceRecord(ctx, instance)
+	if err != nil {
+		p.state.forgetCachedInstances()
 	}
-	return p.maybeRefreshNameRecord(ctx, instance)
+	return err
 }
 
 // RemoveInstance removes an instance's persisted record, its index entry,
-// and its name-lookup record (if any).
+// its name-lookup record (if any) and, under Config.WriteEntityRecords, the ID
+// records of its resources and links.
 func (p *Persister) RemoveInstance(ctx context.Context, instance *state.InstanceState) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+
+	if p.config.WriteEntityRecords {
+		return p.removeInstanceWithRecords(ctx, instance)
+	}
 
 	if err := p.deleteInstanceRecord(ctx, instance); err != nil {
 		return err
@@ -276,18 +291,6 @@ func (p *Persister) reserveNameRecord(ctx context.Context, instance *state.Insta
 	if p.nameRecordReserver != nil {
 		return p.nameRecordReserver(ctx, instance.InstanceName, instance.InstanceID)
 	}
-	record := &InstanceNameRecord{ID: instance.InstanceID, Name: instance.InstanceName}
-	return writeChunk(ctx, p.storage, p.keys.InstanceByName(instance.InstanceName), record)
-}
-
-func (p *Persister) maybeRefreshNameRecord(ctx context.Context, instance *state.InstanceState) error {
-	if !p.config.WriteNameRecords || instance.InstanceName == "" {
-		return nil
-	}
-	// If the name changed, the previous record is orphaned but harmless —
-	// LookupInstanceIDByName verifies record→instance consistency by reading
-	// the instance it points at and rejecting stale results. We still
-	// write the new record so the current name resolves cheaply.
 	record := &InstanceNameRecord{ID: instance.InstanceID, Name: instance.InstanceName}
 	return writeChunk(ctx, p.storage, p.keys.InstanceByName(instance.InstanceName), record)
 }

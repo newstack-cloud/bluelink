@@ -13,6 +13,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/statestore"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,7 +24,7 @@ func TestInitialiseAndClaim_creates_new_instance_at_version_1(t *testing.T) {
 	st := statestore.NewState()
 
 	version, err := objectstore.InitialiseAndClaim(
-		context.Background(), svc, keys, st,
+		context.Background(), svc, keys, st, &commoncore.SystemClock{},
 		state.InstanceState{
 			InstanceID:   testInstanceID,
 			InstanceName: "TestInstance",
@@ -52,7 +53,7 @@ func TestInitialiseAndClaim_returns_already_exists_for_existing_instance(t *test
 	svc, keys, st := setupClaimTest(t, 3)
 
 	_, err := objectstore.InitialiseAndClaim(
-		context.Background(), svc, keys, st,
+		context.Background(), svc, keys, st, &commoncore.SystemClock{},
 		state.InstanceState{
 			InstanceID:   testInstanceID,
 			InstanceName: "ignored-because-conflict",
@@ -85,7 +86,7 @@ func TestInitialiseAndClaim_concurrent_callers_only_one_wins(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			_, err := objectstore.InitialiseAndClaim(
-				context.Background(), svc, keys, st,
+				context.Background(), svc, keys, st, &commoncore.SystemClock{},
 				state.InstanceState{
 					InstanceID:   testInstanceID,
 					InstanceName: "TestInstance",

@@ -47,10 +47,17 @@ type Config struct {
 	Mode LoadMode
 
 	// WriteNameRecords toggles per-entity name-lookup record writes alongside
-	// instance creates/updates/removes. Required for ModeLazy so
+	// instance creates and removes. Required for ModeLazy so
 	// LookupInstanceIDByName can avoid enumerating all instances. Memfile
 	// (ModeEager) leaves this false and resolves names from its in-memory map.
 	WriteNameRecords bool
+
+	// WriteEntityRecords toggles per-entity ID records for resources and links, each naming
+	// the instance whose object holds the entity. Required for ModeLazy so a resource or
+	// link can be found by ID alone. Enabling it also makes instance removal write a
+	// removal marker first, so an interrupted removal leaves no record pointing at a
+	// missing instance and can be resumed. Requires LayoutPerEntity for instances.
+	WriteEntityRecords bool
 
 	Instances             CategoryConfig
 	Resources             CategoryConfig

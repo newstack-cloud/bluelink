@@ -47,16 +47,20 @@ const (
 // memfile supplies a no-op loader (ModeEager); objectstore supplies one that
 // reads and unmarshals objects from its Service.
 //
-// Every method returns (entity, found, error):
-//   - entity non-nil, found true, err nil  — entity materialised
-//   - entity nil, found false, err nil     — entity does not exist
-//   - entity nil, found false, err non-nil — transient error; caller decides
+// Every method returns (value, found, error): the value and true when found, the zero
+// value and false when it does not exist, and the zero value with an error on a transient
+// failure, which the caller decides how to handle.
+//
+// LoadInstance returns the instance as persisted, with child blueprints as ID references,
+// which State resolves when it caches the instance.
 type EntityLoader interface {
-	LoadInstance(ctx context.Context, id string) (*state.InstanceState, bool, error)
+	LoadInstance(ctx context.Context, id string) (*PersistedInstanceState, bool, error)
 	LoadInstanceIDByName(ctx context.Context, name string) (string, bool, error)
-	LoadResource(ctx context.Context, id string) (*state.ResourceState, bool, error)
+	// LoadResourceInstanceID and LoadLinkInstanceID resolve an entity's ID record to the
+	// instance said to hold it. State loads that instance and checks it still holds the entity.
+	LoadResourceInstanceID(ctx context.Context, resourceID string) (string, bool, error)
+	LoadLinkInstanceID(ctx context.Context, linkID string) (string, bool, error)
 	LoadResourceDrift(ctx context.Context, id string) (*state.ResourceDriftState, bool, error)
-	LoadLink(ctx context.Context, id string) (*state.LinkState, bool, error)
 	LoadLinkDrift(ctx context.Context, id string) (*state.LinkDriftState, bool, error)
 	LoadEvent(ctx context.Context, id string) (*manage.Event, bool, error)
 	LoadChangeset(ctx context.Context, id string) (*manage.Changeset, bool, error)
@@ -66,11 +70,22 @@ type EntityLoader interface {
 	LoadAuditRecord(ctx context.Context, id string) (*manage.AuditRecord, bool, error)
 }
 
+// EntityLister is implemented by an EntityLoader that can enumerate the entities of a
+// category in storage. Under ModeLazy, queries that span a whole category (listing
+// instances, finding the latest reconciliation result or cleanup operation) list the
+// category and load each entity before answering from the cache, so they cover what
+// other processes wrote rather than only what this one has loaded.
+type EntityLister interface {
+	ListInstanceIDs(ctx context.Context) ([]string, error)
+	ListReconciliationResultIDs(ctx context.Context) ([]string, error)
+	ListCleanupOperationIDs(ctx context.Context) ([]string, error)
+}
+
 // noopLoader is the loader used under ModeEager — it never materialises
 // anything because the State is assumed to hold the full picture.
 type noopLoader struct{}
 
-func (noopLoader) LoadInstance(context.Context, string) (*state.InstanceState, bool, error) {
+func (noopLoader) LoadInstance(context.Context, string) (*PersistedInstanceState, bool, error) {
 	return nil, false, nil
 }
 
@@ -78,16 +93,16 @@ func (noopLoader) LoadInstanceIDByName(context.Context, string) (string, bool, e
 	return "", false, nil
 }
 
-func (noopLoader) LoadResource(context.Context, string) (*state.ResourceState, bool, error) {
-	return nil, false, nil
+func (noopLoader) LoadResourceInstanceID(context.Context, string) (string, bool, error) {
+	return "", false, nil
 }
 
 func (noopLoader) LoadResourceDrift(context.Context, string) (*state.ResourceDriftState, bool, error) {
 	return nil, false, nil
 }
 
-func (noopLoader) LoadLink(context.Context, string) (*state.LinkState, bool, error) {
-	return nil, false, nil
+func (noopLoader) LoadLinkInstanceID(context.Context, string) (string, bool, error) {
+	return "", false, nil
 }
 
 func (noopLoader) LoadLinkDrift(context.Context, string) (*state.LinkDriftState, bool, error) {

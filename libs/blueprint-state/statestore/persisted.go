@@ -30,6 +30,47 @@ type PersistedInstanceState struct {
 	ChildDependencies map[string]*state.DependencyInfo  `json:"childDependencies,omitempty"`
 	Durations         *state.InstanceCompletionDuration `json:"durations,omitempty"`
 	Version           int64                             `json:"version"`
+	// Removing marks an instance whose removal has started under Config.WriteEntityRecords.
+	// A marked instance reads as not found, and removing it again resumes the removal.
+	Removing bool `json:"removing,omitempty"`
+}
+
+// EntityRecord is the JSON shape of a resource or link ID record written under
+// Config.WriteEntityRecords. It is a hint where whoever follows it checks that the instance
+// it names still holds the entity.
+type EntityRecord struct {
+	InstanceID string `json:"instanceId"`
+}
+
+// InstanceEntityIDs lists resource and link IDs held by an instance, or added or removed by a
+// change to it, so their ID records can be written before and deleted after the instance.
+type InstanceEntityIDs struct {
+	Resources []string
+	Links     []string
+}
+
+// EntityIDs returns the IDs of the resources and links the persisted instance holds, which
+// are the ID records it needs under Config.WriteEntityRecords.
+func (p *PersistedInstanceState) EntityIDs() InstanceEntityIDs {
+	ids := InstanceEntityIDs{}
+	for resourceID := range p.Resources {
+		ids.Resources = append(ids.Resources, resourceID)
+	}
+	for _, link := range p.Links {
+		ids.Links = append(ids.Links, link.LinkID)
+	}
+	return ids
+}
+
+// WithoutEntities returns a copy of the persisted instance without its resources and links.
+// Under Config.WriteEntityRecords an instance is first written in this form, so that the
+// instance object exists before any ID record names it.
+func (p *PersistedInstanceState) WithoutEntities() *PersistedInstanceState {
+	shell := *p
+	shell.ResourceIDs = map[string]string{}
+	shell.Resources = map[string]*state.ResourceState{}
+	shell.Links = map[string]*state.LinkState{}
+	return &shell
 }
 
 // NewPersistedInstanceState returns the persistence representation of an
@@ -66,6 +107,10 @@ func NewPersistedInstanceState(instance *state.InstanceState) *PersistedInstance
 type InstanceNameRecord struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+	// ReservedAt is the Unix time the name was reserved, set by backends that reserve
+	// a name before writing the instance. It lets a reservation whose instance was never
+	// written, because the process died in between, be recognised as abandoned.
+	ReservedAt int64 `json:"reservedAt,omitempty"`
 }
 
 // ToInstanceState returns a live state.InstanceState populated from the

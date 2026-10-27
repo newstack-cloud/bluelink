@@ -10,9 +10,10 @@ import (
 )
 
 // ResourcesContainer implements state.ResourcesContainer against a shared
-// statestore.State and Persister. Instance mutations (Save/UpdateStatus/
-// Remove) flow through Persister.UpdateInstance; drift mutations flow
-// through Persister.CreateResourceDrift / UpdateResourceDrift / RemoveResourceDrift.
+// statestore.State and Persister. Instance mutations flow through
+// Persister.UpdateInstanceEntities when they add or remove a resource, and
+// Persister.UpdateInstance otherwise. Drift mutations flow through
+// Persister.CreateResourceDrift / UpdateResourceDrift / RemoveResourceDrift.
 type ResourcesContainer struct {
 	state     *State
 	persister *Persister
@@ -71,6 +72,10 @@ func (c *ResourcesContainer) Save(
 	ctx context.Context,
 	resourceState state.ResourceState,
 ) error {
+	if err := c.state.preloadInstances(ctx, resourceState.InstanceID); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -84,6 +89,12 @@ func (c *ResourcesContainer) Save(
 	if inst.Resources == nil {
 		inst.Resources = map[string]*state.ResourceState{}
 	}
+
+	added := InstanceEntityIDs{}
+	if _, exists := inst.Resources[resourceState.ResourceID]; !exists {
+		added.Resources = []string{resourceState.ResourceID}
+	}
+
 	inst.ResourceIDs[resourceState.Name] = resourceState.ResourceID
 	inst.Resources[resourceState.ResourceID] = &resourceState
 	c.state.resources[resourceState.ResourceID] = &resourceState
@@ -94,7 +105,7 @@ func (c *ResourcesContainer) Save(
 		core.StringLogField("resourceName", resourceState.Name),
 		core.StringLogField("instanceId", resourceState.InstanceID),
 	)
-	return c.persister.UpdateInstance(ctx, inst)
+	return c.persister.UpdateInstanceEntities(ctx, inst, added, InstanceEntityIDs{})
 }
 
 func (c *ResourcesContainer) UpdateStatus(
@@ -102,6 +113,10 @@ func (c *ResourcesContainer) UpdateStatus(
 	resourceID string,
 	statusInfo state.ResourceStatusInfo,
 ) error {
+	if err := c.state.preloadResource(ctx, resourceID); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -141,6 +156,10 @@ func (c *ResourcesContainer) Remove(
 	ctx context.Context,
 	resourceID string,
 ) (state.ResourceState, error) {
+	if err := c.state.preloadResource(ctx, resourceID); err != nil {
+		return state.ResourceState{}, err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -165,7 +184,10 @@ func (c *ResourcesContainer) Remove(
 		"persisting removal of resource",
 		core.StringLogField("resourceId", resourceID),
 	)
-	return *resource, c.persister.UpdateInstance(ctx, inst)
+	removed := InstanceEntityIDs{Resources: []string{resourceID}}
+	return *resource, c.persister.UpdateInstanceEntities(
+		ctx, inst, InstanceEntityIDs{}, removed,
+	)
 }
 
 func (c *ResourcesContainer) SaveContributionFailure(
@@ -203,6 +225,10 @@ func (c *ResourcesContainer) updateContributionFailures(
 	resourceID string,
 	update func([]state.ResourceLinkContributionFailure) []state.ResourceLinkContributionFailure,
 ) error {
+	if err := c.state.preloadResource(ctx, resourceID); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -252,6 +278,10 @@ func (c *ResourcesContainer) SaveDrift(
 	ctx context.Context,
 	driftState state.ResourceDriftState,
 ) error {
+	if err := c.state.preloadResourceWithDrift(ctx, driftState.ResourceID); err != nil {
+		return err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 
@@ -302,6 +332,10 @@ func (c *ResourcesContainer) RemoveDrift(
 	ctx context.Context,
 	resourceID string,
 ) (state.ResourceDriftState, error) {
+	if err := c.state.preloadResourceWithDrift(ctx, resourceID); err != nil {
+		return state.ResourceDriftState{}, err
+	}
+
 	c.state.Lock()
 	defer c.state.Unlock()
 

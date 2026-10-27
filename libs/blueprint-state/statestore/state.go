@@ -16,8 +16,8 @@ type State struct {
 	loader EntityLoader
 
 	// nameLookup caches instance name → id resolutions. Populated lazily from
-	// loader.LoadInstanceIDByName under ModeLazy; kept in sync by
-	// SetInstanceInMemory / RemoveInstanceFromMemory under ModeEager.
+	// loader.LoadInstanceIDByName under ModeLazy, and kept in sync wherever an
+	// instance is cached or removed.
 	nameLookup map[string]string
 
 	instances       map[string]*state.InstanceState
@@ -89,41 +89,10 @@ func (s *State) EachInstance(visit func(*state.InstanceState) bool) {
 	}
 }
 
-// SetInstanceInMemory replaces (or inserts) an instance in the in-memory map
-// without triggering any persistence. Also keeps the name-lookup cache in sync.
-// Intended for:
-//   - the loader, populating State from Storage on startup, and
-//   - backend flows that handled durability out of band (e.g. objectstore's
-//     ClaimForDeployment via a direct ETag CAS on the Service).
-//
-// Acquires the write lock internally.
-func (s *State) SetInstanceInMemory(instance *state.InstanceState) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if prev, ok := s.instances[instance.InstanceID]; ok && prev.InstanceName != instance.InstanceName {
-		delete(s.nameLookup, prev.InstanceName)
-	}
-	s.instances[instance.InstanceID] = instance
-	if instance.InstanceName != "" {
-		s.nameLookup[instance.InstanceName] = instance.InstanceID
-	}
-}
-
-// RemoveInstanceFromMemory removes an instance from the in-memory map and
-// its name-lookup entry. Acquires the write lock internally.
-func (s *State) RemoveInstanceFromMemory(instanceID string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if prev, ok := s.instances[instanceID]; ok && prev.InstanceName != "" {
-		delete(s.nameLookup, prev.InstanceName)
-	}
-	delete(s.instances, instanceID)
-}
-
 // RebuildNameLookup regenerates the name → id cache from the current
 // instances map. Intended for ModeEager backends that populate State's
 // instances pointer-share-style (e.g. memfile's loadStateFromDir) without
-// going through SetInstanceInMemory.
+// going through the instance cache helpers that keep it in sync.
 func (s *State) RebuildNameLookup() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
