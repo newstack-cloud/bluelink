@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.1](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.11.0...blueprint-state/v0.11.1) (2026-10-27)
+
+
+### Bug Fixes
+
+* **blueprint-state:** remove postgres instances that have no resources or links ([87b3944](https://github.com/newstack-cloud/bluelink/commit/87b3944d73f35c573a38989a235325e8740c3711))
+
 ## [0.11.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.10.0...blueprint-state/v0.11.0) (2026-10-27)
 
 
