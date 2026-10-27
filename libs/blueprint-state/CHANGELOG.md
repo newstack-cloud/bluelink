@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.10.0...blueprint-state/v0.11.0) (2026-10-27)
+
+
+### Features
+
+* **blueprint-state:** add audit records to state containers ([59a012f](https://github.com/newstack-cloud/bluelink/commit/59a012f3e541096d7743fb6e423b3ce1d357789f))
+* **blueprint-state:** add link data senstive paths to state containers ([dd3ce02](https://github.com/newstack-cloud/bluelink/commit/dd3ce02b1a0f0fe28df00c13d37d29ccd42a894f))
+* **blueprint-state:** add sensitive flag to export state ([2328f60](https://github.com/newstack-cloud/bluelink/commit/2328f60d8c64f49998fa35fc9c2bd4d1c08d5b77))
+* **blueprint-state:** add sensitivity tracking in resource drift field changes ([ce60ced](https://github.com/newstack-cloud/bluelink/commit/ce60ced092bb08c5a4f4bb25458c7e133ca309a1))
+* **blueprint-state:** add trace and span ids to audit records to tie audits to telemetry ([499c249](https://github.com/newstack-cloud/bluelink/commit/499c24977ab4bc9c3d2835cdf3cf8eb7a843c6d7))
+* **blueprint-state:** tighten fs permissions for memfile engine ([057455c](https://github.com/newstack-cloud/bluelink/commit/057455c172ec9b23a6341c2428e8951fbb4405f3))
+
+
+### Bug Fixes
+
+* **blueprint-state:** check instance names in the postgres upsert itself ([c2d6a5f](https://github.com/newstack-cloud/bluelink/commit/c2d6a5fdd1e182d34f39511e5e6b94fc0e07bdc6))
+* **blueprint-state:** make the lazily loaded objectstore backend fully functional ([4624b70](https://github.com/newstack-cloud/bluelink/commit/4624b703f4020ad8cbf1dcac941fbcfa56443894))
+* **blueprint-state:** only delete a name record that names the removed instance ([9807dd1](https://github.com/newstack-cloud/bluelink/commit/9807dd15b5bd26cbc070719d494f44cf3bf880e3))
+
+
+### Performance Improvements
+
+* **blueprint-state:** answer audit reads from object keys ([eaeb76a](https://github.com/newstack-cloud/bluelink/commit/eaeb76af8d8172237d9c529e7ba37a87294f6417))
+* **blueprint-state:** reduce scope of key listing when only a start offset is provided ([d087244](https://github.com/newstack-cloud/bluelink/commit/d087244326fbbc1f2b46391429dbfe4fba6b7ca4))
+
+
+### Dependencies
+
+* **blueprint-state:** update blueprint and common libs ([15d41d2](https://github.com/newstack-cloud/bluelink/commit/15d41d207f81f6ea429d2e5ed9739079ee1e0189))
+
 ## [0.10.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.9.1...blueprint-state/v0.10.0) (2026-10-14)
 
 
