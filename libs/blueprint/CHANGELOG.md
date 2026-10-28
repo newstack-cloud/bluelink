@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.56.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.55.0...blueprint/v0.56.0) (2026-10-28)
+
+
+### Features
+
+* **blueprint:** add ErrInstanceWriteConflict for repeatedly rejected instance writes ([1fb4c33](https://github.com/newstack-cloud/bluelink/commit/1fb4c334882f98da6e87dda793ae81d66847fe4c))
+
 ## [0.55.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.54.0...blueprint/v0.55.0) (2026-10-27)
 
 
