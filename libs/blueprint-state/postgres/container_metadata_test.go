@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/internal"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -98,6 +99,29 @@ func (s *PostgresStateContainerMetadataTestSuite) Test_reports_instance_not_foun
 	s.Assert().True(isStateErr)
 	s.Assert().Equal(state.ErrInstanceNotFound, stateErr.Code)
 	s.Assert().Equal(nonExistentInstanceID, stateErr.ItemID)
+}
+
+func (s *PostgresStateContainerMetadataTestSuite) Test_saving_no_metadata_leaves_the_instance_with_none_without_failing() {
+	ctx := context.Background()
+	instanceID := uuid.NewString()
+	err := s.container.Instances().Save(ctx, state.InstanceState{
+		InstanceID:   instanceID,
+		InstanceName: "SaveNoMetadata" + instanceID,
+		Status:       core.InstanceStatusDeployed,
+		Metadata: map[string]*core.MappingNode{
+			"build": core.MappingNodeFromString("tsc"),
+		},
+		Exports: map[string]*state.ExportState{},
+	})
+	s.Require().NoError(err)
+
+	metadataContainer := s.container.Metadata()
+	err = metadataContainer.Save(ctx, instanceID, nil)
+	s.Require().NoError(err)
+
+	saved, err := metadataContainer.Get(ctx, instanceID)
+	s.Require().NoError(err)
+	s.Assert().Empty(saved)
 }
 
 func (s *PostgresStateContainerMetadataTestSuite) Test_removes_metadata_from_blueprint_instance() {

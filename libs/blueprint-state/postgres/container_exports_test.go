@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/internal"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -187,6 +188,33 @@ func (s *PostgresStateContainerExportsTestSuite) Test_reports_instance_not_found
 	s.Assert().True(isStateErr)
 	s.Assert().Equal(state.ErrInstanceNotFound, stateErr.Code)
 	s.Assert().Equal(nonExistentInstanceID, stateErr.ItemID)
+}
+
+func (s *PostgresStateContainerExportsTestSuite) Test_saving_no_exports_leaves_the_instance_with_none_without_failing() {
+	ctx := context.Background()
+	instanceID := uuid.NewString()
+	err := s.container.Instances().Save(ctx, state.InstanceState{
+		InstanceID:   instanceID,
+		InstanceName: "SaveNoExports" + instanceID,
+		Status:       core.InstanceStatusDeployed,
+		Metadata:     map[string]*core.MappingNode{},
+		Exports: map[string]*state.ExportState{
+			"environment": {
+				Value: core.MappingNodeFromString("production"),
+				Type:  schema.ExportTypeString,
+				Field: envVarsField,
+			},
+		},
+	})
+	s.Require().NoError(err)
+
+	exportsContainer := s.container.Exports()
+	err = exportsContainer.SaveAll(ctx, instanceID, nil)
+	s.Require().NoError(err)
+
+	saved, err := exportsContainer.GetAll(ctx, instanceID)
+	s.Require().NoError(err)
+	s.Assert().Empty(saved)
 }
 
 func (s *PostgresStateContainerExportsTestSuite) Test_removes_all_exports_from_blueprint_instance() {

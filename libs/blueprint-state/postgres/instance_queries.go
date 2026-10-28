@@ -26,8 +26,8 @@ func upsertInstanceQuery() string {
 		@lastStatusUpdateTimestamp,
 		@lastDeployedTimestamp,
 		@lastDeployAttemptTimestamp,
-		@metadata,
-		@exports,
+		COALESCE(@metadata::jsonb, '{}'::jsonb),
+		COALESCE(@exports::jsonb, '{}'::jsonb),
 		@childDependencies,
 		@durations
 	) ON CONFLICT (id) DO UPDATE SET
@@ -250,7 +250,7 @@ func singleExportQuery() string {
 func saveAllExportsQuery() string {
 	return `
 	UPDATE blueprint_instances
-	SET exports = @exports
+	SET exports = COALESCE(@exports::jsonb, '{}'::jsonb)
 	WHERE id = @instanceId
 	`
 }
@@ -293,7 +293,7 @@ func blueprintMetadataQuery() string {
 func saveBlueprintMetadataQuery() string {
 	return `
 	UPDATE blueprint_instances
-	SET metadata = @metadata
+	SET metadata = COALESCE(@metadata::jsonb, '{}'::jsonb)
 	WHERE id = @instanceId
 	`
 }

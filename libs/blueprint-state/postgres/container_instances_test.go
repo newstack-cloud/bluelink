@@ -288,6 +288,23 @@ func (s *PostgresStateContainerInstancesTestSuite) Test_removes_a_blueprint_inst
 	s.Assert().True(state.IsInstanceNotFound(err), "got %v", err)
 }
 
+func (s *PostgresStateContainerInstancesTestSuite) Test_saves_an_instance_with_no_metadata_or_exports_without_failing() {
+	ctx := context.Background()
+	instances := s.container.Instances()
+	instanceID := uuid.NewString()
+	err := instances.Save(ctx, state.InstanceState{
+		InstanceID:   instanceID,
+		InstanceName: "NoMetadataOrExports" + instanceID,
+		Status:       core.InstanceStatusDeployed,
+	})
+	s.Require().NoError(err)
+
+	saved, err := instances.Get(ctx, instanceID)
+	s.Require().NoError(err)
+	s.Assert().Empty(saved.Metadata)
+	s.Assert().Empty(saved.Exports)
+}
+
 func (s *PostgresStateContainerInstancesTestSuite) Test_removes_blueprint_instance() {
 	fixture := s.saveBlueprintFixtures[3]
 
