@@ -1053,6 +1053,41 @@ deployments or with other workloads.
 
 **default value:** `bluelink-state/`
 
+#### `objectstore` Cache Max Age
+
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_CACHE_MAX_AGE_MS`
+
+_Config field:_ `state.objectstore.cache_max_age_ms`
+
+_**optional**_
+
+How long, in milliseconds, the engine uses a cached blueprint instance before checking it
+against the bucket again with a HEAD request. This is how a long-running engine sees changes
+that other engines sharing the bucket made since it cached the instance, such as a CI run
+deploying it or a retry of a failed deployment that ran elsewhere. A changed instance is
+reloaded and a removed one dropped. `0` checks on every use.
+
+Writes do not depend on this setting. Every instance write is conditional on the version the
+engine last read, so a write based on an outdated copy is rejected and applied again to the
+current one.
+
+**default value:** `30000` (30 seconds)
+
+#### `objectstore` Disable Cache Revalidation
+
+`BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_DISABLE_CACHE_REVALIDATION`
+
+_Config field:_ `state.objectstore.disable_cache_revalidation`
+
+_**optional**_
+
+Turns off checking cached instances against the bucket, so the engine makes no HEAD requests
+to revalidate them. Suited to short-lived engines, such as one started for a CI run, which
+load state fresh and finish before another engine's change would matter, and to an engine
+that has the bucket to itself.
+
+**default value:** `false`
+
 #### `objectstore` S3 Bucket
 
 `BLUELINK_DEPLOY_ENGINE_STATE_OBJECTSTORE_S3_BUCKET`

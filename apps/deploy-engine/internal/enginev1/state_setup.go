@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"time"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -347,9 +348,7 @@ func loadObjectstoreStateServices(
 		svc,
 		stateConfig.ObjectStore.Prefix,
 		logger,
-		objectstore.WithRecentlyQueuedEventsThreshold(
-			stateConfig.RecentlyQueuedEventsThreshold,
-		),
+		objectstoreContainerOptions(stateConfig)...,
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf(
@@ -369,8 +368,22 @@ func loadObjectstoreStateServices(
 	}, objectstoreStubClose, nil
 }
 
+func objectstoreContainerOptions(stateConfig *core.StateConfig) []objectstore.Option {
+	opts := []objectstore.Option{
+		objectstore.WithRecentlyQueuedEventsThreshold(
+			stateConfig.RecentlyQueuedEventsThreshold,
+		),
+	}
+	if stateConfig.ObjectStore.DisableCacheRevalidation {
+		return append(opts, objectstore.WithoutCacheRevalidation())
+	}
+
+	maxAge := time.Duration(stateConfig.ObjectStore.CacheMaxAgeMS) * time.Millisecond
+	return append(opts, objectstore.WithCacheRevalidation(maxAge))
+}
+
 func objectstoreStubClose() {
-	// No-op close function for objectstore state services — the
+	// This is a no-op close function for objectstore state services as the
 	// underlying provider SDK clients do not hold long-lived resources
 	// that require explicit cleanup during normal engine shutdown.
 }

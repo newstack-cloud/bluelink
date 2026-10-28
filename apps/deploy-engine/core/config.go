@@ -500,6 +500,18 @@ type ObjectStoreConfig struct {
 	// across deploy-engine deployments or with other workloads.
 	// Defaults to "bluelink-state/".
 	Prefix string `mapstructure:"prefix"`
+	// CacheMaxAgeMS is how long, in milliseconds, a cached instance is used
+	// before it is checked against the bucket again with a HEAD request, so a
+	// long-running engine sees changes other engines sharing the bucket made
+	// since it cached the instance. Zero checks on every use.
+	// Defaults to 30000 (30 seconds).
+	CacheMaxAgeMS int `mapstructure:"cache_max_age_ms"`
+	// DisableCacheRevalidation turns off checking cached instances against the
+	// bucket. Suited to short-lived engines such as one started for a CI run,
+	// which load state fresh and finish before another engine's change would
+	// matter. Writes stay conditional on the version last read either way.
+	// Defaults to false.
+	DisableCacheRevalidation bool `mapstructure:"disable_cache_revalidation"`
 	// S3 provides configuration for the S3 provider.
 	S3 ObjectStoreS3Config `mapstructure:"s3"`
 	// GCS provides configuration for the Google Cloud Storage provider.
@@ -976,6 +988,8 @@ func bindEnvVars(viperInstance *viper.Viper) {
 	viperInstance.BindEnv("state.encryption.azurekeyvault.algorithm")
 	viperInstance.BindEnv("state.objectstore.provider")
 	viperInstance.BindEnv("state.objectstore.prefix")
+	viperInstance.BindEnv("state.objectstore.cache_max_age_ms")
+	viperInstance.BindEnv("state.objectstore.disable_cache_revalidation")
 	viperInstance.BindEnv("state.objectstore.s3.bucket")
 	viperInstance.BindEnv("state.objectstore.s3.region")
 	viperInstance.BindEnv("state.objectstore.s3.endpoint")
@@ -1082,6 +1096,7 @@ func setDefaults(viperInstance *viper.Viper) {
 	viperInstance.SetDefault("state.encryption.enabled", false)
 	viperInstance.SetDefault("state.encryption.provider", "passphrase")
 	viperInstance.SetDefault("state.objectstore.prefix", "bluelink-state/")
+	viperInstance.SetDefault("state.objectstore.cache_max_age_ms", 30*oneSecondMillis)
 
 	viperInstance.SetDefault("resolvers.https_client_timeout", 30)
 
