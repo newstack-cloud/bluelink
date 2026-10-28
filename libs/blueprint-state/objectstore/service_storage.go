@@ -8,9 +8,9 @@ import (
 )
 
 // ServiceStorage adapts an objectstore.Service to statestore.Storage so the
-// shared persistence engine can back its writes with an object store. ETag
-// semantics are intentionally hidden at this layer — the atomic claim path
-// talks to the Service directly for IfMatch / IfNoneMatch.
+// shared persistence engine can back its writes with an object store. It also
+// implements statestore.ConditionalStorage, with object ETags as versions, so
+// engines sharing a bucket do not overwrite each other's instance changes.
 type ServiceStorage struct {
 	svc Service
 }
@@ -18,6 +18,48 @@ type ServiceStorage struct {
 // NewServiceStorage returns a statestore.Storage adapter over svc.
 func NewServiceStorage(svc Service) *ServiceStorage {
 	return &ServiceStorage{svc: svc}
+}
+
+var _ statestore.ConditionalStorage = (*ServiceStorage)(nil)
+
+func (s *ServiceStorage) ReadVersion(ctx context.Context, key string) ([]byte, string, error) {
+	data, etag, err := s.svc.Get(ctx, key)
+	if err != nil {
+		return nil, "", mapStorageErr(err)
+	}
+	return data, etag, nil
+}
+
+func (s *ServiceStorage) WriteIfMatch(
+	ctx context.Context,
+	key string,
+	data []byte,
+	version string,
+) (string, error) {
+	opts := &PutOptions{IfMatch: version}
+	if version == "" {
+		opts = &PutOptions{IfNoneMatch: "*"}
+	}
+
+	etag, err := s.svc.Put(ctx, key, data, opts)
+	if err != nil {
+		return "", mapStorageErr(err)
+	}
+	return etag, nil
+}
+
+func (s *ServiceStorage) DeleteIfMatch(ctx context.Context, key string, version string) error {
+	return mapStorageErr(s.svc.Delete(ctx, key, &DeleteOptions{IfMatch: version}))
+}
+
+func mapStorageErr(err error) error {
+	switch {
+	case isObjectNotFound(err):
+		return statestore.ErrNotFound
+	case isPreconditionFailed(err):
+		return statestore.ErrPreconditionFailed
+	}
+	return err
 }
 
 func (s *ServiceStorage) Read(ctx context.Context, key string) ([]byte, error) {
@@ -37,7 +79,7 @@ func (s *ServiceStorage) Write(ctx context.Context, key string, data []byte) err
 }
 
 func (s *ServiceStorage) Delete(ctx context.Context, key string) error {
-	if err := s.svc.Delete(ctx, key); err != nil {
+	if err := s.svc.Delete(ctx, key, nil); err != nil {
 		if isObjectNotFound(err) {
 			return statestore.ErrNotFound
 		}

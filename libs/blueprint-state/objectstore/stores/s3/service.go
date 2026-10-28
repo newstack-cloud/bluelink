@@ -77,11 +77,16 @@ func (s *Service) Put(
 	return derefString(out.ETag), nil
 }
 
-func (s *Service) Delete(ctx context.Context, key string) error {
-	_, err := s.client.DeleteObject(ctx, &s3sdk.DeleteObjectInput{
+func (s *Service) Delete(ctx context.Context, key string, opts *objectstore.DeleteOptions) error {
+	input := &s3sdk.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
-	})
+	}
+	if opts != nil && opts.IfMatch != "" {
+		input.IfMatch = aws.String(opts.IfMatch)
+	}
+
+	_, err := s.client.DeleteObject(ctx, input)
 	if err != nil {
 		return mapErr(err, "delete "+key)
 	}

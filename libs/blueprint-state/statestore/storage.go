@@ -32,3 +32,30 @@ type Storage interface {
 // ErrNotFound is returned by Storage implementations when a target key does
 // not exist. Backends map their native not-found signals onto this sentinel.
 var ErrNotFound = errors.New("statestore: key not found")
+
+// ConditionalStorage is implemented by a Storage whose objects carry a version (an ETag)
+// that a write or delete can be made conditional on. It lets processes that share the
+// same storage detect that another process changed an object since it was read, instead of
+// overwriting the change.
+//
+// Optional because not every store versions its objects. The Persister type-asserts for it
+// and, without it, writes unconditionally as it would for a single process.
+type ConditionalStorage interface {
+	// ReadVersion returns the contents of the object at key and its current version.
+	// Returns ErrNotFound if the key does not exist.
+	ReadVersion(ctx context.Context, key string) (data []byte, version string, err error)
+
+	// WriteIfMatch stores data at key only if the object's current version is version,
+	// and returns the new version. An empty version means the write only succeeds if no
+	// object exists at key. Returns ErrPreconditionFailed otherwise.
+	WriteIfMatch(ctx context.Context, key string, data []byte, version string) (newVersion string, err error)
+
+	// DeleteIfMatch removes the object at key only if its current version is version.
+	// Returns ErrPreconditionFailed if the version does not match, and ErrNotFound if the
+	// key does not exist.
+	DeleteIfMatch(ctx context.Context, key string, version string) error
+}
+
+// ErrPreconditionFailed is returned by ConditionalStorage implementations when the object
+// at a key is not at the version a conditional write or delete required.
+var ErrPreconditionFailed = errors.New("statestore: precondition failed")

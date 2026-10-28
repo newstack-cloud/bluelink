@@ -22,11 +22,24 @@ func (s *State) LookupInstance(ctx context.Context, id string) (*state.InstanceS
 // a miss reads the instance's name record through the loader.
 func (s *State) LookupInstanceIDByName(ctx context.Context, name string) (string, bool, error) {
 	s.mu.RLock()
-	if id, ok := s.nameLookup[name]; ok {
-		s.mu.RUnlock()
-		return id, true, nil
-	}
+	cachedID, isCached := s.nameLookup[name]
+	fresh := isCached && !s.needsRevalidation(cachedID)
 	s.mu.RUnlock()
+	if fresh {
+		return cachedID, true, nil
+	}
+
+	// The instance a cached name resolves to may have been removed by another process, and
+	// its name taken by a new instance, so it is checked before the name is trusted.
+	if isCached {
+		inst, found, err := s.LookupInstance(ctx, cachedID)
+		if err != nil {
+			return "", false, err
+		}
+		if found && inst.InstanceName == name {
+			return cachedID, true, nil
+		}
+	}
 
 	id, ok, err := s.loader.LoadInstanceIDByName(ctx, name)
 	if err != nil || !ok {
@@ -39,15 +52,19 @@ func (s *State) LookupInstanceIDByName(ctx context.Context, name string) (string
 }
 
 // LookupResource returns a resource by ID, materialising it on cache miss.
+//
+// A cached resource is only as current as the instance that holds it, so that instance is
+// revalidated (see WithRevalidation) before the resource is returned.
 func (s *State) LookupResource(ctx context.Context, id string) (*state.ResourceState, bool, error) {
 	s.mu.RLock()
-	if r, ok := s.resources[id]; ok {
-		s.mu.RUnlock()
-		return r, true, nil
-	}
+	cached, isCached := s.resources[id]
+	fresh := isCached && !s.needsRevalidation(cached.InstanceID)
 	s.mu.RUnlock()
+	if fresh {
+		return cached, true, nil
+	}
 
-	instanceID, ok, err := s.loader.LoadResourceInstanceID(ctx, id)
+	instanceID, ok, err := s.resourceInstanceID(ctx, id, cached)
 	if err != nil || !ok {
 		return nil, ok, err
 	}
@@ -67,8 +84,28 @@ func (s *State) LookupResource(ctx context.Context, id string) (*state.ResourceS
 	return r, true, nil
 }
 
+// Resource IDs never move between instances, so a cached resource names the instance that holds
+// it without reading its record.
+func (s *State) resourceInstanceID(
+	ctx context.Context,
+	id string,
+	cached *state.ResourceState,
+) (string, bool, error) {
+	if cached != nil {
+		return cached.InstanceID, true, nil
+	}
+	return s.loader.LoadResourceInstanceID(ctx, id)
+}
+
 // LookupResourceDrift returns a resource-drift entry by resource ID.
+//
+// Drift is saved together with a rewrite of the instance that holds the resource, so the
+// resource is looked up first, which drops cached drift when that instance changed in storage.
 func (s *State) LookupResourceDrift(ctx context.Context, id string) (*state.ResourceDriftState, bool, error) {
+	if _, _, err := s.LookupResource(ctx, id); err != nil {
+		return nil, false, err
+	}
+
 	s.mu.RLock()
 	if d, ok := s.resourceDrift[id]; ok {
 		s.mu.RUnlock()
@@ -86,16 +123,18 @@ func (s *State) LookupResourceDrift(ctx context.Context, id string) (*state.Reso
 	return d, true, nil
 }
 
-// LookupLink returns a link by ID.
+// LookupLink returns a link by ID. As for resources, a cached link's instance is revalidated
+// before the link is returned.
 func (s *State) LookupLink(ctx context.Context, id string) (*state.LinkState, bool, error) {
 	s.mu.RLock()
-	if l, ok := s.links[id]; ok {
-		s.mu.RUnlock()
-		return l, true, nil
-	}
+	cached, isCached := s.links[id]
+	fresh := isCached && !s.needsRevalidation(cached.InstanceID)
 	s.mu.RUnlock()
+	if fresh {
+		return cached, true, nil
+	}
 
-	instanceID, ok, err := s.loader.LoadLinkInstanceID(ctx, id)
+	instanceID, ok, err := s.linkInstanceID(ctx, id, cached)
 	if err != nil || !ok {
 		return nil, ok, err
 	}
@@ -114,8 +153,20 @@ func (s *State) LookupLink(ctx context.Context, id string) (*state.LinkState, bo
 	return l, true, nil
 }
 
-// LookupLinkDrift returns a link-drift entry by link ID.
+func (s *State) linkInstanceID(ctx context.Context, id string, cached *state.LinkState) (string, bool, error) {
+	if cached != nil {
+		return cached.InstanceID, true, nil
+	}
+	return s.loader.LoadLinkInstanceID(ctx, id)
+}
+
+// LookupLinkDrift returns a link-drift entry by link ID. As for resources, the link is looked
+// up first so that drift cached for a changed instance is dropped.
 func (s *State) LookupLinkDrift(ctx context.Context, id string) (*state.LinkDriftState, bool, error) {
+	if _, _, err := s.LookupLink(ctx, id); err != nil {
+		return nil, false, err
+	}
+
 	s.mu.RLock()
 	if d, ok := s.linkDrift[id]; ok {
 		s.mu.RUnlock()

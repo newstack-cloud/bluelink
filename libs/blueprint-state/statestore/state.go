@@ -20,6 +20,13 @@ type State struct {
 	// instance is cached or removed.
 	nameLookup map[string]string
 
+	// instanceVersions holds the stored version of each cached instance object, for storage
+	// that versions objects. Instance writes are conditional on it (see ConditionalStorage),
+	// and revalidation compares it with storage.
+	instanceVersions map[string]*instanceVersion
+	// revalidation is nil unless the State was configured WithRevalidation.
+	revalidation *revalidation
+
 	instances       map[string]*state.InstanceState
 	resources       map[string]*state.ResourceState
 	resourceDrift   map[string]*state.ResourceDriftState
@@ -234,6 +241,7 @@ func NewState(opts ...StateOption) *State {
 		mu:                  &sync.RWMutex{},
 		loader:              noopLoader{},
 		nameLookup:          map[string]string{},
+		instanceVersions:    map[string]*instanceVersion{},
 		instances:           map[string]*state.InstanceState{},
 		resources:           map[string]*state.ResourceState{},
 		resourceDrift:       map[string]*state.ResourceDriftState{},

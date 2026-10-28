@@ -25,7 +25,7 @@ func (p *Persister) UpdateInstanceEntities(
 
 	err := p.updateInstanceEntities(ctx, instance, added, removed)
 	if err != nil {
-		p.state.forgetCachedInstances()
+		p.forgetAfterFailedWrite(err)
 	}
 
 	return err
@@ -80,11 +80,7 @@ func (p *Persister) removeInstanceWithRecords(ctx context.Context, instance *sta
 		return errEntityRecordsNeedPerEntityInstances
 	}
 
-	marked := NewPersistedInstanceState(instance)
-	marked.Removing = true
-	if err := writeChunk(
-		ctx, p.storage, p.keys.Instance(instance.InstanceID), marked,
-	); err != nil {
+	if err := p.putInstanceObject(ctx, newRemovalMarker(instance), false /* isNew */); err != nil {
 		return err
 	}
 

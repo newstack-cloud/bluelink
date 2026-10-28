@@ -70,8 +70,17 @@ func (s *Service) Put(
 	return formatGeneration(writer.Attrs().Generation), nil
 }
 
-func (s *Service) Delete(ctx context.Context, key string) error {
-	if err := s.client.Bucket(s.bucket).Object(key).Delete(ctx); err != nil {
+func (s *Service) Delete(ctx context.Context, key string, opts *objectstore.DeleteOptions) error {
+	obj := s.client.Bucket(s.bucket).Object(key)
+	if opts != nil && opts.IfMatch != "" {
+		generation, err := strconv.ParseInt(opts.IfMatch, 10, 64)
+		if err != nil {
+			return err
+		}
+		obj = obj.If(storage.Conditions{GenerationMatch: generation})
+	}
+
+	if err := obj.Delete(ctx); err != nil {
 		return mapErr(err, "delete "+key)
 	}
 
