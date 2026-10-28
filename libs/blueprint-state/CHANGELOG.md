@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.11.1...blueprint-state/v0.12.0) (2026-10-28)
+
+
+### Features
+
+* **blueprint-state:** make objectstore safe for engines sharing a bucket ([4ca608d](https://github.com/newstack-cloud/bluelink/commit/4ca608dd332c8a957000ea53412d9b9adda213dd))
+
+
+### Bug Fixes
+
+* **blueprint-state:** add fix to ensure read lock is held when checking cache revalidation ([0a51584](https://github.com/newstack-cloud/bluelink/commit/0a515845c7d76da8550a519ae4dd8ba6a75650d2))
+* **blueprint-state:** ensure empty exports and metadata can be saved ([eab9246](https://github.com/newstack-cloud/bluelink/commit/eab9246115ae1e441ff8f3c132d9cbb608ea345d))
+
+
+### Dependencies
+
+* **blueprint-state:** bump blueprint lib up to v0.56.0 ([d690129](https://github.com/newstack-cloud/bluelink/commit/d690129cedc8ac8cd92dd4d68ac5c7effd7dc2ad))
+
 ## [0.11.1](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.11.0...blueprint-state/v0.11.1) (2026-10-27)
 
 
