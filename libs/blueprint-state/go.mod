@@ -17,7 +17,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/googleapis/gax-go/v2 v2.23.0
 	github.com/jackc/pgx/v5 v5.8.0
-	github.com/newstack-cloud/bluelink/libs/blueprint v0.55.0
+	github.com/newstack-cloud/bluelink/libs/blueprint v0.56.0
 	github.com/newstack-cloud/bluelink/libs/common v0.6.0
 	github.com/spf13/afero v1.15.0
 	github.com/stretchr/testify v1.12.1
