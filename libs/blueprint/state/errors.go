@@ -164,6 +164,20 @@ var ErrInstanceAlreadyExists = errors.New("state: instance already exists")
 // should check for it with errors.Is.
 var ErrInstanceNameImmutable = errors.New("state: instance name cannot be changed")
 
+// ErrInstanceWriteConflict is returned when a write to a blueprint instance is rejected because
+// another process sharing the same state changed the instance first, and the write was still
+// rejected after being applied again to the latest stored version a bounded number of times.
+// Unlike ErrVersionConflict, it does not mean the caller's claim on the instance is stale. The
+// write can be retried, or the conflict reported. Implementations wrap it with the instance ID,
+// so callers should check for it with errors.Is.
+var ErrInstanceWriteConflict = errors.New("state: instance write conflict: instance was changed by another process")
+
+// InstanceWriteConflictError wraps ErrInstanceWriteConflict with the instance whose write kept
+// being rejected and the number of attempts made.
+func InstanceWriteConflictError(instanceID string, attempts int) error {
+	return fmt.Errorf("%w: instance %q, after %d attempts", ErrInstanceWriteConflict, instanceID, attempts)
+}
+
 // InstanceNameImmutableError wraps ErrInstanceNameImmutable with the instance whose name a save
 // tried to change.
 func InstanceNameImmutableError(instanceID, currentName, requestedName string) error {
