@@ -87,8 +87,9 @@ func (s *State) lookupInstance(
 ) (*state.InstanceState, bool, error) {
 	s.mu.RLock()
 	inst, isCached := s.instances[id]
+	revalidate := isCached && s.needsRevalidation(id)
 	s.mu.RUnlock()
-	if isCached && s.needsRevalidation(id) {
+	if revalidate {
 		return s.revalidateInstance(ctx, id, visiting)
 	}
 	if isCached {
