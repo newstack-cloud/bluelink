@@ -8,8 +8,44 @@ import "context"
 //
 // None of these may be called while holding the State lock.
 
+// With revalidation, a cached instance that is no longer listed was removed by another process
+// and is dropped, so a listing does not keep returning it.
 func (s *State) preloadAllInstances(ctx context.Context) error {
-	return preloadListed(ctx, s, EntityLister.ListInstanceIDs, s.LookupInstance)
+	lister, isLister := s.lister()
+	if !isLister {
+		return nil
+	}
+
+	ids, err := lister.ListInstanceIDs(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, id := range ids {
+		if _, _, err := s.LookupInstance(ctx, id); err != nil {
+			return err
+		}
+	}
+
+	if s.revalidation != nil {
+		s.uncacheUnlisted(ids)
+	}
+	return nil
+}
+
+func (s *State) uncacheUnlisted(listedIDs []string) {
+	listed := make(map[string]bool, len(listedIDs))
+	for _, id := range listedIDs {
+		listed[id] = true
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for id := range s.instances {
+		if !listed[id] {
+			s.uncacheInstance(id)
+		}
+	}
 }
 
 func (s *State) preloadAllReconciliationResults(ctx context.Context) error {

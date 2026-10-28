@@ -115,6 +115,15 @@ func (c *LinksContainer) Save(
 	ctx context.Context,
 	linkState state.LinkState,
 ) error {
+	return retryOnInstanceChange(func() error {
+		return c.save(ctx, linkState)
+	})
+}
+
+func (c *LinksContainer) save(
+	ctx context.Context,
+	linkState state.LinkState,
+) error {
 	if err := c.state.preloadInstances(ctx, linkState.InstanceID); err != nil {
 		return err
 	}
@@ -166,6 +175,16 @@ func (c *LinksContainer) UpdateStatus(
 	linkID string,
 	statusInfo state.LinkStatusInfo,
 ) error {
+	return retryOnInstanceChange(func() error {
+		return c.updateStatus(ctx, linkID, statusInfo)
+	})
+}
+
+func (c *LinksContainer) updateStatus(
+	ctx context.Context,
+	linkID string,
+	statusInfo state.LinkStatusInfo,
+) error {
 	if err := c.state.preloadLink(ctx, linkID); err != nil {
 		return err
 	}
@@ -206,6 +225,15 @@ func (c *LinksContainer) UpdateStatus(
 }
 
 func (c *LinksContainer) Remove(
+	ctx context.Context,
+	linkID string,
+) (state.LinkState, error) {
+	return retryOnInstanceChangeWithResult(func() (state.LinkState, error) {
+		return c.remove(ctx, linkID)
+	})
+}
+
+func (c *LinksContainer) remove(
 	ctx context.Context,
 	linkID string,
 ) (state.LinkState, error) {
@@ -267,6 +295,15 @@ func (c *LinksContainer) SaveDrift(
 	ctx context.Context,
 	driftState state.LinkDriftState,
 ) error {
+	return retryOnInstanceChange(func() error {
+		return c.saveDrift(ctx, driftState)
+	})
+}
+
+func (c *LinksContainer) saveDrift(
+	ctx context.Context,
+	driftState state.LinkDriftState,
+) error {
 	if err := c.state.preloadLinkWithDrift(ctx, driftState.LinkID); err != nil {
 		return err
 	}
@@ -319,6 +356,17 @@ func (c *LinksContainer) RemoveDrift(
 	ctx context.Context,
 	linkID string,
 ) (state.LinkDriftState, error) {
+	return retryOnInstanceChangeWithResult(func() (state.LinkDriftState, error) {
+		return c.removeDrift(ctx, linkID)
+	})
+}
+
+// As for resources, a retried attempt can find the drift entry already deleted and still has
+// to clear the link's drifted flag.
+func (c *LinksContainer) removeDrift(
+	ctx context.Context,
+	linkID string,
+) (state.LinkDriftState, error) {
 	if err := c.state.preloadLinkWithDrift(ctx, linkID); err != nil {
 		return state.LinkDriftState{}, err
 	}
@@ -331,25 +379,27 @@ func (c *LinksContainer) RemoveDrift(
 		return state.LinkDriftState{}, state.LinkNotFoundError(linkID)
 	}
 	driftState, hasDrift := c.state.linkDrift[linkID]
-	if !hasDrift {
+	if !hasDrift && !link.Drifted {
 		return state.LinkDriftState{}, nil
 	}
 	inst, ok := c.state.instances[link.InstanceID]
 	if !ok {
 		return state.LinkDriftState{}, errMalformedState(
-			instanceNotFoundForLinkMessage(link.InstanceID, driftState.LinkID),
+			instanceNotFoundForLinkMessage(link.InstanceID, linkID),
 		)
 	}
 	link.Drifted = false
 	link.LastDriftDetectedTimestamp = nil
 	delete(c.state.linkDrift, linkID)
 
-	c.logger.Debug(
-		"persisting removal of link drift entry",
-		core.StringLogField("linkId", linkID),
-	)
-	if err := c.persister.RemoveLinkDrift(ctx, driftState); err != nil {
-		return state.LinkDriftState{}, err
+	if hasDrift {
+		c.logger.Debug(
+			"persisting removal of link drift entry",
+			core.StringLogField("linkId", linkID),
+		)
+		if err := c.persister.RemoveLinkDrift(ctx, driftState); err != nil {
+			return state.LinkDriftState{}, err
+		}
 	}
 	c.logger.Debug(
 		"persisting link changes for removal of drift state",
@@ -357,6 +407,9 @@ func (c *LinksContainer) RemoveDrift(
 	)
 	if err := c.persister.UpdateInstance(ctx, inst); err != nil {
 		return state.LinkDriftState{}, err
+	}
+	if !hasDrift {
+		return state.LinkDriftState{}, nil
 	}
 	return *driftState, nil
 }

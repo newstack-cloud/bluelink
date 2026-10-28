@@ -8,8 +8,9 @@ type Service interface {
 	Get(ctx context.Context, key string) (data []byte, etag string, err error)
 	// Put stores the object data with the given key and options, returning the new ETag.
 	Put(ctx context.Context, key string, data []byte, opts *PutOptions) (etag string, err error)
-	// Delete removes the object associated with the given key.
-	Delete(ctx context.Context, key string) error
+	// Delete removes the object associated with the given key, subject to the given
+	// options. opts may be nil for an unconditional delete.
+	Delete(ctx context.Context, key string, opts *DeleteOptions) error
 	// Head retrieves the size and ETag of the object for the given key without fetching the data.
 	Head(ctx context.Context, key string) (*ObjectInfo, error)
 	// List returns a list of ObjectInfo for objects that match the given prefix.
@@ -41,6 +42,14 @@ type PutOptions struct {
 	IfNoneMatch string
 	// IfMatch is used to specify that the Put operation should only succeed
 	// if the ETag matches the provided value.
+	IfMatch string
+}
+
+// DeleteOptions defines options for the Delete operation in the object storage service.
+type DeleteOptions struct {
+	// IfMatch is used to specify that the Delete operation should only succeed
+	// if the ETag matches the provided value. A delete that does not match fails
+	// with a precondition failed error and leaves the object in place.
 	IfMatch string
 }
 

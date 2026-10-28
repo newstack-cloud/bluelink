@@ -86,34 +86,37 @@ func (s *State) lookupInstance(
 	visiting map[string]bool,
 ) (*state.InstanceState, bool, error) {
 	s.mu.RLock()
-	if inst, ok := s.instances[id]; ok {
-		s.mu.RUnlock()
+	inst, isCached := s.instances[id]
+	s.mu.RUnlock()
+	if isCached && s.needsRevalidation(id) {
+		return s.revalidateInstance(ctx, id, visiting)
+	}
+	if isCached {
 		return inst, true, nil
 	}
-	s.mu.RUnlock()
 
 	persisted, ok, err := s.loader.LoadInstance(ctx, id)
 	if err != nil || !ok || persisted.Removing {
 		return nil, false, err
 	}
 
-	inst, err := s.cachePersistedInstance(ctx, persisted, cacheIfAbsent, visiting)
+	loaded, err := s.cachePersistedInstance(ctx, persisted, cacheIfAbsent, visiting)
 	if err != nil {
 		return nil, false, err
 	}
 
-	return inst, true, nil
+	return loaded, true, nil
 }
 
 // Returns an instance whose removal started but did not finish, which lookups otherwise
 // report as not found. It is not cached.
-func (s *State) loadInstanceBeingRemoved(ctx context.Context, id string) (*state.InstanceState, bool, error) {
+func (s *State) loadInstanceBeingRemoved(ctx context.Context, id string) (*PersistedInstanceState, bool, error) {
 	persisted, ok, err := s.loader.LoadInstance(ctx, id)
 	if err != nil || !ok || !persisted.Removing {
 		return nil, false, err
 	}
 
-	return persisted.ToInstanceState(), true, nil
+	return persisted, true, nil
 }
 
 func (s *State) cachePersistedInstance(
@@ -138,6 +141,7 @@ func (s *State) cachePersistedInstance(
 	if cached, isCached := s.instances[loaded.InstanceID]; isCached && mode == cacheIfAbsent {
 		return cached, nil
 	}
+	s.recordLoadedVersion(persisted)
 	return s.cacheInstance(loaded), nil
 }
 
@@ -199,8 +203,11 @@ func (s *State) forgetCachedInstances() {
 
 	// Cleared in place, since a backend may share the instances map with State.
 	clear(s.instances)
+	clear(s.instanceVersions)
 	clear(s.resources)
+	clear(s.resourceDrift)
 	clear(s.links)
+	clear(s.linkDrift)
 	clear(s.nameLookup)
 }
 

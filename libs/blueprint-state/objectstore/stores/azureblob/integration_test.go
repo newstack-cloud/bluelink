@@ -119,6 +119,25 @@ func TestAzureService_put_ifMatch_succeeds_with_current_etag_and_fails_with_stal
 	requireReason(t, err, objectstore.ErrorReasonCodePreconditionFailed)
 }
 
+func TestAzureService_delete_ifMatch_fails_with_stale_etag_and_succeeds_with_current(t *testing.T) {
+	ctx := context.Background()
+	svc, _, _ := newTestContainer(t, ctx)
+
+	firstETag, err := svc.Put(ctx, "cad.json", []byte(`{"v":1}`), nil)
+	require.NoError(t, err)
+	secondETag, err := svc.Put(ctx, "cad.json", []byte(`{"v":2}`), nil)
+	require.NoError(t, err)
+
+	err = svc.Delete(ctx, "cad.json", &objectstore.DeleteOptions{IfMatch: firstETag})
+	requireReason(t, err, objectstore.ErrorReasonCodePreconditionFailed)
+	_, err = svc.Head(ctx, "cad.json")
+	require.NoError(t, err)
+
+	require.NoError(t, svc.Delete(ctx, "cad.json", &objectstore.DeleteOptions{IfMatch: secondETag}))
+	_, err = svc.Head(ctx, "cad.json")
+	requireReason(t, err, objectstore.ErrorReasonCodeObjectNotFound)
+}
+
 func TestAzureService_head_list_delete_round_trip(t *testing.T) {
 	ctx := context.Background()
 	svc, _, _ := newTestContainer(t, ctx)
@@ -137,7 +156,7 @@ func TestAzureService_head_list_delete_round_trip(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, listed, 2)
 
-	require.NoError(t, svc.Delete(ctx, "dir/a.json"))
+	require.NoError(t, svc.Delete(ctx, "dir/a.json", nil))
 
 	_, err = svc.Head(ctx, "dir/a.json")
 	requireReason(t, err, objectstore.ErrorReasonCodeObjectNotFound)

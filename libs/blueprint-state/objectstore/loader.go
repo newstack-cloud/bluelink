@@ -3,7 +3,6 @@ package objectstore
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
@@ -28,11 +27,26 @@ func (l *ServiceLoader) LoadInstance(
 	id string,
 ) (*statestore.PersistedInstanceState, bool, error) {
 	var persisted statestore.PersistedInstanceState
-	found, err := readEntity(ctx, l.svc, l.keys.Instance(id), &persisted)
+	etag, found, err := readVersionedEntity(ctx, l.svc, l.keys.Instance(id), &persisted)
 	if err != nil || !found {
 		return nil, found, err
 	}
+	persisted.ETag = etag
 	return &persisted, true, nil
+}
+
+var _ statestore.InstanceVersioner = (*ServiceLoader)(nil)
+
+func (l *ServiceLoader) InstanceVersion(ctx context.Context, instanceID string) (string, bool, error) {
+	info, err := l.svc.Head(ctx, l.keys.Instance(instanceID))
+	if err != nil {
+		if isObjectNotFound(err) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+
+	return info.ETag, true, nil
 }
 
 func (l *ServiceLoader) LoadInstanceIDByName(
@@ -225,27 +239,28 @@ func (l *ServiceLoader) LoadCleanupOperation(
 }
 
 func readEntity(ctx context.Context, svc Service, key string, dst any) (bool, error) {
-	data, _, err := svc.Get(ctx, key)
+	_, found, err := readVersionedEntity(ctx, svc, key, dst)
+	return found, err
+}
+
+// As readEntity, also returning the ETag of the object read.
+func readVersionedEntity(ctx context.Context, svc Service, key string, dst any) (string, bool, error) {
+	data, etag, err := svc.Get(ctx, key)
 	if err != nil {
 		if isObjectNotFound(err) {
-			return false, nil
+			return "", false, nil
 		}
 
-		var sErr *Error
-		if errors.As(err, &sErr) && sErr.ReasonCode == ErrorReasonCodeObjectNotFound {
-			return false, nil
-		}
-
-		return false, err
+		return "", false, err
 	}
 
 	if len(data) == 0 {
-		return false, nil
+		return "", false, nil
 	}
 
 	if err := json.Unmarshal(data, dst); err != nil {
-		return false, err
+		return "", false, err
 	}
 
-	return true, nil
+	return etag, true, nil
 }

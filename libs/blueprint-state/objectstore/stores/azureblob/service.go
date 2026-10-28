@@ -66,8 +66,19 @@ func (s *Service) Put(
 	return etagString(resp.ETag), nil
 }
 
-func (s *Service) Delete(ctx context.Context, key string) error {
-	if _, err := s.client.DeleteBlob(ctx, s.container, key, nil); err != nil {
+func (s *Service) Delete(ctx context.Context, key string, opts *objectstore.DeleteOptions) error {
+	var deleteOpts *azblob.DeleteBlobOptions
+	if opts != nil && opts.IfMatch != "" {
+		deleteOpts = &azblob.DeleteBlobOptions{
+			AccessConditions: &blob.AccessConditions{
+				ModifiedAccessConditions: &blob.ModifiedAccessConditions{
+					IfMatch: new(azcore.ETag(opts.IfMatch)),
+				},
+			},
+		}
+	}
+
+	if _, err := s.client.DeleteBlob(ctx, s.container, key, deleteOpts); err != nil {
 		return mapErr(err, "delete "+key)
 	}
 	return nil

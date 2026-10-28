@@ -33,6 +33,9 @@ type PersistedInstanceState struct {
 	// Removing marks an instance whose removal has started under Config.WriteEntityRecords.
 	// A marked instance reads as not found, and removing it again resumes the removal.
 	Removing bool `json:"removing,omitempty"`
+	// ETag is the version of the stored object this was read from, set by loaders whose
+	// storage versions objects. It is not part of the stored object.
+	ETag string `json:"-"`
 }
 
 // EntityRecord is the JSON shape of a resource or link ID record written under

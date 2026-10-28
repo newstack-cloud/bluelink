@@ -10,6 +10,9 @@ import (
 // nothing for an instance that is live or absent. A removal only starts once a destroy has
 // removed everything the instance deployed, so what is left is state, this includes
 // the ID records the interruption left behind, the name record, and the marked instance object.
+//
+// The name record and the instance object are only deleted at the versions read here, so one
+// that another process replaced in the meantime is left alone.
 func finishRemoval(
 	ctx context.Context,
 	svc Service,
@@ -17,7 +20,7 @@ func finishRemoval(
 	instanceID string,
 ) error {
 	var marked statestore.PersistedInstanceState
-	found, err := readEntity(ctx, svc, keys.Instance(instanceID), &marked)
+	markedETag, found, err := readVersionedEntity(ctx, svc, keys.Instance(instanceID), &marked)
 	if err != nil || !found || !marked.Removing {
 		return err
 	}
@@ -36,7 +39,7 @@ func finishRemoval(
 		}
 	}
 
-	return deleteIgnoringNotFound(ctx, svc, keys.Instance(instanceID))
+	return deleteAtVersion(ctx, svc, keys.Instance(instanceID), markedETag)
 }
 
 func deleteRecordsNaming(ctx context.Context, svc Service, instanceID string, recordKeys []string) error {
@@ -60,11 +63,21 @@ func deleteRecordsNaming(ctx context.Context, svc Service, instanceID string, re
 
 func deleteNameRecordNaming(ctx context.Context, svc Service, key string, instanceID string) error {
 	var record statestore.InstanceNameRecord
-	found, err := readEntity(ctx, svc, key, &record)
+	etag, found, err := readVersionedEntity(ctx, svc, key, &record)
 	if err != nil || !found || record.ID != instanceID {
 		return err
 	}
-	return deleteIgnoringNotFound(ctx, svc, key)
+	return deleteAtVersion(ctx, svc, key, etag)
+}
+
+// An object that is gone or was replaced since it was read is left as it is.
+func deleteAtVersion(ctx context.Context, svc Service, key string, etag string) error {
+	err := svc.Delete(ctx, key, &DeleteOptions{IfMatch: etag})
+	if err != nil && !isObjectNotFound(err) && !isPreconditionFailed(err) {
+		return err
+	}
+
+	return nil
 }
 
 func entityRecordKeys(keys statestore.KeyBuilder, ids statestore.InstanceEntityIDs) []string {
@@ -81,7 +94,7 @@ func entityRecordKeys(keys statestore.KeyBuilder, ids statestore.InstanceEntityI
 }
 
 func deleteIgnoringNotFound(ctx context.Context, svc Service, key string) error {
-	if err := svc.Delete(ctx, key); err != nil && !isObjectNotFound(err) {
+	if err := svc.Delete(ctx, key, nil); err != nil && !isObjectNotFound(err) {
 		return err
 	}
 	return nil

@@ -32,10 +32,46 @@ type StateContainer struct {
 	auditContainer                 *auditContainer
 	storePersister                 *statestore.Persister
 	clock                          commoncore.Clock
+	revalidateCache                bool
+	cacheMaxAge                    time.Duration
 }
+
+// DefaultCacheMaxAge is how long a cached instance is used before it is checked against the
+// bucket again, unless WithCacheRevalidation or WithoutCacheRevalidation says otherwise.
+//
+// Typically, engine instances that share the same object storage backend will be running in CI
+// environments that get fresh state on every run, for the more unusual case where long-lived
+// engine instances share an object storage backend, deployments for the same instances
+// do not run in parallel, so subsequent runs are usually minutes apart and 30 seconds is enough
+// to reduce subsequent reads throughout a single deployment process.
+const DefaultCacheMaxAge = 30 * time.Second
 
 // Option is a type for options that can be passed to LoadStateContainer.
 type Option func(*StateContainer)
+
+// WithCacheRevalidation sets how long a cached instance is used before it is checked against
+// the bucket again (a HEAD request), so that a long-running engine sees changes made by other
+// engines sharing the bucket. A changed instance is reloaded and a removed one dropped. Zero
+// checks on every use. Defaults to DefaultCacheMaxAge.
+//
+// Writes do not depend on it as every instance write is conditional on the version last read, so
+// a write based on a stale instance is rejected and applied again to the current one.
+func WithCacheRevalidation(maxAge time.Duration) Option {
+	return func(c *StateContainer) {
+		c.revalidateCache = true
+		c.cacheMaxAge = maxAge
+	}
+}
+
+// WithoutCacheRevalidation turns off checking cached instances against the bucket, for an
+// engine that has the bucket to itself or is short-lived, such as one started for a CI run.
+// It loads instances fresh, its own writes keep its cache current, and it makes no HEAD
+// requests to revalidate.
+func WithoutCacheRevalidation() Option {
+	return func(c *StateContainer) {
+		c.revalidateCache = false
+	}
+}
 
 // WithMaxGuideFileSize sets a guide for the maximum size of a state chunk
 // file in bytes. See statestore.WithMaxGuideFileSize.
@@ -108,12 +144,14 @@ func LoadStateContainer(
 	)
 
 	container = &StateContainer{
-		clock:          &commoncore.SystemClock{},
-		storePersister: storePersister,
+		clock:           &commoncore.SystemClock{},
+		revalidateCache: true,
+		cacheMaxAge:     DefaultCacheMaxAge,
+		storePersister:  storePersister,
 		instancesContainer: statestore.NewInstancesContainer(
 			storeState,
 			storePersister,
-			objectstoreClaimFunc(svc, keys, storeState),
+			objectstoreClaimFunc(svc, keys, storeState, getClock),
 			objectstoreInitialiseAndClaimFunc(svc, keys, storeState, getClock),
 			logger,
 		),
@@ -137,7 +175,18 @@ func LoadStateContainer(
 	for _, opt := range opts {
 		opt(container)
 	}
+	if container.revalidateCache {
+		statestore.WithRevalidation(container.cacheMaxAge, clockFunc(getClock))(storeState)
+	}
 	return container, nil
+}
+
+// Reads the container's clock when the time is asked for, so WithClock applies whatever
+// order the options are given in.
+type clockFunc func() commoncore.Clock
+
+func (c clockFunc) Now() time.Time {
+	return c().Now()
 }
 
 func (c *StateContainer) Instances() state.InstancesContainer { return c.instancesContainer }
@@ -222,6 +271,7 @@ func objectstoreClaimFunc(
 	svc Service,
 	keys statestore.KeyBuilder,
 	st *statestore.State,
+	clock func() commoncore.Clock,
 ) statestore.ClaimFunc {
 	return func(
 		ctx context.Context,
@@ -229,7 +279,7 @@ func objectstoreClaimFunc(
 		expectedVersion int64,
 		newStatus core.InstanceStatus,
 	) (int64, error) {
-		return ClaimForDeployment(ctx, svc, keys, st, instanceID, expectedVersion, newStatus)
+		return ClaimForDeployment(ctx, svc, keys, st, clock(), instanceID, expectedVersion, newStatus)
 	}
 }
 

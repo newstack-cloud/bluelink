@@ -72,6 +72,15 @@ func (c *ResourcesContainer) Save(
 	ctx context.Context,
 	resourceState state.ResourceState,
 ) error {
+	return retryOnInstanceChange(func() error {
+		return c.save(ctx, resourceState)
+	})
+}
+
+func (c *ResourcesContainer) save(
+	ctx context.Context,
+	resourceState state.ResourceState,
+) error {
 	if err := c.state.preloadInstances(ctx, resourceState.InstanceID); err != nil {
 		return err
 	}
@@ -109,6 +118,16 @@ func (c *ResourcesContainer) Save(
 }
 
 func (c *ResourcesContainer) UpdateStatus(
+	ctx context.Context,
+	resourceID string,
+	statusInfo state.ResourceStatusInfo,
+) error {
+	return retryOnInstanceChange(func() error {
+		return c.updateStatus(ctx, resourceID, statusInfo)
+	})
+}
+
+func (c *ResourcesContainer) updateStatus(
 	ctx context.Context,
 	resourceID string,
 	statusInfo state.ResourceStatusInfo,
@@ -153,6 +172,15 @@ func (c *ResourcesContainer) UpdateStatus(
 }
 
 func (c *ResourcesContainer) Remove(
+	ctx context.Context,
+	resourceID string,
+) (state.ResourceState, error) {
+	return retryOnInstanceChangeWithResult(func() (state.ResourceState, error) {
+		return c.remove(ctx, resourceID)
+	})
+}
+
+func (c *ResourcesContainer) remove(
 	ctx context.Context,
 	resourceID string,
 ) (state.ResourceState, error) {
@@ -225,6 +253,16 @@ func (c *ResourcesContainer) updateContributionFailures(
 	resourceID string,
 	update func([]state.ResourceLinkContributionFailure) []state.ResourceLinkContributionFailure,
 ) error {
+	return retryOnInstanceChange(func() error {
+		return c.applyContributionFailuresUpdate(ctx, resourceID, update)
+	})
+}
+
+func (c *ResourcesContainer) applyContributionFailuresUpdate(
+	ctx context.Context,
+	resourceID string,
+	update func([]state.ResourceLinkContributionFailure) []state.ResourceLinkContributionFailure,
+) error {
 	if err := c.state.preloadResource(ctx, resourceID); err != nil {
 		return err
 	}
@@ -275,6 +313,15 @@ func (c *ResourcesContainer) GetDrift(
 }
 
 func (c *ResourcesContainer) SaveDrift(
+	ctx context.Context,
+	driftState state.ResourceDriftState,
+) error {
+	return retryOnInstanceChange(func() error {
+		return c.saveDrift(ctx, driftState)
+	})
+}
+
+func (c *ResourcesContainer) saveDrift(
 	ctx context.Context,
 	driftState state.ResourceDriftState,
 ) error {
@@ -332,6 +379,18 @@ func (c *ResourcesContainer) RemoveDrift(
 	ctx context.Context,
 	resourceID string,
 ) (state.ResourceDriftState, error) {
+	return retryOnInstanceChangeWithResult(func() (state.ResourceDriftState, error) {
+		return c.removeDrift(ctx, resourceID)
+	})
+}
+
+// The drift entry is deleted before the instance is rewritten, so an attempt that is retried
+// after its instance write was rejected finds no drift. It still has to clear the resource's
+// drifted flag, which only the instance write does.
+func (c *ResourcesContainer) removeDrift(
+	ctx context.Context,
+	resourceID string,
+) (state.ResourceDriftState, error) {
 	if err := c.state.preloadResourceWithDrift(ctx, resourceID); err != nil {
 		return state.ResourceDriftState{}, err
 	}
@@ -344,13 +403,13 @@ func (c *ResourcesContainer) RemoveDrift(
 		return state.ResourceDriftState{}, state.ResourceNotFoundError(resourceID)
 	}
 	driftState, hasDrift := c.state.resourceDrift[resourceID]
-	if !hasDrift {
+	if !hasDrift && !resource.Drifted {
 		return state.ResourceDriftState{}, nil
 	}
 	inst, ok := c.state.instances[resource.InstanceID]
 	if !ok {
 		return state.ResourceDriftState{}, errMalformedState(
-			instanceNotFoundForResourceMessage(resource.InstanceID, driftState.ResourceID),
+			instanceNotFoundForResourceMessage(resource.InstanceID, resourceID),
 		)
 	}
 
@@ -358,12 +417,14 @@ func (c *ResourcesContainer) RemoveDrift(
 	resource.LastDriftDetectedTimestamp = nil
 	delete(c.state.resourceDrift, resourceID)
 
-	c.logger.Debug(
-		"persisting removal of resource drift entry",
-		core.StringLogField("resourceId", resourceID),
-	)
-	if err := c.persister.RemoveResourceDrift(ctx, driftState); err != nil {
-		return state.ResourceDriftState{}, err
+	if hasDrift {
+		c.logger.Debug(
+			"persisting removal of resource drift entry",
+			core.StringLogField("resourceId", resourceID),
+		)
+		if err := c.persister.RemoveResourceDrift(ctx, driftState); err != nil {
+			return state.ResourceDriftState{}, err
+		}
 	}
 
 	c.logger.Debug(
@@ -373,6 +434,10 @@ func (c *ResourcesContainer) RemoveDrift(
 	if err := c.persister.UpdateInstance(ctx, inst); err != nil {
 		return state.ResourceDriftState{}, err
 	}
+	if !hasDrift {
+		return state.ResourceDriftState{}, nil
+	}
+
 	return *driftState, nil
 }
 

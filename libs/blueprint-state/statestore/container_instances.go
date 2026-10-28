@@ -138,6 +138,15 @@ func (c *InstancesContainer) Save(
 	ctx context.Context,
 	instanceState state.InstanceState,
 ) error {
+	return retryOnInstanceChange(func() error {
+		return c.saveTree(ctx, instanceState)
+	})
+}
+
+func (c *InstancesContainer) saveTree(
+	ctx context.Context,
+	instanceState state.InstanceState,
+) error {
 	if err := c.state.preloadInstances(
 		ctx, instanceTreeIDs(&instanceState)...,
 	); err != nil {
@@ -151,6 +160,15 @@ func (c *InstancesContainer) Save(
 }
 
 func (c *InstancesContainer) SaveBatch(
+	ctx context.Context,
+	instances []state.InstanceState,
+) error {
+	return retryOnInstanceChange(func() error {
+		return c.saveBatch(ctx, instances)
+	})
+}
+
+func (c *InstancesContainer) saveBatch(
 	ctx context.Context,
 	instances []state.InstanceState,
 ) error {
@@ -303,6 +321,16 @@ func (c *InstancesContainer) UpdateStatus(
 	instanceID string,
 	statusInfo state.InstanceStatusInfo,
 ) error {
+	return retryOnInstanceChange(func() error {
+		return c.updateStatus(ctx, instanceID, statusInfo)
+	})
+}
+
+func (c *InstancesContainer) updateStatus(
+	ctx context.Context,
+	instanceID string,
+	statusInfo state.InstanceStatusInfo,
+) error {
 	if err := c.state.preloadInstances(ctx, instanceID); err != nil {
 		return err
 	}
@@ -361,6 +389,15 @@ func (c *InstancesContainer) Remove(
 	ctx context.Context,
 	instanceID string,
 ) (state.InstanceState, error) {
+	return retryOnInstanceChangeWithResult(func() (state.InstanceState, error) {
+		return c.remove(ctx, instanceID)
+	})
+}
+
+func (c *InstancesContainer) remove(
+	ctx context.Context,
+	instanceID string,
+) (state.InstanceState, error) {
 	_, found, err := c.state.LookupInstance(ctx, instanceID)
 	if err != nil {
 		return state.InstanceState{}, err
@@ -380,7 +417,7 @@ func (c *InstancesContainer) Remove(
 	if inst.InstanceName != "" {
 		delete(c.state.nameLookup, inst.InstanceName)
 	}
-	c.cleanupResourceDrift(inst.ResourceIDs)
+	c.state.forgetDriftOf(inst)
 	c.cleanupResources(inst.ResourceIDs)
 	c.cleanupLinks(inst.InstanceID)
 
@@ -397,7 +434,7 @@ func (c *InstancesContainer) resumeRemoval(
 	ctx context.Context,
 	instanceID string,
 ) (state.InstanceState, error) {
-	beingRemoved, found, err := c.state.loadInstanceBeingRemoved(ctx, instanceID)
+	persisted, found, err := c.state.loadInstanceBeingRemoved(ctx, instanceID)
 	if err != nil {
 		return state.InstanceState{}, err
 	}
@@ -405,17 +442,18 @@ func (c *InstancesContainer) resumeRemoval(
 		return state.InstanceState{}, state.InstanceNotFoundError(instanceID)
 	}
 
+	c.state.Lock()
+	defer c.state.Unlock()
+
+	// The removal is resumed from the marked object just read, so its deletes are conditional
+	// on that version, as they would have been had the removal not been interrupted.
+	c.state.recordLoadedVersion(persisted)
+	beingRemoved := persisted.ToInstanceState()
 	c.logger.Debug(
 		"resuming interrupted removal of blueprint instance",
 		core.StringLogField("instanceId", instanceID),
 	)
 	return *beingRemoved, c.persister.RemoveInstance(ctx, beingRemoved)
-}
-
-func (c *InstancesContainer) cleanupResourceDrift(resourceIDs map[string]string) {
-	for _, resourceID := range resourceIDs {
-		delete(c.state.resourceDrift, resourceID)
-	}
 }
 
 func (c *InstancesContainer) cleanupResources(resourceIDs map[string]string) {

@@ -86,7 +86,7 @@ func giveBackName(
 			return
 		}
 	}
-	_ = svc.Delete(ctx, keys.InstanceByName(instanceState.InstanceName))
+	_ = svc.Delete(ctx, keys.InstanceByName(instanceState.InstanceName), nil)
 }
 
 // Reports whether the instance object was written. The caller gives back the name it
@@ -108,49 +108,38 @@ func createInstanceObject(
 	}
 
 	etag, err := putNewInstanceObject(ctx, svc, keys, first)
-	if err != nil || !hasEntities {
-		return err == nil, err
+	if err != nil {
+		return false, err
+	}
+	if !hasEntities {
+		persisted.ETag = etag
+		return true, nil
 	}
 
 	if err := putEntityRecords(ctx, svc, keys, persisted.InstanceID, entities); err != nil {
 		return true, err
 	}
-	_, err = putJSON(ctx, svc, keys.Instance(persisted.InstanceID), persisted, &PutOptions{IfMatch: etag})
+	persisted.ETag, err = putJSON(
+		ctx, svc, keys.Instance(persisted.InstanceID), persisted, &PutOptions{IfMatch: etag},
+	)
 	return true, err
 }
 
-// Creates the instance object only where none exists. An object left by an interrupted
-// removal of the same ID is not overwritten, that removal is finished first (see
-// finishRemoval), and the create retried once.
+// Creates the instance object only where none exists. An interrupted removal of the same ID
+// was already finished by InitialiseAndClaim, so an object here is a live instance or one
+// another process created or started removing since, and either way this ID is taken.
 func putNewInstanceObject(
 	ctx context.Context,
 	svc Service,
 	keys statestore.KeyBuilder,
 	persisted *statestore.PersistedInstanceState,
 ) (string, error) {
-	key := keys.Instance(persisted.InstanceID)
-	for attempt := range 2 {
-		etag, err := putJSON(ctx, svc, key, persisted, &PutOptions{IfNoneMatch: "*"})
-		if err == nil || !isPreconditionFailed(err) {
-			return etag, err
-		}
-		if attempt > 0 {
-			break
-		}
-
-		liveness, err := readInstanceLiveness(ctx, svc, keys, persisted.InstanceID)
-		if err != nil {
-			return "", err
-		}
-		if liveness == instanceLive {
-			return "", state.ErrInstanceAlreadyExists
-		}
-		if err := finishRemoval(ctx, svc, keys, persisted.InstanceID); err != nil {
-			return "", err
-		}
+	etag, err := putJSON(ctx, svc, keys.Instance(persisted.InstanceID), persisted, &PutOptions{IfNoneMatch: "*"})
+	if isPreconditionFailed(err) {
+		return "", state.ErrInstanceAlreadyExists
 	}
 
-	return "", state.ErrInstanceAlreadyExists
+	return etag, err
 }
 
 func putEntityRecords(

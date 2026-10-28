@@ -13,6 +13,7 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/statestore"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -46,7 +47,7 @@ func TestClaimForDeployment_succeeds_with_matching_version(t *testing.T) {
 	svc, keys, st := setupClaimTest(t, 0)
 
 	newVersion, err := objectstore.ClaimForDeployment(
-		context.Background(), svc, keys, st,
+		context.Background(), svc, keys, st, &commoncore.SystemClock{},
 		testInstanceID, 0, core.InstanceStatusDeploying,
 	)
 	require.NoError(t, err)
@@ -71,7 +72,7 @@ func TestClaimForDeployment_returns_conflict_on_stale_version(t *testing.T) {
 	svc, keys, st := setupClaimTest(t, 5)
 
 	currentVersion, err := objectstore.ClaimForDeployment(
-		context.Background(), svc, keys, st,
+		context.Background(), svc, keys, st, &commoncore.SystemClock{},
 		testInstanceID, 3, core.InstanceStatusDeploying,
 	)
 	require.Error(t, err)
@@ -85,7 +86,7 @@ func TestClaimForDeployment_reports_instance_not_found(t *testing.T) {
 	st := statestore.NewState()
 
 	_, err := objectstore.ClaimForDeployment(
-		context.Background(), svc, keys, st,
+		context.Background(), svc, keys, st, &commoncore.SystemClock{},
 		nonExistentInstanceID, 0, core.InstanceStatusDeploying,
 	)
 	require.Error(t, err)
@@ -119,7 +120,7 @@ func TestClaimForDeployment_412_returns_conflict_with_fresh_version(t *testing.T
 	})
 
 	currentVersion, err := objectstore.ClaimForDeployment(
-		context.Background(), svc, keys, st,
+		context.Background(), svc, keys, st, &commoncore.SystemClock{},
 		testInstanceID, 0, core.InstanceStatusDeploying,
 	)
 	require.Error(t, err)
@@ -139,7 +140,7 @@ func TestClaimForDeployment_concurrent_callers_only_one_wins(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			_, err := objectstore.ClaimForDeployment(
-				context.Background(), svc, keys, st,
+				context.Background(), svc, keys, st, &commoncore.SystemClock{},
 				testInstanceID, 0, core.InstanceStatusDeploying,
 			)
 			if err == nil {

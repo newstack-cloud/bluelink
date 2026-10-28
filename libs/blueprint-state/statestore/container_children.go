@@ -55,6 +55,17 @@ func (c *ChildrenContainer) Attach(
 	childInstanceID string,
 	childName string,
 ) error {
+	return retryOnInstanceChange(func() error {
+		return c.attach(ctx, parentInstanceID, childInstanceID, childName)
+	})
+}
+
+func (c *ChildrenContainer) attach(
+	ctx context.Context,
+	parentInstanceID string,
+	childInstanceID string,
+	childName string,
+) error {
 	if err := c.state.preloadInstances(
 		ctx, parentInstanceID, childInstanceID,
 	); err != nil {
@@ -91,6 +102,17 @@ func (c *ChildrenContainer) SaveDependencies(
 	childName string,
 	dependencies *state.DependencyInfo,
 ) error {
+	return retryOnInstanceChange(func() error {
+		return c.saveDependencies(ctx, instanceID, childName, dependencies)
+	})
+}
+
+func (c *ChildrenContainer) saveDependencies(
+	ctx context.Context,
+	instanceID string,
+	childName string,
+	dependencies *state.DependencyInfo,
+) error {
 	if err := c.state.preloadInstances(ctx, instanceID); err != nil {
 		return err
 	}
@@ -115,6 +137,16 @@ func (c *ChildrenContainer) SaveDependencies(
 }
 
 func (c *ChildrenContainer) Detach(
+	ctx context.Context,
+	instanceID string,
+	childName string,
+) error {
+	return retryOnInstanceChange(func() error {
+		return c.detach(ctx, instanceID, childName)
+	})
+}
+
+func (c *ChildrenContainer) detach(
 	ctx context.Context,
 	instanceID string,
 	childName string,

@@ -169,7 +169,7 @@ func TestS3Service_head_list_delete_round_trip(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, listed, 2)
 
-	require.NoError(t, svc.Delete(ctx, "dir/a.json"))
+	require.NoError(t, svc.Delete(ctx, "dir/a.json", nil))
 
 	_, err = svc.Head(ctx, "dir/a.json")
 	requireReason(t, err, objectstore.ErrorReasonCodeObjectNotFound)

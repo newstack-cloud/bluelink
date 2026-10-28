@@ -114,7 +114,7 @@ func (s *Service) Put(
 	return newETag, nil
 }
 
-func (s *Service) Delete(ctx context.Context, key string) error {
+func (s *Service) Delete(ctx context.Context, key string, opts *objectstore.DeleteOptions) error {
 	if hook := s.hooks.BeforeDelete; hook != nil {
 		if err := hook(ctx, key); err != nil {
 			return err
@@ -122,8 +122,14 @@ func (s *Service) Delete(ctx context.Context, key string) error {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, ok := s.objects[key]; !ok {
+	existing, ok := s.objects[key]
+	if !ok {
 		return notFoundError(key)
+	}
+	if opts != nil && opts.IfMatch != "" && existing.etag != opts.IfMatch {
+		return preconditionError(
+			fmt.Sprintf("IfMatch=%s does not match current etag", opts.IfMatch),
+		)
 	}
 	delete(s.objects, key)
 	return nil

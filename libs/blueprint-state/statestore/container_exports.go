@@ -71,6 +71,16 @@ func (c *ExportsContainer) SaveAll(
 	instanceID string,
 	exports map[string]*state.ExportState,
 ) error {
+	return retryOnInstanceChange(func() error {
+		return c.saveAll(ctx, instanceID, exports)
+	})
+}
+
+func (c *ExportsContainer) saveAll(
+	ctx context.Context,
+	instanceID string,
+	exports map[string]*state.ExportState,
+) error {
 	if err := c.state.preloadInstances(ctx, instanceID); err != nil {
 		return err
 	}
@@ -92,6 +102,17 @@ func (c *ExportsContainer) SaveAll(
 }
 
 func (c *ExportsContainer) Save(
+	ctx context.Context,
+	instanceID string,
+	exportName string,
+	export state.ExportState,
+) error {
+	return retryOnInstanceChange(func() error {
+		return c.save(ctx, instanceID, exportName, export)
+	})
+}
+
+func (c *ExportsContainer) save(
 	ctx context.Context,
 	instanceID string,
 	exportName string,
@@ -125,6 +146,15 @@ func (c *ExportsContainer) RemoveAll(
 	ctx context.Context,
 	instanceID string,
 ) (map[string]*state.ExportState, error) {
+	return retryOnInstanceChangeWithResult(func() (map[string]*state.ExportState, error) {
+		return c.removeAll(ctx, instanceID)
+	})
+}
+
+func (c *ExportsContainer) removeAll(
+	ctx context.Context,
+	instanceID string,
+) (map[string]*state.ExportState, error) {
 	if err := c.state.preloadInstances(ctx, instanceID); err != nil {
 		return nil, err
 	}
@@ -147,6 +177,16 @@ func (c *ExportsContainer) RemoveAll(
 }
 
 func (c *ExportsContainer) Remove(
+	ctx context.Context,
+	instanceID string,
+	exportName string,
+) (state.ExportState, error) {
+	return retryOnInstanceChangeWithResult(func() (state.ExportState, error) {
+		return c.remove(ctx, instanceID, exportName)
+	})
+}
+
+func (c *ExportsContainer) remove(
 	ctx context.Context,
 	instanceID string,
 	exportName string,

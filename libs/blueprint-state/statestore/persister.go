@@ -198,11 +198,12 @@ func (p *Persister) CreateInstance(ctx context.Context, instance *state.Instance
 	}
 	instanceWritten, err := p.createInstanceRecords(ctx, instance)
 	if err != nil {
-		// Once the instance object exists the name record belongs to it.
-		if !instanceWritten {
+		// Once the instance object exists the name record belongs to it, and that includes
+		// an instance with this ID that another process created first.
+		if !instanceWritten && !isInstanceChanged(err) {
 			_ = p.maybeRemoveNameRecord(ctx, instance)
 		}
-		p.state.forgetCachedInstances()
+		p.forgetAfterFailedWrite(err)
 		return err
 	}
 	return nil
@@ -219,7 +220,7 @@ func (p *Persister) UpdateInstance(ctx context.Context, instance *state.Instance
 
 	err := p.rewriteInstanceRecord(ctx, instance)
 	if err != nil {
-		p.state.forgetCachedInstances()
+		p.forgetAfterFailedWrite(err)
 	}
 	return err
 }
@@ -227,12 +228,18 @@ func (p *Persister) UpdateInstance(ctx context.Context, instance *state.Instance
 // RemoveInstance removes an instance's persisted record, its index entry,
 // its name-lookup record (if any) and, under Config.WriteEntityRecords, the ID
 // records of its resources and links.
+//
+// The caller must hold the State write lock for state cache updates.
 func (p *Persister) RemoveInstance(ctx context.Context, instance *state.InstanceState) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	if p.config.WriteEntityRecords {
-		return p.removeInstanceWithRecords(ctx, instance)
+		err := p.removeInstanceWithRecords(ctx, instance)
+		if isInstanceChanged(err) {
+			p.forgetAfterFailedWrite(err)
+		}
+		return err
 	}
 
 	if err := p.deleteInstanceRecord(ctx, instance); err != nil {
@@ -244,7 +251,7 @@ func (p *Persister) RemoveInstance(ctx context.Context, instance *state.Instance
 func (p *Persister) writeInstanceRecord(ctx context.Context, instance *state.InstanceState) error {
 	switch p.config.Instances.Layout {
 	case LayoutPerEntity:
-		return writeChunk(ctx, p.storage, p.keys.Instance(instance.InstanceID), NewPersistedInstanceState(instance))
+		return p.putInstanceObject(ctx, NewPersistedInstanceState(instance), true /* isNew */)
 	case LayoutChunked:
 		return createInChunk(
 			ctx, p.storage, p.maxGuideFileSize, p.instanceSpec(),
@@ -257,7 +264,7 @@ func (p *Persister) writeInstanceRecord(ctx context.Context, instance *state.Ins
 func (p *Persister) rewriteInstanceRecord(ctx context.Context, instance *state.InstanceState) error {
 	switch p.config.Instances.Layout {
 	case LayoutPerEntity:
-		return writeChunk(ctx, p.storage, p.keys.Instance(instance.InstanceID), NewPersistedInstanceState(instance))
+		return p.putInstanceObject(ctx, NewPersistedInstanceState(instance), false /* isNew */)
 	case LayoutChunked:
 		return updateInChunk(
 			ctx, p.storage, p.instanceSpec(),
@@ -271,7 +278,7 @@ func (p *Persister) rewriteInstanceRecord(ctx context.Context, instance *state.I
 func (p *Persister) deleteInstanceRecord(ctx context.Context, instance *state.InstanceState) error {
 	switch p.config.Instances.Layout {
 	case LayoutPerEntity:
-		return deleteIgnoreNotFound(ctx, p.storage, p.keys.Instance(instance.InstanceID))
+		return p.deleteInstanceObject(ctx, instance.InstanceID)
 	case LayoutChunked:
 		return removeFromChunk[*PersistedInstanceState](
 			ctx, p.storage, p.instanceSpec(), instance.InstanceID,
@@ -304,6 +311,10 @@ func (p *Persister) maybeRemoveNameRecord(ctx context.Context, instance *state.I
 	}
 
 	key := p.keys.InstanceByName(instance.InstanceName)
+	if conditional, ok := p.storage.(ConditionalStorage); ok {
+		return p.deleteNameRecordIfOwned(ctx, conditional, key, instance.InstanceID)
+	}
+
 	var record InstanceNameRecord
 	if err := readJSON(ctx, p.storage, key, &record); err != nil {
 		return err

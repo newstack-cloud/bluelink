@@ -54,6 +54,16 @@ func (c *MetadataContainer) Save(
 	instanceID string,
 	metadata map[string]*core.MappingNode,
 ) error {
+	return retryOnInstanceChange(func() error {
+		return c.save(ctx, instanceID, metadata)
+	})
+}
+
+func (c *MetadataContainer) save(
+	ctx context.Context,
+	instanceID string,
+	metadata map[string]*core.MappingNode,
+) error {
 	if err := c.state.preloadInstances(ctx, instanceID); err != nil {
 		return err
 	}
@@ -74,6 +84,15 @@ func (c *MetadataContainer) Save(
 }
 
 func (c *MetadataContainer) Remove(
+	ctx context.Context,
+	instanceID string,
+) (map[string]*core.MappingNode, error) {
+	return retryOnInstanceChangeWithResult(func() (map[string]*core.MappingNode, error) {
+		return c.remove(ctx, instanceID)
+	})
+}
+
+func (c *MetadataContainer) remove(
 	ctx context.Context,
 	instanceID string,
 ) (map[string]*core.MappingNode, error) {

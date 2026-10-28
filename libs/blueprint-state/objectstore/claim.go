@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/statestore"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
+	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
 )
 
 // ClaimForDeployment performs an atomic compare-and-swap on a single instance
@@ -28,6 +28,7 @@ func ClaimForDeployment(
 	svc Service,
 	keys statestore.KeyBuilder,
 	st *statestore.State,
+	clock commoncore.Clock,
 	instanceID string,
 	expectedVersion int64,
 	newStatus core.InstanceStatus,
@@ -45,14 +46,14 @@ func ClaimForDeployment(
 
 	persisted.Version++
 	persisted.Status = newStatus
-	persisted.LastStatusUpdateTimestamp = int(time.Now().Unix())
+	persisted.LastStatusUpdateTimestamp = int(clock.Now().Unix())
 
 	data, err := json.Marshal(persisted)
 	if err != nil {
 		return 0, err
 	}
 
-	_, putErr := svc.Put(ctx, key, data, &PutOptions{IfMatch: etag})
+	newETag, putErr := svc.Put(ctx, key, data, &PutOptions{IfMatch: etag})
 	if putErr != nil {
 		if isPreconditionFailed(putErr) {
 			return currentPersistedVersion(ctx, svc, key, instanceID)
@@ -60,6 +61,7 @@ func ClaimForDeployment(
 		return 0, putErr
 	}
 
+	persisted.ETag = newETag
 	if _, err := st.CachePersistedInstance(ctx, persisted); err != nil {
 		return 0, err
 	}
