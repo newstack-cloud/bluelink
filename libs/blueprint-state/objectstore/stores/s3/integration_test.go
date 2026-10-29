@@ -164,10 +164,14 @@ func TestS3Service_head_list_delete_round_trip(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int64(1), info.Size)
 	require.NotEmpty(t, info.ETag)
+	require.False(t, info.LastModified.IsZero(), "head reports when the object was written")
 
 	listed, err := svc.List(ctx, "dir/")
 	require.NoError(t, err)
 	require.Len(t, listed, 2)
+	for _, object := range listed {
+		require.False(t, object.LastModified.IsZero(), "list reports when %s was written", object.Key)
+	}
 
 	require.NoError(t, svc.Delete(ctx, "dir/a.json", nil))
 

@@ -94,9 +94,10 @@ func (s *Service) Head(ctx context.Context, key string) (*objectstore.ObjectInfo
 	}
 
 	return &objectstore.ObjectInfo{
-		Key:  key,
-		Size: attrs.Size,
-		ETag: formatGeneration(attrs.Generation),
+		Key:          key,
+		Size:         attrs.Size,
+		ETag:         formatGeneration(attrs.Generation),
+		LastModified: attrs.Updated,
 	}, nil
 }
 
@@ -142,9 +143,10 @@ func (s *Service) list(
 			continue
 		}
 		infos = append(infos, &objectstore.ObjectInfo{
-			Key:  attrs.Name,
-			Size: attrs.Size,
-			ETag: formatGeneration(attrs.Generation),
+			Key:          attrs.Name,
+			Size:         attrs.Size,
+			ETag:         formatGeneration(attrs.Generation),
+			LastModified: attrs.Updated,
 		})
 	}
 

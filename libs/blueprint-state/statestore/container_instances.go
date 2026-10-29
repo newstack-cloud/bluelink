@@ -417,7 +417,7 @@ func (c *InstancesContainer) remove(
 	if inst.InstanceName != "" {
 		delete(c.state.nameLookup, inst.InstanceName)
 	}
-	c.state.forgetDriftOf(inst)
+	drifted := c.state.takeDriftOf(inst.Resources, inst.Links)
 	c.cleanupResources(inst.ResourceIDs)
 	c.cleanupLinks(inst.InstanceID)
 
@@ -425,7 +425,12 @@ func (c *InstancesContainer) remove(
 		"persisting removal of blueprint instance",
 		core.StringLogField("instanceId", instanceID),
 	)
-	return *inst, c.persister.RemoveInstance(ctx, inst)
+	if err := c.persister.RemoveInstance(ctx, inst); err != nil {
+		return state.InstanceState{}, err
+	}
+
+	deleteStoredDrift(ctx, c.persister, c.logger, drifted)
+	return *inst, nil
 }
 
 // An instance whose removal was interrupted reads as not found, so removing it again is
@@ -449,11 +454,17 @@ func (c *InstancesContainer) resumeRemoval(
 	// on that version, as they would have been had the removal not been interrupted.
 	c.state.recordLoadedVersion(persisted)
 	beingRemoved := persisted.ToInstanceState()
+	drifted := c.state.takeDriftOf(beingRemoved.Resources, beingRemoved.Links)
 	c.logger.Debug(
 		"resuming interrupted removal of blueprint instance",
 		core.StringLogField("instanceId", instanceID),
 	)
-	return *beingRemoved, c.persister.RemoveInstance(ctx, beingRemoved)
+	if err := c.persister.RemoveInstance(ctx, beingRemoved); err != nil {
+		return state.InstanceState{}, err
+	}
+
+	deleteStoredDrift(ctx, c.persister, c.logger, drifted)
+	return *beingRemoved, nil
 }
 
 func (c *InstancesContainer) cleanupResources(resourceIDs map[string]string) {

@@ -1,6 +1,9 @@
 package objectstore
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // Service is an interface for interacting with object storage services.
 type Service interface {
@@ -61,4 +64,8 @@ type ObjectInfo struct {
 	Size int64
 	// The ETag of the object, which is typically a hash of the object's content.
 	ETag string
+	// LastModified is when the object was last written, as the storage service reports it.
+	// The leftover-record sweep uses it to leave alone anything written too recently to be
+	// judged, such as a record whose instance is still being written.
+	LastModified time.Time
 }

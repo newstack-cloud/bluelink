@@ -3,6 +3,7 @@ package azureblob
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
@@ -93,9 +94,10 @@ func (s *Service) Head(ctx context.Context, key string) (*objectstore.ObjectInfo
 		return nil, mapErr(err, "head "+key)
 	}
 	return &objectstore.ObjectInfo{
-		Key:  key,
-		Size: derefInt64(resp.ContentLength),
-		ETag: etagString(resp.ETag),
+		Key:          key,
+		Size:         derefInt64(resp.ContentLength),
+		ETag:         etagString(resp.ETag),
+		LastModified: derefTime(resp.LastModified),
 	}, nil
 }
 
@@ -126,6 +128,7 @@ func blobItemsToInfos(items []*container.BlobItem) []*objectstore.ObjectInfo {
 		if item.Properties != nil {
 			info.Size = derefInt64(item.Properties.ContentLength)
 			info.ETag = etagString(item.Properties.ETag)
+			info.LastModified = derefTime(item.Properties.LastModified)
 		}
 		infos = append(infos, info)
 	}
@@ -206,6 +209,13 @@ func etagString(etag *azcore.ETag) string {
 func derefInt64(p *int64) int64 {
 	if p == nil {
 		return 0
+	}
+	return *p
+}
+
+func derefTime(p *time.Time) time.Time {
+	if p == nil {
+		return time.Time{}
 	}
 	return *p
 }

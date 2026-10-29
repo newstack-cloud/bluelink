@@ -104,9 +104,10 @@ func (s *Service) Head(ctx context.Context, key string) (*objectstore.ObjectInfo
 	}
 
 	return &objectstore.ObjectInfo{
-		Key:  key,
-		Size: derefInt64(out.ContentLength),
-		ETag: derefString(out.ETag),
+		Key:          key,
+		Size:         derefInt64(out.ContentLength),
+		ETag:         derefString(out.ETag),
+		LastModified: aws.ToTime(out.LastModified),
 	}, nil
 }
 
@@ -150,9 +151,10 @@ func (s *Service) list(
 		}
 		for _, obj := range page.Contents {
 			infos = append(infos, &objectstore.ObjectInfo{
-				Key:  derefString(obj.Key),
-				Size: derefInt64(obj.Size),
-				ETag: derefString(obj.ETag),
+				Key:          derefString(obj.Key),
+				Size:         derefInt64(obj.Size),
+				ETag:         derefString(obj.ETag),
+				LastModified: aws.ToTime(obj.LastModified),
 			})
 		}
 	}

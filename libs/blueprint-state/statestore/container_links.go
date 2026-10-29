@@ -256,6 +256,7 @@ func (c *LinksContainer) remove(
 	}
 	delete(inst.Links, link.Name)
 	delete(c.state.links, linkID)
+	drifted := c.state.takeDriftOf(nil, map[string]*state.LinkState{link.Name: link})
 
 	c.logger.Debug(
 		"persisting link removal",
@@ -263,9 +264,13 @@ func (c *LinksContainer) remove(
 	)
 
 	removed := InstanceEntityIDs{Links: []string{linkID}}
-	return *link, c.persister.UpdateInstanceEntities(
-		ctx, inst, InstanceEntityIDs{}, removed,
-	)
+	err := c.persister.UpdateInstanceEntities(ctx, inst, InstanceEntityIDs{}, removed)
+	if err != nil {
+		return state.LinkState{}, err
+	}
+
+	deleteStoredDrift(ctx, c.persister, c.logger, drifted)
+	return *link, nil
 }
 
 func (c *LinksContainer) GetDrift(

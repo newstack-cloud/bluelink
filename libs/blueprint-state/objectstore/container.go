@@ -30,6 +30,7 @@ type StateContainer struct {
 	reconciliationResultsContainer *statestore.ReconciliationResultsContainer
 	cleanupOperationsContainer     *statestore.CleanupOperationsContainer
 	auditContainer                 *auditContainer
+	leftoverRecords                *leftoverRecords
 	storePersister                 *statestore.Persister
 	clock                          commoncore.Clock
 	revalidateCache                bool
@@ -170,6 +171,7 @@ func LoadStateContainer(
 			svc:            svc,
 			keys:           keys,
 		},
+		leftoverRecords: &leftoverRecords{svc: svc, keys: keys, clock: getClock},
 	}
 
 	for _, opt := range opts {
@@ -209,6 +211,16 @@ func (c *StateContainer) CleanupOperations() manage.CleanupOperations {
 func (c *StateContainer) Audit() manage.Audit {
 	return c.auditContainer
 }
+
+// Housekeeping returns the objectstore backend's housekeeping, which deletes records that
+// interrupted writes left in the bucket, such as ID records whose instance was never written
+// and instances whose removal was cut short. Each multi-object write is ordered so that what it
+// leaves behind is never read as valid, so housekeeping only reclaims storage.
+func (c *StateContainer) Housekeeping() manage.Housekeeping {
+	return c.leftoverRecords
+}
+
+var _ manage.HousekeepingProvider = (*StateContainer)(nil)
 
 // Every category sits on LayoutPerEntity so that each record has its own object key.
 // Cross-run writes to unrelated entities are then collision-free and the lazy

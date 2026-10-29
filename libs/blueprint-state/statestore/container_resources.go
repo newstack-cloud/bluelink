@@ -207,15 +207,20 @@ func (c *ResourcesContainer) remove(
 	delete(inst.ResourceIDs, resource.Name)
 	delete(inst.Resources, resourceID)
 	delete(c.state.resources, resourceID)
+	drifted := c.state.takeDriftOf(map[string]*state.ResourceState{resourceID: resource}, nil)
 
 	c.logger.Debug(
 		"persisting removal of resource",
 		core.StringLogField("resourceId", resourceID),
 	)
 	removed := InstanceEntityIDs{Resources: []string{resourceID}}
-	return *resource, c.persister.UpdateInstanceEntities(
-		ctx, inst, InstanceEntityIDs{}, removed,
-	)
+	err := c.persister.UpdateInstanceEntities(ctx, inst, InstanceEntityIDs{}, removed)
+	if err != nil {
+		return state.ResourceState{}, err
+	}
+
+	deleteStoredDrift(ctx, c.persister, c.logger, drifted)
+	return *resource, nil
 }
 
 func (c *ResourcesContainer) SaveContributionFailure(

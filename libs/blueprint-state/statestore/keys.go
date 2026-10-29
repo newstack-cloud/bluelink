@@ -214,6 +214,32 @@ func (k KeyBuilder) InstancesPrefix() string {
 	return k.categoryPrefix("instances")
 }
 
+// InstanceNamesPrefix returns the storage key prefix every instance name record sits under.
+func (k KeyBuilder) InstanceNamesPrefix() string {
+	return k.categoryPrefix("instances_by_name")
+}
+
+// ResourceRecordsPrefix returns the storage key prefix every resource ID record sits under.
+func (k KeyBuilder) ResourceRecordsPrefix() string {
+	return k.categoryPrefix("resources_by_id")
+}
+
+// LinkRecordsPrefix returns the storage key prefix every link ID record sits under.
+func (k KeyBuilder) LinkRecordsPrefix() string {
+	return k.categoryPrefix("links_by_id")
+}
+
+// ResourceDriftPrefix returns the storage key prefix every per-entity resource-drift key
+// sits under.
+func (k KeyBuilder) ResourceDriftPrefix() string {
+	return k.categoryPrefix("resource_drift")
+}
+
+// LinkDriftPrefix returns the storage key prefix every per-entity link-drift key sits under.
+func (k KeyBuilder) LinkDriftPrefix() string {
+	return k.categoryPrefix("link_drift")
+}
+
 // CleanupOperationsPrefix returns the storage key prefix every per-entity
 // cleanup-operation key sits under.
 func (k KeyBuilder) CleanupOperationsPrefix() string {

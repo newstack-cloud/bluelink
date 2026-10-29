@@ -14,6 +14,7 @@ const (
 	CleanupTypeReconciliationResults CleanupType = "reconciliation_results"
 	CleanupTypeValidations           CleanupType = "validations"
 	CleanupTypeAuditRecords          CleanupType = "audit_records"
+	CleanupTypeStateHousekeeping     CleanupType = "state_housekeeping"
 )
 
 // CleanupOperationStatus represents the status of a cleanup operation.

@@ -7,13 +7,16 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/objectstore"
+	commoncore "github.com/newstack-cloud/bluelink/libs/common/core"
 )
 
 type entry struct {
-	data []byte
-	etag string
+	data         []byte
+	etag         string
+	lastModified time.Time
 }
 
 // Service is an in-memory objectstore.Service implementation.
@@ -29,6 +32,7 @@ type Service struct {
 	objects map[string]*entry
 	etagSeq int64
 	hooks   Hooks
+	clock   commoncore.Clock
 }
 
 // Hooks lets tests inject errors for specific operations. Each hook runs
@@ -47,7 +51,15 @@ type Hooks struct {
 
 // New returns an empty in-memory Service.
 func New() *Service {
-	return &Service{objects: map[string]*entry{}}
+	return &Service{objects: map[string]*entry{}, clock: &commoncore.SystemClock{}}
+}
+
+// SetClock sets the clock that stamps each written object's LastModified, so a test can
+// age objects. Call before concurrent operations.
+func (s *Service) SetClock(clock commoncore.Clock) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.clock = clock
 }
 
 // SetHooks configures error-injection hooks. Call before concurrent operations.
@@ -110,7 +122,7 @@ func (s *Service) Put(
 	dataCopy := make([]byte, len(data))
 	copy(dataCopy, data)
 	newETag := s.nextETagLocked()
-	s.objects[key] = &entry{data: dataCopy, etag: newETag}
+	s.objects[key] = &entry{data: dataCopy, etag: newETag, lastModified: s.clock.Now()}
 	return newETag, nil
 }
 
@@ -150,9 +162,10 @@ func (s *Service) Head(ctx context.Context, key string) (*objectstore.ObjectInfo
 	}
 
 	return &objectstore.ObjectInfo{
-		Key:  key,
-		Size: int64(len(obj.data)),
-		ETag: obj.etag,
+		Key:          key,
+		Size:         int64(len(obj.data)),
+		ETag:         obj.etag,
+		LastModified: obj.lastModified,
 	}, nil
 }
 
@@ -170,9 +183,10 @@ func (s *Service) List(ctx context.Context, prefix string) ([]*objectstore.Objec
 	for k, obj := range s.objects {
 		if strings.HasPrefix(k, prefix) {
 			out = append(out, &objectstore.ObjectInfo{
-				Key:  k,
-				Size: int64(len(obj.data)),
-				ETag: obj.etag,
+				Key:          k,
+				Size:         int64(len(obj.data)),
+				ETag:         obj.etag,
+				LastModified: obj.lastModified,
 			})
 		}
 	}
