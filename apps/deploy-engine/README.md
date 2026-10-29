@@ -1588,6 +1588,21 @@ period should set this to match it.
 
 **default value:** `7776000` (90 days)
 
+#### State Housekeeping
+
+Some storage engines need upkeep of their own storage, beyond the retention periods above. The
+`objectstore` storage engine writes a change to a blueprint instance as several objects, so a
+write that is interrupted, for example by the engine stopping part way through, can leave
+objects behind that nothing else would delete. Housekeeping reclaims that storage. It never
+changes what the deploy engine reads back, and it leaves anything recent enough to belong
+to a write that is still in progress alone, so it is safe to run while deployments are in progress,
+including from other engines sharing the same storage.
+
+What housekeeping involves is up to the storage engine, so there is nothing to configure. It
+runs on the scheduled cleanup interval for storage engines that need it, and can be started at
+any time with `POST /v1/state/housekeeping`. With a storage engine that needs no housekeeping,
+such as `memfile` or `postgres`, that endpoint completes without deleting anything.
+
 #### Scheduled Cleanup Enabled
 
 `BLUELINK_DEPLOY_ENGINE_MAINTENANCE_SCHEDULED_CLEANUP_ENABLED`
@@ -1671,6 +1686,20 @@ from it.
 The API documentation for the v1 of the Deploy Engine HTTP API is available at the following URL:
 
 https://bluelink.dev/deploy-engine/docs/http-api-reference/v1/deploy-engine-api
+
+## Health Check
+
+`GET /v1/health` reports that the deploy engine is up and serving requests, for load
+balancers, container orchestrator probes and uptime monitors. It is the only route that does
+not require authentication, so that a caller holding no credentials can use it. It responds
+with `200` and the server's current Unix time in seconds:
+
+```json
+{ "timestamp": 1678901234 }
+```
+
+It is not part of the API reference above, as it exists for the infrastructure that runs the
+deploy engine rather than for clients of its API.
 
 ## Additional documentation
 

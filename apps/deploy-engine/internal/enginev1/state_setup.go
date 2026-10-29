@@ -51,9 +51,32 @@ type stateServices struct {
 	reconciliationResults manage.ReconciliationResults
 	cleanupOperations     manage.CleanupOperations
 	audit                 manage.Audit
+	housekeeping          manage.Housekeeping
 }
 
 func loadStateServices(
+	ctx context.Context,
+	fileSystem afero.Fs,
+	logger bpcore.Logger,
+	stateConfig *core.StateConfig,
+) (*stateServices, func(), error) {
+	services, closeServices, err := loadStorageEngineServices(
+		ctx, fileSystem, logger, stateConfig,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Found from the container rather than per storage engine, so the engine does not need
+	// to know which backends need housekeeping or what it involves.
+	if provider, ok := services.container.(manage.HousekeepingProvider); ok {
+		services.housekeeping = provider.Housekeeping()
+	}
+
+	return services, closeServices, nil
+}
+
+func loadStorageEngineServices(
 	ctx context.Context,
 	fileSystem afero.Fs,
 	logger bpcore.Logger,

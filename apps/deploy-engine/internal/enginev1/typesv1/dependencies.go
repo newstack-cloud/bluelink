@@ -24,6 +24,7 @@ type Dependencies struct {
 	ReconciliationResultsStore manage.ReconciliationResults
 	CleanupOperationsStore     manage.CleanupOperations
 	AuditStore                 manage.Audit
+	StateHousekeeping          manage.Housekeeping
 	CleanupRunner              *cleanup.Runner
 	Instances                  state.InstancesContainer
 	Exports                    state.ExportsContainer

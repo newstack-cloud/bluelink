@@ -77,10 +77,21 @@ func schedulerInterval(configured int, logger bpcore.Logger) time.Duration {
 
 const defaultScheduledCleanupInterval = 24 * time.Hour
 
-// Every category that has a retention period. Instances, resources, links and drift
-// records are absent because they have no retention period,
-// they are the deployed state rather than a record of working through it.
+// Every category that has a retention period, and the state backend's housekeeping where it
+// needs any. Instances, resources, links and drift records are absent because they have no
+// retention period, they are the deployed state rather than operational data from validation or change staging.
 func cleanupTasks(
+	maintenance *core.MaintenanceConfig,
+	state *stateServices,
+) []cleanup.Task {
+	tasks := retentionCleanupTasks(maintenance, state)
+	if state.housekeeping != nil {
+		tasks = append(tasks, cleanup.StateHousekeepingTask(state.housekeeping))
+	}
+	return tasks
+}
+
+func retentionCleanupTasks(
 	maintenance *core.MaintenanceConfig,
 	state *stateServices,
 ) []cleanup.Task {

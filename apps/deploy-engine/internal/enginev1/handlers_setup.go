@@ -9,6 +9,7 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/deploymentsv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/eventsv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/statev1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/validationv1"
 )
@@ -38,6 +39,7 @@ func setupHandlers(
 	deploymentCtrl := setupDeploymentHandlers(router, dependencies, config)
 	setupEventManagementHandlers(router, dependencies, config)
 	setupAuditHandlers(router, dependencies, config)
+	setupStateMaintenanceHandlers(router, dependencies)
 
 	return &registeredHandlers{
 		deployments:     deploymentCtrl,
@@ -270,5 +272,22 @@ func setupEventManagementHandlers(
 	router.HandleFunc(
 		"/events/cleanup/{id}",
 		eventsCtrl.GetCleanupStatusHandler,
+	).Methods("GET")
+}
+
+func setupStateMaintenanceHandlers(
+	router *mux.Router,
+	dependencies *typesv1.Dependencies,
+) {
+	stateCtrl := statev1.NewController(dependencies)
+
+	router.HandleFunc(
+		"/state/housekeeping",
+		stateCtrl.HousekeepingHandler,
+	).Methods("POST")
+
+	router.HandleFunc(
+		"/state/housekeeping/{id}",
+		stateCtrl.GetCleanupStatusHandler,
 	).Methods("GET")
 }

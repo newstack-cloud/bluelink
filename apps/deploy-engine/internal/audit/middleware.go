@@ -31,6 +31,7 @@ var actionsByRoute = map[string]string{
 	"POST /deployments/instances/{id}/reconciliation/check": "instance.drift.check",
 	"POST /deployments/instances/{id}/reconciliation/apply": "instance.drift.apply",
 	"POST /events/cleanup":                                  "event.cleanup",
+	"POST /state/housekeeping":                              "state.housekeeping",
 	// Deleting records from the trail is itself an action taken through the engine, so it
 	// is recorded in the trail like any other.
 	"POST /audit/records/cleanup": "audit.cleanup",

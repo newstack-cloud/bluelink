@@ -1,6 +1,7 @@
 package enginev1
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"time"
@@ -21,6 +22,7 @@ import (
 	resolverhttps "github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/https"
 	resolverrouter "github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/router"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-resolvers/s3"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	bpcore "github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/includes"
@@ -66,6 +68,7 @@ func buildDependencies(deps *dependencyParams) *typesv1.Dependencies {
 		ReconciliationResultsStore: deps.state.reconciliationResults,
 		CleanupOperationsStore:     deps.state.cleanupOperations,
 		AuditStore:                 deps.state.audit,
+		StateHousekeeping:          stateHousekeeping(deps.state),
 		CleanupRunner: cleanup.NewRunner(
 			deps.state.cleanupOperations,
 			deps.idGenerator,
@@ -241,4 +244,20 @@ func parseDefaultRetryPolicy(
 	}
 
 	return retryPolicy
+}
+
+func stateHousekeeping(state *stateServices) manage.Housekeeping {
+	if state.housekeeping != nil {
+		return state.housekeeping
+	}
+	return noHousekeeping{}
+}
+
+// For a state backend that does not need housekeeping,
+// so the housekeeping endpoint answers the same
+// way whichever storage engine is in use.
+type noHousekeeping struct{}
+
+func (noHousekeeping) Run(context.Context) (int64, error) {
+	return 0, nil
 }

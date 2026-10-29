@@ -1,6 +1,7 @@
 package cleanup
 
 import (
+	"context"
 	"time"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
@@ -55,6 +56,22 @@ func ReconciliationResultsTask(
 		Remove:          store.Cleanup,
 		LogDescription:  "reconciliation results",
 		LogName:         "reconciliationResultsCleanup",
+	}
+}
+
+// StateHousekeepingTask carries out the upkeep the state backend needs on its own storage.
+//
+// What that involves, and how old anything has to be before it is touched, is the backend's
+// to decide, so the task has no retention period. The threshold the runner records for it is
+// the time the run started.
+func StateHousekeepingTask(housekeeping manage.Housekeeping) Task {
+	return Task{
+		Type: manage.CleanupTypeStateHousekeeping,
+		Remove: func(ctx context.Context, _ time.Time) (int64, error) {
+			return housekeeping.Run(ctx)
+		},
+		LogDescription: "state housekeeping",
+		LogName:        "stateHousekeeping",
 	}
 }
 
