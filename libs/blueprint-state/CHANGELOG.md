@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.12.0...blueprint-state/v0.13.0) (2026-10-29)
+
+
+### Features
+
+* **blueprint-state:** add housekeeping interface and object store implementation ([1482fe9](https://github.com/newstack-cloud/bluelink/commit/1482fe9dee8c35b8482850be0cf60a1dbd219890))
+
 ## [0.12.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.11.1...blueprint-state/v0.12.0) (2026-10-28)
 
 
