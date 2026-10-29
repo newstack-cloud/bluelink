@@ -198,8 +198,8 @@ github.com/newstack-cloud/bluelink/libs/blueprint v0.56.0 h1:Mb5aNDFaayXhxKW+Vpi
 github.com/newstack-cloud/bluelink/libs/blueprint v0.56.0/go.mod h1:IzAGdeIgsxVNhqa6fO0wmkD8xbTviEruMgHgXk33j2k=
 github.com/newstack-cloud/bluelink/libs/blueprint-resolvers v0.1.4 h1:t2WLJ3o8pXOxbWRptatIHMBSOST5u28EyzGjzFlzYIw=
 github.com/newstack-cloud/bluelink/libs/blueprint-resolvers v0.1.4/go.mod h1:Cu+ZIH/s1WJyGXA5uIMmLTKkqhl7pBuYr78EJCzUc5A=
-github.com/newstack-cloud/bluelink/libs/blueprint-state v0.12.0 h1:p6WoKlDd/+btlivd89gLfOhAlg6/8z4f4W6pWoPHQQw=
-github.com/newstack-cloud/bluelink/libs/blueprint-state v0.12.0/go.mod h1:Wqd5tZicpwwVOqKEJj4/oyNhEyxvf/frFIWgMEfthOM=
+github.com/newstack-cloud/bluelink/libs/blueprint-state v0.13.0 h1:J8DluchQ1C9vEd/j/aQYSydh5B21BVx/0Xk+A7CBTsE=
+github.com/newstack-cloud/bluelink/libs/blueprint-state v0.13.0/go.mod h1:Wqd5tZicpwwVOqKEJj4/oyNhEyxvf/frFIWgMEfthOM=
 github.com/newstack-cloud/bluelink/libs/common v0.6.0 h1:sITqsLAkYUbNmwuVuJ1/M8uzloZ4k56OcVPfgiwx0G4=
 github.com/newstack-cloud/bluelink/libs/common v0.6.0/go.mod h1:a8xXIgLy0loEE/62oaiGyGxFH7z63xUefLnzZZRk8Gs=
 github.com/newstack-cloud/bluelink/libs/plugin-framework v0.17.0 h1:7hmR2ICu9UyJ+9rWud6MHouIHTwK2OajggznPgHtG1o=
