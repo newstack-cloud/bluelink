@@ -6,7 +6,7 @@
   "libs/blueprint-state": "0.12.0",
   "libs/common": "0.6.0",
   "libs/deploy-engine-client": "0.5.2",
-  "libs/plugin-framework": "0.17.0",
+  "libs/plugin-framework": "0.18.0",
   "libs/telemetry-otel": "0.2.0",
   "tools/blueprint-ls": "0.4.0",
   "tools/plugin-docgen": "0.3.1",
