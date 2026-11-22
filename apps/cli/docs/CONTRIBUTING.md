@@ -4,7 +4,7 @@
 
 ### Prerequisites
 
-- [Go](https://golang.org/dl/) >=1.22
+- [Go](https://golang.org/dl/) >= 1.26.5, which the repo's `go.work` requires
 
 Dependencies are managed with Go modules (go.mod) and will be installed automatically when you first
 run tests.
@@ -75,6 +75,41 @@ This will write the output to the console and also to the `debug.log` file.
 
 You'll find a detailed guide for testing plugin commands against a local registry server in [TESTING_PLUGIN_REGISTRY.md](TESTING_PLUGIN_REGISTRY.md).
 
+## Adding a command
+
+Commands that the Celerity CLI also needs (stage, deploy, destroy, instances, state, cleanup)
+belong in deploy-cli-sdk, not here. For a Bluelink-only command, `cmd/commands/init.go` is the
+complete example: its own TUI, headless validation and headless output.
+
+1. Add `cmd/commands/<name>.go` with a `setup<Name>Command(rootCmd, confProvider)` function
+   (`version` needs only `rootCmd`) and call it from `NewRootCmd` in `cmd/commands/root.go`.
+   Subcommands get their own `setup<Parent><Sub>Command(parentCmd, ...)`, as in `plugins.go`.
+2. For each flag, bind it to a config key and an environment variable, both prefixed with the
+   command path:
+
+   ```go
+   nameCmd.PersistentFlags().String("blueprint-file", project.DetectBlueprintFile("."), "...")
+   confProvider.BindPFlag("<name>BlueprintFile", nameCmd.PersistentFlags().Lookup("blueprint-file"))
+   confProvider.BindEnvVar("<name>BlueprintFile", "BLUELINK_CLI_<NAME>_BLUEPRINT_FILE")
+   ```
+
+3. In `RunE`, call `headless.Validate` first for any flags required without a terminal; it does
+   nothing in a terminal. Read flags through `confProvider`, set up `utils.SetupLogger()` if the
+   command logs, and set `cmd.SilenceUsage = true` once errors are no longer about usage.
+4. Call `tea.LogToFile("bluelink-output.log", "simple")` before starting the program. Detect a
+   terminal with `term.IsTerminal(int(os.Stdout.Fd()))`: in one, run with `tea.WithAltScreen()`
+   and `tea.WithMouseCellMotion()`; without one, with `tea.WithInput(nil)` and
+   `tea.WithoutRenderer()`, passing headless mode and `os.Stdout` to the model so it writes
+   plain output there (`headless.Printer` helps, as in `pluginlistui`).
+5. Put the TUI in `internal/tui/<command><subcommand>ui/`, reusing deploy-cli-sdk's `styles`,
+   `ui` and `headless` packages.
+6. Test flags, help and headless validation through `NewRootCmd()` and `SetArgs` in a
+   `testify/suite` suite that changes into a temporary directory, as
+   `cmd/commands/init_test.go` does. Test the TUI beside it with `teatest`, as
+   `internal/tui/initui/tui_test.go` does.
+
+Document the command in bluelink-docs (`content/docs/cli/reference.mdx`).
+
 ## Releasing
 
 Releases are automated using [release-please](https://github.com/googleapis/release-please).
@@ -105,7 +140,7 @@ Example: `apps/cli/v1.0.0`
 
 ## Commit scope
 
-**blueprint**
+**cli**
 
 Example commit:
 
