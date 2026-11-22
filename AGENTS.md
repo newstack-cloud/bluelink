@@ -5,6 +5,13 @@ following from the links between resources. This Go monorepo holds the blueprint
 plugin framework, state persistence, the deploy engine and the CLI. deploy-cli-sdk, the Celerity
 CLI, the providers and the transformers all build on its libraries.
 
+## Workspace
+
+This repo is one of NewStack's. NewStack's maintainers develop it alongside the others in a
+shared workspace, using the NewStack Claude Code plugin for how work is planned, reviewed,
+committed and coordinated across repos. The plugin isn't public, and nothing here depends on it:
+this file and the repo's own docs cover what a contribution needs.
+
 ## Layout
 
 Each module is released on its own by release-please; `go.work` ties them together.
