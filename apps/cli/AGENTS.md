@@ -11,8 +11,9 @@ this file adds what's specific to the CLI.
   `templatelistui`, and `preflightui` for the plugin check). `validate` uses deploy-cli-sdk's
   `validateui`.
 - `stage`, `deploy`, `destroy`, `instances`, `state` and `cleanup` come from deploy-cli-sdk
-  (`sdkcommands.Setup*Command`), as do their TUIs, `headless` and `jsonout`. The Celerity CLI
-  uses the same code, so change them in deploy-cli-sdk.
+  (`sdkcommands.Setup*Command`), as do their TUIs, `headless` and `jsonout`, so change them in
+  deploy-cli-sdk. The Celerity CLI is meant to share them but so far uses only its `config`,
+  `styles`, `engine` and `tui/precommand` packages.
 - deploy-cli-sdk is a separate repo and isn't in `go.work`: the CLI builds against the version
   pinned in `go.mod`, so read the SDK at that tag (`git show v<version>:<path>`), not its
   checkout. A change there reaches the CLI only after a deploy-cli-sdk release and a bump
