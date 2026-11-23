@@ -153,9 +153,11 @@ func IsInstancesNotFound(err error) bool {
 var ErrVersionConflict = errors.New("state: version conflict: instance was modified by another operation")
 
 // ErrInstanceAlreadyExists is returned by InstancesContainer.InitialiseAndClaim when an atomic
-// create cannot proceed because an instance with the same ID already exists. Callers should treat
-// this as a signal to fall through to the standard Get + ClaimForDeployment flow on the existing
-// record.
+// create cannot proceed because an instance with the same ID already exists, or another instance
+// holds the same name. Callers tell the two apart with a Get under the ID: a record means an ID
+// conflict, so a caller creating an instance it may already have started should fall through to
+// the standard Get + ClaimForDeployment flow on that record; no record means the name is taken,
+// or the record was removed after the conflict, and either way the deploy must not go ahead.
 var ErrInstanceAlreadyExists = errors.New("state: instance already exists")
 
 // ErrInstanceNameImmutable is returned when a save would change the name of an existing blueprint

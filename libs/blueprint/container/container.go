@@ -162,7 +162,16 @@ type DeployInput struct {
 	// InstanceName is the user-defined name of the blueprint instance that
 	// the changes will be deployed for.
 	// If this is set, `InstanceID` must be empty.
+	// Deploy returns state.ErrInstanceAlreadyExists when it would create an instance
+	// under a name another instance holds, as when it finds no instance by the name
+	// and a concurrent deployment creates one before it does.
 	InstanceName string
+	// RequireNewInstance requires the deployment to create a new blueprint instance named
+	// InstanceName, rather than resolving the name to an existing instance and deploying
+	// to that. Deploy returns state.ErrInstanceAlreadyExists when the name already belongs
+	// to an instance, including one created by a concurrent deployment.
+	// InstanceID must be empty when this is set.
+	RequireNewInstance bool
 	// Changes contains the changes that will be made to the blueprint instance.
 	Changes *changes.BlueprintChanges
 	// Rollback is used to indicate that the changes being deployed represent a rollback.

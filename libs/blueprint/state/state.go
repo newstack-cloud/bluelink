@@ -87,13 +87,16 @@ type InstancesContainer interface {
 		newStatus core.InstanceStatus,
 	) (newVersion int64, err error)
 	// InitialiseAndClaim atomically creates a new instance at version 1 with the
-	// given status, if and only if no instance with the same ID already exists.
+	// given status, if and only if no instance with the same ID already exists and
+	// no other instance holds the same name.
 	// This collapses the "initialise a new instance" and "first claim" steps into
-	// a single backend round-trip so concurrent first-deploys of the same ID are
-	// serialised by the backend's native create primitive.
-	// Returns state.ErrInstanceAlreadyExists on conflict, the caller should fall
-	// through to the standard Get + ClaimForDeployment flow for existing
-	// records.
+	// a single backend round-trip so concurrent first-deploys of the same ID or name
+	// are serialised by the backend's native create primitive.
+	// Returns state.ErrInstanceAlreadyExists on conflict, for both an ID that already has a
+	// record and a name another instance holds. The caller tells them apart with a Get under
+	// the ID: a record means an ID conflict, so it should fall through to the standard Get +
+	// ClaimForDeployment flow; no record means the name is taken, or the record was removed
+	// after the conflict, and either way the deploy must not go ahead.
 	InitialiseAndClaim(
 		ctx context.Context,
 		instanceState InstanceState,

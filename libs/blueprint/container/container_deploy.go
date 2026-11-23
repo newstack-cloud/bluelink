@@ -33,6 +33,10 @@ func (c *defaultBlueprintContainer) Deploy(
 	channels *DeployChannels,
 	paramOverrides core.BlueprintParams,
 ) error {
+	if input.RequireNewInstance && input.InstanceID != "" {
+		return errInstanceIDWithRequireNewInstance()
+	}
+
 	instanceID, newID, err := c.getDeployInstanceID(ctx, input)
 	if err != nil {
 		return err
@@ -58,11 +62,11 @@ func (c *defaultBlueprintContainer) Deploy(
 		return errMissingNameForNewInstance()
 	}
 
-	initialised, err := c.saveNewInstance(
+	saved, err := c.saveNewInstance(
 		ctx,
 		instanceID,
 		input.InstanceName,
-		core.InstanceStatusPreparing,
+		newID,
 		deployLogger,
 	)
 	if err != nil {
@@ -103,7 +107,7 @@ func (c *defaultBlueprintContainer) Deploy(
 			rewiredChannels,
 			state,
 			isNewInstance,
-			initialised,
+			saved,
 			&deployDeps{
 				resourceRegistry,
 				deployLogger,
@@ -149,7 +153,7 @@ func (c *defaultBlueprintContainer) deploy(
 	channels *DeployChannels,
 	deployState DeploymentState,
 	isNewInstance bool,
-	initialised bool,
+	saved savedInstance,
 	deployDeps *deployDeps,
 ) {
 	deployLogger := deployDeps.logger
@@ -177,9 +181,8 @@ func (c *defaultBlueprintContainer) deploy(
 
 	startTime := c.clock.Now()
 
-	deployLogger.Info("loading current state for blueprint instance")
 	instances := c.stateContainer.Instances()
-	currentInstanceState, err := instances.Get(ctx, input.InstanceID)
+	currentInstanceState, err := c.loadCurrentInstanceState(ctx, input.InstanceID, saved, deployLogger)
 	if err != nil {
 		if !state.IsInstanceNotFound(err) {
 			deployLogger.Debug(
@@ -201,7 +204,7 @@ func (c *defaultBlueprintContainer) deploy(
 	// that this current execution successfully performed the atomic initialisation of the instance record,
 	// therefore, we can skip the in-progress check and the atomic claim for deployment as the instance is already claimed
 	// by this execution and there cannot be any concurrent deployments for the same instance ID at this point.
-	if !initialised {
+	if !saved.initialised {
 		if !input.Force && isInstanceInProgress(&currentInstanceState, input.Rollback) {
 			deployLogger.Info("instance is already in progress, exiting deployment early")
 			rejectionMsg := c.createDeploymentFinishedMessage(
@@ -662,11 +665,11 @@ func (c *defaultBlueprintContainer) getDeployInstanceID(
 	ctx context.Context,
 	input *DeployInput,
 ) (string, bool, error) {
-	if input.InstanceID == "" && input.InstanceName == "" {
+	if input.InstanceID == "" && (input.InstanceName == "" || input.RequireNewInstance) {
 		return c.generateInstanceID()
 	}
 
-	if input.InstanceID == "" && input.InstanceName != "" {
+	if input.InstanceID == "" {
 		instanceID, err := c.stateContainer.
 			Instances().
 			LookupIDByName(ctx, input.InstanceName)
@@ -693,31 +696,45 @@ func (c *defaultBlueprintContainer) generateInstanceID() (string, bool, error) {
 	return generatedID, true, nil
 }
 
+// The outcome of saveNewInstance. existing is the record the deploy found under its ID when
+// another operation had already created it, so that the deploy goes on from the state it
+// checked rather than reading it again.
+type savedInstance struct {
+	initialised bool
+	existing    *state.InstanceState
+}
+
 // Initialises the instance record via an atomic
 // InitialiseAndClaim. It is invoked for every deploy, regardless of whether
 // the instance ID was generated or user-supplied: the backend decides
 // whether the row is new by the outcome of the atomic create.
 //
 // Returns initialised=true when this goroutine's create-if-absent won and
-// the row was inserted at version 1 with the given status; downstream code
+// the row was inserted at version 1 with the preparing status; downstream code
 // uses this to skip the second claim (already claimed by InitialiseAndClaim)
 // and to allow itself to proceed past the in-progress pre-check despite
 // seeing its own just-written claim status.
 //
-// Returns initialised=false when the row already existed
-// (ErrInstanceAlreadyExists) — downstream Get + ClaimForDeployment in
-// tryClaimForDeployment handles the existing record atomically.
+// When the create conflicts with an existing record under the same ID, returns
+// that record. tryClaimForDeployment then claims it with ClaimForDeployment,
+// which fails if the record has been removed since.
+//
+// When the ID has no record, the conflict was another instance holding the
+// name, so ErrInstanceAlreadyExists is returned. This is always the case for a
+// generated ID: either the deploy required a new instance, or its name lookup
+// ran before the other instance was created. For a given ID, it means the
+// record doesn't exist or was removed after the conflict.
 //
 // Other errors bubble up to fail the deploy synchronously.
 func (c *defaultBlueprintContainer) saveNewInstance(
 	ctx context.Context,
 	instanceID string,
 	instanceName string,
-	currentStatus core.InstanceStatus,
+	idGenerated bool,
 	deployLogger core.Logger,
-) (initialised bool, err error) {
+) (savedInstance, error) {
 	deployLogger.Debug("attempting atomic initialisation of blueprint instance")
-	_, err = c.stateContainer.Instances().InitialiseAndClaim(
+	_, err := c.stateContainer.Instances().InitialiseAndClaim(
 		ctx,
 		state.InstanceState{
 			InstanceID:   instanceID,
@@ -726,18 +743,42 @@ func (c *defaultBlueprintContainer) saveNewInstance(
 			Resources:    make(map[string]*state.ResourceState),
 			Links:        make(map[string]*state.LinkState),
 		},
-		currentStatus,
+		core.InstanceStatusPreparing,
 	)
 	if err == nil {
-		return true, nil
+		return savedInstance{initialised: true}, nil
 	}
 
-	if errors.Is(err, state.ErrInstanceAlreadyExists) {
-		deployLogger.Debug("instance already exists, skipping atomic initialisation")
-		return false, nil
+	if !errors.Is(err, state.ErrInstanceAlreadyExists) || idGenerated {
+		return savedInstance{}, err
 	}
 
-	return false, err
+	// The conflict is the same for an existing ID and for a name another instance holds, so
+	// only a record under this ID shows that the deploy can go ahead on it.
+	existing, getErr := c.stateContainer.Instances().Get(ctx, instanceID)
+	if state.IsInstanceNotFound(getErr) {
+		return savedInstance{}, err
+	}
+	if getErr != nil {
+		return savedInstance{}, getErr
+	}
+
+	deployLogger.Debug("instance already exists, skipping atomic initialisation")
+	return savedInstance{existing: &existing}, nil
+}
+
+func (c *defaultBlueprintContainer) loadCurrentInstanceState(
+	ctx context.Context,
+	instanceID string,
+	saved savedInstance,
+	deployLogger core.Logger,
+) (state.InstanceState, error) {
+	if saved.existing != nil {
+		return *saved.existing, nil
+	}
+
+	deployLogger.Info("loading current state for blueprint instance")
+	return c.stateContainer.Instances().Get(ctx, instanceID)
 }
 
 func (c *defaultBlueprintContainer) deployElements(
