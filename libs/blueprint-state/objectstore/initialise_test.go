@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -112,4 +113,41 @@ func TestInitialiseAndClaim_concurrent_callers_only_one_wins(t *testing.T) {
 	var persisted statestore.PersistedInstanceState
 	require.NoError(t, json.Unmarshal(data, &persisted))
 	assert.Equal(t, int64(1), persisted.Version)
+}
+
+// Each caller has its own in-memory state, as separate engines sharing a bucket do, so only
+// the bucket can tell that the name is taken.
+func TestInitialiseAndClaim_concurrent_ids_with_the_same_name_only_one_wins(t *testing.T) {
+	svc := mockservice.New()
+	keys := statestore.NewKeyBuilder("")
+
+	const workers = 10
+	var wg sync.WaitGroup
+	var successes, conflicts int64
+
+	wg.Add(workers)
+	for i := range workers {
+		go func() {
+			defer wg.Done()
+			_, err := objectstore.InitialiseAndClaim(
+				context.Background(), svc, keys, statestore.NewState(), &commoncore.SystemClock{},
+				state.InstanceState{
+					InstanceID:   fmt.Sprintf("race-instance-%d", i),
+					InstanceName: "RaceInstance",
+				},
+				core.InstanceStatusPreparing,
+			)
+			if err == nil {
+				atomic.AddInt64(&successes, 1)
+				return
+			}
+			if errors.Is(err, state.ErrInstanceAlreadyExists) {
+				atomic.AddInt64(&conflicts, 1)
+			}
+		}()
+	}
+	wg.Wait()
+
+	assert.Equal(t, int64(1), atomic.LoadInt64(&successes))
+	assert.Equal(t, int64(workers-1), atomic.LoadInt64(&conflicts))
 }
