@@ -416,11 +416,7 @@ func (c *stubDeployEngineController) createBlueprintInstanceHandler(
 		instanceName = "test-instance-name"
 	}
 
-	blueprintInstance := &state.InstanceState{
-		InstanceID:   "test-instance-id",
-		InstanceName: instanceName,
-		Status:       core.InstanceStatusDeploying,
-	}
+	blueprintInstance := NewInstanceState("test-instance-id", instanceName, core.InstanceStatusDeploying)
 
 	// Wrap response with lastEventId
 	response := map[string]any{
@@ -448,11 +444,7 @@ func (c *stubDeployEngineController) updateBlueprintInstanceHandler(
 		return
 	}
 
-	blueprintInstance := &state.InstanceState{
-		InstanceID:   id,
-		InstanceName: "test-instance-name",
-		Status:       core.InstanceStatusDeploying,
-	}
+	blueprintInstance := NewInstanceState(id, "test-instance-name", core.InstanceStatusDeploying)
 
 	// Wrap response with lastEventId
 	response := map[string]any{
@@ -480,11 +472,7 @@ func (c *stubDeployEngineController) getBlueprintInstanceHandler(
 		return
 	}
 
-	blueprintInstance := &state.InstanceState{
-		InstanceID:   id,
-		InstanceName: "test-instance-name",
-		Status:       core.InstanceStatusDeploying,
-	}
+	blueprintInstance := NewInstanceState(id, "test-instance-name", core.InstanceStatusDeploying)
 
 	respBytes, _ := json.Marshal(blueprintInstance)
 
@@ -534,11 +522,7 @@ func (c *stubDeployEngineController) destroyBlueprintInstanceHandler(
 		return
 	}
 
-	blueprintInstance := &state.InstanceState{
-		InstanceID:   id,
-		InstanceName: "test-instance-name",
-		Status:       core.InstanceStatusDestroying,
-	}
+	blueprintInstance := NewInstanceState(id, "test-instance-name", core.InstanceStatusDestroying)
 
 	// Wrap response with lastEventId
 	response := map[string]any{
@@ -944,5 +928,21 @@ func stubApplyReconciliationResult(instanceID string) *container.ApplyReconcilia
 		ResourcesUpdated: 1,
 		LinksUpdated:     1,
 		Errors:           []container.ReconciliationError{},
+	}
+}
+
+// NewInstanceState creates the instance the stub engine responds with. Its maps are empty
+// rather than nil, as the deploy engine sends them.
+func NewInstanceState(id string, name string, status core.InstanceStatus) *state.InstanceState {
+	return &state.InstanceState{
+		InstanceID:      id,
+		InstanceName:    name,
+		Status:          status,
+		ResourceIDs:     map[string]string{},
+		Resources:       map[string]*state.ResourceState{},
+		Links:           map[string]*state.LinkState{},
+		Metadata:        map[string]*core.MappingNode{},
+		Exports:         map[string]*state.ExportState{},
+		ChildBlueprints: map[string]*state.InstanceState{},
 	}
 }

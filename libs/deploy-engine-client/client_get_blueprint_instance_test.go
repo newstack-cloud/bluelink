@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/internal/testutils"
 )
@@ -35,11 +34,7 @@ func (s *ClientSuite) Test_get_blueprint_instance() {
 	s.Require().NoError(err)
 
 	s.Assert().Equal(
-		&state.InstanceState{
-			InstanceID:   testInstanceID,
-			InstanceName: "test-instance-name",
-			Status:       core.InstanceStatusDeploying,
-		},
+		testutils.NewInstanceState(testInstanceID, "test-instance-name", core.InstanceStatusDeploying),
 		blueprintInstance,
 	)
 }

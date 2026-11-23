@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/internal/testutils"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
@@ -42,11 +41,7 @@ func (s *ClientSuite) Test_destroy_blueprint_instance() {
 
 	s.Assert().Equal("test-last-event-id", response.LastEventID)
 	s.Assert().Equal(
-		state.InstanceState{
-			InstanceID:   "test-instance-100",
-			InstanceName: "test-instance-name",
-			Status:       core.InstanceStatusDestroying,
-		},
+		*testutils.NewInstanceState("test-instance-100", "test-instance-name", core.InstanceStatusDestroying),
 		response.Data,
 	)
 }

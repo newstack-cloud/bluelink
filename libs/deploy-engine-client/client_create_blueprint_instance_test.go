@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/errors"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/internal/testutils"
 	"github.com/newstack-cloud/bluelink/libs/deploy-engine-client/types"
@@ -44,11 +43,7 @@ func (s *ClientSuite) Test_create_blueprint_instance() {
 
 	s.Assert().Equal("test-last-event-id", response.LastEventID)
 	s.Assert().Equal(
-		state.InstanceState{
-			InstanceID:   "test-instance-id",
-			InstanceName: "test-instance-name",
-			Status:       core.InstanceStatusDeploying,
-		},
+		*testutils.NewInstanceState("test-instance-id", "test-instance-name", core.InstanceStatusDeploying),
 		response.Data,
 	)
 }
@@ -85,11 +80,7 @@ func (s *ClientSuite) Test_create_blueprint_instance_with_instance_name() {
 
 	s.Assert().Equal("test-last-event-id", response.LastEventID)
 	s.Assert().Equal(
-		state.InstanceState{
-			InstanceID:   "test-instance-id",
-			InstanceName: "my-custom-instance",
-			Status:       core.InstanceStatusDeploying,
-		},
+		*testutils.NewInstanceState("test-instance-id", "my-custom-instance", core.InstanceStatusDeploying),
 		response.Data,
 	)
 }
