@@ -460,18 +460,22 @@ func (s *LinkSelector) FromJSONNode(
 		return err
 	}
 
-	s.Exclude = &StringList{}
-	err = core.UnpackValueFromJSONMapNode(
-		nodeMap,
-		"exclude",
-		s.Exclude,
-		linePositions,
-		parentPath,
-		/* parentIsRoot */ false,
-		/* required */ false,
-	)
-	if err != nil {
-		return err
+	// Left nil when absent, as it is for YAML, so that it is omitted rather than
+	// serialised as null.
+	if _, hasExclude := nodeMap["exclude"]; hasExclude {
+		s.Exclude = &StringList{}
+		err = core.UnpackValueFromJSONMapNode(
+			nodeMap,
+			"exclude",
+			s.Exclude,
+			linePositions,
+			parentPath,
+			/* parentIsRoot */ false,
+			/* required */ false,
+		)
+		if err != nil {
+			return err
+		}
 	}
 
 	s.SourceMeta = source.ExtractSourcePositionFromJSONNode(

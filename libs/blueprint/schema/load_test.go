@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 
@@ -93,6 +94,19 @@ func (s *LoadTestSuite) Test_loads_blueprint_from_json_string() {
 	s.Require().NoError(err)
 	err = testhelpers.Snapshot(blueprint)
 	s.Require().NoError(err)
+}
+
+// JSON used to parse a missing exclude into an empty list, so the selector serialised
+// differently from YAML.
+func (s *LoadTestSuite) Test_link_selector_without_exclude_serialises_without_it() {
+	for format, specFormat := range map[string]SpecFormat{"yaml": YAMLSpecFormat, "jwcc": JWCCSpecFormat} {
+		blueprint, err := LoadString(s.specFixtures[format].stringVal, specFormat)
+		s.Require().NoError(err)
+
+		serialised, err := json.Marshal(blueprint.Resources.Values["orderApi"].LinkSelector)
+		s.Require().NoError(err)
+		s.Assert().JSONEq(`{"byLabel":{"app":"orderApi"}}`, string(serialised), format)
+	}
 }
 
 func TestLoadTestSuite(t *testing.T) {
