@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
@@ -664,6 +665,29 @@ type InstanceState struct {
 	// This is used to protect against a race between multiple deployment processes that are trying to start
 	// a deployment at the same time.
 	Version int64 `json:"version"`
+}
+
+// MarshalJSON serialises nil maps as empty objects rather than null, so consumers can read
+// every map without a presence check.
+func (s InstanceState) MarshalJSON() ([]byte, error) {
+	// The alias drops this method so that marshalling it does not recurse.
+	type instanceStateAlias InstanceState
+	alias := instanceStateAlias(s)
+	alias.ResourceIDs = emptyIfNil(alias.ResourceIDs)
+	alias.Resources = emptyIfNil(alias.Resources)
+	alias.Links = emptyIfNil(alias.Links)
+	alias.Metadata = emptyIfNil(alias.Metadata)
+	alias.Exports = emptyIfNil(alias.Exports)
+	alias.ChildBlueprints = emptyIfNil(alias.ChildBlueprints)
+
+	return json.Marshal(alias)
+}
+
+func emptyIfNil[Value any](values map[string]Value) map[string]Value {
+	if values == nil {
+		return map[string]Value{}
+	}
+	return values
 }
 
 // ExportState holds state that is persisted for an export
