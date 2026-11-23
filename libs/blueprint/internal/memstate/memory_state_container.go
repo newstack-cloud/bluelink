@@ -248,6 +248,12 @@ func (c *memoryInstancesContainer) InitialiseAndClaim(
 		return 0, state.ErrInstanceAlreadyExists
 	}
 
+	// The lookup outlives a removed instance, so only a name held by a live instance counts.
+	holderID, named := c.instanceNameIDLookup[instanceState.InstanceName]
+	if _, held := c.instances[holderID]; named && held {
+		return 0, state.ErrInstanceAlreadyExists
+	}
+
 	instanceState.Status = newStatus
 	instanceState.Version = 1
 	instanceState.LastStatusUpdateTimestamp = int(time.Now().Unix())
