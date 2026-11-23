@@ -724,6 +724,27 @@ func (s *PostgresStateContainerInstancesTestSuite) Test_initialise_and_claim_ret
 	s.Assert().Equal(int64(0), savedState.Version)
 }
 
+func (s *PostgresStateContainerInstancesTestSuite) Test_initialise_and_claim_returns_already_exists_for_a_name_in_use() {
+	fixture := s.saveBlueprintFixtures[1]
+	instances := s.container.Instances()
+	err := instances.Save(context.Background(), *fixture.InstanceState)
+	s.Require().NoError(err)
+
+	_, err = instances.InitialiseAndClaim(
+		context.Background(),
+		state.InstanceState{
+			InstanceID:   "8a4d2f38-0f5c-4d43-9a58-2c1d3b8e7f10",
+			InstanceName: fixture.InstanceState.InstanceName,
+		},
+		core.InstanceStatusPreparing,
+	)
+	s.Assert().ErrorIs(err, state.ErrInstanceAlreadyExists)
+
+	holderID, err := instances.LookupIDByName(context.Background(), fixture.InstanceState.InstanceName)
+	s.Require().NoError(err)
+	s.Assert().Equal(fixture.InstanceState.InstanceID, holderID)
+}
+
 func (s *PostgresStateContainerInstancesTestSuite) Test_initialise_and_claim_concurrent_goroutines_only_one_wins() {
 	instances := s.container.Instances()
 	// Per-invocation UUID + name so reruns against the same database

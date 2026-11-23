@@ -535,6 +535,11 @@ func SingleProcessInitialiseAndClaimFunc(st *State, persister *Persister) Initia
 		if _, ok := st.instances[instanceState.InstanceID]; ok {
 			return 0, state.ErrInstanceAlreadyExists
 		}
+		if holderID, named := st.nameLookup[instanceState.InstanceName]; named {
+			if _, held := st.instances[holderID]; held {
+				return 0, state.ErrInstanceAlreadyExists
+			}
+		}
 		now := int(time.Now().Unix())
 		instanceState.Status = newStatus
 		instanceState.Version = 1

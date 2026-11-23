@@ -3,6 +3,7 @@ package memfile
 import (
 	"context"
 	"errors"
+	"fmt"
 	"path"
 	"sync"
 	"sync/atomic"
@@ -672,6 +673,64 @@ func (s *MemFileStateContainerInstancesTestSuite) Test_initialise_and_claim_conc
 	savedState, err := instances.Get(context.Background(), raceID)
 	s.Require().NoError(err)
 	s.Assert().Equal(int64(1), savedState.Version)
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_initialise_and_claim_returns_already_exists_for_a_name_in_use() {
+	instances := s.container.Instances()
+	existing, err := instances.Get(context.Background(), existingBlueprintInstanceID)
+	s.Require().NoError(err)
+	s.Require().NotEmpty(existing.InstanceName)
+
+	_, err = instances.InitialiseAndClaim(
+		context.Background(),
+		state.InstanceState{
+			InstanceID:   "instance-with-a-taken-name",
+			InstanceName: existing.InstanceName,
+		},
+		core.InstanceStatusPreparing,
+	)
+	s.Assert().ErrorIs(err, state.ErrInstanceAlreadyExists)
+
+	holderID, err := instances.LookupIDByName(context.Background(), existing.InstanceName)
+	s.Require().NoError(err)
+	s.Assert().Equal(existingBlueprintInstanceID, holderID)
+	_, err = instances.Get(context.Background(), "instance-with-a-taken-name")
+	s.Assert().True(state.IsInstanceNotFound(err))
+}
+
+func (s *MemFileStateContainerInstancesTestSuite) Test_initialise_and_claim_concurrent_ids_with_the_same_name_only_one_wins() {
+	instances := s.container.Instances()
+	const raceName = "race-instance-name"
+
+	const workers = 10
+	var wg sync.WaitGroup
+	var successes, conflicts int64
+
+	wg.Add(workers)
+	for i := range workers {
+		go func() {
+			defer wg.Done()
+			_, err := instances.InitialiseAndClaim(
+				context.Background(),
+				state.InstanceState{
+					InstanceID:   fmt.Sprintf("race-instance-%d", i),
+					InstanceName: raceName,
+				},
+				core.InstanceStatusPreparing,
+			)
+			if err == nil {
+				atomic.AddInt64(&successes, 1)
+				return
+			}
+			if errors.Is(err, state.ErrInstanceAlreadyExists) {
+				atomic.AddInt64(&conflicts, 1)
+			}
+		}()
+	}
+	wg.Wait()
+
+	s.Assert().Equal(int64(1), atomic.LoadInt64(&successes))
+	s.Assert().Equal(int64(workers-1), atomic.LoadInt64(&conflicts))
 }
 
 func TestMemFileStateContainerInstancesTestSuite(t *testing.T) {
