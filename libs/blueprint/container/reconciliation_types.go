@@ -256,23 +256,23 @@ type IntermediaryReconcileAction struct {
 // ApplyReconciliationResult contains the outcome of applying reconciliation.
 type ApplyReconciliationResult struct {
 	// InstanceID is the ID of the blueprint instance that was reconciled.
-	InstanceID string
+	InstanceID string `json:"instanceId"`
 	// ResourcesUpdated is the number of resources that were successfully updated.
-	ResourcesUpdated int
+	ResourcesUpdated int `json:"resourcesUpdated"`
 	// LinksUpdated is the number of links that were successfully updated.
-	LinksUpdated int
+	LinksUpdated int `json:"linksUpdated"`
 	// Errors contains any errors that occurred during reconciliation.
-	Errors []ReconciliationError
+	Errors []ReconciliationError `json:"errors"`
 }
 
 // ReconciliationError captures an error for a specific element during reconciliation.
 type ReconciliationError struct {
 	// ElementID is the unique identifier for the element that failed.
-	ElementID string
+	ElementID string `json:"elementId"`
 	// ElementName is the logical name of the element.
-	ElementName string
+	ElementName string `json:"elementName"`
 	// ElementType is "resource" or "link".
-	ElementType string
+	ElementType string `json:"elementType"`
 	// Error is the error message.
-	Error string
+	Error string `json:"error"`
 }
