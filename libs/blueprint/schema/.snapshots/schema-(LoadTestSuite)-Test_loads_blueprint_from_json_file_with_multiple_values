@@ -3585,10 +3585,7 @@
               })
             }
           }),
-          Exclude: (*schema.StringList)({
-            Values: ([]string) <nil>,
-            SourceMeta: ([]*source.Meta) <nil>
-          }),
+          Exclude: (*schema.StringList)(<nil>),
           SourceMeta: (*source.Meta)({
             Position: (source.Position) {
               Line: (int) 137,
@@ -4100,10 +4097,7 @@
               })
             }
           }),
-          Exclude: (*schema.StringList)({
-            Values: ([]string) <nil>,
-            SourceMeta: ([]*source.Meta) <nil>
-          }),
+          Exclude: (*schema.StringList)(<nil>),
           SourceMeta: (*source.Meta)({
             Position: (source.Position) {
               Line: (int) 276,
