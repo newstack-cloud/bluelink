@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
@@ -52,7 +54,7 @@ func SSEStreamEvents(
 	// Check if the ResponseWriter supports flushing.
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
+		httputils.HTTPError(w, http.StatusInternalServerError, "streaming is not supported")
 		return
 	}
 
@@ -76,7 +78,7 @@ func SSEStreamEvents(
 			"Failed to start event stream",
 			core.ErrorLogField("error", err),
 		)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
 		return
 	}
 
