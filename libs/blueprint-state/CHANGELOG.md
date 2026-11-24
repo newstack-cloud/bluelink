@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.1](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.13.0...blueprint-state/v0.13.1) (2026-11-24)
+
+
+### Bug Fixes
+
+* **blueprint-state:** reject a new instance whose name a live instance holds ([d5e4b15](https://github.com/newstack-cloud/bluelink/commit/d5e4b155346c7538911ee25b8751a13f9ffd92e0))
+* **blueprint-state:** wrap crypto.ErrNotEnvelope when encrypted state holds plaintext ([b488ed6](https://github.com/newstack-cloud/bluelink/commit/b488ed661ce4969db2f468dd0ca30efd007e69ac))
+
 ## [0.13.0](https://github.com/newstack-cloud/bluelink/compare/blueprint-state/v0.12.0...blueprint-state/v0.13.0) (2026-10-29)
 
 
