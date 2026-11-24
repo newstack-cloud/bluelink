@@ -372,6 +372,10 @@ func (c *Controller) handleDeployRequest(
 		return
 	}
 
+	if c.rejectNewInstanceName(w, r, existingInstance, payload.InstanceName) {
+		return
+	}
+
 	helpersv1.PopulateBlueprintDocInfoDefaults(&payload.BlueprintDocumentInfo)
 
 	finalConfig, _, responseWritten := helpersv1.PrepareAndValidatePluginConfig(
@@ -456,6 +460,22 @@ func (c *Controller) handleDeployRequest(
 		Logger:                c.requestLogger(r),
 		TraceLink:             telemetry.LinkFrom(r.Context()),
 	})
+	if errors.Is(err, state.ErrInstanceAlreadyExists) && existingInstance != nil {
+		// An update only meets this when its instance was removed after it was loaded above.
+		c.handleGetInstanceError(
+			w,
+			state.InstanceNotFoundError(existingInstance.InstanceID),
+			existingInstance.InstanceID,
+			c.requestLogger(r),
+		)
+		return
+	}
+
+	if errors.Is(err, state.ErrInstanceAlreadyExists) {
+		c.respondWithInstanceNameInUse(w, r, payload.InstanceName)
+		return
+	}
+
 	if err != nil {
 		handleDeployErrorForResponse(w, err, c.requestLogger(r))
 		return
@@ -620,8 +640,11 @@ func (c *Controller) startDeployment(request *deploymentRequest) (string, error)
 	err = blueprintContainer.Deploy(
 		ctxWithTimeout,
 		&container.DeployInput{
-			InstanceID:             request.DeployInstanceID,
-			InstanceName:           request.InstanceName,
+			InstanceID:   request.DeployInstanceID,
+			InstanceName: request.InstanceName,
+			// Without an ID the deploy is a create, which must not take over an instance
+			// that already holds the name, even one created after the handler's check.
+			RequireNewInstance:     request.DeployInstanceID == "",
 			Changes:                request.Changeset.Changes,
 			Rollback:               request.ForRollback,
 			Force:                  request.Force,

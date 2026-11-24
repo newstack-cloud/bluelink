@@ -13,6 +13,7 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/resolve"
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/testutils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/types"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
@@ -455,4 +456,56 @@ func (s *ControllerTestSuite) Test_update_blueprint_instance_force_bypasses_drif
 	instance := wrappedResponse.Data
 
 	s.Assert().Equal(testInstanceID, instance.InstanceID)
+}
+
+// A destroy can remove the instance after the handler has loaded it, which the deploy reports
+// as a conflict on creating the instance, so the update must report the instance as missing
+// rather than its name as taken.
+func (s *ControllerTestSuite) Test_update_blueprint_instance_reports_an_instance_removed_while_deploying() {
+	s.Require().NoError(s.saveTestChangeset())
+	stateContainer := testutils.NewMemoryStateContainer()
+	s.Require().NoError(stateContainer.Instances().Save(context.Background(), state.InstanceState{
+		InstanceID:   testInstanceID,
+		InstanceName: testInstanceName,
+		Status:       core.InstanceStatusDeployed,
+	}))
+	ctrl := s.controllerWithDeployStart(
+		stateContainer,
+		testutils.NewDeployTracker(),
+		func(ctx context.Context, input *container.DeployInput) error {
+			_, err := stateContainer.Instances().Remove(ctx, input.InstanceID)
+			s.Require().NoError(err)
+			return state.ErrInstanceAlreadyExists
+		},
+	)
+
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/deployments/instances/{id}",
+		ctrl.UpdateBlueprintInstanceHandler,
+	).Methods("PATCH")
+	reqBytes, err := json.Marshal(&BlueprintInstanceRequestPayload{
+		BlueprintDocumentInfo: testBlueprintDocInfo(),
+		ChangeSetID:           testChangesetID,
+	})
+	s.Require().NoError(err)
+	req := httptest.NewRequest(
+		"PATCH",
+		fmt.Sprintf("/deployments/instances/%s", testInstanceID),
+		bytes.NewReader(reqBytes),
+	)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+	result := w.Result()
+	defer result.Body.Close()
+	respData, err := io.ReadAll(result.Body)
+	s.Require().NoError(err)
+
+	s.Assert().Equal(http.StatusNotFound, result.StatusCode)
+	expected, err := json.Marshal(map[string]string{
+		"message": fmt.Sprintf("blueprint instance %q not found", testInstanceID),
+	})
+	s.Require().NoError(err)
+	s.Assert().JSONEq(string(expected), string(respData))
 }

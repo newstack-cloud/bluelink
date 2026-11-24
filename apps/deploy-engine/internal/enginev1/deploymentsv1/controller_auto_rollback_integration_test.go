@@ -52,6 +52,7 @@ func (s *ControllerTestSuite) Test_auto_rollback_triggered_on_deploy_failed() {
 			Directory:        "/test/dir",
 			BlueprintFile:    "test.blueprint.yaml",
 		},
+		InstanceName: testNewInstanceName,
 		ChangeSetID:  testChangesetID,
 		AutoRollback: true, // Enable auto-rollback
 	}
@@ -127,6 +128,7 @@ func (s *ControllerTestSuite) Test_auto_rollback_not_triggered_when_disabled() {
 			Directory:        "/test/dir",
 			BlueprintFile:    "test.blueprint.yaml",
 		},
+		InstanceName: testNewInstanceName,
 		ChangeSetID:  testChangesetID,
 		AutoRollback: false, // Auto-rollback disabled
 	}
@@ -180,6 +182,7 @@ func (s *ControllerTestSuite) Test_auto_rollback_not_triggered_on_success() {
 			Directory:        "/test/dir",
 			BlueprintFile:    "test.blueprint.yaml",
 		},
+		InstanceName: testNewInstanceName,
 		ChangeSetID:  testChangesetID,
 		AutoRollback: true, // Auto-rollback enabled
 	}
@@ -317,6 +320,7 @@ func (s *ControllerTestSuite) Test_auto_rollback_not_triggered_when_already_roll
 			Directory:        "/test/dir",
 			BlueprintFile:    "test.blueprint.yaml",
 		},
+		InstanceName: testNewInstanceName,
 		ChangeSetID:  testChangesetID,
 		AutoRollback: true, // Auto-rollback enabled
 	}
@@ -373,6 +377,7 @@ func (s *ControllerTestSuite) Test_auto_rollback_stream_remains_open() {
 			Directory:        "/test/dir",
 			BlueprintFile:    "test.blueprint.yaml",
 		},
+		InstanceName: testNewInstanceName,
 		ChangeSetID:  testChangesetID,
 		AutoRollback: true,
 	}
@@ -637,6 +642,7 @@ func (s *ControllerTestSuite) Test_pre_rollback_state_emitted_before_auto_rollba
 			Directory:        "/test/dir",
 			BlueprintFile:    "test.blueprint.yaml",
 		},
+		InstanceName: testNewInstanceName,
 		ChangeSetID:  testChangesetID,
 		AutoRollback: true,
 	}
@@ -757,6 +763,7 @@ func (s *ControllerTestSuite) Test_auto_rollback_of_a_create_is_traced_as_a_link
 			Directory:        "/test/dir",
 			BlueprintFile:    "test.blueprint.yaml",
 		},
+		InstanceName: testNewInstanceName,
 		ChangeSetID:  testChangesetID,
 		AutoRollback: true,
 	})

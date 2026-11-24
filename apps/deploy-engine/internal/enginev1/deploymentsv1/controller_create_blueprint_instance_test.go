@@ -2,6 +2,7 @@ package deploymentsv1
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -43,7 +44,8 @@ func (s *ControllerTestSuite) Test_create_blueprint_instance_handler() {
 			Directory:        "/test/dir",
 			BlueprintFile:    "test.blueprint.yaml",
 		},
-		ChangeSetID: testChangesetID,
+		InstanceName: testNewInstanceName,
+		ChangeSetID:  testChangesetID,
 	}
 
 	reqBytes, err := json.Marshal(reqPayload)
@@ -229,7 +231,8 @@ func (s *ControllerTestSuite) Test_create_blueprint_instance_handler_with_stream
 			Directory:        "/test/dir",
 			BlueprintFile:    "test.blueprint.yaml",
 		},
-		ChangeSetID: testChangesetID,
+		InstanceName: testNewInstanceName,
+		ChangeSetID:  testChangesetID,
 	}
 
 	reqBytes, err := json.Marshal(reqPayload)
@@ -354,7 +357,8 @@ func (s *ControllerTestSuite) Test_create_blueprint_instance_handler_fails_for_i
 			Directory:        "/test/dir",
 			BlueprintFile:    "test.blueprint.yaml",
 		},
-		ChangeSetID: testChangesetID,
+		InstanceName: testNewInstanceName,
+		ChangeSetID:  testChangesetID,
 		Config: &types.BlueprintOperationConfig{
 			Providers: map[string]map[string]*core.ScalarValue{
 				"aws": {
@@ -406,7 +410,8 @@ func (s *ControllerTestSuite) Test_create_blueprint_instance_handler_fails_due_t
 			Directory:        "/test/dir",
 			BlueprintFile:    "test.blueprint.yaml",
 		},
-		ChangeSetID: testChangesetID,
+		InstanceName: testNewInstanceName,
+		ChangeSetID:  testChangesetID,
 	}
 
 	reqBytes, err := json.Marshal(reqPayload)
@@ -448,7 +453,8 @@ func (s *ControllerTestSuite) Test_create_blueprint_instance_handler_fails_for_d
 			Directory:        "/test/dir",
 			BlueprintFile:    "test.blueprint.yaml",
 		},
-		ChangeSetID: testDestroyChangesetID,
+		InstanceName: testNewInstanceName,
+		ChangeSetID:  testDestroyChangesetID,
 	}
 
 	reqBytes, err := json.Marshal(reqPayload)
@@ -637,4 +643,155 @@ func wrapDeployEvent(
 	return testutils.DeployEventWrapper{
 		DeployEvent: &event,
 	}
+}
+
+func (s *ControllerTestSuite) Test_create_blueprint_instance_handler_requires_an_instance_name() {
+	s.Require().NoError(s.saveTestChangeset())
+
+	result, respData := s.createBlueprintInstance(s.ctrl, &BlueprintInstanceRequestPayload{
+		BlueprintDocumentInfo: testBlueprintDocInfo(),
+		ChangeSetID:           testChangesetID,
+	})
+
+	s.Assert().Equal(http.StatusUnprocessableEntity, result.StatusCode)
+	validationError := &inputvalidation.FormattedValidationError{}
+	s.Require().NoError(json.Unmarshal(respData, validationError))
+	s.Assert().Equal(
+		&inputvalidation.FormattedValidationError{
+			Message: "request body input validation failed",
+			Errors: []inputvalidation.ValidationError{
+				{
+					Location: ".instanceName",
+					Message:  "missing required value",
+					Type:     "required",
+				},
+			},
+		},
+		validationError,
+	)
+}
+
+// Without the check, the deploy resolves the name to the existing instance and deploys
+// onto it, so a create would quietly become an update.
+func (s *ControllerTestSuite) Test_create_blueprint_instance_handler_rejects_a_name_in_use() {
+	s.Require().NoError(s.saveTestChangeset())
+	_, err := s.saveTestBlueprintInstance()
+	s.Require().NoError(err)
+
+	result, respData := s.createBlueprintInstance(s.ctrl, &BlueprintInstanceRequestPayload{
+		BlueprintDocumentInfo: testBlueprintDocInfo(),
+		InstanceName:          testInstanceName,
+		ChangeSetID:           testChangesetID,
+	})
+
+	s.Assert().Equal(http.StatusConflict, result.StatusCode)
+	expected, err := json.Marshal(map[string]string{
+		"message":    fmt.Sprintf("a blueprint instance named %q already exists", testInstanceName),
+		"code":       "INSTANCE_ALREADY_EXISTS",
+		"instanceId": testInstanceID,
+	})
+	s.Require().NoError(err)
+	s.Assert().JSONEq(string(expected), string(respData))
+	instance, err := s.instances.Get(context.Background(), testInstanceID)
+	s.Require().NoError(err)
+	s.Assert().Equal(core.InstanceStatusDeploying, instance.Status)
+}
+
+// The name check before the deploy cannot see a create that has not written its instance yet,
+// so the deploy itself must refuse to take over a named instance.
+func (s *ControllerTestSuite) Test_create_blueprint_instance_handler_requires_the_deploy_to_create_the_instance() {
+	s.Require().NoError(s.saveTestChangeset())
+	tracker := testutils.NewDeployTracker()
+	ctrl := s.controllerWithDeployStart(
+		testutils.NewMemoryStateContainer(),
+		tracker,
+		func(context.Context, *container.DeployInput) error { return nil },
+	)
+
+	result, _ := s.createBlueprintInstance(ctrl, &BlueprintInstanceRequestPayload{
+		BlueprintDocumentInfo: testBlueprintDocInfo(),
+		InstanceName:          testNewInstanceName,
+		ChangeSetID:           testChangesetID,
+	})
+
+	s.Require().Equal(http.StatusAccepted, result.StatusCode)
+	s.Require().Len(tracker.DeployCalls, 1)
+	s.Assert().True(tracker.DeployCalls[0].RequireNewInstance)
+}
+
+func (s *ControllerTestSuite) Test_create_blueprint_instance_handler_rejects_a_name_taken_while_deploying() {
+	s.Require().NoError(s.saveTestChangeset())
+	stateContainer := testutils.NewMemoryStateContainer()
+	const competingInstanceID = "4f6c1d2e-competing-instance"
+	ctrl := s.controllerWithDeployStart(
+		stateContainer,
+		testutils.NewDeployTracker(),
+		// A concurrent create takes the name after the handler checked it.
+		func(ctx context.Context, input *container.DeployInput) error {
+			err := stateContainer.Instances().Save(ctx, state.InstanceState{
+				InstanceID:   competingInstanceID,
+				InstanceName: input.InstanceName,
+			})
+			s.Require().NoError(err)
+			return state.ErrInstanceAlreadyExists
+		},
+	)
+
+	result, respData := s.createBlueprintInstance(ctrl, &BlueprintInstanceRequestPayload{
+		BlueprintDocumentInfo: testBlueprintDocInfo(),
+		InstanceName:          testNewInstanceName,
+		ChangeSetID:           testChangesetID,
+	})
+
+	s.Assert().Equal(http.StatusConflict, result.StatusCode)
+	expected, err := json.Marshal(map[string]string{
+		"message":    fmt.Sprintf("a blueprint instance named %q already exists", testNewInstanceName),
+		"code":       "INSTANCE_ALREADY_EXISTS",
+		"instanceId": competingInstanceID,
+	})
+	s.Require().NoError(err)
+	s.Assert().JSONEq(string(expected), string(respData))
+}
+
+func (s *ControllerTestSuite) controllerWithDeployStart(
+	stateContainer state.Container,
+	tracker *testutils.DeployTracker,
+	deployStart func(ctx context.Context, input *container.DeployInput) error,
+) *Controller {
+	clock := &testutils.MockClock{StaticTime: testTime}
+	loader := testutils.NewMockBlueprintLoader(
+		[]*core.Diagnostic{},
+		clock,
+		stateContainer.Instances(),
+		deployEventSequence(""),
+		changeStagingEventSequence(),
+		testutils.WithDeployTracker(tracker),
+		testutils.WithMockBlueprintLoaderDeployStart(deployStart),
+	)
+	return s.setupControllerWithLoader(stateContainer, clock, loader)
+}
+
+func (s *ControllerTestSuite) createBlueprintInstance(
+	ctrl *Controller,
+	payload *BlueprintInstanceRequestPayload,
+) (*http.Response, []byte) {
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/deployments/instances",
+		ctrl.CreateBlueprintInstanceHandler,
+	).Methods("POST")
+
+	reqBytes, err := json.Marshal(payload)
+	s.Require().NoError(err)
+
+	req := httptest.NewRequest("POST", "/deployments/instances", bytes.NewReader(reqBytes))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+	result := w.Result()
+	defer result.Body.Close()
+	respData, err := io.ReadAll(result.Body)
+	s.Require().NoError(err)
+
+	return result, respData
 }

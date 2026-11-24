@@ -39,8 +39,8 @@ type CreateChangesetRequestPayload struct {
 type BlueprintInstanceRequestPayload struct {
 	resolve.BlueprintDocumentInfo
 	// The user-defined name for the blueprint instance.
-	// This is required when creating a new blueprint instance and must be unique.
-	// This should be left empty when updating an existing instance.
+	// Required when creating an instance, and a name already in use is rejected with a 409.
+	// When updating, leave it empty or give the instance's current name, since a name can't be changed.
 	InstanceName string `json:"instanceName"`
 	// The ID of the change set to use to deploy the blueprint instance.
 	// When deploying blueprint instances,

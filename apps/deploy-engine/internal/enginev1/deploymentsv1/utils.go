@@ -2,8 +2,10 @@ package deploymentsv1
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
+	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/inputvalidation"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
@@ -91,6 +93,62 @@ func rejectInstanceRename(
 		},
 	)
 	return true
+}
+
+// Reports whether it wrote a response. Given a name and no ID, the deploy resolves the name
+// and deploys onto the instance it finds, so a create naming an existing instance would
+// update that instance instead of failing.
+func (c *Controller) rejectNewInstanceName(
+	w http.ResponseWriter,
+	r *http.Request,
+	existingInstance *state.InstanceState,
+	requestedName string,
+) (responseWritten bool) {
+	if existingInstance != nil {
+		return false
+	}
+
+	if requestedName == "" {
+		inputvalidation.HTTPMissingValueError(w, ".instanceName")
+		return true
+	}
+
+	_, err := c.instances.LookupIDByName(r.Context(), requestedName)
+	if state.IsInstanceNotFound(err) {
+		return false
+	}
+
+	c.respondWithInstanceNameInUse(w, r, requestedName)
+	return true
+}
+
+// The holder's ID is left out when it can no longer be found, as it can be after the deploy
+// found the name taken and the holder was removed before it could be looked up.
+func (c *Controller) respondWithInstanceNameInUse(
+	w http.ResponseWriter,
+	r *http.Request,
+	name string,
+) {
+	fields := map[string]any{"code": "INSTANCE_ALREADY_EXISTS"}
+	instanceID, err := c.instances.LookupIDByName(r.Context(), name)
+	if err != nil && !state.IsInstanceNotFound(err) {
+		c.requestLogger(r).Error(
+			"failed to look up the blueprint instance that holds the requested name",
+			core.ErrorLogField("error", err),
+		)
+		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
+		return
+	}
+	if err == nil {
+		fields["instanceId"] = instanceID
+	}
+
+	httputils.HTTPErrorWithFields(
+		w,
+		http.StatusConflict,
+		fmt.Sprintf("a blueprint instance named %q already exists", name),
+		fields,
+	)
 }
 
 // resolveInstance resolves an instance from the provided identifier,

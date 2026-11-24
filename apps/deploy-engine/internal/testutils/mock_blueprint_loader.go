@@ -23,6 +23,7 @@ type MockBlueprintLoader struct {
 	deployEventSequence        []container.DeployEvent
 	changeStagingEventSequence []ChangeStagingEvent
 	deployError                error
+	deployStart                func(ctx context.Context, input *container.DeployInput) error
 	changeStagingError         error
 	// loadError is returned by Load and LoadString instead of a container, for a test
 	// about what the caller does when a blueprint cannot be loaded at all.
@@ -208,6 +209,17 @@ func WithMockBlueprintLoaderDeployError(err error) MockBlueprintLoaderOption {
 	}
 }
 
+// WithMockBlueprintLoaderDeployStart configures a function called when Deploy starts. An error
+// it returns is returned by Deploy, as the container does when it cannot create or claim the
+// instance.
+func WithMockBlueprintLoaderDeployStart(
+	deployStart func(ctx context.Context, input *container.DeployInput) error,
+) MockBlueprintLoaderOption {
+	return func(loader *MockBlueprintLoader) {
+		loader.deployStart = deployStart
+	}
+}
+
 func WithMockBlueprintLoaderChangeStagingError(err error) MockBlueprintLoaderOption {
 	return func(loader *MockBlueprintLoader) {
 		loader.changeStagingError = err
@@ -316,6 +328,7 @@ func (m *MockBlueprintLoader) Load(
 		deployEventSequence:         m.deployEventSequence,
 		changeStagingEventSequence:  m.changeStagingEventSequence,
 		deployError:                 m.deployError,
+		deployStart:                 m.deployStart,
 		changeStagingError:          m.changeStagingError,
 		destroyTracker:              m.DestroyTracker,
 		deployTracker:               m.DeployTracker,
@@ -356,6 +369,7 @@ func (m *MockBlueprintLoader) LoadString(
 		deployEventSequence:         m.deployEventSequence,
 		changeStagingEventSequence:  m.changeStagingEventSequence,
 		deployError:                 m.deployError,
+		deployStart:                 m.deployStart,
 		changeStagingError:          m.changeStagingError,
 		destroyTracker:              m.DestroyTracker,
 		deployTracker:               m.DeployTracker,
@@ -392,6 +406,7 @@ func (m *MockBlueprintLoader) LoadFromSchema(
 		deployEventSequence:         m.deployEventSequence,
 		changeStagingEventSequence:  m.changeStagingEventSequence,
 		deployError:                 m.deployError,
+		deployStart:                 m.deployStart,
 		changeStagingError:          m.changeStagingError,
 		destroyTracker:              m.DestroyTracker,
 		deployTracker:               m.DeployTracker,
@@ -423,6 +438,7 @@ type MockBlueprintContainer struct {
 	changeStagingEventSequence  []ChangeStagingEvent
 	changeStagingError          error
 	deployError                 error
+	deployStart                 func(ctx context.Context, input *container.DeployInput) error
 	destroyTracker              *DestroyTracker
 	deployTracker               *DeployTracker
 	destroyEventSequence        []container.DeployEvent
@@ -474,6 +490,12 @@ func (m *MockBlueprintContainer) Deploy(
 	// Track the deploy call if a tracker is configured
 	if m.deployTracker != nil {
 		m.deployTracker.RecordCall(input)
+	}
+
+	if m.deployStart != nil {
+		if err := m.deployStart(ctx, input); err != nil {
+			return err
+		}
 	}
 
 	instanceID := input.InstanceID

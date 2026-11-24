@@ -49,7 +49,25 @@ func FormatValidationErrors(errors validator.ValidationErrors) *FormattedValidat
 // HTTPValidationError is a function that writes a slice of validation errors
 // to the response writer in a JSON format.
 func HTTPValidationError(w http.ResponseWriter, errors validator.ValidationErrors) {
-	formatted := FormatValidationErrors(errors)
+	writeValidationErrors(w, FormatValidationErrors(errors))
+}
+
+// HTTPMissingValueError writes the same response as HTTPValidationError for a single required
+// value that is missing, for a requirement that depends on more than the request body.
+func HTTPMissingValueError(w http.ResponseWriter, location string) {
+	writeValidationErrors(w, &FormattedValidationError{
+		Message: requestValidationFailedMessage,
+		Errors: []ValidationError{
+			{
+				Location: location,
+				Message:  missingValueMessage,
+				Type:     "required",
+			},
+		},
+	})
+}
+
+func writeValidationErrors(w http.ResponseWriter, formatted *FormattedValidationError) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnprocessableEntity)
 	json.NewEncoder(w).Encode(formatted)
