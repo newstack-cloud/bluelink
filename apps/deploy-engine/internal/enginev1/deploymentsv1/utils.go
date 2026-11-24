@@ -9,6 +9,7 @@ import (
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
+	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/changes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/container"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
@@ -148,6 +149,63 @@ func (c *Controller) respondWithInstanceNameInUse(
 		http.StatusConflict,
 		fmt.Sprintf("a blueprint instance named %q already exists", name),
 		fields,
+	)
+}
+
+// A change set's changes were computed against the instance it was staged for, or against
+// nothing for a new instance, so applying it to any other target would start from the wrong
+// state. An empty targetInstanceID means a new instance.
+func rejectChangesetForOtherInstance(
+	w http.ResponseWriter,
+	changeset *manage.Changeset,
+	targetInstanceID string,
+) (responseWritten bool) {
+	if changeset.InstanceID == targetInstanceID {
+		return false
+	}
+
+	fields := map[string]any{"code": "CHANGESET_INSTANCE_MISMATCH"}
+	if changeset.InstanceID != "" {
+		fields["changesetInstanceId"] = changeset.InstanceID
+	}
+	if targetInstanceID != "" {
+		fields["instanceId"] = targetInstanceID
+	}
+
+	httputils.HTTPErrorWithFields(
+		w,
+		http.StatusConflict,
+		changesetInstanceMismatchMessage(changeset, targetInstanceID),
+		fields,
+	)
+	return true
+}
+
+func changesetInstanceMismatchMessage(changeset *manage.Changeset, targetInstanceID string) string {
+	if changeset.InstanceID == "" {
+		return fmt.Sprintf(
+			"change set %q was staged for a new blueprint instance, not instance %q; "+
+				"stage changes against the instance and try again",
+			changeset.ID,
+			targetInstanceID,
+		)
+	}
+
+	if targetInstanceID == "" {
+		return fmt.Sprintf(
+			"change set %q was staged for instance %q, not a new blueprint instance; "+
+				"stage changes for a new instance and try again",
+			changeset.ID,
+			changeset.InstanceID,
+		)
+	}
+
+	return fmt.Sprintf(
+		"change set %q was staged for instance %q, not instance %q; "+
+			"stage changes against the instance and try again",
+		changeset.ID,
+		changeset.InstanceID,
+		targetInstanceID,
 	)
 }
 

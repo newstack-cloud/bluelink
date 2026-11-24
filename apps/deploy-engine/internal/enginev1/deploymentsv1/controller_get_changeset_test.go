@@ -103,9 +103,20 @@ func (s *ControllerTestSuite) Test_get_changeset_handler_returns_404_not_found()
 	)
 }
 
+// Staged for a new instance, as a change set for a create is.
 func (s *ControllerTestSuite) saveTestChangeset() error {
+	return s.saveTestChangesetForInstance("")
+}
+
+// Staged against testInstanceID, as a change set for an update is.
+func (s *ControllerTestSuite) saveUpdateChangeset() error {
+	return s.saveTestChangesetForInstance(testInstanceID)
+}
+
+func (s *ControllerTestSuite) saveTestChangesetForInstance(instanceID string) error {
 	changeset := &manage.Changeset{
 		ID:                testChangesetID,
+		InstanceID:        instanceID,
 		Status:            manage.ChangesetStatusStarting,
 		BlueprintLocation: "file:///test/dir/test.blueprint.yaml",
 		Created:           testTime.Unix(),
@@ -128,6 +139,7 @@ func (s *ControllerTestSuite) saveTestChangeset() error {
 func (s *ControllerTestSuite) saveDestroyChangeset() error {
 	changeset := &manage.Changeset{
 		ID:                testDestroyChangesetID,
+		InstanceID:        testInstanceID,
 		Status:            manage.ChangesetStatusStarting,
 		BlueprintLocation: "file:///test/dir/test.blueprint.yaml",
 		Created:           testTime.Unix(),
