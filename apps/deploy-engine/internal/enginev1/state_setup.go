@@ -350,7 +350,7 @@ func createPostgresConnPool(
 	ctx context.Context,
 	stateConfig *core.StateConfig,
 ) (*pgxpool.Pool, error) {
-	return pgxpool.New(ctx, buildPostgresDatabaseURL(stateConfig))
+	return pgxpool.New(ctx, stateConfig.PostgresDatabaseURL())
 }
 
 func loadObjectstoreStateServices(
@@ -504,18 +504,4 @@ func buildAzureObjectstoreService(
 		return nil, fmt.Errorf("failed to create azure blob client: %w", err)
 	}
 	return azurestore.NewService(client, cfg.Container), nil
-}
-
-func buildPostgresDatabaseURL(stateConfig *core.StateConfig) string {
-	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s?sslmode=%s&pool_max_conns=%d&pool_max_conn_lifetime=%s",
-		stateConfig.PostgresUser,
-		stateConfig.PostgresPassword,
-		stateConfig.PostgresHost,
-		stateConfig.PostgresPort,
-		stateConfig.PostgresDatabase,
-		stateConfig.PostgresSSLMode,
-		stateConfig.PostgresPoolMaxConns,
-		stateConfig.PostgresPoolMaxConnLifetime,
-	)
 }
