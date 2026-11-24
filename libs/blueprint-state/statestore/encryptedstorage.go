@@ -47,8 +47,9 @@ func (s *encryptedStorage) Read(ctx context.Context, key string) ([]byte, error)
 		if errors.Is(err, crypto.ErrNotEnvelope) {
 			return nil, fmt.Errorf(
 				"statestore: %q is not encrypted, so this state was written before encryption "+
-					"was enabled; re-encrypt the state directory or start from an empty one",
+					"was enabled; re-encrypt the state directory or start from an empty one: %w",
 				key,
+				err,
 			)
 		}
 
