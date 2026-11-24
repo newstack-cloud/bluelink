@@ -168,24 +168,13 @@ func (c *Controller) GetCleanupStatusHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	operationID := mux.Vars(r)["id"]
-
-	operation, err := c.cleanupOperationsStore.Get(r.Context(), operationID)
-	if err != nil {
-		notFoundErr := &manage.CleanupOperationNotFound{}
-		if errors.As(err, &notFoundErr) {
-			httputils.HTTPError(w, http.StatusNotFound, notFoundErr.Error())
-			return
-		}
-		c.requestLogger(r).Debug(
-			"failed to get cleanup operation",
-			core.ErrorLogField("error", err),
-		)
-		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
-		return
-	}
-
-	httputils.HTTPJSONResponse(w, http.StatusOK, operation)
+	helpersv1.GetCleanupStatus(
+		w,
+		r,
+		c.cleanupOperationsStore,
+		manage.CleanupTypeAuditRecords,
+		c.requestLogger(r),
+	)
 }
 
 // Trims the extra record that was asked for, and says what follows the page.
