@@ -45,7 +45,7 @@ type BlueprintDocumentInfo struct {
 	// Authentication is not supported `https` sources.
 	//
 	// If not provided, the default value of `file` will be used.
-	FileSourceScheme string `json:"fileSourceScheme" validate:"oneof=file s3 gcs azureblob https"`
+	FileSourceScheme string `json:"fileSourceScheme" validate:"omitempty,oneof=file s3 gcs azureblob https"`
 	// Directory where the blueprint document is located.
 	// For `file` sources, this must be an absolute path to the directory
 	// on the local file system of the Deploy Engine server.

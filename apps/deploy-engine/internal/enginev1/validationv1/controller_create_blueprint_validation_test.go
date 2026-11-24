@@ -72,6 +72,41 @@ func (s *ControllerTestSuite) Test_create_blueprint_validation_handler() {
 	)
 }
 
+func (s *ControllerTestSuite) Test_create_blueprint_validation_handler_defaults_the_file_source_scheme() {
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/validations",
+		s.ctrl.CreateBlueprintValidationHandler,
+	).Methods("POST")
+
+	reqPayload := &CreateValidationRequestPayload{
+		BlueprintDocumentInfo: resolve.BlueprintDocumentInfo{
+			Directory:     "/test/dir",
+			BlueprintFile: "test.blueprint.yaml",
+		},
+	}
+
+	reqBytes, err := json.Marshal(reqPayload)
+	s.Require().NoError(err)
+
+	req := httptest.NewRequest("POST", "/validations", bytes.NewReader(reqBytes))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+	result := w.Result()
+	defer result.Body.Close()
+	respData, err := io.ReadAll(result.Body)
+	s.Require().NoError(err)
+
+	s.Require().Equal(http.StatusAccepted, result.StatusCode, string(respData))
+	wrappedResponse := &helpersv1.AsyncOperationResponse[*manage.BlueprintValidation]{}
+	s.Require().NoError(json.Unmarshal(respData, wrappedResponse))
+	s.Assert().Equal(
+		"file:///test/dir/test.blueprint.yaml",
+		wrappedResponse.Data.BlueprintLocation,
+	)
+}
+
 func (s *ControllerTestSuite) Test_create_blueprint_validation_handler_fails_for_invalid_input() {
 	router := mux.NewRouter()
 	router.HandleFunc(
