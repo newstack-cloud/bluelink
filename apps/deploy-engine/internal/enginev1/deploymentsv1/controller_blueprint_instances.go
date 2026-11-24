@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/go-playground/validator/v10"
@@ -52,7 +53,11 @@ func (c *Controller) ListBlueprintInstancesHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	params := parseListInstancesParams(r)
+	params, err := parseListInstancesParams(r)
+	if err != nil {
+		httputils.HTTPError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	result, err := c.instances.List(r.Context(), params)
 	if err != nil {
@@ -64,27 +69,45 @@ func (c *Controller) ListBlueprintInstancesHandler(
 		return
 	}
 
+	// A backend can return no slice at all for an empty page, which would be sent as null.
+	if result.Instances == nil {
+		result.Instances = []state.InstanceSummary{}
+	}
+
 	httputils.HTTPJSONResponse(w, http.StatusOK, result)
 }
 
-func parseListInstancesParams(r *http.Request) state.ListInstancesParams {
+func parseListInstancesParams(r *http.Request) (state.ListInstancesParams, error) {
 	query := r.URL.Query()
 
-	offset, _ := strconv.Atoi(query.Get("offset"))
-	if offset < 0 {
-		offset = 0
+	offset, err := parseNonNegativeQueryParam(query, "offset")
+	if err != nil {
+		return state.ListInstancesParams{}, err
 	}
 
-	limit, _ := strconv.Atoi(query.Get("limit"))
-	if limit < 0 {
-		limit = 0
+	limit, err := parseNonNegativeQueryParam(query, "limit")
+	if err != nil {
+		return state.ListInstancesParams{}, err
 	}
 
 	return state.ListInstancesParams{
 		Search: query.Get("search"),
 		Offset: offset,
 		Limit:  limit,
+	}, nil
+}
+
+func parseNonNegativeQueryParam(query url.Values, name string) (int, error) {
+	value := query.Get(name)
+	if value == "" {
+		return 0, nil
 	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed < 0 {
+		return 0, fmt.Errorf("%s must be a non-negative integer", name)
+	}
+	return parsed, nil
 }
 
 // UpdateBlueprintInstanceHandler is the handler for the PATCH /deployments/instances/{id}

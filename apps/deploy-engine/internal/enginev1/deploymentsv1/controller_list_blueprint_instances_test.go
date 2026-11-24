@@ -3,6 +3,7 @@ package deploymentsv1
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -112,13 +113,35 @@ func (s *ControllerTestSuite) Test_list_blueprint_instances_returns_empty_array_
 	respData, err := io.ReadAll(result.Body)
 	s.Require().NoError(err)
 
-	listResult := &state.ListInstancesResult{}
-	err = json.Unmarshal(respData, listResult)
-	s.Require().NoError(err)
-
 	s.Assert().Equal(http.StatusOK, result.StatusCode)
-	s.Assert().Equal(0, listResult.TotalCount)
-	s.Assert().Empty(listResult.Instances)
+	s.Assert().JSONEq(`{"instances": [], "totalCount": 0}`, string(respData))
+}
+
+func (s *ControllerTestSuite) Test_list_blueprint_instances_rejects_invalid_paging() {
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/deployments/instances",
+		s.ctrl.ListBlueprintInstancesHandler,
+	).Methods("GET")
+
+	for query, message := range map[string]string{
+		"offset=-1":  "offset must be a non-negative integer",
+		"offset=one": "offset must be a non-negative integer",
+		"limit=-5":   "limit must be a non-negative integer",
+		"limit=2.5":  "limit must be a non-negative integer",
+	} {
+		req := httptest.NewRequest("GET", "/deployments/instances?"+query, nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+		result := w.Result()
+		respData, err := io.ReadAll(result.Body)
+		result.Body.Close()
+		s.Require().NoError(err)
+
+		s.Assert().Equal(http.StatusBadRequest, result.StatusCode, query)
+		s.Assert().JSONEq(fmt.Sprintf(`{"message": %q}`, message), string(respData), query)
+	}
 }
 
 func (s *ControllerTestSuite) Test_list_blueprint_instances_search_is_case_insensitive() {
