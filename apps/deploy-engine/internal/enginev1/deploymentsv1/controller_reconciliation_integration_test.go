@@ -257,7 +257,7 @@ func (s *ControllerTestSuite) Test_drift_workflow_update() {
 			{
 				ResourceID: "resource-1",
 				Action:     "accept_external",
-				NewStatus:  "stable",
+				NewStatus:  "CREATED",
 			},
 		},
 		Config: &types.BlueprintOperationConfig{
@@ -414,7 +414,7 @@ func (s *ControllerTestSuite) Test_drift_workflow_destroy() {
 			{
 				ResourceID: "resource-1",
 				Action:     "accept_external",
-				NewStatus:  "stable",
+				NewStatus:  "CREATED",
 			},
 		},
 		Config: &types.BlueprintOperationConfig{

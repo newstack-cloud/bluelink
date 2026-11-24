@@ -391,19 +391,19 @@ func (s *ControllerTestSuite) Test_apply_reconciliation_success() {
 			{
 				ResourceID: "resource-1",
 				Action:     "accept_external",
-				NewStatus:  "stable",
+				NewStatus:  "CREATED",
 			},
 			{
 				ResourceID: "resource-2",
 				Action:     "update_status",
-				NewStatus:  "stable",
+				NewStatus:  "CREATED",
 			},
 		},
 		LinkActions: []LinkReconcileActionPayload{
 			{
 				LinkID:    "link-1",
 				Action:    "update_status",
-				NewStatus: "stable",
+				NewStatus: "LINKED RESOURCES UPDATED",
 			},
 		},
 		Config: &types.BlueprintOperationConfig{
@@ -463,7 +463,7 @@ func (s *ControllerTestSuite) Test_apply_reconciliation_by_instance_name() {
 			{
 				ResourceID: "resource-1",
 				Action:     "update_status",
-				NewStatus:  "stable",
+				NewStatus:  "CREATED",
 			},
 		},
 		Config: &types.BlueprintOperationConfig{
@@ -501,7 +501,7 @@ func (s *ControllerTestSuite) Test_apply_reconciliation_instance_not_found() {
 			{
 				ResourceID: "resource-1",
 				Action:     "update_status",
-				NewStatus:  "stable",
+				NewStatus:  "CREATED",
 			},
 		},
 		Config: &types.BlueprintOperationConfig{
@@ -546,7 +546,7 @@ func (s *ControllerTestSuite) Test_apply_reconciliation_missing_config() {
 			{
 				ResourceID: "resource-1",
 				Action:     "update_status",
-				NewStatus:  "stable",
+				NewStatus:  "CREATED",
 			},
 		},
 	}
@@ -582,7 +582,7 @@ func (s *ControllerTestSuite) Test_apply_reconciliation_container_error() {
 			{
 				ResourceID: "resource-1",
 				Action:     "update_status",
-				NewStatus:  "stable",
+				NewStatus:  "CREATED",
 			},
 		},
 		Config: &types.BlueprintOperationConfig{
@@ -622,11 +622,11 @@ func (s *ControllerTestSuite) Test_apply_reconciliation_with_intermediary_action
 			{
 				LinkID:    "link-1",
 				Action:    "accept_external",
-				NewStatus: "stable",
+				NewStatus: "LINKED RESOURCES UPDATED",
 				IntermediaryActions: map[string]*IntermediaryReconcileActionPayload{
 					"intermediary-1": {
 						Action:    "accept_external",
-						NewStatus: "stable",
+						NewStatus: "CREATED",
 					},
 				},
 			},
@@ -854,19 +854,19 @@ func (s *ControllerTestSuite) Test_apply_reconciliation_with_child_resource_acti
 				ResourceID: "parent-resource-1",
 				ChildPath:  "",
 				Action:     "update_status",
-				NewStatus:  "stable",
+				NewStatus:  "CREATED",
 			},
 			{
 				ResourceID: "child-resource-1",
 				ChildPath:  "childA",
 				Action:     "accept_external",
-				NewStatus:  "stable",
+				NewStatus:  "CREATED",
 			},
 			{
 				ResourceID: "nested-resource-1",
 				ChildPath:  "childA.nestedChild",
 				Action:     "update_status",
-				NewStatus:  "stable",
+				NewStatus:  "CREATED",
 			},
 		},
 		Config: &types.BlueprintOperationConfig{
@@ -927,13 +927,13 @@ func (s *ControllerTestSuite) Test_apply_reconciliation_with_child_link_actions(
 				LinkID:    "parent-link-1",
 				ChildPath: "",
 				Action:    "update_status",
-				NewStatus: "stable",
+				NewStatus: "LINKED RESOURCES UPDATED",
 			},
 			{
 				LinkID:    "child-link-1",
 				ChildPath: "childA",
 				Action:    "accept_external",
-				NewStatus: "stable",
+				NewStatus: "LINKED RESOURCES UPDATED",
 			},
 		},
 		Config: &types.BlueprintOperationConfig{
