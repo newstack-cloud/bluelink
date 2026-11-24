@@ -256,7 +256,7 @@ func (s *ControllerTestSuite) Test_check_reconciliation_instance_not_found() {
 	var errResp map[string]string
 	err = json.Unmarshal(respData, &errResp)
 	s.Require().NoError(err)
-	s.Assert().Contains(errResp["message"], "not found")
+	s.Assert().Equal(`blueprint instance "non-existent-instance" not found`, errResp["message"])
 }
 
 func (s *ControllerTestSuite) Test_check_reconciliation_missing_config() {
@@ -527,7 +527,7 @@ func (s *ControllerTestSuite) Test_apply_reconciliation_instance_not_found() {
 	var errResp map[string]string
 	err = json.Unmarshal(respData, &errResp)
 	s.Require().NoError(err)
-	s.Assert().Contains(errResp["message"], "not found")
+	s.Assert().Equal(`blueprint instance "non-existent-instance" not found`, errResp["message"])
 }
 
 func (s *ControllerTestSuite) Test_apply_reconciliation_missing_config() {
