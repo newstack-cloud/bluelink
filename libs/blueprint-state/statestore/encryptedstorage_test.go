@@ -80,6 +80,7 @@ func (s *EncryptedStorageSuite) Test_reading_unencrypted_state_reports_why() {
 	_, err := encrypted.Read(context.Background(), "instances_c0.json")
 	s.Require().Error(err)
 	s.Assert().Contains(err.Error(), "is not encrypted")
+	s.Assert().ErrorIs(err, crypto.ErrNotEnvelope)
 }
 
 // A missing key must stay distinguishable from a decryption failure: the persister treats

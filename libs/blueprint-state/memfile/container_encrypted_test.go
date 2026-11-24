@@ -122,6 +122,7 @@ func (s *MemFileEncryptedStateContainerTestSuite) Test_enabling_encryption_over_
 	_, err = s.loadEncryptedContainer(fs, "deployment-passphrase")
 	s.Require().Error(err)
 	s.Assert().Contains(err.Error(), "is not encrypted")
+	s.Assert().ErrorIs(err, crypto.ErrNotEnvelope)
 }
 
 // A passphrase change is a key change, so the state must fail to open rather
@@ -138,6 +139,7 @@ func (s *MemFileEncryptedStateContainerTestSuite) Test_a_different_passphrase_ca
 
 	_, err = s.loadEncryptedContainer(fs, "a-different-passphrase")
 	s.Require().Error(err)
+	s.Assert().NotErrorIs(err, crypto.ErrNotEnvelope, "a wrong key must not read as plaintext state")
 }
 
 func (s *MemFileEncryptedStateContainerTestSuite) listFiles(fs afero.Fs, dir string) []string {
