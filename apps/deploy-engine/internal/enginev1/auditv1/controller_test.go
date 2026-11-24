@@ -105,6 +105,7 @@ func (s *ControllerTestSuite) Test_query_rejects_a_malformed_filter() {
 		"/audit/records?to=-1",
 		"/audit/records?limit=0",
 		"/audit/records?limit=10000",
+		"/audit/records?outcome=failed",
 	} {
 		result := s.serve("GET", target)
 		s.Assert().Equal(http.StatusBadRequest, result.StatusCode, target)

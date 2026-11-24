@@ -222,6 +222,14 @@ func queryFromRequest(r *http.Request) (*manage.AuditRecordQuery, error) {
 		return nil, err
 	}
 
+	outcome := params.Get("outcome")
+	if outcome != "" && outcome != manage.OutcomeSuccess && outcome != manage.OutcomeFailure {
+		return nil, errors.New(
+			"the \"outcome\" query parameter must be \"" + manage.OutcomeSuccess +
+				"\" or \"" + manage.OutcomeFailure + "\"",
+		)
+	}
+
 	return &manage.AuditRecordQuery{
 		From:             from,
 		To:               to,
@@ -229,7 +237,7 @@ func queryFromRequest(r *http.Request) (*manage.AuditRecordQuery, error) {
 		AfterID:          params.Get("afterId"),
 		Action:           params.Get("action"),
 		PrincipalSubject: params.Get("principalSubject"),
-		Outcome:          params.Get("outcome"),
+		Outcome:          outcome,
 		Limit:            limit,
 	}, nil
 }
