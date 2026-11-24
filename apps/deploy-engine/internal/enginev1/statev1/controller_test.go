@@ -23,6 +23,8 @@ import (
 // Saturday, 3 May 2025 14:27:22 UTC
 var testTime = time.Unix(1746282442, 0).UTC()
 
+const eventsCleanupOperationID = "5a0c3b0e-events-cleanup"
+
 type ControllerTestSuite struct {
 	suite.Suite
 	housekeeping *recordingHousekeeping
@@ -32,7 +34,13 @@ type ControllerTestSuite struct {
 func (s *ControllerTestSuite) SetupTest() {
 	s.housekeeping = &recordingHousekeeping{deleted: 3}
 	cleanupOperationsStore := testutils.NewMockCleanupOperationsStore(
-		map[string]*manage.CleanupOperation{},
+		map[string]*manage.CleanupOperation{
+			eventsCleanupOperationID: {
+				ID:          eventsCleanupOperationID,
+				CleanupType: manage.CleanupTypeEvents,
+				Status:      manage.CleanupOperationStatusCompleted,
+			},
+		},
 	)
 	runner := cleanup.NewRunner(
 		cleanupOperationsStore,
@@ -74,6 +82,12 @@ func (s *ControllerTestSuite) Test_housekeeping_runs_the_backends_housekeeping_a
 
 func (s *ControllerTestSuite) Test_status_reports_a_missing_operation_as_not_found() {
 	result := s.serve("GET", "/state/housekeeping/missing-operation")
+	defer result.Body.Close()
+	s.Assert().Equal(http.StatusNotFound, result.StatusCode)
+}
+
+func (s *ControllerTestSuite) Test_status_reports_another_categorys_operation_as_not_found() {
+	result := s.serve("GET", "/state/housekeeping/"+eventsCleanupOperationID)
 	defer result.Body.Close()
 	s.Assert().Equal(http.StatusNotFound, result.StatusCode)
 }

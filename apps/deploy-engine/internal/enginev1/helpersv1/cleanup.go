@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/cleanup"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
@@ -53,4 +54,40 @@ func StartCleanup(
 			Data: operation,
 		},
 	)
+}
+
+// GetCleanupStatus answers a request for the status of a cleanup operation in one category.
+//
+// An operation from another category is answered as not found, so that each status route
+// only reports on operations started through its own cleanup endpoint.
+func GetCleanupStatus(
+	w http.ResponseWriter,
+	r *http.Request,
+	store manage.CleanupOperations,
+	cleanupType manage.CleanupType,
+	logger core.Logger,
+) {
+	operationID := mux.Vars(r)["id"]
+
+	operation, err := store.Get(r.Context(), operationID)
+	notFoundErr := &manage.CleanupOperationNotFound{}
+	if errors.As(err, &notFoundErr) || (err == nil && operation.CleanupType != cleanupType) {
+		httputils.HTTPError(
+			w,
+			http.StatusNotFound,
+			manage.CleanupOperationNotFoundError(operationID).Error(),
+		)
+		return
+	}
+
+	if err != nil {
+		logger.Debug(
+			"failed to get cleanup operation",
+			core.ErrorLogField("error", err),
+		)
+		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
+		return
+	}
+
+	httputils.HTTPJSONResponse(w, http.StatusOK, operation)
 }

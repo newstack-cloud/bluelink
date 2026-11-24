@@ -307,29 +307,13 @@ func (c *Controller) GetCleanupStatusHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	params := mux.Vars(r)
-	operationID := params["id"]
-
-	operation, err := c.cleanupOperationsStore.Get(r.Context(), operationID)
-	if err != nil {
-		notFoundErr := &manage.CleanupOperationNotFound{}
-		if errors.As(err, &notFoundErr) {
-			httputils.HTTPError(
-				w,
-				http.StatusNotFound,
-				notFoundErr.Error(),
-			)
-			return
-		}
-		c.requestLogger(r).Debug(
-			"failed to get cleanup operation",
-			core.ErrorLogField("error", err),
-		)
-		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
-		return
-	}
-
-	httputils.HTTPJSONResponse(w, http.StatusOK, operation)
+	helpersv1.GetCleanupStatus(
+		w,
+		r,
+		c.cleanupOperationsStore,
+		manage.CleanupTypeValidations,
+		c.requestLogger(r),
+	)
 }
 
 // resolveValidationLoader picks the loader to use for a single

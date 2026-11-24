@@ -1,16 +1,12 @@
 package statev1
 
 import (
-	"errors"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/cleanup"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/helpersv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/enginev1/typesv1"
 	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httpmw"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/internal/httputils"
-	"github.com/newstack-cloud/bluelink/apps/deploy-engine/utils"
 	"github.com/newstack-cloud/bluelink/libs/blueprint-state/manage"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 )
@@ -64,25 +60,13 @@ func (c *Controller) GetCleanupStatusHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	operationID := mux.Vars(r)["id"]
-
-	operation, err := c.cleanupOperationsStore.Get(r.Context(), operationID)
-	if err != nil {
-		notFoundErr := &manage.CleanupOperationNotFound{}
-		if errors.As(err, &notFoundErr) {
-			httputils.HTTPError(w, http.StatusNotFound, notFoundErr.Error())
-			return
-		}
-
-		c.requestLogger(r).Debug(
-			"failed to get cleanup operation",
-			core.ErrorLogField("error", err),
-		)
-		httputils.HTTPError(w, http.StatusInternalServerError, utils.UnexpectedErrorMessage)
-		return
-	}
-
-	httputils.HTTPJSONResponse(w, http.StatusOK, operation)
+	helpersv1.GetCleanupStatus(
+		w,
+		r,
+		c.cleanupOperationsStore,
+		manage.CleanupTypeStateHousekeeping,
+		c.requestLogger(r),
+	)
 }
 
 // The logger for the request being answered, carrying its correlation ID, source
