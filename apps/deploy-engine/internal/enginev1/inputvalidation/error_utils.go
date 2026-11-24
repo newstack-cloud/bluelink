@@ -41,7 +41,7 @@ func FormatValidationErrors(errors validator.ValidationErrors) *FormattedValidat
 		}
 	}
 	return &FormattedValidationError{
-		Message: "request body input validation failed",
+		Message: requestValidationFailedMessage,
 		Errors:  validationErrors,
 	}
 }
@@ -81,10 +81,29 @@ func stripNestedAnonymousStructs(namespace string) string {
 	return strings.Join(partsWithoutAnonymousStructs, ".")
 }
 
+const (
+	requestValidationFailedMessage = "request body input validation failed"
+	missingValueMessage            = "missing required value"
+)
+
+const (
+	// TagPreciseResourceStatus is the validation tag for a precise resource status given as
+	// its label or its integer.
+	TagPreciseResourceStatus = "precise_resource_status"
+	// TagPreciseLinkStatus is the validation tag for a precise link status given as its label
+	// or its integer.
+	TagPreciseLinkStatus = "precise_link_status"
+)
+
 func validationErrorMessage(err validator.FieldError) string {
 	switch err.Tag() {
+	case TagPreciseResourceStatus:
+		return "the value must be a precise resource status label (e.g. \"CREATED\") or its integer"
+	case TagPreciseLinkStatus:
+		return "the value must be a precise link status label (e.g. \"LINKED RESOURCES UPDATED\") " +
+			"or its integer"
 	case "required":
-		return "missing required value"
+		return missingValueMessage
 	case "oneof":
 		return fmt.Sprintf("the value must be one of the following: %s", err.Param())
 	default:

@@ -324,111 +324,25 @@ func (c *Controller) resolveInstance(
 	return nil, err
 }
 
+// The scope, actions and statuses are validated with the request body, so the casts and
+// parse results below are not checked again.
 func parseReconciliationScope(scope string) container.ReconciliationScope {
-	switch scope {
-	case "interrupted":
-		return container.ReconciliationScopeInterrupted
-	case "specific":
-		return container.ReconciliationScopeSpecific
-	case "all", "":
-		return container.ReconciliationScopeAll
-	default:
-		// Default to "all" for unknown scope values
+	if scope == "" {
 		return container.ReconciliationScopeAll
 	}
-}
-
-func parseReconciliationAction(action string) container.ReconciliationAction {
-	switch action {
-	case "accept_external":
-		return container.ReconciliationActionAcceptExternal
-	case "update_status":
-		return container.ReconciliationActionUpdateStatus
-	case "manual_cleanup_required":
-		return container.ReconciliationActionManualCleanupRequired
-	default:
-		return container.ReconciliationActionUpdateStatus
-	}
-}
-
-// parsePreciseResourceStatus parses a string to a PreciseResourceStatus.
-// Uses a reverse lookup of the status string values.
-func parsePreciseResourceStatus(status string) core.PreciseResourceStatus {
-	// Map of string representations to PreciseResourceStatus values
-	statusMap := map[string]core.PreciseResourceStatus{
-		"UNKNOWN":                          core.PreciseResourceStatusUnknown,
-		"UPDATING LINK CONTRIBUTIONS":      core.PreciseResourceStatusUpdatingLinkContributions,
-		"LINK CONTRIBUTIONS UPDATED":       core.PreciseResourceStatusLinkContributionsUpdated,
-		"LINK CONTRIBUTIONS UPDATE FAILED": core.PreciseResourceStatusLinkContributionsUpdateFailed,
-		"CREATING":                         core.PreciseResourceStatusCreating,
-		"CONFIG COMPLETE":                  core.PreciseResourceStatusConfigComplete,
-		"CREATED":                          core.PreciseResourceStatusCreated,
-		"CREATE FAILED":                    core.PreciseResourceStatusCreateFailed,
-		"CREATE ROLLING BACK":              core.PreciseResourceStatusCreateRollingBack,
-		"CREATE ROLLBACK FAILED":           core.PreciseResourceStatusCreateRollbackFailed,
-		"CREATE ROLLBACK COMPLETE":         core.PreciseResourceStatusCreateRollbackComplete,
-		"DESTROYING":                       core.PreciseResourceStatusDestroying,
-		"DESTROYED":                        core.PreciseResourceStatusDestroyed,
-		"DESTROY FAILED":                   core.PreciseResourceStatusDestroyFailed,
-		"DESTROY ROLLING BACK":             core.PreciseResourceStatusDestroyRollingBack,
-		"DESTROY ROLLBACK FAILED":          core.PreciseResourceStatusDestroyRollbackFailed,
-		"DESTROY ROLLBACK CONFIG COMPLETE": core.PreciseResourceStatusDestroyRollbackConfigComplete,
-		"DESTROY ROLLBACK COMPLETE":        core.PreciseResourceStatusDestroyRollbackComplete,
-		"UPDATING":                         core.PreciseResourceStatusUpdating,
-		"UPDATE CONFIG COMPLETE":           core.PreciseResourceStatusUpdateConfigComplete,
-		"UPDATED":                          core.PreciseResourceStatusUpdated,
-		"UPDATE FAILED":                    core.PreciseResourceStatusUpdateFailed,
-		"UPDATE ROLLING BACK":              core.PreciseResourceStatusUpdateRollingBack,
-		"UPDATE ROLLBACK FAILED":           core.PreciseResourceStatusUpdateRollbackFailed,
-		"UPDATE ROLLBACK CONFIG COMPLETE":  core.PreciseResourceStatusUpdateRollbackConfigComplete,
-		"UPDATE ROLLBACK COMPLETE":         core.PreciseResourceStatusUpdateRollbackComplete,
-		"CREATE INTERRUPTED":               core.PreciseResourceStatusCreateInterrupted,
-		"UPDATE INTERRUPTED":               core.PreciseResourceStatusUpdateInterrupted,
-		"DESTROY INTERRUPTED":              core.PreciseResourceStatusDestroyInterrupted,
-		"RETAINED":                         core.PreciseResourceStatusRetained,
-	}
-	if s, ok := statusMap[status]; ok {
-		return s
-	}
-	return core.PreciseResourceStatusUnknown
-}
-
-// parsePreciseLinkStatus parses a string to a PreciseLinkStatus.
-// Uses a reverse lookup of the status string values.
-func parsePreciseLinkStatus(status string) core.PreciseLinkStatus {
-	// Map of string representations to PreciseLinkStatus values
-	statusMap := map[string]core.PreciseLinkStatus{
-		"UNKNOWN":                                         core.PreciseLinkStatusUnknown,
-		"UPDATING LINKED RESOURCES":                       core.PreciseLinkStatusUpdatingLinkedResources,
-		"LINKED RESOURCES UPDATED":                        core.PreciseLinkStatusLinkedResourcesUpdated,
-		"LINKED RESOURCES UPDATE FAILED":                  core.PreciseLinkStatusLinkedResourcesUpdateFailed,
-		"LINKED RESOURCES UPDATE ROLLING BACK":            core.PreciseLinkStatusLinkedResourcesUpdateRollingBack,
-		"LINKED RESOURCES UPDATE ROLLBACK FAILED":         core.PreciseLinkStatusLinkedResourcesUpdateRollbackFailed,
-		"LINKED RESOURCES UPDATE ROLLBACK COMPLETE":       core.PreciseLinkStatusLinkedResourcesUpdateRollbackComplete,
-		"UPDATING INTERMEDIARY RESOURCES":                 core.PreciseLinkStatusUpdatingIntermediaryResources,
-		"INTERMEDIARY RESOURCES UPDATED":                  core.PreciseLinkStatusIntermediaryResourcesUpdated,
-		"INTERMEDIARY RESOURCES UPDATE FAILED":            core.PreciseLinkStatusIntermediaryResourceUpdateFailed,
-		"INTERMEDIARY RESOURCES UPDATE ROLLING BACK":      core.PreciseLinkStatusIntermediaryResourceUpdateRollingBack,
-		"INTERMEDIARY RESOURCES UPDATE ROLLBACK FAILED":   core.PreciseLinkStatusIntermediaryResourceUpdateRollbackFailed,
-		"INTERMEDIARY RESOURCES UPDATE ROLLBACK COMPLETE": core.PreciseLinkStatusIntermediaryResourceUpdateRollbackComplete,
-		"LINKED RESOURCES UPDATE INTERRUPTED":             core.PreciseLinkStatusLinkedResourcesUpdateInterrupted,
-		"INTERMEDIARY RESOURCES UPDATE INTERRUPTED":       core.PreciseLinkStatusIntermediaryResourceUpdateInterrupted,
-	}
-	if s, ok := statusMap[status]; ok {
-		return s
-	}
-	return core.PreciseLinkStatusUnknown
+	return container.ReconciliationScope(scope)
 }
 
 func convertResourceActions(payloadActions []ResourceReconcileActionPayload) []container.ResourceReconcileAction {
 	actions := make([]container.ResourceReconcileAction, len(payloadActions))
 	for i, pa := range payloadActions {
+		newStatus, _ := helpersv1.ParsePreciseResourceStatus(pa.NewStatus)
 		actions[i] = container.ResourceReconcileAction{
 			ResourceID:    pa.ResourceID,
 			ChildPath:     pa.ChildPath,
-			Action:        parseReconciliationAction(pa.Action),
+			Action:        container.ReconciliationAction(pa.Action),
 			ExternalState: pa.ExternalState,
-			NewStatus:     parsePreciseResourceStatus(pa.NewStatus),
+			NewStatus:     newStatus,
 		}
 	}
 	return actions
@@ -437,11 +351,12 @@ func convertResourceActions(payloadActions []ResourceReconcileActionPayload) []c
 func convertLinkActions(payloadActions []LinkReconcileActionPayload) []container.LinkReconcileAction {
 	actions := make([]container.LinkReconcileAction, len(payloadActions))
 	for i, pa := range payloadActions {
+		newStatus, _ := helpersv1.ParsePreciseLinkStatus(pa.NewStatus)
 		actions[i] = container.LinkReconcileAction{
 			LinkID:              pa.LinkID,
 			ChildPath:           pa.ChildPath,
-			Action:              parseReconciliationAction(pa.Action),
-			NewStatus:           parsePreciseLinkStatus(pa.NewStatus),
+			Action:              container.ReconciliationAction(pa.Action),
+			NewStatus:           newStatus,
 			LinkDataUpdates:     pa.LinkDataUpdates,
 			IntermediaryActions: convertIntermediaryActions(pa.IntermediaryActions),
 		}
@@ -460,11 +375,12 @@ func convertIntermediaryActions(
 		if pa == nil {
 			continue
 		}
+		newStatus, _ := helpersv1.ParsePreciseResourceStatus(pa.NewStatus)
 		actions[id] = &container.IntermediaryReconcileAction{
 			IntermediaryID: id,
-			Action:         parseReconciliationAction(pa.Action),
+			Action:         container.ReconciliationAction(pa.Action),
 			ExternalState:  pa.ExternalState,
-			NewStatus:      parsePreciseResourceStatus(pa.NewStatus),
+			NewStatus:      newStatus,
 		}
 	}
 	return actions

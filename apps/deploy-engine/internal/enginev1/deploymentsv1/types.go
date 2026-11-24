@@ -137,7 +137,7 @@ type CheckReconciliationRequestPayload struct {
 	resolve.BlueprintDocumentInfo
 	// Scope controls which elements to check.
 	// Valid values: "all" (default), "interrupted", "specific"
-	Scope string `json:"scope"`
+	Scope string `json:"scope" validate:"omitempty,oneof=all interrupted specific"`
 	// ResourceNames specifies which resources to check when Scope is "specific".
 	// Ignored for other scopes.
 	ResourceNames []string `json:"resourceNames,omitempty"`
@@ -161,9 +161,9 @@ type CheckReconciliationRequestPayload struct {
 type ApplyReconciliationRequestPayload struct {
 	resolve.BlueprintDocumentInfo
 	// ResourceActions specifies the actions to take for each resource.
-	ResourceActions []ResourceReconcileActionPayload `json:"resourceActions,omitempty"`
+	ResourceActions []ResourceReconcileActionPayload `json:"resourceActions,omitempty" validate:"dive"`
 	// LinkActions specifies the actions to take for each link.
-	LinkActions []LinkReconcileActionPayload `json:"linkActions,omitempty"`
+	LinkActions []LinkReconcileActionPayload `json:"linkActions,omitempty" validate:"dive"`
 	// Config values for the reconciliation apply
 	// that will be used in plugins.
 	Config *types.BlueprintOperationConfig `json:"config" validate:"required"`
@@ -179,12 +179,12 @@ type ResourceReconcileActionPayload struct {
 	ChildPath string `json:"childPath,omitempty"`
 	// Action is the reconciliation action to apply.
 	// Valid values: "accept_external", "update_status", "manual_cleanup_required"
-	Action string `json:"action" validate:"required"`
+	Action string `json:"action" validate:"required,oneof=accept_external update_status manual_cleanup_required"`
 	// ExternalState is required when Action is "accept_external".
 	// This is the state that will be persisted.
 	ExternalState *core.MappingNode `json:"externalState,omitempty"`
 	// NewStatus is the status to set for the resource.
-	NewStatus string `json:"newStatus" validate:"required"`
+	NewStatus string `json:"newStatus" validate:"required,precise_resource_status"`
 }
 
 // LinkReconcileActionPayload specifies the action to take for a link.
@@ -197,9 +197,9 @@ type LinkReconcileActionPayload struct {
 	ChildPath string `json:"childPath,omitempty"`
 	// Action is the reconciliation action to apply.
 	// Valid values: "accept_external", "update_status", "manual_cleanup_required"
-	Action string `json:"action" validate:"required"`
+	Action string `json:"action" validate:"required,oneof=accept_external update_status manual_cleanup_required"`
 	// NewStatus is the status to set for the link.
-	NewStatus string `json:"newStatus" validate:"required"`
+	NewStatus string `json:"newStatus" validate:"required,precise_link_status"`
 	// LinkDataUpdates contains updates to apply to link.Data when Action is
 	// "accept_external". This is used to sync link.Data with
 	// external resource state when drift is detected via ResourceDataMappings.
@@ -207,19 +207,19 @@ type LinkReconcileActionPayload struct {
 	LinkDataUpdates map[string]*core.MappingNode `json:"linkDataUpdates,omitempty"`
 	// IntermediaryActions specifies actions for each intermediary resource.
 	// Key is the intermediary resource ID.
-	IntermediaryActions map[string]*IntermediaryReconcileActionPayload `json:"intermediaryActions,omitempty"`
+	IntermediaryActions map[string]*IntermediaryReconcileActionPayload `json:"intermediaryActions,omitempty" validate:"dive,required"`
 }
 
 // IntermediaryReconcileActionPayload specifies the action to take for an intermediary resource.
 type IntermediaryReconcileActionPayload struct {
 	// Action is the reconciliation action to apply.
 	// Valid values: "accept_external", "update_status", "manual_cleanup_required"
-	Action string `json:"action" validate:"required"`
+	Action string `json:"action" validate:"required,oneof=accept_external update_status manual_cleanup_required"`
 	// ExternalState is required when Action is "accept_external".
 	// This is the state that will be persisted.
 	ExternalState *core.MappingNode `json:"externalState,omitempty"`
 	// NewStatus is the status to set for the intermediary resource.
-	NewStatus string `json:"newStatus" validate:"required"`
+	NewStatus string `json:"newStatus" validate:"required,precise_resource_status"`
 }
 
 // DriftBlockedResponse is returned when an operation is blocked due to drift detection.
