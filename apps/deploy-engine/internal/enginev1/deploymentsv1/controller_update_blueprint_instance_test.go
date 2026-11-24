@@ -28,7 +28,7 @@ func (s *ControllerTestSuite) Test_update_blueprint_instance() {
 
 	// Create the test change set to be used to start the deployment
 	// process for the existing blueprint instance.
-	err = s.saveTestChangeset()
+	err = s.saveUpdateChangeset()
 	s.Require().NoError(err)
 
 	router := mux.NewRouter()
@@ -90,7 +90,7 @@ func (s *ControllerTestSuite) Test_update_blueprint_instance_by_name() {
 
 	// Create the test change set to be used to start the deployment
 	// process for the existing blueprint instance.
-	err = s.saveTestChangeset()
+	err = s.saveUpdateChangeset()
 	s.Require().NoError(err)
 
 	router := mux.NewRouter()
@@ -462,7 +462,7 @@ func (s *ControllerTestSuite) Test_update_blueprint_instance_force_bypasses_drif
 // as a conflict on creating the instance, so the update must report the instance as missing
 // rather than its name as taken.
 func (s *ControllerTestSuite) Test_update_blueprint_instance_reports_an_instance_removed_while_deploying() {
-	s.Require().NoError(s.saveTestChangeset())
+	s.Require().NoError(s.saveUpdateChangeset())
 	stateContainer := testutils.NewMemoryStateContainer()
 	s.Require().NoError(stateContainer.Instances().Save(context.Background(), state.InstanceState{
 		InstanceID:   testInstanceID,

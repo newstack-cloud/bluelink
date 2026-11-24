@@ -285,6 +285,10 @@ func (c *Controller) DestroyBlueprintInstanceHandler(
 		return
 	}
 
+	if rejectChangesetForOtherInstance(w, changeset, instance.InstanceID) {
+		return
+	}
+
 	// Check if changeset has drift detected status and block the destroy unless force is set
 	if !payload.Force {
 		if changeset.Status == manage.ChangesetStatusDriftDetected {
@@ -421,6 +425,10 @@ func (c *Controller) handleDeployRequest(
 				"code": "DESTROY_CHANGESET",
 			},
 		)
+		return
+	}
+
+	if rejectChangesetForOtherInstance(w, changeset, getInstanceID(existingInstance)) {
 		return
 	}
 

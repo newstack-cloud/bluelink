@@ -230,7 +230,7 @@ func (s *ControllerTestSuite) Test_auto_rollback_triggered_on_update_failed() {
 	_, err := s.saveTestBlueprintInstance()
 	s.Require().NoError(err)
 
-	err = s.saveTestChangeset()
+	err = s.saveUpdateChangeset()
 	s.Require().NoError(err)
 
 	router := mux.NewRouter()
