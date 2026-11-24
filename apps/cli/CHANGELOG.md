@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/newstack-cloud/bluelink/compare/cli/v0.6.0...cli/v0.6.1) (2026-11-24)
+
+
+### Bug Fixes
+
+* **cli:** update deploy-cli-sdk to v0.10.0 so redeploying by name works with newer engines ([da432c0](https://github.com/newstack-cloud/bluelink/commit/da432c0ea3c1ab32df215c19ef4229a3b3ff6a8b))
+
 ## [0.6.0](https://github.com/newstack-cloud/bluelink/compare/cli/v0.5.1...cli/v0.6.0) (2026-08-08)
 
 
