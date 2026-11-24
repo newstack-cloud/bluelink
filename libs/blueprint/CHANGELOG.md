@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.57.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.56.0...blueprint/v0.57.0) (2026-11-24)
+
+
+### Features
+
+* **blueprint:** add RequireNewInstance so a deploy never takes over an instance by name ([1d90d77](https://github.com/newstack-cloud/bluelink/commit/1d90d77fb60c553bd1dbca4b5aeef656d662eb4f))
+
+
+### Bug Fixes
+
+* **blueprint:** leave a JSON link selector's exclude unset when absent ([1cd0689](https://github.com/newstack-cloud/bluelink/commit/1cd0689df0ebfd00b9846342b268cdd2a85dae2c))
+* **blueprint:** serialise empty instance state maps as {} rather than null ([12be226](https://github.com/newstack-cloud/bluelink/commit/12be2266e5cb79b5a28de9c9c184448cfd07ded3))
+* **blueprint:** serialise reconciliation results with camelCase fields ([85d985c](https://github.com/newstack-cloud/bluelink/commit/85d985c2273b7ec3eb3374fa591c6533f2c898d3))
+
 ## [0.56.0](https://github.com/newstack-cloud/bluelink/compare/blueprint/v0.55.0...blueprint/v0.56.0) (2026-10-28)
 
 
