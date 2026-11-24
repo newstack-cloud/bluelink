@@ -86,6 +86,36 @@ func (s *ControllerTestSuite) Test_create_changeset_handler() {
 	)
 }
 
+func (s *ControllerTestSuite) Test_create_changeset_handler_reports_a_missing_instance_to_destroy() {
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/deployments/changes",
+		s.ctrl.CreateChangesetHandler,
+	).Methods("POST")
+
+	reqBytes, err := json.Marshal(&CreateChangesetRequestPayload{
+		BlueprintDocumentInfo: testBlueprintDocInfo(),
+		InstanceName:          "missing-instance",
+		Destroy:               true,
+	})
+	s.Require().NoError(err)
+
+	req := httptest.NewRequest("POST", "/deployments/changes", bytes.NewReader(reqBytes))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+	result := w.Result()
+	defer result.Body.Close()
+	respData, err := io.ReadAll(result.Body)
+	s.Require().NoError(err)
+
+	s.Assert().Equal(http.StatusNotFound, result.StatusCode)
+	s.Assert().JSONEq(
+		`{"message": "blueprint instance \"missing-instance\" not found"}`,
+		string(respData),
+	)
+}
+
 func (s *ControllerTestSuite) Test_create_changeset_handler_with_stream_error() {
 	router := mux.NewRouter()
 	router.HandleFunc(

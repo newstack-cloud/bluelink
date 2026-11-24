@@ -18,7 +18,6 @@ import (
 	"github.com/newstack-cloud/bluelink/libs/blueprint/core"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/includes"
 	"github.com/newstack-cloud/bluelink/libs/blueprint/schema"
-	"github.com/newstack-cloud/bluelink/libs/blueprint/state"
 )
 
 const (
@@ -73,26 +72,9 @@ func (c *Controller) CheckReconciliationHandler(
 		return
 	}
 
-	// Resolve the instance ID (may be name or ID)
-	resolvedInstance, err := c.resolveInstance(r.Context(), instanceID)
+	resolvedInstance, err := resolveInstance(r.Context(), instanceID, c.instances)
 	if err != nil {
-		if state.IsInstanceNotFound(err) {
-			httputils.HTTPError(
-				w,
-				http.StatusNotFound,
-				fmt.Sprintf("instance %q not found", instanceID),
-			)
-			return
-		}
-		c.requestLogger(r).Debug(
-			"failed to resolve instance",
-			core.ErrorLogField("error", err),
-		)
-		httputils.HTTPError(
-			w,
-			http.StatusInternalServerError,
-			utils.UnexpectedErrorMessage,
-		)
+		c.handleGetInstanceError(w, err, instanceID, c.requestLogger(r))
 		return
 	}
 
@@ -175,26 +157,9 @@ func (c *Controller) ApplyReconciliationHandler(
 		return
 	}
 
-	// Resolve the instance ID (may be name or ID)
-	resolvedInstance, err := c.resolveInstance(r.Context(), instanceID)
+	resolvedInstance, err := resolveInstance(r.Context(), instanceID, c.instances)
 	if err != nil {
-		if state.IsInstanceNotFound(err) {
-			httputils.HTTPError(
-				w,
-				http.StatusNotFound,
-				fmt.Sprintf("instance %q not found", instanceID),
-			)
-			return
-		}
-		c.requestLogger(r).Debug(
-			"failed to resolve instance",
-			core.ErrorLogField("error", err),
-		)
-		httputils.HTTPError(
-			w,
-			http.StatusInternalServerError,
-			utils.UnexpectedErrorMessage,
-		)
+		c.handleGetInstanceError(w, err, instanceID, c.requestLogger(r))
 		return
 	}
 
@@ -296,32 +261,6 @@ func (c *Controller) applyReconciliation(
 	}
 
 	return blueprintContainer.ApplyReconciliation(ctxWithTimeout, input, params)
-}
-
-func (c *Controller) resolveInstance(
-	ctx context.Context,
-	instanceIDOrName string,
-) (*state.InstanceState, error) {
-	// Try to get by ID first
-	instance, err := c.instances.Get(ctx, instanceIDOrName)
-	if err == nil {
-		return &instance, nil
-	}
-
-	// If not found by ID, try by name
-	if state.IsInstanceNotFound(err) {
-		instanceID, lookupErr := c.instances.LookupIDByName(ctx, instanceIDOrName)
-		if lookupErr != nil {
-			return nil, lookupErr
-		}
-		instance, err = c.instances.Get(ctx, instanceID)
-		if err != nil {
-			return nil, err
-		}
-		return &instance, nil
-	}
-
-	return nil, err
 }
 
 // The scope, actions and statuses are validated with the request body, so the casts and

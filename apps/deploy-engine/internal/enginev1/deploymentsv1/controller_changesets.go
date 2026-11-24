@@ -93,11 +93,7 @@ func (c *Controller) CreateChangesetHandler(
 			if identifier == "" {
 				identifier = payload.InstanceName
 			}
-			httputils.HTTPError(
-				w,
-				http.StatusNotFound,
-				fmt.Sprintf("instance %q not found", identifier),
-			)
+			c.handleGetInstanceError(w, err, identifier, c.requestLogger(r))
 			return
 		}
 		c.requestLogger(r).Debug(
