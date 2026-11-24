@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	testNewInstanceName    = "test-new-instance"
 	testChangesetID        = "bf8de86f-5762-4c59-a878-c17fc93b7651"
 	testDestroyChangesetID = "a1b2c3d4-5762-4c59-a878-c17fc93b7651"
 	nonExistentChangesetID = "13766f10-f82d-4441-a887-e1b6da8028ba"
