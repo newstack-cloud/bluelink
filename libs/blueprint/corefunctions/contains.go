@@ -25,7 +25,7 @@ func NewContainsFunction() provider.Function {
 			Description: "Checks if a string contains a given substring or if an array contains a given value.",
 			FormattedDescription: "Checks if a string contains a given substring or if an array contains a given value.\n\n" +
 				"**Examples:**\n\n" +
-				"```\n${contains(values.cacheClusterConfig.host, \"celerityframework.com\")}\n```",
+				"```\n${contains(values.cacheClusterConfig.host, \"example.com\")}\n```",
 			Parameters: []function.Parameter{
 				&function.AnyParameter{
 					UnionTypes: []function.ValueTypeDefinition{
