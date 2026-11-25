@@ -5,7 +5,7 @@
 # which handles the full installation of Celerity components.
 #
 # Usage:
-#   curl --proto '=https' --tlsv1.2 -sSfL https://manager-sh.celerityframework.io | sh
+#   curl --proto '=https' --tlsv1.2 -sSfL https://manager-sh.celerity.dev | sh
 #
 # Environment variables:
 #   BLUELINK_INSTALL_DIR - Installation directory (default: ~/.bluelink)
