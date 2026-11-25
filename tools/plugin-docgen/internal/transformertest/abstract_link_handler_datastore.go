@@ -11,7 +11,7 @@ func handlerDatastoreAbstractLink() *transformerv1.AbstractLinkDefinition {
 		ResourceTypeA:        "test/celerity/handler",
 		ResourceTypeB:        "test/celerity/datastore",
 		PlainTextSummary:     "A link between a Celerity handler and a NoSQL data store.",
-		FormattedDescription: "Links a [Celerity Handler](https://www.celerityframework.io/docs/applications/resources/celerity-handler) to a Celerity datastore.",
+		FormattedDescription: "Links a [Celerity Handler](https://celerity.dev/docs/framework/applications/resources/celerity-handler) to a Celerity datastore.",
 		CardinalityA: provider.LinkCardinality{
 			Min: 0,
 			Max: 3,

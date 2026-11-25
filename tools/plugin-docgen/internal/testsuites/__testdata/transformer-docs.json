@@ -26,7 +26,7 @@
       "group": "celerity",
       "label": "Celerity Handler",
       "summary": "An abstract resource for managing a Celerity application handler.",
-      "description": "The abstract resource type used to define a [Celerity Handler](https://www.celerityframework.io/docs/applications/resources/celerity-handler).",
+      "description": "The abstract resource type used to define a [Celerity Handler](https://celerity.dev/docs/framework/applications/resources/celerity-handler).",
       "specification": {
         "schema": {
           "type": "object",
@@ -250,7 +250,7 @@
       "type": "test/celerity/handler::test/celerity/datastore",
       "group": "celerity",
       "summary": "A link between a Celerity handler and a NoSQL data store.",
-      "description": "Links a [Celerity Handler](https://www.celerityframework.io/docs/applications/resources/celerity-handler) to a Celerity datastore.",
+      "description": "Links a [Celerity Handler](https://celerity.dev/docs/framework/applications/resources/celerity-handler) to a Celerity datastore.",
       "cardinalityA": {
         "min": 0,
         "max": 3
