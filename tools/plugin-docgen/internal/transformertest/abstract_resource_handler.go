@@ -11,7 +11,7 @@ func handlerAbstractResource() *transformerv1.AbstractResourceDefinition {
 		Type:                 "test/celerity/handler",
 		Label:                "Celerity Handler",
 		PlainTextSummary:     "An abstract resource for managing a Celerity application handler.",
-		FormattedDescription: "The abstract resource type used to define a [Celerity Handler](https://www.celerityframework.io/docs/applications/resources/celerity-handler).",
+		FormattedDescription: "The abstract resource type used to define a [Celerity Handler](https://celerity.dev/docs/framework/applications/resources/celerity-handler).",
 		Schema:               handlerAbstractResourceSchema(),
 		IDField:              "id",
 		FormattedExamples: []string{
