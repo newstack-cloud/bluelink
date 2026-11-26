@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/newstack-cloud/bluelink/compare/cli/v0.6.1...cli/v0.6.2) (2026-11-26)
+
+
+### Bug Fixes
+
+* **cli:** stop failing when the default deploy config file is missing ([3cc5f50](https://github.com/newstack-cloud/bluelink/commit/3cc5f5024ecce1f0f48bcb9b2b4e3d3fe88a54e0))
+
 ## [0.6.1](https://github.com/newstack-cloud/bluelink/compare/cli/v0.6.0...cli/v0.6.1) (2026-11-24)
 
 
