@@ -48,8 +48,11 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
 # =============================================================================
 FROM debian:trixie-slim
 
-# Install CA certificates and curl for health checks
+# Install CA certificates and curl for health checks. The upgrade applies Debian's
+# security fixes published since the base image was built, which the release's
+# image scan would otherwise fail on.
 RUN apt-get update && \
+    apt-get upgrade -y --no-install-recommends && \
     apt-get install -y --no-install-recommends \
     ca-certificates \
     curl && \
