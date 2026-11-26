@@ -4,12 +4,12 @@ E2E tests verify the CLI works correctly as a complete binary, including integra
 
 ## Prerequisites
 
-- Docker and Docker Compose (for running the deploy engine and MinIO)
+- Docker and Docker Compose (for running the deploy engine and LocalStack)
 
 ## How E2E Tests Work
 
 1. **Binary Build**: `TestMain` in `e2e/e2e_test.go` builds a coverage-instrumented CLI binary
-2. **Docker Stack**: The test infrastructure runs deploy-engine and MinIO via `e2e/docker-compose.test.yaml`
+2. **Docker Stack**: The test infrastructure runs deploy-engine and LocalStack (for S3) via `e2e/docker-compose.test.yaml`
 3. **Test Scripts**: Individual tests are `.txtar` files in `e2e/testdata/scripts/`
 4. **Coverage**: Binary coverage is collected via `GOCOVERDIR` and merged with unit test coverage
 
@@ -19,10 +19,11 @@ Tests are organized by command in `e2e/testdata/scripts/`:
 
 ```
 e2e/
-├── docker-compose.test.yaml    # Test infrastructure (deploy-engine, MinIO)
+├── docker-compose.test.yaml    # Test infrastructure (deploy-engine, LocalStack)
+├── localstack-ready.sh         # Creates the S3 bucket and uploads the fixtures
 ├── e2e_test.go                 # Test runner and setup
 └── testdata/
-    ├── fixtures/               # Test data files (e.g., blueprints for MinIO)
+    ├── fixtures/               # Test data files (e.g., blueprints served from S3)
     └── scripts/
         ├── init/               # Tests for `bluelink init`
         └── validate/           # Tests for `bluelink validate`
@@ -89,7 +90,7 @@ The test runner sets these environment variables for validate tests:
 
 1. **Create test file**: Add a `.txtar` file in the appropriate `e2e/testdata/scripts/<command>/` directory
 2. **Include required files**: Embed any config files needed (e.g., `bluelink.config.toml`, `engine.auth.json`)
-3. **Use fixtures for remote files**: For S3-based tests, add fixtures to `e2e/testdata/fixtures/` and update `docker-compose.test.yaml` to upload them to MinIO
+3. **Use fixtures for remote files**: For S3-based tests, add fixtures to `e2e/testdata/fixtures/`; they're served from `s3://test-blueprints/`
 
 ## Running E2E Tests Manually
 
@@ -109,7 +110,6 @@ docker compose -f e2e/docker-compose.test.yaml down
 
 ## Test Fixtures
 
-Test fixtures in `e2e/testdata/fixtures/` are uploaded to MinIO at startup. To add a new fixture:
-
-1. Add the file to `e2e/testdata/fixtures/`
-2. Update the `minio-setup` service in `docker-compose.test.yaml` to upload it
+Every file in `e2e/testdata/fixtures/` is uploaded to the `test-blueprints` bucket in LocalStack at
+startup, by `e2e/localstack-ready.sh`, so a test reads `fixtures/<name>` as
+`s3://test-blueprints/<name>`. Adding a fixture needs no other change.

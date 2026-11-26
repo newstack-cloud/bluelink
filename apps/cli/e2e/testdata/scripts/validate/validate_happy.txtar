@@ -1,6 +1,6 @@
 # Test blueprint validation with deploy engine completes and produces diagnostics
-# Uses a blueprint file stored in MinIO (S3-compatible storage)
-# The blueprint is uploaded by minio-setup container at startup
+# Uses a blueprint file stored in S3 (LocalStack)
+# The blueprint is uploaded by e2e/localstack-ready.sh at startup
 #
 # Note: The blueprint will produce validation errors because no provider plugins
 # are installed in the deploy engine. This test verifies the CLI can connect to
@@ -12,7 +12,7 @@ wait_engine
 stdout 'Validation complete'
 stdout 'diagnostic'
 stdout 'error'
-stdout 'provider or transformer "example" not found for resource type "example/resource"'
+stdout 'unsupported type "example/resource", this type is not made available by any of the loaded plugins'
 
 -- bluelink.config.toml --
 # Empty config file
