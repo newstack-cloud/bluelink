@@ -1,5 +1,54 @@
 # Changelog
 
+## [0.9.0](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.8.3...deploy-engine/v0.9.0) (2026-11-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* **deploy-engine:** a create (POST /deployments/instances) whose instanceName is already in use now returns 409 INSTANCE_ALREADY_EXISTS instead of updating that instance, and a create without an instanceName returns 422. CLIs that redeploy an existing instance by name through the create endpoint must update it by ID or name instead; deploy-cli-sdk 0.10.0 does this.
+
+### Features
+
+* **common:** move telemetry helpers to common lib ([a3ea334](https://github.com/newstack-cloud/bluelink/commit/a3ea334b8768121e9b3fea7d3f6c6721a7a73420))
+* **deploy-engine:** add audit trail and scheduled state cleanup ([7c1db8b](https://github.com/newstack-cloud/bluelink/commit/7c1db8b0cde3f2590498b1ce703d7be2af63e7c2))
+* **deploy-engine:** add check to ensure blueprint instances cannot be renamed ([439c887](https://github.com/newstack-cloud/bluelink/commit/439c88720289b1e387d2ed561bbcb018b9d35c72))
+* **deploy-engine:** add foundations for detached operation sampling and root spans with links ([e764009](https://github.com/newstack-cloud/bluelink/commit/e7640095f8a798a52c5cfae108f4c128eef57a1a))
+* **deploy-engine:** add housekeeping endpoints for general state cleanup ([ddbea1a](https://github.com/newstack-cloud/bluelink/commit/ddbea1a2afa0306a8e048ba8fd276980e9c30d56))
+* **deploy-engine:** add index for reporting fields holding sensitive values ([2d77722](https://github.com/newstack-cloud/bluelink/commit/2d77722da423c77b70ebbeee6df6d9f3c5c73bca))
+* **deploy-engine:** add log redaction for secret plugin config keys ([4ca1d43](https://github.com/newstack-cloud/bluelink/commit/4ca1d43f35ec82c3d6e7a8f8ba8ece19fdd9d9b8))
+* **deploy-engine:** add objectstore cache revalidation settings ([6d04968](https://github.com/newstack-cloud/bluelink/commit/6d049689c038b0dc9724cf1d93fd880d058d175d))
+* **deploy-engine:** add OpenTelemetry tracing ([6e98ae2](https://github.com/newstack-cloud/bluelink/commit/6e98ae2136d76e3f141fd7c76e49742c02fea80b))
+* **deploy-engine:** add principal extraction for audit attribution ([e5620a9](https://github.com/newstack-cloud/bluelink/commit/e5620a9d8e42e55e24c99daa00448cd5fc2735f6))
+* **deploy-engine:** add support for encrypting state for memfile backend ([dbbbaed](https://github.com/newstack-cloud/bluelink/commit/dbbbaed1c00e8d8943b68050ced2a9c15b85251d))
+* **deploy-engine:** add support for unix sockets on windows ([f81af01](https://github.com/newstack-cloud/bluelink/commit/f81af0106d14973a16ab92b17f4d2ed53dd5a041))
+* **deploy-engine:** tighten fs permissions for the memfile storage backend ([27f5342](https://github.com/newstack-cloud/bluelink/commit/27f5342f3780ba764bbfa73a3f7f83f4d8e31902))
+* **telemetry-otel:** add library for otel instrumentation ([322181f](https://github.com/newstack-cloud/bluelink/commit/322181f87086e3ad03dd261dbe5f74f74fe68977))
+
+
+### Bug Fixes
+
+* **deploy-engine:** accept requests that omit fileSourceScheme ([19cfcc5](https://github.com/newstack-cloud/bluelink/commit/19cfcc54152fd772213ad28602926dabe33a6dde))
+* **deploy-engine:** build the image with go 1.26 to match go.mod ([48664ff](https://github.com/newstack-cloud/bluelink/commit/48664ff90500add486bc8991c1ef0b123028ff7c))
+* **deploy-engine:** escape credentials and database in the postgres connection URL ([76927d2](https://github.com/newstack-cloud/bluelink/commit/76927d2bc3c6feda07b54b33d11af07feb9a1056))
+* **deploy-engine:** improve security posture of api key checks ([e6ba9ba](https://github.com/newstack-cloud/bluelink/commit/e6ba9ba75c37cc940f6034dfe1c00891449018dd))
+* **deploy-engine:** improve shutdown behaviour of detached cleanup runners ([24423b6](https://github.com/newstack-cloud/bluelink/commit/24423b64c760ee870259785ddd1be42daa6135bc))
+* **deploy-engine:** reject a change set staged for a different instance ([37b296b](https://github.com/newstack-cloud/bluelink/commit/37b296b7accc53110496ee729ae3b8ddc9a1aaec))
+* **deploy-engine:** reject a create whose instance name is already in use ([7bf3637](https://github.com/newstack-cloud/bluelink/commit/7bf3637696751330f2d72b9802f78606ca004d7d))
+* **deploy-engine:** reject an unknown outcome filter on audit queries ([48cc765](https://github.com/newstack-cloud/bluelink/commit/48cc76566e705e096e25019624f1b28ec2cef30a))
+* **deploy-engine:** reject invalid paging on instance lists and return [] for an empty page ([d797c11](https://github.com/newstack-cloud/bluelink/commit/d797c112b321f65fd6d9546b559368caa20a0f1c))
+* **deploy-engine:** report a missing instance with the same message on every endpoint ([d50b20a](https://github.com/newstack-cloud/bluelink/commit/d50b20a2df1d92517c79686546ce6589beebd6ee))
+* **deploy-engine:** resolve blueprints at a bucket's root without a leading slash ([7c08d2b](https://github.com/newstack-cloud/bluelink/commit/7c08d2bad1278baf8f85e2af2fe5866d8935bb87))
+* **deploy-engine:** return 404 for a cleanup operation of another category ([c6ba4be](https://github.com/newstack-cloud/bluelink/commit/c6ba4befb27d2672058cdaa50657a496aa866793))
+* **deploy-engine:** send stream start errors as JSON ([9e74c9d](https://github.com/newstack-cloud/bluelink/commit/9e74c9d25a533c742501bfb53f888695ea574a10))
+* **deploy-engine:** update pgx, go-jose, x/net and debian packages for reported vulnerabilities ([abb2939](https://github.com/newstack-cloud/bluelink/commit/abb29395c2ce3262cbb3355d097da285950f1bcc))
+* **deploy-engine:** validate reconciliation actions and accept precise statuses as labels or ints ([51030ec](https://github.com/newstack-cloud/bluelink/commit/51030ec4f2f0533783c5583bf9cca7d120f122fb))
+
+
+### Dependencies
+
+* **deploy-engine:** bump blueprint state to v0.13.0 ([647c043](https://github.com/newstack-cloud/bluelink/commit/647c0439d2fbda7c6bf3153ffd4c77ec53a3d1f3))
+* **deploy-engine:** update blueprint to v0.57.0 and blueprint-state to v0.13.1 ([802ee1f](https://github.com/newstack-cloud/bluelink/commit/802ee1f254ba162555c1601487d7d8e40176b484))
+
 ## [0.8.3](https://github.com/newstack-cloud/bluelink/compare/deploy-engine/v0.8.2...deploy-engine/v0.8.3) (2026-09-17)
 
 
