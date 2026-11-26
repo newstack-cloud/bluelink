@@ -90,13 +90,7 @@ func BlueprintDocumentInfoToInclude(
 	bucketName, pathPrefix := splitDirectoryForRemoteSource(
 		blueprintDocInfo.Directory,
 	)
-	objectPath := strings.Join(
-		[]string{
-			pathPrefix,
-			blueprintDocInfo.BlueprintFile,
-		},
-		"/",
-	)
+	objectPath := createRemoteObjectPath(pathPrefix, blueprintDocInfo.BlueprintFile)
 	return &subengine.ResolvedInclude{
 		Path: core.MappingNodeFromString(objectPath),
 		Variables: &core.MappingNode{
@@ -210,6 +204,17 @@ func splitDirectoryForRemoteSource(dirPath string) (string, string) {
 		return pathSegments[0], ""
 	}
 	return pathSegments[0], pathSegments[1]
+}
+
+// Object keys are matched exactly, so a blueprint at the root of a bucket must not get a
+// leading "/" (or a "//" after a prefix ending in "/"), which would name a different key.
+func createRemoteObjectPath(pathPrefix string, blueprintFile string) string {
+	trimmedPrefix := strings.TrimSuffix(pathPrefix, "/")
+	trimmedFile := strings.TrimPrefix(blueprintFile, "/")
+	if trimmedPrefix == "" {
+		return trimmedFile
+	}
+	return trimmedPrefix + "/" + trimmedFile
 }
 
 func createFilePathForOS(
