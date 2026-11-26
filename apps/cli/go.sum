@@ -278,8 +278,8 @@ github.com/newstack-cloud/bluelink/libs/common v0.6.0 h1:sITqsLAkYUbNmwuVuJ1/M8u
 github.com/newstack-cloud/bluelink/libs/common v0.6.0/go.mod h1:a8xXIgLy0loEE/62oaiGyGxFH7z63xUefLnzZZRk8Gs=
 github.com/newstack-cloud/bluelink/libs/deploy-engine-client v0.5.2 h1:REoQW+smduR0tzb7G8/tu4e8ouLpvcUxh2jn5dsCXCI=
 github.com/newstack-cloud/bluelink/libs/deploy-engine-client v0.5.2/go.mod h1:9GboMmne4TYv9cbsenYnqCt4wIu4z1tEf0CxKzoIf8o=
-github.com/newstack-cloud/deploy-cli-sdk v0.10.0 h1:MtzD37hxkolqHRQqct5gON+A65NGwV6TTgOqHEGTCG0=
-github.com/newstack-cloud/deploy-cli-sdk v0.10.0/go.mod h1:H9MF9dSvt49x/p73xUU9hHj5u748MdRMygjObZpTv9M=
+github.com/newstack-cloud/deploy-cli-sdk v0.10.1 h1:gIn1HUGJxT3Ocop/2mQybk0LTAzHgx33qECdTU4E9JQ=
+github.com/newstack-cloud/deploy-cli-sdk v0.10.1/go.mod h1:H9MF9dSvt49x/p73xUU9hHj5u748MdRMygjObZpTv9M=
 github.com/pierrec/lz4/v4 v4.1.28 h1:pPEPwRJ4kybBTfGt28q7lQsRJQHhC08axprdLD5Ppio=
 github.com/pierrec/lz4/v4 v4.1.28/go.mod h1:EoQMVJgeeEOMsCqCzqFm2O0cJvljX2nGZjcRIPL34O4=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c h1:+mdjkGKdHQG3305AYmdv1U2eRNDiU2ErMBj1gwrq8eQ=

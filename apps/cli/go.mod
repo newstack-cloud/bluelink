@@ -9,7 +9,7 @@ require (
 	github.com/charmbracelet/huh v0.8.0
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
 	github.com/charmbracelet/x/exp/teatest v0.0.0-20261011004359-2acd7e345453
-	github.com/newstack-cloud/deploy-cli-sdk v0.10.0
+	github.com/newstack-cloud/deploy-cli-sdk v0.10.1
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
